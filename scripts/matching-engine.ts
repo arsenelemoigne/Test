@@ -1,10 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { areIndustriesCompatible } from '@/lib/industry-affinity'
 import { sendLeadEmail } from '@/lib/emails'
 import { Business } from '@/lib/types'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+}
 
 interface MatchScore {
   score: number
@@ -52,13 +54,15 @@ Return ONLY valid JSON:
 Only return send: true if score >= 0.65 AND there is a clear, specific reason.
 Do not match businesses that simply exist in the same city with no logical connection.`
 
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
+  const openai = getOpenAI()
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 200,
+    response_format: { type: 'json_object' },
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
+  const text = response.choices[0]?.message?.content || '{}'
   return JSON.parse(text) as MatchScore
 }
 

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -24,10 +26,11 @@ export async function GET(request: NextRequest) {
   }
 
   let refreshed = 0
+  const openai = getOpenAI()
+  const today = new Date().toISOString().split('T')[0]
 
   for (const business of businesses) {
     try {
-      // Re-scrape
       const scrapeRes = await fetch(business.url, {
         headers: { 'User-Agent': 'Meshly/1.0 (+https://meshly.com)' },
         signal: AbortSignal.timeout(10000),
@@ -35,11 +38,8 @@ export async function GET(request: NextRequest) {
 
       if (!scrapeRes.ok) continue
 
-      const today = new Date().toISOString().split('T')[0]
-
-      // Regenerate llms.txt
-      const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5',
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
         max_tokens: 800,
         messages: [{
           role: 'user',
@@ -74,7 +74,7 @@ ${today}
         }],
       })
 
-      const txt = response.content[0].type === 'text' ? response.content[0].text : ''
+      const txt = response.choices[0]?.message?.content || ''
 
       await supabase
         .from('businesses')

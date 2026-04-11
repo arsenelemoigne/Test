@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import * as cheerio from 'cheerio'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateUniqueSlug } from '@/lib/slugify'
 import { AnalyzedBusiness } from '@/lib/types'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+}
 
 // Rate limiting (in-memory, simple MVP version)
 const submissionsByIP: Map<string, { count: number; resetAt: number }> = new Map()
@@ -33,7 +33,6 @@ function isPrivateURL(url: string): boolean {
     const parsed = new URL(url)
     const hostname = parsed.hostname
 
-    // Block localhost and private IPs
     const blocked = [
       'localhost', '127.0.0.1', '0.0.0.0', '::1',
       '10.', '172.16.', '172.17.', '172.18.', '172.19.',
@@ -78,7 +77,6 @@ async function scrapeWithCheerio(url: string): Promise<string | null> {
     const html = await response.text()
     const $ = cheerio.load(html)
 
-    // Remove scripts, styles, nav, footer
     $('script, style, nav, footer, header, .cookie-banner').remove()
 
     const title = $('title').text().trim()
@@ -93,12 +91,17 @@ async function scrapeWithCheerio(url: string): Promise<string | null> {
   }
 }
 
-async function analyzeWithClaude(rawContent: string): Promise<AnalyzedBusiness> {
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
+async function analyzeWithOpenAI(rawContent: string): Promise<AnalyzedBusiness> {
+  const openai = getOpenAI()
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 1000,
-    system: 'You are a business analyst. Extract structured information from website content. Return ONLY valid JSON, no markdown, no explanation.',
+    response_format: { type: 'json_object' },
     messages: [
+      {
+        role: 'system',
+        content: 'You are a business analyst. Extract structured information from website content. Return ONLY valid JSON, no markdown, no explanation.',
+      },
       {
         role: 'user',
         content: `Analyze this website content and return:
@@ -118,14 +121,13 @@ IMPORTANT on inferred_needs: Based on their industry and services, infer what ki
 - Hair salon → ["hair product suppliers", "booking software", "social media agency"]
 - Marketing agency → ["SaaS clients", "print providers", "freelance developers"]
 - Restaurant → ["food suppliers", "delivery platforms", "accounting software"]
-This inference is critical for matching before the user tells us themselves.
 
 Website content: ${rawContent}`,
       },
     ],
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  const text = response.choices[0]?.message?.content || '{}'
   return JSON.parse(text) as AnalyzedBusiness
 }
 
@@ -133,13 +135,17 @@ async function generateLlmsTxt(
   business: AnalyzedBusiness,
   slug: string
 ): Promise<string> {
+  const openai = getOpenAI()
   const today = new Date().toISOString().split('T')[0]
 
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 800,
-    system: 'Generate a clean llms.txt file for a business. Use this exact format. No extra commentary.',
     messages: [
+      {
+        role: 'system',
+        content: 'Generate a clean llms.txt file for a business. Use the exact format provided. No extra commentary.',
+      },
       {
         role: 'user',
         content: `Generate an llms.txt file for this business:
@@ -169,7 +175,7 @@ Use this format:
 [inferred from industry — who do they typically serve, 1-2 sentences]
 
 ## Contact
-Managed via Meshly network. To connect with this business, reach out through the Meshly platform at https://meshly.com/b/[slug]
+Managed via Meshly network. To connect with this business, reach out through the Meshly platform at https://meshly.com/b/${slug}
 
 ## Last updated
 ${today}
@@ -179,14 +185,12 @@ ${today}
     ],
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  return text
+  return response.choices[0]?.message?.content || ''
 }
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
 
-  // Rate limiting
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
@@ -197,7 +201,6 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const { url } = body
 
-  // Validate URL
   let parsedUrl: URL
   try {
     parsedUrl = new URL(url)
@@ -212,7 +215,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'URL not allowed.' }, { status: 400 })
   }
 
-  // Check if URL already exists
   const supabase = createAdminClient()
   const { data: existing } = await supabase
     .from('businesses')
@@ -228,7 +230,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // Check URL is reachable
   try {
     const headRes = await fetch(url, {
       method: 'HEAD',
@@ -257,7 +258,7 @@ export async function POST(request: NextRequest) {
   // 2. AI Analysis
   let analyzed: AnalyzedBusiness
   try {
-    analyzed = await analyzeWithClaude(rawContent)
+    analyzed = await analyzeWithOpenAI(rawContent)
   } catch (err) {
     console.error('AI analysis failed:', err)
     return NextResponse.json(
@@ -274,7 +275,6 @@ export async function POST(request: NextRequest) {
   try {
     llmsTxtContent = await generateLlmsTxt(analyzed, slug)
   } catch {
-    // Fallback: generate manually without AI
     const today = new Date().toISOString().split('T')[0]
     llmsTxtContent = `# ${analyzed.name}
 > ${analyzed.offering_summary}
