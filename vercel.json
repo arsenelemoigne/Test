@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/run-matching",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-llms-txt",
+      "schedule": "0 2 * * 1"
+    }
+  ]
+}
