@@ -16,13 +16,15 @@ export async function sendWelcomeEmail({
   to,
   businessName,
   businessId,
+  profileUrl: profileUrlOverride,
 }: {
   to: string
   businessName: string
   businessId: string
+  profileUrl?: string
 }) {
   const APP_URL = getAppUrl()
-  const profileUrl = `${APP_URL}/profile?id=${businessId}`
+  const profileUrl = profileUrlOverride ?? `${APP_URL}/profile`
 
   return getResend().emails.send({
     from: `Meshly <${getFrom()}>`,
