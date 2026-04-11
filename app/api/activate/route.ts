@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Basic email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
     return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 })
@@ -22,7 +21,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient()
 
-  // Update business with email
   const { data: business, error } = await supabase
     .from('businesses')
     .update({ email })
@@ -31,6 +29,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error || !business) {
+    console.error('Business lookup failed:', error)
     return NextResponse.json(
       { error: 'Business not found.' },
       { status: 404 }
@@ -39,14 +38,14 @@ export async function POST(request: NextRequest) {
 
   // Send welcome email via Resend
   try {
-    await sendWelcomeEmail({
+    const result = await sendWelcomeEmail({
       to: email,
       businessName: business.name || 'Your business',
       businessId: business.id,
     })
+    console.log('Welcome email result:', JSON.stringify(result))
   } catch (err) {
-    console.error('Welcome email failed:', err)
-    // Don't fail the whole request if email fails
+    console.error('Welcome email FAILED:', JSON.stringify(err))
   }
 
   // Send magic link for platform login (Supabase Auth)
@@ -66,7 +65,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (err) {
     console.error('Magic link failed:', err)
-    // Non-blocking
   }
 
   return NextResponse.json({ success: true })
