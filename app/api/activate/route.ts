@@ -21,6 +21,15 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient()
 
+  // Check if welcome email was already sent for this business
+  const { data: existing } = await supabase
+    .from('businesses')
+    .select('email')
+    .eq('id', business_id)
+    .single()
+
+  const alreadyActivated = !!(existing?.email)
+
   const { data: business, error } = await supabase
     .from('businesses')
     .update({ email })
@@ -36,16 +45,18 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Send welcome email via Resend
-  try {
-    const result = await sendWelcomeEmail({
-      to: email,
-      businessName: business.name || 'Your business',
-      businessId: business.id,
-    })
-    console.log('Welcome email result:', JSON.stringify(result))
-  } catch (err) {
-    console.error('Welcome email FAILED:', JSON.stringify(err))
+  // Only send welcome email on first activation
+  if (!alreadyActivated) {
+    try {
+      const result = await sendWelcomeEmail({
+        to: email,
+        businessName: business.name || 'Your business',
+        businessId: business.id,
+      })
+      console.log('Welcome email result:', JSON.stringify(result))
+    } catch (err) {
+      console.error('Welcome email FAILED:', JSON.stringify(err))
+    }
   }
 
   // Send magic link for platform login (Supabase Auth)
