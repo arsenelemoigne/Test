@@ -15,12 +15,10 @@ function getAppUrl() {
 export async function sendWelcomeEmail({
   to,
   businessName,
-  businessId,
   profileUrl: profileUrlOverride,
 }: {
   to: string
   businessName: string
-  businessId: string
   profileUrl?: string
 }) {
   const APP_URL = getAppUrl()

@@ -62,7 +62,6 @@ export async function POST(request: NextRequest) {
     const result = await sendWelcomeEmail({
       to: email,
       businessName: business.name || 'Your business',
-      businessId: business.id,
       profileUrl,
     })
     console.log('Welcome email result:', JSON.stringify(result))
