@@ -73,7 +73,7 @@ export default function HomePage() {
       <header className="px-6 py-5 flex items-center justify-between max-w-5xl mx-auto w-full">
         <span className="text-xl font-bold tracking-tight">Meshly</span>
         <a
-          href="/dashboard"
+          href="/login"
           className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
           Sign in
