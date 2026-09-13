@@ -230,9 +230,18 @@ def single_trades(c: Contract, weights=None):
             a[pid] = o.id
             lose = total(sub(c.vector(a), vt), weights)
             gain = total(sub(c.vector(a, "theirs"), wt), weights)
-            # Un cout nul ne fait pas un echange infiniment bon : il fait une
-            # clause sans enjeu pour nous. La trier en tete est trompeur.
-            ratio = gain / abs(lose) if abs(lose) > 1e-9 else 0.0
+            # Un ratio ne veut dire quelque chose que sur une CONCESSION :
+            # combien ils gagnent par unite de ce que nous cedons. Quand une
+            # redaction nous rapporte AUSSI, il n'y a rien de cede, et diviser
+            # par ce gain produit un nombre enorme qui la classe en tete de ce
+            # qu'il faut offrir. Ce n'est pas un echange, c'est une amelioration
+            # commune - a proposer immediatement, mais pour une autre raison.
+            if lose > 1e-9:
+                ratio = float("inf") if gain > 0 else 0.0
+            elif abs(lose) > 1e-9:
+                ratio = gain / abs(lose)
+            else:
+                ratio = 0.0
             rows.append((p.name, o.text, lose, gain, ratio, o.id == p.theirs))
     return sorted(rows, key=lambda r: -r[4])
 
@@ -264,6 +273,17 @@ def report(c: Contract, weights=None, min_concessions: int = 2) -> str:
         L.append(f"  {p.name[:22]:<24}{show_vector(diff)}")
 
     singles = single_trades(c, weights)
+    mutuel = [r for r in singles if r[2] > 1e-9 and r[3] > 0]
+    if mutuel:
+        L += ["", "AMELIORATIONS COMMUNES - personne ne cede rien", "-" * 78,
+              "  Ces redactions nous rapportent ET leur rapportent. Ce ne sont pas",
+              "  des echanges : a proposer d'emblee, sans contrepartie. Verifie-les",
+              "  cependant - si notre propre modele etait optimal, il ne devrait pas",
+              "  y en avoir beaucoup.", ""]
+        for name, text, lose, gain, _r, is_t in sorted(mutuel, key=lambda r: -r[3]):
+            L.append(f"  {name[:22]:<24}{text[:32]:<34}{lose:>+8.0f}{gain:>+8.0f}"
+                     + ("  <-- leur demande" if is_t else ""))
+    singles = [r for r in singles if not (r[2] > 1e-9 and r[3] > 0)]
     L += ["", "CHAQUE CONCESSION, PRISE SEULE", "-" * 78,
           f"  {'variable':<24}{'redaction':<34}{'nous':>8}{'eux':>7}{'ratio':>7}"]
     for name, text, lose, gain, ratio, is_theirs in singles:
@@ -670,6 +690,16 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
             f"qu'ils ont demandees\n  leur seraient defavorables "
             f"({', '.join(x[:26] for x in contre[:4])}).\n  Une partie ne marque "
             f"pas un contrat contre elle-meme : ces valeurs sont fausses.")
+
+    # 2d. notre propre modele devrait etre a peu pres optimal pour nous
+    mutuel = [r for r in rows if r[2] > 1e-9 and r[3] > 0]
+    if len(rows) >= 8 and len(mutuel) / len(rows) > 0.25:
+        out.append(
+            f"NOTRE MODELE NE SERAIT PAS OPTIMAL : {len(mutuel)}/{len(rows)} "
+            f"redactions nous\n  rapporteraient PLUS que la notre tout en leur "
+            f"rapportant aussi. Si c'etait vrai,\n  nous aurions envoye une autre "
+            f"redaction. La redaction de reference a probablement\n  ete mal "
+            f"identifiee, ou son vecteur mal recale.")
 
     # 3. coherence des signes. Une partie qui marque un contrat prend quelque
     #    chose : si son markup ameliore NOTRE position, un axe a ete rempli
