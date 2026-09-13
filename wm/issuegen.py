@@ -457,6 +457,12 @@ def audit(issues: list[GenIssue], memo: str) -> str:
                     hit = find_phrase(str(ph).lower())
                     rows.append((i.id, i.name, f'forbid "{ph}"', hit))
 
+    # Une unite qui n'apparait nulle part dans le document ne peut jamais etre
+    # trouvee a cote d'un nombre : la limite est muette, silencieusement.
+    units = {l.get("unit") for i in issues for l in i.limits if l.get("unit")}
+    absent = sorted(u for u in units if u and u.lower() not in low
+                    and (u.lower().rstrip("s") not in low))
+
     checkable = [r for r in rows if r[2].startswith(("max", "min", "require"))]
     L = [f"LIMIT AUDIT - {len(checkable)} limits carry a value or phrase that must",
          f"appear in the mandate. {len(checkable) - len(missing)} do; "
@@ -471,6 +477,12 @@ def audit(issues: list[GenIssue], memo: str) -> str:
               "Each is either a paraphrase, a unit the memo states differently, or",
               "a number the model invented. Read those sections yourself before",
               "quoting any figure that depends on them."]
+    if absent:
+        L += ["", f"UNITES ABSENTES DU DOCUMENT : {', '.join(absent)}.",
+              "Une limite dont l'unite ne figure pas dans le texte ne peut jamais",
+              "se declencher : le checker cherche un nombre COLLE a son unite. Ces",
+              "limites sont muettes, et un zero dans la colonne violations ne veut",
+              "alors rien dire."]
     L += ["", "This proves a number is PRESENT, not that it was read in the right",
           "direction. A floor recorded as a ceiling passes. Read the quoted line."]
     return "\n".join(L)

@@ -469,28 +469,52 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
             f"partie adverse qui negocie prend\n  toujours quelque chose : une "
             f"elicitation credible doit trouver des ratios < 1.")
 
-    # 3. un axe qui ecrase les autres
+    return out
+
+
+def model_notes(c: Contract, weights=None) -> list[str]:
+    """Observations sur le contrat lui-meme. A lire, mais pas bloquantes.
+
+    La dominance d'un axe en est une : un plafond de responsabilite ECRASE
+    reellement le reste dans beaucoup de contrats, et ce n'est pas un defaut
+    d'elicitation. Les echanges se trouvent dans les RATIOS clause par clause,
+    qui restent informatifs meme quand une seule dimension porte la derive.
+    """
+    out = []
     d = c.drift()
     w = weights or DEFAULT_WEIGHTS
     mag = {k: abs(d[k]) * w.get(k, 1.0) for k in DIMENSIONS}
     tot = sum(mag.values())
     if tot:
-        top, share = max(mag.items(), key=lambda kv: kv[1])[0], max(mag.values()) / tot
+        top = max(mag.items(), key=lambda kv: kv[1])[0]
+        share = max(mag.values()) / tot
         if share > 0.7:
-            out.append(
-                f"UN SEUL AXE : {top} represente {share:.0%} de la derive ponderee.\n"
-                f"  Les six dimensions se reduisent alors a une seule, et le "
-                f"modele vectoriel\n  n'apporte rien sur un score unique. "
-                f"Verifie les ordres de grandeur.")
+            out.append(f"{top} porte {share:.0%} de la derive ponderee. Les six "
+                       f"axes se comportent ici presque comme un seul ; les "
+                       f"echanges restent dans les ratios.")
+    used = [k for k in DIMENSIONS
+            if any(abs(o.vec().get(k, 0)) > 1e-9 or abs(o.vec("theirs").get(k, 0)) > 1e-9
+                   for p in c.params.values() for o in p.options)]
+    if len(used) < 3:
+        out.append(f"seuls {len(used)} axes sur {len(DIMENSIONS)} sont utilises "
+                   f"({', '.join(used)}). Le reste du vecteur est inerte.")
+    n_mid = sum(1 for p in c.params.values()
+                if any(o.id not in (p.ours, p.theirs) for o in p.options))
+    if n_mid < len(c.params) / 2:
+        out.append(f"{n_mid}/{len(c.params)} variables ont une redaction "
+                   f"intermediaire. Sans elles il n'y a que ceder ou refuser, "
+                   f"et la recherche n'a rien a chercher.")
     return out
 
 
 def sanity_report(c: Contract, weights=None) -> str:
     w = model_sanity(c, weights)
+    notes = model_notes(c, weights)
+    tail = ("\n\nA NOTER (non bloquant) :\n  " + "\n  ".join(notes)) if notes else ""
     if not w:
-        return "controles du modele : aucun signal d'alerte."
+        return "controles du modele : aucun signal d'alerte." + tail
     return ("CE MODELE N'EST PROBABLEMENT PAS EXPLOITABLE\n" + "=" * 78 + "\n\n"
-            + "\n\n".join(w))
+            + "\n\n".join(w) + tail)
 
 
 # retro-compatibilite
