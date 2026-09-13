@@ -325,9 +325,15 @@ def dump(c: Contract) -> str:
 PARAM_PROMPT = """Voici notre modele de contrat et la version que la partie adverse
 nous a renvoyee, marquee. Construis le contrat comme un OBJET PARAMETRIQUE.
 
-Pour chaque point que leur markup a change de facon substantielle, donne une
-VARIABLE. Entre huit et douze variables : prends les plus materielles, ignore le
-reste. Pour chaque variable, donne un DOMAINE de deux a quatre redactions :
+LES POINTS EN LITIGE SONT DEJA IDENTIFIES ET NUMEROTES ci-dessous. Reprends
+EXACTEMENT ces identifiants comme "id" de tes variables - un point, une
+variable, meme numero. N'en invente pas d'autres et n'en omets aucun : la
+reponse finale devra statuer sur chacun de ces identifiants, et une variable
+nommee autrement rend le point invisible.
+
+{issue_list}
+
+Pour chaque point, donne une VARIABLE. Pour chaque variable, donne un DOMAINE de deux a quatre redactions :
 
   - la notre, telle qu'elle figure dans notre modele        (id "ours")
   - la leur, telle qu'elle figure dans leur markup          (id "theirs")
@@ -599,13 +605,24 @@ def parse_model(raw: str) -> tuple[Contract, list[str]]:
 
 
 def build_model(template: str, markup: str, llm, party: str, context: str,
-                max_tokens: int = 24000, raw_out=None) -> Contract:
-    raw = llm(PARAM_PROMPT.format(party=party, context=context,
+                max_tokens: int = 24000, raw_out=None, issues=None) -> Contract:
+    listing = "\n".join(f"  {i.id}  {i.name}" + (f"  [section {i.section}]"
+                                                 if getattr(i, "section", "") else "")
+                        for i in (issues or [])) or "  (aucun point pre-identifie)"
+    raw = llm(PARAM_PROMPT.format(party=party, context=context, issue_list=listing,
                                   template=template, markup=markup),
               max_tokens=max_tokens)
     if raw_out is not None:
         raw_out.write_text(raw)          # toujours, pour pouvoir diagnostiquer
     c, why = parse_model(raw)
+    if issues:
+        attendus = {i.id for i in issues}
+        obtenus = set(c.params)
+        manquants = sorted(attendus - obtenus)
+        if manquants:
+            print(f"  {len(manquants)}/{len(attendus)} points sans variable : "
+                  f"{', '.join(manquants[:10])}\n  La sortie devra statuer dessus "
+                  f"sans qu'ils aient ete decrits.", flush=True)
     if why:
         print(f"  {len(why)} entrees ecartees :", flush=True)
         for w in why[:10]:

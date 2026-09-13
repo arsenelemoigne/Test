@@ -1052,8 +1052,14 @@ def cmd_model_elicit() -> None:
     raw_path = T / "_parametric_raw.txt"
     call = llm.model(llm.FRONTIER)
     print("passe 1/2 : les variables, leurs domaines, NOTRE vecteur ...", flush=True)
+    try:
+        issues = taskctx.issues()
+    except RuntimeError:
+        issues = None
+        print("  (pas de liste de points : lance `issues` d'abord pour que les "
+              "variables\n   portent les memes identifiants que la sortie exigera)")
     c = parametric.build_model(template, markup, call, PARTY, CONTEXT,
-                               raw_out=raw_path)
+                               raw_out=raw_path, issues=issues)
     if c.params:
         print(f"passe 2/2 : leur vecteur, depuis leur siege, sans voir le notre "
               f"({len(c.params)} variables) ...", flush=True)
