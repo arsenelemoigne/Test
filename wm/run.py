@@ -830,6 +830,40 @@ def cmd_selftest() -> None:
     print(f"  reponse tronquee: {len(_rec)}/2 decisions completes recuperees")
     ok &= (len(_rec) == 2)
 
+    # LE SIMULATEUR DE NEGOCIATION, sur le contrat d'exemple. Trois choses :
+    # algo contre algo conclut des accords localement efficaces ; une politique
+    # LLM scriptee est lue correctement (offre partielle, ids inconnus ignores,
+    # acceptation) ; la variante brute ne voit AUCUN chiffre.
+    from . import negotiation as _ng, parametric_example as _pe
+    _c = _pe.contract()
+    _rs = _ng.run_campaign(_c, ["algo"], list(range(4)), T=5)
+    _acc = [r for r in _rs if r["agreed"]]
+    _nok = [("au moins un accord", len(_acc) >= 1),
+            ("aucun accord hors mandat", not any(r["mandate_breach"] for r in _acc)),
+            ("accords localement efficaces", all(r["pareto_gap"] == 0 for r in _acc))]
+    _seen = []
+    def _fake(prompt, max_tokens=0):
+        _seen.append(prompt)
+        pid = next(iter(_c.params)); oid = _c.params[pid].options[-1].id
+        return (json.dumps({"offer": {pid: oid, "ZZZ": "nope"}}) if len(_seen) == 1
+                else 'ok\n{"accept": true}')
+    _us, _th = _ng.make_us(_c), _ng.make_them(_c, 1)
+    _r = _ng.negotiate(_c, _us, _th, _ng.LLMPolicy(_c, _us, _th, _fake, True),
+                       _ng.AlgoPolicy(_c, _th, _us), T=4)
+    _nok += [("politique LLM lue", _r["agreed"] and _r["calls"] == 2 and _r["invalid_ids"] == 1),
+             ("llm_value montre les chiffres", "VALEUR (calculee" in _seen[0])]
+    _seen.clear()
+    _us2 = _ng.make_us(_c)
+    _ng.negotiate(_c, _us2, _th, _ng.LLMPolicy(_c, _us2, _th, lambda p, max_tokens=0: (_seen.append(p) or '{"accept": true}'), False),
+                  _ng.AlgoPolicy(_c, _th, _us2), T=2)
+    _nok.append(("llm_raw ne voit aucun chiffre", "VALEUR (calculee" not in _seen[0] and "[nous " not in _seen[0]))
+    _nk = all(v for _, v in _nok)
+    print(f"  negociation     : {sum(v for _, v in _nok)}/{len(_nok)} {'OK' if _nk else 'FAIL'}")
+    for _n, _v in _nok:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _nk
+
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
     gi = [GenIssue(id="G1", name="cap", question="?", limits=[
@@ -1507,6 +1541,100 @@ def cmd_report() -> None:
     print("have exceeded its mandate, and for a law firm that is the worse failure.")
 
 
+def _neg_contract():
+    """Le contrat parametrique de la tache, ou l'exemple si la tache par defaut
+    n'en a pas - en le disant, parce qu'un resultat sur l'exemple n'est pas un
+    resultat sur un contrat."""
+    from . import parametric
+    f = taskctx.task_dir() / "parametric.json"
+    if f.exists():
+        return parametric.load(f.read_text()), str(f)
+    if taskctx.is_default():
+        from . import parametric_example
+        return parametric_example.contract(), "EXEMPLE (wm/parametric_example.py)"
+    raise SystemExit(f"{f} n'existe pas - lance `python -m wm.run model --elicit`")
+
+
+def cmd_neg(argv: list[str]) -> None:
+    """Simulateur de negociation. Voir wm/negotiation.py.
+
+        python -m wm.run neg --policies algo --n 5 --rounds 6          # gratuit
+        python -m wm.run neg --policies algo,llm_raw,llm_value --n 3 --rounds 4 --model z-ai/glm-4.6
+        python -m wm.run neg --report
+    """
+    from . import negotiation as ng
+    opts = {"policies": "algo", "n": "3", "rounds": str(ng.DEFAULT_ROUNDS),
+            "model": llm.FRONTIER, "them": "algo", "budget": "0.35", "seed0": "0"}
+    report_only = False
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--report":
+            report_only = True
+            i += 1
+            continue
+        k = a.lstrip("-")
+        if k in opts and i + 1 < len(argv):
+            opts[k] = argv[i + 1]
+            i += 2
+        else:
+            raise SystemExit(f"option inconnue : {a}")
+
+    out = taskctx.runs_dir() / "neg"
+    out.mkdir(parents=True, exist_ok=True)
+    if report_only:
+        rs = [json.loads(f.read_text()) for f in sorted(out.glob("*.json"))]
+        if not rs:
+            print(f"aucune negociation enregistree dans {out}")
+            return
+        print(f"{len(rs)} negociations dans {out}\n")
+        print(ng.summary(rs))
+        return
+
+    c, src = _neg_contract()
+    policies = [x.strip() for x in opts["policies"].split(",") if x.strip()]
+    n, T = int(opts["n"]), int(opts["rounds"])
+    seeds = list(range(int(opts["seed0"]), int(opts["seed0"]) + n))
+    need_llm = any(p_ != "algo" for p_ in policies) or opts["them"] == "llm"
+    call = None
+    if need_llm:
+        call = llm.model(opts["model"])
+        if call is None:
+            raise SystemExit("OPENROUTER_API_KEY manquante")
+        per_round = (1 if opts["them"] == "algo" else 2) * len([p_ for p_ in policies if p_ != "algo"])
+        per_round += (1 if opts["them"] == "llm" else 0) * len([p_ for p_ in policies if p_ == "algo"])
+        print(f"budget d'appels au plus : {n} adversaires x {T} tours x {per_round} = "
+              f"{n * T * per_round} appels, ~{len(c.params) * 120 // 4 + 600} tokens chacun")
+    from .render import _partie
+    try:
+        us_name, them_name = _partie("us"), _partie("them")
+    except Exception:                                           # noqa: BLE001
+        us_name, them_name = "notre client", "la partie adverse"
+
+    print(f"contrat : {src}  ({len(c.params)} variables)")
+    print(f"politiques : {', '.join(policies)}   adversaires : {n} ({opts['them']})   "
+          f"tours : {T}   budget de concession : {float(opts['budget']):.0%}\n")
+
+    def save(r):
+        f = out / f"{r['policy']}__{slug(opts['model']) if r['policy'] != 'algo' else 'none'}__cp{r['seed']}.json"
+        f.write_text(json.dumps(r, indent=1, ensure_ascii=False))
+        etat = ("accord tour %d par %s" % (r["rounds"], r["accepted_by"])) if r["agreed"] else "RUPTURE"
+        garde = "" if r["kept_us"] is None else f"  garde {r['kept_us']:.2f}  eux {r['share_them']:.2f}"
+        extra = f"  ids invalides {r['invalid_ids']}" if r["invalid_ids"] else ""
+        print(f"  {r['policy']:<10} adversaire {r['seed']:>2} ({r['them']['label']:<10}) {etat:<22}{garde}{extra}")
+
+    rs = ng.run_campaign(c, policies, seeds, T, call=call, them_mode=opts["them"],
+                         budget=float(opts["budget"]), us_name=us_name, them_name=them_name,
+                         on_result=save)
+    print()
+    print(ng.summary(rs))
+    if need_llm:
+        print()
+        print(llm.spend_report())
+    if src.startswith("EXEMPLE"):
+        print("\nCONTRAT D'EXEMPLE : ceci verifie la mecanique, pas l'hypothese.")
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if not a:
@@ -1568,6 +1696,8 @@ if __name__ == "__main__":
                   "needs the template/markup pair.")
     elif a[0] == "recheck":
         cmd_recheck()
+    elif a[0] == "neg":
+        cmd_neg(a[1:])
     elif a[0] == "report":
         cmd_report()
     else:
