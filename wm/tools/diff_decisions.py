@@ -1,42 +1,73 @@
-"""Compare les dispositions de deux arms, ou qu'ils se trouvent."""
+"""Compare ce que deux arms DECIDENT, a modele identique.
+
+    python3 wm/tools/diff_decisions.py A4 B1 [modele]
+
+La rubrique note si chaque point a ete traite. Elle ne dit pas si deux arms ont
+pris la meme position, et c'est pourtant la seule facon de voir si une
+representation change la negociation plutot que la note.
+
+LES DEUX ARMS DOIVENT TOURNER SUR LE MEME MODELE. Une premiere version prenait
+le premier run trouve par ordre alphabetique et comparait glm-4.5-air a
+glm-4.6 : les ecarts mesures etaient alors ceux des deux modeles, pas ceux des
+deux arms, et rien dans la sortie ne le disait.
+"""
 import json, sys, pathlib
+from collections import defaultdict
 
 ROOT = pathlib.Path("wm/runs")
 
 
-def trouve(cond, motif="z-ai"):
-    hits = [d for d in ROOT.rglob(f"{cond}__*__seed*")
-            if motif in d.name and (d / "decisions.json").exists()]
-    return sorted(hits)
+def inventaire():
+    """arm -> modele -> liste de dossiers."""
+    out = defaultdict(lambda: defaultdict(list))
+    for d in sorted(ROOT.rglob("*__*__seed*")):
+        if not (d / "decisions.json").exists():
+            continue
+        cond, modele, _ = d.name.split("__", 2)
+        out[cond][modele].append(d)
+    return out
 
 
 def charge(d):
     return {x["issue_id"]: x for x in json.loads((d / "decisions.json").read_text())}
 
 
+def mots(s):
+    return set(str(s).lower().split())
+
+
+inv = inventaire()
 a_name, b_name = (sys.argv[1], sys.argv[2]) if len(sys.argv) > 2 else ("A4", "B1")
-A, B = trouve(a_name), trouve(b_name)
-if not A or not B:
-    print(f"introuvable : {a_name}={len(A)} runs, {b_name}={len(B)} runs")
-    print("\nce qui existe :")
-    for d in sorted(ROOT.rglob("*__*__seed*")):
-        if (d / "decisions.json").exists():
-            print(f"   {d.relative_to(ROOT)}")
+voulu = sys.argv[3] if len(sys.argv) > 3 else None
+
+communs_modeles = sorted(set(inv.get(a_name, {})) & set(inv.get(b_name, {})))
+if voulu:
+    communs_modeles = [m for m in communs_modeles if voulu in m]
+
+if not communs_modeles:
+    print(f"AUCUN MODELE COMMUN entre {a_name} et {b_name}.")
+    print(f"  {a_name} tourne sur : {', '.join(sorted(inv.get(a_name, {}))) or 'rien'}")
+    print(f"  {b_name} tourne sur : {', '.join(sorted(inv.get(b_name, {}))) or 'rien'}")
+    print("\nComparer deux arms sur deux modeles differents mesure l'ecart entre")
+    print("les modeles, pas entre les arms. Relance l'arm manquant sur le modele")
+    print("de l'autre avant de comparer.")
     raise SystemExit(1)
 
-a, b = charge(A[0]), charge(B[0])
-print(f"{a_name}: {A[0].relative_to(ROOT)}")
-print(f"{b_name}: {B[0].relative_to(ROOT)}\n")
+modele = communs_modeles[-1]
+A, B = inv[a_name][modele][0], inv[b_name][modele][0]
+a, b = charge(A), charge(B)
+print(f"modele commun : {modele}")
+print(f"  {a_name}: {A.relative_to(ROOT)}")
+print(f"  {b_name}: {B.relative_to(ROOT)}")
+if len(communs_modeles) > 1:
+    print(f"  (aussi disponible : {', '.join(communs_modeles[:-1])})")
+print()
 
 communs = [k for k in a if k in b]
 diff = [k for k in communs if a[k]["disposition"] != b[k]["disposition"]]
 print(f"{len(diff)}/{len(communs)} points ou la DISPOSITION differe")
 for k in diff:
     print(f"  {k}  {a_name}={a[k]['disposition']:<8} {b_name}={b[k]['disposition']}")
-
-# une disposition identique peut cacher une contre-proposition tres differente
-def mots(s):
-    return set(str(s).lower().split())
 
 ecart = []
 for k in communs:
