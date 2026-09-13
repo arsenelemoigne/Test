@@ -10,6 +10,7 @@ The experiment runner.
     python -m wm.run prose                  # build + cache the prose twin (1 frontier call)
     python -m wm.run trial A4 <model> [n]   # one arm, n seeds
     python -m wm.run all [n]                # every arm x every model, n seeds
+    python -m wm.run gradeall               # grade every ungraded run (parallel)
     python -m wm.run report                 # table of results so far
 
 Everything lands in wm/runs/<condition>__<model>__seed<k>/.
@@ -145,10 +146,49 @@ def cmd_trial(condition: str, model_name: str, seeds: int = 1) -> None:
         print(m)
 
 
-def cmd_all(seeds: int = 3) -> None:
-    for model_name in llm.ARMS:
-        for c in conditions.CONDITIONS:
-            cmd_trial(c, model_name, seeds)
+def cmd_all(seeds: int = 3, workers: int = 5) -> None:
+    """All arms. Runs are independent, so they go concurrently."""
+    from concurrent.futures import ThreadPoolExecutor
+    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    jobs = [(c, m, s) for m in llm.ARMS for c in conditions.CONDITIONS for s in range(seeds)]
+    print(f"{len(jobs)} runs, {workers} at a time")
+
+    def go(job):
+        c, m, s = job
+        try:
+            return one_trial(c, m, llm.model(m), s, prose)
+        except Exception as e:                       # noqa: BLE001
+            print(f"  {c}/{m}/seed{s} FAILED: {str(e)[:140]}", flush=True)
+            return {"condition": c, "model": m, "seed": s, "failed": True}
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        done = list(pool.map(go, jobs))
+    bad = [d for d in done if d.get("failed")]
+    print(f"\n{len(done) - len(bad)}/{len(done)} runs succeeded")
+
+
+def cmd_gradeall(workers: int = 5) -> None:
+    """Grade every run that has not been graded yet."""
+    from concurrent.futures import ThreadPoolExecutor
+    dirs = [d for d in sorted(RUNS.glob("*__*__seed*"))
+            if (d / "meta.json").exists() and not list(d.glob("scores__*.json"))]
+    if not dirs:
+        print("nothing to grade")
+        return
+    print(f"grading {len(dirs)} runs with {llm.JUDGE}, {workers} at a time "
+          f"({len(dirs) * 29} judge calls)")
+
+    def go(d):
+        try:
+            s = grade(d, llm.JUDGE)
+            print(f"  {d.name:<52} {s['n_passed']}/{s['n_criteria']}"
+                  + (f"  ({s['n_unparseable']} unparseable)" if s.get("n_unparseable") else ""),
+                  flush=True)
+        except Exception as e:                       # noqa: BLE001
+            print(f"  {d.name:<52} FAILED: {str(e)[:110]}", flush=True)
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        list(pool.map(go, dirs))
 
 
 def stub(prompt: str, max_tokens: int = 16000) -> str:
@@ -304,6 +344,8 @@ if __name__ == "__main__":
                   int(a[3]) if len(a) > 3 else 1)
     elif a[0] == "all":
         cmd_all(int(a[1]) if len(a) > 1 else 3)
+    elif a[0] == "gradeall":
+        cmd_gradeall(int(a[1]) if len(a) > 1 else 5)
     elif a[0] == "report":
         cmd_report()
     else:

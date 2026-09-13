@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 TASK_JSON = Path(__file__).resolve().parent / "task" / "task.json"
@@ -41,32 +42,46 @@ def task_description() -> str:
     return f"{d['title']}\n\n{d['instructions']}"
 
 
-def score(deliverables: dict[str, str], judge) -> dict:
-    """deliverables: {filename: text}. judge: callable(prompt, max_tokens) -> str."""
+def score(deliverables: dict[str, str], judge, workers: int = 8) -> dict:
+    """
+    deliverables: {filename: text}. judge: callable(prompt, max_tokens) -> str.
+
+    Criteria are graded concurrently. Each judge call is independent by design
+    (one criterion, no shared state), so this changes wall-clock only, not the
+    result. 29 criteria x 30 runs = 870 calls; serially that is hours.
+    """
     output = "\n\n".join(f"===== {k} =====\n{v}" for k, v in deliverables.items())
     task = task_description()
     crit = criteria()
-    results = []
-    n_unparseable = 0
-    for i, c in enumerate(crit, 1):
+
+    def grade_one(c: dict) -> dict:
         # 4000, not 1500: a reasoning judge spends most of its budget thinking and
         # returns an empty string if the cap is tight.
-        raw = judge(
-            PROMPT.format(task=task, title=c["title"], match=c["match_criteria"], output=output),
-            max_tokens=4000,
-        ) or ""
+        try:
+            raw = judge(
+                PROMPT.format(task=task, title=c["title"],
+                              match=c["match_criteria"], output=output),
+                max_tokens=4000,
+            ) or ""
+        except Exception as e:                       # noqa: BLE001
+            raw = ""
+            print(f"    {c['id']} judge error: {str(e)[:110]}", flush=True)
         m = re.search(r"\{.*\}", raw, re.S)
         try:
             v = json.loads(m.group(0)) if m else None
         except json.JSONDecodeError:
             v = None
-        if v is None:
-            n_unparseable += 1
+        bad = v is None
+        if bad:
             v = {"verdict": "fail", "reasoning": f"JUDGE RETURNED NO JSON (len={len(raw)})"}
-        results.append({"id": c["id"], "title": c["title"],
-                        "verdict": v.get("verdict", "fail"),
-                        "reasoning": v.get("reasoning", "")})
-        print(f"    {i:>2}/{len(crit)} {c['id']} {v.get('verdict','fail')}", flush=True)
+        return {"id": c["id"], "title": c["title"],
+                "verdict": v.get("verdict", "fail"),
+                "reasoning": v.get("reasoning", ""), "_bad": bad}
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(grade_one, crit))
+
+    n_unparseable = sum(1 for r in results if r.pop("_bad"))
     if n_unparseable:
         print(f"  WARNING: {n_unparseable}/{len(results)} judge replies were unparseable. "
               f"Scores are NOT trustworthy - switch WM_JUDGE to a non-reasoning model "
