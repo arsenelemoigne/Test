@@ -3,6 +3,7 @@ The experiment runner.
 
     python -m wm.run preflight              # check key + model slugs (3 tiny calls)
     python -m wm.run selftest               # exercise the whole pipeline offline
+    python -m wm.run bridge                 # value vs NO contract, Shapley per clause
     python -m wm.run cardinal               # money view + Cox diagnostic + packages
     python -m wm.run validate [reps]        # groundedness, stability, model agreement
     python -m wm.run autoschema             # FULL contract, no playbook: schema+weights+value
@@ -352,6 +353,54 @@ def cmd_autoschema() -> None:
     print(llm.spend_report())
 
 
+def cmd_bridge() -> None:
+    """What is the contract worth against having no contract at all?
+
+    Elicits, per clause, the value with it and the value under the default rule
+    that would apply without it; finds the pairs whose value is joint; then
+    attributes the difference across clauses by Shapley value.
+    """
+    from . import autoschema, bridge
+    T = Path(__file__).resolve().parent / "task"
+    RUNS.mkdir(parents=True, exist_ok=True)
+    doc = (T / "luminos-first-markup-dsa.txt").read_text()
+    PARTY = "Carden Analytics (the data discloser)"
+    CONTEXT = ("a B2B data sharing agreement; Carden licenses a pseudonymised "
+               "consumer dataset to Luminos for benchmarking analytics. Assume a "
+               "mid-size contract value and a US regulatory footprint.")
+    enc = llm.model(llm.FRONTIER)
+
+    print("enumerating decisions ...", flush=True)
+    schema = autoschema.build_schema(doc, enc)
+    print(f"{len(schema)} decisions; eliciting default rules and values ...", flush=True)
+    effects = bridge.elicit(schema, enc, PARTY, CONTEXT)
+    print(f"{len(effects)} valued; finding joint-value pairs ...", flush=True)
+    inter = bridge.elicit_interactions(effects, enc)
+    print(f"{len(inter)} interactions\n", flush=True)
+    (RUNS / "_bridge.json").write_text(bridge.dump(effects, inter))
+
+    rel = bridge.Relationship(effects, inter)
+    attrs = bridge.shapley(rel, samples=6000)
+    print(bridge.waterfall(rel, attrs))
+    print()
+
+    # the biggest adverse contributors, reverted to their default rule
+    worst = [a for a in attrs if a.shapley < 0][:4]
+    changes = [(a.id, rel.clauses[a.id].without_clause, f"revert {a.name[:34]}")
+               for a in worst]
+    print(bridge.ladder(rel, changes))
+    print()
+    low = [c for c in effects if not c.confident]
+    print(f"{len(low)}/{len(effects)} figures marked low confidence.")
+    print()
+    print("DEFAULT RULES the model identified (the baseline is a legal question,")
+    print("and these are its answers - check them):")
+    for c in sorted(effects, key=lambda x: x.naive_delta)[:10]:
+        print(f"  {c.name[:38]:<40}without it: {c.default_rule[:60]}")
+    print()
+    print(llm.spend_report())
+
+
 def cmd_cardinal() -> None:
     """Money-denominated view: expected annual cost per clause, the Cox
     diagnostic on the ordinal model, and the non-modular packages."""
@@ -488,6 +537,8 @@ if __name__ == "__main__":
         cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
+    elif a[0] == "bridge":
+        cmd_bridge()
     elif a[0] == "cardinal":
         cmd_cardinal()
     elif a[0] == "validate":
