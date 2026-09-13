@@ -956,6 +956,24 @@ def cmd_tighten() -> None:
     print(issuegen.summary(issues))
 
 
+def cmd_audit() -> None:
+    """Check every generated limit against the memo it was read from. Free."""
+    from . import issuegen, taskctx
+    T, f = taskctx.task_dir(), taskctx.issues_file()
+    if not f.exists():
+        print(f"ABORT: {f} does not exist. Run `issues` first.")
+        return
+    rf = T / "_roles.json"
+    r = json.loads(rf.read_text()) if rf.exists() else {}
+    memo = "\n\n".join((T / (Path(n).stem + ".txt")).read_text()
+                        for n in (r.get("memo") or [])
+                        if (T / (Path(n).stem + ".txt")).exists())
+    if not memo:
+        print("ABORT: no memo text found for this task.")
+        return
+    print(issuegen.audit(issuegen.load(f.read_text()), memo))
+
+
 def cmd_issues() -> None:
     """Read the client's mandate and the counterparty markup; produce the issue
     list and its machine-checkable limits. One model call, then cached."""
@@ -1116,6 +1134,8 @@ if __name__ == "__main__":
     elif a[0] == "issues":
         if len(a) > 1 and a[1] in ("--tighten", "tighten"):
             cmd_tighten()
+        elif len(a) > 1 and a[1] in ("--audit", "audit"):
+            cmd_audit()
         else:
             cmd_issues()
     elif a[0] == "drift":

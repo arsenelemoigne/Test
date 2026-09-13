@@ -366,3 +366,111 @@ def unsatisfiable(issues: list[GenIssue]) -> list[tuple[str, str, str]]:
                 out.append((i.id, i.name,
                             f"min {b['min']:g} > max {b['max']:g} {unit}s"))
     return out
+
+
+# --- provenance ------------------------------------------------------------
+
+def audit(issues: list[GenIssue], memo: str) -> str:
+    """Does every limit's number actually appear in the mandate it came from?
+
+    The limits were read out of the memo BY A MODEL. That is one model call
+    standing between the client's stated authority and a metric reported as
+    deterministic. This checks the one thing that can be checked without
+    judgement: a numeric limit whose value appears nowhere in the source is
+    fabricated, and a require_phrase whose phrase appears nowhere is too.
+
+    It cannot tell you a number was read in the right DIRECTION - an 18 that is
+    a floor recorded as a ceiling passes this test. For that, read the quoted
+    line.
+    """
+    import re as _re
+    low = memo.lower()
+    from .abstraction import _WORDS
+    words = {v: k for k, v in _WORDS.items()}
+    lines = memo.splitlines()
+
+    def _show(ln: str, i: int) -> str:
+        return ln[max(0, i - 70):i + 95].strip()
+
+    def find_phrase(needle: str) -> str | None:
+        for ln in lines:
+            j = ln.lower().find(needle)
+            if j >= 0:
+                return _show(ln, j)
+        return None
+
+    def find_quantity(v, unit: str) -> str | None:
+        """The number must sit NEXT TO its unit.
+
+        A bare search for "12" matches "June 12, 2025" and reports a warranty
+        limit as sourced. The checker only ever reads a number adjacent to its
+        unit, so the audit must look for the same thing.
+        """
+        try:
+            iv = int(float(v))
+        except (TypeError, ValueError):
+            return None
+        u = _re.escape((unit or "").lower().rstrip("s"))
+        alts = [_re.escape(f"{iv:g}")]
+        if iv in words:
+            alts.append(_re.escape(words[iv]))
+        # "18 months", "18-month", "eighteen (18) month", "eighteen months"
+        pat = _re.compile(rf"(?:{'|'.join(alts)})\s*(?:\(\d+\))?\s*[-\u2013 ]?\s*{u}",
+                          _re.I)
+        for ln in lines:
+            m = pat.search(ln)
+            if m:
+                return _show(ln, m.start())
+        return None
+
+    def find_money(v) -> str | None:
+        try:
+            iv = int(float(v))
+        except (TypeError, ValueError):
+            return None
+        for cand in (f"{iv:,}", f"{iv}", f"{iv/1e6:g} million"):
+            hit = find_phrase(cand.lower())
+            if hit:
+                return hit
+        return None
+
+    rows, missing = [], []
+    for i in issues:
+        for l in i.limits:
+            k = l.get("kind")
+            if k in ("max_quantity", "min_quantity", "max_money"):
+                v = l.get("value")
+                hit = (find_money(v) if k == "max_money"
+                       else find_quantity(v, l.get("unit", "")))
+                unit = "" if k == "max_money" else f" {l.get('unit','')}"
+                rows.append((i.id, i.name, f"{k}={v}{unit}", hit))
+                if hit is None:
+                    missing.append((i.id, i.name, f"{k}={v}"))
+            elif k == "require_phrase":
+                for ph in l.get("phrases", []):
+                    hit = find_phrase(str(ph).lower())
+                    rows.append((i.id, i.name, f'require "{ph}"', hit))
+                    if hit is None:
+                        missing.append((i.id, i.name, f'require "{ph}"'))
+            elif k == "forbid_phrase":
+                for ph in l.get("phrases", []):
+                    hit = find_phrase(str(ph).lower())
+                    rows.append((i.id, i.name, f'forbid "{ph}"', hit))
+
+    checkable = [r for r in rows if r[2].startswith(("max", "min", "require"))]
+    L = [f"LIMIT AUDIT - {len(checkable)} limits carry a value or phrase that must",
+         f"appear in the mandate. {len(checkable) - len(missing)} do; "
+         f"{len(missing)} do not.", "=" * 76, ""]
+    for iid, name, what, hit in rows:
+        if hit:
+            L.append(f"  OK    {iid} {what[:26]:<28} \u2026{hit[:78]}\u2026")
+        else:
+            L.append(f"  ????  {iid} {what[:26]:<28} NOT FOUND IN THE MEMO")
+    if missing:
+        L += ["", f"{len(missing)} limits cite something the memo does not contain.",
+              "Each is either a paraphrase, a unit the memo states differently, or",
+              "a number the model invented. Read those sections yourself before",
+              "quoting any figure that depends on them."]
+    L += ["", "This proves a number is PRESENT, not that it was read in the right",
+          "direction. A floor recorded as a ceiling passes. Read the quoted line."]
+    return "\n".join(L)
