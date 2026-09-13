@@ -2,6 +2,7 @@
 The experiment runner.
 
     python -m wm.run selftest               # exercise the whole pipeline offline
+    python -m wm.run gravity                # per-issue gravity from the authority memo
     python -m wm.run blind                  # lexical change detection, no API calls
     python -m wm.run encode                 # tied encoder on both docs -> latent diff
     python -m wm.run inputs                 # print each condition's input, no API calls
@@ -153,6 +154,7 @@ def stub(prompt: str, max_tokens: int = 16000) -> str:
         "I12": ("MODIFY", "Use limited to aggregated Benchmarking Reports; no ML training on the Shared Data Set."),
         "I13": ("REJECT", "Delaware governing law maintained."),
         "I14": ("REJECT", "Delaware Court of Chancery venue maintained."),
+        "I15": ("REJECT", "2-year initial term, 1-year renewals and 90 days' non-renewal notice retained."),
     }
     rows = []
     for i in ISSUES:
@@ -164,6 +166,7 @@ def stub(prompt: str, max_tokens: int = 16000) -> str:
 
 def cmd_selftest() -> None:
     """Exercise every stage offline. No network, no key, no spend."""
+    from .abstraction import ISSUES
     prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else "(prose twin not built)"
     ok = True
     for c in conditions.CONDITIONS:
@@ -173,7 +176,7 @@ def cmd_selftest() -> None:
         viols = check(decisions)
         r = render.redline(decisions)
         n = render.cover_note(decisions)
-        good = len(decisions) == 14 and not viols and len(r) > 500 and len(n) > 500
+        good = len(decisions) == len(ISSUES) and not viols and len(r) > 500 and len(n) > 500
         ok &= good
         print(f"  {c:<4} prompt {len(prompt):>7,} chars | {len(decisions):>2} decisions | "
               f"{len(viols)} violations | redline {len(r):,} | note {len(n):,}  "
@@ -205,6 +208,13 @@ def cmd_encode() -> None:
     print(text)
     print()
     print(llm.spend_report())
+
+
+def cmd_gravity() -> None:
+    """Per-issue gravity, read from the client's authority memo. No API calls."""
+    from . import gravity
+    from .abstraction import ISSUES
+    print(gravity.report({i.id: i.name for i in ISSUES}))
 
 
 def cmd_blind() -> None:
@@ -254,6 +264,8 @@ if __name__ == "__main__":
         cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
+    elif a[0] == "gravity":
+        cmd_gravity()
     elif a[0] == "blind":
         cmd_blind()
     elif a[0] == "prose":

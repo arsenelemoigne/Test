@@ -94,6 +94,9 @@ SLOTS: list[Slot] = [
          "models permitted, and who owns them?"),
     Slot("I13", "Governing law", "15.1", "Which state's law governs?"),
     Slot("I14", "Venue", "15.2", "Where must proceedings be brought?"),
+    Slot("I15", "Term, renewal and non-renewal notice", "12.1, 12.2, 12.3",
+         "How long is the initial term, how long is each automatic renewal, and how much "
+         "notice is needed to stop renewal?"),
 ]
 
 SLOTS_BY_ID = {s.id: s for s in SLOTS}

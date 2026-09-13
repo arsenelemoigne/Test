@@ -214,6 +214,17 @@ ISSUES: list[Issue] = [
                   "preserved. Departure from Delaware requires escalation.",
         hard_limit="venue_state == 'Delaware'",
     ),
+    Issue(
+        id="I15", name="Term, renewal and non-renewal notice", section="12.1, 12.2, 12.3",
+        ours="2-year initial term; 1-year automatic renewals; 90 days' non-renewal notice",
+        theirs="3-year initial term; 2-year automatic renewals; 180 days' non-renewal notice",
+        theirs_quote="an initial period of {-two (2) years-} {+three (3) years+} ... successive "
+                     "periods of {-one (1) year-} {+two (2) years+} ... at least {-ninety (90)-} "
+                     "{+one hundred eighty (180)+} days prior",
+        authority="Memo s.12 covers initial term, renewal periods and non-renewal notice. "
+                  "Longer terms with longer notice windows lengthen lock-in and delay exit.",
+        hard_limit=None,
+    ),
 ]
 
 ISSUES_BY_ID = {i.id: i for i in ISSUES}
