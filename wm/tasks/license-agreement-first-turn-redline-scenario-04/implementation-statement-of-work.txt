@@ -1,0 +1,468 @@
+STATEMENT OF WORK NO. 1
+IMPLEMENTATION SERVICES
+SOW Reference Number: SOW-001
+Executed pursuant to the Veridian OnePlatform Master License Agreement (the "Agreement")
+between
+VERIDIAN SYSTEMS CORP. ("Licensor")
+and
+HALCYON INDUSTRIAL HOLDINGS, LLC ("Licensee")
+CONFIDENTIAL — This document contains proprietary and confidential information of Veridian Systems Corp. and Halcyon Industrial Holdings, LLC. Distribution is limited to authorized representatives of the parties.
+This Statement of Work No. 1 ("SOW" or "SOW-001") is entered into as of the Effective Date of the Agreement (or as otherwise specified upon execution of this SOW) and is executed pursuant to, and is incorporated by reference into, the Veridian OnePlatform Master License Agreement dated as of such Effective Date (the "Agreement") between Veridian Systems Corp., a Delaware corporation with principal offices at 2100 Ridgeview Boulevard, Suite 500, Austin, Texas 78746 ("Licensor"), and Halcyon Industrial Holdings, LLC, a Delaware limited liability company with principal offices at 8200 San Jacinto Parkway, Building D, Houston, Texas 77056 ("Licensee"). Licensor and Licensee are each referred to herein individually as a "Party" and collectively as the "Parties."
+Capitalized terms used but not otherwise defined in this SOW shall have the meanings ascribed to such terms in the Agreement. In the event of any conflict or inconsistency between the terms and conditions of this SOW and the terms and conditions of the Agreement, the Agreement shall govern and control, except where this SOW expressly and specifically states an intention to override a particular section of the Agreement, as permitted by Section 3.2 of the Agreement. For the avoidance of doubt, nothing in this SOW is intended to amend, modify, or supersede any provision of the Agreement unless expressly stated herein with specific reference to the provision of the Agreement being overridden.
+Right-click to update Table of Contents
+SECTION 1 — BACKGROUND AND OBJECTIVES
+1.1 Purpose.  The purpose of this SOW is to define the scope, responsibilities, milestones, deliverables, fees, and other terms governing the implementation and deployment of the Veridian OnePlatform (the "Platform") across Licensee's North American operations (the "Implementation Services"). The Implementation Services encompass the full lifecycle of activities necessary to achieve production go-live readiness, including, without limitation, the following workstreams: (a) discovery and current-state assessment; (b) functional and technical design; (c) Platform configuration; (d) data migration from Licensee's existing legacy systems; (e) integration of the Platform with Licensee's identified third-party systems; (f) system integration testing, user acceptance testing, and performance testing; (g) end-user and administrator training; and (h) production go-live and post-go-live hypercare support.
+This SOW, together with its exhibits and any Change Orders executed hereunder, constitutes the complete description of the Implementation Services to be performed by Licensor for Licensee under the Agreement.
+1.2 Business Context
+Halcyon Industrial Holdings, LLC is a specialty chemicals manufacturer operating multiple production facilities, distribution centers, and administrative offices across North America. Licensee's current operational technology landscape comprises a heterogeneous collection of legacy enterprise resource planning ("ERP") systems, point solutions, and manual processes that have been accumulated through organic growth and prior acquisitions. This fragmented landscape results in duplicative data entry, inconsistent business processes, limited visibility into cross-facility operations, and elevated compliance risk.
+The deployment of the Veridian OnePlatform is intended to consolidate and standardize Licensee's core ERP functions across all of Licensee's North American facilities, thereby achieving a single, unified platform for the management of the following functional areas:
+(a) Finance and Accounting, including general ledger, accounts payable, accounts receivable, fixed assets, and financial consolidation;
+(b) Supply Chain Management, including demand planning, procurement requisitioning, and supplier collaboration;
+(c) Manufacturing Execution, including production scheduling, shop floor control, batch processing, and quality management;
+(d) Inventory and Warehouse Management, including real-time inventory tracking, warehouse operations, and shipping/receiving;
+(e) Procurement, including strategic sourcing, purchase order management, and contract management;
+(f) Human Capital Management, including core HR, payroll, benefits administration, time and attendance, and talent management; and
+(g) Reporting and Analytics, including operational dashboards, financial reporting, and executive-level business intelligence.
+By consolidating these functions onto a single platform, Licensee expects to achieve improved operational efficiency, enhanced data integrity, stronger regulatory compliance posture, and more timely and accurate decision-making across its organization.
+1.3 Key Objectives
+The key objectives of the Implementation Services described in this SOW are as follows:
+(a) Deployment of Core Platform Modules. Deploy the core Platform modules identified in Section 2.1 to support up to one thousand five hundred (1,500) Named Users, consistent with the Named User Cap set forth in Schedule A of the Agreement, across Licensee's in-scope North American facilities identified in Exhibit A to this SOW.
+(b) Legacy Data Migration. Extract, transform, and load designated categories of legacy data from Licensee's existing systems into the Platform, including master data, open transactional data, and historical transactional data, as further described in Section 2.4, in a manner that preserves data integrity and supports Licensee's ongoing business operations and regulatory obligations.
+(c) Third-Party System Integration. Design, develop, test, and deploy integration connectors between the Platform and Licensee's identified third-party systems, as further described in Section 2.3, using the Platform's standard application programming interfaces ("APIs") and integration framework per Schedule B of the Agreement.
+(d) Production Go-Live Readiness. Achieve production go-live readiness for the Platform within the implementation timeline set forth in Section 4 of this SOW, including the successful completion of all testing, training, and cutover activities necessary to support Licensee's transition from legacy systems to the Platform in a controlled and risk-managed manner.
+SECTION 2 — SCOPE OF IMPLEMENTATION SERVICES
+2.1 In-Scope Modules
+The Implementation Services cover the configuration, deployment, and go-live of the following Platform modules (collectively, the "In-Scope Modules"):
+Module
+Functional Area
+Description
+Finance & Accounting
+General Ledger, AP, AR, Fixed Assets, Consolidation
+Core financial operations, period-end close, multi-entity consolidation, and financial reporting
+Supply Chain Management
+Demand Planning, Procurement Requisitioning, Supplier Collaboration
+End-to-end supply chain visibility, demand forecasting, and supplier relationship management
+Manufacturing Execution
+Production Scheduling, Shop Floor Control, Batch Processing, Quality Management
+Manufacturing operations management, including batch tracking and quality control specific to specialty chemicals processes
+Inventory & Warehouse Management
+Real-Time Inventory, Warehouse Operations, Shipping/Receiving
+Inventory tracking across multiple storage locations, warehouse task management, and logistics coordination
+Procurement
+Strategic Sourcing, Purchase Orders, Contract Management
+Procurement lifecycle management from requisition through payment, including vendor management and contract compliance
+Human Capital Management
+Core HR, Payroll, Benefits, Time & Attendance, Talent Management
+Employee lifecycle management, payroll processing, benefits administration, and workforce planning
+Reporting & Analytics
+Operational Dashboards, Financial Reporting, Business Intelligence
+Cross-module reporting, configurable dashboards, and analytics capabilities leveraging Platform-native tools
+Each In-Scope Module will be configured in accordance with Licensee's business requirements as documented and approved during the Design Phase (Phase 2) described in Section 4.2. Configuration will leverage the Platform's standard configuration capabilities; no modifications to the Platform's core source code are contemplated within the scope of this SOW. To the extent any requirement identified during the Discovery or Design Phase cannot be addressed through standard Platform configuration and requires custom development or Platform modification, such requirement shall be addressed through the Change Order process described in Section 7.
+2.2 In-Scope Facilities
+The Implementation Services are scoped to cover Licensee's North American facilities as specifically identified in Exhibit A to this SOW (collectively, the "In-Scope Facilities"). The In-Scope Facilities include Licensee's manufacturing plants, distribution centers, and administrative offices located within the United States, Canada, and Mexico that are designated for deployment of the Platform.
+Licensee's corporate headquarters, located at 8200 San Jacinto Parkway, Building D, Houston, Texas 77056, shall serve as the primary implementation hub for the duration of the Implementation Services. The Houston headquarters will house the core project team workspace, serve as the primary location for on-site workshops and design sessions, and function as the command center for go-live cutover activities.
+The specific names, addresses, and applicable time zones of all In-Scope Facilities are enumerated in Exhibit A. To the extent any facility is added to or removed from the In-Scope Facilities list after execution of this SOW, such change shall be effected through a Change Order pursuant to Section 7.
+2.3 In-Scope Integrations
+The Implementation Services include the design, development, testing, and deployment of integration connectors between the Platform and the following categories of Licensee third-party systems (collectively, the "In-Scope Integrations"):
+(a) Laboratory Information Management System ("LIMS"). Integration with Licensee's existing LIMS to enable bi-directional data exchange of quality testing results, batch release data, certificates of analysis, and material specifications between the LIMS and the Platform's Manufacturing Execution and Quality Management modules.
+(b) Transportation Management System ("TMS"). Integration with Licensee's existing TMS to enable the exchange of shipment planning data, carrier assignments, freight cost data, and shipment status updates between the TMS and the Platform's Supply Chain Management and Inventory & Warehouse Management modules.
+(c) Corporate Banking and Payment Platforms. Integration with Licensee's corporate banking partners and electronic payment platforms to enable automated payment file generation, bank statement imports, payment status reconciliation, and cash management data exchange between Licensee's banking infrastructure and the Platform's Finance & Accounting module.
+(d) Other Integrations. Any additional third-party system integrations identified during the Discovery Phase (Phase 1) that are mutually agreed upon by the Parties for inclusion in the implementation scope, subject to the Change Order process to the extent such additional integrations materially impact the fees, timeline, or resource requirements set forth in this SOW.
+All In-Scope Integrations will be developed using the Platform's standard APIs and integration framework as described in Schedule B of the Agreement. Licensor will be responsible for the design, development, and testing of the Platform-side integration connectors. Licensee will be responsible for any configuration or modification required on the third-party system side to enable data exchange with the Platform, except as otherwise specifically agreed in writing.
+2.4 Data Migration
+The Implementation Services include the extraction, transformation, and loading ("ETL") of designated categories of Licensee legacy data from Licensee's existing systems into the Platform (the "Data Migration"). The Data Migration scope encompasses the following categories of data:
+(a) Master Data. Customer master records, vendor/supplier master records, material master records (including chemical compound identifiers, hazard classifications, and regulatory attributes), bills of materials, routings, chart of accounts, cost centers, profit centers, organizational hierarchy structures, and employee master records.
+(b) Open Transactional Data. Open purchase orders, open sales orders, open production orders, open accounts payable invoices, open accounts receivable invoices, open inventory commitments, and other in-flight transactions that must be migrated to ensure continuity of business operations at the time of go-live cutover.
+(c) Historical Transactional Data. Completed transactional data for a historical period to be mutually agreed upon by the Parties during the Discovery Phase (Phase 1), based on Licensee's business requirements, regulatory retention obligations, and data volume considerations. Unless otherwise agreed, the target historical migration period is anticipated to be twenty-four (24) months of transactional history preceding the go-live date.
+Licensor will develop and execute data migration scripts to perform the ETL processes. Licensee will be responsible for providing Licensor with access to legacy systems and data, performing data cleansing and enrichment activities as mutually agreed, and validating the accuracy and completeness of migrated data at each stage of the migration process. The Data Migration will include a minimum of two (2) mock conversion runs prior to the final cutover conversion, as described in Section 4.
+2.5 Exclusions.  The following items are expressly excluded from the scope of the Implementation Services under this SOW:
+(a) Custom Hardware Procurement. Procurement, installation, or configuration of any hardware, including servers, workstations, network equipment, barcode scanners, printers, or other physical devices, whether at Licensee's data centers, facilities, or end-user locations. Licensee is solely responsible for procuring and maintaining all hardware necessary to operate the Platform in accordance with the Platform's published technical requirements.
+(b) Third-Party System Modifications. Any modifications, upgrades, patches, configuration changes, or development work on Licensee's existing third-party systems (including the LIMS, TMS, and banking platforms) beyond the development of Platform-side integration connectors described in Section 2.3. Licensee is responsible for engaging the respective third-party system vendors to perform any work required on their systems to support integration with the Platform.
+(c) Regulatory Filings. Preparation, submission, or management of any regulatory filings, permits, licenses, or compliance submissions with governmental or regulatory authorities, including but not limited to filings with the U.S. Environmental Protection Agency, the Occupational Safety and Health Administration, the U.S. Securities and Exchange Commission, or any comparable state, provincial, or federal agency.
+(d) Ongoing Managed Services. Ongoing application management services, system administration, help desk support, or Platform hosting services following the conclusion of the Hypercare period described in Section 4.6. Such services, if desired by Licensee, shall be the subject of a separate agreement or statement of work to be negotiated by the Parties.
+(e) Non-North American Facilities. Any services relating to Licensee's operations, facilities, or personnel located outside of North America (defined for purposes of this SOW as the United States of America, Canada, and Mexico). Deployment of the Platform to facilities or operations outside North America, if desired by Licensee, shall be addressed through a separate statement of work.
+(f) Custom Code Development. Development of custom application code, custom modules, or modifications to the Platform's core source code, unless specifically agreed through a Change Order. The Implementation Services are scoped on the basis of leveraging the Platform's standard configuration capabilities.
+SECTION 3 — ROLES AND RESPONSIBILITIES
+3.1 Licensor Project Team
+Licensor shall provide a dedicated project team to perform the Implementation Services (the "Licensor Project Team"). The Licensor Project Team shall include, at a minimum, the following roles:
+(a) Licensor Project Manager. A single, dedicated point of contact responsible for day-to-day coordination and management of the Implementation Services, including project planning, status reporting, resource coordination, risk and issue management, and communication with the Licensee Project Manager and the Joint Steering Committee. The Licensor Project Manager will be designated as Key Personnel per Section 8.2.
+(b) Solution Architects. One or more senior technical consultants responsible for Platform configuration design, technical architecture, and solution design across all In-Scope Modules. The Lead Solution Architect will be designated as Key Personnel per Section 8.2.
+(c) Data Migration Lead. A dedicated resource responsible for the design, development, and execution of the Data Migration strategy and scripts, including oversight of mock conversion runs and the final cutover conversion. The Data Migration Lead will be designated as Key Personnel per Section 8.2.
+(d) Integration Specialists. One or more technical resources responsible for the design, development, and testing of the In-Scope Integration connectors, including API configuration, data mapping, and interface testing.
+(e) Training Lead. A dedicated resource responsible for the design and delivery of train-the-trainer sessions and end-user training materials, as described in Section 4.5.
+(f) Functional Consultants. Module-specific consultants with expertise in the relevant functional areas (Finance, Supply Chain, Manufacturing, HR, etc.) responsible for requirements gathering, business process mapping, configuration execution, and testing support.
+During peak implementation phases (anticipated to include Phases 3 and 4), Licensor shall staff the Licensor Project Team with no fewer than eight (8) dedicated resources assigned to the Implementation Services on a substantially full-time basis. Licensor retains the right to substitute individual members of the Licensor Project Team with personnel of equivalent qualifications and experience, subject to the Key Personnel provisions set forth in Section 8.2. Licensor shall notify Licensee of any non-Key Personnel substitution within a commercially reasonable period.
+3.2 Licensee Project Team
+Licensee shall establish and maintain a dedicated project team to support and participate in the Implementation Services (the "Licensee Project Team"). The Licensee Project Team shall include, at a minimum, the following roles:
+(a) Executive Sponsor. Brian Kasprzak, Chief Information Officer, Halcyon Industrial Holdings, LLC, shall serve as the Executive Sponsor for the implementation. The Executive Sponsor is responsible for providing strategic direction, securing organizational commitment and resources, resolving escalated issues, and participating in the Joint Steering Committee as described in Section 3.3.
+(b) Licensee Project Manager. A single, dedicated point of contact on the Licensee side, responsible for coordinating Licensee resources, managing Licensee-side tasks and deliverables, facilitating Licensee decision-making, and serving as the primary day-to-day counterpart to the Licensor Project Manager.
+(c) Module Leads / Subject Matter Experts ("SMEs"). Licensee shall designate one or more Module Leads or SMEs for each In-Scope Module functional area. Module Leads and SMEs are responsible for participating in requirements workshops, validating functional design documents, providing input on business process configuration, participating in UAT, and supporting end-user training. Module Leads and SMEs should have deep operational knowledge of their respective functional areas and sufficient organizational authority to make or recommend configuration decisions on behalf of Licensee.
+(d) IT Technical Staff. Licensee shall provide IT technical personnel with sufficient knowledge and access rights to support legacy system data extraction, network and infrastructure provisioning, security configuration, and technical troubleshooting during the implementation. IT technical staff will serve as the primary point of contact for any Licensee infrastructure matters that may impact the Implementation Services.
+Licensee shall ensure the timely availability of all Licensee Project Team personnel and shall provide Licensor with reasonable access to Licensee's facilities, systems, data, documentation, and information as necessary for Licensor to perform the Implementation Services. Licensee acknowledges that the timely performance of the Implementation Services is dependent upon Licensee's fulfillment of its staffing and access obligations as set forth in this Section 3.2 and Section 3.4.
+3.3 Governance Structure
+The Parties shall establish a Joint Steering Committee (the "JSC") to provide executive oversight and governance of the Implementation Services. The JSC shall be composed of the following members, at a minimum:
+(a) Licensee Executive Sponsor (Brian Kasprzak, CIO);
+(b) Licensor Engagement Lead (a senior Licensor executive with authority over the engagement);
+(c) Licensee Project Manager;
+(d) Licensor Project Manager; and
+(e) Such additional senior representatives of each Party as either Party may designate from time to time.
+The JSC shall meet biweekly (every two weeks) or at such other frequency as the Parties may mutually agree in writing. Meetings may be conducted in person or via video conference as circumstances require. The Licensor Project Manager shall prepare and distribute meeting agendas at least two (2) business days in advance of each JSC meeting and shall circulate written meeting minutes within three (3) business days following each meeting.
+The JSC shall have the following authority and responsibilities:
+(a) Review and approve milestone deliverable sign-offs;
+(b) Review project status, risks, and issues escalated by either Project Manager;
+(c) Make decisions on escalated matters that cannot be resolved at the project team level;
+(d) Review and approve Change Orders per Section 7 of this SOW and Section 3.3 of the Agreement;
+(e) Conduct the go/no-go decision for production go-live per Milestone 6.2; and
+(f) Execute the Final Project Completion sign-off per Milestone 6.6.
+Decisions of the JSC shall be made by mutual agreement of the Parties. In the event the JSC is unable to reach agreement on a matter within ten (10) business days, such matter shall be escalated pursuant to the dispute resolution provisions of the Agreement.
+3.4 Licensee Dependencies
+Licensor's ability to perform the Implementation Services in accordance with the milestones and timelines set forth in this SOW is contingent upon Licensee's timely fulfillment of the following obligations (collectively, "Licensee Dependencies"):
+(a) Legacy Data Access. Timely provision of access to Licensee's legacy systems and data, in formats reasonably suitable for extraction and migration, as needed for the Data Migration and integration workstreams.
+(b) Subject Matter Expert Availability. Timely availability of Licensee Module Leads and SMEs for participation in requirements workshops, design review sessions, configuration validation, UAT, and training activities, as scheduled in the Implementation Plan.
+(c) Infrastructure Readiness. Provisioning and maintenance of Licensee's network infrastructure, hardware, and technical environments in accordance with the Platform's published technical requirements per Schedule B of the Agreement, including ensuring adequate bandwidth, firewall configurations, and security settings to support Platform access.
+(d) Decision-Making. Timely decision-making by Licensee's authorized representatives on design choices, configuration options, business process decisions, and milestone approvals, within the timeframes specified in the Implementation Plan or, if no specific timeframe is specified, within five (5) business days of request.
+(e) Facility Access. Provision of reasonable access to In-Scope Facilities, including workspace, network connectivity, and building access credentials, for Licensor personnel performing on-site Implementation Services.
+(f) Third-Party Coordination. Coordination with Licensee's third-party system vendors to ensure that third-party systems are available and configured as necessary to support the In-Scope Integrations and Data Migration activities.
+(g) Data Cleansing. Performance of data cleansing and enrichment activities on legacy data as mutually agreed during the Discovery Phase, to ensure that data presented for migration meets the agreed-upon quality standards.
+(h) Organizational Change Management. Management of internal communications, stakeholder alignment, and organizational change management activities necessary to support end-user adoption of the Platform. While Licensor will provide training services as described in Section 4.5, Licensee is responsible for the broader organizational change management effort.
+Delays attributable to Licensee's failure to satisfy one or more Licensee Dependencies in a timely manner may result in adjustments to the implementation timeline and milestones in accordance with Section 5.4 of this SOW. Licensor shall promptly notify Licensee in writing upon becoming aware of any actual or anticipated delay resulting from an unmet Licensee Dependency.
+SECTION 4 — IMPLEMENTATION PHASES AND MILESTONES
+The Implementation Services shall be performed in the following six (6) phases. Each phase contains defined milestones and associated deliverables, as described below. The estimated durations are based on the assumptions set forth in Section 9 and are subject to adjustment in accordance with Section 5.4. All milestone references are for convenience of reference and do not limit the scope of work within any phase.
+4.1 Phase 1: Discovery and Planning
+Estimated Duration: Six (6) weeks from project kickoff.
+The Discovery and Planning Phase is the foundational phase of the implementation, during which the Parties will align on project governance, validate Licensee's business requirements against Platform capabilities, and develop the detailed plans that will guide all subsequent phases. Activities during this phase include project mobilization, stakeholder alignment, current-state documentation, requirements gathering and validation workshops, gap analysis, and the development of key planning deliverables.
+Milestone
+Description
+Deliverable(s)
+1.1
+Project kickoff and governance charter execution
+Executed Project Governance Charter; confirmed project team rosters for both Parties
+1.2
+Current-state assessment and requirements validation workshops
+Current-State Assessment Report; validated Requirements Traceability Matrix
+1.3
+Delivery of Implementation Plan document
+Detailed project plan (work breakdown structure, task dependencies, resource assignments, and timeline); resource plan; risk register with initial risk assessments and mitigation strategies
+1.4
+Delivery of Data Migration Strategy document
+Data Migration Strategy (source system inventory, data categories, ETL approach, data quality criteria, mock conversion schedule, cutover strategy, and rollback plan)
+1.5
+Sign-off on Discovery Phase deliverables by Joint Steering Committee
+Written sign-off by JSC on all Phase 1 deliverables
+Upon JSC sign-off of Milestone 1.5, the Discovery and Planning Phase shall be deemed accepted, and the corresponding milestone payment under Section 6.2 shall become due.
+4.2 Phase 2: Design
+Estimated Duration: Eight (8) weeks following acceptance of Phase 1.
+The Design Phase translates the validated business requirements from Phase 1 into detailed functional and technical design specifications that will govern the configuration, integration, and data migration activities in subsequent phases. During this phase, the Licensor Project Team and Licensee Module Leads will collaborate closely to map Licensee's business processes to the Platform's functional capabilities and to define the target-state solution architecture.
+Milestone
+Description
+Deliverable(s)
+2.1
+Functional design documents for each In-Scope Module
+Functional Design Documents (one per In-Scope Module), including business process maps, configuration specifications, role and security design, and gap/fit analysis results
+2.2
+Technical design document for integrations and data migration
+Technical Design Document covering integration architecture, API specifications, data mapping documents, interface control documents, and data migration technical specifications
+2.3
+Design review sessions with Licensee module leads
+Completed design review sessions (documented via session minutes and sign-off logs); resolution of all design questions and open items
+2.4
+Sign-off on all Design Phase deliverables
+Written sign-off by JSC on all Phase 2 deliverables
+Licensee's Module Leads and SMEs are expected to dedicate significant time during this phase to participate in design workshops, review deliverables, and provide timely feedback and approvals. Licensor recommends that Licensee Module Leads allocate a minimum of fifty percent (50%) of their working time to implementation activities during the Design Phase.
+4.3 Phase 3: Build and Configure
+Estimated Duration: Ten (10) weeks following acceptance of Phase 2.
+The Build and Configure Phase is the core technical execution phase during which the Platform is configured, integrations are developed, data migration scripts are built, and custom reports and analytics dashboards are created, all in accordance with the approved design documents from Phase 2. This phase also includes Licensor's internal quality assurance review prior to progressing to formal testing.
+Milestone
+Description
+Deliverable(s)
+3.1
+Platform environment provisioning
+Provisioned Platform environments: development, testing (SIT), staging (UAT/pre-production), and production; environment configuration documentation
+3.2
+Completion of core module configuration
+Configured Platform modules per approved Functional Design Documents; configuration workbooks documenting all settings
+3.3
+Development and unit testing of integration connectors
+Developed and unit-tested integration connectors for all In-Scope Integrations; unit test results documentation
+3.4
+Completion of initial data migration scripts and first mock conversion run
+Completed ETL scripts; first mock conversion run results report including data quality analysis and discrepancy log
+3.5
+Completion of custom reports and analytics dashboards
+Custom reports and analytics dashboards per approved specifications from Design Phase; report specification validation
+3.6
+Internal Licensor quality assurance review; sign-off to proceed to testing
+Licensor internal QA review report; confirmation of readiness to enter Testing Phase; JSC sign-off
+During this phase, Licensor shall maintain a development environment separate from the testing and staging environments to prevent configuration changes from disrupting testing activities. Licensee IT technical staff shall be available to support environment provisioning and network connectivity as needed.
+4.4 Phase 4: Testing
+Estimated Duration: Eight (8) weeks following acceptance of Phase 3.
+The Testing Phase is a critical quality assurance phase during which the configured Platform, integrations, and migrated data are rigorously validated to ensure conformance with the approved design specifications and Licensee's business requirements. This phase encompasses System Integration Testing, data migration validation, User Acceptance Testing, and performance testing.
+Milestone
+Description
+Deliverable(s)
+4.1
+System Integration Testing (SIT)
+Licensor-led SIT; test scripts covering end-to-end business processes, integration scenarios, and data flows; defect tracking log with severity classifications
+4.2
+Second mock data conversion run with data quality validation
+Second mock conversion run results report; data quality validation report; data reconciliation documentation
+4.3
+User Acceptance Testing (UAT)
+Licensee-led UAT with Licensor support; UAT entrance criteria, test scenarios, and exit criteria as defined in the Implementation Plan; UAT defect log
+4.4
+Performance and load testing
+Performance and load test results simulating up to 1,500 concurrent Named Users; performance benchmarks and comparison to agreed-upon performance criteria
+4.5
+Remediation of all Severity 1 and Severity 2 defects
+Completed remediation and retesting of all defects classified as Severity 1 (system down/critical business process blocked) and Severity 2 (major functional impact with no workaround); updated defect tracking log
+4.6
+UAT sign-off
+Written UAT sign-off by Licensee Project Manager and Executive Sponsor, confirming that UAT exit criteria have been met
+Defect Severity Classifications. For purposes of this SOW, defects identified during testing shall be classified using the following severity levels:
+•  Severity 1 (Critical): A defect that causes a complete system failure, data loss, or prevents execution of a critical business process with no available workaround.
+•  Severity 2 (High): A defect that causes a major functional impact to a business process with no reasonable workaround available; the affected function operates in a significantly degraded manner.
+•  Severity 3 (Medium): A defect that causes a moderate functional impact but a reasonable workaround exists; the affected function operates with reduced capability.
+•  Severity 4 (Low): A defect that causes a minor or cosmetic issue with no material impact on business process execution.
+UAT exit criteria require the remediation of all Severity 1 and Severity 2 defects. Severity 3 and Severity 4 defects may, at Licensee's discretion, be deferred to post-go-live resolution, provided such deferral is documented and approved by the JSC.
+4.5 Phase 5: Training
+Estimated Duration: Four (4) weeks, overlapping with Phase 4 (Testing).
+The Training Phase is designed to prepare Licensee's end users and designated trainers for productive use of the Platform following go-live. Licensor will employ a train-the-trainer methodology to enable Licensee to sustain training capabilities on an ongoing basis.
+Milestone
+Description
+Deliverable(s)
+5.1
+Delivery of train-the-trainer sessions
+Train-the-trainer sessions delivered to up to thirty (30) Licensee-designated trainers; trainer certification assessments (if applicable)
+5.2
+Delivery of end-user training materials
+Customized training materials including user guides (per module/role), quick reference cards, and video tutorials, all tailored to Licensee's configured Platform environment
+5.3
+Completion of end-user training program
+Coordinated by Licensee trainers with Licensor on-site and remote support; training completion tracking report
+Train-the-trainer sessions will be conducted at Licensee's Houston headquarters or via video conference, as mutually agreed. Licensor will deliver training sessions organized by functional area and user role, ensuring that Licensee's designated trainers have sufficient proficiency to conduct end-user training sessions at their respective facilities. All training materials will be delivered in English per Section 9.6.
+Licensee is responsible for scheduling end-user training sessions, securing training facilities, managing end-user attendance, and conducting the end-user training program using Licensor-provided materials and the train-the-trainer model. Licensor will provide supplemental support to Licensee's trainers during the end-user training rollout as reasonably requested.
+4.6 Phase 6: Go-Live and Hypercare
+Estimated Duration: Six (6) weeks (approximately two (2) weeks for go-live preparation and cutover, followed by four (4) weeks of hypercare support).
+The Go-Live and Hypercare Phase encompasses the final data migration cutover, production go-live, and a post-go-live support period during which Licensor provides enhanced support to stabilize the Platform and address any issues that arise during the initial period of production use.
+Milestone
+Description
+Deliverable(s)
+6.1
+Final data migration (cutover conversion) and data reconciliation
+Completed final cutover conversion; data reconciliation report confirming accuracy and completeness of migrated data
+6.2
+Go-live readiness assessment and go/no-go decision
+Go-Live Readiness Assessment report; documented go/no-go decision by JSC
+6.3
+Production go-live
+Platform available in production for end-user access; legacy system cutover completed per cutover plan
+6.4
+Hypercare support period
+Four (4) weeks of dedicated Licensor on-site and remote support following go-live; hypercare team for issue triage, defect resolution, and end-user support
+6.5
+Post-go-live stabilization review and handoff
+Post-Go-Live Stabilization Report; formal handoff from Licensor's implementation team to Licensor's standard support organization
+6.6
+Final Project Completion sign-off
+Written Final Project Completion sign-off by JSC, confirming successful completion of all Implementation Services
+Go/No-Go Criteria. The JSC's go/no-go decision for production go-live (Milestone 6.2) shall be based on an assessment of the following criteria, at a minimum: (i) successful completion and sign-off of UAT (Milestone 4.6); (ii) remediation of all Severity 1 and Severity 2 defects; (iii) successful completion of the final data migration cutover conversion with data reconciliation within agreed tolerances; (iv) completion of end-user training with satisfactory coverage of the Named User population; (v) confirmation of production environment readiness; and (vi) completion of the go-live cutover plan and rollback plan.
+Hypercare Support. During the four (4)-week Hypercare period following production go-live, Licensor shall maintain a dedicated support team consisting of on-site and remote resources to provide the following services: (i) triage and resolution of production issues and defects; (ii) monitoring of system performance and data integrity; (iii) end-user support and guidance; (iv) resolution of any remaining Severity 3 and Severity 4 defects agreed for post-go-live remediation; and (v) knowledge transfer to Licensee's internal support team. On-site support during Hypercare shall be provided at Licensee's Houston headquarters, with remote support available for other In-Scope Facilities.
+4.7 Estimated Total Timeline
+The estimated total timeline for the Implementation Services, from project kickoff (Milestone 1.1) to Final Project Completion sign-off (Milestone 6.6), is approximately forty-two (42) weeks, based on the phase durations set forth above and accounting for the overlap between Phase 4 (Testing) and Phase 5 (Training). This estimated timeline is subject to adjustment in accordance with Section 5.4 of this SOW and is predicated on the assumptions set forth in Section 9.
+The Parties acknowledge that the timeline estimates are based on current information available at the time of SOW execution and that actual durations may vary based on the complexity of Licensee's requirements as validated during the Discovery Phase. Any material deviation from the estimated timeline shall be communicated promptly by the Licensor Project Manager to the JSC, and the Parties shall work collaboratively to identify appropriate remediation actions.
+SECTION 5 — ACCEPTANCE CRITERIA AND PROCEDURES
+5.1 Milestone Acceptance
+Each milestone deliverable identified in Section 4 shall be subject to Licensee's review and written acceptance. Upon delivery of a milestone deliverable by Licensor, Licensee shall have a period of ten (10) business days (the "Review Period") to review the deliverable and provide written notification to Licensor of either: (a) acceptance of the deliverable; or (b) rejection of the deliverable, accompanied by a written description specifying the non-conformities in reasonable detail sufficient to enable Licensor to understand and remediate the identified issues.
+Acceptance of a milestone deliverable shall be documented through a Milestone Acceptance Form signed by the Licensee Project Manager (or, for milestones requiring JSC approval, by the designated JSC representatives of both Parties). Licensor shall provide a template Milestone Acceptance Form as part of the Implementation Plan deliverable.
+5.2 Rejection and Remediation
+In the event Licensee provides a written rejection of a milestone deliverable within the applicable Review Period, Licensor shall use commercially reasonable efforts to remediate the identified non-conformities and resubmit the corrected deliverable to Licensee within a commercially reasonable period, taking into account the nature and complexity of the non-conformities identified. Upon resubmission of the corrected deliverable, Licensee shall have a second review period of five (5) business days (the "Second Review Period") to review the corrected deliverable and provide written notification of acceptance or continued rejection.
+If Licensee rejects a resubmitted deliverable during the Second Review Period, the matter shall be escalated to the JSC for resolution. The JSC shall determine, in good faith and within ten (10) business days, the appropriate course of action, which may include additional remediation efforts, scope adjustments, or other mutually agreed measures. Continued failure to achieve acceptance following JSC escalation shall be addressed through the dispute resolution provisions of the Agreement.
+5.3 Deemed Acceptance
+If Licensee does not provide written notification of either acceptance or rejection of a milestone deliverable within the applicable Review Period (or Second Review Period, as the case may be), the deliverable shall be deemed accepted as of the expiration of such period. Licensor shall provide written notice to Licensee at least two (2) business days prior to the expiration of a Review Period as a courtesy reminder, provided that Licensor's failure to provide such courtesy reminder shall not affect the deemed acceptance provisions of this Section 5.3.
+5.4 Timeline Adjustments
+If delays in the Implementation Services result from Licensee's failure to satisfy one or more of its obligations under Section 3.4 (Licensee Dependencies), Licensor shall be entitled to an equitable extension of the affected milestones and the overall implementation timeline commensurate with the duration and impact of such delay. Licensor shall notify Licensee in writing of any claimed timeline adjustment, including the specific Licensee Dependency that was not satisfied and the estimated impact on the affected milestones.
+Material changes to the scope, timeline, deliverables, or fees of the Implementation Services, whether resulting from Licensee-initiated changes, Licensor-identified scope gaps, or other circumstances, shall require a Change Order executed in accordance with Section 7 of this SOW and Section 3.3 of the Agreement. No Party shall be bound by any change to the scope, timeline, or fees of this SOW unless and until a Change Order reflecting such change has been duly executed by authorized representatives of both Parties.
+5.5 Final Acceptance
+The Implementation Services shall be deemed finally accepted upon the execution of the Final Project Completion sign-off by the JSC under Milestone 6.6 (the "Final Acceptance"). Final Acceptance signifies the completion of all Implementation Services described in this SOW, subject to any outstanding Severity 3 and Severity 4 defects that have been deferred to post-go-live resolution with JSC approval. Final Acceptance does not constitute a waiver of Licensee's rights under Section 10 (Warranties Specific to Implementation Services) or under the Agreement.
+SECTION 6 — FEES AND PAYMENT
+6.1 Total Estimated Implementation Fee
+The total estimated fee for the Implementation Services described in this SOW is Eight Hundred Seventy-Five Thousand Dollars ($875,000.00) (the "Implementation Fee"). The Implementation Fee is structured as milestone-based payments, as set forth in the fee table in Section 6.2 below, and represents the total compensation payable to Licensor for the Implementation Services, exclusive of travel and expense reimbursement under Section 6.4 and additional fees for Change Orders under Section 6.5.
+6.2 Fee Table / Milestone Payment Schedule
+The Implementation Fee shall be payable in installments upon the achievement and acceptance of the milestones set forth in the following table:
+Phase
+Milestone Trigger
+Fee Amount
+Phase 1 — Discovery and Planning
+Invoiced upon sign-off of Milestone 1.5 (JSC sign-off on Discovery Phase deliverables)
+$105,000.00
+Phase 2 — Design
+Invoiced upon sign-off of Milestone 2.4 (JSC sign-off on all Design Phase deliverables)
+$140,000.00
+Phase 3 — Build and Configure
+Invoiced upon sign-off of Milestone 3.6 (Internal QA review and JSC sign-off to proceed to Testing)
+$245,000.00
+Phase 4 — Testing
+Invoiced upon sign-off of Milestone 4.6 (UAT sign-off by Licensee Project Manager and Executive Sponsor)
+$157,500.00
+Phase 5 — Training
+Invoiced upon completion of Milestone 5.3 (Completion of end-user training program)
+$87,500.00
+Phase 6 — Go-Live and Hypercare
+Invoiced upon sign-off of Milestone 6.6 (Final Project Completion sign-off by JSC)
+$140,000.00
+Total Implementation Fee
+$875,000.00
+6.3 Invoicing.  Licensor shall invoice Licensee for each milestone payment upon the occurrence of the applicable milestone trigger event identified in Section 6.2. In accordance with Section 4.4 of the Agreement, invoices shall be submitted monthly in arrears, and payment shall be due net thirty (30) days from the date of Licensee's receipt of a valid invoice. All invoices shall be submitted to Licensee at the billing address specified in the Agreement (or such other address as Licensee may designate in writing) and shall include the SOW reference number (SOW-001), the applicable milestone reference, and a description of the services performed.
+Late payments shall be subject to the late payment provisions set forth in Section 4.5 of the Agreement.
+6.4 Expenses.  Licensee shall reimburse Licensor for reasonable, pre-approved travel and lodging expenses incurred by Licensor personnel in connection with the performance of on-site Implementation Services at Licensee's facilities ("Reimbursable Expenses"). Reimbursable Expenses include economy-class airfare or standard-class ground transportation, standard business-class hotel accommodations, meals, and incidental expenses incurred in accordance with Licensor's standard travel and expense policy, a copy of which has been provided to Licensee.
+Reimbursable Expenses shall be invoiced monthly at actual cost incurred, accompanied by supporting documentation (e.g., receipts, itineraries, and expense reports). All travel requiring overnight stays must be pre-approved in writing by the Licensee Project Manager, which approval shall not be unreasonably withheld or delayed. Reimbursable Expenses are estimated at approximately ten to fifteen percent (10–15%) above the Implementation Fee but are not included in the $875,000.00 Implementation Fee stated in Section 6.1. For the avoidance of doubt, Reimbursable Expenses are payable in addition to the Implementation Fee.
+6.5 Change Order Fees
+Additional services requested by Licensee, or services required due to material changes in scope that are identified and agreed upon through the Change Order process described in Section 7, shall be priced and invoiced separately from the Implementation Fee. Change Order fees shall be calculated based on Licensor's then-current professional services rates for the applicable resource categories, as communicated to Licensee at the time of the Change Order impact assessment. No Change Order fees shall be incurred unless and until a Change Order has been executed by authorized representatives of both Parties in accordance with Section 7.
+As of the Effective Date of this SOW, Licensor's standard professional services rates are as follows (subject to annual adjustment per the terms of the Agreement):
+Resource Category
+Hourly Rate
+Senior Solution Architect
+$325.00
+Solution Architect
+$275.00
+Functional Consultant (Senior)
+$250.00
+Functional Consultant
+$225.00
+Technical Consultant / Integration Specialist
+$250.00
+Training Specialist
+$200.00
+Project Manager
+$275.00
+SECTION 7 — CHANGE ORDER PROCESS
+7.1 Change Requests
+Either Party may submit a written Change Request to the other Party's Project Manager at any time during the performance of this SOW. A Change Request shall describe, in reasonable detail, the proposed modification to the scope, timeline, deliverables, or fees of the Implementation Services, including the business rationale for the proposed change. Change Requests shall be submitted using the Change Request Form template to be included in the Implementation Plan deliverable.
+7.2 Impact Assessment
+Upon receipt of a Change Request, Licensor shall prepare and deliver to Licensee a written impact assessment within ten (10) business days (or such longer period as may be mutually agreed for complex change requests). The impact assessment shall include, at a minimum:
+(a) A description of the proposed change and its effect on the existing scope, deliverables, and acceptance criteria;
+(b) The estimated impact on the implementation timeline, including any affected milestones;
+(c) The estimated additional fees (or fee reductions, if applicable), including the applicable resource categories, estimated hours, and rates;
+(d) The estimated impact on resource requirements, including any additional Licensor or Licensee resources needed; and
+(e) An assessment of any risks associated with the proposed change.
+7.3 Change Order Execution
+No Change Request shall be binding upon either Party, and no work on a proposed change shall commence, until a Change Order documenting the agreed-upon scope, timeline, deliverable, and fee modifications has been executed by authorized representatives of both Parties. Change Orders shall be executed in accordance with Section 3.3 of the Agreement and shall be sequentially numbered (e.g., CO-001, CO-002, etc.) and attached to this SOW as amendments.
+Each executed Change Order shall be deemed an integral part of this SOW and shall be subject to all terms and conditions of this SOW and the Agreement, except as expressly modified by the Change Order.
+7.4 Continuation of Work
+Pending the review, negotiation, and execution of a Change Order, Licensor shall continue to perform the Implementation Services under the existing SOW scope without interruption. Neither Party shall unreasonably delay the review or execution of a Change Order, and both Parties shall use commercially reasonable efforts to resolve any disagreements regarding proposed changes in a timely manner.
+SECTION 8 — STAFFING AND WORK LOCATION
+8.1 Work Location
+The Implementation Services shall be performed through a combination of on-site work at Licensee's facilities and remote work from Licensor's offices, as follows:
+(a) Phase 1 (Discovery and Planning): Primarily on-site at Licensee's Houston headquarters, with travel to select In-Scope Facilities as needed for current-state assessments and stakeholder workshops.
+(b) Phase 2 (Design): Blended on-site and remote; design workshops and review sessions primarily on-site at Licensee's Houston headquarters; design document development and detailed specification work may be performed remotely.
+(c) Phase 3 (Build and Configure): Primarily remote, with periodic on-site presence at Licensee's Houston headquarters for configuration review sessions, integration testing coordination, and stakeholder touchpoints.
+(d) Phase 4 (Testing): Blended; SIT primarily remote with on-site support as needed; UAT support primarily on-site at Licensee's Houston headquarters; performance testing may be conducted remotely.
+(e) Phase 5 (Training): Blended; train-the-trainer sessions on-site at Licensee's Houston headquarters or via video conference; end-user training support may be on-site at multiple In-Scope Facilities or remote, as coordinated with Licensee.
+(f) Phase 6 (Go-Live and Hypercare): Primarily on-site at Licensee's Houston headquarters for cutover activities and initial hypercare support, with remote support coverage for after-hours and non-Houston facilities.
+Licensee shall provide Licensor's on-site personnel with reasonable workspace, including desk space, network access (wired and wireless), meeting room availability, and building access credentials. Specific on-site and remote scheduling shall be coordinated between the Project Managers and documented in the Implementation Plan.
+8.2 Key Personnel
+The following Licensor personnel are designated as Key Personnel for the Implementation Services:
+Role
+Name
+Designation
+Licensor Project Manager
+To be confirmed upon execution
+Key Personnel
+Lead Solution Architect
+To be confirmed upon execution
+Key Personnel
+Data Migration Lead
+To be confirmed upon execution
+Key Personnel
+Licensor shall not remove or reassign any Key Personnel from the Implementation Services without Licensee's prior written consent, except in cases of resignation, termination for cause, extended medical leave, or other circumstances beyond Licensor's reasonable control. In the event of any Key Personnel change, Licensor shall provide Licensee with no fewer than five (5) business days' advance written notice and shall propose a replacement individual of equivalent qualifications and experience for Licensee's review and approval, which approval shall not be unreasonably withheld or delayed. Licensor shall ensure a reasonable transition period during which the outgoing and incoming Key Personnel overlap to facilitate knowledge transfer.
+8.3 Working Hours
+Implementation Services shall be performed during standard business hours, Monday through Friday, 8:00 a.m. to 5:00 p.m. Central Time, excluding U.S. federal holidays and any additional holidays mutually agreed upon by the Parties (collectively, "Standard Business Hours").
+Go-live cutover activities (including the final data migration cutover, system validation, and production activation) may require extended hours and weekend work as mutually agreed by the Project Managers in advance. Licensor shall coordinate any extended-hour or weekend work requirements with Licensee no fewer than ten (10) business days in advance to allow Licensee to arrange for necessary facility access, IT support, and SME availability. Licensor personnel performing extended-hour or weekend work during go-live cutover shall not result in additional fees beyond those set forth in Section 6.2, as such activities are contemplated within the scope and fees of Phase 6.
+SECTION 9 — ASSUMPTIONS
+The scope, timeline, fees, and resource estimates set forth in this SOW are based on the following assumptions. If any of these assumptions prove to be materially inaccurate, the Parties shall evaluate the impact through the Change Order process described in Section 7.
+9.1 Licensee's existing legacy systems and data are accessible to Licensor in a timely manner and in a format reasonably suitable for extraction, analysis, and migration. Licensee shall provide Licensor with documentation of legacy system data structures, data dictionaries, and interface specifications within a commercially reasonable period following the project kickoff.
+9.2 Licensee will dedicate sufficient subject matter expert ("SME") and IT technical resources as outlined in Section 3.2, with availability aligned to the resource plan developed during the Discovery Phase. Licensee acknowledges that implementation success depends on the active and sustained participation of knowledgeable business and technical personnel throughout the implementation lifecycle.
+9.3 Licensee's network infrastructure, hardware, and technical environments meet the Platform's published technical requirements as set forth in Schedule B of the Agreement at the time of environment provisioning. Licensee shall be solely responsible for the procurement, installation, configuration, and maintenance of all Licensee-side infrastructure necessary to support the Platform. Any infrastructure deficiencies identified during the implementation that require remediation by Licensee may impact the implementation timeline.
+9.4 The Named User Cap of one thousand five hundred (1,500) Named Users, as defined in Schedule A of the Agreement, applies to this implementation. The Implementation Services are scoped to support deployment to up to 1,500 Named Users. If Licensee elects to increase the Named User Cap during the implementation period, such increase shall be addressed through an amendment to the Agreement and a corresponding Change Order under this SOW.
+9.5 No material organizational restructuring, facility closures, divestitures, mergers, or acquisitions by Licensee will occur during the implementation period that would materially alter the scope of the In-Scope Modules, In-Scope Facilities, user population, or business processes addressed by the Implementation Services. In the event of such an occurrence, the Parties shall evaluate the impact on the Implementation Services through the Change Order process.
+9.6 English is the primary language for all deliverables, training materials, user documentation, and project communications produced under this SOW. Localization or translation of materials into other languages is not included in the scope or fees of this SOW.
+9.7 Regulatory and compliance requirements specific to Licensee's specialty chemicals operations (including, without limitation, environmental, health, and safety regulations; trade compliance requirements; hazardous materials handling and storage regulations; and industry-specific reporting requirements) will be identified and documented by Licensee during the Discovery Phase (Phase 1) and addressed in the functional design during the Design Phase (Phase 2). Licensor will configure the Platform to support the identified regulatory requirements to the extent the Platform's standard functionality permits. Licensee is solely responsible for validating the regulatory accuracy and completeness of Platform configurations, data, and reports, and Licensor makes no representation or warranty regarding the Platform's compliance with any specific law, regulation, or industry standard.
+SECTION 10 — WARRANTIES SPECIFIC TO IMPLEMENTATION SERVICES
+10.1 Services Warranty
+Licensor warrants that the Implementation Services performed under this SOW will be performed in a professional and workmanlike manner, consistent with generally accepted industry standards applicable to the performance of similar enterprise software implementation services. Licensor further warrants that the Implementation Services will be performed by personnel possessing the qualifications, experience, and skills reasonably necessary for the performance of such services.
+10.2 Re-Performance Remedy
+In the event that any Implementation Services performed under this SOW fail to conform to the warranty set forth in Section 10.1, Licensee's sole and exclusive remedy, and Licensor's sole and exclusive obligation, with respect to such non-conformance shall be for Licensor to re-perform the non-conforming Implementation Services at no additional charge to Licensee. To invoke this remedy, Licensee must provide Licensor with written notice of the alleged non-conformity, described in reasonable detail, within thirty (30) days following the date of Licensee's acceptance (or deemed acceptance) of the relevant milestone deliverable. If Licensor is unable to re-perform the non-conforming services to conform to the warranty within a commercially reasonable period following receipt of such notice, Licensee shall be entitled to pursue its remedies under the Agreement.
+10.3 Relationship to Agreement Warranties
+The warranties set forth in this Section 10 are specific to the Implementation Services and are in addition to, and do not limit, modify, or supersede, the warranties set forth in Article 7 of the Agreement as they apply to the Platform itself, including any warranties regarding the functionality, performance, or fitness of the Platform software. For the avoidance of doubt, the limitations on remedies set forth in Section 10.2 above apply only to the Implementation Services warranty and do not limit Licensee's rights or remedies with respect to the Platform warranties under the Agreement.
+EXCEPT AS EXPRESSLY SET FORTH IN THIS SECTION 10 AND IN THE AGREEMENT, LICENSOR MAKES NO OTHER WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO THE IMPLEMENTATION SERVICES, INCLUDING ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT, ALL OF WHICH ARE HEREBY DISCLAIMED TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+SECTION 11 — TERM AND TERMINATION OF SOW
+11.1 SOW Term
+This SOW shall commence on the Effective Date and shall continue in effect until the earlier of: (a) the date of Final Project Completion sign-off under Milestone 6.6 (Final Acceptance); (b) termination of this SOW in accordance with Section 11.2; or (c) termination of the Agreement in accordance with Article 9 of the Agreement.
+11.2 Termination.  This SOW may be terminated as follows:
+(a) Termination under the Agreement. This SOW shall automatically terminate upon the termination of the Agreement in accordance with Article 9 of the Agreement.
+(b) Termination by Mutual Written Agreement. This SOW may be terminated at any time by the mutual written agreement of both Parties, upon such terms and conditions as the Parties may agree.
+(c) Termination by Licensee for Material Milestone Delay. Licensee may terminate this SOW upon thirty (30) days' prior written notice to Licensor if a material milestone identified in Section 4 is more than forty-five (45) calendar days overdue for reasons not attributable to Licensee's failure to satisfy its obligations under Section 3.4 (Licensee Dependencies), and Licensor has failed to present a commercially reasonable remediation plan, acceptable to Licensee in its reasonable discretion, within fifteen (15) business days of Licensee's written notice of the delay. For purposes of this Section 11.2(c), a "material milestone" means any milestone that constitutes a phase completion sign-off (i.e., Milestones 1.5, 2.4, 3.6, 4.6, 5.3, or 6.6).
+11.3 Effect of SOW Termination
+Termination of this SOW, for any reason, shall not automatically terminate the Agreement. In the event of termination of this SOW:
+(a) Payment for Accepted Milestones. Licensee shall pay all fees for milestone deliverables accepted (or deemed accepted) prior to the effective date of termination and for any approved Change Orders that have been completed prior to such date, in each case in accordance with Section 6 and the applicable Change Order.
+(b) Delivery of Work Product. Within thirty (30) days following the effective date of termination, Licensor shall deliver to Licensee all work product completed or in progress as of the date of termination, including all deliverables, documentation, configuration settings, data migration scripts, and other materials developed by Licensor in connection with the Implementation Services.
+(c) Transition Assistance. Upon Licensee's request, Licensor shall provide reasonable transition assistance for a period not to exceed thirty (30) days following the effective date of termination, at Licensor's then-current professional services rates, to facilitate the orderly wind-down of the Implementation Services and the transition of work product to Licensee or its designee.
+(d) Return of Licensee Materials. Licensor shall return or, at Licensee's direction, securely destroy all Licensee-provided materials, data, and information in Licensor's possession in accordance with Section 6.1 of the Agreement.
+11.4 Survival.  The following provisions of this SOW shall survive the termination or expiration of this SOW: Section 6 (to the extent of accrued but unpaid payment obligations), Section 10 (Warranties Specific to Implementation Services), Section 11.3 (Effect of SOW Termination), and Section 12.2 (Ownership of Work Product). In addition, any provisions of this SOW that by their nature are intended to survive termination shall so survive.
+SECTION 12 — DELIVERABLES AND WORK PRODUCT
+12.1 List of Deliverables
+The following is a comprehensive list of the deliverables to be produced by Licensor in connection with the Implementation Services (collectively, the "Deliverables"). Specific content, format, and acceptance criteria for each Deliverable shall be further defined in the Implementation Plan developed during Phase 1.
+(a) Project Governance Charter
+(b) Implementation Plan (including work breakdown structure, resource plan, risk register, communication plan, and Change Request Form template)
+(c) Current-State Assessment Report
+(d) Requirements Traceability Matrix
+(e) Data Migration Strategy
+(f) Functional Design Documents (one per In-Scope Module)
+(g) Technical Design Document (integrations, data migration, and reporting architecture)
+(h) Configured Platform environments (development, testing, staging, and production)
+(i) Integration connectors (per In-Scope Integration)
+(j) Data migration scripts and conversion programs
+(k) Configuration workbooks
+(l) Test scripts and test results documentation (SIT and UAT support)
+(m) Performance and load test results report
+(n) Training materials (user guides, quick reference cards, video tutorials)
+(o) Go-live cutover plan and rollback plan
+(p) Data reconciliation reports (mock conversion and final cutover)
+(q) Post-Go-Live Stabilization Report
+(r) Go-Live Readiness Assessment report
+12.2 Ownership of Work Product
+All intellectual property rights in Licensor's pre-existing technology, tools, methodologies, frameworks, templates, software, code libraries, and Platform configurations (including the Platform itself) shall remain the sole and exclusive property of Licensor, as set forth in Section 2.4 of the Agreement. Nothing in this SOW shall be construed as transferring or assigning to Licensee any ownership interest in Licensor's intellectual property.
+Deliverables consisting of Licensee-specific configuration settings, Licensee-specific documentation (e.g., Functional Design Documents describing Licensee's configured business processes), and other work product that incorporates Licensee's confidential information or is created specifically for Licensee's use in connection with the Platform are licensed to Licensee for use solely in connection with the Platform under the Agreement. Such license is subject to the license terms and restrictions set forth in the Agreement and shall continue for so long as Licensee maintains a valid license to the Platform under the Agreement.
+For the avoidance of doubt, Licensor retains the right to use its general knowledge, skills, experience, techniques, methodologies, and know-how (including ideas, concepts, processes, and techniques) developed or refined during the performance of the Implementation Services in connection with other engagements, provided that Licensor does not disclose Licensee's Confidential Information in violation of the Agreement.
+12.3 Licensee Materials
+All materials, data, information, documentation, business processes, trade secrets, and other intellectual property provided by Licensee to Licensor in connection with the Implementation Services ("Licensee Materials") shall remain the sole and exclusive property of Licensee, as set forth in Section 6.1 of the Agreement. Licensor's use of Licensee Materials is limited to the performance of the Implementation Services and is subject to the confidentiality obligations set forth in the Agreement. Upon completion or termination of this SOW, Licensor shall return or securely destroy all Licensee Materials in accordance with the Agreement.
+EXHIBIT A — LICENSEE FACILITY LOCATIONS
+The following Halcyon Industrial Holdings, LLC North American facilities are in scope for deployment of the Veridian OnePlatform under this SOW. Facility names, addresses, time zones, and estimated user counts are set forth below.
+Facility Name
+Address
+Type
+Time Zone
+Est. Named Users
+Corporate Headquarters
+8200 San Jacinto Parkway, Building D, Houston, TX 77056
+Administrative / IT Hub
+Central
+To be confirmed
+[Additional facilities to be enumerated upon execution]
+Total Named Users (not to exceed Named User Cap)
+Up to 1,500
+Note: This Exhibit shall be populated with the complete list of In-Scope Facilities and estimated Named User allocations by facility upon execution of this SOW. Any additions to or removals from this list after execution shall be addressed through the Change Order process described in Section 7.
+SIGNATURE PAGE
+IN WITNESS WHEREOF, the Parties have caused this Statement of Work No. 1 to be executed by their duly authorized representatives as of the date last signed below.
+This SOW is executed as SOW-001 under the Veridian OnePlatform Master License Agreement between the Parties dated as of the Effective Date.
+VERIDIAN SYSTEMS CORP.
+By: ________
+Name: ________
+Title: ________
+Date: ________
+HALCYON INDUSTRIAL HOLDINGS, LLC
+By: ________
+Name: ________
+Title: ________
+Date: ________
+SOW-001 — Veridian OnePlatform Implementation Services — Page intentionally left as signature page.

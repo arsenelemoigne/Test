@@ -14,7 +14,8 @@ arms is what the model was shown.
 
 from __future__ import annotations
 
-from .abstraction import FACTS, ISSUES_BY_ID, Decision, Disposition
+from . import taskctx
+from .abstraction import FACTS, Decision, Disposition
 
 VERB = {
     Disposition.ACCEPT: "Accepted",
@@ -27,9 +28,12 @@ def redline(decisions: list[Decision]) -> str:
     """counter-turn-redline-dsa.docx"""
     L = [
         "DATA SHARING AGREEMENT - CARDEN COUNTER-TURN REDLINE",
-        f"{FACTS['us']} and {FACTS['them']}",
-        f"Counter-turn against the Luminos first markup received {FACTS['markup_received']}, "
-        f"marked against the Carden initial draft of {FACTS['initial_draft_date']}.",
+        (f"{FACTS['us']} and {FACTS['them']}" if taskctx.is_default()
+         else "the parties to the agreement"),
+        (f"Counter-turn against the first markup received {FACTS['markup_received']}, "
+         f"marked against our initial draft of {FACTS['initial_draft_date']}."
+         if taskctx.is_default()
+         else "Counter-turn against the counterparty's first markup."),
         "Prepared in Microsoft Word Track Changes.",
         "",
         "=" * 76,
@@ -38,7 +42,7 @@ def redline(decisions: list[Decision]) -> str:
         "",
     ]
     for d in decisions:
-        iss = ISSUES_BY_ID.get(d.issue_id)
+        iss = taskctx.issues_by_id().get(d.issue_id)
         if iss is None:
             continue
         L.append(f"Section {iss.section} - {iss.name}")
@@ -52,21 +56,34 @@ def redline(decisions: list[Decision]) -> str:
     return "\n".join(L)
 
 
+def _opening() -> str:
+    """First paragraph of the cover note. Names the deal only where we have one."""
+    if taskctx.is_default():
+        return (f"Thank you for the markup received {FACTS['markup_received']}. Attached "
+                f"is Carden's counter-turn redline, prepared in Microsoft Word Track "
+                f"Changes against the Carden initial draft of "
+                f"{FACTS['initial_draft_date']}. Our position on each substantive change "
+                f"is set out below.")
+    return ("Thank you for the markup. Attached is our counter-turn redline, prepared "
+            "in Microsoft Word Track Changes against our initial draft. Our position "
+            "on each substantive change is set out below.")
+
+
 def cover_note(decisions: list[Decision]) -> str:
     """cover-note-to-calyx.docx"""
     L = [
-        f"To:      {FACTS['their_counsel']}, counsel to {FACTS['them']}",
-        f"From:    {FACTS['our_counsel']}, for {FACTS['us']}",
-        "Re:      Data Sharing Agreement - Carden counter-turn",
+        (f"To:      {FACTS['their_counsel']}, counsel to {FACTS['them']}"
+         if taskctx.is_default() else "To:      Counsel to the counterparty"),
+        (f"From:    {FACTS['our_counsel']}, for {FACTS['us']}"
+         if taskctx.is_default() else "From:    Counsel to our client"),
+        ("Re:      Data Sharing Agreement - Carden counter-turn"
+         if taskctx.is_default() else "Re:      Counter-turn redline"),
         "",
-        f"Thank you for the markup received {FACTS['markup_received']}. Attached is "
-        f"Carden's counter-turn redline, prepared in Microsoft Word Track Changes against "
-        f"the Carden initial draft of {FACTS['initial_draft_date']}. Our position on each "
-        "substantive change is set out below.",
+        _opening(),
         "",
     ]
     for d in decisions:
-        iss = ISSUES_BY_ID.get(d.issue_id)
+        iss = taskctx.issues_by_id().get(d.issue_id)
         if iss is None:
             continue
         L.append(f"{iss.name} (Section {iss.section}) - {VERB[d.disposition]}")

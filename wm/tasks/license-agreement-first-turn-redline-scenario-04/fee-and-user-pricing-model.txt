@@ -1,0 +1,199 @@
+--- sheet: Assumptions & Key Inputs
+Parameter | Value
+CELL BLOCK A — DEAL PARAMETERS
+Agreement Title | Veridian OnePlatform Master License Agreement
+Licensee | Halcyon Industrial Holdings, LLC
+Initial Term | 5 years
+Auto-Renewal Period | Successive 1-year periods
+Payment Cadence (Template / Counter) | Quarterly in advance
+Effective Date | TBD (modeling assumes notional start for year-count purposes)
+CELL BLOCK B — PRICING ARCHITECTURE
+Base Platform Fee (annual) | $1,848,000
+Marginal Per-User Fee (annual) | $528 per Named User
+Validation — 1,500-user derivation | $1,848,000 + (1,500 × $528) = $2,640,000
+Validation — 2,500-user derivation | $1,848,000 + (2,500 × $528) = $3,168,000
+Implementation Services (separate SOW, excluded) | $875,000
+CELL BLOCK C — ESCALATOR VARIANTS DEFINED
+Variant 1 (Template v1.0) | 4.0% per annum, compounding
+Variant 2 (Halcyon Markup v2.0) | Lesser of CPI-U (U.S. City Average) or 2.0% per annum
+Variant 3 (Veridian Counter — Preferred) | CPI-U (12-mo trailing, measured 3 mo before anniversary), floor 3.0%, cap 5.0%
+Illustrative CPI-U Assumptions | 2.0%, 2.5%, 3.0%, 3.5%, 4.0%, 4.5%, 5.0%, 5.5%
+CELL BLOCK D — PAYMENT TERMS VARIANTS
+Template | Quarterly in advance, net 30 days
+Halcyon Markup | Semi-annually in arrears, net 60 days
+Veridian Counter | Quarterly in advance, net 45 days
+CELL BLOCK E — USER-COUNT VARIANTS
+Template | 1,500 Named Users
+Halcyon Markup | Unlimited Authorized Users (no cap)
+Veridian Counter | 2,500 Named Users
+--- sheet: Fee Schedule — 1,500 Users (Tem
+Contract Year | Escalator Rate Applied | Annual License Fee | Quarterly Installment | Cumulative Fees Paid | Trailing 12-Month Fees
+Year 1 | — | $2,640,000 | $660,000 | $2,640,000 | $2,640,000
+Year 2 | 4.0% | $2,745,600 | $686,400 | $5,385,600 | $2,745,600
+Year 3 | 4.0% | $2,855,424 | $713,856 | $8,241,024 | $2,855,424
+Year 4 | 4.0% | $2,969,641 | $742,410 | $11,210,665 | $2,969,641
+Year 5 | 4.0% | $3,088,427 | $772,107 | $14,299,092 | $3,088,427
+Renewal Year 6 (illustrative) | 4.0% | $3,211,964 | $802,991 | $17,511,056 | $3,211,964
+Renewal Year 7 (illustrative) | 4.0% | $3,340,443 | $835,111 | $20,851,499 | $3,340,443
+5-Year Initial Term Total |  | $14,299,092
+--- sheet: Fee Schedule — 2,500 Users (Cou
+Contract Year | Escalator Rate | Annual License Fee | Quarterly Installment | Cumulative Fees | Trailing 12-Month Fees
+SUB-TABLE A — 2,500 Users at 4% Escalator (Structural Reference)
+Year 1 | — | $3,168,000 | $792,000 | $3,168,000 | $3,168,000
+Year 2 | 4.0% | $3,294,720 | $823,680 | $6,462,720 | $3,294,720
+Year 3 | 4.0% | $3,426,509 | $856,627 | $9,889,229 | $3,426,509
+Year 4 | 4.0% | $3,563,569 | $890,892 | $13,452,798 | $3,563,569
+Year 5 | 4.0% | $3,706,112 | $926,528 | $17,158,910 | $3,706,112
+5-Year Total |  | $17,158,910
+SUB-TABLE B — 2,500 Users at CPI-U with 3% Floor (Low Case)
+Year 1 | — | $3,168,000 | $792,000 | $3,168,000 | $3,168,000
+Year 2 | 3.0% | $3,263,040 | $815,760 | $6,431,040 | $3,263,040
+Year 3 | 3.0% | $3,360,931 | $840,233 | $9,791,971 | $3,360,931
+Year 4 | 3.0% | $3,461,759 | $865,440 | $13,253,730 | $3,461,759
+Year 5 | 3.0% | $3,565,612 | $891,403 | $16,819,342 | $3,565,612
+5-Year Total |  | $16,819,342
+SUB-TABLE C — 2,500 Users at CPI-U with 5% Cap (High Case)
+Year 1 | — | $3,168,000 | $792,000 | $3,168,000 | $3,168,000
+Year 2 | 5.0% | $3,326,400 | $831,600 | $6,494,400 | $3,326,400
+Year 3 | 5.0% | $3,492,720 | $873,180 | $9,987,120 | $3,492,720
+Year 4 | 5.0% | $3,667,356 | $916,839 | $13,654,476 | $3,667,356
+Year 5 | 5.0% | $3,850,724 | $962,681 | $17,505,200 | $3,850,724
+5-Year Total |  | $17,505,200
+SUB-TABLE D — 2,500 Users at Illustrative CPI-U of 3.5% (Mid Case / Preferred Counter)
+Year 1 | — | $3,168,000 | $792,000 | $3,168,000 | $3,168,000
+Year 2 | 3.5% | $3,278,880 | $819,720 | $6,446,880 | $3,278,880
+Year 3 | 3.5% | $3,393,641 | $848,410 | $9,840,521 | $3,393,641
+Year 4 | 3.5% | $3,512,418 | $878,105 | $13,352,939 | $3,512,418
+Year 5 | 3.5% | $3,635,353 | $908,838 | $16,988,292 | $3,635,353
+5-Year Total |  | $16,988,292
+SUB-TABLE E — 2,500 Users at Halcyon Escalator (Lesser of CPI-U or 2%; modeled at 2.0%)
+Year 1 | — | $3,168,000 | $792,000 | $3,168,000 | $3,168,000
+Year 2 | 2.0% | $3,231,360 | $807,840 | $6,399,360 | $3,231,360
+Year 3 | 2.0% | $3,295,987 | $823,997 | $9,695,347 | $3,295,987
+Year 4 | 2.0% | $3,361,907 | $840,477 | $13,057,254 | $3,361,907
+Year 5 | 2.0% | $3,429,145 | $857,286 | $16,486,399 | $3,429,145
+5-Year Total |  | $16,486,399
+--- sheet: Escalator Sensitivity Matrix
+Assumed CPI-U | Template (Fixed 4%) — Eff. Rate | Template — Yr 1 | Template — Yr 2 | Template — Yr 3 | Template — Yr 4 | Template — Yr 5 | Template — 5-Yr Total | Halcyon (≤2%) — Eff. Rate | Halcyon — Yr 1 | Halcyon — Yr 2 | Halcyon — Yr 3 | Halcyon — Yr 4 | Halcyon — Yr 5 | Halcyon — 5-Yr Total | Veridian Counter (3% floor / 5% cap) — Eff. Rate | Veridian — Yr 1 | Veridian — Yr 2 | Veridian — Yr 3 | Veridian — Yr 4 | Veridian — Yr 5 | Veridian — 5-Yr Total | Delta Veridian vs Halcyon ($) | Delta Veridian vs Halcyon (%) | Delta Veridian vs Template ($) | Delta Veridian vs Template (%)
+1.5% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 1.5% | $3,168,000 | $3,215,520 | $3,263,753 | $3,312,709 | $3,362,400 | $16,322,382 | 3.0% | $3,168,000 | $3,263,040 | $3,360,931 | $3,461,759 | $3,565,612 | $16,819,342 | +$496,960 | +3.0% | -$339,568 | -2.0%
+2.0% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 3.0% | $3,168,000 | $3,263,040 | $3,360,931 | $3,461,759 | $3,565,612 | $16,819,342 | +$332,943 | +2.0% | -$339,568 | -2.0%
+2.5% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 3.0% | $3,168,000 | $3,263,040 | $3,360,931 | $3,461,759 | $3,565,612 | $16,819,342 | +$332,943 | +2.0% | -$339,568 | -2.0%
+3.0% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 3.0% | $3,168,000 | $3,263,040 | $3,360,931 | $3,461,759 | $3,565,612 | $16,819,342 | +$332,943 | +2.0% | -$339,568 | -2.0%
+3.5% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 3.5% | $3,168,000 | $3,278,880 | $3,393,641 | $3,512,418 | $3,635,353 | $16,988,292 | +$501,893 | +3.0% | -$170,618 | -1.0%
+4.0% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | +$672,511 | +4.1% | $0 | 0.0%
+4.5% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 4.5% | $3,168,000 | $3,310,560 | $3,459,535 | $3,615,214 | $3,777,899 | $17,331,208 | +$844,809 | +5.1% | +$172,298 | +1.0%
+5.0% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 5.0% | $3,168,000 | $3,326,400 | $3,492,720 | $3,667,356 | $3,850,724 | $17,505,200 | +$1,018,801 | +6.2% | +$346,290 | +2.0%
+5.5% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 5.0% | $3,168,000 | $3,326,400 | $3,492,720 | $3,667,356 | $3,850,724 | $17,505,200 | +$1,018,801 | +6.2% | +$346,290 | +2.0%
+6.0% | 4.0% | $3,168,000 | $3,294,720 | $3,426,509 | $3,563,569 | $3,706,112 | $17,158,910 | 2.0% | $3,168,000 | $3,231,360 | $3,295,987 | $3,361,907 | $3,429,145 | $16,486,399 | 5.0% | $3,168,000 | $3,326,400 | $3,492,720 | $3,667,356 | $3,850,724 | $17,505,200 | +$1,018,801 | +6.2% | +$346,290 | +2.0%
+--- sheet: Per-User Economics
+Metric / Description | Value
+SECTION A — RATE BUILD-UP
+Base Platform Fee (annual, fixed) | $1,848,000
+Marginal Per-User Fee (annual) | $528 per Named User
+SECTION B — BLENDED PER-USER RATE BY USER COUNT
+User Count | Total Annual Fee (Yr 1) | Blended Per-User Rate | Marginal Per-User Rate
+1,000 | $2,376,000 | $2,376.00 | $528.00
+1,250 | $2,508,000 | $2,006.40 | $528.00
+1,500 | $2,640,000 | $1,760.00 | $528.00
+1,750 | $2,772,000 | $1,584.00 | $528.00
+2,000 | $2,904,000 | $1,452.00 | $528.00
+2,250 | $3,036,000 | $1,349.33 | $528.00
+2,500 | $3,168,000 | $1,267.20 | $528.00
+3,000 | $3,432,000 | $1,144.00 | $528.00
+3,500 | $3,696,000 | $1,056.00 | $528.00
+SECTION C — INCREMENTAL REVENUE (1,500 → 2,500 USERS)
+Additional Users | 1,000
+Additional Annual Revenue | $528,000 (1,000 × $528)
+% Increase in Annual Fee | 20.0% ($528,000 / $2,640,000)
+% Increase in Users | 66.7% (1,000 / 1,500)
+SECTION D — PER-USER RATE COMPARISON: VERIDIAN COUNTER VS. HALCYON "UNLIMITED"
+Veridian Counter (2,500 users) — Blended Per-User | $1,267.20
+Halcyon "Unlimited" at $2,640,000 — 2,500 users | $1,056.00
+Halcyon "Unlimited" at $2,640,000 — 3,000 users | $880.00
+Halcyon "Unlimited" at $2,640,000 — 5,000 users | $528.00
+Halcyon "Unlimited" at $2,640,000 — 10,000 users | $264.00
+Annotation | Unlimited-user model at flat fee creates unsustainable per-user economics; infrastructure and support costs scale with active user count
+SECTION E — ADDITIONAL NAMED USER PRICING (Schedule A, Section A.6)
+Per-User Add-On Rate (above 2,500 cap) | $528 per Named User per annum (marginal rate)
+Minimum Add-On Increment | Blocks of 250 Named Users
+Escalator | Same annual escalator as base annual license fee
+--- sheet: Quarterly Payment Schedule
+Period | Veridian Counter — Invoice Amount | Veridian Counter — Invoice Issue Date | Veridian Counter — Payment Due (Net 45) | Cumulative Payments Invoiced | Cumulative Payments Due | Halcyon Markup — Semi-Annual Arrears Amount | Halcyon Markup — Payment Due (Net 60) | Cash-Flow Timing Differential (Veridian vs Halcyon)
+Y1-Q1 | $792,000 | ~15 days before Q1 start | Net 45 from invoice date | $792,000 | $792,000 | — | — | +$792,000
+Y1-Q2 | $792,000 | ~15 days before Q2 start | Net 45 from invoice date | $1,584,000 | $1,584,000 | $1,584,000 (H1 arrears) | Net 60 from H1 end | +$792,000
+Y1-Q3 | $792,000 | ~15 days before Q3 start | Net 45 from invoice date | $2,376,000 | $2,376,000 | — | — | +$792,000
+Y1-Q4 | $792,000 | ~15 days before Q4 start | Net 45 from invoice date | $3,168,000 | $3,168,000 | $1,584,000 (H2 arrears) | Net 60 from H2 end | +$792,000
+Y2-Q1 | $815,760 | ~15 days before Q1 start | Net 45 from invoice date | $3,983,760 | $3,983,760 | — | — | +$815,760
+Y2-Q2 | $815,760 | ~15 days before Q2 start | Net 45 from invoice date | $4,799,520 | $4,799,520 | $1,631,520 (H1 arrears) | Net 60 from H1 end | +$815,760
+Y2-Q3 | $815,760 | ~15 days before Q3 start | Net 45 from invoice date | $5,615,280 | $5,615,280 | — | — | +$815,760
+Y2-Q4 | $815,760 | ~15 days before Q4 start | Net 45 from invoice date | $6,431,040 | $6,431,040 | $1,631,520 (H2 arrears) | Net 60 from H2 end | +$815,760
+Y3-Q1 | $840,233 | ~15 days before Q1 start | Net 45 from invoice date | $7,271,273 | $7,271,273 | — | — | +$840,233
+Y3-Q2 | $840,233 | ~15 days before Q2 start | Net 45 from invoice date | $8,111,506 | $8,111,506 | $1,680,466 (H1 arrears) | Net 60 from H1 end | +$840,233
+Y3-Q3 | $840,233 | ~15 days before Q3 start | Net 45 from invoice date | $8,951,739 | $8,951,739 | — | — | +$840,233
+Y3-Q4 | $840,233 | ~15 days before Q4 start | Net 45 from invoice date | $9,791,972 | $9,791,972 | $1,680,466 (H2 arrears) | Net 60 from H2 end | +$840,233
+Y4-Q1 | $865,440 | ~15 days before Q1 start | Net 45 from invoice date | $10,657,412 | $10,657,412 | — | — | +$865,440
+Y4-Q2 | $865,440 | ~15 days before Q2 start | Net 45 from invoice date | $11,522,852 | $11,522,852 | $1,730,880 (H1 arrears) | Net 60 from H1 end | +$865,440
+Y4-Q3 | $865,440 | ~15 days before Q3 start | Net 45 from invoice date | $12,388,292 | $12,388,292 | — | — | +$865,440
+Y4-Q4 | $865,440 | ~15 days before Q4 start | Net 45 from invoice date | $13,253,732 | $13,253,732 | $1,730,880 (H2 arrears) | Net 60 from H2 end | +$865,440
+Y5-Q1 | $891,403 | ~15 days before Q1 start | Net 45 from invoice date | $14,145,135 | $14,145,135 | — | — | +$891,403
+Y5-Q2 | $891,403 | ~15 days before Q2 start | Net 45 from invoice date | $15,036,538 | $15,036,538 | $1,782,806 (H1 arrears) | Net 60 from H1 end | +$891,403
+Y5-Q3 | $891,403 | ~15 days before Q3 start | Net 45 from invoice date | $15,927,941 | $15,927,941 | — | — | +$891,403
+Y5-Q4 | $891,403 | ~15 days before Q4 start | Net 45 from invoice date | $16,819,344 | $16,819,344 | $1,782,806 (H2 arrears) | Net 60 from H2 end | +$891,403
+Renewal Y6-Q1 (illustrative) | $918,345 | ~15 days before Q1 start | Net 45 from invoice date | $17,737,689 | $17,737,689 | — | — | +$918,345
+Renewal Y6-Q2 (illustrative) | $918,345 | ~15 days before Q2 start | Net 45 from invoice date | $18,656,034 | $18,656,034 | $1,836,690 (H1 arrears) | Net 60 from H1 end | +$918,345
+Renewal Y6-Q3 (illustrative) | $918,345 | ~15 days before Q3 start | Net 45 from invoice date | $19,574,379 | $19,574,379 | — | — | +$918,345
+Renewal Y6-Q4 (illustrative) | $918,345 | ~15 days before Q4 start | Net 45 from invoice date | $20,492,724 | $20,492,724 | $1,836,690 (H2 arrears) | Net 60 from H2 end | +$918,345
+NOTE: Halcyon semi-annual arrears + net 60 delays cash receipt by ~7.5 months relative to service delivery
+--- sheet: Liability Cap Impact Analysis
+Claim Timing | Template: Trailing 12-Month Fees (2,500 users, 3% esc.) | Veridian Counter: Trailing 18-Month Fees (2,500 users, 3% esc.) | Halcyon Markup: 2× Total Fees Paid & Payable (Full Initial Term) | Ratio: Halcyon ÷ Veridian Counter
+SECTION A — CAP CALCULATIONS BY METHODOLOGY
+Claim arising end of Year 1 | $3,168,000 | $3,168,000 | $33,638,684 | 10.6×
+Claim arising end of Year 2 | $3,263,040 | $4,752,000 (Yr2 + 50% Yr1) | $33,638,684 | 7.1×
+Claim arising end of Year 3 | $3,360,931 | $4,992,451 (Yr3 + 50% Yr2) | $33,638,684 | 6.7×
+Claim arising end of Year 4 | $3,461,759 | $5,142,225 (Yr4 + 50% Yr3) | $33,638,684 | 6.5×
+Claim arising end of Year 5 | $3,565,612 | $5,296,492 (Yr5 + 50% Yr4) | $33,638,684 | 6.4×
+SECTION B — HALCYON MARKUP CAP VARIANTS
+At 2,500 users / 3% floor escalator | — | — | $33,638,684 (2 × $16,819,342)
+At 2,500 users / 4% escalator | — | — | $34,317,820 (2 × $17,158,910)
+At 2,500 users / 5% cap escalator | — | — | $35,010,400 (2 × $17,505,200)
+ANNOTATION
+Halcyon's proposed cap exceeds Veridian counter by factor of approximately 6× to 10× depending on claim timing
+At 2,500-user adjusted fee, Halcyon's markup produces exposure in excess of $30 million (per internal memo guidance)
+--- sheet: Early Termination Fee Calculato
+Notice Date (Month of Initial Term) | Effective Termination Date (Month) | Remaining Months in Initial Term After Eff. Termination | Remaining Fees (Pro-Rated) | Early Termination Fee (50% of Remaining Fees) | Total Amount Due at Termination
+INPUTS: Veridian Counter — Termination for convenience after Month 24; 180-day notice; ETF = 50% of remaining fees
+3% floor escalator, 2,500 Named Users
+Month 25 | Month 31 | 29 | $7,751,000 | $3,876,000 | $11,627,000
+Month 27 | Month 33 | 27 | $7,221,000 | $3,611,000 | $10,832,000
+Month 30 | Month 36 | 24 | $6,559,000 | $3,280,000 | $9,839,000
+Month 33 | Month 39 | 21 | $5,928,000 | $2,964,000 | $8,892,000
+Month 36 | Month 42 | 18 | $5,296,000 | $2,648,000 | $7,944,000
+Month 39 | Month 45 | 15 | $4,534,000 | $2,267,000 | $6,801,000
+Month 42 | Month 48 | 12 | $3,566,000 | $1,783,000 | $5,349,000
+Month 45 | Month 51 | 9 | $2,674,000 | $1,337,000 | $4,011,000
+Month 48 | Month 54 | 6 | $1,783,000 | $891,000 | $2,674,000
+Month 51 | Month 57 | 3 | $891,000 | $446,000 | $1,337,000
+Month 54 | Month 60 | 0 | $0 | $0 | $0
+--- sheet: Scenario Comparison Summary
+Metric | A: Template Baseline (1,500 users / 4%) | B: Veridian Counter Preferred (2,500 users / CPI-U 3.5% illustrative) | C: Veridian Counter Floor (2,500 users / 3%) | D: Veridian Counter Cap (2,500 users / 5%) | E: Halcyon Markup (2,500 users / 2%) | F: Halcyon Full Position (Unlimited users / 2% / $2,640,000 base) | G: Delta — Veridian Preferred (B) vs. Halcyon Markup (E)
+Named User Cap | 1,500 | 2,500 | 2,500 | 2,500 | 2,500 | Unlimited | +0 (same 2,500)
+Year 1 Annual License Fee | $2,640,000 | $3,168,000 | $3,168,000 | $3,168,000 | $3,168,000 | $2,640,000 | $0
+Escalator Mechanism | 4.0% fixed compounding | CPI-U, 3% floor, 5% cap (modeled 3.5%) | CPI-U, 3% floor, 5% cap (3.0% eff.) | CPI-U, 3% floor, 5% cap (5.0% eff.) | Lesser of CPI-U or 2% (2.0% eff.) | Lesser of CPI-U or 2% (2.0% eff.) | Structural difference
+Year 2 Annual Fee | $2,745,600 | $3,278,880 | $3,263,040 | $3,326,400 | $3,231,360 | $2,692,800 | +$47,520 (+1.5%)
+Year 3 Annual Fee | $2,855,424 | $3,393,641 | $3,360,931 | $3,492,720 | $3,295,987 | $2,746,656 | +$97,654 (+3.0%)
+Year 4 Annual Fee | $2,969,641 | $3,512,418 | $3,461,759 | $3,667,356 | $3,361,907 | $2,801,589 | +$150,511 (+4.5%)
+Year 5 Annual Fee | $3,088,427 | $3,635,353 | $3,565,612 | $3,850,724 | $3,429,145 | $2,857,621 | +$206,208 (+6.0%)
+5-Year Initial Term Total | $14,299,092 | $16,988,292 | $16,819,342 | $17,505,200 | $16,486,399 | $13,738,666 | +$501,893 (+3.0%)
+Quarterly Installment Year 1 | $660,000 | $792,000 | $792,000 | $792,000 | $792,000 | $660,000 | $0
+Payment Terms | Quarterly in advance, net 30 | Quarterly in advance, net 45 | Quarterly in advance, net 45 | Quarterly in advance, net 45 | Semi-annually in arrears, net 60 | Semi-annually in arrears, net 60 | Timing advantage to Veridian
+Blended Per-User Rate Year 1 | $1,760.00 | $1,267.20 | $1,267.20 | $1,267.20 | $1,267.20 | N/A (unlimited) | $0
+Average Annual Fee over Initial Term | $2,859,818 | $3,397,658 | $3,363,868 | $3,501,040 | $3,297,280 | $2,747,733 | +$100,379 (+3.0%)
+Liability Cap Methodology | Trailing 12-month fees | Trailing 18-month fees | Trailing 18-month fees | Trailing 18-month fees | 2× total fees paid & payable over full term | 2× total fees paid & payable over full term | Structural difference
+Maximum Liability Cap Exposure (end of Year 5) | $3,088,427 | $5,296,492 | $5,296,492 | $5,776,086 | $32,972,798 | $27,477,332 | -$27,676,306
+KEY DELTA OUTPUTS
+5-Year Total: Veridian Preferred vs. Halcyon Markup (2,500 users) |  | $16,988,292 |  |  | $16,486,399 |  | +$501,893 (+3.0%)
+5-Year Total: Veridian Preferred vs. Halcyon Full Position (unlimited) |  | $16,988,292 |  |  |  | $13,738,666 | +$3,249,626 (+23.6%)
+5-Year Total: Veridian Preferred vs. Template Baseline | $14,299,092 | $16,988,292 |  |  |  |  | +$2,689,200 (+18.8%)
+REVENUE IMPACT ANNOTATIONS
+Veridian counter at 3% floor preserves minimum 5-year revenue of $16,819,342 — 17.6% above template baseline, reflecting expanded user entitlement
+Halcyon full markup (unlimited users at original fee with ≤2% escalator) yields $13,738,666 — $560,426 less than template baseline over 5 years while providing unlimited user access — commercially unacceptable

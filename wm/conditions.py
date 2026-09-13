@@ -29,9 +29,26 @@ import os
 
 from pathlib import Path
 
-from .abstraction import CONFIDENTIAL, FACTS, ISSUES
+from . import taskctx
+from .abstraction import CONFIDENTIAL as _CONF, FACTS as _FACTS
 
-TASK_DIR = Path(__file__).resolve().parent / "task"
+
+def _issues():
+    return taskctx.issues()
+
+
+def _facts():
+    """FACTS and _confidential() were written for the original DSA. A ported task
+    has neither, and carrying them over would leak another deal's numbers into
+    the prompt."""
+    return _FACTS if taskctx.is_default() else {}
+
+
+def _confidential():
+    return _CONF if taskctx.is_default() else []
+
+def TASK_DIR():
+    return taskctx.task_dir()
 
 OUTPUT_SPEC = """
 Return ONLY a JSON array. One object per issue, using these exact issue ids:
@@ -51,28 +68,42 @@ negotiation authority: {confidential}
 
 
 def _ids() -> str:
-    return ", ".join(f"{i.id} ({i.name})" for i in ISSUES)
+    return ", ".join(f"{i.id} ({i.name})" for i in _issues())
 
 
 def output_spec() -> str:
-    return OUTPUT_SPEC.format(ids=_ids(), confidential="; ".join(CONFIDENTIAL))
+    return OUTPUT_SPEC.format(ids=_ids(), confidential="; ".join(_confidential()))
 
 
-TASK = (
-    f"You act for {FACTS['us']} in negotiating a Data Sharing Agreement with "
-    f"{FACTS['them']}. Luminos returned a first markup on {FACTS['markup_received']} "
-    f"against Carden's initial draft of {FACTS['initial_draft_date']}.\n\n"
-    "Decide Carden's counter-turn position on every substantive change: accept it, "
-    "reject it and revert, or modify it with a counter-proposal. Where you reject or "
-    "modify, state the specific position Carden proposes."
-)
+def TASK() -> str:
+    """What the agent is being asked to do.
+
+    The original DSA statement names the parties and dates from FACTS. A ported
+    task has no FACTS, so the instruction comes from its own task.json - which
+    is also what the judge grades against, so the two cannot drift apart.
+    """
+    if taskctx.is_default():
+        f = _facts()
+        return (f"You act for {f['us']} in negotiating a Data Sharing Agreement with "
+                f"{f['them']}. Luminos returned a first markup on {f['markup_received']} "
+                f"against Carden's initial draft of {f['initial_draft_date']}.\n\n"
+                "Decide Carden's counter-turn position on every substantive change: "
+                "accept it, reject it and revert, or modify it with a counter-proposal. "
+                "Where you reject or modify, state the specific position Carden proposes.")
+    import json
+    tj = taskctx.task_dir() / "task.json"
+    instr = json.loads(tj.read_text()).get("instructions", "") if tj.exists() else ""
+    return (instr.strip() + "\n\n" if instr else "") + (
+        "Decide your client's position on every substantive change the counterparty "
+        "made: accept it, reject it and revert, or modify it with a counter-proposal. "
+        "Where you reject or modify, state the specific position your client proposes.")
 
 
 # --- A0 -------------------------------------------------------------------
 
 def raw() -> str:
     parts = []
-    for f in sorted(TASK_DIR.glob("*.txt")):
+    for f in sorted(TASK_DIR().glob("*.txt")):
         parts.append(f"===== {f.name} =====\n{f.read_text()}")
     return "\n\n".join(parts)
 
@@ -80,12 +111,14 @@ def raw() -> str:
 # --- A4 -------------------------------------------------------------------
 
 def worldmodel() -> str:
-    L = ["NEGOTIATION STATE", "=" * 70, "",
-         f"We are {FACTS['us']}. Counterparty: {FACTS['them']}.",
-         f"Luminos markup received {FACTS['markup_received']} against our draft of "
-         f"{FACTS['initial_draft_date']}.",
-         f"{len(ISSUES)} substantive issues are open. Each needs a disposition.", ""]
-    for i in ISSUES:
+    f = _facts()
+    L = ["NEGOTIATION STATE", "=" * 70, ""]
+    if f:
+        L += [f"We are {f['us']}. Counterparty: {f['them']}.",
+              f"Markup received {f['markup_received']} against our draft of "
+              f"{f['initial_draft_date']}."]
+    L += [f"{len(_issues())} substantive issues are open. Each needs a disposition.", ""]
+    for i in _issues():
         L += [
             f"{i.id}  {i.name}   [Section {i.section}]",
             f"    our draft   : {i.ours}",
@@ -97,7 +130,7 @@ def worldmodel() -> str:
             L.append(f"    hard limit  : {i.hard_limit}")
         L.append("")
     L += ["INTERNAL ONLY - must not appear in anything sent to Luminos:"]
-    L += [f"  - {c}" for c in CONFIDENTIAL]
+    L += [f"  - {c}" for c in _confidential()]
     return "\n".join(L)
 
 
@@ -140,14 +173,13 @@ def build(condition: str, prose: str | None = None) -> str:
         body = worldmodel()
     elif condition == "A4G":
         from . import gravity
-        from .abstraction import ISSUES
         body = (f"{worldmodel()}\n\n"
-                f"{gravity.report({i.id: i.name for i in ISSUES})}")
+                f"{gravity.report({i.id: i.name for i in _issues()})}")
     elif condition == "A6":
         body = f"{worldmodel()}\n\n\nSOURCE DOCUMENTS\n\n{raw()}"
     else:
         raise ValueError(condition)
-    return f"{TASK}\n\n{body}\n\n{output_spec()}"
+    return f"{TASK()}\n\n{body}\n\n{output_spec()}"
 
 
 _ALL = ["A0", "A2", "A4", "A4G", "A6"]

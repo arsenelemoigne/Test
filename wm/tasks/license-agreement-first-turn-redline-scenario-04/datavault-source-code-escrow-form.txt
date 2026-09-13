@@ -1,0 +1,365 @@
+SOURCE CODE ESCROW AGREEMENT
+by and among
+VERIDIAN SYSTEMS CORP. (Depositor)
+THE BENEFICIARY IDENTIFIED ON EXHIBIT A (Beneficiary)
+and
+DATAVAULT ESCROW SERVICES, INC. (Escrow Agent)
+Dated as of the Effective Date (as defined herein)
+Right-click to update Table of Contents
+PREAMBLE
+This Source Code Escrow Agreement (this "Agreement") is entered into as of the date of the last signature affixed hereto (the "Effective Date"), by and among:
+VERIDIAN SYSTEMS CORP., a corporation organized and existing under the laws of the State of Delaware, with its principal offices located at 400 Garrison Boulevard, Suite 1100, Wilmington, Delaware 19801 ("Depositor");
+The entity identified as the beneficiary on Exhibit A attached hereto and incorporated herein by reference ("Beneficiary"), with its address as set forth on Exhibit A; and
+DATAVAULT ESCROW SERVICES, INC., a corporation organized and existing under the laws of the Commonwealth of Virginia, with its principal offices located at 250 Northwind Drive, Reston, Virginia 20190 ("Escrow Agent").
+Depositor, Beneficiary, and Escrow Agent are each referred to herein individually as a "Party" and collectively as the "Parties."
+RECITALS
+WHEREAS, Depositor has developed, owns, and licenses certain proprietary software known as Veridian OnePlatform (as more fully described on Exhibit B), which software Depositor licenses to Beneficiary pursuant to the terms and conditions of a separate license agreement between Depositor and Beneficiary, as identified on Exhibit A (the "License Agreement");
+WHEREAS, Beneficiary's business operations depend, in material part, upon the continued availability, maintenance, and support of Veridian OnePlatform, and Beneficiary desires to ensure that it will have access to the source code and related materials for Veridian OnePlatform in the event of certain defined circumstances that may impair Depositor's ability to provide such software, maintenance, or support;
+WHEREAS, the Parties desire to establish an escrow arrangement pursuant to which Depositor will deposit with Escrow Agent the source code and related materials for Veridian OnePlatform, and Escrow Agent will hold such materials in trust and release them to Beneficiary solely upon the occurrence of certain defined release conditions and in accordance with the procedures set forth herein;
+WHEREAS, Escrow Agent is in the business of providing technology escrow services and has the expertise, facilities, and security infrastructure necessary to receive, safeguard, store, and, when authorized, release technology deposits of the type contemplated by this Agreement; and
+WHEREAS, Escrow Agent agrees to hold the Deposit Materials (as defined below) subject to the terms and conditions of this Agreement and to act as a neutral stakeholder with respect thereto.
+NOW, THEREFORE, in consideration of the mutual covenants, agreements, representations, and warranties contained herein, and for other good and valuable consideration, the receipt and sufficiency of which are hereby acknowledged, the Parties agree as follows:
+ARTICLE 1 — DEFINITIONS
+As used in this Agreement, the following terms shall have the meanings set forth below. Capitalized terms used but not defined in this Article 1 shall have the meanings ascribed to them elsewhere in this Agreement.
+1.1 "Deposit Materials" means, collectively, all source code in human-readable form, build scripts, makefiles, compilers and compiler configurations, technical documentation (including architecture documents, design specifications, developer guides, and inline code comments), database schemas, data dictionaries, API specifications, configuration files, deployment scripts, test suites, test data, encryption keys or certificates necessary for compilation or deployment, and any and all other materials, tools, information, and instructions reasonably necessary to compile, build, link, deploy, maintain, modify, and operate the software identified on Exhibit B (Veridian OnePlatform), including all components, modules, libraries, and subsystems thereof. The term "Deposit Materials" includes both the Initial Deposit and all Update Deposits delivered pursuant to Article 3.
+1.2 "Effective Date" means the date on which the last of the three Parties executes this Agreement, as reflected on the signature pages hereto.
+1.3 "License Agreement" means the agreement between Depositor and Beneficiary under which Depositor licenses Veridian OnePlatform to Beneficiary, as identified on Exhibit A, together with all amendments, supplements, statements of work, and order forms executed thereunder.
+1.4 "Release Conditions" means the conditions and events specified in Section 5.1 of this Agreement under which Escrow Agent is authorized to release the Deposit Materials to Beneficiary in accordance with the procedures set forth in Section 5.2.
+1.5 "Verification" means the technical inspection and testing process described in Article 4, by which the completeness, readability, integrity, and (at Level 2) compilability of the Deposit Materials are assessed.
+1.6 "Update Deposit" means each supplemental or replacement deposit of Deposit Materials made by Depositor after the Initial Deposit pursuant to Section 3.2 of this Agreement.
+1.7 "Initial Deposit" means the first complete deposit of Deposit Materials made by Depositor to Escrow Agent pursuant to Section 3.1 of this Agreement.
+1.8 "Dispute Notice" means the written notice of objection delivered by Depositor to Escrow Agent in response to a Release Request, as described in Section 5.2.
+1.9 "Release Request" means the written request submitted by Beneficiary to Escrow Agent seeking the release of the Deposit Materials upon the alleged occurrence of a Release Condition, as described in Section 5.2.
+1.10 "Deposit Description Form" means the form attached hereto as Exhibit C, or such successor form as Escrow Agent may prescribe from time to time, which is to be completed and submitted by Depositor in connection with each deposit of Deposit Materials.
+ARTICLE 2 — APPOINTMENT OF ESCROW AGENT
+2.1 Appointment. Depositor and Beneficiary hereby jointly appoint DataVault Escrow Services, Inc. as the escrow agent under this Agreement, and Escrow Agent hereby accepts such appointment and agrees to receive, hold, safeguard, and release the Deposit Materials solely in accordance with the terms and conditions of this Agreement.
+2.2 Neutral Stakeholder. The Parties acknowledge and agree that Escrow Agent acts solely as a neutral stakeholder with respect to the Deposit Materials. Escrow Agent is not, and shall not be deemed to be, an agent, fiduciary, trustee (other than as a depositary), partner, or joint venturer of or with either Depositor or Beneficiary. Escrow Agent's duties and obligations are strictly limited to those expressly set forth in this Agreement, and Escrow Agent shall have no implied duties or obligations of any kind. Escrow Agent shall not be required to take any action that, in its reasonable judgment, would be contrary to applicable law or to the terms of this Agreement.
+2.3 Reliance on Documents. Escrow Agent shall be entitled to rely upon any written notice, instruction, request, certificate, or other document furnished to it hereunder that Escrow Agent in good faith believes to be genuine and to have been signed or presented by the proper Party or Parties. Escrow Agent shall not be liable for any action taken, suffered, or omitted to be taken by it in good faith in accordance with the advice of its legal counsel.
+ARTICLE 3 — DEPOSIT OBLIGATIONS
+Section 3.1 — Initial Deposit
+(a) Depositor shall deliver the initial Deposit Materials to Escrow Agent within sixty (60) calendar days following the Effective Date. Time is of the essence with respect to this obligation.
+(b) The Deposit Materials shall be delivered on industry-standard media (including, without limitation, encrypted USB drives, optical media, or external hard drives) or, at Depositor's election and Escrow Agent's agreement, via Escrow Agent's secure electronic deposit system (the "Secure Upload Portal"). All electronic transmissions shall employ encryption meeting or exceeding AES-256 standards.
+(c) Each delivery of Deposit Materials shall be accompanied by a completed Deposit Description Form in the form of Exhibit C, fully executed by an authorized representative of Depositor.
+(d) Depositor shall include with the Initial Deposit a written inventory listing all files and materials included in the deposit, organized by directory structure and file name, specifying the version number of each file where applicable, and identifying the version number corresponding to the then-current production release of Veridian OnePlatform as of the date of deposit. The inventory shall also identify, with specificity, any and all third-party tools, compilers, libraries, frameworks, runtime environments, and other components required for compilation, building, linking, deployment, and operation of Veridian OnePlatform, including the name, version number, and supplier of each such third-party component.
+(e) Depositor shall include with the Initial Deposit written compilation and build instructions sufficient to enable a reasonably skilled software engineer familiar with the relevant programming languages and development environments to compile, build, and deploy Veridian OnePlatform from the deposited source code using only the Deposit Materials and the identified third-party tools and libraries.
+Section 3.2 — Update Deposits
+(a) Depositor shall deliver updated Deposit Materials to Escrow Agent within thirty (30) calendar days following each major or minor production release of Veridian OnePlatform. For purposes of this Section, a "major release" is any release designated by a change in the first or second numeral of the version number (e.g., from version 3.x to version 4.0 or from version 3.1 to version 3.2), and a "minor release" is any release designated by a change in the third numeral of the version number (e.g., from version 3.2.1 to version 3.2.2). Hotfixes and patches that do not receive a new minor version number need not be separately deposited but shall be included in the next scheduled Update Deposit.
+(b) Notwithstanding Section 3.2(a), Depositor shall make Update Deposits no less frequently than once every six (6) calendar months, regardless of release cadence. If no major or minor production release has occurred during a six-month period, Depositor shall nonetheless deliver an Update Deposit containing the most current version of the Deposit Materials as of the date of such deposit.
+(c) Each Update Deposit shall be accompanied by an updated Deposit Description Form and a revised written inventory reflecting all changes, additions, and deletions since the immediately preceding deposit. The updated inventory shall clearly identify the version number of the then-current production release of Veridian OnePlatform to which the Update Deposit corresponds.
+(d) Unless Depositor expressly specifies in writing on the Deposit Description Form that an Update Deposit is supplemental to (and does not replace) the immediately preceding deposit, each Update Deposit shall be deemed a complete replacement of all prior Deposit Materials held by Escrow Agent. Upon confirmation of receipt and integrity of a replacement Update Deposit, Escrow Agent shall securely destroy the superseded deposit in accordance with its standard data destruction procedures, unless Depositor instructs otherwise in writing.
+Section 3.3 — Depositor Representations
+(a) Depositor represents and warrants to Beneficiary and Escrow Agent that, at the time of each deposit (including the Initial Deposit and each Update Deposit):
+(i) The Deposit Materials constitute a complete and accurate copy of the source code and all related materials for the then-current production version of Veridian OnePlatform, and include all materials reasonably necessary to compile, build, deploy, maintain, and operate such software;
+(ii) Depositor is the owner of, or has all necessary rights in, the Deposit Materials and has the full right, power, and authority to deposit such materials with Escrow Agent and to authorize the potential release thereof to Beneficiary under the terms of this Agreement;
+(iii) The deposit of the Deposit Materials with Escrow Agent does not violate any agreement, obligation, or understanding between Depositor and any third party, including, without limitation, any intellectual property license, non-disclosure agreement, or employment agreement;
+(iv) To Depositor's knowledge, the Deposit Materials do not contain any virus, malware, worm, Trojan horse, back door, time bomb, or other malicious code; and
+(v) The Deposit Materials, when compiled and built in accordance with the deposited instructions and using the identified third-party tools and libraries, will produce object code that is functionally equivalent to the then-current production release of Veridian OnePlatform licensed to Beneficiary under the License Agreement.
+(b) Depositor acknowledges and agrees that Beneficiary is entering into this Agreement and paying fees hereunder in material reliance on the representations and warranties set forth in this Section 3.3. A breach of any such representation or warranty shall constitute a material breach of this Agreement.
+ARTICLE 4 — VERIFICATION
+Section 4.1 — Beneficiary's Right to Verification
+(a) Beneficiary may request that Escrow Agent perform a Verification of the Deposit Materials no more than once during any twelve (12)-month period, measured from the date of the most recently completed Verification (or, if no Verification has been performed, from the Effective Date).
+(b) All Verification requests shall be submitted in writing to Escrow Agent, with a contemporaneous copy to Depositor. The Verification request shall specify the level of Verification desired (Level 1 or Level 2, as described in Section 4.2 below).
+(c) Escrow Agent shall commence the Verification within fifteen (15) business days following receipt of a properly submitted Verification request, or such other timeframe as the Parties may agree.
+Section 4.2 — Scope of Verification
+Escrow Agent offers two levels of Verification, as described below:
+(a) Level 1 — Inventory Verification. In a Level 1 Verification, Escrow Agent shall confirm that: (i) the deposit media is readable and accessible; (ii) the files contained in the deposit correspond to the file inventory list provided by Depositor on the Deposit Description Form; (iii) the deposit is not empty, corrupt, or otherwise materially incomplete based on a comparison of the deposited files against the inventory; and (iv) the version number identified on the Deposit Description Form corresponds to the version information contained within the deposited files to the extent readily ascertainable. Level 1 Verification is a non-technical, administrative review and does not include any attempt to compile, build, or execute the Deposit Materials.
+(b) Level 2 — Technical Verification. In a Level 2 Verification, Escrow Agent shall engage a qualified independent technical expert (the "Verification Expert"), selected by Escrow Agent in its reasonable discretion from its panel of approved technical consultants, to perform the following:
+(i) Conduct a full Level 1 Inventory Verification as described in Section 4.2(a);
+(ii) Attempt to compile, build, link, and deploy the Deposit Materials in a clean, isolated environment using only the deposited materials, the documented compilation and build instructions, and the third-party tools and libraries identified in the deposit inventory;
+(iii) Execute basic functional tests, if test suites are included in the Deposit Materials, to confirm that the resulting build operates in a manner substantially consistent with the documented functionality of Veridian OnePlatform;
+(iv) Identify and document any errors, omissions, missing files, missing third-party components, or other deficiencies that prevent or materially impair successful compilation, building, deployment, or operation; and
+(v) Produce a written report (the "Verification Report") documenting the Verification Expert's findings, including a summary of the procedures performed, the results obtained, and any deficiencies identified.
+(c) Beneficiary shall select the level of Verification at the time of the Verification request. Level 1 Verification is included in the annual escrow maintenance fee and may be performed at no additional cost to either Party. Level 2 Verification is subject to the additional fees set forth in Section 8.2.
+(d) Depositor shall cooperate in good faith with any Verification, including by providing reasonable assistance and clarification to the Verification Expert as may be necessary; provided, however, that Depositor shall not be required to disclose proprietary information beyond the scope of the Deposit Materials.
+Section 4.3 — Verification Results and Remediation
+(a) Escrow Agent shall provide copies of the Verification Report to both Depositor and Beneficiary within ten (10) business days following the completion of the Verification (or such longer period as may be reasonably required for Level 2 Verification).
+(b) If the Verification reveals material deficiencies in the Deposit Materials — including, without limitation, missing files, unreadable media, incomplete source code, absent or incorrect build instructions, or failure to compile and build in a Level 2 Verification — Depositor shall cure such deficiencies and deliver corrected Deposit Materials to Escrow Agent within thirty (30) calendar days following Depositor's receipt of the Verification Report. The corrected deposit shall be accompanied by a revised Deposit Description Form and inventory specifically identifying the corrections made.
+(c) Escrow Agent shall conduct a follow-up Verification of the corrected Deposit Materials following Depositor's re-deposit. A follow-up Level 1 Verification shall be performed at no additional charge to either Party. A follow-up Level 2 Verification, if required because the original deficiency was identified at Level 2, shall be performed at Depositor's sole cost and expense.
+(d) If Depositor fails to cure material deficiencies identified in a Verification within the thirty (30)-day cure period specified in Section 4.3(b), such failure shall constitute a material breach of this Agreement, and Beneficiary shall have all remedies available under this Agreement and at law or in equity.
+ARTICLE 5 — RELEASE CONDITIONS
+Section 5.1 — Events Triggering Release
+Escrow Agent shall release the Deposit Materials to Beneficiary upon the occurrence of any of the following Release Conditions:
+(a) Insolvency of Depositor. Any of the following events shall constitute a Release Condition under this Section 5.1(a):
+(i) Depositor files a voluntary petition for relief under Title 11 of the United States Code (the Bankruptcy Code) or any analogous federal or state insolvency statute;
+(ii) An involuntary petition for relief is filed against Depositor under the Bankruptcy Code or any analogous federal or state insolvency statute, and such petition is not dismissed, stayed, or vacated within sixty (60) calendar days following the date of filing;
+(iii) Depositor makes a general assignment for the benefit of its creditors;
+(iv) A receiver, trustee, conservator, custodian, or similar official is appointed over all or substantially all of Depositor's assets, and such appointment is not vacated or stayed within sixty (60) calendar days;
+(v) Depositor is dissolved or liquidated, whether voluntarily or by operation of law; or
+(vi) Depositor becomes insolvent, meaning that Depositor is generally unable to pay its debts as they become due in the ordinary course of business.
+(b) Discontinuation of the Platform. Any of the following events shall constitute a Release Condition under this Section 5.1(b):
+(i) Depositor publicly announces, whether by press release, public filing, or otherwise, that it will cease to develop, maintain, or support Veridian OnePlatform;
+(ii) Depositor provides written notice to Beneficiary that it will cease to develop, maintain, or support Veridian OnePlatform; or
+(iii) Depositor has, in fact, ceased all development and maintenance of Veridian OnePlatform (including the release of updates, patches, bug fixes, and new versions) for a continuous period of twelve (12) months without having provided prior written notice to Beneficiary explaining the reason for such cessation and a commercially reasonable plan and timeline for resuming development and maintenance.
+(c) Exclusivity of Release Conditions. The Release Conditions set forth in Sections 5.1(a) and 5.1(b) are exhaustive. No event or circumstance other than those specifically enumerated in this Section 5.1 shall entitle Beneficiary to the release of the Deposit Materials, and Escrow Agent shall have no obligation to release the Deposit Materials except upon the occurrence of a Release Condition and in compliance with the procedures set forth in Section 5.2.
+Section 5.2 — Release Request Procedure
+(a) To initiate a release of the Deposit Materials, Beneficiary shall submit a written Release Request to Escrow Agent. The Release Request shall: (i) identify the specific Release Condition that Beneficiary claims has occurred, by reference to the applicable subsection of Section 5.1; (ii) describe in reasonable detail the facts and circumstances supporting Beneficiary's claim; and (iii) include reasonable supporting evidence or documentation of the alleged Release Condition (which may include, without limitation, copies of public filings, press releases, court orders, correspondence from Depositor, or sworn declarations).
+(b) Promptly upon receipt of a Release Request, and in no event later than five (5) business days following receipt, Escrow Agent shall deliver a copy of the Release Request and all accompanying documentation to Depositor at the address specified for notices under Section 11.2.
+(c) Depositor shall have thirty (30) business days from the date of its receipt of the Release Request to deliver a written objection (a "Dispute Notice") to Escrow Agent. The Dispute Notice shall set forth in reasonable detail the basis for Depositor's objection, including a statement of the specific facts and grounds upon which Depositor disputes the occurrence of the claimed Release Condition.
+(d) If Depositor does not deliver a timely Dispute Notice to Escrow Agent within the thirty (30)-business-day objection period, Escrow Agent shall release the Deposit Materials to Beneficiary within ten (10) business days following the expiration of the objection period. Release shall be effected by delivery of the Deposit Materials on encrypted media via bonded courier service to the address specified by Beneficiary in the Release Request, or via Escrow Agent's Secure Upload Portal, as mutually agreed by Escrow Agent and Beneficiary.
+(e) If Depositor delivers a timely Dispute Notice, Escrow Agent shall not release the Deposit Materials and shall promptly notify Beneficiary of the dispute. The dispute shall thereafter be resolved in accordance with the dispute resolution procedures set forth in Article 9. Escrow Agent shall continue to hold the Deposit Materials pending final resolution of the dispute and shall release or retain the Deposit Materials in accordance with the final determination or award resulting from such proceedings.
+(f) Escrow Agent shall have no obligation to independently investigate, verify, or determine the validity of any Release Request or Dispute Notice. Escrow Agent's sole obligation is to follow the procedural requirements set forth in this Section 5.2.
+Section 5.3 — Scope of Release License
+(a) Upon the release of the Deposit Materials to Beneficiary pursuant to this Article 5, Beneficiary shall receive, and Depositor hereby grants to Beneficiary (effective upon such release), a non-exclusive, non-transferable, non-sublicensable license to use, reproduce, modify, compile, and create derivative works of the Deposit Materials solely for the purpose of continuing to operate, maintain, support, and make necessary modifications to Veridian OnePlatform internally within Beneficiary's organization, in the manner and for the purposes contemplated by the License Agreement.
+(b) Without limiting the generality of any other provision of this Agreement, Beneficiary shall not, following a release of the Deposit Materials:
+(i) Use the Deposit Materials, in whole or in part, to develop, create, market, distribute, or sell any product or service that competes with Veridian OnePlatform or any other product or service of Depositor;
+(ii) Sublicense, distribute, publish, display, or otherwise make available the Deposit Materials, in whole or in part, to any third party, except as expressly permitted under Section 5.3(c);
+(iii) Reverse engineer, decompile, or disassemble any object code included in the Deposit Materials for purposes other than maintaining or supporting Veridian OnePlatform as permitted under this Agreement; or
+(iv) Remove, obscure, or alter any proprietary notices, labels, or marks contained in or on the Deposit Materials.
+(c) Notwithstanding Section 5.3(b)(ii), Beneficiary may disclose the Deposit Materials to Beneficiary's employees and to third-party contractors engaged by Beneficiary, in each case solely on a need-to-know basis and solely for the purpose of exercising the license rights granted under Section 5.3(a); provided, that each such employee or contractor is bound by written confidentiality obligations at least as protective of the Deposit Materials as the obligations set forth in Article 6 of this Agreement.
+(d) The license granted under this Section 5.3 shall survive the termination or expiration of the License Agreement solely to the extent that a Release Condition occurred prior to or simultaneously with such termination or expiration. In no event shall the release license be deemed to expand, modify, or supersede any other intellectual property rights or obligations of the Parties under the License Agreement or otherwise.
+ARTICLE 6 — CONFIDENTIALITY
+6.1 Confidential Information. The Parties acknowledge and agree that the Deposit Materials constitute the Confidential Information and trade secrets of Depositor. In addition, the terms of this Agreement, the fees payable hereunder, and any information disclosed by any Party in connection with a Verification, Release Request, or dispute hereunder shall be deemed Confidential Information of the disclosing Party.
+6.2 Obligations of Escrow Agent. Escrow Agent shall maintain the Deposit Materials in strict confidence and shall not disclose, copy, distribute, or otherwise make available the Deposit Materials to any person or entity other than as expressly authorized by this Agreement. Escrow Agent shall apply to the Deposit Materials no less than the same degree of care that Escrow Agent uses to protect its own most sensitive proprietary and confidential information, but in no event less than reasonable care. Escrow Agent shall store the Deposit Materials in secure, access-controlled facilities and shall restrict access to the Deposit Materials to those of its personnel who have a direct need to know in order to perform Escrow Agent's obligations under this Agreement and who are bound by written confidentiality obligations at least as protective as those set forth herein.
+6.3 Obligations of Beneficiary. Beneficiary shall maintain the Deposit Materials in strict confidence both before and after any release and shall not disclose the Deposit Materials except as expressly permitted under Section 5.3(c). Beneficiary shall apply to the Deposit Materials no less than the same degree of care that Beneficiary uses to protect its own most sensitive proprietary and confidential information, but in no event less than reasonable care.
+6.4 Exceptions. The confidentiality obligations set forth in this Article 6 shall not apply to information that: (a) is or becomes generally available to the public through no act or omission of the receiving Party; (b) was in the receiving Party's lawful possession prior to disclosure and was not subject to an obligation of confidentiality; (c) is lawfully obtained by the receiving Party from a third party without restriction on disclosure; or (d) is required to be disclosed by applicable law, regulation, or order of a court or governmental authority, provided that the receiving Party gives the disclosing Party prompt written notice of such requirement (to the extent legally permissible) and cooperates with the disclosing Party's efforts to obtain a protective order or other appropriate relief.
+6.5 Survival. Beneficiary's and Escrow Agent's confidentiality obligations with respect to the Deposit Materials shall survive the termination or expiration of this Agreement indefinitely, except to the extent that the Deposit Materials become publicly known through no fault, act, or omission of the Party seeking to invoke this exception.
+ARTICLE 7 — ESCROW AGENT'S DUTIES AND LIMITATIONS
+Section 7.1 — Standard of Care
+(a) Escrow Agent shall use commercially reasonable efforts to safeguard and preserve the Deposit Materials in its custody. Escrow Agent shall maintain industry-standard physical and electronic security measures at all facilities where Deposit Materials are stored, including, without limitation, access controls, environmental controls (temperature, humidity, fire suppression), surveillance systems, and intrusion detection systems.
+(b) Escrow Agent shall maintain and follow commercially reasonable disaster-recovery and business-continuity procedures, including the maintenance of at least one off-site backup copy of each deposit at a geographically separate facility. The off-site backup facility shall provide security protections substantially equivalent to those maintained at the primary storage facility.
+(c) Escrow Agent shall provide Depositor and Beneficiary, upon written request and no more than once per calendar year, with a summary description of Escrow Agent's then-current security measures and disaster-recovery procedures. Escrow Agent shall notify Depositor and Beneficiary promptly in writing in the event of any security breach or incident that may have resulted in unauthorized access to, or loss or destruction of, the Deposit Materials.
+Section 7.2 — Limitation of Liability
+(a) ESCROW AGENT'S AGGREGATE LIABILITY TO EITHER DEPOSITOR OR BENEFICIARY FOR ANY AND ALL CLAIMS ARISING UNDER OR IN CONNECTION WITH THIS AGREEMENT, WHETHER IN CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY, OR OTHERWISE, SHALL NOT EXCEED THE TOTAL FEES ACTUALLY PAID TO ESCROW AGENT UNDER THIS AGREEMENT DURING THE TWELVE (12)-MONTH PERIOD IMMEDIATELY PRECEDING THE EVENT OR OCCURRENCE GIVING RISE TO SUCH CLAIM.
+(b) IN NO EVENT SHALL ESCROW AGENT BE LIABLE TO ANY PARTY FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOST PROFITS, LOST REVENUE, LOSS OF DATA, LOSS OF BUSINESS OPPORTUNITY, OR BUSINESS INTERRUPTION, ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT, REGARDLESS OF WHETHER SUCH DAMAGES ARE BASED ON CONTRACT, TORT, STRICT LIABILITY, OR ANY OTHER THEORY, AND REGARDLESS OF WHETHER ESCROW AGENT HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+(c) Escrow Agent is not responsible for, and makes no representation or warranty regarding, the accuracy, completeness, functionality, or fitness for any particular purpose of the Deposit Materials. Escrow Agent's sole obligations with respect to evaluating the Deposit Materials are limited to performing Verifications expressly requested by Beneficiary and conducted in accordance with Article 4.
+(d) Escrow Agent shall not be liable for any delay or failure in performance resulting from causes beyond its reasonable control, including, without limitation, acts of God, natural disasters, war, terrorism, riots, embargoes, acts of governmental authorities, fire, floods, power outages, telecommunications failures, or cyberattacks.
+Section 7.3 — Interpleader
+In the event that Escrow Agent receives conflicting claims, demands, instructions, or notices from Depositor and Beneficiary, or if Escrow Agent is in good-faith doubt as to what action it should take under this Agreement, Escrow Agent may, at its sole election and in its sole discretion: (a) refrain from taking any action until such conflict or doubt is resolved to Escrow Agent's reasonable satisfaction; (b) commence an interpleader action or similar proceeding in a court of competent jurisdiction and deposit the Deposit Materials (or copies thereof) with such court; or (c) take any other action permitted by applicable law. Upon the filing of an interpleader action and the deposit of the Deposit Materials with the court, Escrow Agent shall be fully and finally discharged from all further obligations and liability under this Agreement with respect to the disputed Deposit Materials and shall be entitled to recover its reasonable attorneys' fees and costs incurred in connection with such interpleader action from the Deposit Materials or from the Parties.
+ARTICLE 8 — FEES AND COST ALLOCATION
+Section 8.1 — Annual Escrow Fee
+(a) The annual escrow maintenance fee for the services provided by Escrow Agent under this Agreement shall be as set forth on Exhibit D (DataVault Escrow Services, Inc. Fee Schedule), which reflects Escrow Agent's then-current published fee schedule as of the Effective Date.
+(b) The annual escrow maintenance fee shall be split equally between Depositor and Beneficiary, with each Party responsible for fifty percent (50%) of the total annual fee. Escrow Agent shall invoice each Party directly for its respective share.
+(c) The first year's annual escrow maintenance fee shall be due and payable within thirty (30) calendar days following the Effective Date. Thereafter, the annual fee shall be due and payable on each anniversary of the Effective Date. All fees shall be paid in United States dollars by wire transfer, ACH, or check to the account or address designated by Escrow Agent.
+(d) Escrow Agent may adjust the annual escrow maintenance fee upon sixty (60) days' prior written notice to both Depositor and Beneficiary, effective as of the next anniversary date; provided, however, that any annual increase shall not exceed five percent (5%) of the prior year's fee without the prior written consent of both Depositor and Beneficiary.
+Section 8.2 — Verification Fees
+(a) Level 1 (Inventory) Verification is included in the annual escrow maintenance fee and shall be performed at no additional cost to either Party.
+(b) Level 2 (Technical) Verification shall be billed at Escrow Agent's then-current professional services rates, as set forth on Exhibit D. The cost of a Level 2 Verification shall be borne solely by the requesting Beneficiary; provided, however, that if the Level 2 Verification reveals a material deficiency in the Deposit Materials (including, without limitation, the inability to compile or build the software from the deposited materials in accordance with the deposited instructions), the cost of the initial Level 2 Verification shall be borne by Depositor. Escrow Agent shall invoice the appropriate Party upon completion of the Verification.
+(c) Follow-up Verification fees shall be allocated as set forth in Section 4.3(c).
+Section 8.3 — Supplemental Fees
+(a) Special handling charges, expedited release processing fees, additional storage media costs, fees for additional copies of deposits, and any other services not included in the annual escrow maintenance fee shall be billed at Escrow Agent's standard published rates as set forth on Exhibit D.
+(b) Unless otherwise agreed in writing by the Parties, supplemental fees shall be borne by the Party requesting the applicable supplemental service.
+(c) Escrow Agent shall provide the requesting Party with a written estimate of supplemental fees prior to performing any supplemental service, and shall not proceed with such service until the requesting Party has approved the estimate in writing.
+Section 8.4 — Late Payment
+Any amount not paid when due shall bear interest at the lesser of one and one-half percent (1.5%) per month or the maximum rate permitted by applicable law, from the date due until paid. In the event that any fees remain unpaid for more than sixty (60) calendar days following the applicable due date, Escrow Agent may, upon thirty (30) days' prior written notice to both Depositor and Beneficiary, suspend the performance of its obligations under this Agreement (other than the continued safekeeping of the Deposit Materials) until all outstanding fees, including accrued interest, are paid in full.
+ARTICLE 9 — DISPUTE RESOLUTION
+9.1 Binding Arbitration. Any dispute, controversy, or claim arising out of or relating to this Agreement, including, without limitation, disputes regarding whether a Release Condition has occurred, the validity or enforceability of any provision of this Agreement, or the rights or obligations of any Party hereunder, shall be submitted to final and binding arbitration administered by the American Arbitration Association (the "AAA") in accordance with its then-current Commercial Arbitration Rules and Mediation Procedures (the "AAA Rules").
+9.2 Arbitrator. The arbitration shall be conducted by a single arbitrator appointed in accordance with the AAA Rules. The arbitrator shall be a licensed attorney with at least ten (10) years of experience in technology licensing or intellectual property law. If the Parties are unable to agree on an arbitrator within thirty (30) calendar days following the filing of the arbitration demand, the AAA shall appoint the arbitrator in accordance with the AAA Rules.
+9.3 Location. The arbitration shall be conducted in Reston, Virginia, unless the Parties mutually agree to another location. The Parties consent to the conduct of hearings by videoconference to the extent permitted by the AAA Rules and agreed by the arbitrator.
+9.4 Interim and Provisional Relief. The arbitrator shall have full authority to grant interim or provisional relief, including, without limitation, temporary restraining orders and preliminary injunctive relief to prevent the release of Deposit Materials pending the final resolution of the dispute, to order the preservation of evidence, or to take such other measures as the arbitrator deems necessary to preserve the status quo or prevent irreparable harm.
+9.5 Fees and Costs. The prevailing Party in any arbitration under this Article 9 shall be entitled to recover its reasonable attorneys' fees, arbitration filing fees, arbitrator compensation, and other costs and expenses incurred in connection with the arbitration from the non-prevailing Party, as determined by the arbitrator in the final award.
+9.6 Confidentiality of Proceedings. All arbitration proceedings, submissions, evidence, and awards shall be treated as confidential by the Parties and the arbitrator and shall not be disclosed to any third party except as may be required by applicable law, regulation, or court order, or as necessary to confirm, vacate, or enforce the arbitration award.
+9.7 Emergency Injunctive Relief. Notwithstanding the foregoing provisions of this Article 9, any Party may seek emergency injunctive or other equitable relief from a court of competent jurisdiction to the extent necessary to prevent irreparable harm pending the appointment of the arbitrator or the completion of arbitration proceedings. The institution of any such court proceeding shall not constitute a waiver of the right to submit the underlying dispute to arbitration.
+9.8 Escrow Agent's Role. Unless Escrow Agent is itself a party to the dispute, Escrow Agent shall not be required to participate in any arbitration proceeding under this Article 9 but shall comply with any final arbitration award or court order directed to it regarding the release or retention of Deposit Materials.
+ARTICLE 10 — TERM AND TERMINATION
+Section 10.1 — Term
+This Agreement shall commence on the Effective Date and shall continue in full force and effect for the duration of the License Agreement, including any renewal, extension, or amendment periods thereof, unless earlier terminated pursuant to this Article 10. The Parties acknowledge that the term of this Agreement is intended to be coextensive with the term of the License Agreement to ensure continuous escrow protection for the duration of Beneficiary's licensed use of Veridian OnePlatform.
+Section 10.2 — Termination
+(a) Termination upon Expiration of License Agreement. This Agreement shall terminate automatically upon the expiration or termination of the License Agreement; provided, however, that if a Release Request is pending at the time of such expiration or termination, this Agreement shall remain in effect with respect to such Release Request until the Release Request has been finally resolved (whether by release, withdrawal, or final arbitration award) in accordance with the terms of this Agreement.
+(b) Termination for Material Breach. Any Party may terminate this Agreement upon sixty (60) calendar days' prior written notice to the other Parties if another Party materially breaches any provision of this Agreement and fails to cure such breach within such sixty (60)-day notice period. Notwithstanding the foregoing, Escrow Agent may not terminate this Agreement under this Section 10.2(b) if a Release Request is pending at the time of the proposed termination.
+(c) Termination by Escrow Agent for Convenience. Escrow Agent may terminate this Agreement upon ninety (90) calendar days' prior written notice to both Depositor and Beneficiary for any reason or no reason. In the event of such termination for convenience, the Parties shall cooperate in good faith to identify and appoint a successor escrow agent mutually agreed upon by Depositor and Beneficiary. Escrow Agent shall transfer all Deposit Materials then in its possession to the successor escrow agent promptly upon confirmation of such appointment and execution of a successor escrow agreement. Escrow Agent shall not destroy or return any Deposit Materials to Depositor pursuant to such termination for convenience unless and until (i) the Deposit Materials have been successfully transferred to a successor escrow agent, or (ii) Depositor and Beneficiary jointly instruct Escrow Agent in writing to destroy or return the materials.
+(d) Termination by Mutual Agreement. This Agreement may be terminated at any time by the written agreement of all three Parties.
+Section 10.3 — Effect of Termination
+(a) Upon termination of this Agreement for any reason other than a release of the Deposit Materials to Beneficiary pursuant to Article 5, Escrow Agent shall, at Depositor's written direction, either: (i) return all Deposit Materials (including all copies, backups, and replicas) to Depositor by secure courier or other mutually agreed method; or (ii) securely destroy all Deposit Materials (including all copies, backups, and replicas) in accordance with Escrow Agent's standard data destruction procedures. Escrow Agent shall provide Depositor and Beneficiary with a written certificate confirming the return or destruction of the Deposit Materials, as applicable, within thirty (30) calendar days following such return or destruction. If Depositor fails to provide written direction within sixty (60) calendar days following the effective date of termination, Escrow Agent shall destroy the Deposit Materials and provide the certificate of destruction described herein.
+(b) The following provisions shall survive the termination or expiration of this Agreement: Article 6 (Confidentiality), Section 7.2 (Limitation of Liability), Article 9 (Dispute Resolution), this Section 10.3 (Effect of Termination), and Article 11 (General Provisions), together with any other provisions that by their nature are intended to survive termination.
+(c) Termination of this Agreement shall not affect any rights or obligations that accrued prior to the effective date of termination, including, without limitation, any obligation to pay fees that accrued prior to termination.
+ARTICLE 11 — GENERAL PROVISIONS
+Section 11.1 — Governing Law
+This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict-of-laws principles or rules that would direct the application of the laws of any other jurisdiction. Each Party hereby irrevocably submits to the exclusive jurisdiction of the federal and state courts located in the State of Delaware for the purposes of any action or proceeding that is not required to be arbitrated under Article 9, and each Party irrevocably waives any objection it may now or hereafter have to the laying of venue of any such action or proceeding in any such court.
+Section 11.2 — Notices
+(a) All notices, requests, demands, consents, approvals, and other communications required or permitted to be given under this Agreement shall be in writing and shall be deemed to have been duly given and received: (i) upon delivery, if delivered by hand; (ii) upon delivery, if sent by nationally recognized overnight courier service (with tracking and proof of delivery); (iii) upon transmission, if sent by electronic mail (with confirmation of receipt from the receiving Party or automated delivery receipt); or (iv) three (3) business days after deposit in the United States mail, postage prepaid, certified or registered, return receipt requested.
+(b) Notices shall be addressed to the Parties at the following addresses (or at such other address as a Party may designate by notice given in accordance with this Section 11.2):
+If to Depositor: Veridian Systems Corp. 400 Garrison Boulevard, Suite 1100 Wilmington, Delaware 19801
+Attn: General Counsel
+Email: legal@veridiansystems.com
+If to Beneficiary: At the address set forth on Exhibit A.
+If to Escrow Agent: DataVault Escrow Services, Inc. 250 Northwind Drive Reston, Virginia 20190
+Attn: Escrow Administration
+Email: escrow-admin@datavaultescrow.com
+Section 11.3 — Entire Agreement; Amendments
+(a) This Agreement, together with all Exhibits attached hereto (Exhibits A, B, C, and D), which are incorporated herein by reference, constitutes the entire agreement among the Parties with respect to the escrow of the Deposit Materials and supersedes all prior and contemporaneous agreements, understandings, negotiations, discussions, representations, and warranties, whether oral or written, relating to the subject matter hereof. For the avoidance of doubt, this Agreement does not supersede or amend the License Agreement, which remains in full force and effect in accordance with its terms.
+(b) This Agreement may not be amended, modified, supplemented, or waived except by a written instrument executed by all three Parties. No waiver of any provision of this Agreement shall be effective unless set forth in a written instrument signed by the Party granting such waiver. No failure or delay by any Party in exercising any right, power, or privilege under this Agreement shall operate as a waiver thereof, nor shall any single or partial exercise of any such right, power, or privilege preclude any other or further exercise thereof or the exercise of any other right, power, or privilege.
+Section 11.4 — Assignment
+(a) Neither Depositor nor Beneficiary may assign, delegate, or otherwise transfer this Agreement or any of its rights or obligations hereunder without the prior written consent of the other Party (as between Depositor and Beneficiary) and Escrow Agent, and any attempted assignment without such consent shall be null and void.
+(b) Notwithstanding Section 11.4(a), Depositor may assign this Agreement to a successor entity in connection with a merger, consolidation, reorganization, or sale of all or substantially all of Depositor's assets or the assets of Depositor's business unit responsible for Veridian OnePlatform, without the consent of Beneficiary or Escrow Agent; provided, that Depositor provides written notice of such assignment to both Escrow Agent and Beneficiary no later than thirty (30) calendar days following the effective date of such transaction, and the assignee assumes in writing all of Depositor's obligations under this Agreement.
+(c) Escrow Agent may not assign this Agreement without the prior written consent of both Depositor and Beneficiary.
+(d) Subject to the foregoing restrictions, this Agreement shall be binding upon and inure to the benefit of the Parties and their respective successors and permitted assigns.
+Section 11.5 — Counterparts and Electronic Signatures
+This Agreement may be executed in two or more counterparts, each of which shall be deemed an original and all of which, taken together, shall constitute one and the same instrument. Delivery of an executed counterpart of this Agreement by electronic mail (including in PDF format) or by any other electronic transmission shall be effective as delivery of a manually executed counterpart. Electronic signatures, including signatures executed via commercially available electronic signature platforms (e.g., DocuSign, Adobe Sign), shall be deemed original signatures for all purposes and shall be binding upon the Parties.
+Section 11.6 — Severability
+If any provision of this Agreement is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction or an arbitrator, such provision shall be modified to the minimum extent necessary to make it valid, legal, and enforceable while preserving the Parties' original intent to the greatest extent possible. If such modification is not possible, the invalid provision shall be severed from this Agreement, and the remaining provisions shall continue in full force and effect.
+Section 11.7 — Relationship of the Parties
+Nothing in this Agreement shall be construed to create a partnership, joint venture, agency (except to the limited extent of Escrow Agent's role as depositary), or employment relationship among any of the Parties. No Party shall have the right, power, or authority to bind any other Party or to create any obligation on behalf of any other Party.
+Section 11.8 — Force Majeure
+No Party shall be liable for any failure or delay in performance of its obligations under this Agreement (other than payment obligations) to the extent that such failure or delay results from causes beyond such Party's reasonable control, including, without limitation, acts of God, natural disasters, epidemics, pandemics, war, terrorism, civil unrest, government orders or restrictions, power failures, internet or telecommunications outages, or cyberattacks. The affected Party shall provide prompt written notice of such event to the other Parties and shall use commercially reasonable efforts to resume performance as soon as practicable.
+Section 11.9 — Third-Party Beneficiaries
+This Agreement is for the sole benefit of the Parties and their respective successors and permitted assigns. Nothing in this Agreement, express or implied, is intended to or shall confer upon any person or entity other than the Parties any rights, benefits, or remedies of any nature whatsoever under or by reason of this Agreement.
+EXHIBITS
+The following Exhibits are attached hereto and incorporated herein by reference:
+•  Exhibit A — Identification of Beneficiary and License Agreement
+•  Exhibit B — Description of Escrowed Software (Veridian OnePlatform)
+•  Exhibit C — Deposit Description Form
+•  Exhibit D — DataVault Escrow Services, Inc. Fee Schedule
+EXHIBIT A
+IDENTIFICATION OF BENEFICIARY AND LICENSE AGREEMENT
+Beneficiary Name: ____________
+Beneficiary Address: ____________
+________________________________________
+________________________________________
+Beneficiary Contact Person: ____________
+Beneficiary Contact Email: ____________
+Beneficiary Contact Phone: ____________
+License Agreement Identification:
+Field
+Details
+Title of License Agreement
+________
+Date of License Agreement
+________
+Parties to License Agreement
+Veridian Systems Corp. and ________
+Licensed Software
+Veridian OnePlatform
+Amendment(s), if any
+________
+This Exhibit A is to be completed at the time of execution and is incorporated into and made a part of the Source Code Escrow Agreement among Veridian Systems Corp., the Beneficiary identified above, and DataVault Escrow Services, Inc.
+EXHIBIT B
+DESCRIPTION OF ESCROWED SOFTWARE
+Software Name: Veridian OnePlatform
+Current Production Version Number (as of Effective Date): ______
+General Description of Software:
+________________________________________
+________________________________________
+________________________________________
+Component / Module Listing:
+Component / Module Name
+Version
+Programming Language(s)
+Description
+______
+__
+______
+______
+______
+__
+______
+______
+______
+__
+______
+______
+______
+__
+______
+______
+______
+__
+______
+______
+______
+__
+______
+______
+Third-Party Tools and Libraries Required for Compilation / Build:
+Tool / Library Name
+Version
+Supplier / Source
+License Type
+______
+__
+______
+______
+______
+__
+______
+______
+______
+__
+______
+______
+______
+__
+______
+______
+This Exhibit B is to be completed at the time of the Initial Deposit and updated with each Update Deposit. It is incorporated into and made a part of the Source Code Escrow Agreement among Veridian Systems Corp., the Beneficiary identified on Exhibit A, and DataVault Escrow Services, Inc.
+EXHIBIT C
+DEPOSIT DESCRIPTION FORM
+Deposit Type:  Initial Deposit  Update Deposit (Replacement)  Update Deposit (Supplemental)
+Date of Deposit: ______
+Depositor: Veridian Systems Corp.
+Software: Veridian OnePlatform
+Version Number of Deposited Materials: ______
+Delivery Method:  Encrypted USB Drive  External Hard Drive  Optical Media  Secure Upload Portal
+Number of Media Items Delivered: ______
+Encryption Applied:  Yes (Method: ______)  No
+Total File Count: ______
+Total File Size: ______
+Summary of Changes Since Prior Deposit (if Update Deposit):
+________________________________________
+________________________________________
+________________________________________
+File Inventory Attached:  Yes  No
+Build Instructions Attached / Updated:  Yes  No
+Depositor Certification:
+I, the undersigned authorized representative of Veridian Systems Corp., certify that this deposit is complete and accurate and that the representations set forth in Section 3.3 of the Source Code Escrow Agreement are true and correct as of the date of this deposit.
+VERIDIAN SYSTEMS CORP.
+By: ________
+Name: ________
+Title: ________
+Date: ________
+Escrow Agent Acknowledgment of Receipt:
+DATAVAULT ESCROW SERVICES, INC.
+Received by: ________
+Name: ________
+Title: ________
+Date Received: ________
+This Exhibit C is incorporated into and made a part of the Source Code Escrow Agreement among Veridian Systems Corp., the Beneficiary identified on Exhibit A, and DataVault Escrow Services, Inc.
+EXHIBIT D
+DATAVAULT ESCROW SERVICES, INC. FEE SCHEDULE
+Effective as of the Effective Date of the Source Code Escrow Agreement. Subject to adjustment in accordance with Section 8.1(d).
+Service
+Fee
+Annual Escrow Maintenance Fee (three-party agreement)
+$__ per year
+Level 1 (Inventory) Verification
+Included in Annual Fee
+Level 2 (Technical) Verification — Professional Services Rate
+$__ per hour
+Level 2 (Technical) Verification — Estimated Minimum Engagement
+$__
+Expedited Release Processing (within 48 hours of authorization)
+$__ per request
+Additional Storage Media (per physical media item)
+$__ per item
+Replacement or Duplicate Deposit Copy
+$__ per copy
+Special Handling / Custom Services
+$__ per hour
+Late Payment Interest Rate
+1.5% per month
+Payment Terms: Net thirty (30) calendar days from date of invoice. All fees are stated in United States dollars.
+Invoicing: Escrow Agent shall invoice each Party directly for its respective share of fees as set forth in the Agreement.
+This Exhibit D is incorporated into and made a part of the Source Code Escrow Agreement among Veridian Systems Corp., the Beneficiary identified on Exhibit A, and DataVault Escrow Services, Inc. Fees are subject to periodic adjustment in accordance with Section 8.1(d) of the Agreement.
+SIGNATURE PAGE
+IN WITNESS WHEREOF, the Parties have executed this Source Code Escrow Agreement as of the date last written below.
+VERIDIAN SYSTEMS CORP. (Depositor)
+By: ________
+Name: ________
+Title: ________
+Date: ________
+Address: 400 Garrison Boulevard, Suite 1100
+Wilmington, Delaware 19801
+[BENEFICIARY NAME] (Beneficiary)
+By: ________
+Name: ________
+Title: ________
+Date: ________
+Address: ________
+________________________________________
+________________________________________
+DATAVAULT ESCROW SERVICES, INC. (Escrow Agent)
+By: ________
+Name: ________
+Title: ________
+Date: ________
+Address: 250 Northwind Drive
+Reston, Virginia 20190

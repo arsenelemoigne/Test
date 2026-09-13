@@ -29,7 +29,9 @@ import time
 from pathlib import Path
 
 from . import conditions, judge, llm, render
-from .abstraction import Decision, Disposition, check
+from . import taskctx
+from .abstraction import Decision, Disposition
+from .taskctx import check
 
 RUNS = Path(__file__).resolve().parent / "runs"
 PROSE_CACHE = RUNS / "_prose_twin.txt"
@@ -169,6 +171,10 @@ PRICES = {
     "qwen/qwen3-32b":                  (0.10,  0.30),
     "google/gemini-2.5-flash":         (0.30,  2.50),
     "google/gemini-2.5-pro":           (1.25, 10.00),
+    "z-ai/glm-4.6":                    (0.40,  1.75),
+    "z-ai/glm-4.5-air":                (0.15,  0.85),
+    "deepseek/deepseek-chat":          (0.25,  1.00),
+    "moonshotai/kimi-k2":              (0.50,  2.00),
 }
 TOK = 4.0          # chars per token, near enough for English prose
 
@@ -298,7 +304,7 @@ def stub(prompt: str, max_tokens: int = 16000) -> str:
     key. It is NOT a model: its decisions are fixed, so it proves the pipeline
     runs, not that anything is any good.
     """
-    from .abstraction import ISSUES
+    ISSUES = taskctx.issues()
     fixed = {
         "I01": ("MODIFY", "Fixed aggregate cap of $3,500,000. No fee-multiple formulation."),
         "I02": ("MODIFY", "Retention of 18 months from receipt of each delivery."),
@@ -326,7 +332,7 @@ def stub(prompt: str, max_tokens: int = 16000) -> str:
 
 def cmd_selftest() -> None:
     """Exercise every stage offline. No network, no key, no spend."""
-    from .abstraction import ISSUES
+    ISSUES = taskctx.issues()
     prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else "(prose twin not built)"
     ok = True
     for c in conditions.CONDITIONS:
@@ -349,6 +355,7 @@ def cmd_selftest() -> None:
     # either full compliance or a checker that cannot detect anything, and the
     # two look identical from the outside. So feed it decisions that plainly
     # breach the memo and require that it objects.
+    from .abstraction import ISSUES as _DSA_ISSUES, check as _dsa_check
     breaches = {
         "I01": "Aggregate cap set at three times the fees paid in the prior twelve months.",
         "I02": "Retention of thirty-six (36) months from receipt.",
@@ -357,14 +364,33 @@ def cmd_selftest() -> None:
     }
     bad = [Decision(issue_id=i.id, disposition=Disposition.REJECT,
                     counter=breaches.get(i.id, "Reverted to the Carden initial draft."),
-                    rationale="") for i in ISSUES]
-    caught = {v.issue_id for v in check(bad)}
+                    rationale="") for i in _DSA_ISSUES]
+    caught = {v.issue_id for v in _dsa_check(bad)}
     missed = set(breaches) - caught
     print()
     print(f"  negative control: {len(breaches) - len(missed)}/{len(breaches)} "
           f"planted breaches caught"
           + (f"  MISSED {', '.join(sorted(missed))}" if missed else ""))
     ok &= not missed
+
+    # the generic checker too, since a ported task uses that path instead
+    from .issuegen import GenIssue, check_generic
+    gi = [GenIssue(id="G1", name="cap", question="?", limits=[
+              {"kind": "max_money", "value": 1_000_000, "message": "cap too high"}]),
+          GenIssue(id="G2", name="term", question="?", limits=[
+              {"kind": "max_quantity", "unit": "month", "value": 12, "message": "too long"}])]
+    gbad = [Decision(issue_id="G1", disposition=Disposition.REJECT,
+                     counter="Cap of FIVE MILLION DOLLARS.", rationale="they wanted 1m"),
+            Decision(issue_id="G2", disposition=Disposition.REJECT,
+                     counter="Term of thirty-six (36) months.", rationale="")]
+    ggood = [Decision(issue_id="G1", disposition=Disposition.REJECT,
+                      counter="Cap of $750,000.", rationale="they wanted five million"),
+             Decision(issue_id="G2", disposition=Disposition.REJECT,
+                      counter="Term of twelve (12) months.", rationale="thirty-six refused")]
+    nb, ng = len(check_generic(gbad, gi)), len(check_generic(ggood, gi))
+    print(f"  generic checker : {nb}/2 breaches caught, {ng} false positives on "
+          f"compliant text")
+    ok &= (nb == 2 and ng == 0)
 
     print()
     print("pipeline:", "OK -- build/parse/check/render all work end to end" if ok else "FAILED")
@@ -703,6 +729,92 @@ def cmd_recheck() -> None:
             print(f"      counter: {r.get('counter', '(none)')[:150]}")
 
 
+def cmd_pack(task_path: str) -> None:
+    """Extract a Harvey LAB task folder to text this pipeline can read.
+
+        export WM_LABS=~/harvey-labs
+        python -m wm.run pack ip-licensing/license-agreement-first-turn-redline/scenario-04
+    """
+    import os
+    from . import taskpack
+    src = Path(task_path).expanduser()
+    if not src.is_absolute() or not src.exists():
+        labs = Path(os.environ.get("WM_LABS", "~/harvey-labs")).expanduser()
+        src = labs / "tasks" / "contracts" / task_path
+    if not (src / "task.json").exists():
+        print(f"ABORT: no task.json in {src}")
+        print("       Set WM_LABS to your harvey-labs checkout, or pass an absolute path.")
+        return
+
+    out = Path(__file__).resolve().parent / "tasks" / src.parent.name if src.name.startswith("scenario") else None
+    out = (Path(__file__).resolve().parent / "tasks" /
+           ("-".join(src.parts[-2:]) if src.name.startswith("scenario") else src.name))
+    sizes = taskpack.pack(src, out)
+    print(f"packed {len([v for v in sizes.values() if v > 0])} documents -> {out}\n")
+    for k, v in sorted(sizes.items(), key=lambda kv: -kv[1]):
+        print(f"  {v:>9,}  {k}" if v > 0 else f"  {'SKIPPED':>9}  {k}")
+
+    r = taskpack.roles(list(sizes))
+    (out / "_roles.json").write_text(json.dumps(r, indent=2))
+    print()
+    for role in ("template", "markup", "memo", "policy", "pricing", "email", "other"):
+        if r.get(role):
+            print(f"  {role:<10} {', '.join(r[role])}")
+    missing = [x for x in ("markup", "memo") if not r.get(x)]
+    if missing:
+        print(f"\n  WARNING no file matched {', '.join(missing)}. This pipeline needs")
+        print("  a counterparty markup and a client mandate; edit _roles.json by hand.")
+    n = len(judge_criteria_count(out))
+    print(f"\n  rubric: {n} criteria "
+          f"(the original DSA task had 29 - more criteria means more headroom)")
+    print(f"\nNext:  export WM_TASK_DIR={out}")
+    print( "       python -m wm.run issues")
+
+
+def judge_criteria_count(task_dir: Path) -> list:
+    try:
+        d = json.loads((task_dir / "task.json").read_text())
+        return d.get("rubric") or d.get("criteria") or []
+    except Exception:                                   # noqa: BLE001
+        return []
+
+
+def cmd_issues() -> None:
+    """Read the client's mandate and the counterparty markup; produce the issue
+    list and its machine-checkable limits. One model call, then cached."""
+    from . import issuegen, taskctx, taskpack
+    T = taskctx.task_dir()
+    rf = T / "_roles.json"
+    if not rf.exists():
+        print(f"ABORT: no _roles.json in {T}. Run `pack` first.")
+        return
+    r = json.loads(rf.read_text())
+
+    def read(role):
+        names = r.get(role) or []
+        return "\n\n".join((T / (Path(n).stem + ".txt")).read_text()
+                            for n in names
+                            if (T / (Path(n).stem + ".txt")).exists())
+
+    memo, markup = read("memo"), read("markup")
+    if not memo or not markup:
+        print(f"ABORT: memo {len(memo):,} chars, markup {len(markup):,} chars - "
+              f"both are required.")
+        return
+    print(f"memo {len(memo):,} chars, markup {len(markup):,} chars -> "
+          f"{llm.FRONTIER}", flush=True)
+    issues = issuegen.build_issues(memo, markup, llm.model(llm.FRONTIER))
+    taskctx.issues_file().write_text(issuegen.dump(issues))
+    print()
+    print(issuegen.summary(issues))
+    print()
+    print(f"written to {taskctx.issues_file()}")
+    print("READ IT. Everything downstream trusts this file, and it was written")
+    print("by a model from the memo - check the limits against the memo yourself.")
+    print()
+    print(llm.spend_report())
+
+
 def cmd_report() -> None:
     import datetime as _dt
     rows = []
@@ -801,6 +913,10 @@ if __name__ == "__main__":
         cmd_all(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "gradeall":
         cmd_gradeall(int(a[1]) if len(a) > 1 else 5)
+    elif a[0] == "pack":
+        cmd_pack(a[1] if len(a) > 1 else "")
+    elif a[0] == "issues":
+        cmd_issues()
     elif a[0] == "recheck":
         cmd_recheck()
     elif a[0] == "report":

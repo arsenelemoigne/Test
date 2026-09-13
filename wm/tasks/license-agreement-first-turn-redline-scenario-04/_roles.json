@@ -1,0 +1,23 @@
+{
+  "template": [
+    "datavault-source-code-escrow-form.docx",
+    "template-transmittal-to-halcyon.eml",
+    "veridian-oneplatform-master-license-agreement-template.docx"
+  ],
+  "pricing": [
+    "fee-and-user-pricing-model.xlsx"
+  ],
+  "markup": [
+    "halcyon-first-markup-license-agreement.docx",
+    "halcyon-markup-return-cover-email.eml"
+  ],
+  "other": [
+    "implementation-statement-of-work.docx"
+  ],
+  "memo": [
+    "internal-negotiation-parameters-memo.docx"
+  ],
+  "policy": [
+    "veridian-privacy-policy.txt"
+  ]
+}

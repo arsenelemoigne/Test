@@ -16,7 +16,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-TASK_JSON = Path(__file__).resolve().parent / "task" / "task.json"
+from . import taskctx
 
 PROMPT = """You are grading one criterion of a legal work-product evaluation.
 
@@ -34,11 +34,11 @@ formatting. Answer with JSON only: {{"verdict": "pass" | "fail", "reasoning": ".
 
 
 def criteria() -> list[dict]:
-    return json.loads(TASK_JSON.read_text())["criteria"]
+    return json.loads((taskctx.task_dir() / "task.json").read_text())["criteria"]
 
 
 def task_description() -> str:
-    d = json.loads(TASK_JSON.read_text())
+    d = json.loads((taskctx.task_dir() / "task.json").read_text())
     return f"{d['title']}\n\n{d['instructions']}"
 
 
