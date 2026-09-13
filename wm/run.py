@@ -272,45 +272,60 @@ def cmd_encode() -> None:
 
 
 def cmd_autoschema() -> None:
-    """Full-contract encoding with NO playbook: schema + weights + scalar value.
-
-    Encodes both the draft and the markup, so the per-clause delta is the answer
-    to 'how much did each change move the contract'.
-    """
-    from . import autoschema
+    """Full contract, no playbook: schema -> decomposed assessment -> couplings
+    -> value under several profiles. Encodes draft and markup so the per-clause
+    delta shows how much each change moved the contract."""
+    from . import autoschema, valuation
     T = Path(__file__).resolve().parent / "task"
     RUNS.mkdir(parents=True, exist_ok=True)
     enc = llm.model(llm.FRONTIER)
+    PARTY = "Carden Analytics (the data discloser)"
 
-    out = {}
+    state = {}
     for label, fname in (("draft", "carden-initial-draft-dsa.txt"),
                          ("markup", "luminos-first-markup-dsa.txt")):
         doc = (T / fname).read_text()
-        print(f"[{label}] enumerating decisions ...", flush=True)
         t0 = time.time()
+        print(f"[{label}] enumerating decisions ...", flush=True)
         schema = autoschema.build_schema(doc, enc)
-        print(f"[{label}] {len(schema)} decisions in {time.time()-t0:.0f}s; weighing ...",
+        print(f"[{label}] {len(schema)} decisions ({time.time()-t0:.0f}s); assessing ...",
               flush=True)
         t0 = time.time()
-        valued = autoschema.weigh(schema, enc, party="Carden Analytics (the data discloser)")
-        print(f"[{label}] weighed in {time.time()-t0:.0f}s", flush=True)
-        (RUNS / f"_auto_{label}.json").write_text(autoschema.dump(valued))
-        out[label] = valued
+        asmts = valuation.assess(schema, enc, PARTY)
+        print(f"[{label}] {len(asmts)} assessed ({time.time()-t0:.0f}s); finding couplings ...",
+              flush=True)
+        t0 = time.time()
+        cpls = valuation.find_couplings(schema, enc)
+        print(f"[{label}] {len(cpls)} couplings ({time.time()-t0:.0f}s)", flush=True)
+        (RUNS / f"_auto_{label}.json").write_text(valuation.dump(asmts, cpls))
+        state[label] = (asmts, cpls)
 
+    prof = valuation.DATA_DISCLOSER
+    for label in ("draft", "markup"):
+        a, c = state[label]
+        total, contribs = valuation.score(a, c, prof)
+        print()
+        print("=" * 78)
+        print(f"### {label.upper()}")
+        print(valuation.render(total, contribs, prof))
+
+    da, dc = state["draft"]
+    ma, mc = state["markup"]
+    d_total, d_contrib = valuation.score(da, dc, prof)
+    m_total, m_contrib = valuation.score(ma, mc, prof)
     print()
-    print(autoschema.render(out["draft"]))
+    print("=" * 78)
+    print(f"DRAFT {d_total:+.1f}  ->  MARKUP {m_total:+.1f}   "
+          f"(the markup moved the contract {m_total - d_total:+.1f})")
     print()
-    print("=" * 82)
-    print(f"DRAFT value {autoschema.contract_value(out['draft']):+.0f}   ->   "
-          f"MARKUP value {autoschema.contract_value(out['markup']):+.0f}   "
-          f"(moved {autoschema.contract_value(out['markup']) - autoschema.contract_value(out['draft']):+.0f})")
+    print(valuation.across_profiles(ma, mc))
     print()
-    print("biggest movers:")
-    for cid, name, d in autoschema.delta(out["draft"], out["markup"])[:20]:
-        print(f"  {cid:<8}{name[:54]:<56}{d:>+5}")
-    print()
-    print("=" * 82)
-    print(autoschema.compare_to_memo(out["markup"]))
+    print("=" * 78)
+    low = [a for a in ma if not a.confident]
+    print(f"{len(low)}/{len(ma)} decisions scored with LOW CONFIDENCE - these are")
+    print("where a firm playbook would actually change the answer:")
+    for a in low[:20]:
+        print(f"  {a.id}  {a.name[:56]:<58} {a.basis[:70]}")
     print()
     print(llm.spend_report())
 
