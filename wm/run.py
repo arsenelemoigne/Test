@@ -332,10 +332,21 @@ def stub(prompt: str, max_tokens: int = 16000) -> str:
 
 def cmd_selftest() -> None:
     """Exercise every stage offline. No network, no key, no spend."""
-    ISSUES = taskctx.issues()
+    # The controls below need no task at all. Run them even when the selected
+    # task has no issue list yet - that is precisely when you want to know the
+    # prompts format, since `issues` is the call about to use them.
+    try:
+        ISSUES = taskctx.issues()
+    except RuntimeError as e:
+        ISSUES = None
+        print(f"  no issue list for this task yet, so the arm-by-arm build is")
+        print(f"  skipped. Run `python -m wm.run issues` first for that part.")
+        print(f"  ({str(e).splitlines()[0]})")
+        print()
+
     prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else "(prose twin not built)"
     ok = True
-    for c in conditions.CONDITIONS:
+    for c in (conditions.CONDITIONS if ISSUES else []):
         prompt = conditions.build(c, prose=prose)
         raw = stub(prompt)
         decisions = parse_decisions(raw)
@@ -419,7 +430,13 @@ def cmd_selftest() -> None:
     ok &= (nb == 2 and ng == 0)
 
     print()
-    print("pipeline:", "OK -- build/parse/check/render all work end to end" if ok else "FAILED")
+    if ISSUES is None:
+        print("controls:", "OK" if ok else "FAILED",
+              "-- the prompt and checker controls pass; the pipeline itself")
+        print("          was not exercised because this task has no issue list yet.")
+    else:
+        print("pipeline:", "OK -- build/parse/check/render all work end to end"
+              if ok else "FAILED")
     print("not exercised offline: the model call and the judge call.")
 
 
