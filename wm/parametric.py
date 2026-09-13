@@ -525,13 +525,17 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
     import statistics as st
     out = []
     rows = single_trades(c, weights)
-    theirs = [r for r in rows if r[5]]                  # leurs demandes seulement
-    ratios = [r[4] for r in theirs if r[4] != float("inf")]
+    def informatif(r):
+        """Une redaction sans cout pour nous ne dit rien du multiplicateur."""
+        return abs(r[2]) > 1e-9
+
+    theirs = [r for r in rows if r[5] and informatif(r)]
+    ratios = [r[4] for r in theirs]
 
     # symetrie de fond : la verifier sur LEURS demandes seulement laisse passer
     # un modele ou l'essentiel des redactions est a somme nulle et ou seules
     # quelques-unes, par hasard, ne le sont pas.
-    tous = [r[4] for r in rows if r[4] != float("inf")]
+    tous = [r[4] for r in rows if informatif(r)]
     sym = sum(1 for x in tous if 0.92 <= x <= 1.08)
     if len(tous) >= 8 and sym / len(tous) >= 0.5:
         out.append(
