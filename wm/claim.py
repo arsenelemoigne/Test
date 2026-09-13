@@ -525,7 +525,10 @@ def scenarios(t: Terms) -> dict[str, Events]:
     demande AUCUN taux de base : elle dit ce que chaque contrat FAIT si ceci
     arrive, et laisse a l'utilisateur le soin de juger si ceci arrivera."""
     months = t.term_years * 12
-    calm = Events(cpi=[0.03] * t.term_years, uptime=[0.9995] * months)
+    # 500 sieges d'expansion, le milieu de la fourchette tiree en Monte Carlo :
+    # sans eux, un plafond de 2 500 sieges ne vaut rien au licencie dans
+    # aucun scenario nomme, et le memo a pourtant bouge a 2 500 pour cela.
+    calm = Events(cpi=[0.03] * t.term_years, uptime=[0.9995] * months, expansion_users=500)
     S = {"calme": calm}
     S["3 mois degrades (99,2 %)"] = replace(calm, uptime=[0.9995] * months)
     for m in (14, 15, 16):
@@ -564,14 +567,17 @@ def stats(xs: list[float]) -> dict:
 
 # --- 3. PREFERENCE ----------------------------------------------------------
 
-def certainty_equivalent(xs: list[float], risk_aversion: float = 0.0, scale: float = 1e6) -> float:
-    """CARA : la valeur certaine qu'on echangerait contre la distribution.
-    risk_aversion = 0 rend la moyenne. C'est la SEULE entree propre a l'utilisateur."""
-    if risk_aversion <= 0:
-        return statistics.mean(xs)
-    a = risk_aversion / scale
-    m = max(xs)
-    return m - math.log(statistics.mean(math.exp(-a * (x - m)) for x in xs)) / a
+def certainty_equivalent(xs: list[float], risk_aversion: float = 0.0) -> float:
+    """moyenne + lambda x (CVaR5 - moyenne) : la penalite de queue, ponderee.
+
+    C'est la meme forme que claim_bridge.WEIGHTS, pour que les deux tableaux
+    se lisent ensemble. Une version CARA a ete retiree : sur une distribution
+    a queue epaisse elle est dominee par le pire tirage et affichait -99 M$
+    pour une moyenne de -7 M$, un chiffre instable qui ne dit rien.
+    risk_aversion = 0 rend la moyenne ; 1 compte le pire vingtieme des mondes
+    autant que la moyenne. C'est la SEULE entree propre a l'utilisateur."""
+    s = stats(xs)
+    return s["mean"] + risk_aversion * (s["cvar5"] - s["mean"])
 
 
 # --- rendu -----------------------------------------------------------------
@@ -628,8 +634,9 @@ def distribution_table(terms: list[Terms], n: int = 2000, seed: int = 0,
             L.append(f"{t.label[:33]:<34}{_money(s['mean']):>12}{_money(s['p5']):>12}"
                      f"{_money(s['p50']):>12}{_money(s['p95']):>12}{_money(s['cvar5']):>12}"
                      f"{_money(ce):>13}")
-    L += ["", f"eq. certain : equivalent certain CARA, aversion au risque = {risk_aversion} "
-              f"(0 = la moyenne). C'est la couche 3, la seule qui soit propre a vous."]
+    L += ["", f"eq. certain : moyenne + {risk_aversion} x (CVaR5 - moyenne). 0 = neutre au "
+              f"risque, 1 = le pire vingtieme compte autant que la moyenne.",
+          "C'est la couche 3, la seule qui soit propre a vous."]
     return "\n".join(L)
 
 
