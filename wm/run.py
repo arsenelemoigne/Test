@@ -129,6 +129,9 @@ def cmd_prose() -> None:
 
 
 def cmd_trial(condition: str, model_name: str, seeds: int = 1) -> None:
+    if not model_name or not model_name.strip():
+        model_name = llm.FRONTIER
+        print(f"(no model given - defaulting to {model_name})")
     prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
     call = llm.model(model_name)
     for s in range(seeds):
@@ -290,7 +293,9 @@ if __name__ == "__main__":
     elif a[0] == "prose":
         cmd_prose()
     elif a[0] == "trial":
-        cmd_trial(a[1], a[2], int(a[3]) if len(a) > 3 else 1)
+        cmd_trial(a[1],
+                  a[2] if len(a) > 2 else "",
+                  int(a[3]) if len(a) > 3 else 1)
     elif a[0] == "all":
         cmd_all(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "report":
