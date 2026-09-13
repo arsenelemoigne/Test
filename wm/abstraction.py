@@ -41,6 +41,10 @@ class Decision:
     disposition: Disposition
     counter: str               # the position we are taking
     rationale: str             # why -- goes in the cover note
+    # Quelle redaction du modele parametrique cette position retient. Sans elle,
+    # un contre-projet en texte libre ne peut pas etre revalue : il faudrait
+    # deviner de quelle redaction il parle.
+    option_id: str = ""
 
 
 # ---------------------------------------------------------------------------

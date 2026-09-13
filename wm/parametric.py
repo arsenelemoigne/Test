@@ -801,3 +801,90 @@ def sanity_report(c: Contract, weights=None) -> str:
 def zero_sum_warning(c: Contract, weights=None) -> str:
     w = model_sanity(c, weights)
     return "\n\n".join(w)
+
+
+# --- la valeur comme retour de boucle --------------------------------------
+
+def assignment_from(decisions, c: Contract) -> tuple[dict, list[str]]:
+    """La position du modele, traduite en assignation sur le contrat.
+
+    Chaque decision porte l'identifiant de la redaction retenue. Celles qui n'en
+    designent aucune - "autre", ou un identifiant inconnu - restent sur notre
+    modele : on ne peut pas valoriser une redaction qui n'existe pas dans le
+    domaine, et la compter comme une concession serait inventer un chiffre.
+    """
+    a, hors = dict(c.template), []
+    for d in decisions:
+        p = c.params.get(d.issue_id)
+        if p is None:
+            continue
+        oid = getattr(d, "option_id", "") or ""
+        if any(o.id == oid for o in p.options):
+            a[d.issue_id] = oid
+        elif oid:
+            hors.append(f"{d.issue_id}:{oid}")
+    return a, hors
+
+
+def value_feedback(decisions, c: Contract, weights=None) -> str:
+    """Ce que la contre-proposition vaut, et ou elle laisse de la valeur.
+
+    C'est la fonction de perte que le projet cherchait depuis le debut : le
+    modele propose, le contrat est evalue, et l'ecart lui revient - non pas
+    comme un jugement sur son texte, mais comme le prix de ses propres
+    concessions.
+    """
+    a, hors = assignment_from(decisions, c)
+    vt, vm, va = c.vector(c.template), c.vector(c.markup), c.vector(a)
+    tt, tm, ta = (total(x, weights) for x in (vt, vm, va))
+    recupere = (ta - tm) / (tt - tm) if tt != tm else 0.0
+
+    L = ["VALEUR DE VOTRE CONTRE-PROPOSITION", "=" * 60, "",
+         f"  leur markup      {tm:>10.0f}",
+         f"  votre position   {ta:>10.0f}",
+         f"  notre modele     {tt:>10.0f}   (reference)",
+         f"\n  Vous recuperez {recupere:.0%} de ce que leur markup nous avait pris.", ""]
+
+    singles = {(r[0], r[1]): r for r in single_trades(c, weights)}
+    mauvaises, ratees = [], []
+    for pid, oid in a.items():
+        p = c.params[pid]
+        if oid == p.ours:
+            # concession non prise : l'avons-nous refusee alors qu'elle etait efficace ?
+            for o in p.options:
+                if o.id == p.ours:
+                    continue
+                r = singles.get((p.name, o.text))
+                if r and r[4] > 1.2 and r[2] < -1e-9:
+                    ratees.append((p.name, o.text, r[2], r[3], r[4]))
+            continue
+        o = p.option(oid)
+        r = singles.get((p.name, o.text))
+        if r and 0 < r[4] < 0.6 and r[2] < -1e-9:
+            mieux = [x for x in p.options
+                     if (q := singles.get((p.name, x.text))) and q[4] > r[4] and q[2] < -1e-9]
+            mauvaises.append((p.name, o.text, r[2], r[3], r[4],
+                              mieux[0].text if mieux else ""))
+
+    if mauvaises:
+        L += [f"{len(mauvaises)} concessions vous coutent bien plus qu'elles ne "
+              f"leur rapportent :", ""]
+        for nom, txt, lo, ga, ra, alt in mauvaises[:8]:
+            L.append(f"  {nom[:30]:<32} vous {lo:>7.0f}  eux {ga:>6.0f}  ratio {ra:.2f}")
+            L.append(f"      vous avez retenu : {txt[:70]}")
+            if alt:
+                L.append(f"      redaction mieux echangee : {alt[:66]}")
+        L.append("")
+    if ratees:
+        L += [f"{len(ratees)} echanges efficaces que vous n'avez pas pris - ils y "
+              f"gagnent plus que", "cela ne vous coute, donc ils sont monnayables :", ""]
+        for nom, txt, lo, ga, ra in sorted(ratees, key=lambda x: -x[4])[:6]:
+            L.append(f"  {nom[:30]:<32} vous {lo:>7.0f}  eux {ga:>6.0f}  ratio {ra:.2f}")
+            L.append(f"      {txt[:70]}")
+        L.append("")
+    if hors:
+        L += [f"{len(hors)} positions ne designent aucune redaction connue "
+              f"({', '.join(hors[:6])}).", "Elles n'ont pas pu etre valorisees.", ""]
+    L.append("Revisez en consequence : refusez ce qui vous coute sans leur rapporter,")
+    L.append("offrez ce qui leur rapporte sans vous couter.")
+    return "\n".join(L)

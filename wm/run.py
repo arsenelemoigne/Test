@@ -59,6 +59,7 @@ def parse_decisions(text: str) -> list[Decision]:
                 counter=row.get("counter", ""),
                 rationale=row.get("rationale", ""),
             ))
+            out[-1].option_id = str(row.get("option_id", "") or "")
         except (KeyError, ValueError):
             continue          # malformed rows are dropped, and that shows up as a miss
     return out
@@ -116,8 +117,20 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     if condition in LOOP_CONDITIONS:
         from . import loop
         rounds = int(os.environ.get("WM_ROUNDS", "3"))
+        vfn = None
+        if condition.startswith("B"):
+            # Les arms B disposent du contrat parametrique : le retour de boucle
+            # peut alors porter sur la VALEUR de la contre-proposition et non
+            # seulement sur sa conformite au mandat. C'est la fonction de perte
+            # que le projet cherchait : le modele propose, le contrat est
+            # evalue, l'ecart lui revient.
+            from . import parametric
+            f = taskctx.task_dir() / "parametric.json"
+            if f.exists():
+                pc = parametric.load(f.read_text())
+                vfn = lambda ds: parametric.value_feedback(ds, pc)
         res = loop.run(prompt, call, parse_decisions, taskctx.issues(), check,
-                       rounds=rounds, blind=condition.endswith("N"))
+                       rounds=rounds, blind=condition.endswith("N"), value_fn=vfn)
         decisions, raw = res["decisions"], res["raw"]
         n_calls, loop_trace = res["calls"], res["trace"]
         print(f" {time.time()-t0:.0f}s, {n_calls} calls, "

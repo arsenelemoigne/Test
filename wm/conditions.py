@@ -59,7 +59,7 @@ Each object:
     "disposition": "ACCEPT" | "REJECT" | "MODIFY",
     "counter": "the operative position Carden takes on this issue, stated concretely -
                 include specific numbers, durations and named jurisdictions where relevant",
-    "rationale": "why, in language suitable to send to opposing counsel"}}
+    "rationale": "why, in language suitable to send to opposing counsel"{option_field}}}
 
 Think first, then emit the JSON last. Do not wrap it in prose.
 IMPORTANT: the rationale is sent to the counterparty. Never disclose internal
@@ -71,8 +71,21 @@ def _ids() -> str:
     return ", ".join(f"{i.id} ({i.name})" for i in _issues())
 
 
-def output_spec() -> str:
-    return OUTPUT_SPEC.format(ids=_ids(), confidential="; ".join(_confidential()))
+OPTION_FIELD = (',\n    "option_id": "l\'identifiant de la redaction retenue parmi celles '
+                'listees pour ce point, ou \\"autre\\" si votre position n\'en '
+                'reprend aucune"')
+
+
+def output_spec(with_option: bool = False) -> str:
+    """with_option : exiger aussi l'identifiant de redaction retenu.
+
+    Sans lui, une contre-proposition en texte libre ne peut pas etre revaluee
+    par le modele parametrique : il faudrait deviner quelle redaction elle
+    designe. Avec lui, la valeur de la reponse se calcule exactement, et la
+    boucle peut rendre au modele ce que sa propre proposition vaut.
+    """
+    return OUTPUT_SPEC.format(ids=_ids(), confidential="; ".join(_confidential()),
+                              option_field=OPTION_FIELD if with_option else "")
 
 
 def TASK() -> str:
@@ -224,7 +237,8 @@ def build(condition: str, prose: str | None = None) -> str:
         body = f"{worldmodel()}\n\n\nSOURCE DOCUMENTS\n\n{raw()}"
     else:
         raise ValueError(condition)
-    return f"{TASK()}\n\n{body}\n\n{output_spec()}"
+    besoin_option = condition.startswith("B")
+    return f"{TASK()}\n\n{body}\n\n{output_spec(besoin_option)}"
 
 
 _ALL = ["A0", "A0L", "A0LN", "A2", "A4", "A4G", "A5", "A5N", "A6",
