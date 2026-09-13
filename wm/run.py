@@ -1,6 +1,8 @@
 """
 The experiment runner.
 
+    python -m wm.run blind                  # lexical change detection, no API calls
+    python -m wm.run encode                 # tied encoder on both docs -> latent diff
     python -m wm.run inputs                 # print each condition's input, no API calls
     python -m wm.run prose                  # build + cache the prose twin (1 frontier call)
     python -m wm.run trial A4 <model> [n]   # one arm, n seeds
@@ -85,7 +87,7 @@ def grade(run_dir: Path, judge_model: str) -> dict:
         "counter-turn-redline-dsa.docx": (run_dir / "counter-turn-redline-dsa.txt").read_text(),
         "cover-note-to-calyx.docx": (run_dir / "cover-note-to-calyx.txt").read_text(),
     }
-    j = llm.claude(judge_model) if judge_model.startswith("claude") else llm.open_weights(judge_model)
+    j = llm.model(judge_model)
     s = judge.score(deliverables, j)
     (run_dir / f"scores__{judge_model}.json").write_text(json.dumps(s, indent=2))
     return s
@@ -106,7 +108,7 @@ def cmd_inputs() -> None:
 
 def cmd_prose() -> None:
     RUNS.mkdir(parents=True, exist_ok=True)
-    text = conditions.prose_twin(PROSE_CACHE, llm.claude(llm.FRONTIER))
+    text = conditions.prose_twin(PROSE_CACHE, llm.model(llm.FRONTIER))
     wm = conditions.worldmodel()
     print(f"prose twin cached: {len(text):,} chars   (world model: {len(wm):,} chars)")
     ratio = len(text) / len(wm)
@@ -115,16 +117,53 @@ def cmd_prose() -> None:
 
 def cmd_trial(condition: str, model_name: str, seeds: int = 1) -> None:
     prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
-    call = llm.claude(model_name) if model_name.startswith("claude") else llm.open_weights(model_name)
+    call = llm.model(model_name)
     for s in range(seeds):
         m = one_trial(condition, model_name, call, s, prose)
         print(m)
 
 
 def cmd_all(seeds: int = 3) -> None:
-    for model_name in (llm.FRONTIER, llm.SMALL_CLAUDE):
+    for model_name in llm.ARMS:
         for c in conditions.CONDITIONS:
             cmd_trial(c, model_name, seeds)
+
+
+def cmd_encode() -> None:
+    """Run the tied encoder on both documents and cache the latent diff."""
+    from . import encoder
+    T = Path(__file__).resolve().parent / "task"
+    draft = (T / "carden-initial-draft-dsa.txt").read_text()
+    markup = (T / "luminos-first-markup-dsa.txt").read_text()
+    enc = llm.model(llm.FRONTIER)
+    RUNS.mkdir(parents=True, exist_ok=True)
+    s_x = encoder.encode(draft, enc)
+    s_y = encoder.encode(markup, enc)
+    (RUNS / "_latent_draft.json").write_text(json.dumps(s_x, indent=2))
+    (RUNS / "_latent_markup.json").write_text(json.dumps(s_y, indent=2))
+    deltas = encoder.latent_diff(s_x, s_y)
+    blind = encoder.blind_spots(draft, markup)
+    text = encoder.render_latent(deltas, blind)
+    (RUNS / "_latent_diff.txt").write_text(text)
+    print(text)
+    print()
+    print(llm.spend_report())
+
+
+def cmd_blind() -> None:
+    """Lexical channel only -- no API calls."""
+    from . import encoder
+    T = Path(__file__).resolve().parent / "task"
+    draft = (T / "carden-initial-draft-dsa.txt").read_text()
+    markup = (T / "luminos-first-markup-dsa.txt").read_text()
+    moved = encoder.section_diff(draft, markup)
+    blind = encoder.blind_spots(draft, markup)
+    print(f"{len(moved)} sections moved; {len(blind)} fall outside the slot schema\n")
+    for b in blind:
+        state = ("deleted" if not b.present_in_markup else
+                 "inserted" if not b.present_in_draft else
+                 f"rewritten (sim {b.similarity:.3f})")
+        print(f"  Section {b.section:<8} {state}")
 
 
 def cmd_report() -> None:
@@ -154,6 +193,10 @@ if __name__ == "__main__":
         print(__doc__)
     elif a[0] == "inputs":
         cmd_inputs()
+    elif a[0] == "encode":
+        cmd_encode()
+    elif a[0] == "blind":
+        cmd_blind()
     elif a[0] == "prose":
         cmd_prose()
     elif a[0] == "trial":

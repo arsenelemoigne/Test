@@ -31,12 +31,65 @@ the initial draft, the markup (Word tracked changes), an internal negotiation au
 memo with hard limits, a privacy policy, a fee schedule and the transmittal email.
 **29 criteria** — 20 on substantive positions, 9 on cover-note rationales.
 
+## Is this JEPA?
+
+Partly, and the part that differs matters.
+
+JEPA maps two views through **tied encoders** into a shared latent space, predicts one
+latent from the other, and puts the loss **in latent space** rather than reconstructing
+the input. The tied-encoder and latent-diff instincts transfer directly. Three things
+do not:
+
+1. **An LLM cannot reason in a learned latent space** — it consumes tokens. Handing it a
+   vector needs a trained projector (the LLaVA pattern), which needs training data.
+2. **JEPA is a training recipe.** I-JEPA needed ImageNet; V-JEPA millions of videos.
+   There is no public corpus of paired (draft, markup) contracts to learn from.
+3. **JEPA deliberately discards detail.** The deliverable here is "$3,500,000",
+   "18 months", "Delaware". The numbers *are* the contract.
+
+So `encoder.py` keeps JEPA's **shape** with a symbolic encoder:
+
+| JEPA | here |
+|---|---|
+| tied encoder | `encode(document, llm)` — identical function, run on each document separately, seeing only that document |
+| s_x, s_y | the draft's 14 slot values, the markup's 14 slot values |
+| latent diff | `latent_diff(s_x, s_y)` — per-slot change = how much each markup weighs |
+| energy | `abstraction.check` — authority violations |
+| decoder | `render.py` — back to text for the judge |
+
+### The measured reason a learned latent can't be the primary channel
+
+`encoder.py` also runs a **lexical** channel (character-5-gram cosine over aligned
+sections) — a real continuous similarity space. Run `python -m wm.run blind`. It shows
+the problem directly:
+
+**Legal materiality is anti-correlated with textual magnitude.** At a conventional
+threshold of 0.93 the channel catches every structural move — deleted sections, inserted
+clauses, rewrites — and misses the three highest-impact edits in the markup:
+
+| edit | legal weight | similarity |
+|---|---|---|
+| 24 hours → 72 hours (breach notification) | large | ~0.99 |
+| Delaware → Maryland (governing law) | large | ~0.98 |
+| 2 years → 3 years (term) | large | ~0.99 |
+
+Only at 0.995 do they surface, and then 35 sections are flagged instead of 17. No
+threshold separates them, because the separation isn't lexical — it's legal. A slot that
+asks "how many hours?" reads 72 regardless of how small the edit was.
+
+**Where the continuous channel does earn its place: recall.** It sees everything, so it
+catches material changes the slot schema has no slot for. On this markup it flags four,
+and §12.1/§12.2 are real — term 2→3 years, renewal 1→2 years, non-renewal notice 90→180
+days — and **none of them appear in the 29 rubric criteria**. That is the honest use of a
+latent space here: detection, not reasoning.
+
 ## The five steps
 
 **1. Load.** `.docx` → text, preserving tracked changes as `{+inserted+}` / `{-deleted-}`.
 Without this the counterparty's changes are invisible. → `task/`
 
-**2. Abstract.** The contract becomes **14 `Issue` objects**. One issue = one thing the
+**2. Abstract.** Both documents go through the **same tied encoder** into **14 slots**;
+the diff is the signal. A lexical channel runs alongside as a recall guard. One issue = one thing the
 parties disagree about, carrying: our draft position, their proposed position, their
 verbatim words, and what the authority memo permits. → `abstraction.py`
 
@@ -72,18 +125,21 @@ result, not a representation result.
 ## Running it
 
 ```bash
-pip install anthropic openai
-export ANTHROPIC_API_KEY=...
+pip install openai
+export OPENROUTER_API_KEY=sk-or-...
 
+python -m wm.run blind               # lexical change detection; no API calls
 python -m wm.run inputs              # sizes; no API calls
+python -m wm.run encode              # tied encoder on both documents
 python -m wm.run prose               # build the prose twin (one frontier call), cached
 python -m wm.run trial A4 claude-opus-5 3
 python -m wm.run all 3               # 4 conditions x 2 models x 3 seeds
 python -m wm.run report
 ```
 
-Open-weights models plug in through `llm.open_weights(model, base_url=...)` — any
-OpenAI-compatible endpoint. Nothing is hardcoded to a provider.
+Every model goes through one OpenRouter client, so transport and parameters are
+identical across arms and only the model id varies. Roster is in `llm.py`;
+`llm.spend_report()` prints tokens per model.
 
 ## Reading the results
 
