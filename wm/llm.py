@@ -28,6 +28,34 @@ def model(name: str, temperature: float = 0.0):
         raise RuntimeError("OPENROUTER_API_KEY is not set")
     client = OpenAI(base_url=BASE_URL, api_key=key)
 
+    # Retrying these wastes 14 seconds of backoff per call and buries the cause
+    # under "failed after 4 attempts". None of them get better by asking again.
+    TERMINAL = (
+        (401, "the API key is missing, empty, or malformed. Check:\n"
+              "          echo \"$OPENROUTER_API_KEY\"\n"
+              "        It must start with sk-or-v1- and contain no angle brackets "
+              "or spaces."),
+        (402, "OUT OF CREDIT. Top up at https://openrouter.ai/credits, or run a\n"
+              "        narrower experiment: WM_CONDITIONS=A2,A4,A4G and a cheaper "
+              "WM_FRONTIER.\n"
+              "        `python -m wm.run cost 3` prices it first."),
+        (403, "the key is valid but not permitted to use this model. Some models "
+              "need\n        a privacy/data-policy setting enabled at "
+              "https://openrouter.ai/settings/privacy"),
+        (429, "rate limited beyond the retry budget. Lower the worker count."),
+    )
+
+    def _terminal(e) -> str | None:
+        text = str(e)
+        for code, advice in TERMINAL:
+            if f"Error code: {code}" in text or f"'code': {code}" in text:
+                return advice
+        if "context" in text.lower() and "length" in text.lower():
+            return (f"the prompt does not fit in {name}'s context window. This is a\n"
+                    "        finding, not a bug: that model physically cannot read "
+                    "this input.")
+        return None
+
     def call(prompt: str, max_tokens: int = 16000) -> str:
         last = None
         for attempt in range(4):
@@ -46,6 +74,9 @@ def model(name: str, temperature: float = 0.0):
                 })
                 return r.choices[0].message.content or ""
             except Exception as e:          # noqa: BLE001 - transport errors vary by provider
+                advice = _terminal(e)
+                if advice:
+                    raise RuntimeError(f"{name}: {advice}") from None
                 last = e
                 time.sleep(2 ** attempt)
         raise RuntimeError(f"{name} failed after 4 attempts: {last}")
