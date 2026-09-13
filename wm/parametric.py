@@ -317,8 +317,8 @@ reste. Pour chaque variable, donne un DOMAINE de deux a quatre redactions :
 
 ATTENTION AU SCHEMA. Au niveau de la VARIABLE, "ours_option" et "theirs_option"
 sont des identifiants d'option, donc des chaines. Au niveau de l'OPTION, "ours"
-et "theirs" sont des vecteurs, donc des objets. Ne confonds pas les deux
-niveaux : chaque option doit avoir un "id", un "text", et deux objets vecteurs.
+est un vecteur, donc un objet. Ne confonds pas les deux niveaux : chaque option
+doit avoir un "id", un "text" et un objet "ours".
 
 Chaque redaction porte DEUX vecteurs sur ces six axes, jamais un score unique :
 
@@ -335,28 +335,8 @@ donc NEGATIVE, pas positive.
   flexibility    -5 a +5, marge de manoeuvre future
   enforceability -5 a +5, capacite a faire executer
 
-  "ours"    l'effet POUR NOUS ({party})
-  "theirs"  l'effet POUR EUX, autant qu'on puisse l'inferer de leur markup et
-            de ce qu'il revele de leurs priorites
-
-Les deux vecteurs sont le coeur de l'exercice. Deux facons de les rater :
-
-  - remplir "theirs" comme l'oppose de "ours" : tout devient a somme nulle et il
-    n'y a plus d'echange a trouver ;
-  - appliquer un facteur constant, par exemple "theirs" = 2 x "ours" : les
-    ratios sortent tous identiques et le classement ne reflete plus que la
-    taille des clauses.
-
-Les deux detruisent exactement l'information recherchee. Pour chaque redaction,
-demande-toi ce que CETTE partie-la y gagne concretement, et pourquoi elle l'a
-demandee plutot qu'une autre. Les valeurs doivent varier fortement d'une clause
-a l'autre.
-
-ILS NE PEUVENT PAS AVOIR RAISON SUR TOUT. Une partie qui negocie prend toujours
-quelque chose : au moins un tiers de leurs demandes doivent leur rapporter MOINS
-qu'elles ne nous coutent. Ce sont des prises de valeur pure, et les identifier
-est la moitie de l'exercice. Si chacune de leurs demandes leur vaut plus qu'elle
-ne nous coute, tu dis qu'il faut accepter leur markup en entier.
+  "ours"    l'effet POUR NOUS ({party}). C'est le SEUL vecteur demande ici :
+            la valeur pour la partie adverse fait l'objet d'une passe separee.
 
 LE SIGNE, SUR UN EXEMPLE. Ils portent le plafond de responsabilite de 12 mois de
 redevances a 2x le terme. Notre exposition AUGMENTE, donc c'est MAUVAIS pour
@@ -390,8 +370,8 @@ Reponds UNIQUEMENT par ce JSON :
 {{"params": [{{"id":"cap","name":"Plafond de responsabilite","section":"11.1",
    "ours_option":"ours","theirs_option":"theirs",
    "options":[{{"id":"ours","text":"...","ours":{{}},"theirs":{{"revenue":0}}}},
-              {{"id":"mid","text":"...","ours":{{"tail_risk":-150}},"theirs":{{"tail_risk":120}}}},
-              {{"id":"theirs","text":"...","ours":{{"tail_risk":-410}},"theirs":{{"tail_risk":150}}}}]}}],
+              {{"id":"mid","text":"...","ours":{{"tail_risk":-150}}}},
+              {{"id":"theirs","text":"...","ours":{{"tail_risk":-410}}}}]}}],
  "couplings": [{{"a":"cap","a_option":"theirs","b":"remedy","b_option":"theirs",
    "joint":{{"tail_risk":-95}},"note":"une phrase"}}]}}
 
@@ -400,6 +380,93 @@ Reponds UNIQUEMENT par ce JSON :
 
 === LEUR MARKUP ===
 {markup}"""
+
+
+THEIRS_PROMPT = """Tu es le conseil de LA PARTIE ADVERSE. Ton client est celui qui a
+RENVOYE le markup ; l'autre partie est {party}.
+
+Voici les points en discussion et, pour chacun, les redactions possibles. Pour
+chaque redaction, dis ce qu'elle vaut A TON CLIENT, sur six axes.
+
+CONVENTION : un nombre POSITIF est MEILLEUR pour ton client. Plus de cout, plus
+de contrainte, plus de risque pour lui : nombre NEGATIF.
+
+  revenue        effet sur son resultat annuel, en milliers
+  tail_risk      effet sur sa perte extreme esperee, en milliers
+  admin          effet sur son cout d'administration annuel, en milliers
+  control        -5 a +5, qui decide
+  flexibility    -5 a +5, sa marge de manoeuvre future
+  enforceability -5 a +5, sa capacite a faire executer
+
+La redaction marquee (reference) vaut zero partout : tout est mesure par
+rapport a elle.
+
+Tu ne sais PAS ce que ces redactions valent a l'autre partie, et tu n'as pas a
+le deviner. Raisonne uniquement depuis le siege de ton client : pourquoi a-t-il
+demande CELLE-CI plutot qu'une autre, et qu'est-ce que cela lui apporte
+concretement ? Deux redactions qui coutent le meme montant a l'autre partie
+peuvent tres bien ne pas avoir la meme valeur pour lui - c'est precisement ce
+qu'on cherche a savoir.
+
+Contexte : {context}
+
+Reponds UNIQUEMENT par ce JSON :
+{{"values": [{{"param":"cap","option":"theirs","v":{{"tail_risk":150,"enforceability":3}}}}]}}
+
+=== LES POINTS ET LEURS REDACTIONS ===
+{menu}"""
+
+
+def _menu(c: Contract) -> str:
+    L = []
+    for p in c.params.values():
+        L.append(f"{p.id}  {p.name}  [section {p.section}]")
+        for o in p.options:
+            tag = "  (reference)" if o.id == p.ours else (
+                  "  (demandee par ton client)" if o.id == p.theirs else "")
+            L.append(f"    {o.id}: {o.text}{tag}")
+        L.append("")
+    return "\n".join(L)
+
+
+def elicit_theirs(c: Contract, llm, party: str, context: str,
+                  max_tokens: int = 12000, raw_out=None) -> int:
+    """Deuxieme passe : leur vecteur, sans jamais montrer le notre.
+
+    Quatre elicitations en un seul appel ont produit theirs = -ours sur 19
+    redactions sur 20. Le modele voyait notre vecteur au moment d'ecrire le
+    leur et le recopiait en miroir - ce qui est la reponse la plus probable
+    quand on demande deux estimations cote a cote sans raison de les separer.
+
+    Ici il ne voit que les redactions et le siege de la partie adverse. La
+    symetrie n'est plus disponible : il n'a rien a refleter.
+    """
+    raw = llm(THEIRS_PROMPT.format(party=party, context=context, menu=_menu(c)),
+              max_tokens=max_tokens)
+    if raw_out is not None:
+        raw_out.write_text(raw)
+    d = _obj(raw)
+    n = 0
+    for r in d.get("values") or []:
+        try:
+            p = c.params.get(r["param"])
+            if p is None:
+                continue
+            o = p.option(str(r["option"]))
+            o.theirs = {k: float(v) for k, v in (r.get("v") or {}).items()
+                        if k in DIMENSIONS}
+            n += 1
+        except (KeyError, TypeError, ValueError):
+            continue
+    # la reference reste l'origine
+    for p in c.params.values():
+        ref = p.option(p.ours)
+        rt = ref.vec("theirs")
+        if any(abs(v) > 1e-9 for v in rt.values()):
+            for o in p.options:
+                o.theirs = {d_: o.vec("theirs")[d_] - rt[d_] for d_ in DIMENSIONS
+                            if abs(o.vec("theirs")[d_] - rt[d_]) > 1e-9}
+    return n
 
 
 def _obj(raw: str) -> dict:

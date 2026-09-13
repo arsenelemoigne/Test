@@ -1049,8 +1049,16 @@ def cmd_model_elicit() -> None:
     print(f"modele {len(template):,} car., markup {len(markup):,} car. -> "
           f"{llm.FRONTIER}", flush=True)
     raw_path = T / "_parametric_raw.txt"
-    c = parametric.build_model(template, markup, llm.model(llm.FRONTIER),
-                               PARTY, CONTEXT, raw_out=raw_path)
+    call = llm.model(llm.FRONTIER)
+    print("passe 1/2 : les variables, leurs domaines, NOTRE vecteur ...", flush=True)
+    c = parametric.build_model(template, markup, call, PARTY, CONTEXT,
+                               raw_out=raw_path)
+    if c.params:
+        print(f"passe 2/2 : leur vecteur, depuis leur siege, sans voir le notre "
+              f"({len(c.params)} variables) ...", flush=True)
+        n = parametric.elicit_theirs(c, call, PARTY, CONTEXT,
+                                     raw_out=T / "_parametric_theirs_raw.txt")
+        print(f"  {n} redactions valorisees cote adverse", flush=True)
     if not c.params:
         print(f"\nAUCUNE VARIABLE RETENUE. La reponse brute est dans\n  {raw_path}\n"
               f"Regarde sa premiere variable : le schema attendu met des "
