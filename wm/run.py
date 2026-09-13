@@ -1023,6 +1023,12 @@ def cmd_drift_demo() -> None:
     print("number; nobody audits 'what if there were no contract'.")
 
 
+def cmd_parametric_demo() -> None:
+    """Le contrat comme objet parametrique. Aucun appel API."""
+    from . import parametric, parametric_example
+    print(parametric.report(parametric_example.contract(), min_concessions=2))
+
+
 def cmd_report() -> None:
     import datetime as _dt
     rows = []
@@ -1138,6 +1144,8 @@ if __name__ == "__main__":
             cmd_audit()
         else:
             cmd_issues()
+    elif a[0] == "model":
+        cmd_parametric_demo()
     elif a[0] == "drift":
         if len(a) > 1 and a[1] in ("--demo", "demo"):
             cmd_drift_demo()
