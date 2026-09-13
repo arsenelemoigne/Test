@@ -93,6 +93,7 @@ def _wm_hash() -> str:
 
 
 LOOP_CONDITIONS = {"A5", "A5N", "A0L", "A0LN", "B0L", "B0LN",
+                   "B2L", "B2LN",
                    "B1L", "B1LN"}
 
 
@@ -547,6 +548,67 @@ def cmd_selftest() -> None:
           f"blind {_bl['calls']} calls -> "
           f"{'clean (CONTROL BROKEN)' if _bl['trace'][-1]['clean'] else 'still dirty, as it must be'}")
     ok &= _ev_ok and _bl_ok
+
+    # LA BOUCLE PAR LA VALEUR. Le retour n'est plus "vous avez enfreint une
+    # limite" mais "cette concession vous coute 500 et ne leur rapporte que
+    # 210". Ce controle ne mesure pas un modele : il verifie que la fonction de
+    # perte nomme bien la mauvaise concession, propose la redaction mieux
+    # echangee, signale l'echange efficace laisse sur la table, et refuse de
+    # chiffrer une position qui ne designe aucune redaction du domaine.
+    from . import parametric as _pm
+    _P = _pm.Parameter
+    _O = _pm.Option
+    _toy = _pm.Contract([
+        _P(id="V1", name="Plafond de responsabilite", section="11", ours="cap_1x",
+           theirs="cap_2x", options=[
+               _O(id="cap_1x", text="12 mois de redevances glissantes"),
+               _O(id="cap_18m", text="18 mois de redevances glissantes",
+                  ours={"tail_risk": -150}, theirs={"tail_risk": 200}),
+               _O(id="cap_2x", text="2x les redevances du terme initial",
+                  ours={"tail_risk": -500}, theirs={"tail_risk": 210})]),
+        _P(id="V2", name="Periode de garantie", section="9", ours="warr_90d",
+           theirs="warr_18m", options=[
+               _O(id="warr_90d", text="90 jours par version"),
+               _O(id="warr_12m", text="12 mois par version",
+                  ours={"revenue": -30}, theirs={"revenue": 90}),
+               _O(id="warr_18m", text="18 mois par version",
+                  ours={"revenue": -52}, theirs={"revenue": 190})]),
+        _P(id="V3", name="Loi applicable", section="15", ours="del", theirs="tex",
+           options=[
+               _O(id="del", text="Delaware"),
+               _O(id="tex", text="Texas",
+                  ours={"enforceability": -300}, theirs={"enforceability": 40})]),
+    ])
+    _pos = [
+        # on cede le plafond : -500 contre +210, la pire monnaie du contrat
+        Decision(issue_id="V1", disposition=Disposition.ACCEPT,
+                 counter="Cap at 2x initial-term fees.", rationale="",
+                 option_id="cap_2x"),
+        # on refuse la garantie : elle leur vaut 190 et ne nous coute que 52
+        Decision(issue_id="V2", disposition=Disposition.REJECT,
+                 counter="Warranty stays at ninety (90) days.", rationale="",
+                 option_id="warr_90d"),
+        # une position qui ne designe aucune redaction connue
+        Decision(issue_id="V3", disposition=Disposition.MODIFY,
+                 counter="New York law.", rationale="", option_id="new_york"),
+    ]
+    _fb = _pm.value_feedback(_pos, _toy)
+    _a, _hors = _pm.assignment_from(_pos, _toy)
+    _vchecks = [
+        ("mauvaise concession nommee", "Plafond de responsabilite" in _fb
+         and "ratio 0.4" in _fb),
+        ("redaction mieux echangee proposee", "18 mois de redevances glissantes" in _fb),
+        ("echange efficace signale", "Periode de garantie" in _fb and "18 mois par version" in _fb),
+        ("redaction inconnue ecartee", _hors == ["V3:new_york"] and _a["V3"] == "del"),
+        ("valeur recuperee calculee", "recuperez" in _fb),
+    ]
+    _vok = all(v for _, v in _vchecks)
+    print(f"  boucle valeur   : {sum(v for _, v in _vchecks)}/{len(_vchecks)} "
+          f"{'OK' if _vok else 'FAIL'}")
+    for _n, _v in _vchecks:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _vok
 
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic

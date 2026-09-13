@@ -11,6 +11,9 @@ renderer and the judge are identical everywhere.
   A4G worldmodel+  A4 plus the gravity table (tier per issue, read
                    from the client's authority memo)                <-- TREATMENT 2
   A6  both         A4 alongside the raw documents (the deployable shape)
+  B0  parametric   the contract as variables, domains and vector drift
+  B1  A4+B0        the issue list alongside the parametric model
+  B2  A0+B0        the raw documents alongside the parametric model
 
 A4G is separated from A4 deliberately. Gravity is extra INFORMATION, not just
 extra form -- it tells the model which issues are walk-aways. Folding it into A4
@@ -224,6 +227,15 @@ def build(condition: str, prose: str | None = None) -> str:
         # substitut - le modele ne peut pas rediger une contre-proposition
         # precise sans le texte qu'il contre.
         body = f"{worldmodel()}\n\n\n{parametric_body()}"
+    elif condition in ("B2", "B2L", "B2LN"):
+        # A0 + abstraction. A0 gagne le rubric (0,986) et enfreint le mandat le
+        # plus souvent ; B1 decide mieux mais rate les secondes conditions que
+        # la compression a laissees dehors. Aucun arm ne portait les deux : le
+        # texte integral, qui ne perd rien, ET le modele parametrique, qui dit
+        # ce que chaque redaction coute. C'est la seule combinaison qui puisse
+        # trancher entre "l'abstraction aide" et "l'abstraction ne fait que
+        # compenser ce qu'elle a elle-meme jete".
+        body = f"SOURCE DOCUMENTS\n\n{raw()}\n\n\n{parametric_body()}"
     elif condition in ("A0L", "A0LN"):
         # Raw documents AND the evaluator. A0 wins the rubric and breaches the
         # mandate most; A5 does the reverse. This is the arm that asks whether
@@ -242,7 +254,7 @@ def build(condition: str, prose: str | None = None) -> str:
 
 
 _ALL = ["A0", "A0L", "A0LN", "A2", "A4", "A4G", "A5", "A5N", "A6",
-        "B0", "B0L", "B0LN", "B1", "B1L", "B1LN"]
+        "B0", "B0L", "B0LN", "B1", "B1L", "B1LN", "B2", "B2L", "B2LN"]
 
 # Narrow the run without editing code:
 #     export WM_CONDITIONS=A2,A4,A4G
