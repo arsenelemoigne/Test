@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import asdict
 import re
 import sys
 import time
@@ -890,6 +891,52 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _ok
 
+    # LES AXES. Extraction des trois notations d'un markup, oracle par regles
+    # sur des formes canoniques, lecture d'une reponse de classification avec
+    # rejets, arithmetique du profil.
+    from . import axes as _AX
+    _mini_t = "Section 1.1 — \"Affiliate.\" means an entity.\nSection 9.1 — Cure. Licensor fails to cure within thirty (30) days.\nSection 12.1 — Audit. Licensor may audit."
+    _mini_m = ("Section 1.1 — \"Affiliate.\" means an entity {+or joint venture+}.\n"
+               "Section 9.1 — Cure. Licensee may terminate if Licensor fails to cure within {-thirty (30) days-} {+sixty (60) days+}.\n"
+               "[DELETED: Section 12.1 — Audit. Licensor may audit.\nAudits at Licensee's offices.]\n"
+               "Section 14.12 — Escrow. Licensor shall deposit the source code.\n"
+               "(b) [ADDED: Licensor's obligations under Section 10.1;\n(c)] any liability.")
+    _hs = _AX.hunks(_mini_m, _mini_t)
+    _kinds = sorted(h.kind for h in _hs)
+    _ax = [("extraction : 5 modifications", len(_hs) == 5),
+           ("extraction : bloc DELETED multi-lignes", "deleted" in _kinds),
+           ("extraction : section nouvelle sans marqueur", any(h.section == "14.12" and h.kind == "new_section" for h in _hs)),
+           ("extraction : alinea herite de sa section", all(h.section for h in _hs))]
+    _regles = [
+        ("Licensor shall remedy any {+material+} breach.", ("threshold", "licensor")),
+        ("Licensor {-shall-} {+shall use commercially reasonable efforts to+} maintain it.", ("obligation", "licensor")),
+        ("Licensor shall defend. {-This states Licensee's sole and exclusive remedy.-}", ("remedy", "licensee")),
+        ("Licensee may not assign without the {+prior written consent of Licensor+}.", ("control", "licensor")),
+        ("Licensee may terminate if Licensor fails to cure within {-thirty (30) days-} {+sixty (60) days+}.", ("timing", "licensor")),
+        ("Licensor may terminate if Licensee fails to cure within {-thirty (30) days-} {+ten (10) days+}.", ("timing", "licensor")),
+        ("Each Party shall use {+commercially reasonable efforts+} to comply.", ("obligation", "ambiguous")),
+        ("Licensee shall pay all {-undisputed-} amounts.", None),
+    ]
+    _rok = sum(_AX.rule_label(t) == att for t, att in _regles)
+    _ax.append((f"regles : {_rok}/{len(_regles)}", _rok == len(_regles)))
+    _raw = ('[{"hunk":"h01","axis":"scope","favours":"licensee","magnitude":"major","what":"a"},'
+            '{"hunk":"h01","axis":"bogus","favours":"licensee","magnitude":"minor","what":"b"},'
+            '{"hunk":"h99","axis":"scope","favours":"licensee","magnitude":"minor","what":"c"},'
+            '{"hunk":"h02","axis":"timing","favours":"licensor","magnitude":"minor","what":"d"}]')
+    _ms, _why = _AX.parse_moves(_raw, {"h01", "h02"})
+    _ax.append(("lecture : 2 lus, 2 rejetes nommes", len(_ms) == 2 and len(_why) == 2))
+    _P = _AX.profile(_ms)
+    _ax.append(("profil : poids major=4, minor=1", _P["scope"]["licensee"] == [1, 4] and _P["timing"]["licensor"] == [1, 1]))
+    _fake = lambda p, max_tokens=0: _raw
+    _mv, _w = _AX.classify(_hs[:2], _fake, "V", "H", batch=2)
+    _ax.append(("classification : hunks manquants signales", any("aucun mouvement" in w for w in _w) or len(_mv) == 2))
+    _aok = all(v for _, v in _ax)
+    print(f"  axes            : {sum(v for _, v in _ax)}/{len(_ax)} {'OK' if _aok else 'FAIL'}")
+    for _n, _v in _ax:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _aok
+
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
     gi = [GenIssue(id="G1", name="cap", question="?", limits=[
@@ -1706,6 +1753,110 @@ def cmd_claim(argv: list[str]) -> None:
     print("Modules de droit : wm/claim.py LAW. Les scenarios nommes n'utilisent ni l'un ni l'autre.")
 
 
+def _axes_docs() -> tuple[str, str]:
+    """Le markup et le template de la tache, en texte, via _roles.json."""
+    d = taskctx.task_dir()
+    roles = json.loads((d / "_roles.json").read_text()) if (d / "_roles.json").exists() else {}
+
+    def first_txt(names):
+        # le role "template" liste aussi le formulaire d'escrow et l'e-mail de
+        # transmission ; le contrat est le plus long des fichiers du role. Le
+        # prendre "premier de la liste" a fait passer l'escrow pour le template
+        # et chaque section du contrat pour une section nouvelle.
+        best, size = "", -1
+        for n in names:
+            f = d / (Path(n).stem + ".txt")
+            if f.exists() and f.stat().st_size > size:
+                best, size = f.read_text(), f.stat().st_size
+        return best
+    mk = first_txt(roles.get("markup", []))
+    tp = first_txt(roles.get("template", []))
+    if not mk:
+        raise SystemExit(f"aucun markup en texte dans {d} (voir _roles.json)")
+    return mk, tp
+
+
+def cmd_axes(argv: list[str]) -> None:
+    """Le profil du markup par fonction juridique. Voir wm/axes.py.
+
+        python -m wm.run axes --hunks                 # gratuit : les modifications extraites
+        python -m wm.run axes --model z-ai/glm-4.6    # classe (un appel par lot de 6)
+        python -m wm.run axes --report                # relit la derniere classification
+    """
+    from . import axes as AX
+    from .render import _partie
+    opts = {"model": llm.FRONTIER, "batch": "6", "limit": "0"}
+    flags = set()
+    i = 0
+    while i < len(argv):
+        k = argv[i].lstrip("-")
+        if k in ("hunks", "report"):
+            flags.add(k)
+            i += 1
+        elif k in opts and i + 1 < len(argv):
+            opts[k] = argv[i + 1]
+            i += 2
+        else:
+            raise SystemExit(f"option inconnue : {argv[i]}")
+
+    mk, tp = _axes_docs()
+    hs = AX.hunks(mk, tp)
+    if int(opts["limit"]):
+        hs = hs[:int(opts["limit"])]
+    try:
+        licensor, licensee = _partie("us").split(",")[-1].strip(), _partie("them").split(",")[-1].strip()
+    except Exception:                                           # noqa: BLE001
+        licensor, licensee = "Licensor", "Licensee"
+    out = taskctx.task_dir() / "axes_moves.json"
+
+    if "hunks" in flags:
+        from collections import Counter
+        print(f"{len(hs)} modifications  {dict(Counter(h.kind for h in hs))}\n")
+        for h in hs:
+            print(f"  {h.id} s.{h.section or '?':<8} {h.kind:<16} +{h.inserted:<5} -{h.deleted:<5} {h.heading[:44]}")
+        n = sum(1 for h in hs if AX.rule_label(h.text))
+        print(f"\n{n} d'entre elles ont une forme canonique que les regles savent juger seules ;")
+        print("elles serviront de second annotateur pour mesurer l'accord avec le modele.")
+        return
+
+    if "report" in flags:
+        if not out.exists():
+            raise SystemExit(f"{out} n'existe pas - lance `axes --model ...` d'abord")
+        d = json.loads(out.read_text())
+        moves = [AX.Move(**m) for m in d["moves"]]
+        why = d.get("why", [])
+    else:
+        call = llm.model(opts["model"])
+        if call is None:
+            raise SystemExit("OPENROUTER_API_KEY manquante")
+        nb = -(-len(hs) // int(opts["batch"]))
+        print(f"{len(hs)} modifications, {nb} appels de classification ({opts['model']})...")
+        raws = []
+        moves, why = AX.classify(hs, call, licensor, licensee, batch=int(opts["batch"]), raw_out=raws)
+        out.write_text(json.dumps({"model": opts["model"], "moves": [asdict(m) for m in moves],
+                                   "why": why}, indent=1, ensure_ascii=False))
+        (taskctx.task_dir() / "axes_raw.txt").write_text("\n\n=====\n\n".join(raws))
+        print(f"  {len(moves)} mouvements, {len(why)} rejets -> {out}\n")
+
+    # les sections que le moteur de scenarios chiffre deja
+    try:
+        from . import claim_bridge
+        param = {sec for _, _, sec, _ in claim_bridge.VERIDIAN}
+    except Exception:                                           # noqa: BLE001
+        param = set()
+    print(AX.report(hs, moves, why, licensor, licensee, parametric_sections=param))
+    n, ok, bad = AX.agreement(hs, moves)
+    print()
+    print(f"ACCORD REGLES / MODELE : {ok}/{n} sur les modifications de forme canonique.")
+    if bad:
+        print("  desaccords :")
+        for b in bad:
+            print(f"    {b}")
+    print("  Les regles ne sont pas un juriste ; un accord eleve est necessaire, pas suffisant.")
+    if "report" not in flags:
+        print(); print(llm.spend_report())
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if not a:
@@ -1771,6 +1922,8 @@ if __name__ == "__main__":
         cmd_neg(a[1:])
     elif a[0] == "claim":
         cmd_claim(a[1:])
+    elif a[0] == "axes":
+        cmd_axes(a[1:])
     elif a[0] == "report":
         cmd_report()
     else:
