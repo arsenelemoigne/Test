@@ -18,6 +18,7 @@ import json
 import re
 from dataclasses import dataclass, field, asdict
 
+from . import attribution
 from .abstraction import Violation, quantities, money_amounts, Disposition
 
 
@@ -65,7 +66,9 @@ def check_generic(decisions, issues: list[GenIssue]) -> list[Violation]:
 
     Reads ONLY the counter, never the rationale: the rationale is where the
     agent says what it rejected, and reading it scores the other side's
-    position as ours.
+    position as ours. For the same reason it reads only the part of the counter
+    that states OUR position - see attribution.py - because a counter-proposal
+    normally names both positions in one sentence.
     """
     by_id = {d.issue_id: d for d in decisions}
     out: list[Violation] = []
@@ -74,7 +77,11 @@ def check_generic(decisions, issues: list[GenIssue]) -> list[Violation]:
         if d is None:
             out.append(Violation(issue.id, f"no decision recorded for {issue.id} ({issue.name})"))
             continue
-        text = (d.counter or "").lower()
+        # Le texte sur lequel les limites s'appliquent est la part du counter
+        # qui enonce NOTRE position. Lire la phrase entiere imputait a notre
+        # client le chiffre qu'il venait de refuser : sur quatre formulations
+        # courantes, trois declenchaient une violation imaginaire.
+        text = attribution.ours(d.counter or "").lower()
 
         for lim in issue.limits:
             kind = lim.get("kind")

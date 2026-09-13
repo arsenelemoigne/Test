@@ -46,12 +46,53 @@ def slug(model_name: str) -> str:
     return model_name.replace("/", "--")
 
 
+def _json_arrays(text: str):
+    """Tout tableau JSON equilibre du texte, le plus long d'abord.
+
+    L'ancienne version prenait `\\[.*\\]` en glouton : un modele qui ecrit une
+    phrase avec des crochets avant sa reponse faisait avaler au motif tout
+    l'intervalle entre le premier crochet du raisonnement et le dernier de la
+    reponse, et le run entier echouait sur un texte pourtant exploitable.
+    """
+    spans, pile = [], []
+    dans_chaine = esc = False
+    for i, ch in enumerate(text):
+        if dans_chaine:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                dans_chaine = False
+            continue
+        if ch == '"':
+            dans_chaine = True
+        elif ch == "[":
+            pile.append(i)
+        elif ch == "]" and pile:
+            spans.append(text[pile.pop():i + 1])
+    return sorted(spans, key=len, reverse=True)
+
+
 def parse_decisions(text: str) -> list[Decision]:
-    m = re.search(r"\[.*\]", text, re.S)
-    if not m:
-        raise ValueError("no JSON array in model output")
+    rows, derniere = None, None
+    for span in _json_arrays(text):
+        try:
+            candidate = json.loads(span)
+        except ValueError as e:
+            derniere = e
+            continue
+        if isinstance(candidate, list) and any(
+                isinstance(r, dict) and "issue_id" in r for r in candidate):
+            rows = candidate
+            break
+    if rows is None:
+        raise ValueError(
+            "no JSON array of decisions in model output"
+            + (f" (last decode error: {derniere})" if derniere else "")
+            + f"; {len(text):,} chars returned, see raw_response.txt")
     out = []
-    for row in json.loads(m.group(0)):
+    for row in rows:
         try:
             out.append(Decision(
                 issue_id=row["issue_id"],
@@ -140,7 +181,9 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
         (d / "loop_trace.json").write_text(json.dumps(loop_trace, indent=2))
         (d / "raw_response.txt").write_text(raw)
         if not decisions:
-            (d / "error.txt").write_text("loop produced no parseable decisions")
+            msg = "loop produced no parseable decisions"
+            (d / "error.txt").write_text(msg)
+            print(f"        FAILED: {msg}\n        see {d}/raw_response.txt")
             return {"condition": condition, "model": model_name, "seed": seed,
                     "failed": True}
     else:
@@ -150,7 +193,11 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
         try:
             decisions = parse_decisions(raw)
         except ValueError as e:
+            # Un run qui echoue en silence coute un appel et n'apprend rien.
+            # La raison etait ecrite dans error.txt et jamais imprimee.
             (d / "error.txt").write_text(str(e))
+            print(f"        FAILED: {e}")
+            print(f"        first 300 chars back: {raw[:300]!r}")
             return {"condition": condition, "model": model_name, "seed": seed,
                     "failed": True}
 
@@ -634,6 +681,65 @@ def cmd_selftest() -> None:
         if not _v:
             print(f"        ! {_n}")
     ok &= _lok
+
+    # ATTRIBUTION DES CHIFFRES. Une contre-proposition nomme les DEUX positions
+    # dans la meme phrase. Le controle prenait le maximum de tous les nombres du
+    # counter, donc imputait a notre client le chiffre qu'il venait de refuser.
+    # Les quatre premiers cas doivent rester muets, les quatre suivants sortir.
+    from .issuegen import GenIssue as _GI, check_generic as _cgen
+    _lim = {"W": _GI(id="W", name="garantie", question="?",
+                     limits=[{"kind": "max_quantity", "unit": "month", "value": 12,
+                              "message": "garantie trop longue"}]),
+            "C": _GI(id="C", name="plafond", question="?",
+                     limits=[{"kind": "max_money", "value": 5_000_000,
+                              "message": "plafond trop haut"}]),
+            "N": _GI(id="N", name="preavis", question="?",
+                     limits=[{"kind": "min_quantity", "unit": "day", "value": 30,
+                              "message": "preavis trop court"}])}
+    _attr = [
+        ("W", "Veridian offers a twelve (12) month warranty; Halcyon's demand for "
+              "eighteen (18) months is rejected.", False),
+        ("W", "Warranty period of twelve (12) months rather than the eighteen (18) "
+              "months requested.", False),
+        ("C", "Cap at $3,168,000. We reject Halcyon's proposed cap of $34,000,000.", False),
+        ("N", "Termination on ninety (90) days' notice, not the ten (10) days they "
+              "sought.", False),
+        ("W", "Warranty extended to twenty-four (24) months.", True),
+        ("W", "We accept the eighteen (18) month warranty they demanded.", True),
+        ("C", "We agree to Halcyon's proposed cap of $34,000,000.", True),
+        ("N", "Termination on ten (10) days' notice.", True),
+    ]
+    _faux_pos = _faux_neg = 0
+    for _iid, _txt, _doit in _attr:
+        _v = _cgen([Decision(issue_id=_iid, disposition=Disposition.MODIFY,
+                             counter=_txt, rationale="")], [_lim[_iid]])
+        if bool(_v) and not _doit:
+            _faux_pos += 1
+            print(f"        ! faux positif : {_txt[:64]}")
+        elif not _v and _doit:
+            _faux_neg += 1
+            print(f"        ! faux negatif : {_txt[:64]}")
+    print(f"  attribution     : {len(_attr) - _faux_pos - _faux_neg}/{len(_attr)} "
+          f"({_faux_pos} faux positifs, {_faux_neg} faux negatifs)")
+    ok &= (_faux_pos == 0 and _faux_neg == 0)
+
+    # le parseur, sur les formes que les modeles rendent vraiment
+    _formes = [
+        'Weighing [the cap] and [the term].\n```json\n[{"issue_id":"I1",'
+        '"disposition":"REJECT","counter":"x","rationale":"y"}]\n```',
+        '[{"issue_id":"I1","disposition":"ACCEPT","counter":"see [Section 3]",'
+        '"rationale":"d"}]',
+        '[{"issue_id":"I1","disposition":"MODIFY","counter":"a","rationale":"b",'
+        '"tags":["x","y"]}]',
+    ]
+    _pok = 0
+    for _f in _formes:
+        try:
+            _pok += len(parse_decisions(_f)) == 1
+        except ValueError:
+            pass
+    print(f"  parseur JSON    : {_pok}/{len(_formes)} formes lues")
+    ok &= (_pok == len(_formes))
 
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
