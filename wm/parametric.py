@@ -632,8 +632,13 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
     out = []
     rows = single_trades(c, weights)
     def informatif(r):
-        """Une redaction sans cout pour nous ne dit rien du multiplicateur."""
-        return abs(r[2]) > 1e-9
+        """Seules les vraies CONCESSIONS disent quelque chose du multiplicateur.
+
+        Une redaction sans cout n'en dit rien, et une qui nous rapporte porte un
+        ratio infini - que statistics.pstdev refuse, ce qui faisait tomber le
+        controle en exception au lieu de rendre un verdict.
+        """
+        return r[2] < -1e-9
 
     theirs = [r for r in rows if r[5] and informatif(r)]
     ratios = [r[4] for r in theirs]
