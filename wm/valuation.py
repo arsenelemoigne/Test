@@ -78,6 +78,7 @@ is not in question - it does, and text does not.
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 import re
 from dataclasses import dataclass, asdict, field
 from enum import Enum
@@ -445,13 +446,29 @@ def _json_array(raw: str) -> list[dict]:
     return json.loads(m.group(0))
 
 
-def assess(decisions, llm, party: str) -> list[Assessment]:
-    payload = "\n".join(
-        f"{d.id} [{d.category}, s.{d.section}] {d.name}: {d.value[:200]}" for d in decisions)
-    rows = _json_array(llm(ASSESS_PROMPT.format(party=party, decisions=payload),
-                           max_tokens=32000))
+def assess(decisions, llm, party: str,
+           batch: int = 20, workers: int = 6) -> list[Assessment]:
+    """Ordinal assessment, in BATCHES - see cardinal.assess_cardinal for why."""
     by_id = {d.id: d for d in decisions}
-    out = []
+    chunks = [decisions[i:i + batch] for i in range(0, len(decisions), batch)]
+
+    def one(chunk):
+        payload = "\n".join(
+            f"{d.id} [{d.category}, s.{d.section}] {d.name}: {d.value[:200]}"
+            for d in chunk)
+        try:
+            return _json_array(llm(ASSESS_PROMPT.format(party=party, decisions=payload),
+                                   max_tokens=8000))
+        except Exception as e:                          # noqa: BLE001
+            print(f"  batch of {len(chunk)} failed: {str(e)[:90]}", flush=True)
+            return []
+
+    rows: list[dict] = []
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for r in ex.map(one, chunks):
+            rows.extend(r)
+
+    out: list[Assessment] = []
     for r in rows:
         d = by_id.get(r.get("id"))
         if d is None:
@@ -466,6 +483,14 @@ def assess(decisions, llm, party: str) -> list[Assessment]:
                 basis=r.get("basis", ""), confident=bool(r.get("confident", False))))
         except (KeyError, ValueError, TypeError):
             continue
+
+    got = {a.id for a in out}
+    missing = [d.id for d in decisions if d.id not in got]
+    if missing:
+        print(f"  WARNING {len(missing)}/{len(decisions)} decisions came back "
+              f"unusable and are NOT assessed: "
+              f"{', '.join(missing[:10])}{' ...' if len(missing) > 10 else ''}",
+              flush=True)
     return out
 
 

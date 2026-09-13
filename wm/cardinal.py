@@ -62,6 +62,7 @@ every figure as an order of magnitude.
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 import math
 import re
 from dataclasses import dataclass, asdict
@@ -234,11 +235,25 @@ def top_exposures(exposures: list[Exposure], k: int = 3) -> str:
     currency, with the tail shown separately from the expected value, and no
     composite at all.
     """
-    adverse = sorted((e for e in exposures if e.favours == "them"),
+    # A zero is not a small exposure, it is an absent answer. Ranking them puts
+    # definitional clauses - effective date, party names - at the top of a risk
+    # report, which is how you can tell the elicitation failed.
+    priced = [e for e in exposures if e.expected > 0 or e.tail > 0]
+    if not priced:
+        return ("LARGEST EXPOSURES\n" + "=" * 72 + "\n\n"
+                f"NOTHING IS PRICED. All {len(exposures)} figures came back at "
+                "zero loss and zero\nprobability, which means the elicitation "
+                "failed, not that the contract is\nsafe. Do not read anything "
+                "into the ordering of zeros. Re-run, and check\nthe batch "
+                "warnings above.")
+
+    adverse = sorted((e for e in priced if e.favours == "them"),
                      key=lambda e: -e.expected)[:k]
-    by_tail = sorted(exposures, key=lambda e: -e.tail)[:k]
+    by_tail = sorted(priced, key=lambda e: -e.tail)[:k]
 
     L = ["LARGEST EXPOSURES", "=" * 72, "",
+         f"{len(priced)} of {len(exposures)} decisions carry a priced exposure; "
+         f"the rest are zero.", "",
          "By expected annual cost:", ""]
     for e in adverse:
         L.append(f"  {e.name[:44]:<46}{money(e.expected):>12}/yr   "
@@ -293,13 +308,37 @@ def _json_array(raw: str) -> list[dict]:
     return json.loads(m.group(0))
 
 
-def assess_cardinal(decisions, llm, party: str, context: str) -> list[Exposure]:
-    payload = "\n".join(
-        f"{d.id} [{d.category}, s.{d.section}] {d.name}: {d.value[:200]}" for d in decisions)
-    rows = _json_array(llm(CARDINAL_PROMPT.format(party=party, context=context,
-                                                  decisions=payload), max_tokens=32000))
+def assess_cardinal(decisions, llm, party: str, context: str,
+                    batch: int = 20, workers: int = 6) -> list[Exposure]:
+    """
+    Elicit money figures in BATCHES.
+
+    One call for a hundred-odd decisions does not work: the model answers the
+    first dozen properly and then fills the rest with zeros, and because every
+    unparseable row used to be dropped silently, the result looked like a
+    contract with no exposure anywhere. Small batches, run concurrently, and
+    every decision that does not come back is named.
+    """
     by_id = {d.id: d for d in decisions}
-    out = []
+    chunks = [decisions[i:i + batch] for i in range(0, len(decisions), batch)]
+
+    def one(chunk):
+        payload = "\n".join(
+            f"{d.id} [{d.category}, s.{d.section}] {d.name}: {d.value[:200]}"
+            for d in chunk)
+        try:
+            return _json_array(llm(CARDINAL_PROMPT.format(
+                party=party, context=context, decisions=payload), max_tokens=8000))
+        except Exception as e:                          # noqa: BLE001
+            print(f"  batch of {len(chunk)} failed: {str(e)[:90]}", flush=True)
+            return []
+
+    rows: list[dict] = []
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for r in ex.map(one, chunks):
+            rows.extend(r)
+
+    out: list[Exposure] = []
     for r in rows:
         d = by_id.get(r.get("id"))
         if d is None:
@@ -313,6 +352,14 @@ def assess_cardinal(decisions, llm, party: str, context: str) -> list[Exposure]:
                 confident=bool(r.get("confident", False))))
         except (KeyError, ValueError, TypeError):
             continue
+
+    got = {e.id for e in out}
+    missing = [d.id for d in decisions if d.id not in got]
+    if missing:
+        print(f"  WARNING {len(missing)}/{len(decisions)} decisions came back "
+              f"unusable and are NOT in the figures below: "
+              f"{', '.join(missing[:10])}{' ...' if len(missing) > 10 else ''}",
+              flush=True)
     return out
 
 
