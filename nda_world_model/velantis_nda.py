@@ -160,6 +160,29 @@ DEAL_POINTS: list[DealPoint] = [
                     "algorithms, employee compensation data.",
     ),
 
+    DealPoint(
+        id="DP-21",
+        name="No License (collateral casualty of the Section 6 deletion)",
+        dimension="Use rights",
+        playbook_ref="Section 6 -- Residuals Clause (s.6.3 sits inside it)",
+        weight=1.3,
+        base=Position("no licence or right granted by implication or estoppel", +15,
+                      Tier.PREFERRED,
+                      _p(B, "6.3", "Nothing in this Section 6 shall be construed as granting, "
+                                   "conveying, or conferring any license or right under any "
+                                   "patent, copyright, trademark, trade secret, or other "
+                                   "intellectual property right of the Disclosing Party, "
+                                   "whether by implication, estoppel, or otherwise.")),
+        proposed=Position("deleted with the rest of Section 6", 0, Tier.HARD_LINE,
+                          _p(M, "6.3", "{-6.3 No License.-}{- Nothing in this Section 6 shall "
+                                       "be construed as granting ... -}")),
+        instruction="NOT SEPARATELY INSTRUCTED. Surfaced by the ContractNLI coverage audit "
+                    "(nda-15). s.6.3 is an IP protection unrelated to residuals that was "
+                    "deleted as collateral damage when Corrigan struck Section 6. Restoring "
+                    "only the residuals definition would silently lose it.",
+        couples_with=("DP-07",),
+    ),
+
     # ---- Operational burden ---------------------------------------------
     DealPoint(
         id="DP-08",
@@ -490,6 +513,11 @@ COUNTER_TURN_ACTIONS: list[Action] = [
                     "marked 'Highly Confidential -- No Residuals'", +25, Tier.PREFERRED),
            "Must-have clause restored, with a protective mechanism addressing Corrigan's "
            "concerns on customer lists, proprietary algorithms and compensation data."),
+    Action("DP-21", Disposition.REJECT,
+           Position("no licence or right granted by implication or estoppel", +15,
+                    Tier.PREFERRED),
+           "Section 6 restored in full, including s.6.3 No License, which protects against "
+           "implied IP licences and is unrelated to the residuals concept Corrigan objected to."),
     Action("DP-08", Disposition.REJECT,
            Position("reasonable care, no less than own standard", 0, Tier.PREFERRED),
            "'Highest degree of care' is above market for an M&A NDA."),
@@ -603,10 +631,22 @@ def _gate_forum_vs_injunction(state: ContractState):
     return None
 
 
+def _gate_no_license_lost_with_residuals(state: ContractState):
+    res = state.deal_points["DP-07"]
+    lic = state.deal_points["DP-21"]
+    if res.current.favourability > 0 and lic.current.favourability <= 0:
+        return ("DP-07 residuals restored but DP-21 'No License' (v.6.2 s.6.3) is still "
+                "deleted. s.6.3 sits inside Section 6 but protects against implied IP "
+                "licences, which is unrelated to residuals. Restore the whole section, "
+                "not just the residuals definition.")
+    return None
+
+
 GATING_RULES = [
     _gate_affiliates_without_breach_language,
     _gate_residuals_must_have,
     _gate_standstill_fallback_leak,
     _gate_ld_without_equitable_remedy,
     _gate_forum_vs_injunction,
+    _gate_no_license_lost_with_residuals,
 ]

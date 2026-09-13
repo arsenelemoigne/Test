@@ -7,6 +7,7 @@ CLI for the Project Lantern NDA world model.
     python -m nda_world_model brief        the context block for the drafting LLM
     python -m nda_world_model brief-blind  same, instruction-blind (for the A/B)
     python -m nda_world_model checklist    completion checklist
+    python -m nda_world_model coverage     audit vs ContractNLI 17 NDA hypotheses
     python -m nda_world_model sizes        token/character comparison vs raw docs
     python -m nda_world_model whatif       counterfactual rollouts
 """
@@ -16,6 +17,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from . import coverage
 from .brief import negotiation_brief, render_checklist
 from .core import Action, Disposition, Position, Tier, diff, score
 from .velantis_nda import (
@@ -50,6 +52,10 @@ def cmd_brief_blind() -> None:
 
 def cmd_checklist() -> None:
     print(render_checklist(corrigan_state()))
+
+
+def cmd_coverage() -> None:
+    print(coverage.report(corrigan_state()))
 
 
 def cmd_sizes() -> None:
@@ -149,6 +155,7 @@ COMMANDS = {
     "brief": cmd_brief,
     "brief-blind": cmd_brief_blind,
     "checklist": cmd_checklist,
+    "coverage": cmd_coverage,
     "sizes": cmd_sizes,
     "whatif": cmd_whatif,
 }

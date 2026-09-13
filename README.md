@@ -35,14 +35,14 @@ Everything in `task_extract/` is the task folder as-is, plus `.txt` conversions
 ```
 nda_world_model/
 ├── core.py          # generic engine: state, transition, value function
-├── velantis_nda.py  # 20 deal points, 3 states, 5 gating rules
+├── velantis_nda.py  # 21 deal points, 3 states, 6 gating rules
 ├── brief.py         # the context block handed to the drafting LLM
 └── __main__.py      # CLI
 ```
 
 State / transition / value, as a world model requires:
 
-- **State** — `ContractState`: 20 typed `DealPoint`s across 7 balance dimensions.
+- **State** — `ContractState`: 21 typed `DealPoint`s across 7 balance dimensions.
   Each carries our form position, their proposed position, playbook tier, signed
   favourability, verbatim quote and locator.
 - **Transition** — `apply(state, Action) -> state'`. A redline is an action. Pure.
@@ -62,6 +62,7 @@ python -m nda_world_model diff         # 18 deal points moved, +28.1
 python -m nda_world_model brief        # ~3.3k tokens of context for the drafting LLM
 python -m nda_world_model brief-blind  # instruction-blind version (see below)
 python -m nda_world_model checklist    # 48-item completion checklist
+python -m nda_world_model coverage     # audit vs ContractNLI 17 NDA hypotheses
 python -m nda_world_model whatif       # counterfactual rollouts + sensitivity ranking
 python -m nda_world_model sizes        # 52k tokens raw -> 5.2k tokens (10x)
 ```
