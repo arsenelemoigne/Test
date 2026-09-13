@@ -67,3 +67,15 @@ def check(decisions):
 
 def issues_by_id():
     return {i.id: i for i in issues()}
+
+
+def runs_dir():
+    """Where this task's runs live.
+
+    The original task keeps wm/runs so its existing runs stay put; every other
+    task gets its own subdirectory. Sharing one directory meant `report` listed
+    runs from two different CONTRACTS in one table, and `gradeall` graded them
+    together.
+    """
+    base = Path(__file__).resolve().parent / "runs"
+    return base if is_default() else base / task_dir().name

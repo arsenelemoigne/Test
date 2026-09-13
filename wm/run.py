@@ -34,8 +34,10 @@ from . import taskctx
 from .abstraction import Decision, Disposition
 from .taskctx import check
 
-RUNS = Path(__file__).resolve().parent / "runs"
+# Resolved at import: WM_TASK_DIR is set before the process starts.
+RUNS = taskctx.runs_dir()
 PROSE_CACHE = RUNS / "_prose_twin.txt"
+PROSE_STAMP = RUNS / "_prose_twin.source.sha"
 
 
 def slug(model_name: str) -> str:
@@ -60,6 +62,33 @@ def parse_decisions(text: str) -> list[Decision]:
         except (KeyError, ValueError):
             continue          # malformed rows are dropped, and that shows up as a miss
     return out
+
+
+def load_prose() -> str | None:
+    """The A2 control, but only if it was built from THIS task's world model.
+
+    The cache used to be one global file. Running a second task reused the first
+    task's prose twin, so the control arm was answering about a different
+    contract entirely - and scored accordingly, which looks exactly like "prose
+    is worse than structure".
+    """
+    if not PROSE_CACHE.exists():
+        return None
+    want = _wm_hash()
+    have = PROSE_STAMP.read_text().strip() if PROSE_STAMP.exists() else ""
+    if have != want:
+        print(f"REFUSING the cached prose twin: it was built from a different "
+              f"world model\n  ({PROSE_CACHE})\n"
+              f"  expected source {want[:12]}, cache carries "
+              f"{have[:12] or 'no stamp'}.\n"
+              f"  Delete it and run `python -m wm.run prose` again.", flush=True)
+        return None
+    return PROSE_CACHE.read_text()
+
+
+def _wm_hash() -> str:
+    import hashlib
+    return hashlib.sha256(conditions.worldmodel().encode()).hexdigest()
 
 
 def one_trial(condition: str, model_name: str, call, seed: int, prose: str | None) -> dict:
@@ -144,7 +173,7 @@ def grade(run_dir: Path, judge_model: str) -> dict:
 # --------------------------------------------------------------------------
 
 def cmd_inputs() -> None:
-    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    prose = load_prose()
     print(f"{'condition':<12}{'chars':>10}{'~tokens':>10}   note")
     for c in conditions.CONDITIONS:
         if c == "A2" and prose is None:
@@ -156,12 +185,13 @@ def cmd_inputs() -> None:
 
 def cmd_prose() -> None:
     RUNS.mkdir(parents=True, exist_ok=True)
-    if PROSE_CACHE.exists():
+    if PROSE_CACHE.exists() and load_prose() is not None:
         print(f"cached already: {PROSE_CACHE}")
     else:
         print(f"generating the prose twin with {llm.FRONTIER} - "
               f"this takes 30-90s, leave it running ...", flush=True)
     text = conditions.prose_twin(PROSE_CACHE, llm.model(llm.FRONTIER))
+    PROSE_STAMP.write_text(_wm_hash())
     wm = conditions.worldmodel()
     print(f"prose twin cached: {len(text):,} chars   (world model: {len(wm):,} chars)")
     ratio = len(text) / len(wm)
@@ -172,7 +202,7 @@ def cmd_trial(condition: str, model_name: str, seeds: int = 1) -> None:
     if not model_name or not model_name.strip():
         model_name = llm.FRONTIER
         print(f"(no model given - defaulting to {model_name})")
-    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    prose = load_prose()
     call = llm.model(model_name)
     for s in range(seeds):
         m = one_trial(condition, model_name, call, s, prose)
@@ -208,7 +238,7 @@ def cmd_cost(seeds: int = 3) -> None:
     Builds every prompt for real and counts it. Output tokens are estimated
     from the deliverable sizes the self-test measures.
     """
-    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    prose = load_prose()
     if prose is None:
         print("no prose twin cached - A2 estimated at 11,000 chars\n")
         prose = "x" * 11_000
@@ -263,7 +293,7 @@ def cmd_cost(seeds: int = 3) -> None:
 def cmd_all(seeds: int = 3, workers: int = 5) -> None:
     """All arms. Runs are independent, so they go concurrently."""
     from concurrent.futures import ThreadPoolExecutor
-    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    prose = load_prose()
     if prose is None and "A2" in conditions.CONDITIONS:
         print("ABORT: no prose twin cached, so A2 - the PRIMARY comparison - cannot run.")
         print("       Run `python -m wm.run prose` first and let it finish (60-150s).")
@@ -382,7 +412,7 @@ def cmd_selftest() -> None:
         print(f"  ({str(e).splitlines()[0]})")
         print()
 
-    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else "(prose twin not built)"
+    prose = load_prose() or "(prose twin not built)"
     ok = True
     for c in (conditions.CONDITIONS if ISSUES else []):
         prompt = conditions.build(c, prose=prose)
