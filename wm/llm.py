@@ -19,9 +19,17 @@ BASE_URL = "https://openrouter.ai/api/v1"
 USAGE: list[dict] = []
 
 
-def model(name: str, temperature: float = 0.0):
+# Seeds are replicates unless you raise this: the OpenRouter call sends no seed,
+# so at temperature 0 every "seed" is the same computation run again.
+DEFAULT_TEMP = float(os.environ.get("WM_TEMP", "0.0"))
+
+
+def model(name: str, temperature: float | None = None):
     """Returns callable(prompt, max_tokens) -> str, and records token usage."""
     from openai import OpenAI
+
+    if temperature is None:
+        temperature = DEFAULT_TEMP
 
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
