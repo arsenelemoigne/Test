@@ -373,6 +373,32 @@ def cmd_selftest() -> None:
           + (f"  MISSED {', '.join(sorted(missed))}" if missed else ""))
     ok &= not missed
 
+    # Every prompt template must survive .format(). A literal brace in a
+    # template - "{+ins+}" describing a tracked change, a JSON example written
+    # with single braces - raises KeyError only when the prompt is first sent,
+    # which is after the model call has been set up and paid for.
+    bad_templates = []
+    import importlib, string
+    for mod in ("autoschema", "bridge", "cardinal", "conditions", "encoder",
+                "issuegen", "judge", "valuation"):
+        m = importlib.import_module(f".{mod}", package="wm")
+        for name in dir(m):
+            if not name.endswith("PROMPT"):
+                continue
+            tpl = getattr(m, name)
+            if not isinstance(tpl, str):
+                continue
+            try:
+                fields = {f for _, f, _, _ in string.Formatter().parse(tpl) if f}
+                tpl.format(**{f: "x" for f in fields})
+            except Exception as e:                     # noqa: BLE001
+                bad_templates.append(f"{mod}.{name}: {type(e).__name__} {e}")
+    print(f"  prompt templates: "
+          + (f"{len(bad_templates)} BROKEN" if bad_templates else "all format cleanly"))
+    for b in bad_templates:
+        print(f"      {b}")
+    ok &= not bad_templates
+
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
     gi = [GenIssue(id="G1", name="cap", question="?", limits=[

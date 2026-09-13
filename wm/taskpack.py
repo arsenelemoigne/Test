@@ -76,17 +76,66 @@ def extract_eml(path: Path) -> str:
     return "\n".join(head) + "\n\n" + text
 
 
+S = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+
+
+def _col(ref: str) -> int:
+    """"BC12" -> 54. Column letters to a zero-based index."""
+    n = 0
+    for ch in ref:
+        if not ch.isalpha():
+            break
+        n = n * 26 + (ord(ch.upper()) - 64)
+    return n - 1
+
+
 def extract_xlsx(path: Path) -> str:
-    from openpyxl import load_workbook
-    wb = load_workbook(path, data_only=True)
-    out = []
-    for ws in wb.worksheets:
-        out.append(f"--- sheet: {ws.title}")
-        for row in ws.iter_rows(values_only=True):
-            cells = ["" if c is None else str(c) for c in row]
-            if any(c.strip() for c in cells):
-                out.append(" | ".join(cells).rstrip(" |"))
-    return "\n".join(out)
+    """Read a workbook with the standard library only.
+
+    An .xlsx is a zip of XML. openpyxl is nicer but is not installed
+    everywhere, and a missing pricing model is a missing negotiation input -
+    it should not be silently skipped because of a dependency.
+    """
+    with zipfile.ZipFile(path) as z:
+        names = set(z.namelist())
+        shared = []
+        if "xl/sharedStrings.xml" in names:
+            root = ET.fromstring(z.read("xl/sharedStrings.xml"))
+            for si in root.iter(S + "si"):
+                shared.append("".join(t.text or "" for t in si.iter(S + "t")))
+
+        titles = {}
+        if "xl/workbook.xml" in names:
+            wb = ET.fromstring(z.read("xl/workbook.xml"))
+            for idx, sh in enumerate(wb.iter(S + "sheet"), start=1):
+                titles[idx] = sh.get("name", f"sheet{idx}")
+
+        out = []
+        sheets = sorted(n for n in names
+                        if n.startswith("xl/worksheets/sheet") and n.endswith(".xml"))
+        for i, sn in enumerate(sheets, start=1):
+            out.append(f"--- sheet: {titles.get(i, sn.rsplit('/', 1)[-1])}")
+            root = ET.fromstring(z.read(sn))
+            for row in root.iter(S + "row"):
+                cells = {}
+                for c in row.iter(S + "c"):
+                    ref, typ = c.get("r", ""), c.get("t")
+                    v = c.find(S + "v")
+                    if typ == "s" and v is not None and v.text is not None:
+                        try:
+                            val = shared[int(v.text)]
+                        except (ValueError, IndexError):
+                            val = ""
+                    elif typ == "inlineStr":
+                        val = "".join(t.text or "" for t in c.iter(S + "t"))
+                    else:
+                        val = (v.text or "") if v is not None else ""
+                    if val.strip():
+                        cells[_col(ref)] = val.strip()
+                if cells:
+                    width = max(cells) + 1
+                    out.append(" | ".join(cells.get(j, "") for j in range(width)).rstrip(" |"))
+        return "\n".join(out)
 
 
 EXTRACTORS = {".docx": extract_docx, ".eml": extract_eml, ".xlsx": extract_xlsx,

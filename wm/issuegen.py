@@ -137,8 +137,8 @@ For each issue give:
   "section"         the contract section number, if there is one
   "our_position"    what the mandate authorises, in one sentence
   "their_position"  what the markup proposes, in one sentence
-  "their_quote"     the markup's own words, verbatim, including any {+...+} and
-                    {-...-} tracked-change markers. Quote, never paraphrase.
+  "their_quote"     the markup's own words, verbatim, including any {{+...+}} and
+                    {{-...-}} tracked-change markers. Quote, never paraphrase.
   "limits"          machine-checkable constraints from the mandate (see below)
 
 LIMITS. Only state a limit the mandate actually imposes. An issue with no hard
