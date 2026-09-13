@@ -91,6 +91,9 @@ def _wm_hash() -> str:
     return hashlib.sha256(conditions.worldmodel().encode()).hexdigest()
 
 
+LOOP_CONDITIONS = {"A5", "A5N", "A0L", "A0LN"}
+
+
 def one_trial(condition: str, model_name: str, call, seed: int, prose: str | None) -> dict:
     d = RUNS / f"{condition}__{slug(model_name)}__seed{seed}"
     d.mkdir(parents=True, exist_ok=True)
@@ -108,11 +111,12 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     t0 = time.time()
 
     n_calls, loop_trace = 1, None
-    if condition in ("A5", "A5N"):
+    # Any arm whose name ends in N is the blind control for the arm without it.
+    if condition in LOOP_CONDITIONS:
         from . import loop
         rounds = int(os.environ.get("WM_ROUNDS", "3"))
         res = loop.run(prompt, call, parse_decisions, taskctx.issues(), check,
-                       rounds=rounds, blind=(condition == "A5N"))
+                       rounds=rounds, blind=condition.endswith("N"))
         decisions, raw = res["decisions"], res["raw"]
         n_calls, loop_trace = res["calls"], res["trace"]
         print(f" {time.time()-t0:.0f}s, {n_calls} calls, "
@@ -264,7 +268,8 @@ def cmd_cost(seeds: int = 3) -> None:
             # signal and always runs the full round count. Follow-up calls carry
             # the prompt again plus the previous answer and the evaluation.
             rounds = int(os.environ.get("WM_ROUNDS", "3"))
-            calls = {"A5": 2, "A5N": rounds + 1}.get(c, 1)
+            calls = ((rounds + 1) if c.endswith("N")
+                     else 2 if c in LOOP_CONDITIONS else 1)
             per_in = len(prompt) / TOK
             tin = int(per_in + (calls - 1) * (per_in + OUT_TOK * 1.3)) * seeds
             tout = OUT_TOK * calls * seeds

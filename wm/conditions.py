@@ -175,6 +175,11 @@ def build(condition: str, prose: str | None = None) -> str:
         from . import gravity
         body = (f"{worldmodel()}\n\n"
                 f"{gravity.report({i.id: i.name for i in _issues()})}")
+    elif condition in ("A0L", "A0LN"):
+        # Raw documents AND the evaluator. A0 wins the rubric and breaches the
+        # mandate most; A5 does the reverse. This is the arm that asks whether
+        # you have to choose.
+        body = f"SOURCE DOCUMENTS\n\n{raw()}"
     elif condition in ("A5", "A5N"):
         # Same prompt as A4. The difference is not what the model is told, it is
         # that the code evaluates the answer and the model gets to revise.
@@ -186,7 +191,7 @@ def build(condition: str, prose: str | None = None) -> str:
     return f"{TASK()}\n\n{body}\n\n{output_spec()}"
 
 
-_ALL = ["A0", "A2", "A4", "A4G", "A5", "A5N", "A6"]
+_ALL = ["A0", "A0L", "A0LN", "A2", "A4", "A4G", "A5", "A5N", "A6"]
 
 # Narrow the run without editing code:
 #     export WM_CONDITIONS=A2,A4,A4G
