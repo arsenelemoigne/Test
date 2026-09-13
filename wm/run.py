@@ -1680,9 +1680,10 @@ def cmd_neg(argv: list[str]) -> None:
     need_llm = any(p_ != "algo" for p_ in policies) or opts["them"] == "llm"
     call = None
     if need_llm:
-        call = llm.model(opts["model"])
-        if call is None:
-            raise SystemExit("OPENROUTER_API_KEY manquante")
+        try:
+            call = llm.model(opts["model"])
+        except RuntimeError as e:
+            raise SystemExit(f"{e} - export OPENROUTER_API_KEY='...' dans ce terminal")
         per_round = (1 if opts["them"] == "algo" else 2) * len([p_ for p_ in policies if p_ != "algo"])
         per_round += (1 if opts["them"] == "llm" else 0) * len([p_ for p_ in policies if p_ == "algo"])
         print(f"budget d'appels au plus : {n} adversaires x {T} tours x {per_round} = "
@@ -1826,9 +1827,10 @@ def cmd_axes(argv: list[str]) -> None:
         moves = [AX.Move(**m) for m in d["moves"]]
         why = d.get("why", [])
     else:
-        call = llm.model(opts["model"])
-        if call is None:
-            raise SystemExit("OPENROUTER_API_KEY manquante")
+        try:
+            call = llm.model(opts["model"])
+        except RuntimeError as e:
+            raise SystemExit(f"{e} - export OPENROUTER_API_KEY='...' dans ce terminal")
         nb = -(-len(hs) // int(opts["batch"]))
         print(f"{len(hs)} modifications, {nb} appels de classification ({opts['model']})...")
         raws = []
