@@ -410,8 +410,19 @@ qu'on cherche a savoir.
 
 Contexte : {context}
 
+UNE ENTREE PAR REDACTION, SANS EXCEPTION - y compris les redactions
+intermediaires que personne n'a encore proposees. Ce sont elles qui portent les
+compromis possibles : si tu ne les values pas, elles valent zero pour ton client
+et aucun terrain d'entente ne peut etre trouve. Compte tes entrees avant de
+repondre : il en faut exactement autant que de redactions listees, moins les
+references.
+
+Ton client ne demande pas des clauses qui le desavantagent : la redaction qu'il
+a lui-meme proposee doit lui etre nettement POSITIVE.
+
 Reponds UNIQUEMENT par ce JSON :
-{{"values": [{{"param":"cap","option":"theirs","v":{{"tail_risk":150,"enforceability":3}}}}]}}
+{{"values": [{{"param":"cap","option":"mid","v":{{"tail_risk":60}}}},
+            {{"param":"cap","option":"theirs","v":{{"tail_risk":150,"enforceability":3}}}}]}}
 
 === LES POINTS ET LEURS REDACTIONS ===
 {menu}"""
@@ -458,6 +469,14 @@ def elicit_theirs(c: Contract, llm, party: str, context: str,
             n += 1
         except (KeyError, TypeError, ValueError):
             continue
+    total_opts = sum(len(p.options) - 1 for p in c.params.values())  # hors reference
+    if n < total_opts:
+        print(f"  ATTENTION : {n}/{total_opts} redactions valorisees cote adverse. "
+              f"Les autres\n  restent a zero pour eux, donc a un ratio nul, donc "
+              f"invisibles comme echange.\n  Ce sont en general les redactions "
+              f"INTERMEDIAIRES - celles qui font tout l'interet\n  de la "
+              f"recherche.", flush=True)
+
     # la reference reste l'origine
     for p in c.params.values():
         ref = p.option(p.ours)
@@ -633,6 +652,24 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
             f"ratio > 1.\n  Le modele conclut qu'il faut tout accepter. Une "
             f"partie adverse qui negocie prend\n  toujours quelque chose : une "
             f"elicitation credible doit trouver des ratios < 1.")
+
+    # 2b. tout refuser est aussi vide que tout accepter. Une negociation reelle
+    #     melange des echanges et des prises de valeur.
+    if len(ratios) >= 4 and all(x < 1 for x in ratios):
+        out.append(
+            f"AUCUN ECHANGE POSSIBLE : les {len(ratios)} demandes ont toutes un "
+            f"ratio < 1.\n  Le modele conclut qu'il faut tout refuser, ce qui ne "
+            f"laisse aucune monnaie\n  d'echange et n'est pas une negociation. "
+            f"Leur valeur a probablement ete sous-estimee\n  en bloc.")
+
+    # 2c. ils ne demandent pas ce qui les desavantage
+    contre = [r[0] for r in theirs if r[3] < 0]
+    if contre:
+        out.append(
+            f"DEMANDES CONTRE LEUR PROPRE INTERET : {len(contre)} redactions "
+            f"qu'ils ont demandees\n  leur seraient defavorables "
+            f"({', '.join(x[:26] for x in contre[:4])}).\n  Une partie ne marque "
+            f"pas un contrat contre elle-meme : ces valeurs sont fausses.")
 
     # 3. coherence des signes. Une partie qui marque un contrat prend quelque
     #    chose : si son markup ameliore NOTRE position, un axe a ete rempli
