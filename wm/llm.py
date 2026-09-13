@@ -91,10 +91,23 @@ def preflight() -> None:
     print(f"judge    : {JUDGE}")
     print()
     ok = True
+    probe = ('Reply with exactly this JSON and nothing else: '
+             '{"verdict": "pass", "reasoning": "probe"}')
     for role, name in (("frontier", FRONTIER), ("small", SMALL), ("judge", JUDGE)):
         try:
-            r = model(name)("Reply with the single word OK.", max_tokens=16)
-            print(f"  {role:<9} {name:<40} OK  -> {r.strip()[:30]!r}")
+            # 2000 tokens, not 16: reasoning models spend their budget thinking and
+            # return an empty string if the cap is small. An empty reply is a FAILURE.
+            r = (model(name)(probe, max_tokens=2000) or "").strip()
+            if not r:
+                ok = False
+                print(f"  {role:<9} {name:<40} FAILED: empty response "
+                      f"(reasoning model exhausting max_tokens?)")
+            elif '"verdict"' not in r:
+                ok = False
+                print(f"  {role:<9} {name:<40} FAILED: did not return the JSON "
+                      f"-> {r[:70]!r}")
+            else:
+                print(f"  {role:<9} {name:<40} OK")
         except Exception as e:                      # noqa: BLE001
             ok = False
             print(f"  {role:<9} {name:<40} FAILED: {str(e)[:150]}")

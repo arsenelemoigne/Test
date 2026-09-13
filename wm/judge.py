@@ -46,24 +46,36 @@ def score(deliverables: dict[str, str], judge) -> dict:
     output = "\n\n".join(f"===== {k} =====\n{v}" for k, v in deliverables.items())
     task = task_description()
     results = []
-    for c in criteria():
+    n_unparseable = 0
+    for i, c in enumerate(criteria(), 1):
+        # 4000, not 1500: a reasoning judge spends most of its budget thinking and
+        # returns an empty string if the cap is tight.
         raw = judge(
             PROMPT.format(task=task, title=c["title"], match=c["match_criteria"], output=output),
-            max_tokens=1500,
-        )
+            max_tokens=4000,
+        ) or ""
         m = re.search(r"\{.*\}", raw, re.S)
         try:
-            v = json.loads(m.group(0)) if m else {"verdict": "fail", "reasoning": "unparseable"}
+            v = json.loads(m.group(0)) if m else None
         except json.JSONDecodeError:
-            v = {"verdict": "fail", "reasoning": "unparseable"}
+            v = None
+        if v is None:
+            n_unparseable += 1
+            v = {"verdict": "fail", "reasoning": f"JUDGE RETURNED NO JSON (len={len(raw)})"}
         results.append({"id": c["id"], "title": c["title"],
                         "verdict": v.get("verdict", "fail"),
                         "reasoning": v.get("reasoning", "")})
+        print(f"    {i:>2}/{len(results) or 1} {c['id']} {v.get('verdict','fail')}", flush=True)
+    if n_unparseable:
+        print(f"  WARNING: {n_unparseable}/{len(results)} judge replies were unparseable. "
+              f"Scores are NOT trustworthy - switch WM_JUDGE to a non-reasoning model "
+              f"(e.g. google/gemini-2.5-flash) and re-run.")
     n_pass = sum(1 for r in results if r["verdict"] == "pass")
     return {
         "n_criteria": len(results),
         "n_passed": n_pass,
         "criterion_pass_rate": n_pass / len(results) if results else 0.0,
         "all_pass": n_pass == len(results),
+        "n_unparseable": n_unparseable,
         "results": results,
     }

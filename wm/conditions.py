@@ -119,7 +119,7 @@ def prose_twin(cache: Path, llm) -> str:
     """Generated once by the frontier model, then cached and reused for every run."""
     if cache.exists():
         return cache.read_text()
-    text = llm(PROSE_TWIN_PROMPT.format(wm=worldmodel()), max_tokens=16000)
+    text = llm(PROSE_TWIN_PROMPT.format(wm=worldmodel()), max_tokens=8000)
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(text)
     return text

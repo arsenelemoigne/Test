@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import time
 from pathlib import Path
 
 from . import conditions, judge, llm, render
@@ -54,7 +55,11 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     prompt = conditions.build(condition, prose=prose)
     (d / "prompt.txt").write_text(prompt)
 
+    print(f"  {condition}/{model_name}/seed{seed}: sending {len(prompt):,} chars ...",
+          end="", flush=True)
+    t0 = time.time()
     raw = call(prompt)
+    print(f" {time.time()-t0:.0f}s, {len(raw):,} chars back", flush=True)
     (d / "raw_response.txt").write_text(raw)
 
     try:
@@ -111,6 +116,11 @@ def cmd_inputs() -> None:
 
 def cmd_prose() -> None:
     RUNS.mkdir(parents=True, exist_ok=True)
+    if PROSE_CACHE.exists():
+        print(f"cached already: {PROSE_CACHE}")
+    else:
+        print(f"generating the prose twin with {llm.FRONTIER} - "
+              f"this takes 30-90s, leave it running ...", flush=True)
     text = conditions.prose_twin(PROSE_CACHE, llm.model(llm.FRONTIER))
     wm = conditions.worldmodel()
     print(f"prose twin cached: {len(text):,} chars   (world model: {len(wm):,} chars)")
