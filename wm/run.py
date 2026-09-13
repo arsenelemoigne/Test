@@ -171,7 +171,8 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     meta = {"generated_at": time.time(), "n_calls": n_calls,
             "condition": condition, "model": model_name, "seed": seed,
             "n_decisions": len(decisions), "n_violations": len(violations),
-            "prompt_chars": len(prompt), "failed": False}
+            "prompt_chars": len(prompt), "failed": False,
+            "temperature": llm.DEFAULT_TEMP}
     (d / "meta.json").write_text(json.dumps(meta, indent=2))
     return meta
 
@@ -980,14 +981,35 @@ def cmd_pack(task_path: str) -> None:
     """
     import os
     from . import taskpack
+    labs = Path(os.environ.get("WM_LABS", "~/harvey-labs")).expanduser()
     src = Path(task_path).expanduser()
     if not src.is_absolute() or not src.exists():
-        labs = Path(os.environ.get("WM_LABS", "~/harvey-labs")).expanduser()
         src = labs / "tasks" / "contracts" / task_path
     if not (src / "task.json").exists():
-        print(f"ABORT: no task.json in {src}")
-        print("       Set WM_LABS to your harvey-labs checkout, or pass an absolute path.")
-        return
+        # The tree nests the scenario under the task family, so a folder name
+        # spelled with a hyphen where the tree has a slash lands nowhere. That
+        # is a typo, not a missing checkout, and refusing to look for it wasted
+        # a session. Search by the last path segment instead of aborting.
+        want = Path(task_path).name
+        found = [d.parent for d in labs.rglob("task.json")
+                 if want in str(d.parent).replace("/", "-")] if labs.exists() else []
+        if len(found) == 1:
+            src = found[0]
+            print(f"  (resolved {task_path!r} -> {src})")
+        else:
+            print(f"ABORT: no task.json in {src}")
+            if not labs.exists():
+                print(f"       WM_LABS points at {labs}, which does not exist.")
+            elif found:
+                print(f"       {len(found)} folders match {want!r}:")
+                for f in found[:8]:
+                    print(f"         {f.relative_to(labs)}")
+                print("       Pass one of them (relative to tasks/contracts/) or an "
+                      "absolute path.")
+            else:
+                print(f"       Nothing under {labs} matches {want!r}. Try:")
+                print(f"         ls {labs}/tasks/contracts")
+            return
 
     out = Path(__file__).resolve().parent / "tasks" / src.parent.name if src.name.startswith("scenario") else None
     out = (Path(__file__).resolve().parent / "tasks" /
@@ -1170,12 +1192,13 @@ def cmd_parametric_demo() -> None:
 
 def cmd_report() -> None:
     import datetime as _dt
-    rows = []
+    rows, metas = [], []
     for d in sorted(RUNS.glob("*__*__seed*")):
         meta_f = d / "meta.json"
         if not meta_f.exists():
             continue
         meta = json.loads(meta_f.read_text())
+        metas.append(meta)
         scores = [json.loads(f.read_text()) for f in d.glob("scores__*.json")]
         rate = sum(s["criterion_pass_rate"] for s in scores) / len(scores) if scores else None
         # generated_at, not the file mtime: recheck rewrites meta.json and would
@@ -1225,10 +1248,28 @@ def cmd_report() -> None:
         print("une mesure. Relancer a 3 seeds avant de conclure quoi que ce soit.")
         print()
 
-    print(f"temperature is 0.0 and the seed is NOT sent to the model - it only")
-    print("names the directory. Seeds are therefore REPLICATES of one computation,")
-    print("not independent samples. Identical scores across seeds show provider")
-    print("determinism, not robustness. Set WM_TEMP=0.7 to get real variation.")
+    # This paragraph used to print "temperature is 0.0" unconditionally, which
+    # told a reader running at 0.7 that their seeds were replicates when they
+    # were independent samples - the opposite of the truth, in the one place
+    # the report tells you how much to trust a spread. It now reads the runs.
+    temps = sorted({m.get("temperature") for m in metas if m.get("temperature") is not None})
+    unknown = sum(1 for m in metas if m.get("temperature") is None)
+    if temps == [0.0] or (not temps and unknown):
+        shown = "0.0" if temps else "0.0 (not recorded on these runs)"
+        print(f"temperature is {shown} and the seed is NOT sent to the model - it")
+        print("only names the directory. Seeds are therefore REPLICATES of one")
+        print("computation, not independent samples. Identical scores across seeds")
+        print("show provider determinism, not robustness. Set WM_TEMP=0.7 for real")
+        print("variation.")
+    elif len(temps) == 1:
+        print(f"temperature is {temps[0]}: seeds ARE independent samples and a")
+        print("spread across them is a real estimate of variance.")
+    else:
+        print(f"MIXED TEMPERATURES across these rows: {', '.join(str(t) for t in temps)}"
+              + (f", plus {unknown} rows that predate the recording" if unknown else "") + ".")
+        print("Runs at 0.0 are replicates of one computation; runs at a higher")
+        print("temperature are independent samples. A spread computed across both")
+        print("is neither, so do not average them together.")
     print()
     print("A4 vs A5   : does an EXECUTABLE model in the loop help? (the hypothesis)")
     print("A5 vs A5N  : ... or was it just the extra passes? A5N spends the same")
