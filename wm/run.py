@@ -305,6 +305,18 @@ def stub(prompt: str, max_tokens: int = 16000) -> str:
     runs, not that anything is any good.
     """
     ISSUES = taskctx.issues()
+    gen = taskctx.gen_issues()
+    if gen is not None:
+        # A ported task: answer each issue with a position built from its own
+        # limits, so the self-test checks that the limits are satisfiable
+        # rather than that a DSA answer happens to fit another contract.
+        from .issuegen import compliant_counter
+        rows = [{"issue_id": g.id, "disposition": "MODIFY",
+                 "counter": compliant_counter(g),
+                 "rationale": f"Position on {g.name.lower()} per the client's mandate."}
+                for g in gen]
+        return json.dumps(rows, indent=2)
+
     fixed = {
         "I01": ("MODIFY", "Fixed aggregate cap of $3,500,000. No fee-multiple formulation."),
         "I02": ("MODIFY", "Retention of 18 months from receipt of each delivery."),
@@ -409,6 +421,17 @@ def cmd_selftest() -> None:
     for b in bad_templates:
         print(f"      {b}")
     ok &= not bad_templates
+
+    g = taskctx.gen_issues()
+    if g is not None:
+        from .issuegen import unsatisfiable
+        bad = unsatisfiable(g)
+        print(f"  limit consistency: "
+              + (f"{len(bad)} issues have contradictory limits" if bad
+                 else f"all {sum(len(i.limits) for i in g)} limits are satisfiable"))
+        for iid, name, why in bad:
+            print(f"      {iid} {name}: {why}")
+        ok &= not bad
 
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic

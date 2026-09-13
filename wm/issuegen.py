@@ -290,3 +290,79 @@ def summary(issues: list[GenIssue]) -> str:
               "  passes. `python -m wm.run issues --tighten` adds the matching",
               "  presence requirement to each. Free, no model call."]
     return "\n".join(L)
+
+
+def _qty(v: float, unit: str) -> str:
+    """Write a quantity the way drafting does, so the checker's own regexes
+    match it. "3 percents" is not a phrase any contract contains."""
+    u = (unit or "").lower()
+    if u in ("percent", "pct", "%"):
+        return f"{v:g} percent ({v:g}%)"
+    plural = "" if (v == 1 or u.endswith("s")) else "s"
+    return f"{v:g} {u}{plural}"
+
+
+def compliant_counter(issue: GenIssue) -> str:
+    """Build a counter that satisfies every limit on this issue.
+
+    Used by the self-test. It turns "does the plumbing run" into a real
+    question: can a position satisfying all of an issue's stated limits be
+    written at all, and does the checker then accept it? Limits that
+    contradict each other - a ninety-day minimum under a thirty-day maximum -
+    produce a counter that cannot pass, and the self-test says so.
+    """
+    bounds: dict[str, dict] = {}
+    parts: list[str] = []
+    money = None
+
+    for l in issue.limits:
+        k, unit = l.get("kind"), l.get("unit")
+        if k == "max_quantity":
+            bounds.setdefault(unit, {})["max"] = float(l["value"])
+        elif k == "min_quantity":
+            bounds.setdefault(unit, {})["min"] = float(l["value"])
+        elif k == "require_quantity":
+            bounds.setdefault(unit, {})
+        elif k == "max_money":
+            money = min(float(l["value"]), money if money is not None else float("inf"))
+        elif k == "require_money":
+            money = money if money is not None else 1_000_000.0
+        elif k == "require_phrase":
+            ph = l.get("phrases") or []
+            if ph:
+                parts.append(str(ph[0]))
+
+    for unit, b in bounds.items():
+        lo, hi = b.get("min"), b.get("max")
+        if lo is not None and hi is not None:
+            v = hi if lo <= hi else hi          # unsatisfiable; emit the ceiling
+        elif hi is not None:
+            v = hi
+        elif lo is not None:
+            v = lo
+        else:
+            v = 30
+        parts.append(_qty(v, unit))
+
+    if money is not None:
+        parts.append(f"${money:,.0f}")
+    if not parts:
+        parts.append("Position reverted to our template.")
+    return "; ".join(parts) + "."
+
+
+def unsatisfiable(issues: list[GenIssue]) -> list[tuple[str, str, str]]:
+    """Issues whose limits cannot all be met at once."""
+    out = []
+    for i in issues:
+        per: dict[str, dict] = {}
+        for l in i.limits:
+            if l.get("kind") == "max_quantity":
+                per.setdefault(l.get("unit"), {})["max"] = float(l["value"])
+            elif l.get("kind") == "min_quantity":
+                per.setdefault(l.get("unit"), {})["min"] = float(l["value"])
+        for unit, b in per.items():
+            if "min" in b and "max" in b and b["min"] > b["max"]:
+                out.append((i.id, i.name,
+                            f"min {b['min']:g} > max {b['max']:g} {unit}s"))
+    return out
