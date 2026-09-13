@@ -91,7 +91,7 @@ def _wm_hash() -> str:
     return hashlib.sha256(conditions.worldmodel().encode()).hexdigest()
 
 
-LOOP_CONDITIONS = {"A5", "A5N", "A0L", "A0LN"}
+LOOP_CONDITIONS = {"A5", "A5N", "A0L", "A0LN", "B0L", "B0LN"}
 
 
 def one_trial(condition: str, model_name: str, call, seed: int, prose: str | None) -> dict:
@@ -420,7 +420,12 @@ def cmd_selftest() -> None:
     prose = load_prose() or "(prose twin not built)"
     ok = True
     for c in (conditions.CONDITIONS if ISSUES else []):
-        prompt = conditions.build(c, prose=prose)
+        try:
+            prompt = conditions.build(c, prose=prose)
+        except RuntimeError as e:
+            # an arm whose input has not been built yet is not a failure
+            print(f"  {c:<4} skipped -- {str(e).splitlines()[0]}")
+            continue
         raw = stub(prompt)
         decisions = parse_decisions(raw)
         viols = check(decisions)
@@ -1023,6 +1028,40 @@ def cmd_drift_demo() -> None:
     print("number; nobody audits 'what if there were no contract'.")
 
 
+def cmd_model_elicit() -> None:
+    """Construit le contrat parametrique a partir du modele et du markup."""
+    from . import parametric, taskctx
+    T = taskctx.task_dir()
+    r = json.loads((T / "_roles.json").read_text()) if (T / "_roles.json").exists() else {}
+
+    def read(role):
+        return "\n\n".join((T / (Path(n).stem + ".txt")).read_text()
+                            for n in (r.get(role) or [])
+                            if (T / (Path(n).stem + ".txt")).exists())
+
+    template, markup = read("template"), read("markup")
+    if not template or not markup:
+        print(f"ABORT: modele {len(template):,} car., markup {len(markup):,} car. "
+              f"- les deux sont requis.")
+        return
+    PARTY = os.environ.get("WM_PARTY", "notre client, qui a envoye le modele")
+    CONTEXT = os.environ.get("WM_CONTEXT", "un contrat commercial B2B")
+    print(f"modele {len(template):,} car., markup {len(markup):,} car. -> "
+          f"{llm.FRONTIER}", flush=True)
+    c = parametric.build_model(template, markup, llm.model(llm.FRONTIER),
+                               PARTY, CONTEXT)
+    (T / "parametric.json").write_text(parametric.dump(c))
+    print(f"\n{len(c.params)} variables, {c.size():,} contrats possibles, "
+          f"{len(c.couplings)} couplages\n")
+    print(parametric.report(c, min_concessions=2))
+    warn = parametric.zero_sum_warning(c)
+    if warn:
+        print(); print(warn)
+    print()
+    print(f"ecrit dans {T / 'parametric.json'}")
+    print(llm.spend_report())
+
+
 def cmd_parametric_demo() -> None:
     """Le contrat comme objet parametrique. Aucun appel API."""
     from . import parametric, parametric_example
@@ -1145,7 +1184,10 @@ if __name__ == "__main__":
         else:
             cmd_issues()
     elif a[0] == "model":
-        cmd_parametric_demo()
+        if len(a) > 1 and a[1] in ("--elicit", "elicit"):
+            cmd_model_elicit()
+        else:
+            cmd_parametric_demo()
     elif a[0] == "drift":
         if len(a) > 1 and a[1] in ("--demo", "demo"):
             cmd_drift_demo()

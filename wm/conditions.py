@@ -134,6 +134,27 @@ def worldmodel() -> str:
     return "\n".join(L)
 
 
+def parametric_body() -> str:
+    """B0 : le contrat comme objet parametrique.
+
+    Ni des documents bruts ni une liste de clauses annotees : les variables,
+    leurs domaines, la derive vectorielle entre notre modele et leur markup, et
+    les echanges efficaces calcules sur les deux vecteurs. Le modele ne lit pas
+    un resume du contrat, il lit ce que le contrat FAIT quand on bouge ses
+    variables.
+    """
+    from . import parametric, taskctx
+    f = taskctx.task_dir() / "parametric.json"
+    if not f.exists():
+        raise RuntimeError(
+            f"{f} n'existe pas.\nLance `python -m wm.run model --elicit` : il lit "
+            f"le modele et le markup et construit\nle contrat parametrique.")
+    c = parametric.load(f.read_text())
+    warn = parametric.zero_sum_warning(c)
+    return (parametric.report(c, min_concessions=2)
+            + (f"\n\n{warn}" if warn else ""))
+
+
 # --- A2 (the control) -----------------------------------------------------
 
 PROSE_TWIN_PROMPT = """Rewrite the negotiation state below as flowing narrative prose.
@@ -175,6 +196,8 @@ def build(condition: str, prose: str | None = None) -> str:
         from . import gravity
         body = (f"{worldmodel()}\n\n"
                 f"{gravity.report({i.id: i.name for i in _issues()})}")
+    elif condition in ("B0", "B0L", "B0LN"):
+        body = parametric_body()
     elif condition in ("A0L", "A0LN"):
         # Raw documents AND the evaluator. A0 wins the rubric and breaches the
         # mandate most; A5 does the reverse. This is the arm that asks whether
@@ -191,7 +214,8 @@ def build(condition: str, prose: str | None = None) -> str:
     return f"{TASK()}\n\n{body}\n\n{output_spec()}"
 
 
-_ALL = ["A0", "A0L", "A0LN", "A2", "A4", "A4G", "A5", "A5N", "A6"]
+_ALL = ["A0", "A0L", "A0LN", "A2", "A4", "A4G", "A5", "A5N", "A6",
+        "B0", "B0L", "B0LN"]
 
 # Narrow the run without editing code:
 #     export WM_CONDITIONS=A2,A4,A4G

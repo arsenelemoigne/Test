@@ -146,33 +146,62 @@ class Contract:
         for combo in itertools.product(*domains):
             yield dict(zip(ids, combo))
 
-    def counters(self, min_concessions: int = 1, weights=None, limit: int = 12):
+    def size(self) -> int:
+        n = 1
+        for p in self.params.values():
+            n *= len(p.options)
+        return n
+
+    def counters(self, min_concessions: int = 1, weights=None, limit: int = 12,
+                 max_enum: int = 200_000, seed: int = 0):
         """Les contre-propositions credibles, sur la frontiere efficace.
 
         Credible = on leur concede au moins `min_concessions` parametres sur
         lesquels ils avaient bouge. Efficace = aucune autre assignation ne fait
-        mieux POUR NOUS sans faire moins bien POUR EUX.
+        mieux pour nous sans faire moins bien pour eux.
+
+        La frontiere est calculee par tri et balayage, en O(n log n). La version
+        naive comparait chaque paire : sur douze variables a trois redactions,
+        cela fait 5 x 10^11 comparaisons et ne rend jamais la main.
         """
         vt, wt = self.vector(self.template), self.vector(self.template, "theirs")
+        n = self.size()
+        if n <= max_enum:
+            space = self.enumerate_all()
+        else:
+            space = self._sample(max_enum, seed)
+
         rows = []
-        for a in self.enumerate_all():
+        for a in space:
             conc = self.conceded(a)
             if len(conc) < min_concessions:
                 continue
-            ours = sub(self.vector(a), vt)              # notre perte vs notre modele
-            theirs = sub(self.vector(a, "theirs"), wt)  # leur gain vs notre modele
+            ours = sub(self.vector(a), vt)
+            theirs = sub(self.vector(a, "theirs"), wt)
             rows.append((a, ours, theirs,
                          total(ours, weights), total(theirs, weights)))
+        if not rows:
+            return []
 
-        # frontiere de Pareto sur (notre total, leur total)
-        front = []
+        # balayage : trie sur notre total decroissant, garde ce qui ameliore leur total
+        rows.sort(key=lambda r: (-r[3], -r[4]))
+        front, best_theirs = [], float("-inf")
         for r in rows:
-            if not any(o[3] >= r[3] and o[4] >= r[4] and (o[3] > r[3] or o[4] > r[4])
-                       for o in rows):
+            if r[4] > best_theirs:
                 front.append(r)
+                best_theirs = r[4]
         front.sort(key=lambda r: -((r[4] / abs(r[3])) if r[3] else 0))
         return front[:limit]
 
+    def _sample(self, k: int, seed: int):
+        """Echantillon uniforme de l'espace quand il est trop grand pour etre
+        parcouru. Une frontiere echantillonnee est une borne inferieure, pas la
+        frontiere - le rapport le dit."""
+        import random
+        rng = random.Random(seed)
+        ids = list(self.params)
+        for _ in range(k):
+            yield {i: rng.choice([o.id for o in self.params[i].options]) for i in ids}
 
 # --- rendu -----------------------------------------------------------------
 
@@ -209,9 +238,7 @@ def single_trades(c: Contract, weights=None):
 def report(c: Contract, weights=None, min_concessions: int = 2) -> str:
     vt, vm = c.vector(c.template), c.vector(c.markup)
     d = c.drift()
-    n_assign = 1
-    for p in c.params.values():
-        n_assign *= len(p.options)
+    n_assign = c.size()
 
     L = ["LE CONTRAT COMME OBJET PARAMETRIQUE", "=" * 78, "",
          f"{len(c.params)} variables, {n_assign:,} redactions possibles, "
@@ -252,7 +279,9 @@ def report(c: Contract, weights=None, min_concessions: int = 2) -> str:
 
     L += ["", "COMBINAISONS SUR LA FRONTIERE EFFICACE", "-" * 78,
           "  Les echanges ou LEUR gain depasse NOTRE perte. Invisible sur un",
-          "  score unique : il faut les deux vecteurs pour les voir.", "",
+          "  score unique : il faut les deux vecteurs pour les voir.",
+          ("  (espace echantillonne : borne inferieure de la frontiere)"
+           if c.size() > 200_000 else ""), "",
           f"  {'concessions':<34}{'nous':>8}{'eux':>8}{'ratio':>8}"]
     for a, ours, theirs, to, tt in c.counters(min_concessions, weights):
         names = ", ".join(c.params[p].name[:16] for p in c.conceded(a))[:32]
@@ -267,3 +296,141 @@ def report(c: Contract, weights=None, min_concessions: int = 2) -> str:
 def dump(c: Contract) -> str:
     return json.dumps({"params": [asdict(p) for p in c.params.values()],
                        "couplings": [asdict(x) for x in c.couplings]}, indent=2)
+
+
+# --- elicitation -----------------------------------------------------------
+
+PARAM_PROMPT = """Voici notre modele de contrat et la version que la partie adverse
+nous a renvoyee, marquee. Construis le contrat comme un OBJET PARAMETRIQUE.
+
+Pour chaque point que leur markup a change de facon substantielle, donne une
+VARIABLE. Entre huit et douze variables : prends les plus materielles, ignore le
+reste. Pour chaque variable, donne un DOMAINE de deux a quatre redactions :
+
+  - la notre, telle qu'elle figure dans notre modele        (id "ours")
+  - la leur, telle qu'elle figure dans leur markup          (id "theirs")
+  - une ou deux redactions INTERMEDIAIRES qu'un negociateur envisagerait et que
+    ni l'un ni l'autre n'a encore proposees. Ce sont elles qui rendent la
+    recherche utile : sans elles il n'y a que capituler ou refuser.
+
+Chaque redaction porte DEUX vecteurs sur ces six axes, jamais un score unique :
+
+  revenue        effet sur le revenu annuel, en milliers, signe
+  tail_risk      effet sur la perte extreme, en milliers, signe
+  admin          effet sur le cout d'administration annuel, en milliers, signe
+  control        -5 a +5, qui decide
+  flexibility    -5 a +5, marge de manoeuvre future
+  enforceability -5 a +5, capacite a faire executer
+
+  "ours"    l'effet POUR NOUS ({party})
+  "theirs"  l'effet POUR EUX, autant qu'on puisse l'inferer de leur markup et
+            de ce qu'il revele de leurs priorites
+
+Les deux vecteurs sont le coeur de l'exercice. Une negociation n'est pas a somme
+nulle clause par clause : certaines concessions leur rapportent beaucoup plus
+qu'elles ne nous coutent, et ce sont les seules qu'il faut offrir. Si tu remplis
+"theirs" comme l'oppose de "ours", tu detruis l'information utile. Reflechis a
+ce qu'ILS cherchent reellement a obtenir.
+
+La redaction de reference ("ours") porte des zeros partout : tout est mesure
+par rapport a notre modele.
+
+Donne aussi les COUPLAGES : les paires de redactions dont l'effet conjoint n'est
+pas la somme des effets separes - un plafond et son exception, une garantie et
+la charge de la preuve qui l'accompagne. Cinq vrais couplages valent mieux que
+vingt supposes.
+
+Contexte : {context}
+
+Reponds UNIQUEMENT par ce JSON :
+{{"params": [{{"id":"cap","name":"Plafond de responsabilite","section":"11.1",
+   "ours":"ours","theirs":"theirs",
+   "options":[{{"id":"ours","text":"...","ours":{{}},"theirs":{{"revenue":0}}}},
+              {{"id":"mid","text":"...","ours":{{"tail_risk":-150}},"theirs":{{"tail_risk":120}}}},
+              {{"id":"theirs","text":"...","ours":{{"tail_risk":-410}},"theirs":{{"tail_risk":150}}}}]}}],
+ "couplings": [{{"a":"cap","a_option":"theirs","b":"remedy","b_option":"theirs",
+   "joint":{{"tail_risk":-95}},"note":"une phrase"}}]}}
+
+=== NOTRE MODELE ===
+{template}
+
+=== LEUR MARKUP ===
+{markup}"""
+
+
+def _obj(raw: str) -> dict:
+    import re as _re
+    m = _re.search(r"\{.*\}", raw or "", _re.S)
+    if not m:
+        raise ValueError("pas d'objet JSON dans la reponse")
+    return json.loads(m.group(0))
+
+
+def build_model(template: str, markup: str, llm, party: str, context: str,
+                max_tokens: int = 24000) -> Contract:
+    d = _obj(llm(PARAM_PROMPT.format(party=party, context=context,
+                                     template=template, markup=markup),
+                 max_tokens=max_tokens))
+    params, dropped = [], 0
+    for r in d.get("params", []):
+        try:
+            opts = [Option(id=o["id"], text=o.get("text", ""),
+                           ours=o.get("ours") or {}, theirs=o.get("theirs") or {})
+                    for o in r["options"]]
+            ids = {o.id for o in opts}
+            if r["ours"] not in ids or r["theirs"] not in ids or len(opts) < 2:
+                dropped += 1
+                continue
+            params.append(Parameter(id=r["id"], name=r["name"],
+                                    section=str(r.get("section", "")),
+                                    options=opts, ours=r["ours"], theirs=r["theirs"]))
+        except (KeyError, TypeError):
+            dropped += 1
+    pids = {p.id for p in params}
+    cps = []
+    for r in d.get("couplings", []) or []:
+        try:
+            if r["a"] in pids and r["b"] in pids:
+                cps.append(Coupling(a=r["a"], a_option=r["a_option"], b=r["b"],
+                                    b_option=r["b_option"], joint=r.get("joint") or {},
+                                    note=r.get("note", "")))
+        except (KeyError, TypeError):
+            dropped += 1
+    if dropped:
+        print(f"  {dropped} variables/couplages mal formes, ecartes", flush=True)
+    return Contract(params, cps)
+
+
+def load(raw: str) -> Contract:
+    d = json.loads(raw)
+    params = [Parameter(id=p["id"], name=p["name"], section=p.get("section", ""),
+                        ours=p["ours"], theirs=p["theirs"],
+                        options=[Option(**o) for o in p["options"]])
+              for p in d["params"]]
+    return Contract(params, [Coupling(**c) for c in d.get("couplings", [])])
+
+
+def zero_sum_warning(c: Contract, weights=None) -> str:
+    """Un modele ou "theirs" est l'oppose de "ours" ne dit rien.
+
+    C'est le mode d'echec le plus probable de l'elicitation : un modele qui
+    remplit le second vecteur par symetrie. Le test porte sur la DISPERSION des
+    ratios, pas sur l'angle entre les vecteurs - un pur transfert de revenu est
+    legitimement a somme nulle et doit passer. Ce qui est suspect, c'est que
+    TOUTES les concessions sortent au meme ratio : il n'y a plus alors d'echange
+    a trouver, seulement des tailles a comparer.
+    """
+    rows = single_trades(c, weights)
+    ratios = [r[4] for r in rows if r[4] != float("inf")]
+    if len(ratios) < 3:
+        return ""
+    near_one = sum(1 for x in ratios if 0.9 <= x <= 1.1)
+    lo, hi = min(ratios), max(ratios)
+    if near_one / len(ratios) >= 0.8 or hi - lo < 0.3:
+        return (f"ATTENTION : {near_one}/{len(ratios)} concessions sortent a un "
+                f"ratio proche de 1 (etendue {lo:.2f}-{hi:.2f}).\n"
+                f"Le modele a probablement rempli 'theirs' par symetrie au lieu "
+                f"d'inferer leurs\npriorites. Sans asymetrie il n'y a aucun "
+                f"echange efficace a trouver, et ce\nrapport ne vaut pas mieux "
+                f"qu'un score unique.")
+    return ""
