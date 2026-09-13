@@ -987,6 +987,19 @@ def cmd_issues() -> None:
     print(llm.spend_report())
 
 
+def cmd_drift_demo() -> None:
+    """The drift valuation on the worked example. No mandate, no API calls."""
+    from . import drift, drift_example
+    d = drift_example.drift()
+    print("WORKED EXAMPLE - changes are real, NUMBERS ARE HAND-SET.\n")
+    print(drift.report(d))
+    print()
+    print("No mandate was used. The baseline is our own template, which is the")
+    print("counterfactual ASC 805 and IFRS 3 already require for acquired")
+    print("contracts: PV(actual terms) - PV(reference terms). Auditors sign that")
+    print("number; nobody audits 'what if there were no contract'.")
+
+
 def cmd_report() -> None:
     import datetime as _dt
     rows = []
@@ -1100,6 +1113,12 @@ if __name__ == "__main__":
             cmd_tighten()
         else:
             cmd_issues()
+    elif a[0] == "drift":
+        if len(a) > 1 and a[1] in ("--demo", "demo"):
+            cmd_drift_demo()
+        else:
+            print("only `drift --demo` is wired so far - the elicited version "
+                  "needs the template/markup pair.")
     elif a[0] == "recheck":
         cmd_recheck()
     elif a[0] == "report":
