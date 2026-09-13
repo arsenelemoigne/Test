@@ -3,6 +3,7 @@ The experiment runner.
 
     python -m wm.run preflight              # check key + model slugs (3 tiny calls)
     python -m wm.run selftest               # exercise the whole pipeline offline
+    python -m wm.run validate [reps]        # groundedness, stability, model agreement
     python -m wm.run autoschema             # FULL contract, no playbook: schema+weights+value
     python -m wm.run gravity                # per-issue gravity from the authority memo
     python -m wm.run blind                  # lexical change detection, no API calls
@@ -330,6 +331,42 @@ def cmd_autoschema() -> None:
     print(llm.spend_report())
 
 
+def cmd_validate(reps: int = 3) -> None:
+    """Measure whether the encoding can be trusted: groundedness, stability,
+    cross-model agreement. Roughly reps+2 frontier calls plus 1 small-model call."""
+    from . import autoschema, valuation, validate
+    T = Path(__file__).resolve().parent / "task"
+    RUNS.mkdir(parents=True, exist_ok=True)
+    doc = (T / "luminos-first-markup-dsa.txt").read_text()
+    PARTY = "Carden Analytics (the data discloser)"
+
+    enc = llm.model(llm.FRONTIER)
+    print("enumerating decisions ...", flush=True)
+    schema = autoschema.build_schema(doc, enc)
+    print(f"{len(schema)} decisions\n", flush=True)
+
+    print("=" * 78)
+    print(validate.grounding_report(validate.check_quotes(schema, doc)))
+
+    print()
+    print("=" * 78)
+    runs = []
+    for i in range(reps):
+        print(f"assessment run {i+1}/{reps} ...", flush=True)
+        runs.append(valuation.assess(schema, enc, PARTY))
+    print()
+    print(validate.stability_report(validate.stability(runs)))
+
+    print()
+    print("=" * 78)
+    print(f"second opinion from {llm.SMALL} ...", flush=True)
+    other = valuation.assess(schema, llm.model(llm.SMALL), PARTY)
+    print()
+    print(validate.agreement(runs[0], other))
+    print()
+    print(llm.spend_report())
+
+
 def cmd_preflight() -> None:
     llm.preflight()
 
@@ -390,6 +427,8 @@ if __name__ == "__main__":
         cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
+    elif a[0] == "validate":
+        cmd_validate(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "autoschema":
         cmd_autoschema()
     elif a[0] == "preflight":

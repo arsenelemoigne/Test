@@ -249,6 +249,55 @@ def across_profiles(assessments: list[Assessment],
     return "\n".join(L)
 
 
+# ---------------------------------------------------------------------------
+# The same model, written as linear algebra
+# ---------------------------------------------------------------------------
+
+def feature_matrix(assessments: list[Assessment]) -> tuple[list[str], list[list[float]]]:
+    """
+    Each clause IS a vector. This returns the N x 5 matrix of them.
+
+        v_i = [exposure, likelihood, reversibility, mutuality, direction]
+
+    Which makes the whole value model a quadratic form:
+
+        V = sum_i  w_i . f(v_i)          <- clause-level terms
+          + sum_ij C_ij . g(v_i, v_j)     <- coupling terms
+
+    The first sum is what a per-clause score gives you. The second is the part a
+    flat list cannot express, and C is the coupling matrix below. So "a vector
+    per clause" and "a coupling matrix" are not two ideas - they are the linear
+    and quadratic halves of one model.
+    """
+    MUT = {"one_way_them": -1.0, "mutual": 0.0, "one_way_us": 1.0}
+    DIR = {"them": -1.0, "neutral": 0.0, "us": 1.0}
+    rows = [[float(a.exposure), float(a.likelihood), float(a.reversibility),
+             MUT.get(a.mutuality, 0.0), DIR.get(a.favours, 0.0)] for a in assessments]
+    return [a.id for a in assessments], rows
+
+
+FEATURE_NAMES = ["exposure", "likelihood", "reversibility", "mutuality", "direction"]
+
+
+def coupling_matrix(assessments: list[Assessment],
+                    couplings: list[Coupling]) -> tuple[list[str], list[list[float]]]:
+    """
+    The N x N interaction matrix C. Signed by kind so the heatmap is readable:
+    GATES and REQUIRES are destructive (negative), AMPLIFIES compounds
+    (negative), SUBSTITUTES is redundancy (positive - it means you are double
+    counting, not that it is good).
+    """
+    ids = [a.id for a in assessments]
+    idx = {i: n for n, i in enumerate(ids)}
+    M = [[0.0] * len(ids) for _ in ids]
+    SIGN = {Kind.GATES: -1.0, Kind.REQUIRES: -1.0,
+            Kind.AMPLIFIES: -1.0, Kind.SUBSTITUTES: 1.0}
+    for c in couplings:
+        if c.source in idx and c.target in idx:
+            M[idx[c.source]][idx[c.target]] = SIGN[c.kind] * c.strength
+    return ids, M
+
+
 def render(total: float, contribs: list[Contribution], profile: Profile,
            top: int = 20) -> str:
     L = [f"CONTRACT VALUE: {total:+.1f}   [profile: {profile.name}]",
