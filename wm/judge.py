@@ -45,9 +45,10 @@ def score(deliverables: dict[str, str], judge) -> dict:
     """deliverables: {filename: text}. judge: callable(prompt, max_tokens) -> str."""
     output = "\n\n".join(f"===== {k} =====\n{v}" for k, v in deliverables.items())
     task = task_description()
+    crit = criteria()
     results = []
     n_unparseable = 0
-    for i, c in enumerate(criteria(), 1):
+    for i, c in enumerate(crit, 1):
         # 4000, not 1500: a reasoning judge spends most of its budget thinking and
         # returns an empty string if the cap is tight.
         raw = judge(
@@ -65,7 +66,7 @@ def score(deliverables: dict[str, str], judge) -> dict:
         results.append({"id": c["id"], "title": c["title"],
                         "verdict": v.get("verdict", "fail"),
                         "reasoning": v.get("reasoning", "")})
-        print(f"    {i:>2}/{len(results) or 1} {c['id']} {v.get('verdict','fail')}", flush=True)
+        print(f"    {i:>2}/{len(crit)} {c['id']} {v.get('verdict','fail')}", flush=True)
     if n_unparseable:
         print(f"  WARNING: {n_unparseable}/{len(results)} judge replies were unparseable. "
               f"Scores are NOT trustworthy - switch WM_JUDGE to a non-reasoning model "
