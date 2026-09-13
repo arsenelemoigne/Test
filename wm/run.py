@@ -1054,11 +1054,14 @@ def cmd_model_elicit() -> None:
     print(f"\n{len(c.params)} variables, {c.size():,} contrats possibles, "
           f"{len(c.couplings)} couplages\n")
     print(parametric.report(c, min_concessions=2))
-    warn = parametric.zero_sum_warning(c)
-    if warn:
-        print(); print(warn)
+    print()
+    print(parametric.sanity_report(c))
     print()
     print(f"ecrit dans {T / 'parametric.json'}")
+    if parametric.model_sanity(c):
+        print("RELIS LE RAPPORT CI-DESSUS AVANT DE LANCER B0. Un modele qui "
+              "declenche ces\ncontroles ne vaut pas mieux qu'un score unique, "
+              "et B0 ne mesurera rien.")
     print(llm.spend_report())
 
 

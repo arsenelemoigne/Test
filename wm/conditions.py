@@ -150,9 +150,15 @@ def parametric_body() -> str:
             f"{f} n'existe pas.\nLance `python -m wm.run model --elicit` : il lit "
             f"le modele et le markup et construit\nle contrat parametrique.")
     c = parametric.load(f.read_text())
-    warn = parametric.zero_sum_warning(c)
-    return (parametric.report(c, min_concessions=2)
-            + (f"\n\n{warn}" if warn else ""))
+    bad = parametric.model_sanity(c)
+    if bad and os.environ.get("WM_ALLOW_BAD_MODEL", "") != "1":
+        raise RuntimeError(
+            "le contrat parametrique ne passe pas ses propres controles :\n  "
+            + "\n  ".join(b.splitlines()[0] for b in bad)
+            + "\nRelance `python -m wm.run model --elicit`, ou force avec "
+              "WM_ALLOW_BAD_MODEL=1 en\nsachant que B0 ne mesurera alors que "
+              "la taille des clauses.")
+    return parametric.report(c, min_concessions=2)
 
 
 # --- A2 (the control) -----------------------------------------------------

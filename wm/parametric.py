@@ -315,9 +315,15 @@ reste. Pour chaque variable, donne un DOMAINE de deux a quatre redactions :
 
 Chaque redaction porte DEUX vecteurs sur ces six axes, jamais un score unique :
 
-  revenue        effet sur le revenu annuel, en milliers, signe
-  tail_risk      effet sur la perte extreme, en milliers, signe
-  admin          effet sur le cout d'administration annuel, en milliers, signe
+CONVENTION DE SIGNE, SANS EXCEPTION : un nombre POSITIF est MEILLEUR pour la
+partie concernee, sur les six axes. Une charge administrative qui augmente est
+donc NEGATIVE, pas positive.
+
+  revenue        effet sur le revenu annuel, en milliers
+  tail_risk      effet sur la perte extreme esperee, en milliers (plus de risque
+                 = negatif)
+  admin          effet sur le cout d'administration annuel, en milliers (plus de
+                 cout = negatif)
   control        -5 a +5, qui decide
   flexibility    -5 a +5, marge de manoeuvre future
   enforceability -5 a +5, capacite a faire executer
@@ -326,11 +332,29 @@ Chaque redaction porte DEUX vecteurs sur ces six axes, jamais un score unique :
   "theirs"  l'effet POUR EUX, autant qu'on puisse l'inferer de leur markup et
             de ce qu'il revele de leurs priorites
 
-Les deux vecteurs sont le coeur de l'exercice. Une negociation n'est pas a somme
-nulle clause par clause : certaines concessions leur rapportent beaucoup plus
-qu'elles ne nous coutent, et ce sont les seules qu'il faut offrir. Si tu remplis
-"theirs" comme l'oppose de "ours", tu detruis l'information utile. Reflechis a
-ce qu'ILS cherchent reellement a obtenir.
+Les deux vecteurs sont le coeur de l'exercice. Deux facons de les rater :
+
+  - remplir "theirs" comme l'oppose de "ours" : tout devient a somme nulle et il
+    n'y a plus d'echange a trouver ;
+  - appliquer un facteur constant, par exemple "theirs" = 2 x "ours" : les
+    ratios sortent tous identiques et le classement ne reflete plus que la
+    taille des clauses.
+
+Les deux detruisent exactement l'information recherchee. Pour chaque redaction,
+demande-toi ce que CETTE partie-la y gagne concretement, et pourquoi elle l'a
+demandee plutot qu'une autre. Les valeurs doivent varier fortement d'une clause
+a l'autre.
+
+ILS NE PEUVENT PAS AVOIR RAISON SUR TOUT. Une partie qui negocie prend toujours
+quelque chose : au moins un tiers de leurs demandes doivent leur rapporter MOINS
+qu'elles ne nous coutent. Ce sont des prises de valeur pure, et les identifier
+est la moitie de l'exercice. Si chacune de leurs demandes leur vaut plus qu'elle
+ne nous coute, tu dis qu'il faut accepter leur markup en entier.
+
+ORDRES DE GRANDEUR : ancre-toi sur la valeur annuelle du contrat telle qu'elle
+ressort des documents. Aucun effet annuel ne devrait depasser cette valeur, et
+le risque de queue est une perte ESPEREE - donc deja ponderee par sa
+probabilite - pas le pire cas.
 
 La redaction de reference ("ours") porte des zeros partout : tout est mesure
 par rapport a notre modele.
@@ -410,27 +434,66 @@ def load(raw: str) -> Contract:
     return Contract(params, [Coupling(**c) for c in d.get("couplings", [])])
 
 
-def zero_sum_warning(c: Contract, weights=None) -> str:
-    """Un modele ou "theirs" est l'oppose de "ours" ne dit rien.
+def model_sanity(c: Contract, weights=None) -> list[str]:
+    """Les facons dont une elicitation produit un modele qui ne dit rien.
 
-    C'est le mode d'echec le plus probable de l'elicitation : un modele qui
-    remplit le second vecteur par symetrie. Le test porte sur la DISPERSION des
-    ratios, pas sur l'angle entre les vecteurs - un pur transfert de revenu est
-    legitimement a somme nulle et doit passer. Ce qui est suspect, c'est que
-    TOUTES les concessions sortent au meme ratio : il n'y a plus alors d'echange
-    a trouver, seulement des tailles a comparer.
+    Aucune ne se voit dans les chiffres pris un par un ; toutes se voient dans
+    leur distribution. Ce sont des tests sur le MODELE, pas sur le contrat.
     """
+    import statistics as st
+    out = []
     rows = single_trades(c, weights)
-    ratios = [r[4] for r in rows if r[4] != float("inf")]
-    if len(ratios) < 3:
-        return ""
-    near_one = sum(1 for x in ratios if 0.9 <= x <= 1.1)
-    lo, hi = min(ratios), max(ratios)
-    if near_one / len(ratios) >= 0.8 or hi - lo < 0.3:
-        return (f"ATTENTION : {near_one}/{len(ratios)} concessions sortent a un "
-                f"ratio proche de 1 (etendue {lo:.2f}-{hi:.2f}).\n"
-                f"Le modele a probablement rempli 'theirs' par symetrie au lieu "
-                f"d'inferer leurs\npriorites. Sans asymetrie il n'y a aucun "
-                f"echange efficace a trouver, et ce\nrapport ne vaut pas mieux "
-                f"qu'un score unique.")
-    return ""
+    theirs = [r for r in rows if r[5]]                  # leurs demandes seulement
+    ratios = [r[4] for r in theirs if r[4] != float("inf")]
+
+    # 1. un multiplicateur constant. Une symetrie donne des ratios tous a 1, un
+    #    multiplicateur uniforme les donne tous a k. Ce qui compte est l'absence
+    #    de dispersion, pas la valeur autour de laquelle ils se serrent.
+    if len(ratios) >= 4:
+        cv = st.pstdev(ratios) / abs(st.mean(ratios)) if st.mean(ratios) else 0
+        if cv < 0.25:
+            out.append(
+                f"RATIOS UNIFORMES : leurs {len(ratios)} demandes sortent a un "
+                f"ratio median de {st.median(ratios):.2f} avec un coefficient de "
+                f"variation de {cv:.3f}.\n  Le modele a applique un facteur "
+                f"constant au lieu d'inferer leurs priorites clause par clause. "
+                f"Sans\n  dispersion il n'y a aucun echange a trouver : le "
+                f"classement ne reflete que les tailles.")
+
+    # 2. tout concede. Si chacune de leurs demandes leur rapporte plus qu'elle
+    #    ne nous coute, le modele dit d'accepter le markup en entier.
+    if ratios and all(x > 1 for x in ratios):
+        out.append(
+            f"AUCUNE PRISE DE VALEUR : les {len(ratios)} demandes ont toutes un "
+            f"ratio > 1.\n  Le modele conclut qu'il faut tout accepter. Une "
+            f"partie adverse qui negocie prend\n  toujours quelque chose : une "
+            f"elicitation credible doit trouver des ratios < 1.")
+
+    # 3. un axe qui ecrase les autres
+    d = c.drift()
+    w = weights or DEFAULT_WEIGHTS
+    mag = {k: abs(d[k]) * w.get(k, 1.0) for k in DIMENSIONS}
+    tot = sum(mag.values())
+    if tot:
+        top, share = max(mag.items(), key=lambda kv: kv[1])[0], max(mag.values()) / tot
+        if share > 0.7:
+            out.append(
+                f"UN SEUL AXE : {top} represente {share:.0%} de la derive ponderee.\n"
+                f"  Les six dimensions se reduisent alors a une seule, et le "
+                f"modele vectoriel\n  n'apporte rien sur un score unique. "
+                f"Verifie les ordres de grandeur.")
+    return out
+
+
+def sanity_report(c: Contract, weights=None) -> str:
+    w = model_sanity(c, weights)
+    if not w:
+        return "controles du modele : aucun signal d'alerte."
+    return ("CE MODELE N'EST PROBABLEMENT PAS EXPLOITABLE\n" + "=" * 78 + "\n\n"
+            + "\n\n".join(w))
+
+
+# retro-compatibilite
+def zero_sum_warning(c: Contract, weights=None) -> str:
+    w = model_sanity(c, weights)
+    return "\n\n".join(w)
