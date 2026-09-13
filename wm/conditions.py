@@ -25,6 +25,8 @@ information, the author and the length constant so that only FORM varies.
 
 from __future__ import annotations
 
+import os
+
 from pathlib import Path
 
 from .abstraction import CONFIDENTIAL, FACTS, ISSUES
@@ -148,4 +150,13 @@ def build(condition: str, prose: str | None = None) -> str:
     return f"{TASK}\n\n{body}\n\n{output_spec()}"
 
 
-CONDITIONS = ["A0", "A2", "A4", "A4G", "A6"]
+_ALL = ["A0", "A2", "A4", "A4G", "A6"]
+
+# Narrow the run without editing code:
+#     export WM_CONDITIONS=A2,A4,A4G
+# A2 vs A4 is the primary comparison and both prompts are tiny. A0 and A6 carry
+# the whole 63k-token contract and cost roughly forty times as much per run, and
+# A0 vs A4 is confounded by preprocessing and context length anyway - it was
+# never going to be a result. Drop them first when money is short.
+CONDITIONS = [c.strip() for c in os.environ.get("WM_CONDITIONS", "").split(",")
+              if c.strip() in _ALL] or _ALL

@@ -152,6 +152,76 @@ def cmd_trial(condition: str, model_name: str, seeds: int = 1) -> None:
         print(m)
 
 
+# Approximate OpenRouter list prices, USD per MILLION tokens (in, out).
+# These move. Check https://openrouter.ai/models before trusting a total.
+PRICES = {
+    "anthropic/claude-opus-4.1":      (15.00, 75.00),
+    "anthropic/claude-opus-4":        (15.00, 75.00),
+    "anthropic/claude-sonnet-4.5":     (3.00, 15.00),
+    "anthropic/claude-3.5-sonnet":     (3.00, 15.00),
+    "qwen/qwen-2.5-72b-instruct":      (0.12,  0.39),
+    "qwen/qwen3-32b":                  (0.10,  0.30),
+    "google/gemini-2.5-flash":         (0.30,  2.50),
+    "google/gemini-2.5-pro":           (1.25, 10.00),
+}
+TOK = 4.0          # chars per token, near enough for English prose
+
+
+def _price(name):
+    return PRICES.get(name, (5.00, 20.00))      # unknown model: assume mid-range
+
+
+def cmd_cost(seeds: int = 3) -> None:
+    """What will `all` and `gradeall` cost, before you spend it?
+
+    Builds every prompt for real and counts it. Output tokens are estimated
+    from the deliverable sizes the self-test measures.
+    """
+    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    if prose is None:
+        print("no prose twin cached - A2 estimated at 11,000 chars\n")
+        prose = "x" * 11_000
+
+    OUT_TOK = 2_700          # redline + cover note, measured
+    print(f"conditions: {', '.join(conditions.CONDITIONS)}   seeds: {seeds}")
+    print(f"arms      : {', '.join(llm.ARMS)}")
+    print(f"judge     : {llm.JUDGE}\n")
+    print(f"{'cond':<6}{'model':<32}{'runs':>5}{'in tok':>11}{'out tok':>10}{'USD':>9}")
+    print("-" * 73)
+
+    total = 0.0
+    gen_runs = 0
+    for m in llm.ARMS:
+        pin, pout = _price(m)
+        for c in conditions.CONDITIONS:
+            try:
+                prompt = conditions.build(c, prose=prose)
+            except Exception as e:                      # noqa: BLE001
+                print(f"{c:<6}{m:<32}{'-':>5}  cannot build: {str(e)[:24]}")
+                continue
+            tin = int(len(prompt) / TOK) * seeds
+            tout = OUT_TOK * seeds
+            usd = tin / 1e6 * pin + tout / 1e6 * pout
+            total += usd
+            gen_runs += seeds
+            print(f"{c:<6}{m[:31]:<32}{seeds:>5}{tin:>11,}{tout:>10,}{usd:>9.2f}")
+
+    # judging: one call per (deliverable, criterion), each carrying the deliverable
+    n_crit = len(judge.criteria())
+    jin, jout = _price(llm.JUDGE)
+    jt_in = gen_runs * n_crit * int(OUT_TOK * 1.2)
+    jt_out = gen_runs * n_crit * 120
+    judge_usd = jt_in / 1e6 * jin + jt_out / 1e6 * jout
+    total += judge_usd
+    print("-" * 73)
+    print(f"{'judge':<6}{llm.JUDGE[:31]:<32}{gen_runs * n_crit:>5}"
+          f"{jt_in:>11,}{jt_out:>10,}{judge_usd:>9.2f}")
+    print(f"\n{'ESTIMATED TOTAL':<43}{'':>21}{total:>9.2f} USD")
+    print("\nRough. Prices move and token counts are char/4. Treat it as the order")
+    print("of magnitude, not the bill. Narrow the run with WM_CONDITIONS=A2,A4,A4G")
+    print("and swap WM_FRONTIER for a cheaper model to cut this sharply.")
+
+
 def cmd_all(seeds: int = 3, workers: int = 5) -> None:
     """All arms. Runs are independent, so they go concurrently."""
     from concurrent.futures import ThreadPoolExecutor
@@ -604,6 +674,8 @@ if __name__ == "__main__":
         cmd_trial(a[1],
                   a[2] if len(a) > 2 else "",
                   int(a[3]) if len(a) > 3 else 1)
+    elif a[0] == "cost":
+        cmd_cost(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "all":
         cmd_all(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "gradeall":
