@@ -1,0 +1,28 @@
+### SHEET: Exhibit C — Fee Schedule & Data
+Line Item | Description | Value | Reference
+ | EXHIBIT C — FEE SCHEDULE AND DATA VOLUME |  | 
+ | to the Data Sharing Agreement dated as of April 14, 2025, by and between Carden Analytics, Inc. ("Carden") and Luminos Insights Group, LLC ("Luminos") |  | 
+ | This Exhibit C is incorporated into and forms part of the Agreement pursuant to Section 5 (Fees and Payment) and Section 1.1. |  | 
+ | SECTION I — QUARTERLY DATA-ACCESS FEE |  | 
+1 | Data-Access Fee (per calendar quarter) — Quarterly fee payable by Luminos to Carden for provision of the Shared Data Set | $240,000.00 | Agreement § 5.1
+2 | Invoicing Cadence — First business day of each calendar quarter during the Term | Quarterly | Agreement § 5.2
+3 | Payment Terms — Due date following receipt of invoice | Net-30 days | Agreement § 5.3
+4 | Late-Payment Interest Rate — Per-month rate on past-due amounts (or maximum rate permitted by Applicable Law, if lower) | 1.5% per month | Agreement § 5.4
+ | SECTION II — ANNUAL FEE DERIVATION |  | 
+5 | Number of Calendar Quarters per Year | 4 | 
+6 | Derived Annual Data-Access Fee (Line 1 × Line 5) | $960,000.00 | 
+7 | Six-Month Fee Equivalent (Line 6 ÷ 2; provided for reference only) | $480,000.00 | 
+ | SECTION III — ESTIMATED SHARED DATA SET VOLUME |  | 
+8 | Estimated Record Volume per Calendar Quarter — Pseudonymized consumer point-of-sale transaction records delivered per quarterly transmission pursuant to Exhibit A | ~38,000,000 records | Agreement § 1.12; Exhibit A
+9 | Estimated Record Volume per Annum (Line 8 × 4) | ~152,000,000 records | 
+ | SECTION IV — FEE SCHEDULE BY QUARTER (YEAR 1 ILLUSTRATION) |  | 
+Line Item | Quarter / Invoice Date | Amount Due | Payment Due Date
+10 | Q1 — First business day of Q1 | $240,000.00 | 30 days from invoice
+11 | Q2 — First business day of Q2 | $240,000.00 | 30 days from invoice
+12 | Q3 — First business day of Q3 | $240,000.00 | 30 days from invoice
+13 | Q4 — First business day of Q4 | $240,000.00 | 30 days from invoice
+14 | Year 1 Total | $960,000.00 | 
+ | NOTES |  | 
+Note 1 | All amounts are in United States Dollars and are exclusive of applicable taxes per Agreement § 5.5. |  | 
+Note 2 | Actual quarterly record volumes may vary; the figure on Line 8 is an estimate provided for planning purposes and does not constitute a guaranteed minimum or maximum delivery commitment. |  | 
+Note 3 | Capitalized terms used but not defined in this Exhibit C have the meanings given to them in the Agreement. |  | 
