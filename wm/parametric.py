@@ -313,6 +313,11 @@ reste. Pour chaque variable, donne un DOMAINE de deux a quatre redactions :
     ni l'un ni l'autre n'a encore proposees. Ce sont elles qui rendent la
     recherche utile : sans elles il n'y a que capituler ou refuser.
 
+ATTENTION AU SCHEMA. Au niveau de la VARIABLE, "ours_option" et "theirs_option"
+sont des identifiants d'option, donc des chaines. Au niveau de l'OPTION, "ours"
+et "theirs" sont des vecteurs, donc des objets. Ne confonds pas les deux
+niveaux : chaque option doit avoir un "id", un "text", et deux objets vecteurs.
+
 Chaque redaction porte DEUX vecteurs sur ces six axes, jamais un score unique :
 
 CONVENTION DE SIGNE, SANS EXCEPTION : un nombre POSITIF est MEILLEUR pour la
@@ -368,7 +373,7 @@ Contexte : {context}
 
 Reponds UNIQUEMENT par ce JSON :
 {{"params": [{{"id":"cap","name":"Plafond de responsabilite","section":"11.1",
-   "ours":"ours","theirs":"theirs",
+   "ours_option":"ours","theirs_option":"theirs",
    "options":[{{"id":"ours","text":"...","ours":{{}},"theirs":{{"revenue":0}}}},
               {{"id":"mid","text":"...","ours":{{"tail_risk":-150}},"theirs":{{"tail_risk":120}}}},
               {{"id":"theirs","text":"...","ours":{{"tail_risk":-410}},"theirs":{{"tail_risk":150}}}}]}}],
@@ -390,39 +395,87 @@ def _obj(raw: str) -> dict:
     return json.loads(m.group(0))
 
 
-def build_model(template: str, markup: str, llm, party: str, context: str,
-                max_tokens: int = 24000) -> Contract:
-    d = _obj(llm(PARAM_PROMPT.format(party=party, context=context,
-                                     template=template, markup=markup),
-                 max_tokens=max_tokens))
-    params, dropped = [], 0
-    for r in d.get("params", []):
+def _pick(r: dict, *keys):
+    for k in keys:
+        v = r.get(k)
+        if isinstance(v, str):
+            return v
+    return None
+
+
+def parse_model(raw: str) -> tuple[Contract, list[str]]:
+    """Lit la reponse d'elicitation. Renvoie le contrat ET le motif de chaque rejet.
+
+    Les rejets etaient comptes sans etre expliques : "10 variables mal formees"
+    ne dit pas s'il manque un champ, si un identifiant ne correspond pas, ou si
+    le modele a repondu dans une autre forme. Sans le motif on ne peut que
+    deviner, et une elicitation coute un appel a chaque essai.
+    """
+    d = _obj(raw)
+    rows = d.get("params") or d.get("variables") or []
+    params, why = [], []
+    for r in rows:
+        pid = _pick(r, "id", "key") or "?"
         try:
-            opts = [Option(id=o["id"], text=o.get("text", ""),
-                           ours=o.get("ours") or {}, theirs=o.get("theirs") or {})
-                    for o in r["options"]]
-            ids = {o.id for o in opts}
-            if r["ours"] not in ids or r["theirs"] not in ids or len(opts) < 2:
-                dropped += 1
-                continue
-            params.append(Parameter(id=r["id"], name=r["name"],
-                                    section=str(r.get("section", "")),
-                                    options=opts, ours=r["ours"], theirs=r["theirs"]))
-        except (KeyError, TypeError):
-            dropped += 1
+            raw_opts = r.get("options") or r.get("domain") or []
+            opts = [Option(id=str(o["id"]), text=o.get("text", ""),
+                           ours=o.get("ours") or o.get("us") or {},
+                           theirs=o.get("theirs") or o.get("them") or {})
+                    for o in raw_opts if isinstance(o, dict) and "id" in o]
+        except (KeyError, TypeError) as e:
+            why.append(f"{pid}: options illisibles ({type(e).__name__})")
+            continue
+        if len(opts) < 2:
+            why.append(f"{pid}: {len(opts)} option(s), il en faut au moins 2")
+            continue
+        ids = {o.id for o in opts}
+
+        # les pointeurs. "ours"/"theirs" au niveau variable entraient en
+        # collision avec "ours"/"theirs" au niveau option, qui sont des
+        # vecteurs : on accepte les deux formes mais on privilegie les noms
+        # non ambigus, et a defaut on deduit.
+        a = _pick(r, "ours_option", "our_option", "baseline", "ours", "current")
+        b = _pick(r, "theirs_option", "their_option", "theirs", "proposed")
+        if a not in ids:
+            a = "ours" if "ours" in ids else (opts[0].id if opts else None)
+        if b not in ids:
+            b = "theirs" if "theirs" in ids else (opts[-1].id if opts else None)
+        if a not in ids or b not in ids or a == b:
+            why.append(f"{pid}: impossible d'identifier notre redaction et la "
+                       f"leur parmi {sorted(ids)}")
+            continue
+        params.append(Parameter(id=str(pid), name=r.get("name", pid),
+                                section=str(r.get("section", "")),
+                                options=opts, ours=a, theirs=b))
+
     pids = {p.id for p in params}
     cps = []
-    for r in d.get("couplings", []) or []:
+    for r in d.get("couplings") or []:
         try:
             if r["a"] in pids and r["b"] in pids:
                 cps.append(Coupling(a=r["a"], a_option=r["a_option"], b=r["b"],
-                                    b_option=r["b_option"], joint=r.get("joint") or {},
-                                    note=r.get("note", "")))
+                                    b_option=r["b_option"],
+                                    joint=r.get("joint") or {}, note=r.get("note", "")))
+            else:
+                why.append(f"couplage {r.get('a')}/{r.get('b')}: variable inconnue")
         except (KeyError, TypeError):
-            dropped += 1
-    if dropped:
-        print(f"  {dropped} variables/couplages mal formes, ecartes", flush=True)
-    return Contract(params, cps)
+            why.append(f"couplage illisible: {str(r)[:60]}")
+    return Contract(params, cps), why
+
+
+def build_model(template: str, markup: str, llm, party: str, context: str,
+                max_tokens: int = 24000, raw_out=None) -> Contract:
+    raw = llm(PARAM_PROMPT.format(party=party, context=context,
+                                  template=template, markup=markup),
+              max_tokens=max_tokens)
+    if raw_out is not None:
+        raw_out.write_text(raw)          # toujours, pour pouvoir diagnostiquer
+    c, why = parse_model(raw)
+    if why:
+        print(f"  {len(why)} entrees ecartees :", flush=True)
+        for w in why[:10]:
+            print(f"    {w}", flush=True)
+    return c
 
 
 def load(raw: str) -> Contract:

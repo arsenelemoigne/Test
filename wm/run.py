@@ -1048,8 +1048,15 @@ def cmd_model_elicit() -> None:
     CONTEXT = os.environ.get("WM_CONTEXT", "un contrat commercial B2B")
     print(f"modele {len(template):,} car., markup {len(markup):,} car. -> "
           f"{llm.FRONTIER}", flush=True)
+    raw_path = T / "_parametric_raw.txt"
     c = parametric.build_model(template, markup, llm.model(llm.FRONTIER),
-                               PARTY, CONTEXT)
+                               PARTY, CONTEXT, raw_out=raw_path)
+    if not c.params:
+        print(f"\nAUCUNE VARIABLE RETENUE. La reponse brute est dans\n  {raw_path}\n"
+              f"Regarde sa premiere variable : le schema attendu met des "
+              f"IDENTIFIANTS d'option\ndans ours_option/theirs_option au niveau "
+              f"variable, et des VECTEURS dans\nours/theirs au niveau option.")
+        return
     (T / "parametric.json").write_text(parametric.dump(c))
     print(f"\n{len(c.params)} variables, {c.size():,} contrats possibles, "
           f"{len(c.couplings)} couplages\n")
