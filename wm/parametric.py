@@ -356,6 +356,19 @@ qu'elles ne nous coutent. Ce sont des prises de valeur pure, et les identifier
 est la moitie de l'exercice. Si chacune de leurs demandes leur vaut plus qu'elle
 ne nous coute, tu dis qu'il faut accepter leur markup en entier.
 
+LE SIGNE, SUR UN EXEMPLE. Ils portent le plafond de responsabilite de 12 mois de
+redevances a 2x le terme. Notre exposition AUGMENTE, donc c'est MAUVAIS pour
+nous, donc "ours" porte {{"tail_risk": -410}} - un nombre NEGATIF. Leur
+protection augmente, donc "theirs" porte {{"tail_risk": 150}} - un nombre
+POSITIF. N'ecris jamais la QUANTITE de risque ; ecris ce qu'elle VAUT a la
+partie concernee. Plus de risque, plus de cout, plus de contrainte : nombre
+negatif, toujours.
+
+REGLE DE COHERENCE, a verifier avant de repondre : ils ont marque ce contrat
+pour se l'approprier. La quasi-totalite de leurs redactions doit donc etre
+NEGATIVE pour nous et POSITIVE pour eux. Si tu obtiens l'inverse sur une
+clause, tu as inverse un signe. Relis-la.
+
 ORDRES DE GRANDEUR : ancre-toi sur la valeur annuelle du contrat telle qu'elle
 ressort des documents. Aucun effet annuel ne devrait depasser cette valeur, et
 le risque de queue est une perte ESPEREE - donc deja ponderee par sa
@@ -522,6 +535,32 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
             f"partie adverse qui negocie prend\n  toujours quelque chose : une "
             f"elicitation credible doit trouver des ratios < 1.")
 
+    # 3. coherence des signes. Une partie qui marque un contrat prend quelque
+    #    chose : si son markup ameliore NOTRE position, un axe a ete rempli
+    #    comme une QUANTITE (plus de risque = nombre positif) au lieu d'une
+    #    VALEUR (plus de risque = nombre negatif). C'est le defaut le plus
+    #    frequent, et il inverse la liste des concessions a refuser.
+    vt = c.vector(c.template)
+    dr = total(sub(c.vector(c.markup), vt), weights)
+    gagnantes = []
+    for pid, p in c.params.items():
+        if p.ours == p.theirs:
+            continue
+        a = dict(c.template)
+        a[pid] = p.theirs
+        if total(sub(c.vector(a), vt), weights) > 0:
+            gagnantes.append(p.name)
+    n_moved = sum(1 for p in c.params.values() if p.ours != p.theirs)
+    if n_moved and (dr > 0 or len(gagnantes) > n_moved * 0.4):
+        out.append(
+            f"SIGNES INCOHERENTS : leur markup ameliore notre position de "
+            f"{dr:+.0f} au total,\n  et {len(gagnantes)}/{n_moved} de leurs "
+            f"demandes nous seraient profitables"
+            + (f" ({', '.join(x[:24] for x in gagnantes[:4])})" if gagnantes else "")
+            + ".\n  Une partie adverse ne demande pas des clauses qui nous "
+              f"avantagent. Un axe a ete\n  rempli comme une quantite - plus de "
+              f"risque = nombre positif - au lieu d'une\n  valeur. La liste des "
+              f"concessions a refuser est alors inversee.")
     return out
 
 
