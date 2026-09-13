@@ -864,6 +864,32 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _nk
 
+    # LE CONTRAT COMME CREANCE CONDITIONNELLE. Quatre controles : les
+    # redevances ferment sur la formule ; un plafond plus haut ne nuit jamais
+    # au licencie face a une reclamation ; la faute lourde fait tomber le
+    # plafond la ou la faute simple ne le fait pas ; changer de module de droit
+    # change le resultat a contrat constant.
+    from . import claim as _C
+    _tot = 2_640_000 * sum(1.04 ** y for y in range(5))
+    _calm = _C.evaluate(_C.TEMPLATE, _C.scenarios(_C.TEMPLATE)["calme"])
+    _ip = "reclamation PI 20 M$ (an 3)"
+    _a = _C.evaluate(_C.TEMPLATE, _C.scenarios(_C.TEMPLATE)[_ip]).licensee
+    _b = _C.evaluate(_C.TEMPLATE.with_(cap_basis="total_term", cap_mult=2.0, sole_remedy_ip=False),
+                     _C.scenarios(_C.TEMPLATE)[_ip]).licensee
+    _s, _g = (_C.evaluate(_C.TEMPLATE, _C.scenarios(_C.TEMPLATE)[k]).licensor
+              for k in ("litige 6 M$, faute simple (an 4)", "litige 6 M$, faute lourde (an 4)"))
+    _fr = _C.evaluate(_C.TEMPLATE.with_(law="FR"), _C.scenarios(_C.TEMPLATE)["calme"]).licensor
+    _cc = [("redevances = formule", abs(_calm.detail["redevances"][0] - _tot) < 1),
+           ("plafond plus haut : licencie jamais perdant", _b >= _a - 1e-6),
+           ("faute lourde fait tomber le plafond", _g < _s - 1),
+           ("module de droit change le resultat", abs(_fr - _calm.licensor) > 1)]
+    _ok = all(v for _, v in _cc)
+    print(f"  creance         : {sum(v for _, v in _cc)}/{len(_cc)} {'OK' if _ok else 'FAIL'}")
+    for _n, _v in _cc:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _ok
+
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
     gi = [GenIssue(id="G1", name="cap", question="?", limits=[
@@ -1564,7 +1590,8 @@ def cmd_neg(argv: list[str]) -> None:
     """
     from . import negotiation as ng
     opts = {"policies": "algo", "n": "3", "rounds": str(ng.DEFAULT_ROUNDS),
-            "model": llm.FRONTIER, "them": "algo", "budget": "0.35", "seed0": "0"}
+            "model": llm.FRONTIER, "them": "algo", "budget": "0.35", "seed0": "0",
+            "contract": "elicited"}
     report_only = False
     i = 0
     while i < len(argv):
@@ -1591,7 +1618,15 @@ def cmd_neg(argv: list[str]) -> None:
         print(ng.summary(rs))
         return
 
-    c, src = _neg_contract()
+    if opts["contract"] == "claim":
+        # Les vecteurs CALCULES par le moteur de scenarios, en dollars, au lieu
+        # des vecteurs declares par un LLM. Meme simulateur, autre origine des
+        # chiffres - c'est la comparaison qui dit si la calibration compte.
+        from . import claim_bridge
+        c, src = claim_bridge.build(), "CALCULE (wm/claim_bridge.py sur wm/claim.py)"
+        ng.WEIGHTS = claim_bridge.WEIGHTS
+    else:
+        c, src = _neg_contract()
     policies = [x.strip() for x in opts["policies"].split(",") if x.strip()]
     n, T = int(opts["n"]), int(opts["rounds"])
     seeds = list(range(int(opts["seed0"]), int(opts["seed0"]) + n))
@@ -1616,7 +1651,8 @@ def cmd_neg(argv: list[str]) -> None:
           f"tours : {T}   budget de concession : {float(opts['budget']):.0%}\n")
 
     def save(r):
-        f = out / f"{r['policy']}__{slug(opts['model']) if r['policy'] != 'algo' else 'none'}__cp{r['seed']}.json"
+        tag = "claim__" if opts["contract"] == "claim" else ""
+        f = out / f"{tag}{r['policy']}__{slug(opts['model']) if r['policy'] != 'algo' else 'none'}__cp{r['seed']}.json"
         f.write_text(json.dumps(r, indent=1, ensure_ascii=False))
         etat = ("accord tour %d par %s" % (r["rounds"], r["accepted_by"])) if r["agreed"] else "RUPTURE"
         garde = "" if r["kept_us"] is None else f"  garde {r['kept_us']:.2f}  eux {r['share_them']:.2f}"
@@ -1633,6 +1669,41 @@ def cmd_neg(argv: list[str]) -> None:
         print(llm.spend_report())
     if src.startswith("EXEMPLE"):
         print("\nCONTRAT D'EXEMPLE : ceci verifie la mecanique, pas l'hypothese.")
+
+
+def cmd_claim(argv: list[str]) -> None:
+    """Le contrat comme creance conditionnelle. Aucun appel API.
+
+        python -m wm.run claim                    # scenarios (sans probabilite), distribution, decomposition
+        python -m wm.run claim --law FR           # les trois positions sous droit francais
+        python -m wm.run claim --risk 1.0 --n 4000
+        python -m wm.run claim --breakeven ip_claims
+    """
+    from . import claim as C
+    opts = {"n": "2000", "risk": "0.25", "law": "", "breakeven": "", "seed": "0"}
+    i = 0
+    while i < len(argv):
+        k = argv[i].lstrip("-")
+        if k in opts and i + 1 < len(argv):
+            opts[k] = argv[i + 1]
+            i += 2
+        else:
+            raise SystemExit(f"option inconnue : {argv[i]}")
+    T = [C.TEMPLATE, C.MARKUP, C.COUNTER]
+    if opts["law"]:
+        T = [t.with_(law=opts["law"], label=f"{t.label} [{opts['law']}]") for t in T]
+        print(f"Les trois positions, droit applicable force a {opts['law']} : "
+              f"ce qui change est l'effet du DROIT, a contrat constant.\n")
+    n, seed, risk = int(opts["n"]), int(opts["seed"]), float(opts["risk"])
+    if opts["breakeven"]:
+        print(C.breakeven(T[0], T[1], opts["breakeven"], [1e6, 3e6, 5e6, 10e6, 20e6, 40e6]))
+        return
+    print(C.scenario_table(T)); print()
+    print(C.distribution_table(T, n=n, seed=seed, risk_aversion=risk)); print()
+    print(C.decomposition(T[0], T[1], n=n, seed=seed)); print()
+    print(C.decomposition(T[0], T[2], n=n, seed=seed)); print()
+    print("Taux de base : wm/claim.py BASE (chacun etiquete, avec sa source quand il en a une).")
+    print("Modules de droit : wm/claim.py LAW. Les scenarios nommes n'utilisent ni l'un ni l'autre.")
 
 
 if __name__ == "__main__":
@@ -1698,6 +1769,8 @@ if __name__ == "__main__":
         cmd_recheck()
     elif a[0] == "neg":
         cmd_neg(a[1:])
+    elif a[0] == "claim":
+        cmd_claim(a[1:])
     elif a[0] == "report":
         cmd_report()
     else:

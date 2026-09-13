@@ -48,6 +48,14 @@ from . import parametric as pm
 
 DEFAULT_ROUNDS = 6
 
+# Les poids de scalarisation. None = ceux du modele elicite ; le pont
+# claim_bridge en fournit d'autres, tous en dollars.
+WEIGHTS: dict | None = None
+
+
+def _w() -> dict:
+    return WEIGHTS or pm.DEFAULT_WEIGHTS
+
 
 # --- les camps -----------------------------------------------------------
 
@@ -81,15 +89,15 @@ def utility(c: pm.Contract, side: Side, a: dict) -> float:
 def belief(c: pm.Contract, whose: str, a: dict) -> float:
     """Ce que le modele elicite dit de la valeur d'une assignation pour un camp.
     C'est ce que l'AUTRE camp croit ; la verite est dans Side.weights."""
-    ref = pm.total(c.vector(c.template, whose), pm.DEFAULT_WEIGHTS)
-    return pm.total(c.vector(a, whose), pm.DEFAULT_WEIGHTS) - ref
+    ref = pm.total(c.vector(c.template, whose), _w())
+    return pm.total(c.vector(a, whose), _w()) - ref
 
 
 def make_us(c: pm.Contract, budget: float = 0.35, beta: float = 1.0) -> Side:
     """Notre camp : l'utilite elicitee telle quelle, un budget de concession
     exprime en part de ce que leur markup nous prend."""
     loss = belief(c, "ours", c.markup)           # negatif
-    return Side(name="us", whose="ours", weights=dict(pm.DEFAULT_WEIGHTS),
+    return Side(name="us", whose="ours", weights=dict(_w()),
                 ideal=dict(c.template), aspiration=0.0,
                 reservation=budget * loss, beta=beta, label="nous")
 
@@ -111,7 +119,7 @@ def make_them(c: pm.Contract, seed: int) -> Side:
     rng = random.Random(1000 + seed)
     label = rng.choice(list(PERSONAS))
     persona, beta = PERSONAS[label]
-    weights = {d: w * math.exp(rng.gauss(0.0, 0.4)) for d, w in pm.DEFAULT_WEIGHTS.items()}
+    weights = {d: w * math.exp(rng.gauss(0.0, 0.4)) for d, w in _w().items()}
     fixation = ""
     if rng.random() < 0.5:
         moved = [p for p in c.params.values() if p.theirs != p.ours]
