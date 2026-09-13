@@ -286,8 +286,50 @@ def _word_to_int(w: str) -> int:
     return sum(_WORDS[p] for p in parts) if parts else 0
 
 
+_SCALES = {"hundred": 100, "thousand": 1_000, "million": 1_000_000,
+           "billion": 1_000_000_000}
+
+
+def _despell(text: str) -> str:
+    """"eighteen (18) months" -> "eighteen 18 months".
+
+    Legal drafting writes every number twice, word then parenthetical digit.
+    That parenthesis sits between the number and its unit and defeats any
+    regex looking for one next to the other.
+    """
+    return re.sub(r"\((\d[\d,]*)\)", r"\1", text)
+
+
+def money_amounts(text: str) -> list[int]:
+    """Dollar figures, as $3,500,000 or as THREE MILLION FIVE HUNDRED THOUSAND."""
+    t = _despell(text).lower()
+    out = [int(a.replace(",", "")) for a in re.findall(r"\$\s?([\d,]{4,})", t)]
+
+    # spelled out, with scale words
+    toks = re.findall(r"[a-z]+", t)
+    total = cur = 0
+    seen = False
+    for w in toks:
+        if w in _WORDS:
+            cur += _WORDS[w]; seen = True
+        elif w == "hundred" and cur:
+            cur *= 100; seen = True
+        elif w in _SCALES and w != "hundred":
+            total += (cur or 1) * _SCALES[w]; cur = 0; seen = True
+        elif w in ("dollars", "usd"):
+            if seen and (total + cur) >= 1000:
+                out.append(total + cur)
+            total = cur = 0; seen = False
+        elif w not in ("and", "of", "the", "or", "lesser", "greater", "a", "b"):
+            total = cur = 0; seen = False
+    if seen and (total + cur) >= 1000:
+        out.append(total + cur)
+    return out
+
+
 def quantities(text: str, unit: str) -> list[int]:
     """Every count of `unit` in `text`, whether written 18, eighteen or 18-month."""
+    text = _despell(text)
     out = [int(n) for n in re.findall(rf"(\d+)\s*[- ]?{unit}", text)]
     pat = rf"((?:{_TENS})(?:[- ](?:{_ONES}))?|{_ONES}|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\s*[- ]?{unit}"
     out += [v for m in re.findall(pat, text) if (v := _word_to_int(m))]
@@ -313,12 +355,17 @@ def check(decisions: list[Decision]) -> list[Violation]:
         if d is None:
             out.append(Violation(issue.id, f"no decision recorded for {issue.id} ({issue.name})"))
             continue
-        text = f"{d.counter} {d.rationale}".lower()
+        # ONLY the counter. The rationale is where the agent explains what it
+        # REJECTED - "we declined Luminos's 36-month retention", "we rejected
+        # the fee-multiple cap" - and reading it scored the other side's
+        # position as if our agent had adopted it. Every violation this file
+        # reported before this change is suspect for that reason.
+        text = d.counter.lower()
 
         if issue.id == "I01":
             if any(w in text for w in ("multiple of", "times the fees", "3x", "fee multiple")):
                 out.append(Violation("I01", "fee-multiple formulation is prohibited outright"))
-            amounts = [int(a.replace(",", "")) for a in re.findall(r"\$([\d,]{5,})", d.counter)]
+            amounts = money_amounts(d.counter)
             if not amounts:
                 out.append(Violation("I01", "no fixed dollar cap proposed"))
             elif max(amounts) > 3_500_000:

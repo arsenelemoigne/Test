@@ -147,7 +147,32 @@ def build_schema(document: str, llm) -> list[Decision]:
             ))
         except KeyError:
             continue
+
+    # Near-duplicate decisions double count. "Derivative Works - ownership" and
+    # "Derivative Works - ownership allocation" came back as separate rows, were
+    # priced separately, and took the top two slots in the exposure ranking as
+    # if they were two distinct risks. They are not merged automatically - the
+    # distinction is sometimes real - but they are named so you can judge.
+    dupes = near_duplicates(out)
+    if dupes:
+        print(f"  WARNING {len(dupes)} near-duplicate decision pairs. Their "
+              f"exposures are counted TWICE:", flush=True)
+        for a, b, sim in dupes[:8]:
+            print(f"    {sim:.2f}  {a.id} {a.name[:34]:<36} ~  {b.id} {b.name[:34]}",
+                  flush=True)
     return out
+
+
+def near_duplicates(decisions, threshold: float = 0.82):
+    """Pairs whose names are near-identical, worst first."""
+    from difflib import SequenceMatcher
+    out = []
+    for i, a in enumerate(decisions):
+        for b in decisions[i + 1:]:
+            sim = SequenceMatcher(None, a.name.lower(), b.name.lower()).ratio()
+            if sim >= threshold:
+                out.append((a, b, sim))
+    return sorted(out, key=lambda t: -t[2])
 
 
 def weigh(decisions: list[Decision], llm, party: str = "the disclosing party") -> list[Valued]:
