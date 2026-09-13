@@ -121,45 +121,61 @@ def evaluate(decisions, issues, check_fn, couplings=None, value_fn=None) -> Repo
     return r
 
 
+def _score(rep: Report) -> tuple[int, int]:
+    """Lower is better. Violations first, then unanswered issues."""
+    return (len(rep.violations), len(rep.missing))
+
+
 def run(prompt: str, call, parse, issues, check_fn, rounds: int = 3,
         blind: bool = False, couplings=None, value_fn=None) -> dict:
-    """Propose, evaluate, revise. Returns the final decisions and a full trace."""
+    """Propose, evaluate, revise - and KEEP THE BEST ANSWER, not the last one.
+
+    Keeping the last one is how a working loop produces a worse result than no
+    loop at all: an observed run went 6 violations -> 4 -> 3 and then shipped a
+    fourth revision carrying 7. The evaluator is the objective function, so the
+    answer to return is the one that scores best against it. Anything else is
+    not optimisation, it is a random walk that happens to be evaluated.
+    """
     trace = []
     raw = call(prompt)
     try:
         decisions = parse(raw)
     except ValueError:
         return {"decisions": [], "raw": raw, "rounds": 0, "calls": 1,
-                "trace": [{"round": 0, "error": "unparseable"}]}
+                "best_round": None, "trace": [{"round": 0, "error": "unparseable"}]}
 
-    best, calls = decisions, 1
+    calls = 1
+    rep = evaluate(decisions, issues, check_fn, couplings, value_fn)
+    best, best_rep, best_round, best_raw = decisions, rep, 0, raw
+    trace.append({"round": 0, "violations": len(rep.violations),
+                  "missing": len(rep.missing), "clean": rep.clean, "kept": True})
+
     for n in range(1, rounds + 1):
-        rep = evaluate(decisions, issues, check_fn, couplings, value_fn)
-        trace.append({"round": n - 1, "violations": len(rep.violations),
-                      "missing": len(rep.missing), "clean": rep.clean})
         if rep.clean and not blind:
             break
         positions = {d.issue_id: d.counter for d in decisions}
         feedback = BLIND_FEEDBACK if blind else rep.render(positions)
-        follow = (f"{prompt}\n\n"
-                  f"=== YOUR PREVIOUS ANSWER ===\n{json.dumps([{'issue_id': d.issue_id, 'disposition': d.disposition.value, 'counter': d.counter, 'rationale': d.rationale} for d in decisions], indent=2)}\n\n"
-                  f"{feedback}")
+        follow = (f"{prompt}\n\n=== YOUR PREVIOUS ANSWER ===\n"
+                  f"{json.dumps([{'issue_id': d.issue_id, 'disposition': d.disposition.value, 'counter': d.counter, 'rationale': d.rationale} for d in decisions], indent=2)}"
+                  f"\n\n{feedback}")
         raw = call(follow)
         calls += 1
         try:
-            nxt = parse(raw)
+            decisions = parse(raw)
         except ValueError:
-            trace.append({"round": n, "error": "unparseable, keeping previous"})
-            break
-        # never accept a revision that answers fewer issues than the one before
-        if len(nxt) >= len(best):
-            decisions, best = nxt, nxt
-        else:
-            trace.append({"round": n, "rejected": "fewer issues than previous"})
+            trace.append({"round": n, "error": "unparseable, keeping best so far"})
             break
 
-    final = evaluate(best, issues, check_fn, couplings, value_fn)
-    trace.append({"round": "final", "violations": len(final.violations),
-                  "missing": len(final.missing), "clean": final.clean})
-    return {"decisions": best, "raw": raw, "rounds": len(trace) - 1,
-            "calls": calls, "trace": trace}
+        rep = evaluate(decisions, issues, check_fn, couplings, value_fn)
+        improved = _score(rep) < _score(best_rep)
+        trace.append({"round": n, "violations": len(rep.violations),
+                      "missing": len(rep.missing), "clean": rep.clean,
+                      "kept": improved})
+        if improved:
+            best, best_rep, best_round, best_raw = decisions, rep, n, raw
+
+    trace.append({"round": "returned", "from_round": best_round,
+                  "violations": len(best_rep.violations),
+                  "missing": len(best_rep.missing), "clean": best_rep.clean})
+    return {"decisions": best, "raw": best_raw, "rounds": len(trace) - 2,
+            "calls": calls, "best_round": best_round, "trace": trace}
