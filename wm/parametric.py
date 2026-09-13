@@ -826,6 +826,18 @@ def assignment_from(decisions, c: Contract) -> tuple[dict, list[str]]:
     return a, hors
 
 
+def value_of(decisions, c: Contract, weights=None) -> float:
+    """Ce que vaut la position, sur l'echelle du modele.
+
+    Sert a TRANCHER LES EGALITES dans la boucle, jamais a arbitrer contre le
+    mandat : une position qui enfreint le mandat reste pire qu'une position
+    conforme moins bien valorisee, quel que soit l'ecart de valeur. Le mandat
+    est une contrainte, pas un terme de la fonction objectif.
+    """
+    a, _ = assignment_from(decisions, c)
+    return total(c.vector(a), weights)
+
+
 def value_feedback(decisions, c: Contract, weights=None) -> str:
     """Ce que la contre-proposition vaut, et ou elle laisse de la valeur.
 

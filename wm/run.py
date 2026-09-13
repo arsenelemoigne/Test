@@ -129,7 +129,8 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
             f = taskctx.task_dir() / "parametric.json"
             if f.exists():
                 pc = parametric.load(f.read_text())
-                vfn = lambda ds: parametric.value_feedback(ds, pc)
+                vfn = lambda ds: (parametric.value_feedback(ds, pc),
+                                  parametric.value_of(ds, pc))
         res = loop.run(prompt, call, parse_decisions, taskctx.issues(), check,
                        rounds=rounds, blind=condition.endswith("N"), value_fn=vfn)
         decisions, raw = res["decisions"], res["raw"]
@@ -610,6 +611,29 @@ def cmd_selftest() -> None:
         if not _v:
             print(f"        ! {_n}")
     ok &= _vok
+
+    # LA VALEUR DOIT DEPARTAGER, JAMAIS ARBITRER. Deux controles opposes :
+    # a conformite egale la boucle doit retenir la revision mieux valorisee ;
+    # a valeur superieure mais mandat enfreint elle doit la refuser.
+    from .loop import Report as _Rep, _score as _sc
+    _lex = [
+        ("la valeur departage a conformite egale",
+         _sc(_Rep(violations=[], missing=[], value=900.0))
+         < _sc(_Rep(violations=[], missing=[], value=100.0))),
+        ("le mandat prime sur toute valeur",
+         _sc(_Rep(violations=[("I1", "x")], missing=[], value=1e9))
+         > _sc(_Rep(violations=[], missing=[], value=-1e9))),
+        ("une question sans reponse prime sur la valeur",
+         _sc(_Rep(violations=[], missing=["I1"], value=1e9))
+         > _sc(_Rep(violations=[], missing=[], value=-1e9))),
+    ]
+    _lok = all(v for _, v in _lex)
+    print(f"  ordre lexical   : {sum(v for _, v in _lex)}/{len(_lex)} "
+          f"{'OK' if _lok else 'FAIL'}")
+    for _n, _v in _lex:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _lok
 
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic

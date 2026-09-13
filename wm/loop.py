@@ -38,6 +38,7 @@ class Report:
     missing: list[str] = field(default_factory=list)
     coupled: dict[str, list[str]] = field(default_factory=dict)
     value_note: str = ""
+    value: float | None = None
 
     @property
     def clean(self) -> bool:
@@ -115,15 +116,32 @@ def evaluate(decisions, issues, check_fn, couplings=None, value_fn=None) -> Repo
 
     if value_fn is not None:
         try:
-            r.value_note = value_fn(decisions)
+            v = value_fn(decisions)
+            # value_fn peut rendre le texte seul, ou (texte, valeur). Sans la
+            # valeur, la boucle EMET un signal qu'elle n'utilise pas pour
+            # choisir : le modele revise sous pression de valeur et la selection
+            # garde quand meme la reponse du premier tour. C'est ce qui a rendu
+            # B1L indistinguable de B1.
+            if isinstance(v, tuple):
+                r.value_note, r.value = v[0], float(v[1])
+            else:
+                r.value_note = v
         except Exception:                               # noqa: BLE001
-            r.value_note = ""
+            r.value_note, r.value = "", None
     return r
 
 
-def _score(rep: Report) -> tuple[int, int]:
-    """Lower is better. Violations first, then unanswered issues."""
-    return (len(rep.violations), len(rep.missing))
+def _score(rep: Report) -> tuple[int, int, float]:
+    """Lower is better. Mandate first, coverage second, value last.
+
+    L'ordre est lexicographique et il n'est pas negociable : aucune quantite de
+    valeur ne rachete un depassement de mandat, et aucune valeur ne rachete une
+    question laissee sans reponse. La valeur ne departage que des reponses
+    egales sur les deux premiers - ce qui est exactement le cas frequent, et
+    exactement celui ou la boucle ne choisissait rien.
+    """
+    return (len(rep.violations), len(rep.missing),
+            -rep.value if rep.value is not None else 0.0)
 
 
 def run(prompt: str, call, parse, issues, check_fn, rounds: int = 3,
@@ -148,10 +166,16 @@ def run(prompt: str, call, parse, issues, check_fn, rounds: int = 3,
     rep = evaluate(decisions, issues, check_fn, couplings, value_fn)
     best, best_rep, best_round, best_raw = decisions, rep, 0, raw
     trace.append({"round": 0, "violations": len(rep.violations),
-                  "missing": len(rep.missing), "clean": rep.clean, "kept": True})
+                  "missing": len(rep.missing), "clean": rep.clean,
+                  "value": rep.value, "kept": True})
 
     for n in range(1, rounds + 1):
-        if rep.clean and not blind:
+        # Sans fonction de valeur, "propre" est le meilleur score atteignable et
+        # continuer ne peut que couter des appels. Avec elle, propre n'est que
+        # le premier rang du critere : la recherche de valeur commence la ou la
+        # conformite est acquise, et s'arreter au premier tour conforme revient
+        # a ne jamais s'en servir.
+        if rep.clean and not blind and value_fn is None:
             break
         positions = {d.issue_id: d.counter for d in decisions}
         feedback = BLIND_FEEDBACK if blind else rep.render(positions)
@@ -170,12 +194,18 @@ def run(prompt: str, call, parse, issues, check_fn, rounds: int = 3,
         improved = _score(rep) < _score(best_rep)
         trace.append({"round": n, "violations": len(rep.violations),
                       "missing": len(rep.missing), "clean": rep.clean,
-                      "kept": improved})
+                      "value": rep.value, "kept": improved})
         if improved:
             best, best_rep, best_round, best_raw = decisions, rep, n, raw
 
     trace.append({"round": "returned", "from_round": best_round,
                   "violations": len(best_rep.violations),
-                  "missing": len(best_rep.missing), "clean": best_rep.clean})
+                  "missing": len(best_rep.missing), "clean": best_rep.clean,
+                  "value": best_rep.value,
+                  # Une boucle qui rend toujours son tour 0 n'a rien mesure :
+                  # elle a depense les appels et jete ce qu'ils ont produit.
+                  "revisions_kept": sum(1 for t in trace
+                                        if t.get("round") not in (0, "returned")
+                                        and t.get("kept"))})
     return {"decisions": best, "raw": best_raw, "rounds": len(trace) - 2,
             "calls": calls, "best_round": best_round, "trace": trace}
