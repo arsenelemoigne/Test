@@ -23,6 +23,12 @@ USAGE: list[dict] = []
 # so at temperature 0 every "seed" is the same computation run again.
 DEFAULT_TEMP = float(os.environ.get("WM_TEMP", "0.0"))
 
+# Un modele a raisonnement depense une part de ce budget a penser avant
+# d'ecrire. Sur une tache a 26 points dont la reponse fait deja 12k
+# caracteres, 16 000 jetons coupent le JSON en plein milieu et le run
+# entier echoue. WM_MAX_TOKENS le releve sans toucher au code.
+DEFAULT_MAX = int(os.environ.get("WM_MAX_TOKENS", "24000"))
+
 
 def model(name: str, temperature: float | None = None):
     """Returns callable(prompt, max_tokens) -> str, and records token usage."""
@@ -67,7 +73,8 @@ def model(name: str, temperature: float | None = None):
         t = str(e)
         return "Error code: 429" in t or "'code': 429" in t or "rate limit" in t.lower()
 
-    def call(prompt: str, max_tokens: int = 16000) -> str:
+    def call(prompt: str, max_tokens: int = 0) -> str:
+        max_tokens = max_tokens or DEFAULT_MAX
         last = None
         for attempt in range(6):
             try:

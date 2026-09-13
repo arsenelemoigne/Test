@@ -19,7 +19,8 @@ import re
 from dataclasses import dataclass, field, asdict
 
 from . import attribution
-from .abstraction import Violation, quantities, money_amounts, Disposition
+from .abstraction import (Violation, quantities, money_amounts, Disposition,
+                          normalise_percent)
 
 
 @dataclass
@@ -61,6 +62,27 @@ class GenIssue:
 
 # --- the deterministic part ------------------------------------------------
 
+def _n(v: float) -> str:
+    """99.0 -> '99', 99.9 -> '99.9'. Un controle qui ecrit '99.0 percents' se lit
+    comme un bug et fait douter du reste."""
+    return f"{v:g}"
+
+
+def _u(unit: str, v: float) -> str:
+    return unit if unit == "percent" or abs(v) == 1 else f"{unit}s"
+
+
+def _dit(texte: str, phrase: str) -> bool:
+    """La phrase est-elle presente, aux notations pres ?
+
+    "50%" et "50 percent" sont la meme exigence. Les comparer litteralement
+    faisait dire au controle "50% early-termination fee required" a propos d'un
+    texte qui accordait exactement cela, ecrit en toutes lettres.
+    """
+    a, b = normalise_percent(texte or "").lower(), normalise_percent(phrase or "").lower()
+    return bool(b) and b in a
+
+
 def check_generic(decisions, issues: list[GenIssue]) -> list[Violation]:
     """Apply each issue's limits to its decision. No model, no judgement.
 
@@ -91,14 +113,16 @@ def check_generic(decisions, issues: list[GenIssue]) -> list[Violation]:
                     got = quantities(text, lim["unit"])
                     if got and max(got) > float(lim["value"]):
                         out.append(Violation(issue.id,
-                                             f"{max(got)} {lim['unit']}s exceeds the "
-                                             f"{lim['value']}-{lim['unit']} maximum"))
+                                             f"{_n(max(got))} {_u(lim['unit'], max(got))} "
+                                             f"exceeds the {_n(float(lim['value']))}-"
+                                             f"{lim['unit']} maximum"))
                 elif kind == "min_quantity":
                     got = quantities(text, lim["unit"])
                     if got and min(got) < float(lim["value"]):
                         out.append(Violation(issue.id,
-                                             f"{min(got)} {lim['unit']}s is below the "
-                                             f"{lim['value']}-{lim['unit']} minimum"))
+                                             f"{_n(min(got))} {_u(lim['unit'], min(got))} "
+                                             f"is below the {_n(float(lim['value']))}-"
+                                             f"{lim['unit']} minimum"))
                 elif kind == "require_quantity":
                     if not quantities(text, lim["unit"]):
                         out.append(Violation(issue.id, msg))
@@ -112,11 +136,11 @@ def check_generic(decisions, issues: list[GenIssue]) -> list[Violation]:
                     if not money_amounts(text):
                         out.append(Violation(issue.id, msg))
                 elif kind == "forbid_phrase":
-                    hit = [p for p in lim["phrases"] if p.lower() in text]
+                    hit = [p for p in lim["phrases"] if _dit(text, p)]
                     if hit:
                         out.append(Violation(issue.id, f"{msg} ({hit[0]!r})"))
                 elif kind == "require_phrase":
-                    if not any(p.lower() in text for p in lim["phrases"]):
+                    if not any(_dit(text, p) for p in lim["phrases"]):
                         out.append(Violation(issue.id, msg))
                 elif kind == "forbid_accept":
                     if d.disposition is Disposition.ACCEPT:

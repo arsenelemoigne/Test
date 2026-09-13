@@ -331,12 +331,32 @@ def money_amounts(text: str) -> list[int]:
     return out
 
 
-def quantities(text: str, unit: str) -> list[int]:
+# Adjectifs que la redaction juridique glisse entre le nombre et son unite.
+# La liste est CLOSE a dessein : autoriser un mot quelconque ferait lire "3" dans
+# "3 of 12 months", et le controle inventerait des chiffres au lieu d'en rater.
+_ADJ = (r"(?:consecutive|calendar|business|additional|further|rolling|continuous|"
+        r"successive|full|entire|complete|monthly|annual|separate)")
+
+
+def normalise_percent(text: str) -> str:
+    """'3%' et '99.9 %' deviennent '3 percent' et '99.9 percent'.
+
+    Le parseur ne connaissait que le mot. Or une clause ecrit le signe : sur les
+    runs observes, "CPI-U with 3% floor and 5% cap" produisait "no percent figure
+    stated", et l'essentiel du compteur de violations mesurait cela.
+    """
+    return re.sub(r"(\d+(?:\.\d+)?)\s*%", r"\1 percent", text or "")
+
+
+def quantities(text: str, unit: str) -> list[float]:
     """Every count of `unit` in `text`, whether written 18, eighteen or 18-month."""
-    text = _despell(text)
-    out = [int(n) for n in re.findall(rf"(\d+)\s*[- ]?{unit}", text)]
-    pat = rf"((?:{_TENS})(?:[- ](?:{_ONES}))?|{_ONES}|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\s*[- ]?{unit}"
-    out += [v for m in re.findall(pat, text) if (v := _word_to_int(m))]
+    text = _despell(normalise_percent(text))
+    out = [float(n) for n in
+           re.findall(rf"(\d+(?:\.\d+)?)\s*[- ]?(?:{_ADJ}[- ]\s*)?{unit}", text)]
+    pat = (rf"((?:{_TENS})(?:[- ](?:{_ONES}))?|{_ONES}|ten|eleven|twelve|thirteen|"
+           rf"fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)"
+           rf"\s*[- ]?(?:{_ADJ}[- ]\s*)?{unit}")
+    out += [float(v) for m in re.findall(pat, text) if (v := _word_to_int(m))]
     return out
 
 

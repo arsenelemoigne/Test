@@ -74,6 +74,38 @@ def _json_arrays(text: str):
     return sorted(spans, key=len, reverse=True)
 
 
+def _objets_complets(text: str) -> list[dict]:
+    """Tout objet JSON equilibre qui porte un issue_id, dans l'ordre du texte."""
+    out, debut, prof = [], None, 0
+    dans_chaine = esc = False
+    for i, ch in enumerate(text):
+        if dans_chaine:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                dans_chaine = False
+            continue
+        if ch == '"':
+            dans_chaine = True
+        elif ch == "{":
+            if prof == 0:
+                debut = i
+            prof += 1
+        elif ch == "}" and prof:
+            prof -= 1
+            if prof == 0 and debut is not None:
+                try:
+                    o = json.loads(text[debut:i + 1])
+                except ValueError:
+                    o = None
+                if isinstance(o, dict) and "issue_id" in o:
+                    out.append(o)
+                debut = None
+    return out
+
+
 def parse_decisions(text: str) -> list[Decision]:
     rows, derniere = None, None
     for span in _json_arrays(text):
@@ -87,6 +119,15 @@ def parse_decisions(text: str) -> list[Decision]:
             rows = candidate
             break
     if rows is None:
+        # RATTRAPAGE D'UNE REPONSE TRONQUEE. Un tableau coupe au milieu n'est pas
+        # un JSON valide, mais les objets qui le precedent le sont : sur une
+        # tache a 26 points, perdre 25 decisions ecrites parce que la 26e est
+        # incomplete coute un run entier pour rien. On relit objet par objet.
+        rows = _objets_complets(text)
+        if rows:
+            print(f"        (reponse tronquee : {len(rows)} decisions completes "
+                  f"recuperees sur {len(text):,} chars)")
+    if rows is None or not rows:
         raise ValueError(
             "no JSON array of decisions in model output"
             + (f" (last decode error: {derniere})" if derniere else "")
@@ -740,6 +781,37 @@ def cmd_selftest() -> None:
             pass
     print(f"  parseur JSON    : {_pok}/{len(_formes)} formes lues")
     ok &= (_pok == len(_formes))
+
+    # LECTURE DES CHIFFRES. Le controle ne connaissait que le mot "percent" et
+    # refusait un adjectif entre le nombre et son unite. Sur les runs observes,
+    # "CPI-U with 3% floor and 5% cap" produisait "no percent figure stated" :
+    # l'essentiel du compteur de violations mesurait cela.
+    from .abstraction import quantities as _q
+    _lect = [("CPI-U with 3% floor and 5% cap", "percent", {3.0, 5.0}),
+             ("99.9% monthly uptime commitment", "percent", {99.9}),
+             ("2% of monthly fees per 0.1% shortfall", "percent", {2.0, 0.1}),
+             ("50 percent early-termination fee", "percent", {50.0}),
+             ("90 consecutive days", "day", {90.0}),
+             ("thirty (30) calendar days", "day", {30.0}),
+             ("60-day cure period", "day", {60.0}),
+             ("eighteen (18) months", "month", {18.0}),
+             # et ce qu'il ne doit PAS lire : "3 of 12 months" ne vaut pas 3 mois
+             ("98% uptime in 3 of 12 months", "month", {12.0})]
+    _lok = sum(set(_q(t, u)) == att for t, u, att in _lect)
+    print(f"  lecture chiffres: {_lok}/{len(_lect)}")
+    for _t, _u, _att in _lect:
+        if set(_q(_t, _u)) != _att:
+            print(f"        ! {_u}: {sorted(set(_q(_t, _u)))} au lieu de "
+                  f"{sorted(_att)}  <- {_t}")
+    ok &= (_lok == len(_lect))
+
+    # rattrapage d'une reponse coupee en plein JSON
+    _tr = ('[\n {"issue_id":"I01","disposition":"REJECT","counter":"a","rationale":"x"},\n'
+           ' {"issue_id":"I02","disposition":"MODIFY","counter":"b {c}","rationale":"y"},\n'
+           ' {"issue_id":"I03","disposition":"ACCEPT","counter":"trunc')
+    _rec = parse_decisions(_tr)
+    print(f"  reponse tronquee: {len(_rec)}/2 decisions completes recuperees")
+    ok &= (len(_rec) == 2)
 
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
