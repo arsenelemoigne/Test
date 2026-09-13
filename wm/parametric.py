@@ -826,7 +826,16 @@ def assignment_from(decisions, c: Contract) -> tuple[dict, list[str]]:
     return a, hors
 
 
-def value_of(decisions, c: Contract, weights=None) -> float:
+def couverture(decisions, c: Contract) -> tuple[int, int]:
+    """(positions qui designent une redaction du domaine, positions modelisees)."""
+    modelisees = [d for d in decisions if d.issue_id in c.params]
+    designees = [d for d in modelisees
+                 if any(o.id == (getattr(d, "option_id", "") or "")
+                        for o in c.params[d.issue_id].options)]
+    return len(designees), len(modelisees)
+
+
+def value_of(decisions, c: Contract, weights=None):
     """Ce que vaut la position, sur l'echelle du modele.
 
     Sert a TRANCHER LES EGALITES dans la boucle, jamais a arbitrer contre le
@@ -834,6 +843,12 @@ def value_of(decisions, c: Contract, weights=None) -> float:
     conforme moins bien valorisee, quel que soit l'ecart de valeur. Le mandat
     est une contrainte, pas un terme de la fonction objectif.
     """
+    n, _ = couverture(decisions, c)
+    if n == 0:
+        # Aucune position n'a ete rattachee au domaine : l'assignation est restee
+        # notre modele de bout en bout et sa valeur vaut celle de la reference.
+        # La rendre comme un score ferait croire a une reponse parfaite.
+        return None
     a, _ = assignment_from(decisions, c)
     return total(c.vector(a), weights)
 
@@ -847,6 +862,25 @@ def value_feedback(decisions, c: Contract, weights=None) -> str:
     concessions.
     """
     a, hors = assignment_from(decisions, c)
+    n_des, n_mod = couverture(decisions, c)
+    if n_des == 0:
+        # SANS AUCUNE REDACTION DESIGNEE, le calcul ci-dessous compare notre
+        # modele a lui-meme et annonce "vous recuperez 100%". Un run observe a
+        # produit exactement cela sur 26 positions. Le chiffre serait une
+        # fabrication : mieux vaut dire que rien n'a pu etre valorise.
+        L = ["VALEUR DE VOTRE CONTRE-PROPOSITION", "=" * 60, "",
+             f"NON CALCULABLE : aucune de vos {n_mod} positions ne designe une "
+             f"redaction", "du domaine (champ option_id vide ou inconnu).", ""]
+        if hors:
+            L += [f"{len(hors)} designent une redaction que le modele ne connait "
+                  f"pas : {', '.join(hors[:8])}", ""]
+        L += ["Le contrat n'a donc pas ete evalue, et aucun pourcentage de valeur",
+              "recuperee ne serait autre chose qu'une comparaison du modele avec",
+              "lui-meme.", "",
+              "Repondez en donnant, pour chaque point, l'identifiant de la "
+              "redaction retenue", "parmi celles listees - ou \"autre\" si votre "
+              "position n'en reprend aucune."]
+        return "\n".join(L)
     vt, vm, va = c.vector(c.template), c.vector(c.markup), c.vector(a)
     tt, tm, ta = (total(x, weights) for x in (vt, vm, va))
     recupere = (ta - tm) / (tt - tm) if tt != tm else 0.0
@@ -855,7 +889,9 @@ def value_feedback(decisions, c: Contract, weights=None) -> str:
          f"  leur markup      {tm:>10.0f}",
          f"  votre position   {ta:>10.0f}",
          f"  notre modele     {tt:>10.0f}   (reference)",
-         f"\n  Vous recuperez {recupere:.0%} de ce que leur markup nous avait pris.", ""]
+         f"\n  Vous recuperez {recupere:.0%} de ce que leur markup nous avait pris.",
+         f"  (calcule sur {n_des} de vos {n_mod} positions modelisees ; les autres",
+         f"   sont restees sur notre redaction faute de redaction designee.)", ""]
 
     singles = {(r[0], r[1]): r for r in single_trades(c, weights)}
     mauvaises, ratees = [], []

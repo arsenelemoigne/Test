@@ -682,6 +682,23 @@ def cmd_selftest() -> None:
         Decision(issue_id="V3", disposition=Disposition.MODIFY,
                  counter="New York law.", rationale="", option_id="new_york"),
     ]
+    # COUVERTURE NULLE. Un run observe a rendu 26 positions sans un seul
+    # option_id : l'assignation restait notre modele de bout en bout et le bloc
+    # annoncait "vous recuperez 100%". Le chiffre doit etre refuse, pas nuance.
+    _muet = [Decision(issue_id=x.issue_id, disposition=x.disposition,
+                      counter=x.counter, rationale="") for x in _pos]
+    _fb0 = _pm.value_feedback(_muet, _toy)
+    _cov = [("aucun pourcentage fabrique", "recuperez" not in _fb0),
+            ("le refus est explicite", "NON CALCULABLE" in _fb0),
+            ("la valeur ne departage rien", _pm.value_of(_muet, _toy) is None)]
+    _cok = all(v for _, v in _cov)
+    print(f"  couverture nulle: {sum(v for _, v in _cov)}/{len(_cov)} "
+          f"{'OK' if _cok else 'FAIL'}")
+    for _n, _v in _cov:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _cok
+
     _fb = _pm.value_feedback(_pos, _toy)
     _a, _hors = _pm.assignment_from(_pos, _toy)
     _vchecks = [

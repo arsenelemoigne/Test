@@ -75,8 +75,18 @@ def main() -> int:
     if args:
         cands = [d for d in cands if args[0] in d.name]
     elif "--tous" not in sys.argv:
+        # Un run qui ne porte aucun option_id ne peut rien valoriser : il date
+        # d'avant le champ, ou le modele l'a ignore. Le choisir par defaut
+        # n'apprend que cela, donc on prefere un run qui en porte.
+        def porte_option(d):
+            try:
+                return any(r.get("option_id")
+                           for r in json.loads((d / "decisions.json").read_text()))
+            except Exception:                                   # noqa: BLE001
+                return False
         b = [d for d in cands if d.name.startswith("B")]
-        cands = [b[-1]] if b else cands[-1:]
+        avec = [d for d in b if porte_option(d)]
+        cands = [(avec or b or cands)[-1]]
     if not cands:
         print(f"aucun run avec decisions.json dans {runs}")
         return 1
@@ -124,7 +134,17 @@ def main() -> int:
         if rho is None:
             print("indefinie (trop peu de variation)")
         else:
-            print(f"rho = {rho:+.2f}  (n={len(ampleur)})")
+            n = len(ampleur)
+            t = abs(rho) * ((n - 2) / max(1e-12, 1 - rho ** 2)) ** 0.5
+            # approximation normale du test de Student, suffisante ici : elle
+            # sert a dire "ce rho n'est pas distinguable de zero", pas a publier.
+            import math
+            pval = math.erfc(t / (2 ** 0.5))
+            print(f"rho = {rho:+.2f}  (n={n}, p ~ {pval:.2f})")
+            if pval > 0.05:
+                print("  A ce n, ce rho n'est PAS distinguable de zero. La")
+                print("  concordance avec le mandat n'est ni etablie ni refutee :")
+                print("  le modele pourrait aussi bien ranger les points au hasard.")
             if rho < 0.2:
                 print("  Le modele ne met PAS son poids la ou le client dit tenir.")
                 print("  Il decrit peut-etre un contrat, mais pas les priorites")

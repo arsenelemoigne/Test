@@ -123,7 +123,11 @@ def evaluate(decisions, issues, check_fn, couplings=None, value_fn=None) -> Repo
             # garde quand meme la reponse du premier tour. C'est ce qui a rendu
             # B1L indistinguable de B1.
             if isinstance(v, tuple):
-                r.value_note, r.value = v[0], float(v[1])
+                # v[1] peut etre None : une position qui ne designe aucune
+                # redaction n'a pas de valeur, et lui en prêter une ferait
+                # departager des reponses sur un chiffre invente.
+                r.value_note = v[0]
+                r.value = None if v[1] is None else float(v[1])
             else:
                 r.value_note = v
         except Exception:                               # noqa: BLE001
