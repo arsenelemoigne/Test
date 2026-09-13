@@ -230,7 +230,9 @@ def single_trades(c: Contract, weights=None):
             a[pid] = o.id
             lose = total(sub(c.vector(a), vt), weights)
             gain = total(sub(c.vector(a, "theirs"), wt), weights)
-            ratio = gain / abs(lose) if lose else float("inf")
+            # Un cout nul ne fait pas un echange infiniment bon : il fait une
+            # clause sans enjeu pour nous. La trier en tete est trompeur.
+            ratio = gain / abs(lose) if abs(lose) > 1e-9 else 0.0
             rows.append((p.name, o.text, lose, gain, ratio, o.id == p.theirs))
     return sorted(rows, key=lambda r: -r[4])
 
@@ -457,6 +459,20 @@ def parse_model(raw: str) -> tuple[Contract, list[str]]:
             why.append(f"{pid}: impossible d'identifier notre redaction et la "
                        f"leur parmi {sorted(ids)}")
             continue
+        # La redaction de reference doit etre l'origine : tout est mesure par
+        # rapport a elle. Un modele qui lui donne un vecteur non nul deplace
+        # l'origine, et v(notre modele) cesse d'etre zero. On recale au lieu de
+        # rejeter - l'information relative entre options reste bonne.
+        ref = next(o for o in opts if o.id == a)
+        if any(abs(v) > 1e-9 for v in list(ref.vec().values()) + list(ref.vec("theirs").values())):
+            ro, rt = ref.vec(), ref.vec("theirs")
+            for o in opts:
+                o.ours = {d: o.vec()[d] - ro[d] for d in DIMENSIONS
+                          if abs(o.vec()[d] - ro[d]) > 1e-9}
+                o.theirs = {d: o.vec("theirs")[d] - rt[d] for d in DIMENSIONS
+                            if abs(o.vec("theirs")[d] - rt[d]) > 1e-9}
+            why.append(f"{pid}: reference non nulle, recalee sur l'origine")
+
         params.append(Parameter(id=str(pid), name=r.get("name", pid),
                                 section=str(r.get("section", "")),
                                 options=opts, ours=a, theirs=b))
@@ -511,6 +527,18 @@ def model_sanity(c: Contract, weights=None) -> list[str]:
     rows = single_trades(c, weights)
     theirs = [r for r in rows if r[5]]                  # leurs demandes seulement
     ratios = [r[4] for r in theirs if r[4] != float("inf")]
+
+    # symetrie de fond : la verifier sur LEURS demandes seulement laisse passer
+    # un modele ou l'essentiel des redactions est a somme nulle et ou seules
+    # quelques-unes, par hasard, ne le sont pas.
+    tous = [r[4] for r in rows if r[4] != float("inf")]
+    sym = sum(1 for x in tous if 0.92 <= x <= 1.08)
+    if len(tous) >= 8 and sym / len(tous) >= 0.5:
+        out.append(
+            f"SYMETRIE DE FOND : {sym}/{len(tous)} redactions ont un ratio entre "
+            f"0,92 et 1,08.\n  Le modele a largement rempli 'theirs' comme "
+            f"l'oppose de 'ours'. Sur ces clauses il\n  n'y a aucun echange a "
+            f"trouver, et le classement ne reflete que les montants.")
 
     # 1. un multiplicateur constant. Une symetrie donne des ratios tous a 1, un
     #    multiplicateur uniforme les donne tous a k. Ce qui compte est l'absence
