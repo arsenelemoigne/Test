@@ -1132,6 +1132,18 @@ def cmd_report() -> None:
         print("builder has not changed since. `git log --oneline -- wm/conditions.py`")
         print()
 
+    # un seul seed par arm : utile pour verifier vite, inutilisable pour conclure
+    from collections import Counter
+    par_arm = Counter((r[0], r[1]) for r in rows)
+    seuls = [f"{c}/{m.split('/')[0]}" for (c, m), n in par_arm.items() if n == 1]
+    if seuls:
+        print(f"{len(seuls)} arms n'ont qu'UN SEUL run : {', '.join(sorted(seuls)[:8])}"
+              + (" ..." if len(seuls) > 8 else ""))
+        print("Aucune variance n'est estimable dessus. Un ecart de un ou deux")
+        print("criteres sur 72 n'y veut rien dire - c'est une verification, pas")
+        print("une mesure. Relancer a 3 seeds avant de conclure quoi que ce soit.")
+        print()
+
     print(f"temperature is 0.0 and the seed is NOT sent to the model - it only")
     print("names the directory. Seeds are therefore REPLICATES of one computation,")
     print("not independent samples. Identical scores across seeds show provider")
