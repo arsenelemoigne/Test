@@ -89,9 +89,9 @@ latent space here: detection, not reasoning.
 Without this the counterparty's changes are invisible. → `task/`
 
 **2. Abstract.** Both documents go through the **same tied encoder** into **14 slots**;
-the diff is the signal. A lexical channel runs alongside as a recall guard. One issue = one thing the
-parties disagree about, carrying: our draft position, their proposed position, their
-verbatim words, and what the authority memo permits. → `abstraction.py`
+the diff is the signal. A lexical channel runs alongside as a recall guard.
+Each slot carries: our draft's value, their markup's value, both verbatim quotes, and
+what the authority memo permits. → `encoder.py`, `abstraction.py`
 
 **3. Negotiate.** The model is asked for a JSON list of `Decision`s — one per issue, each
 with a disposition, a concrete counter-position and a rationale. → `conditions.py`
@@ -132,7 +132,7 @@ python -m wm.run blind               # lexical change detection; no API calls
 python -m wm.run inputs              # sizes; no API calls
 python -m wm.run encode              # tied encoder on both documents
 python -m wm.run prose               # build the prose twin (one frontier call), cached
-python -m wm.run trial A4 claude-opus-5 3
+python -m wm.run trial A4 anthropic/claude-opus-4.1 3
 python -m wm.run all 3               # 4 conditions x 2 models x 3 seeds
 python -m wm.run report
 ```
