@@ -3,6 +3,7 @@ The experiment runner.
 
     python -m wm.run preflight              # check key + model slugs (3 tiny calls)
     python -m wm.run selftest               # exercise the whole pipeline offline
+    python -m wm.run cardinal               # money view + Cox diagnostic + packages
     python -m wm.run validate [reps]        # groundedness, stability, model agreement
     python -m wm.run autoschema             # FULL contract, no playbook: schema+weights+value
     python -m wm.run gravity                # per-issue gravity from the authority memo
@@ -331,6 +332,46 @@ def cmd_autoschema() -> None:
     print(llm.spend_report())
 
 
+def cmd_cardinal() -> None:
+    """Money-denominated view: expected annual cost per clause, the Cox
+    diagnostic on the ordinal model, and the non-modular packages."""
+    from . import autoschema, cardinal, valuation
+    T = Path(__file__).resolve().parent / "task"
+    RUNS.mkdir(parents=True, exist_ok=True)
+    doc = (T / "luminos-first-markup-dsa.txt").read_text()
+    PARTY = "Carden Analytics (the data discloser)"
+    CONTEXT = ("a B2B data sharing agreement; Carden licenses a pseudonymised "
+               "consumer dataset to Luminos for benchmarking analytics. Assume a "
+               "mid-size contract value and a US regulatory footprint.")
+    enc = llm.model(llm.FRONTIER)
+
+    print("enumerating decisions ...", flush=True)
+    schema = autoschema.build_schema(doc, enc)
+    print(f"{len(schema)} decisions\n", flush=True)
+
+    print("ordinal assessment (for the Cox diagnostic) ...", flush=True)
+    ordinal = valuation.assess(schema, enc, PARTY)
+    cpls = valuation.find_couplings(schema, enc)
+    print()
+    print("=" * 78)
+    print(cardinal.cox_diagnostic(ordinal))
+    print()
+    print("=" * 78)
+    print(cardinal.modularity_report(ordinal, cpls))
+
+    print("=" * 78)
+    print("cardinal assessment (money) ...", flush=True)
+    exps = cardinal.assess_cardinal(schema, enc, PARTY, CONTEXT)
+    (RUNS / "_cardinal.json").write_text(cardinal.dump(exps))
+    print()
+    print(cardinal.top_exposures(exps, 5))
+    print()
+    low = [e for e in exps if not e.confident]
+    print(f"{len(low)}/{len(exps)} figures marked low confidence.")
+    print()
+    print(llm.spend_report())
+
+
 def cmd_validate(reps: int = 3) -> None:
     """Measure whether the encoding can be trusted: groundedness, stability,
     cross-model agreement. Roughly reps+2 frontier calls plus 1 small-model call."""
@@ -427,6 +468,8 @@ if __name__ == "__main__":
         cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
+    elif a[0] == "cardinal":
+        cmd_cardinal()
     elif a[0] == "validate":
         cmd_validate(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "autoschema":
