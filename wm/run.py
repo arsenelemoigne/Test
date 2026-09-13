@@ -30,6 +30,12 @@ RUNS = Path(__file__).resolve().parent / "runs"
 PROSE_CACHE = RUNS / "_prose_twin.txt"
 
 
+def slug(model_name: str) -> str:
+    """Model ids contain '/', which would nest the run directory and break the
+    report glob. Flatten it."""
+    return model_name.replace("/", "--")
+
+
 def parse_decisions(text: str) -> list[Decision]:
     m = re.search(r"\[.*\]", text, re.S)
     if not m:
@@ -49,7 +55,7 @@ def parse_decisions(text: str) -> list[Decision]:
 
 
 def one_trial(condition: str, model_name: str, call, seed: int, prose: str | None) -> dict:
-    d = RUNS / f"{condition}__{model_name}__seed{seed}"
+    d = RUNS / f"{condition}__{slug(model_name)}__seed{seed}"
     d.mkdir(parents=True, exist_ok=True)
 
     prompt = conditions.build(condition, prose=prose)
