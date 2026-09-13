@@ -251,7 +251,9 @@ def cmd_report() -> None:
     for c, m, s, v, t, r in rows:
         print(f"{c:<6}{m:<22}{s:>5}{v:>17}{t:>10,}{(f'{r:.3f}' if r is not None else '-'):>11}")
     print()
-    print("Primary comparison is A2 vs A4 on the SAME model. A0 vs A4 is confounded.")
+    print("A2 vs A4   : does FORM help, holding information constant? (primary)")
+    print("A4 vs A4G  : does telling the model which issues are walk-aways help?")
+    print("A0 vs A4   : confounded by preprocessing and context length - not a result.")
 
 
 if __name__ == "__main__":

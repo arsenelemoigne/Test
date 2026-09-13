@@ -8,7 +8,14 @@ renderer and the judge are identical everywhere.
   A2  prose        frontier-written prose analysis: same facts as A4, flowing
                    prose, no fields, no IDs, length-matched        <-- CONTROL
   A4  worldmodel   the typed Issue list                            <-- TREATMENT
+  A4G worldmodel+  A4 plus the gravity table (tier per issue, read
+                   from the client's authority memo)                <-- TREATMENT 2
   A6  both         A4 alongside the raw documents (the deployable shape)
+
+A4G is separated from A4 deliberately. Gravity is extra INFORMATION, not just
+extra form -- it tells the model which issues are walk-aways. Folding it into A4
+would confound "structure helps" with "being told what matters helps", which are
+different claims. A4 vs A4G isolates the second one.
 
 A2 is the condition that makes the experiment mean anything. Without it, a win
 for A4 over A0 is explained just as well by "a frontier model read the contract
@@ -129,6 +136,11 @@ def build(condition: str, prose: str | None = None) -> str:
         body = f"NEGOTIATION BACKGROUND\n\n{prose}"
     elif condition == "A4":
         body = worldmodel()
+    elif condition == "A4G":
+        from . import gravity
+        from .abstraction import ISSUES
+        body = (f"{worldmodel()}\n\n"
+                f"{gravity.report({i.id: i.name for i in ISSUES})}")
     elif condition == "A6":
         body = f"{worldmodel()}\n\n\nSOURCE DOCUMENTS\n\n{raw()}"
     else:
@@ -136,4 +148,4 @@ def build(condition: str, prose: str | None = None) -> str:
     return f"{TASK}\n\n{body}\n\n{output_spec()}"
 
 
-CONDITIONS = ["A0", "A2", "A4", "A6"]
+CONDITIONS = ["A0", "A2", "A4", "A4G", "A6"]

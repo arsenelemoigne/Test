@@ -113,8 +113,9 @@ does not do it consistently. It is a guard rail, not a grade.
 |---|---|---|
 | **A0** | all task documents, verbatim | 63,300 |
 | **A2** | **prose twin** — same facts as A4, written as flowing prose by the frontier model, no fields or IDs | ≈ A4 |
-| **A4** | the 14 typed Issues | 2,840 |
-| **A6** | A4 + the raw documents (deployable shape) | 65,700 |
+| **A4** | the 15 typed Issues | 3,010 |
+| **A4G** | A4 + the gravity table (tier per issue, from the authority memo) | 3,650 |
+| **A6** | A4 + the raw documents (deployable shape) | 65,900 |
 
 **A2 is the point of the whole design.** A4 beating A0 proves nothing: a frontier model
 read the contract for you, and the context got 22× shorter. Either explains a win without
@@ -143,13 +144,34 @@ identical across arms and only the model id varies. Roster is in `llm.py`;
 
 ## Reading the results
 
-- **Primary:** A2 vs A4, same model, paired. This is the only comparison that isolates form.
+- **Primary:** A2 vs A4, same model, paired. The only comparison that isolates *form*
+  — same information, same author, same length.
+- **A4 vs A4G:** does telling the model which issues are walk-aways help? Kept separate
+  because gravity is extra *information*, not just extra form; folding it into A4 would
+  confound "structure helps" with "being told what matters helps".
 - **Secondary:** A4 on the small model vs A0 on the frontier model — the headline claim.
 - **Sanity:** A4 vs A6. If A6 wins clearly, the abstraction is losing information the model
   needed, and it should be deployed as a supplement, not a replacement.
 - **Cost:** report tokens and dollars per arm including the world-model build. If the
   pipeline costs more than just calling the frontier model, "small matches frontier" is
   economically empty.
+
+## Gravity
+
+`python -m wm.run gravity` — no API calls.
+
+Weights are not assigned by hand. The client's negotiation authority memo grades every
+issue in its own headings (`2.5 Walk-Away`, `4.2 Authorized Range`,
+`10.2 Escalation Requirement`, `14.3 Walk-Away`), so each tier is auditable against a
+line the client wrote.
+
+```
+gravity = tier  x2 where the counterparty crossed the stated limit
+```
+
+Moving inside an authorised range is not grave even on a big issue; breaching a walk-away
+is grave even on a small one. On this markup: 9 walk-aways at gravity 8, 4 escalations at
+6, 2 authorised-range at 4 — total exposure 104 across 15 issues.
 
 ## Limits
 
