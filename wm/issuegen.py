@@ -212,6 +212,61 @@ def load(raw: str) -> list[GenIssue]:
     return [GenIssue(**r) for r in json.loads(raw)]
 
 
+BOUNDED = {"max_quantity", "min_quantity", "max_money"}
+PRESENCE = {"require_quantity": "unit", "require_money": None}
+
+
+def silent_limits(issues: list[GenIssue]) -> list[tuple[str, str, str]]:
+    """Bounded limits that a counter can evade by stating no number at all.
+
+    max_quantity(month, 18) fires on "thirty-six (36) months" and stays silent
+    on "two times the total fees paid and payable over the full initial Term" -
+    which is the formulation the mandate actually calls unacceptable. A ceiling
+    with no floor under it only catches the wrong magnitude, never the wrong
+    shape.
+    """
+    out = []
+    for i in issues:
+        kinds = {l.get("kind") for l in i.limits}
+        for l in i.limits:
+            k = l.get("kind")
+            if k not in BOUNDED:
+                continue
+            if k == "max_money":
+                if "require_money" not in kinds:
+                    out.append((i.id, i.name, "max_money without require_money"))
+            else:
+                unit = l.get("unit")
+                has = any(o.get("kind") == "require_quantity" and o.get("unit") == unit
+                          for o in i.limits)
+                if not has:
+                    out.append((i.id, i.name, f"{k}({unit}) without "
+                                              f"require_quantity({unit})"))
+    return out
+
+
+def tighten(issues: list[GenIssue]) -> int:
+    """Add the missing presence requirement beside each bounded limit."""
+    n = 0
+    for i in issues:
+        add = []
+        for l in list(i.limits):
+            k = l.get("kind")
+            if k == "max_money" and not any(o.get("kind") == "require_money"
+                                            for o in i.limits):
+                add.append({"kind": "require_money",
+                            "message": f"{i.name}: no figure proposed"})
+            elif k in ("max_quantity", "min_quantity"):
+                unit = l.get("unit")
+                if not any(o.get("kind") == "require_quantity" and o.get("unit") == unit
+                           for o in i.limits + add):
+                    add.append({"kind": "require_quantity", "unit": unit,
+                                "message": f"{i.name}: no {unit} figure stated"})
+        i.limits.extend(add)
+        n += len(add)
+    return n
+
+
 def summary(issues: list[GenIssue]) -> str:
     n_lim = sum(len(i.limits) for i in issues)
     unlimited = [i.id for i in issues if not i.limits]
@@ -224,4 +279,14 @@ def summary(issues: list[GenIssue]) -> str:
                   f"automatically:", "  " + ", ".join(unlimited),
               "  They are still graded by the rubric; they just do not move the",
               "  violation column. Do not read a zero there as full compliance."]
+
+    silent = silent_limits(issues)
+    if silent:
+        L += ["", f"{len(silent)} limits are SILENT when the counter states no number:"]
+        for iid, name, why in silent[:12]:
+            L.append(f"  {iid}  {name[:34]:<36} {why}")
+        L += ["  A ceiling catches the wrong magnitude, never the wrong shape - a",
+              "  counter that adopts the counterparty's formulation without a figure",
+              "  passes. `python -m wm.run issues --tighten` adds the matching",
+              "  presence requirement to each. Free, no model call."]
     return "\n".join(L)

@@ -822,6 +822,21 @@ def judge_criteria_count(task_dir: Path) -> list:
         return []
 
 
+def cmd_tighten() -> None:
+    """Add the missing presence requirement beside each bounded limit. Free."""
+    from . import issuegen, taskctx
+    f = taskctx.issues_file()
+    if not f.exists():
+        print(f"ABORT: {f} does not exist. Run `issues` first.")
+        return
+    issues = issuegen.load(f.read_text())
+    before = sum(len(i.limits) for i in issues)
+    n = issuegen.tighten(issues)
+    f.write_text(issuegen.dump(issues))
+    print(f"added {n} presence requirements ({before} -> {before + n} limits)\n")
+    print(issuegen.summary(issues))
+
+
 def cmd_issues() -> None:
     """Read the client's mandate and the counterparty markup; produce the issue
     list and its machine-checkable limits. One model call, then cached."""
@@ -959,7 +974,10 @@ if __name__ == "__main__":
     elif a[0] == "pack":
         cmd_pack(a[1] if len(a) > 1 else "")
     elif a[0] == "issues":
-        cmd_issues()
+        if len(a) > 1 and a[1] in ("--tighten", "tighten"):
+            cmd_tighten()
+        else:
+            cmd_issues()
     elif a[0] == "recheck":
         cmd_recheck()
     elif a[0] == "report":
