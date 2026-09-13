@@ -23,6 +23,7 @@ Everything lands in wm/runs/<condition>__<model>__seed<k>/.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -76,15 +77,33 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     print(f"  {condition}/{model_name}/seed{seed}: sending {len(prompt):,} chars ...",
           end="", flush=True)
     t0 = time.time()
-    raw = call(prompt)
-    print(f" {time.time()-t0:.0f}s, {len(raw):,} chars back", flush=True)
-    (d / "raw_response.txt").write_text(raw)
 
-    try:
-        decisions = parse_decisions(raw)
-    except ValueError as e:
-        (d / "error.txt").write_text(str(e))
-        return {"condition": condition, "model": model_name, "seed": seed, "failed": True}
+    n_calls, loop_trace = 1, None
+    if condition in ("A5", "A5N"):
+        from . import loop
+        rounds = int(os.environ.get("WM_ROUNDS", "3"))
+        res = loop.run(prompt, call, parse_decisions, taskctx.issues(), check,
+                       rounds=rounds, blind=(condition == "A5N"))
+        decisions, raw = res["decisions"], res["raw"]
+        n_calls, loop_trace = res["calls"], res["trace"]
+        print(f" {time.time()-t0:.0f}s, {n_calls} calls, "
+              f"{len(raw):,} chars back", flush=True)
+        (d / "loop_trace.json").write_text(json.dumps(loop_trace, indent=2))
+        (d / "raw_response.txt").write_text(raw)
+        if not decisions:
+            (d / "error.txt").write_text("loop produced no parseable decisions")
+            return {"condition": condition, "model": model_name, "seed": seed,
+                    "failed": True}
+    else:
+        raw = call(prompt)
+        print(f" {time.time()-t0:.0f}s, {len(raw):,} chars back", flush=True)
+        (d / "raw_response.txt").write_text(raw)
+        try:
+            decisions = parse_decisions(raw)
+        except ValueError as e:
+            (d / "error.txt").write_text(str(e))
+            return {"condition": condition, "model": model_name, "seed": seed,
+                    "failed": True}
 
     (d / "decisions.json").write_text(json.dumps(
         [{"issue_id": x.issue_id, "disposition": x.disposition.value,
@@ -101,7 +120,7 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     for k, v in deliverables.items():
         (d / k.replace(".docx", ".txt")).write_text(v)
 
-    meta = {"generated_at": time.time(),
+    meta = {"generated_at": time.time(), "n_calls": n_calls,
             "condition": condition, "model": model_name, "seed": seed,
             "n_decisions": len(decisions), "n_violations": len(violations),
             "prompt_chars": len(prompt), "failed": False}
@@ -211,12 +230,19 @@ def cmd_cost(seeds: int = 3) -> None:
             except Exception as e:                      # noqa: BLE001
                 print(f"{c:<6}{m:<32}{'-':>5}  cannot build: {str(e)[:24]}")
                 continue
-            tin = int(len(prompt) / TOK) * seeds
-            tout = OUT_TOK * seeds
+            # A5 stops when clean (2 calls is typical); A5N has no stopping
+            # signal and always runs the full round count. Follow-up calls carry
+            # the prompt again plus the previous answer and the evaluation.
+            rounds = int(os.environ.get("WM_ROUNDS", "3"))
+            calls = {"A5": 2, "A5N": rounds + 1}.get(c, 1)
+            per_in = len(prompt) / TOK
+            tin = int(per_in + (calls - 1) * (per_in + OUT_TOK * 1.3)) * seeds
+            tout = OUT_TOK * calls * seeds
             usd = tin / 1e6 * pin + tout / 1e6 * pout
             total += usd
             gen_runs += seeds
-            print(f"{c:<6}{m[:31]:<32}{seeds:>5}{tin:>11,}{tout:>10,}{usd:>9.2f}")
+            tag = f"  x{calls} calls" if calls > 1 else ""
+            print(f"{c:<6}{m[:31]:<32}{seeds:>5}{tin:>11,}{tout:>10,}{usd:>9.2f}{tag}")
 
     # judging: one call per (deliverable, criterion), each carrying the deliverable
     n_crit = len(judge.criteria())
@@ -432,6 +458,41 @@ def cmd_selftest() -> None:
         for iid, name, why in bad:
             print(f"      {iid} {name}: {why}")
         ok &= not bad
+
+    # The closed loop must converge when the feedback carries information and
+    # must NOT when it does not. If the blind arm improves too, the evaluator is
+    # not what is doing the work and the A5/A5N comparison means nothing.
+    from . import loop as _loop
+    from .issuegen import GenIssue as _GI, check_generic as _cg
+    _iss = [_GI(id="L1", name="cap", question="?", section="11.1", limits=[
+                {"kind": "max_quantity", "unit": "month", "value": 18, "message": "cap"},
+                {"kind": "require_quantity", "unit": "month",
+                 "message": "no month figure stated"}])]
+    _bad = '[{"issue_id":"L1","disposition":"MODIFY","counter":"Two times total fees.","rationale":"r"}]'
+    _good = '[{"issue_id":"L1","disposition":"MODIFY","counter":"Fees paid in the eighteen (18) month trailing period.","rationale":"r"}]'
+
+    def _mk():
+        st = {"t": _bad}
+        def c(prompt, max_tokens=16000):
+            if "\n  L1 " in prompt:        # only repairs what the evaluator names
+                st["t"] = _good
+            return st["t"]
+        return c
+
+    def _p(t):
+        return [Decision(issue_id=r["issue_id"], disposition=Disposition(r["disposition"]),
+                         counter=r["counter"], rationale=r["rationale"])
+                for r in json.loads(re.search(r"\[.*\]", t, re.S).group(0))]
+
+    _ev = _loop.run("P", _mk(), _p, _iss, lambda d: _cg(d, _iss), rounds=3, blind=False)
+    _bl = _loop.run("P", _mk(), _p, _iss, lambda d: _cg(d, _iss), rounds=3, blind=True)
+    _ev_ok = _ev["trace"][-1]["clean"] and _ev["calls"] < _bl["calls"]
+    _bl_ok = not _bl["trace"][-1]["clean"]
+    print(f"  closed loop     : evaluated {_ev['calls']} calls -> "
+          f"{'clean' if _ev['trace'][-1]['clean'] else 'STILL DIRTY'}; "
+          f"blind {_bl['calls']} calls -> "
+          f"{'clean (CONTROL BROKEN)' if _bl['trace'][-1]['clean'] else 'still dirty, as it must be'}")
+    ok &= _ev_ok and _bl_ok
 
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
@@ -910,7 +971,8 @@ def cmd_report() -> None:
         # otherwise make every run look freshly generated.
         rows.append((meta["condition"], meta["model"], meta["seed"],
                      meta["n_violations"], meta["prompt_chars"] // 4, rate,
-                     meta.get("generated_at") or meta_f.stat().st_mtime))
+                     meta.get("generated_at") or meta_f.stat().st_mtime,
+                     meta.get("n_calls", 1)))
     if not rows:
         print("no runs yet")
         return
@@ -921,14 +983,14 @@ def cmd_report() -> None:
     newest = max(r[6] for r in rows)
     stale = [r for r in rows if newest - r[6] > 3600]
 
-    print(f"{'cond':<6}{'model':<26}{'seed':>5}{'viol.':>7}{'~in tok':>9}"
+    print(f"{'cond':<6}{'model':<26}{'seed':>5}{'viol.':>7}{'calls':>6}{'~in tok':>9}"
           f"{'pass rate':>11}{'age':>9}")
-    for c, m, sd, v, t, r, ts in rows:
+    for c, m, sd, v, t, r, ts, nc in rows:
         age = newest - ts
         aged = "now" if age < 3600 else (f"{age/3600:.0f}h" if age < 86400
                                          else f"{age/86400:.0f}d")
         mark = " <-- older run" if age > 3600 else ""
-        print(f"{c:<6}{m[:25]:<26}{sd:>5}{v:>7}{t:>9,}"
+        print(f"{c:<6}{m[:25]:<26}{sd:>5}{v:>7}{nc:>6}{t:>9,}"
               f"{(f'{r:.3f}' if r is not None else '-'):>11}{aged:>9}{mark}")
     print()
     if stale:
@@ -945,9 +1007,16 @@ def cmd_report() -> None:
     print("not independent samples. Identical scores across seeds show provider")
     print("determinism, not robustness. Set WM_TEMP=0.7 to get real variation.")
     print()
-    print("A2 vs A4   : does FORM help, holding information constant? (primary)")
+    print("A4 vs A5   : does an EXECUTABLE model in the loop help? (the hypothesis)")
+    print("A5 vs A5N  : ... or was it just the extra passes? A5N spends the same")
+    print("             calls with the feedback replaced by 'improve your answer'.")
+    print("A2 vs A4   : does FORM help, holding information constant?")
     print("A4 vs A4G  : does telling the model which issues are walk-aways help?")
     print("A0 vs A4   : confounded by preprocessing and context length - not a result.")
+    print()
+    print("Read the calls column alongside the pass rate. A5 winning on fewer")
+    print("calls than A5N is the strong result; winning on more is a weaker one")
+    print("and must be reported as such.")
     print()
     print("Read the violation column as carefully as the pass rate. The rubric asks")
     print("whether the issues were addressed; the authority check asks whether the")
