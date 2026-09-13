@@ -3,6 +3,7 @@ The experiment runner.
 
     python -m wm.run preflight              # check key + model slugs (3 tiny calls)
     python -m wm.run selftest               # exercise the whole pipeline offline
+    python -m wm.run autoschema             # FULL contract, no playbook: schema+weights+value
     python -m wm.run gravity                # per-issue gravity from the authority memo
     python -m wm.run blind                  # lexical change detection, no API calls
     python -m wm.run encode                 # tied encoder on both docs -> latent diff
@@ -270,6 +271,50 @@ def cmd_encode() -> None:
     print(llm.spend_report())
 
 
+def cmd_autoschema() -> None:
+    """Full-contract encoding with NO playbook: schema + weights + scalar value.
+
+    Encodes both the draft and the markup, so the per-clause delta is the answer
+    to 'how much did each change move the contract'.
+    """
+    from . import autoschema
+    T = Path(__file__).resolve().parent / "task"
+    RUNS.mkdir(parents=True, exist_ok=True)
+    enc = llm.model(llm.FRONTIER)
+
+    out = {}
+    for label, fname in (("draft", "carden-initial-draft-dsa.txt"),
+                         ("markup", "luminos-first-markup-dsa.txt")):
+        doc = (T / fname).read_text()
+        print(f"[{label}] enumerating decisions ...", flush=True)
+        t0 = time.time()
+        schema = autoschema.build_schema(doc, enc)
+        print(f"[{label}] {len(schema)} decisions in {time.time()-t0:.0f}s; weighing ...",
+              flush=True)
+        t0 = time.time()
+        valued = autoschema.weigh(schema, enc, party="Carden Analytics (the data discloser)")
+        print(f"[{label}] weighed in {time.time()-t0:.0f}s", flush=True)
+        (RUNS / f"_auto_{label}.json").write_text(autoschema.dump(valued))
+        out[label] = valued
+
+    print()
+    print(autoschema.render(out["draft"]))
+    print()
+    print("=" * 82)
+    print(f"DRAFT value {autoschema.contract_value(out['draft']):+.0f}   ->   "
+          f"MARKUP value {autoschema.contract_value(out['markup']):+.0f}   "
+          f"(moved {autoschema.contract_value(out['markup']) - autoschema.contract_value(out['draft']):+.0f})")
+    print()
+    print("biggest movers:")
+    for cid, name, d in autoschema.delta(out["draft"], out["markup"])[:20]:
+        print(f"  {cid:<8}{name[:54]:<56}{d:>+5}")
+    print()
+    print("=" * 82)
+    print(autoschema.compare_to_memo(out["markup"]))
+    print()
+    print(llm.spend_report())
+
+
 def cmd_preflight() -> None:
     llm.preflight()
 
@@ -330,6 +375,8 @@ if __name__ == "__main__":
         cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
+    elif a[0] == "autoschema":
+        cmd_autoschema()
     elif a[0] == "preflight":
         cmd_preflight()
     elif a[0] == "gravity":
