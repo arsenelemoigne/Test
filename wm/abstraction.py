@@ -11,6 +11,8 @@ markup, negotiation authority memo). The 29 rubric criteria were not consulted.
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -262,6 +264,36 @@ class Violation:
     message: str
 
 
+# Numbers written as words. The authority checks used to match digits only, so a
+# counter reading "eighteen months" scored as "no retention period stated" - a
+# drafting style flagged as a breach of mandate. That is a false positive, and a
+# consequential one: it is exactly the difference the A2/A4 comparison turns on.
+_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+    "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+    "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20,
+    "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+    "eighty": 80, "ninety": 90,
+}
+_TENS = "|".join(w for w, v in _WORDS.items() if v >= 20)
+_ONES = "|".join(w for w, v in _WORDS.items() if v < 10)
+
+
+def _word_to_int(w: str) -> int:
+    w = w.strip().lower().replace("-", " ")
+    parts = [p for p in w.split() if p in _WORDS]
+    return sum(_WORDS[p] for p in parts) if parts else 0
+
+
+def quantities(text: str, unit: str) -> list[int]:
+    """Every count of `unit` in `text`, whether written 18, eighteen or 18-month."""
+    out = [int(n) for n in re.findall(rf"(\d+)\s*[- ]?{unit}", text)]
+    pat = rf"((?:{_TENS})(?:[- ](?:{_ONES}))?|{_ONES}|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\s*[- ]?{unit}"
+    out += [v for m in re.findall(pat, text) if (v := _word_to_int(m))]
+    return out
+
+
 def check(decisions: list[Decision]) -> list[Violation]:
     """
     Deterministic authority check. This is the part a language model cannot be
@@ -293,7 +325,7 @@ def check(decisions: list[Decision]) -> list[Violation]:
                 out.append(Violation("I01", f"cap ${max(amounts):,} exceeds the $3,500,000 ceiling"))
 
         if issue.id == "I02":
-            months = [int(m) for m in re.findall(r"(\d+)\s*[- ]?month", text)]
+            months = quantities(text, "month")
             if not months:
                 out.append(Violation("I02", "no retention period stated"))
             elif max(months) > 18:
@@ -308,7 +340,7 @@ def check(decisions: list[Decision]) -> list[Violation]:
             out.append(Violation("I05", "prohibition qualified by intent/materiality/good faith"))
 
         if issue.id == "I06":
-            hrs = [int(h) for h in re.findall(r"(\d+)\s*[- ]?hour", text)]
+            hrs = quantities(text, "hour")
             if not hrs:
                 out.append(Violation("I06", "no notification window stated"))
             elif max(hrs) > 48:

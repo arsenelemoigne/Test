@@ -62,6 +62,11 @@ def parse_decisions(text: str) -> list[Decision]:
 def one_trial(condition: str, model_name: str, call, seed: int, prose: str | None) -> dict:
     d = RUNS / f"{condition}__{slug(model_name)}__seed{seed}"
     d.mkdir(parents=True, exist_ok=True)
+    # Scores belong to the generation they graded. Leaving them behind makes
+    # gradeall skip the directory as already-graded, and the report then shows
+    # an old pass rate beside a new violation count for the same run.
+    for stale in d.glob("scores__*.json"):
+        stale.unlink()
 
     prompt = conditions.build(condition, prose=prose)
     (d / "prompt.txt").write_text(prompt)
@@ -618,6 +623,62 @@ def cmd_blind() -> None:
         print(f"  Section {b.section:<8} {state}")
 
 
+def cmd_recheck() -> None:
+    """Re-run the authority check over every saved run. No API calls.
+
+    decisions.json is kept for each run, so the deterministic check can be
+    replayed whenever the rules change - and the counter text behind any
+    surviving violation is printed, because a violation you cannot read is a
+    violation you cannot trust.
+    """
+    dirs = [d for d in sorted(RUNS.glob("*__*__seed*")) if (d / "decisions.json").exists()]
+    if not dirs:
+        print("no runs with decisions.json")
+        return
+    print(f"{'run':<48}{'was':>5}{'now':>5}")
+    changed = []
+    for d in dirs:
+        rows = json.loads((d / "decisions.json").read_text())
+        decisions = [Decision(issue_id=r["issue_id"],
+                              disposition=Disposition(r["disposition"]),
+                              counter=r["counter"], rationale=r["rationale"])
+                     for r in rows]
+        now = check(decisions)
+        was = json.loads((d / "violations.json").read_text()) \
+            if (d / "violations.json").exists() else []
+        mark = "" if len(now) == len(was) else "   <-- changed"
+        print(f"{d.name[:47]:<48}{len(was):>5}{len(now):>5}{mark}")
+        if len(now) != len(was):
+            changed.append(d)
+        (d / "violations.json").write_text(json.dumps(
+            [{"issue_id": v.issue_id, "message": v.message} for v in now], indent=2))
+        meta_f = d / "meta.json"
+        if meta_f.exists():
+            meta = json.loads(meta_f.read_text())
+            meta["n_violations"] = len(now)
+            meta_f.write_text(json.dumps(meta, indent=2))
+
+    print()
+    if changed:
+        print(f"{len(changed)} runs changed. meta.json updated - re-run `report`.")
+    else:
+        print("no run changed: the rule edit did not move any result.")
+
+    print()
+    print("SURVIVING VIOLATIONS, with the text that triggered them:")
+    print("=" * 74)
+    for d in dirs:
+        viols = json.loads((d / "violations.json").read_text())
+        if not viols:
+            continue
+        rows = {r["issue_id"]: r for r in json.loads((d / "decisions.json").read_text())}
+        print(f"\n{d.name}")
+        for v in viols:
+            r = rows.get(v["issue_id"], {})
+            print(f"  {v['issue_id']}  {v['message']}")
+            print(f"      counter: {r.get('counter', '(none)')[:150]}")
+
+
 def cmd_report() -> None:
     import datetime as _dt
     rows = []
@@ -714,6 +775,8 @@ if __name__ == "__main__":
         cmd_all(int(a[1]) if len(a) > 1 else 3)
     elif a[0] == "gradeall":
         cmd_gradeall(int(a[1]) if len(a) > 1 else 5)
+    elif a[0] == "recheck":
+        cmd_recheck()
     elif a[0] == "report":
         cmd_report()
     else:

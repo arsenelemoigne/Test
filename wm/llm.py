@@ -50,7 +50,6 @@ def model(name: str, temperature: float | None = None):
         (403, "the key is valid but not permitted to use this model. Some models "
               "need\n        a privacy/data-policy setting enabled at "
               "https://openrouter.ai/settings/privacy"),
-        (429, "rate limited beyond the retry budget. Lower the worker count."),
     )
 
     def _terminal(e) -> str | None:
@@ -64,9 +63,13 @@ def model(name: str, temperature: float | None = None):
                     "this input.")
         return None
 
+    def _is_rate_limit(e) -> bool:
+        t = str(e)
+        return "Error code: 429" in t or "'code': 429" in t or "rate limit" in t.lower()
+
     def call(prompt: str, max_tokens: int = 16000) -> str:
         last = None
-        for attempt in range(4):
+        for attempt in range(6):
             try:
                 r = client.chat.completions.create(
                     model=name,
@@ -86,8 +89,22 @@ def model(name: str, temperature: float | None = None):
                 if advice:
                     raise RuntimeError(f"{name}: {advice}") from None
                 last = e
-                time.sleep(2 ** attempt)
-        raise RuntimeError(f"{name} failed after 4 attempts: {last}")
+                if _is_rate_limit(e):
+                    # A shared provider pool clears in tens of seconds, not in
+                    # the 1-2-4-8 a transport retry assumes.
+                    wait = min(60, 15 * (attempt + 1))
+                    print(f"    {name}: rate limited, waiting {wait}s "
+                          f"(attempt {attempt + 1}/6)", flush=True)
+                    time.sleep(wait)
+                else:
+                    time.sleep(2 ** attempt)
+        if _is_rate_limit(last):
+            raise RuntimeError(
+                f"{name}: still rate limited after 6 attempts and ~3 minutes of "
+                f"backoff.\n        Run the arms one at a time rather than "
+                f"concurrently, or try a different\n        provider slug for "
+                f"this model at https://openrouter.ai/models")
+        raise RuntimeError(f"{name} failed after 6 attempts: {last}")
 
     return call
 
