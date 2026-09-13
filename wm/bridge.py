@@ -109,6 +109,57 @@ WHAT THIS SYSTEMATICALLY GETS WRONG
      ladder() prices the terms, not the asks.
   5. Contingent asymmetric clauses are options, and expected-value cash flows
      misprice options (Scott & Triantis, 104 Colum. L. Rev. 1428 (2004)).
+  6. Attribution is NOT invariant to how the document is carved up. Merging two
+     subclauses, or splitting one into three, changes every number here.
+     Drafting granularity is a matter of house style. Fix the granularity by a
+     rule BEFORE looking at results, and say what the rule was.
+  7. Most terms are dials, not switches. A cap is a number of dollars, a notice
+     period a number of days. Binarising them discards most of the variation
+     that is actually negotiated. The honest formalism for a dial is the
+     Aumann-Shapley value (Values of Non-Atomic Games, 1974): integrate the
+     marginal value along the path from the default position to the negotiated
+     one. what_if() is a one-step crude version of that integral.
+  8. This is ONE PARTY'S vector. Carden's. The counterparty has a different one,
+     and for a liability cap the two are near mirror images. Computing on the
+     JOINT surplus instead would be a mistake of a specific and severe kind:
+     purely distributive clauses net to roughly zero jointly, so the clauses
+     people fight hardest over would score lowest. Always state the perspective.
+
+WHY THE NUMBERS HERE ARE EXACT AND NOT SAMPLED
+
+The model is 2-additive - per-clause terms plus pairwise joint terms, nothing
+of order three. Grabisch (1997) showed that such a game has a closed-form
+Shapley value, phi_i = m_i + (1/2) * sum_j m_ij, so there is no approximation
+to make and no confidence interval to report. See shapley_exact().
+
+Two consequences worth knowing:
+
+  - The interaction figures we elicit ARE the Shapley interaction index
+    (Murofushi & Soneda 1993; Grabisch & Roubens 1999). Positive = complements,
+    negative = redundancy. They come free with the fit and are usually more
+    useful to a negotiator than the attribution vector.
+  - Fitting a 2-additive game costs 1 + n + n(n-1)/2 elicitations. At 150
+    clauses that is 11,326 questions, deterministic, versus a quarter of a
+    million model calls for a sampled answer at 1% precision. If the fit fails
+    to reconstruct the whole - if the parts do not sum to the measured total -
+    that is direct evidence of three-way interaction, and a finding.
+
+Sampling (shapley_mc) is kept for one case: precedence constraints, where a
+clause switches OFF entirely in its parent's absence. A gate is multiplicative,
+not bilinear, so the closed form does not apply. shapley() picks the right one.
+
+ONE HONEST NOTE ON NOVELTY
+
+A dedicated search found no published work attributing the value of a single
+contract across its clauses by Shapley value. The nearest real precedent is
+Ferey & Dehez, Multiple Causation, Apportionment, and the Shapley Value, 45 J.
+Legal Stud. 143 (2016), which shows the weighted Shapley value is the formal
+counterpart of the Restatement (Third) of Torts two-step apportionment. Treat
+the empty space as an opportunity and a warning in equal measure: it may be
+empty because people who tried could not define the characteristic function.
+And note that when legal intuition about fair division was tested over two
+millennia it converged on the nucleolus, not on Shapley (Aumann & Maschler,
+36 J. Econ. Theory 195 (1985), on the Talmud's bankruptcy problems).
 """
 
 from __future__ import annotations
@@ -135,6 +186,11 @@ class ClauseEffect:
     without_clause: float   # value to us per year if this clause were simply absent
     default_rule: str       # WHAT governs in its absence - the legal answer, cited
     confident: bool = True
+
+    # Precedence. A carve-out from a deleted cap is not a clause, it is noise.
+    # If the named parent is absent this clause collapses to its default rule
+    # and becomes a null player - Faigle & Kern (1992) by canonicalisation.
+    requires: str | None = None
 
     @property
     def naive_delta(self) -> float:
@@ -173,13 +229,30 @@ class Relationship:
         self.clauses = {c.id: c for c in clauses}
         self.interactions = interactions or []
 
-    def v(self, S) -> float:
+    def active(self, S) -> set[str]:
+        """Drop any clause in S whose parent is absent - it cannot operate.
+
+        Iterated, because a dependent can itself be a parent.
+        """
         S = set(S)
-        total = sum(c.with_clause if c.id in S else c.without_clause
+        while True:
+            drop = {c.id for c in self.clauses.values()
+                    if c.id in S and c.requires and c.requires not in S}
+            if not drop:
+                return S
+            S -= drop
+
+    @property
+    def has_precedence(self) -> bool:
+        return any(c.requires for c in self.clauses.values())
+
+    def v(self, S) -> float:
+        A = self.active(S)
+        total = sum(c.with_clause if c.id in A else c.without_clause
                     for c in self.clauses.values())
         # interaction value accrues only when both members are in force
         for it in self.interactions:
-            if it.a in S and it.b in S:
+            if it.a in A and it.b in A:
                 total += it.joint
         return total
 
@@ -219,14 +292,55 @@ class Attribution:
         return self.naive - self.shapley
 
 
-def shapley(rel: Relationship, samples: int = 4000, seed: int = 0) -> list[Attribution]:
+def shapley_exact(rel: Relationship) -> list[Attribution]:
     """
-    Monte Carlo permutation sampling (Castro et al.).
+    EXACT Shapley values, in closed form, with no sampling.
 
-    Exact Shapley is 2^n - 27 clauses is 134 million subsets. Sampling random
-    orderings and averaging each clause's marginal contribution converges at
-    1/sqrt(samples), and the standard error is reported per clause so you can
-    see whether a difference between two clauses is real.
+    This model is 2-additive: value is a sum of per-clause terms plus pairwise
+    joint terms, and nothing of order three or higher. Grabisch (1997) showed
+    that for such a game the Harsanyi dividends are simply
+
+        m_i  = the clause's own with-minus-without
+        m_ij = the pair's joint value
+        m_S  = 0 for every |S| > 2
+
+    and since phi_i = sum over T containing i of m_T / |T|, the whole Shapley
+    value collapses to
+
+        phi_i = m_i + (1/2) * sum_j m_ij
+
+    Each clause keeps its own effect and HALF of every joint effect it is part
+    of. That half is not an estimate; it is the symmetry axiom. If you think one
+    member of a complementary pair deserves more than half, you need a weighted
+    Shapley value (Kalai & Samet 1987) and you have to justify the weights.
+
+    Equally exact and equally free: for a 2-additive game the Shapley
+    INTERACTION INDEX (Murofushi & Soneda 1993; Grabisch & Roubens 1999) is
+    I(i,j) = m_ij. The joint figures we elicited ARE the interaction index.
+    """
+    contrib = {cid: rel.clauses[cid].naive_delta for cid in rel.clauses}
+    for it in rel.interactions:
+        if it.a in contrib and it.b in contrib:
+            contrib[it.a] += it.joint / 2.0
+            contrib[it.b] += it.joint / 2.0
+    out = []
+    for cid, c in rel.clauses.items():
+        out.append(Attribution(cid, c.name, c.category, contrib[cid],
+                               c.naive_delta, 0.0))
+    return sorted(out, key=lambda a: a.shapley)
+
+
+def shapley_mc(rel: Relationship, samples: int = 4000, seed: int = 0) -> list[Attribution]:
+    """
+    Monte Carlo permutation sampling (Castro et al. 2009).
+
+    Needed only when the game is NOT 2-additive - which here means when
+    precedence constraints are in play, since a clause that switches off in its
+    parent's absence is a multiplicative gate, not a bilinear term.
+
+    Converges at 1/sqrt(samples); the standard error is reported per clause so
+    you can see whether a difference between two clauses is real. Use it against
+    shapley_exact() as a check on the closed form.
     """
     rng = random.Random(seed)
     ids = list(rel.clauses)
@@ -255,6 +369,27 @@ def shapley(rel: Relationship, samples: int = 4000, seed: int = 0) -> list[Attri
         out.append(Attribution(cid, c.name, c.category, mean, c.naive_delta,
                                (var / samples) ** 0.5))
     return sorted(out, key=lambda a: a.shapley)
+
+
+def shapley(rel: Relationship, samples: int = 4000, seed: int = 0) -> list[Attribution]:
+    """Exact where the game allows it, sampled where it does not."""
+    if rel.has_precedence:
+        return shapley_mc(rel, samples=samples, seed=seed)
+    return shapley_exact(rel)
+
+
+def loo_gap(rel: Relationship) -> tuple[float, float, float]:
+    """How non-additive is this contract, in one number?
+
+    Returns (sum of leave-one-out values, the surplus, the gap). Leave-one-out
+    is what everyone computes by instinct: what do I lose if this clause goes?
+    Those figures sum to the surplus ONLY if nothing interacts. The gap is the
+    double-counting, and if it is small relative to the surplus then Shapley is
+    overkill and take-one-out would have done.
+    """
+    full = set(rel.clauses)
+    loo = sum(rel.v(full) - rel.v(full - {cid}) for cid in rel.clauses)
+    return loo, rel.surplus, rel.surplus - loo
 
 
 def check_efficiency(rel: Relationship, attrs: list[Attribution]) -> tuple[float, float, float]:

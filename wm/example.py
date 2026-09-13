@@ -43,9 +43,11 @@ CLAUSES: list[ClauseEffect] = [
     ClauseEffect(
         id="C14C", name="14.3 Carve-Outs from the cap", category="liability",
         with_clause=-180_000, without_clause=-40_000,
-        default_rule="No carve-outs: the cap, if any, applies to everything. "
-                     "Worth nothing on its own - a carve-out from an absent cap "
-                     "is a no-op."),
+        default_rule="No carve-outs: the cap, if any, applies to everything.",
+        # A carve-out from a deleted cap is not a clause. Without 14.1 this is a
+        # null player, and no coalition containing it should be priced as if it
+        # were operative.
+        requires="C14"),
     ClauseEffect(
         id="C10", name="10.1 Audit Right", category="enforcement",
         with_clause=35_000, without_clause=0,
@@ -103,10 +105,9 @@ CLAUSES: list[ClauseEffect] = [
 
 
 INTERACTIONS: list[Interaction] = [
-    Interaction("C14", "C14C", 120_000,
-                "A carve-out is worth nothing without a cap to carve out of. "
-                "Priced apart, the pair reads as pure cost; together it is the "
-                "tail protection."),
+    Interaction("C14", "C14C", 40_000,
+                "Residual complementarity beyond the precedence gate: the pair "
+                "is the tail protection, and reads as pure cost priced apart."),
     Interaction("C10", "C10R", -30_000,
                 "Remote-only audits on notice cannot detect the thing 7.1 "
                 "prohibits. The limitation guts the right it qualifies."),

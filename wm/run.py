@@ -417,6 +417,17 @@ def cmd_bridge_demo() -> None:
     print()
     print(bridge.waterfall(rel, attrs))
     print()
+    loo, surplus, gap = bridge.loo_gap(rel)
+    print(f"NON-ADDITIVITY: leave-one-out values sum to {bridge._m(loo)}, the "
+          f"surplus is {bridge._m(surplus)}.")
+    print(f"The {bridge._m(abs(gap))} gap is what take-one-out double counts. "
+          f"Where that gap is")
+    print("small, Shapley is overkill and instinct would have been fine.")
+    print()
+    engine = "sampled (precedence constraints in play)" if rel.has_precedence \
+        else "exact closed form (2-additive, no sampling)"
+    print(f"engine: {engine}")
+    print()
 
     # Unwind the Luminos markup, one change at a time, in the order a
     # negotiator would actually ask for them.
