@@ -32,6 +32,7 @@ lawyer-scored gold data you do not have yet.
 
 from __future__ import annotations
 
+import itertools
 import re
 import statistics
 from dataclasses import dataclass
@@ -127,7 +128,38 @@ def stability(runs: list[list]) -> list[Stability]:
     return sorted(out, key=lambda s: -s.sd)
 
 
-def stability_report(stabs: list[Stability]) -> str:
+def krippendorff_alpha(runs: list[list]) -> float:
+    """
+    Intra-rater reliability across repeated runs, interval metric.
+
+    alpha = 1 - D_observed / D_expected. Disagreement WITHIN an item, against
+    disagreement across the whole pool. 1.0 = perfectly repeatable, 0.0 = the
+    repeats are no more similar to each other than to random other clauses,
+    negative = systematically worse than chance.
+
+    The convention in content analysis is alpha >= 0.80 for firm conclusions and
+    0.667 as the floor for tentative ones. LLM-as-judge self-consistency work
+    (Rating Roulette, EMNLP Findings 2025) finds intra-rater alpha routinely
+    below 0.80, which is why this is worth measuring rather than assuming.
+    """
+    by_id: dict[str, list[float]] = {}
+    for r in runs:
+        for a in r:
+            by_id.setdefault(a.id, []).append(a.severity)
+    units = [v for v in by_id.values() if len(v) > 1]
+    if len(units) < 2:
+        return float("nan")
+
+    within = [(x - y) ** 2 for v in units for x, y in itertools.combinations(v, 2)]
+    pool = [x for v in units for x in v]
+    across = [(x - y) ** 2 for x, y in itertools.combinations(pool, 2)]
+    if not within or not across:
+        return float("nan")
+    d_o, d_e = statistics.mean(within), statistics.mean(across)
+    return 1.0 - d_o / d_e if d_e else float("nan")
+
+
+def stability_report(stabs: list[Stability], runs: list[list] | None = None) -> str:
     if not stabs:
         return "no runs to compare"
     between = statistics.pstdev([s.mean for s in stabs]) if len(stabs) > 1 else 0.0
@@ -140,6 +172,13 @@ def stability_report(stabs: list[Stability]) -> str:
     if within and between / within < 2:
         L.append("  WARNING: noise is close to signal. These scores do not separate")
         L.append("  clauses reliably. Average more runs, or the scale is too fine.")
+    if runs:
+        a = krippendorff_alpha(runs)
+        verdict = ("firm" if a >= 0.80 else
+                   "tentative only" if a >= 0.667 else
+                   "NOT RELIABLE - do not report these as measurements")
+        L += [f"  Krippendorff alpha (interval)     : {a:.2f}   -> {verdict}",
+              "  (content-analysis convention: >=0.80 firm, >=0.667 tentative)", ""]
     flips = [s for s in stabs if s.flips]
     if flips:
         L.append(f"  {len(flips)} clauses changed DIRECTION between runs - worse than noise,")

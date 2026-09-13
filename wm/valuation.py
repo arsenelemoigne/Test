@@ -2,6 +2,48 @@
 A richer value model: decomposed severity, typed inter-clause couplings, and
 swappable value profiles.
 
+WHAT THIS MODEL IS CALLED
+
+It is not novel, and that is good news. Value = per-clause terms + pairwise
+interaction terms is a **GAI decomposition of order 2**, equivalently a
+**2-additive Choquet integral**, equivalently a pairwise factor graph over
+clauses. Thirty years of decision theory applies to it, and every parameter has
+a name.
+
+  Robu, Somefun & La Poutre, "Modeling complex multi-issue negotiations using
+  utility graphs" (AAMAS 2005) - utility over contract issues as node terms plus
+  edge terms on an interdependency graph. This exact model, for contracts, in 2005.
+  Bacchus & Grove (UAI-95) - conditional additive independence has an exact
+  representation as separation in an undirected graph. The licence for drawing a
+  clause interaction graph at all.
+  Grabisch, 2-additive Choquet - gives the pairwise term a named, signed meaning
+  (the Shapley interaction index: >0 synergy, <0 redundancy).
+  Keeney & Raiffa - why plain addition is not available here: it requires mutual
+  preferential independence, which contracts violate structurally (a liability
+  cap has no value where there is no exposure). Their multiplicative fallback
+  adds exactly ONE global interaction parameter, too coarse to say "cap and
+  indemnity are complements while arbitration and forum are redundant".
+
+TWO KINDS OF INTERACTION, AND ONLY ONE IS BILINEAR
+
+This distinction matters more than the formula:
+
+  CONDITIONAL / STRUCTURAL   B is inoperative unless A holds. A cap with the
+                             relevant claim carved out is not "worth less" - it
+                             does not apply. Modelled here as GATES and REQUIRES,
+                             which are multiplicative gates, NOT cross terms.
+                             A bilinear w_ij term fits this badly.
+  VALUE INTERACTION          both adverse is worse than the sum, or two terms
+                             cover the same loss. Modelled as AMPLIFIES and
+                             SUBSTITUTES. This is the genuinely bilinear part.
+
+Most apparent clause interactions in commercial contracts are the first kind.
+
+NEVER FIT A DENSE INTERACTION MATRIX. n clauses give n(n-1)/2 cross terms - 27
+clauses is 351 parameters, unidentifiable against any corpus you will have. The
+couplings here are a sparse, expert-specified graph (about a dozen edges), which
+is the route the utility-graph literature settled on.
+
 WHY A SINGLE 0-10 IMPACT IS NOT ENOUGH
 
 One number per clause cannot express any of these, and all four are ordinary:
@@ -323,15 +365,37 @@ ASSESS_PROMPT = """Assess each contract decision below for {party}.
 You have NO access to {party}'s internal policies, risk appetite, or negotiation
 authority. Judge only from general commercial and legal experience.
 
-Score three things separately - do not collapse them:
+Score three things separately - do not collapse them.
 
-  "exposure"      0-10  how much is at stake WHEN this clause bites.
-                        0 = nothing turns on it. 10 = existential.
-  "likelihood"    0-10  how often it actually bites in a deal of this kind.
-                        A catastrophic clause that almost never triggers scores
-                        high exposure and low likelihood. Say so.
-  "reversibility" 0-10  how easily this could be fixed later.
-                        10 = renegotiated at any time. 0 = binds irrevocably.
+EVERY SCALE POINT IS ANCHORED TO A NAMED EXAMPLE. Use the anchors. Unanchored
+magnitude scales are extremely noisy even between raters who do not actually
+disagree ("Noisy law: scaling without a modulus", J. Risk & Uncertainty 2024),
+so a number without a referent is not a measurement.
+
+  "exposure"      how much is at stake WHEN this clause bites
+                    0  = a notices provision naming the wrong floor of a building
+                    3  = a 30-day payment term instead of 45
+                    5  = an audit capped at once a year instead of twice
+                    8  = a liability cap set at 3x fees instead of a fixed sum
+                   10  = unlimited liability for a data breach, or a term that
+                         would make the deal unsignable
+
+  "likelihood"    how often it actually bites in a deal of this kind
+                    0  = has never been invoked in this kind of agreement
+                    3  = invoked in an unusual deal, perhaps 1 in 20
+                    5  = invoked in a meaningful minority of deals
+                    8  = invoked in most deals that run their full term
+                   10  = operative from signature, every deal, unavoidably
+
+                  A catastrophic clause that almost never triggers scores HIGH
+                  exposure and LOW likelihood. Say so rather than averaging.
+
+  "reversibility" how easily this could be fixed later
+                    0  = perpetual, survives termination, no amendment right
+                    3  = fixed for the initial term
+                    5  = revisited at renewal
+                    8  = amendable on notice
+                   10  = either party may change it at will
 
 Then:
   "mutuality"  "mutual" | "one_way_us" | "one_way_them"   who it binds

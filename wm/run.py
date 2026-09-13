@@ -355,7 +355,7 @@ def cmd_validate(reps: int = 3) -> None:
         print(f"assessment run {i+1}/{reps} ...", flush=True)
         runs.append(valuation.assess(schema, enc, PARTY))
     print()
-    print(validate.stability_report(validate.stability(runs)))
+    print(validate.stability_report(validate.stability(runs), runs))
 
     print()
     print("=" * 78)
