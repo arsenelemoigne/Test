@@ -99,7 +99,8 @@ def one_trial(condition: str, model_name: str, call, seed: int, prose: str | Non
     for k, v in deliverables.items():
         (d / k.replace(".docx", ".txt")).write_text(v)
 
-    meta = {"condition": condition, "model": model_name, "seed": seed,
+    meta = {"generated_at": time.time(),
+            "condition": condition, "model": model_name, "seed": seed,
             "n_decisions": len(decisions), "n_violations": len(violations),
             "prompt_chars": len(prompt), "failed": False}
     (d / "meta.json").write_text(json.dumps(meta, indent=2))
@@ -343,6 +344,28 @@ def cmd_selftest() -> None:
         if viols:
             for v in viols:
                 print(f"        ! {v.issue_id} {v.message}")
+    print()
+    # NEGATIVE CONTROL. Every run currently reports zero violations. That is
+    # either full compliance or a checker that cannot detect anything, and the
+    # two look identical from the outside. So feed it decisions that plainly
+    # breach the memo and require that it objects.
+    breaches = {
+        "I01": "Aggregate cap set at three times the fees paid in the prior twelve months.",
+        "I02": "Retention of thirty-six (36) months from receipt.",
+        "I06": "Notification within seventy-two (72) hours of confirmation of a breach.",
+        "I13": "Governing law changed to Maryland.",
+    }
+    bad = [Decision(issue_id=i.id, disposition=Disposition.REJECT,
+                    counter=breaches.get(i.id, "Reverted to the Carden initial draft."),
+                    rationale="") for i in ISSUES]
+    caught = {v.issue_id for v in check(bad)}
+    missed = set(breaches) - caught
+    print()
+    print(f"  negative control: {len(breaches) - len(missed)}/{len(breaches)} "
+          f"planted breaches caught"
+          + (f"  MISSED {', '.join(sorted(missed))}" if missed else ""))
+    ok &= not missed
+
     print()
     print("pipeline:", "OK -- build/parse/check/render all work end to end" if ok else "FAILED")
     print("not exercised offline: the model call and the judge call.")
@@ -656,6 +679,7 @@ def cmd_recheck() -> None:
         if meta_f.exists():
             meta = json.loads(meta_f.read_text())
             meta["n_violations"] = len(now)
+            meta.setdefault("generated_at", meta_f.stat().st_mtime)
             meta_f.write_text(json.dumps(meta, indent=2))
 
     print()
@@ -689,9 +713,11 @@ def cmd_report() -> None:
         meta = json.loads(meta_f.read_text())
         scores = [json.loads(f.read_text()) for f in d.glob("scores__*.json")]
         rate = sum(s["criterion_pass_rate"] for s in scores) / len(scores) if scores else None
+        # generated_at, not the file mtime: recheck rewrites meta.json and would
+        # otherwise make every run look freshly generated.
         rows.append((meta["condition"], meta["model"], meta["seed"],
                      meta["n_violations"], meta["prompt_chars"] // 4, rate,
-                     meta_f.stat().st_mtime))
+                     meta.get("generated_at") or meta_f.stat().st_mtime))
     if not rows:
         print("no runs yet")
         return
