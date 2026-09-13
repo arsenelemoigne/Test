@@ -72,9 +72,31 @@ def spend_report() -> str:
 # SMALL is the model the hypothesis says structure can lift.
 # JUDGE must not be either arm, and should come from a third family where possible.
 
-FRONTIER = "anthropic/claude-opus-4.1"
-SMALL = "qwen/qwen-2.5-72b-instruct"
-SMALLER = "qwen/qwen-2.5-7b-instruct"
-JUDGE = "google/gemini-2.5-pro"
+# Override any of these without editing code:
+#   export WM_FRONTIER=anthropic/claude-sonnet-4.5
+#   export WM_SMALL=qwen/qwen3-32b
+#   export WM_JUDGE=google/gemini-2.5-flash
+# Check the exact slugs at https://openrouter.ai/models before running.
+FRONTIER = os.environ.get("WM_FRONTIER", "anthropic/claude-opus-4.1")
+SMALL = os.environ.get("WM_SMALL", "qwen/qwen-2.5-72b-instruct")
+JUDGE = os.environ.get("WM_JUDGE", "google/gemini-2.5-pro")
 
 ARMS = [FRONTIER, SMALL]
+
+
+def preflight() -> None:
+    """Confirm the key works and every model slug resolves, before spending."""
+    print(f"frontier : {FRONTIER}")
+    print(f"small    : {SMALL}")
+    print(f"judge    : {JUDGE}")
+    print()
+    ok = True
+    for role, name in (("frontier", FRONTIER), ("small", SMALL), ("judge", JUDGE)):
+        try:
+            r = model(name)("Reply with the single word OK.", max_tokens=16)
+            print(f"  {role:<9} {name:<40} OK  -> {r.strip()[:30]!r}")
+        except Exception as e:                      # noqa: BLE001
+            ok = False
+            print(f"  {role:<9} {name:<40} FAILED: {str(e)[:150]}")
+    print()
+    print("ready" if ok else "fix the failures above before running `all`")

@@ -1,6 +1,7 @@
 """
 The experiment runner.
 
+    python -m wm.run preflight              # check key + model slugs (3 tiny calls)
     python -m wm.run selftest               # exercise the whole pipeline offline
     python -m wm.run gravity                # per-issue gravity from the authority memo
     python -m wm.run blind                  # lexical change detection, no API calls
@@ -210,6 +211,10 @@ def cmd_encode() -> None:
     print(llm.spend_report())
 
 
+def cmd_preflight() -> None:
+    llm.preflight()
+
+
 def cmd_gravity() -> None:
     """Per-issue gravity, read from the client's authority memo. No API calls."""
     from . import gravity
@@ -266,6 +271,8 @@ if __name__ == "__main__":
         cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
+    elif a[0] == "preflight":
+        cmd_preflight()
     elif a[0] == "gravity":
         cmd_gravity()
     elif a[0] == "blind":
