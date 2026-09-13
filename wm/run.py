@@ -107,7 +107,9 @@ def grade(run_dir: Path, judge_model: str) -> dict:
     }
     j = llm.model(judge_model)
     s = judge.score(deliverables, j)
-    (run_dir / f"scores__{judge_model}.json").write_text(json.dumps(s, indent=2))
+    # slug(): the judge id contains "/", which would write into a subdirectory
+    # that does not exist - and would do so AFTER all 29 judge calls were paid for.
+    (run_dir / f"scores__{slug(judge_model)}.json").write_text(json.dumps(s, indent=2))
     return s
 
 
@@ -153,6 +155,10 @@ def cmd_all(seeds: int = 3, workers: int = 5) -> None:
     """All arms. Runs are independent, so they go concurrently."""
     from concurrent.futures import ThreadPoolExecutor
     prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else None
+    if prose is None and "A2" in conditions.CONDITIONS:
+        print("ABORT: no prose twin cached, so A2 - the PRIMARY comparison - cannot run.")
+        print("       Run `python -m wm.run prose` first and let it finish (60-150s).")
+        return
     jobs = [(c, m, s) for m in llm.ARMS for c in conditions.CONDITIONS for s in range(seeds)]
     print(f"{len(jobs)} runs, {workers} at a time")
 
@@ -177,6 +183,20 @@ def cmd_gradeall(workers: int = 5) -> None:
             if (d / "meta.json").exists() and not list(d.glob("scores__*.json"))]
     if not dirs:
         print("nothing to grade")
+        return
+
+    # Probe every precondition BEFORE spending on 29 judge calls per run.
+    probe = dirs[0]
+    for f in ("counter-turn-redline-dsa.txt", "cover-note-to-calyx.txt"):
+        if not (probe / f).exists():
+            print(f"ABORT: {probe.name} has no {f} - the runs are incomplete.")
+            return
+    try:
+        t = probe / f"scores__{slug(llm.JUDGE)}.json"
+        t.write_text("{}")
+        t.unlink()
+    except OSError as e:
+        print(f"ABORT: cannot write the scores file ({e}). Fix this before grading.")
         return
     print(f"grading {len(dirs)} runs with {llm.JUDGE}, {workers} at a time "
           f"({len(dirs) * 29} judge calls)")
