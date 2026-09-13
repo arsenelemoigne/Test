@@ -15,6 +15,7 @@ import email.policy
 import re
 import zipfile
 from pathlib import Path
+import pathlib
 from xml.etree import ElementTree as ET
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -161,6 +162,12 @@ def pack(task_dir: Path, out_dir: Path) -> dict[str, int]:
             continue
         (out_dir / (f.stem + ".txt")).write_text(text)
         sizes[f.name] = len(text)
+    import json as _json
+    textes = {f.stem: f.read_text() for f in out_dir.glob("*.txt")}
+    pj = parties(textes, roles(list(sizes)))
+    if pj:
+        (out_dir / "_parties.json").write_text(_json.dumps(pj, indent=2))
+
     tj = task_dir / "task.json"
     if tj.exists():
         (out_dir / "task.json").write_text(tj.read_text())
@@ -192,3 +199,73 @@ def roles(names: list[str]) -> dict[str, list[str]]:
         else:
             out.setdefault("other", []).append(n)
     return out
+
+
+# --- qui ecrit a qui ------------------------------------------------------
+
+def parties(texts: dict[str, str], roles: dict[str, list[str]]) -> dict:
+    """Les noms reels des deux conseils, tires de l'e-mail de renvoi du markup.
+
+    Le rendu ecrivait "Counsel to the counterparty" sur toute tache autre que
+    l'originale, et perdait deux criteres de rubrique sur chaque arm - la lettre
+    doit etre adressee a la personne qui a envoye le markup, et signee de celle
+    qui l'a recu. Les deux noms sont dans l'en-tete de cet e-mail, et la maison
+    dans sa signature.
+    """
+    import re as _re
+    cible = None
+    for n in roles.get("markup", []):
+        t = texts.get(pathlib.Path(n).stem)
+        if t and t.lstrip().startswith("From:"):
+            cible = t
+            break
+    if not cible:
+        return {}
+
+    def entete(champ):
+        m = _re.search(rf"^{champ}:\s*([^<\n]+?)\s*<([^>]+)>", cible, _re.M)
+        return (m.group(1).strip(), m.group(2).strip()) if m else ("", "")
+
+    (eux, eux_mail), (nous, nous_mail) = entete("From"), entete("To")
+
+    ORG = r"\b(LLP|LLC|Inc\.?|Corp\.?|Ltd\.?|GmbH|SAS|S\.A\.)\b"
+
+    def maison(nom):
+        """La ligne d'organisation sous le nom, dans n'importe quelle signature.
+
+        Le destinataire d'un e-mail n'y signe pas : sa maison figure dans un
+        AUTRE document, celui qu'il a lui-meme envoye. Chercher dans le seul
+        e-mail de renvoi ne trouve donc jamais que l'expediteur.
+        """
+        if not nom:
+            return ""
+        for t in [cible] + [v for v in texts.values() if v is not cible]:
+            for m in _re.finditer(_re.escape(nom), t):
+                for ligne in t[m.end():m.end() + 300].splitlines()[1:5]:
+                    l = ligne.strip(" *")
+                    if _re.search(ORG, l) and len(l) < 70:
+                        return l
+        return ""
+
+    def par_domaine(mail):
+        """La maison d'un collegue partageant le domaine.
+
+        Le destinataire d'un e-mail n'y signe pas, donc sa propre maison
+        n'apparait nulle part a cote de son nom. Elle figure en revanche sous la
+        signature de quelqu'un de la meme adresse.
+        """
+        dom = mail.rsplit("@", 1)[-1] if "@" in mail else ""
+        if not dom:
+            return ""
+        for t in texts.values():
+            for m in _re.finditer(rf"[\w.\-]+@{_re.escape(dom)}", t):
+                bloc = t[max(0, m.start() - 400):m.start()].splitlines()
+                for l in reversed(bloc[-6:]):
+                    l = l.strip(" *")
+                    if _re.search(ORG, l) and len(l) < 70:
+                        return l
+        return ""
+
+    return {k: v for k, v in {
+        "them": eux, "them_org": maison(eux) or par_domaine(eux_mail),
+        "us": nous, "us_org": maison(nous) or par_domaine(nous_mail)}.items() if v}

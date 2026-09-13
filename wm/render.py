@@ -15,6 +15,19 @@ arms is what the model was shown.
 from __future__ import annotations
 
 from . import taskctx
+
+
+def _nous() -> str:
+    """Notre client. "Carden" etait ecrit en dur et apparaissait dans le redline
+    de toute autre tache, ce qui nomme une partie etrangere au contrat."""
+    import json
+    if taskctx.is_default():
+        return FACTS["us"]
+    f = taskctx.task_dir() / "_parties.json"
+    if f.exists():
+        d = json.loads(f.read_text())
+        return d.get("us_org") or "our client"
+    return "our client"
 from .abstraction import FACTS, Decision, Disposition
 
 VERB = {
@@ -46,14 +59,27 @@ def redline(decisions: list[Decision]) -> str:
         if iss is None:
             continue
         L.append(f"Section {iss.section} - {iss.name}")
-        L.append(f"  Carden initial draft: {iss.ours}")
+        L.append(f"  Our initial draft: {iss.ours}")
         L.append(f"  Luminos proposed:     {iss.theirs}")
         L.append(f"  DISPOSITION:          {VERB[d.disposition].upper()}")
-        L.append(f"  Carden counter-position (operative language for this turn):")
+        L.append(f"  Our counter-position (operative language for this turn):")
         for line in _wrap(d.counter, 70):
             L.append(f"      {line}")
         L.append("")
     return "\n".join(L)
+
+
+def _partie(cote: str) -> str:
+    """Le nom reel du conseil, ecrit au pack depuis l'e-mail de renvoi."""
+    import json
+    f = taskctx.task_dir() / "_parties.json"
+    if not f.exists():
+        return "Counsel to the counterparty" if cote == "them" else "Counsel to our client"
+    d = json.loads(f.read_text())
+    nom, org = d.get(cote, ""), d.get(f"{cote}_org", "")
+    if not nom:
+        return "Counsel to the counterparty" if cote == "them" else "Counsel to our client"
+    return f"{nom}, {org}" if org else nom
 
 
 def _opening() -> str:
@@ -73,11 +99,11 @@ def cover_note(decisions: list[Decision]) -> str:
     """cover-note-to-calyx.docx"""
     L = [
         (f"To:      {FACTS['their_counsel']}, counsel to {FACTS['them']}"
-         if taskctx.is_default() else "To:      Counsel to the counterparty"),
+         if taskctx.is_default() else f"To:      {_partie('them')}"),
         (f"From:    {FACTS['our_counsel']}, for {FACTS['us']}"
-         if taskctx.is_default() else "From:    Counsel to our client"),
+         if taskctx.is_default() else f"From:    {_partie('us')}"),
         ("Re:      Data Sharing Agreement - Carden counter-turn"
-         if taskctx.is_default() else "Re:      Counter-turn redline"),
+         if taskctx.is_default() else f"Re:      Counter-turn redline - {_nous()}"),
         "",
         _opening(),
         "",
@@ -87,7 +113,8 @@ def cover_note(decisions: list[Decision]) -> str:
         if iss is None:
             continue
         L.append(f"{iss.name} (Section {iss.section}) - {VERB[d.disposition]}")
-        L.append("  Carden's position:")
+        L.append(f"  {_nous()}'s position:" if not taskctx.is_default()
+                 else "  Carden's position:")
         for line in _wrap(d.counter, 70):
             L.append(f"      {line}")
         L.append("  Rationale:")
