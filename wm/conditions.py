@@ -204,6 +204,13 @@ def build(condition: str, prose: str | None = None) -> str:
                 f"{gravity.report({i.id: i.name for i in _issues()})}")
     elif condition in ("B0", "B0L", "B0LN"):
         body = parametric_body()
+    elif condition in ("B1", "B1L", "B1LN"):
+        # B0 a REMPLACE le dossier par l'analyse economique et perdu les
+        # positions, les citations et le mandat : 2 208 tokens contre 4 240, et
+        # un score de 0,54 contre 0,93. L'analyse est un supplement, pas un
+        # substitut - le modele ne peut pas rediger une contre-proposition
+        # precise sans le texte qu'il contre.
+        body = f"{worldmodel()}\n\n\n{parametric_body()}"
     elif condition in ("A0L", "A0LN"):
         # Raw documents AND the evaluator. A0 wins the rubric and breaches the
         # mandate most; A5 does the reverse. This is the arm that asks whether
@@ -221,7 +228,7 @@ def build(condition: str, prose: str | None = None) -> str:
 
 
 _ALL = ["A0", "A0L", "A0LN", "A2", "A4", "A4G", "A5", "A5N", "A6",
-        "B0", "B0L", "B0LN"]
+        "B0", "B0L", "B0LN", "B1", "B1L", "B1LN"]
 
 # Narrow the run without editing code:
 #     export WM_CONDITIONS=A2,A4,A4G

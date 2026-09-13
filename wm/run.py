@@ -91,7 +91,8 @@ def _wm_hash() -> str:
     return hashlib.sha256(conditions.worldmodel().encode()).hexdigest()
 
 
-LOOP_CONDITIONS = {"A5", "A5N", "A0L", "A0LN", "B0L", "B0LN"}
+LOOP_CONDITIONS = {"A5", "A5N", "A0L", "A0LN", "B0L", "B0LN",
+                   "B1L", "B1LN"}
 
 
 def one_trial(condition: str, model_name: str, call, seed: int, prose: str | None) -> dict:
