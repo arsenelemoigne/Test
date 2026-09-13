@@ -45,6 +45,70 @@ marginal contribution over every possible order of adding clauses, and (b)
 satisfies efficiency: the parts sum EXACTLY to v(contract) - v(no contract).
 That second property is what makes the waterfall close, and it is why this is
 the right formalism rather than a convenient one.
+
+THIS HAS A NAME, AND FOUR LITERATURES INVENTED IT SEPARATELY
+
+  valuation      the With-and-Without Method (WWM), codified at IVS 210 s.60.9
+                 as one of the five income-approach methods for intangibles.
+                 In practice it is used for non-competes, supply agreements and
+                 licences: model the cash flows with the agreement, model them
+                 without, take the PV of the difference, then multiply by the
+                 probability the thing it guards against actually happens.
+  law & economics  "contracting around the default" - Ayres & Gertner, Filling
+                 Gaps in Incomplete Contracts, 99 Yale L.J. 87 (1989).
+  negotiation    surplus over the disagreement point - Nash (1950); BATNA and
+                 ZOPA are the applied vocabulary (Fisher & Ury; Raiffa).
+  damages        the but-for world; Fuller & Perdue's reliance interest is
+                 exactly "the world where the contract was never made",
+                 Restatement (Second) s.344.
+
+The sentence that joins them, which is the design of this module:
+
+    the value of a term is the surplus it creates or shifts relative to the
+    default rule that would apply in its absence - and the default rule IS the
+    parties' bargaining disagreement point.
+
+That second half is Mnookin & Kornhauser, Bargaining in the Shadow of the Law,
+88 Yale L.J. 950 (1979): legal rules do not dictate outcomes, they create the
+bargaining endowments.
+
+WHICH "WITHOUT" - THERE ARE FOUR, AND THEY GIVE DIFFERENT NUMBERS
+
+  (a) no relationship at all          -> BATNA. Measures gains from trade.
+                                         Mostly not attributable to the document.
+  (b) same relationship, no contract  -> default rules + reputation. THIS ONE.
+  (c) same contract, market terms     -> the favourable/unfavourable contract
+                                         intangible under ASC 805 / IFRS 3. The
+                                         only one that is audited in practice.
+  (d) contract + one clause changed   -> marginal clause value. What ladder() does.
+
+We use (b) because it is the baseline a negotiator actually reasons from, and
+because it is the one with the doctrinal anchor above. Be honest that it is also
+the least measured: Marotta-Wurgler's deviation indices count terms, covenant
+pricing (Bradley & Roberts 2015) prices clauses in basis points, but nobody has
+priced a commercial contract in currency against the UCC/BGB default baseline.
+That gap is why this module exists; it is not a solved problem it implements.
+
+WHAT THIS SYSTEMATICALLY GETS WRONG
+
+  1. WWM is the most manipulable method in the valuation toolkit, precisely
+     because the "without" scenario is unfalsifiable. That is why MPEEM, which
+     does NOT use this framing, dominates purchase-price allocation work.
+     Everything here inherits that weakness. Treat outputs as a structured
+     argument, not a measurement.
+  2. It understates. Grossman-Hart-Moore: much governance lives in asset
+     ownership, outside any document. Poppo & Zenger (SMJ 2002): formal and
+     relational governance are COMPLEMENTS, so deleting the contract in the
+     counterfactual also degrades the relationship we held constant.
+  3. Dormant clauses price at zero until they do not. Choi & Gulati on sovereign
+     bond boilerplate; pari passu is the catastrophic example. Absence of a
+     measured effect is not evidence of no value.
+  4. The price of asking for a change is not the value of the change.
+     Ben-Shahar & Pottow's "deviance cost": proposing a non-standard term
+     signals something, and the signal can cost more than the term is worth.
+     ladder() prices the terms, not the asks.
+  5. Contingent asymmetric clauses are options, and expected-value cash flows
+     misprice options (Scott & Triantis, 104 Colum. L. Rev. 1428 (2004)).
 """
 
 from __future__ import annotations
@@ -240,7 +304,15 @@ def ladder(rel: Relationship, changes: list[tuple[str, float, str]]) -> str:
         prev = cur
     L += ["", f"The contract is worth {_m(rel.surplus)}/yr more than no contract.",
           "That difference is the only defensible number here. The absolute levels",
-          "depend on the baseline assumptions and should not be quoted alone."]
+          "depend on the baseline assumptions and should not be quoted alone.",
+          "",
+          "Changes are CUMULATIVE - each line adds to the one above it, so the",
+          "change column is that ask's value given the asks already conceded.",
+          "Reorder the list and the per-line numbers move; the total does not.",
+          "",
+          "This prices the TERMS, not the ASKS. Raising a non-standard term",
+          "carries a signalling cost of its own (Ben-Shahar & Pottow, deviance",
+          "cost) that is not in any figure here."]
     return "\n".join(L)
 
 

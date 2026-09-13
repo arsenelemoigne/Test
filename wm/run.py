@@ -401,6 +401,39 @@ def cmd_bridge() -> None:
     print(llm.spend_report())
 
 
+def cmd_bridge_demo() -> None:
+    """The same value bridge, on the hand-filled worked example. Costs nothing.
+
+    Run this first. It shows exactly what `bridge` produces and lets you argue
+    with the model before paying anything to populate it.
+    """
+    from . import bridge, example
+    rel = example.relationship()
+    attrs = bridge.shapley(rel, samples=8000)
+
+    print("WORKED EXAMPLE - the numbers below are HAND-SET, not elicited.")
+    print("The clauses and the default rules are real; the values are")
+    print("illustrative. Read the shape, not the digits.")
+    print()
+    print(bridge.waterfall(rel, attrs))
+    print()
+
+    # Unwind the Luminos markup, one change at a time, in the order a
+    # negotiator would actually ask for them.
+    changes = [
+        ("C10R", 0,        "drop remote-only audit limit (10.3)"),
+        ("C12", -20_000,   "convenience termination -> 90 days notice (12.4)"),
+        ("C14C", -60_000,  "restore Carden's re-identification carve-out (14.3)"),
+        ("C15", -10_000,   "governing law back to Delaware (15.1)"),
+    ]
+    print(bridge.ladder(rel, changes))
+    print()
+    print("How to read it: the ladder is a negotiation sequence and the waterfall")
+    print("is an attribution. The ladder answers 'what do I get if I win these")
+    print("asks, in this order'. The waterfall answers 'which clauses account for")
+    print("the value I already have', and it is the one that sums correctly.")
+
+
 def cmd_cardinal() -> None:
     """Money-denominated view: expected annual cost per clause, the Cox
     diagnostic on the ordinal model, and the non-modular packages."""
@@ -538,7 +571,10 @@ if __name__ == "__main__":
     elif a[0] == "encode":
         cmd_encode()
     elif a[0] == "bridge":
-        cmd_bridge()
+        if len(a) > 1 and a[1] in ("--demo", "demo"):
+            cmd_bridge_demo()
+        else:
+            cmd_bridge()
     elif a[0] == "cardinal":
         cmd_cardinal()
     elif a[0] == "validate":
