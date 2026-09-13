@@ -1,6 +1,7 @@
 """
 The experiment runner.
 
+    python -m wm.run selftest               # exercise the whole pipeline offline
     python -m wm.run blind                  # lexical change detection, no API calls
     python -m wm.run encode                 # tied encoder on both docs -> latent diff
     python -m wm.run inputs                 # print each condition's input, no API calls
@@ -129,6 +130,62 @@ def cmd_all(seeds: int = 3) -> None:
             cmd_trial(c, model_name, seeds)
 
 
+def stub(prompt: str, max_tokens: int = 16000) -> str:
+    """
+    Offline model stand-in. Answers the JSON contract correctly so the plumbing
+    (build -> parse -> authority check -> render) can be exercised without an API
+    key. It is NOT a model: its decisions are fixed, so it proves the pipeline
+    runs, not that anything is any good.
+    """
+    from .abstraction import ISSUES
+    fixed = {
+        "I01": ("MODIFY", "Fixed aggregate cap of $3,500,000. No fee-multiple formulation."),
+        "I02": ("MODIFY", "Retention of 18 months from receipt of each delivery."),
+        "I03": ("REJECT", "Mandatory deletion or return at expiry; anonymisation-in-place not accepted."),
+        "I04": ("REJECT", "Officer-signed certification of destruction within 10 business days retained."),
+        "I05": ("REJECT", "Absolute prohibition retained, no exceptions, technique-agnostic."),
+        "I06": ("MODIFY", "Notification within 48 hours of Discovery; Discovery means first reasonable suspicion."),
+        "I07": ("REJECT", "Vendor Security Assessment required for every subprocessor before access."),
+        "I08": ("REJECT", "Unrestricted right to share audit findings with regulators retained."),
+        "I09": ("REJECT", "On-site audit capability preserved; frequency once per calendar year."),
+        "I10": ("REJECT", "Residuals clause deleted in its entirety."),
+        "I11": ("REJECT", "Three-part prerequisite retained: prior written approval, completed TIA, transfer mechanism."),
+        "I12": ("MODIFY", "Use limited to aggregated Benchmarking Reports; no ML training on the Shared Data Set."),
+        "I13": ("REJECT", "Delaware governing law maintained."),
+        "I14": ("REJECT", "Delaware Court of Chancery venue maintained."),
+    }
+    rows = []
+    for i in ISSUES:
+        disp, counter = fixed.get(i.id, ("REJECT", "Reverted to the Carden initial draft."))
+        rows.append({"issue_id": i.id, "disposition": disp, "counter": counter,
+                     "rationale": f"Carden's position on {i.name.lower()}, consistent with the initial draft."})
+    return json.dumps(rows, indent=2)
+
+
+def cmd_selftest() -> None:
+    """Exercise every stage offline. No network, no key, no spend."""
+    prose = PROSE_CACHE.read_text() if PROSE_CACHE.exists() else "(prose twin not built)"
+    ok = True
+    for c in conditions.CONDITIONS:
+        prompt = conditions.build(c, prose=prose)
+        raw = stub(prompt)
+        decisions = parse_decisions(raw)
+        viols = check(decisions)
+        r = render.redline(decisions)
+        n = render.cover_note(decisions)
+        good = len(decisions) == 14 and not viols and len(r) > 500 and len(n) > 500
+        ok &= good
+        print(f"  {c:<4} prompt {len(prompt):>7,} chars | {len(decisions):>2} decisions | "
+              f"{len(viols)} violations | redline {len(r):,} | note {len(n):,}  "
+              f"{'OK' if good else 'FAIL'}")
+        if viols:
+            for v in viols:
+                print(f"        ! {v.issue_id} {v.message}")
+    print()
+    print("pipeline:", "OK -- build/parse/check/render all work end to end" if ok else "FAILED")
+    print("not exercised offline: the model call and the judge call.")
+
+
 def cmd_encode() -> None:
     """Run the tied encoder on both documents and cache the latent diff."""
     from . import encoder
@@ -193,6 +250,8 @@ if __name__ == "__main__":
         print(__doc__)
     elif a[0] == "inputs":
         cmd_inputs()
+    elif a[0] == "selftest":
+        cmd_selftest()
     elif a[0] == "encode":
         cmd_encode()
     elif a[0] == "blind":
