@@ -1785,7 +1785,6 @@ def cmd_axes(argv: list[str]) -> None:
         python -m wm.run axes --report                # relit la derniere classification
     """
     from . import axes as AX
-    from .render import _partie
     opts = {"model": llm.FRONTIER, "batch": "6", "limit": "0"}
     flags = set()
     i = 0
@@ -1804,10 +1803,7 @@ def cmd_axes(argv: list[str]) -> None:
     hs = AX.hunks(mk, tp)
     if int(opts["limit"]):
         hs = hs[:int(opts["limit"])]
-    try:
-        licensor, licensee = _partie("us").split(",")[-1].strip(), _partie("them").split(",")[-1].strip()
-    except Exception:                                           # noqa: BLE001
-        licensor, licensee = "Licensor", "Licensee"
+    licensor, licensee = AX.parties(tp) if tp else ("Licensor", "Licensee")
     out = taskctx.task_dir() / "axes_moves.json"
 
     if "hunks" in flags:
@@ -1849,12 +1845,18 @@ def cmd_axes(argv: list[str]) -> None:
     print(AX.report(hs, moves, why, licensor, licensee, parametric_sections=param))
     n, ok, bad = AX.agreement(hs, moves)
     print()
-    print(f"ACCORD REGLES / MODELE : {ok}/{n} sur les modifications de forme canonique.")
-    if bad:
-        print("  desaccords :")
-        for b in bad:
-            print(f"    {b}")
-    print("  Les regles ne sont pas un juriste ; un accord eleve est necessaire, pas suffisant.")
+    if n == 0:
+        print("ACCORD REGLES / MODELE : non mesurable ici - aucune modification COURTE de forme")
+        print("  canonique dans ce markup (les six formes reconnues sont dans des blocs reecrits).")
+        print("  Sur ce markup la fiabilite ne se mesure qu'avec un juriste : etiqueter les 45")
+        print("  modifications (axe, sens, beneficiaire) prend une heure, et c'est le vrai test.")
+    else:
+        print(f"ACCORD REGLES / MODELE : {ok}/{n} sur les modifications courtes de forme canonique.")
+        if bad:
+            print("  desaccords :")
+            for b in bad:
+                print(f"    {b}")
+        print("  Les regles ne sont pas un juriste ; un accord eleve est necessaire, pas suffisant.")
     if "report" not in flags:
         print(); print(llm.spend_report())
 

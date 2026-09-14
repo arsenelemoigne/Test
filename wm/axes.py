@@ -58,6 +58,7 @@ class Hunk:
     text: str          # avec les marqueurs {+ +} {- -}
     inserted: int = 0
     deleted: int = 0
+    before: str = ""   # la version du template pour une section reecrite
 
 
 _SEC = re.compile(r"Section\s+([0-9A-Z]+(?:\.[0-9]+)*(?:\([a-z]\))?)\s*[—-]\s*([^.\n]{0,80})")
@@ -92,6 +93,31 @@ def _blocks(lines: list[str]) -> list[tuple[str, list[str]]]:
         out.append(("plain", [ln]))
         i += 1
     return out
+
+
+def _template_index(template: str) -> dict[str, str]:
+    """Le texte du template par numero de section (l'en-tete et ses alineas)."""
+    idx, cur = {}, ""
+    for ln in template.split("\n"):
+        if not ln.strip():
+            continue
+        sec, _ = _section_of(ln)
+        if sec and _HEAD.match(ln.strip()):
+            cur = sec
+            idx[cur] = ln.strip()
+        elif cur:
+            idx[cur] += "\n" + ln.strip()
+    return idx
+
+
+def parties(template: str) -> tuple[str, str]:
+    """Les noms des parties, lus dans le preambule : 'X, a ... ("Licensor")'.
+    Le fichier _parties.json porte les CONSEILS ; un profil qui titre
+    'Nakamura & Oakes' pour le licencie a confondu l'avocat et le client."""
+    def find(role):
+        m = re.search(r"\n([^\n,]{3,80}),[^\n]{0,200}\(\"" + role + r"\"\)", template)
+        return m.group(1).strip() if m else role.capitalize()
+    return find("Licensor"), find("Licensee")
 
 
 def hunks(markup: str, template: str = "") -> list[Hunk]:
@@ -134,6 +160,14 @@ def hunks(markup: str, template: str = "") -> list[Hunk]:
                             inserted=ins, deleted=dele))
 
     if template:
+        # une section reecrite d'un bloc arrive comme ADDED : sans la version du
+        # template en face, le modele classe comme mouvement du texte qui n'a
+        # pas bouge ("sole control of the defence" etait deja la)
+        idx = _template_index(template)
+        for h in out:
+            base = h.section.split("(")[0]
+            if h.kind in ("added", "deleted") or h.deleted > 300:
+                h.before = idx.get(h.section, "") or idx.get(base, "")
         tmpl_secs = {m[0] for m in _SEC.findall(template)}
         # seules les sections portant LEUR propre en-tete comptent comme deja
         # vues : un alinea rattache par heritage a 14.12 ne prouve pas que
@@ -214,7 +248,12 @@ Every hunk id listed above must appear at least once (use axis "scope", favours
 
 def _render_hunk(h: Hunk, limit: int = 1400) -> str:
     t = h.text if len(h.text) <= limit else h.text[:limit] + " [...]"
-    return f"--- {h.id}  Section {h.section or '?'}  {h.heading}  ({h.kind})\n{t}"
+    out = f"--- {h.id}  Section {h.section or '?'}  {h.heading}  ({h.kind})\n{t}"
+    if h.before:
+        b = h.before if len(h.before) <= limit else h.before[:limit] + " [...]"
+        out += (f"\n    BEFORE (template text of this section - classify ONLY what changed; "
+                f"text present in both is NOT a move):\n    {b}")
+    return out
 
 
 def parse_moves(raw: str, valid_hunks: set[str]) -> tuple[list[Move], list[str]]:
@@ -280,10 +319,21 @@ def classify(hs: list[Hunk], llm, licensor: str, licensee: str, batch: int = 6,
             licensor=licensor, licensee=licensee, axes=", ".join(AXES),
             axis_help="\n".join(f"  {k:<13} {v}" for k, v in AXES.items()),
             changes="\n\n".join(_render_hunk(h) for h in lot))
-        raw = llm(prompt, max_tokens=6000) or ""
+        raw = llm(prompt, max_tokens=14000) or ""
         if raw_out is not None:
             raw_out.append(raw)
         ms, w = parse_moves(raw, {h.id for h in lot})
+        if not ms and len(lot) > 1:
+            # un lot entier perdu (reponse coupee ou sans JSON) : on le
+            # rejoue en deux moities plutot que de perdre six modifications
+            ms, w = [], []
+            for half in (lot[:len(lot) // 2], lot[len(lot) // 2:]):
+                sub, w2 = classify(half, llm, licensor, licensee, batch=len(half), raw_out=raw_out)
+                ms += sub
+                w += w2
+            moves += ms
+            why += w
+            continue
         for m in ms:
             m.section = by_id[m.hunk].section
         moves += ms
@@ -316,8 +366,16 @@ def _other(p: str) -> str:
     return "licensee" if p == "licensor" else "licensor"
 
 
-def rule_label(text: str) -> tuple[str, str] | None:
-    """(axe, beneficiaire) pour une modification canonique, sinon None."""
+def rule_label(text: str, max_chars: int = 500) -> tuple[str, str] | None:
+    """(axe, beneficiaire) pour une modification canonique, sinon None.
+
+    Formes COURTES seulement : une forme canonique ne dit quelque chose que
+    quand elle EST la modification. Sur un bloc de 3 000 caracteres, "cure"
+    ou "reasonable efforts" apparaissent quelque part sans etre le point, et
+    l'oracle contredisait le modele a tort - deux des quatre desaccords de la
+    premiere passe venaient de la."""
+    if len(text) > max_chars:
+        return None
     ins = " ".join(re.findall(r"\{\+(.*?)\+\}", text, re.S)).lower()
     dele = " ".join(re.findall(r"\{-(.*?)-\}", text, re.S)).lower()
     plain = re.sub(r"\{[+-](.*?)[+-]\}", r"\1", text, flags=re.S)
