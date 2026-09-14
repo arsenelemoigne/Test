@@ -388,4 +388,55 @@ def triangle(elic: pm.Contract, moves, sec_of: dict, cal: dict, nous: str = NOUS
           "  le declare ne doit pas suivre l'ordinal. Les trois correlations ne peuvent",
           "  pas etre positives ensemble - si elles l'etaient, une des mesures serait",
           "  de trop, et ce serait probablement celle qu'on croit la plus solide."]
+    return "\n".join(L) + "\n" + quadrants(noms, C, O)
+
+
+def quadrants(noms, dollars, ordinal) -> str:
+    """Croiser les deux mesures au lieu de les convertir l'une en l'autre.
+
+    Le pont a echoue parce que l'elaboration juridique et le poids financier
+    vont en sens inverse. Mais deux mesures qui divergent sont plus
+    informatives qu'une seule : c'est leur DESACCORD qui designe les clauses
+    interessantes.
+
+      cher ET lourd juridiquement   le markup attaque franchement ; tout le
+                                    monde le voit, y compris l'adversaire
+      pas cher, lourd juridiquement de la procedure. Il ecrit beaucoup pour
+                                    peu d'argent - c'est la monnaie d'echange
+                                    la moins chere qu'on puisse lui rendre
+      CHER, LEGER juridiquement     une phrase qui coute des millions et qui
+                                    ne ressemble a rien dans le redline.
+                                    C'est ce que Scott, Choi & Gulati appellent
+                                    une MINE (41 Yale J. Reg. 307, 2024) :
+                                    l'ecart le plus dangereux est celui qui ne
+                                    se voit pas.
+      ni l'un ni l'autre            a accepter sans discuter
+
+    La coupure est la MEDIANE de chaque mesure : rien ici ne justifie un seuil
+    absolu, et une mediane se defend - elle dit "dans la moitie haute de CE
+    markup", pas "au-dessus d'un chiffre que j'ai choisi".
+    """
+    import statistics as st
+    if len(noms) < 4:
+        return ""
+    md, mo = st.median([abs(x) for x in dollars]), st.median([abs(x) for x in ordinal])
+    cases = {"mine": [], "franc": [], "procedure": [], "mineur": []}
+    for n_, d_, o_ in zip(noms, dollars, ordinal):
+        cher, lourd = abs(d_) > md, abs(o_) > mo
+        cases[("franc" if lourd else "mine") if cher
+              else ("procedure" if lourd else "mineur")].append((n_, d_, o_))
+    L = ["", "LES DEUX MESURES CROISEES, PLUTOT QUE CONVERTIES", "-" * 84,
+         f"coupures : {md/1e6:.2f} M$ et {mo:.0f} points de net ordinal (medianes)", ""]
+    for cle, titre in (("mine", "MINES - cher, et juridiquement discret. A regarder en premier."),
+                       ("franc", "ATTAQUE FRANCHE - cher et visible. L'adversaire sait ce qu'il demande."),
+                       ("procedure", "PROCEDURE - beaucoup d'ecriture, peu d'argent. Monnaie d'echange."),
+                       ("mineur", "MINEUR - ni l'un ni l'autre.")):
+        if not cases[cle]:
+            continue
+        L.append(titre)
+        for n_, d_, o_ in sorted(cases[cle], key=lambda r: r[1]):
+            L.append(f"    {n_[:46]:<48}{d_/1e6:>8.2f} M${o_:>8.0f}")
+        L.append("")
+    L += ["C'est la seule chose que le pont ordinal, en echouant, a rendue possible :",
+          "si les deux mesures allaient dans le meme sens, les croiser n'apprendrait rien."]
     return "\n".join(L)
