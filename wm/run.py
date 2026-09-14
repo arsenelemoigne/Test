@@ -1638,7 +1638,7 @@ def cmd_neg(argv: list[str]) -> None:
     from . import negotiation as ng
     opts = {"policies": "algo", "n": "3", "rounds": str(ng.DEFAULT_ROUNDS),
             "model": llm.FRONTIER, "them": "algo", "budget": "0.35", "seed0": "0",
-            "contract": "elicited"}
+            "contract": "elicited", "workers": "4"}
     report_only = False
     i = 0
     while i < len(argv):
@@ -1687,7 +1687,10 @@ def cmd_neg(argv: list[str]) -> None:
         per_round = (1 if opts["them"] == "algo" else 2) * len([p_ for p_ in policies if p_ != "algo"])
         per_round += (1 if opts["them"] == "llm" else 0) * len([p_ for p_ in policies if p_ == "algo"])
         print(f"budget d'appels au plus : {n} adversaires x {T} tours x {per_round} = "
-              f"{n * T * per_round} appels, ~{len(c.params) * 120 // 4 + 600} tokens chacun")
+              f"{n * T * per_round} appels ; un modele a raisonnement ecrit 3-5k tokens par "
+              f"offre,\n  soit 1-2 min par appel - compter "
+              f"{n * T * per_round * 1.5 / int(opts['workers']) / 60:.1f} h avec "
+              f"{opts['workers']} en parallele")
     from .render import _partie
     try:
         us_name, them_name = _partie("us"), _partie("them")
@@ -1707,9 +1710,29 @@ def cmd_neg(argv: list[str]) -> None:
         extra = f"  ids invalides {r['invalid_ids']}" if r["invalid_ids"] else ""
         print(f"  {r['policy']:<10} adversaire {r['seed']:>2} ({r['them']['label']:<10}) {etat:<22}{garde}{extra}")
 
+    # reprise : ce qui est deja sur disque n'est pas rejoue
+    tag = "claim__" if opts["contract"] == "claim" else ""
+    done = set()
+    for pol in policies:
+        m = slug(opts["model"]) if pol != "algo" else "none"
+        for seed in seeds:
+            if (out / f"{tag}{pol}__{m}__cp{seed}.json").exists():
+                done.add((pol, seed))
+    if done:
+        print(f"  {len(done)} negociations deja faites, sautees (reprise).")
+    if need_llm:
+        print(f"  {opts['workers']} negociations en parallele ; Ctrl-C ne perd rien, relancer reprend.\n")
     rs = ng.run_campaign(c, policies, seeds, T, call=call, them_mode=opts["them"],
                          budget=float(opts["budget"]), us_name=us_name, them_name=them_name,
-                         on_result=save)
+                         on_result=save, skip=done, workers=int(opts["workers"]))
+    # le resume porte sur TOUT ce qui est sur disque pour ces politiques/adversaires
+    rs = []
+    for pol in policies:
+        m = slug(opts["model"]) if pol != "algo" else "none"
+        for seed in seeds:
+            f = out / f"{tag}{pol}__{m}__cp{seed}.json"
+            if f.exists():
+                rs.append(json.loads(f.read_text()))
     print()
     print(ng.summary(rs))
     if need_llm:

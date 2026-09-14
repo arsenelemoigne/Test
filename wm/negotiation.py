@@ -458,11 +458,36 @@ def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) ->
 def run_campaign(c: pm.Contract, policies: list[str], seeds: list[int], T: int,
                  call=None, them_mode: str = "algo", budget: float = 0.35,
                  us_name: str = "notre client", them_name: str = "la partie adverse",
-                 on_result=None) -> list[dict]:
-    out = []
-    for seed in seeds:
+                 on_result=None, skip: set | None = None, workers: int = 1) -> list[dict]:
+    """skip : (politique, adversaire) deja faits, sautes - une campagne
+    interrompue reprend ou elle s'est arretee. workers : negociations menees
+    en parallele ; chacune est independante, seul le journal est partage."""
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    lock = threading.Lock()
+    jobs = [(pol, seed) for seed in seeds for pol in policies
+            if not (skip and (pol, seed) in skip)]
+
+    def one(job):
+        pol, seed = job
         them = make_them(c, seed)
-        for pol in policies:
+        r = _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name)
+        if on_result:
+            with lock:
+                on_result(r)
+        return r
+
+    if workers > 1 and call is not None:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            out = list(ex.map(one, jobs))
+    else:
+        out = [one(j) for j in jobs]
+    return out
+
+
+def _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name) -> dict:
+    if True:
+        if True:
             us = make_us(c, budget=budget)
             if them_mode == "llm":
                 if call is None:
@@ -482,10 +507,7 @@ def run_campaign(c: pm.Contract, policies: list[str], seeds: list[int], T: int,
                 raise ValueError(pol)
             r = negotiate(c, us, them, p_us, p_them, T)
             r.update({"policy": pol, "seed": seed, "them_mode": them_mode, "T": T})
-            out.append(r)
-            if on_result:
-                on_result(r)
-    return out
+            return r
 
 
 def summary(results: list[dict]) -> str:
