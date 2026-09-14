@@ -118,6 +118,23 @@ def main() -> int:
               "affiche par ailleurs.")
 
     ampleur, ferme, noms = [], [], []
+    # La FERMETE d'un point, lue dans la NATURE de ses limites, pas dans leur
+    # nombre. Sur le second contrat, 22 points sur 24 en portaient exactement
+    # une : la variable de reference etait quasi constante et une correlation
+    # de rang n'y mesurait rien - le rho de 0,13 ne disait pas que le modele
+    # est mal calibre, il disait que le test etait aveugle.
+    #   3  forbid_accept      la position ne peut pas etre acceptee : walk-away
+    #   2  forbid/require_phrase  une formule precise est imposee ou interdite
+    #   1  max/min quantity, money  une fourchette, negociable a l'interieur
+    #   0  aucune limite
+    RANG = {"forbid_accept": 3, "forbid_phrase": 2, "require_phrase": 2,
+            "max_quantity": 1, "min_quantity": 1, "max_money": 1,
+            "require_quantity": 1, "require_money": 1}
+
+    def fermete(iss) -> float:
+        ls = getattr(iss, "limits", None) or []
+        return float(max((RANG.get(l.get("kind"), 0) for l in ls), default=0))
+
     for pid, p in c.params.items():
         try:
             v_nous = parametric.total(p.option(p.ours).vec())
@@ -125,13 +142,20 @@ def main() -> int:
         except KeyError:
             continue
         ampleur.append(abs(v_eux - v_nous))
-        ferme.append(float(len(getattr(issues.get(pid), "limits", []) or [])))
+        ferme.append(fermete(issues.get(pid)))
         noms.append(p.name)
 
     if ampleur and any(ferme):
         rho = spearman(ampleur, ferme)
+        from collections import Counter as _C
+        rep = _C(ferme)
+        print(f"\nFermete du mandat par point (3 = walk-away, 2 = formule imposee, "
+              f"1 = fourchette, 0 = libre) :")
+        print("  " + ", ".join(f"{k:.0f} -> {v} points" for k, v in sorted(rep.items())))
+        if max(rep.values()) > 0.8 * len(ferme):
+            print("  QUASI CONSTANTE : une correlation de rang n'y mesurerait rien.")
         print(f"\nCorrelation de rang entre l'ampleur que le modele prete a un "
-              f"point\net le nombre de limites que le mandat y attache : ", end="")
+              f"point\net la fermete du mandat sur ce point : ", end="")
         if rho is None:
             print("indefinie (trop peu de variation)")
         else:
