@@ -2439,6 +2439,7 @@ def cmd_merge(argv: list[str]) -> None:
     c2, journal = AB.build(elic, moves, cal, sec_of, n=int(opts["n"]),
                            seed=int(opts["seed"]), nous=opts["nous"])
     print(AB.report(cal, journal))
+    print(AB.triangle(elic, moves, sec_of, cal, nous=opts["nous"]))
     fiable = (cal["p"] is not None and cal["p"] <= 0.10 and cal["r2"] > 0.2)
     # UN MODELE DONT LA CALIBRATION A ECHOUE N'EST PAS UTILISABLE. La premiere
     # version l'ecrivait quand meme sous son nom normal, et `neg --contract

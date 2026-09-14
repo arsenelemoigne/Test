@@ -336,3 +336,56 @@ def report(cal: dict, journal: list[dict]) -> str:
           "juridique ne dit rien de ce qui arrive dans les mauvais mondes. Une politique",
           "qui pondere le risque de queue ne verra donc rien sur ces points-la."]
     return "\n".join(L)
+
+
+def triangle(elic: pm.Contract, moves, sec_of: dict, cal: dict, nous: str = NOUS) -> str:
+    """Les trois mesures, deux a deux, sur les MEMES points.
+
+    On dispose de trois avis sur la meme chose : ce que le moteur CALCULE en
+    dollars, ce qu'un modele de langage DECLARE comme vecteur, et ce que la
+    classification par fonction juridique rend en ORDINAL. Deux a deux, cela
+    fait trois correlations, et elles doivent tenir ensemble :
+
+        si declare suit les dollars, et que l'ordinal ne les suit pas,
+        alors declare ne doit pas suivre l'ordinal non plus.
+
+    Si les trois etaient positives, l'une des mesures serait de trop. Si
+    declare suivait l'ordinal sans suivre les dollars, le vecteur declare ne
+    serait qu'une reformulation de l'elaboration juridique - et son rho de
+    +0,81 contre les dollars serait l'accident. Ce controle ne coute rien et
+    il est le seul qui puisse attraper cela.
+    """
+    calc = CB.build(n=800)
+    par_sec = {_sec(sec): pid for pid, _, sec, _ in CB.VERIDIAN}
+    part = repartit(moves, [sec for _, _, sec, _ in CB.VERIDIAN])
+    D, O, C, noms = [], [], [], []
+    for pid_e, p_ in elic.params.items():
+        sec = _sec(sec_of.get(pid_e, ""))
+        j = par_sec.get(sec)
+        if not j or not part.get(next((s2 for _, _, s2, _ in CB.VERIDIAN
+                                       if _sec(s2) == sec), "")):
+            continue
+        q = calc.params[j]
+        sec_m = next(s2 for _, _, s2, _ in CB.VERIDIAN if _sec(s2) == sec)
+        C.append(pm.total(q.option(q.theirs).vec(), CB.WEIGHTS)
+                 - pm.total(q.option(q.ours).vec(), CB.WEIGHTS))
+        D.append(pm.total(p_.option(p_.theirs).vec())
+                 - pm.total(p_.option(p_.ours).vec()))
+        O.append(_net(part[sec_m], nous))
+        noms.append(p_.name)
+    L = ["", "LES TROIS MESURES, DEUX A DEUX", "-" * 84,
+         f"sur les {len(C)} points ou les trois existent"]
+    if len(C) < 4:
+        return "\n".join(L + ["  trop peu de points apparies pour correler."])
+    for nom, a, b in (("calcule $  vs  declare (LLM)", C, D),
+                      ("calcule $  vs  ordinal (axes)", C, O),
+                      ("declare    vs  ordinal (axes)", D, O)):
+        r, pv = _spearman(a, b)
+        L.append(f"  {nom:<34}rho = {r:+.2f}   (p ~ {pv:.3f})" if r is not None
+                 else f"  {nom:<34}indefini")
+    L += ["",
+          "  Lecture : si le declare suit les dollars et que l'ordinal ne les suit pas,",
+          "  le declare ne doit pas suivre l'ordinal. Les trois correlations ne peuvent",
+          "  pas etre positives ensemble - si elles l'etaient, une des mesures serait",
+          "  de trop, et ce serait probablement celle qu'on croit la plus solide."]
+    return "\n".join(L)
