@@ -865,6 +865,34 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _nk
 
+    # LA COUCHE DE FAISABILITE. Un modele qui brade tout le markup doit ressortir
+    # au-dessus de son seuil de rupture, sans perdre l'accord : le controle refuse
+    # l'infaisable, il ne rend pas l'agent plus genereux. TERMS-Bench (2026)
+    # documente exactement ce defaut chez les agents LLM, et ce remede.
+    from . import negotiation as _ng2, parametric_example as _pe2
+    _c2 = _pe2.contract()
+    _brade = lambda p, max_tokens=0: json.dumps({"offer": dict(_c2.markup)})
+    _res = {}
+    for _g in (False, True):
+        _us, _th = _ng2.make_us(_c2), _ng2.make_them(_c2, 3)
+        _in = _ng2.LLMPolicy(_c2, _us, _th, _brade, True)
+        _pol = _ng2.Guarded(_in, _c2, _us, _th) if _g else _in
+        _res[_g] = (_ng2.negotiate(_c2, _us, _th, _pol, _ng2.AlgoPolicy(_c2, _th, _us), T=4),
+                    _us.reservation)
+    _sans, _avec = _res[False][0], _res[True][0]
+    _gc = [("sans garde : le mandat est enfreint", _sans["mandate_breach"] is True),
+           ("avec garde : le mandat tient", _avec["mandate_breach"] is False),
+           ("avec garde : l'accord est conserve", _avec["agreed"] is True),
+           ("le controle a bien corrige", _avec["refus_offre"] > 0),
+           ("aucun appel supplementaire par defaut", _avec["calls"] == _sans["calls"] * 4)]
+    _gok = all(v for _, v in _gc)
+    print(f"  faisabilite     : {sum(v for _, v in _gc)}/{len(_gc)} {'OK' if _gok else 'FAIL'} "
+          f"(sans {_sans['u_us']:.0f} / avec {_avec['u_us']:.0f} / seuil {_res[True][1]:.0f})")
+    for _n, _v in _gc:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _gok
+
     # LE CONTRAT COMME CREANCE CONDITIONNELLE. Quatre controles : les
     # redevances ferment sur la formule ; un plafond plus haut ne nuit jamais
     # au licencie face a une reclamation ; la faute lourde fait tomber le

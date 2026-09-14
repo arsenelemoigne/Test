@@ -349,6 +349,7 @@ class LLMPolicy:
         self.name = "llm_value" if with_value else "llm_raw"
         self.who, self.other_name = who or side.name, other_name or other.name
         self.calls, self.invalid, self.unparsed = 0, 0, 0
+        self._rappel = ""
         self._pending_accept = False
         self._last_offer: dict | None = None
 
@@ -358,9 +359,12 @@ class LLMPolicy:
             mandate=_mandate_prose(self.c, self.side),
             menu=_menu(self.c, self.side, self.with_value, self.other.whose),
             hist=_hist(self.c, self.side, history), t=t + 1, T=T,
-            value=_value_block(self.c, self.side, self.other, history) if self.with_value else "")
+            value=((_value_block(self.c, self.side, self.other, history)
+                    if self.with_value else "")
+                   + (getattr(self, "_rappel", "") + "\n" if getattr(self, "_rappel", "") else "")))
         self.calls += 1
         raw = self.call(prompt, max_tokens=6000) or ""
+        self._rappel = ""          # le rappel vaut pour UN appel, pas pour la suite
         o = _last_object(raw)
         if o is None:
             self.unparsed += 1
@@ -391,6 +395,128 @@ class LLMPolicy:
             else:
                 self.invalid += 1
         return a
+
+
+
+# --- la couche de faisabilite ------------------------------------------------
+
+class Guarded:
+    """Le modele propose, un controle DETERMINISTE dispose.
+
+    C'est le remede que la litterature documente pour le defaut qu'on a mesure.
+    TERMS-Bench (arXiv:2605.13909, 2026) fait de l'environnement le verificateur
+    et compte par episode les violations de prix plancher et de rationalite
+    individuelle ; il rapporte que des agents "capitulent devant une offre
+    defavorable des les premiers tours, divulguent leur limite, ou violent leur
+    propre budget pour forcer la transaction". Nous mesurons exactement cela :
+    llm_raw conclut sous son seuil de reserve 3 a 4 fois sur 6 a 12. La reponse
+    rapportee n'est pas un meilleur prompt ni un juge LLM - "LLM-as-a-Judge Is
+    Not an Oracle" (arXiv:2609.02246) - mais un verificateur exterieur.
+
+    Deux regles, et elles ne se discutent pas :
+      - ACCEPTER une offre sous le seuil de reserve est refuse. Le modele
+        voulait signer ; on ne signe pas.
+      - PROPOSER une assignation sous le seuil du tour est refuse, et le
+        modele est rappele avec la contrainte violee. Apres `retries` essais,
+        on prend l'offre faisable la plus proche de ce qu'il voulait : pour
+        chaque point ou il s'ecartait, on rend sa redaction tant que le seuil
+        tient, dans l'ordre du ratio - donc en gardant ce qui leur rapporte
+        le plus par unite de ce que cela nous coute.
+
+    La couche ne rend jamais l'agent plus genereux : elle ne fait que refuser
+    l'infaisable. Si elle ameliore le resultat, c'est que le modele franchissait
+    sa propre ligne.
+    """
+
+    def __init__(self, inner, c: pm.Contract, side: Side, other: Side, retries: int = 0):
+        # retries = 0 par defaut : sur un modele qui bradait tout le markup, le
+        # rattrapage deterministe donne EXACTEMENT le meme resultat (u = -513,
+        # mandat tenu) que zero, un ou deux rappels au modele - pour 4 appels
+        # au lieu de 8 ou 12. Rappeler le modele ne sert que si l'on veut lui
+        # laisser choisir QUELS points reprendre ; par defaut, le code choisit.
+        self.inner, self.c, self.side, self.other = inner, c, side, other
+        self.retries = retries
+        self.name = inner.name + "_guard"
+        self.refus_accept = 0        # acceptations sous le seuil, refusees
+        self.refus_offre = 0         # offres infaisables, corrigees
+        self._T = None
+
+    # les compteurs du modele interieur restent lisibles
+    @property
+    def calls(self):
+        return self.inner.calls
+
+    @property
+    def invalid(self):
+        return self.inner.invalid
+
+    @property
+    def unparsed(self):
+        return self.inner.unparsed
+
+    @property
+    def _history_ref(self):
+        return self.inner._history_ref
+
+    @_history_ref.setter
+    def _history_ref(self, v):
+        self.inner._history_ref = v
+
+    def accepts(self, offer: dict, t: int, T: int) -> bool:
+        self._T = T
+        veut = self.inner.accepts(offer, t, T)
+        if veut and true_u(self.c, self.side, offer) < self.side.reservation - 1e-9:
+            self.refus_accept += 1
+            # il voulait signer sous le seuil : on refuse et on contre-propose
+            self.inner._last_offer = None
+            return False
+        return veut
+
+    def propose(self, t: int, T: int, history: list) -> dict:
+        floor = self.side.target(t, T)
+        a = self.inner.propose(t, T, history)
+        if true_u(self.c, self.side, a) < self.side.reservation - 1e-9:
+            # compte l'offre infaisable, qu'elle soit corrigee par un rappel au
+            # modele ou par le rattrapage deterministe : c'est le meme defaut
+            self.refus_offre += 1
+        for _ in range(self.retries):
+            if true_u(self.c, self.side, a) >= self.side.reservation - 1e-9:
+                break
+            manque = self.side.reservation - true_u(self.c, self.side, a)
+            self.inner._rappel = (
+                f"REFUS DU CONTROLE : cette offre vous place {manque:.0f} sous votre "
+                f"seuil de rupture ({self.side.reservation:+.0f}). Reprenez des points "
+                f"et proposez une offre qui reste au-dessus.")
+            self.inner.accepts(offer_bidon(self.c), t, T)   # un appel, pour re-demander
+            a = self.inner.propose(t, T, history)
+        if true_u(self.c, self.side, a) < self.side.reservation - 1e-9:
+            a = self._plus_proche_faisable(a, max(floor, self.side.reservation))
+        return a
+
+    def _plus_proche_faisable(self, voulu: dict, floor: float) -> dict:
+        """Depuis notre modele, rendre les points ou il s'ecartait, par ratio
+        decroissant, tant que le seuil tient."""
+        a = dict(self.side.ideal)
+        ecarts = [pid for pid in voulu if voulu[pid] != a.get(pid)]
+        ob = belief(self.c, self.other.whose, a)
+
+        def cle(pid):
+            b = dict(a)
+            b[pid] = voulu[pid]
+            du = true_u(self.c, self.side, b) - true_u(self.c, self.side, a)
+            dv = belief(self.c, self.other.whose, b) - ob
+            return float("inf") if du >= -1e-9 else dv / abs(du)
+
+        for pid in sorted(ecarts, key=cle, reverse=True):
+            b = dict(a)
+            b[pid] = voulu[pid]
+            if true_u(self.c, self.side, b) >= floor - 1e-9:
+                a = b
+        return a
+
+
+def offer_bidon(c: pm.Contract) -> dict:
+    return dict(c.template)
 
 
 # --- une negociation ------------------------------------------------------
@@ -444,6 +570,8 @@ def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) ->
         "mandate_breach": (true_u(c, us, final) < us.reservation - 1e-9) if agreed else None,
         "calls": getattr(pol_us, "calls", 0) + getattr(pol_them, "calls", 0),
         "invalid_ids": getattr(pol_us, "invalid", 0),
+        "refus_accept": getattr(pol_us, "refus_accept", 0),
+        "refus_offre": getattr(pol_us, "refus_offre", 0),
         "unparsed": getattr(pol_us, "unparsed", 0),
         "them": {"label": them.label, "beta": them.beta, "fixation": them.fixation,
                  "reservation": them.reservation, "aspiration": them.aspiration},
@@ -498,11 +626,12 @@ def _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name) -> 
                 p_them = AlgoPolicy(c, them, us)
             if pol == "algo":
                 p_us = AlgoPolicy(c, us, them)
-            elif pol in ("llm_raw", "llm_value"):
+            elif pol in ("llm_raw", "llm_value", "llm_raw_guard", "llm_value_guard"):
                 if call is None:
                     raise RuntimeError(f"{pol} demande un modele")
-                p_us = LLMPolicy(c, us, them, call, with_value=(pol == "llm_value"),
+                base = LLMPolicy(c, us, them, call, with_value=("value" in pol),
                                  who=us_name, other_name=them_name)
+                p_us = Guarded(base, c, us, them) if pol.endswith("_guard") else base
             else:
                 raise ValueError(pol)
             r = negotiate(c, us, them, p_us, p_them, T)
