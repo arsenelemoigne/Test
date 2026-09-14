@@ -1066,6 +1066,42 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _ntok
 
+    # LES INTERACTIONS. Le theoreme de reconstruction que les papiers sur les
+    # primitives d'interaction doivent DEMONTRER, on le verifie : la somme des
+    # dividendes sur tous les sous-ensembles de S rend exactement U(S). Chez
+    # eux c'est un resultat, parce que la fonction de valeur est une boite
+    # noire echantillonnee ; chez nous c'est une identite, parce qu'on a la
+    # fonction. Verifie a la precision machine sur un sous-ensemble de 3.
+    from . import interactions as _IT
+    _ch = _IT.Champ(n=60)
+    _S3 = ["cap", "conseq", "ip_remedy"]
+    _rec = sum(_ch.dividende(_T)
+               for _k in range(len(_S3) + 1)
+               for _T in __import__("itertools").combinations(_S3, _k))
+    _it = [("reconstruction exacte : somme des dividendes = U(S)",
+            abs(_rec - _ch.U(_S3)) < 1e-6),
+           ("le dividende est symetrique",
+            abs(_ch.dividende(["cap", "conseq"]) - _ch.dividende(["conseq", "cap"])) < 1e-6),
+           ("U(vide) = 0 par construction (notre modele est la reference)",
+            abs(_ch.dividende([])) == abs(_ch.U([]))),
+           # plafond et carve-outs sont la paire dont tout juriste dirait
+           # qu'elle se recouvre : une fois la PI et les donnees hors plafond,
+           # relever le plafond ne protege plus grand-chose. Si le moteur ne le
+           # voyait pas, il ne modeliserait pas le droit qu'il pretend modeliser.
+           ("plafond x carve-outs : interaction non nulle",
+            abs(_ch.dividende(["cap", "conseq"])) > 1e5),
+           ("concede seul, chaque point nous coute",
+            all(_ch.dividende([_p]) < 0 for _p in _S3))]
+    _itok = all(v for _, v in _it)
+    print(f"  interactions    : {sum(v for _, v in _it)}/{len(_it)} "
+          f"{'OK' if _itok else 'FAIL'} (plafond x carve-outs = "
+          f"{_ch.dividende(['cap', 'conseq'])/1e6:+.2f} M$ sur "
+          f"{_ch.appels} evaluations)")
+    for _n, _v in _it:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _itok
+
     # LE MANDAT ENUMERE. La question posee : "si on disait explicitement, tu ne
     # peux pas faire CECI et qu'on nommait les cas, il respecterait". Pour que
     # la comparaison signifie quelque chose, la liste d'interdictions doit
@@ -2253,6 +2289,79 @@ def _axes_docs() -> tuple[str, str]:
     return mk, tp
 
 
+def cmd_inter(argv: list[str]) -> None:
+    """Les interactions entre clauses, calculees exactement. Aucun appel API.
+
+        python -m wm.run inter                  # paires
+        python -m wm.run inter --ordre 3        # + triplets (12 s)
+        python -m wm.run inter --couplages      # confronte les couplages DECLARES
+    """
+    from . import interactions as I
+    opts = {"ordre": "2", "n": "300", "party": "licensor", "top": "12"}
+    coup = False
+    i = 0
+    while i < len(argv):
+        if argv[i] in ("--couplages", "couplages"):
+            coup = True
+            i += 1
+            continue
+        k = argv[i].lstrip("-")
+        if k in opts and i + 1 < len(argv):
+            opts[k] = argv[i + 1]
+            i += 2
+        else:
+            raise SystemExit(f"option inconnue : {argv[i]}")
+    m = I.carte(ordre=int(opts["ordre"]), party=opts["party"], n=int(opts["n"]))
+    print(I.report(m, top=int(opts["top"])))
+    if not coup:
+        return
+    # Le modele DECLARE porte un champ "couplings" que l'elicitation demande au
+    # modele de langage. Le moteur, lui, les calcule. Deuxieme test de
+    # calibration, sur une dimension que la correlation de rang ne touchait pas :
+    # le LLM voit-il les memes clauses se recouvrir ?
+    from . import parametric
+    f = taskctx.task_dir() / "parametric.json"
+    print()
+    print("=" * 78)
+    print("LES COUPLAGES DECLARES, CONFRONTES AUX DIVIDENDES CALCULES")
+    print("=" * 78)
+    if not f.exists():
+        print(f"{f} n'existe pas - rien a confronter.")
+        return
+    c = parametric.load(f.read_text())
+    if not c.couplings:
+        print("Le modele declare ne contient AUCUN couplage, alors que le schema en")
+        print("demande et que le moteur en calcule d'enormes (voir ci-dessus).")
+        print("C'est un resultat : interroge sur les interactions, le modele de langage")
+        print("n'en declare pas. Il ne voit pas ce que le calcul voit.")
+        return
+    g = taskctx.gen_issues() or []
+    sec = {i_.id: str(getattr(i_, "section", "")).split("(")[0].strip() for i_ in g}
+    par_sec = {}
+    for pid_, nom_, s_, _ in __import__("wm.claim_bridge", fromlist=["x"]).VERIDIAN:
+        par_sec.setdefault(s_.split("(")[0].strip(), pid_)
+    n_ok = n_tot = 0
+    for cp in c.couplings:
+        a, b = par_sec.get(sec.get(cp.a, "")), par_sec.get(sec.get(cp.b, ""))
+        if not a or not b or a == b:
+            print(f"  {cp.a} x {cp.b} : pas d'equivalent chiffrable")
+            continue
+        d = m["div"].get(tuple(sorted((a, b), key=m["ids"].index))) \
+            or m["div"].get((a, b)) or m["div"].get((b, a))
+        decl = parametric.total(cp.joint)
+        if d is None:
+            print(f"  {cp.a} x {cp.b} : dividende non calcule a cet ordre")
+            continue
+        n_tot += 1
+        meme = (decl < 0) == (d < 0)
+        n_ok += meme
+        print(f"  {m['nom'][a][:24]:<26} x {m['nom'][b][:24]:<26} "
+              f"declare {decl:>+8.0f}   calcule {d/1e6:>+7.2f} M$   "
+              f"{'meme sens' if meme else 'SENS OPPOSE'}")
+    if n_tot:
+        print(f"\n  {n_ok}/{n_tot} couplages declares vont dans le meme sens que le calcul.")
+
+
 def cmd_axes(argv: list[str]) -> None:
     """Le profil du markup par fonction juridique. Voir wm/axes.py.
 
@@ -2406,6 +2515,8 @@ if __name__ == "__main__":
         cmd_claim(a[1:])
     elif a[0] == "axes":
         cmd_axes(a[1:])
+    elif a[0] == "inter":
+        cmd_inter(a[1:])
     elif a[0] == "report":
         cmd_report()
     else:
