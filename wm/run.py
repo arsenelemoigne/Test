@@ -1066,6 +1066,71 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _ntok
 
+    # LE PONT ORDINAL -> DOLLARS. La moitie du contrat n'a pas de numeraire.
+    # On ne lui en invente pas un : on calibre l'echelle ordinale sur la moitie
+    # ou les deux mesures coexistent, et on regarde si l'ajustement tient. Les
+    # controles portent sur le signe du score, sur la capacite de la
+    # calibration a retrouver une proportionnalite plantee, et sur le fait que
+    # le contrat fusionne garde les dollars la ou ils existent.
+    from . import axes_bridge as _AB, claim_bridge as _CBB
+    _mv = lambda sec, fav, mag: _AX.Move(hunk="h", section=sec, axis="remedy",
+                                         favours=fav, magnitude=mag, what="")
+    _sc = [("un mouvement majeur contre nous vaut -4",
+            _AB.score([_mv("11.1", "licensee", "major")], "11.1") == -4.0),
+           ("un mouvement modere pour nous vaut +2",
+            _AB.score([_mv("11.1", "licensor", "moderate")], "11.1") == 2.0),
+           ("ambigu et neutre comptent zero",
+            _AB.score([_mv("11.1", "ambiguous", "major"),
+                       _mv("11.1", "neutral", "major")], "11.1") == 0.0),
+           ("une autre section ne compte pas",
+            _AB.score([_mv("9.3", "licensee", "major")], "11.1") == 0.0),
+           ("la section est comparee sans son parenthese",
+            _AB.score([_mv("sched. C (credits)", "licensee", "minor")], "sched. C") == -1.0)]
+    # des mouvements PROPORTIONNELS aux dollars calcules : la calibration doit
+    # les retrouver. Si l'appariement par section etait casse, rho s'effondre -
+    # c'est le seul controle qui teste la chaine entiere.
+    _calc = _CBB.build(n=80)
+    _prop = []
+    for _pid, _nom, _sec, _ in _CBB.VERIDIAN:
+        _q = _calc.params[_pid]
+        _d = (_pm.total(_q.option(_q.theirs).vec(), _CBB.WEIGHTS)
+              - _pm.total(_q.option(_q.ours).vec(), _CBB.WEIGHTS))
+        for _ in range(max(1, min(12, round(abs(_d) / 4e5)))):
+            _prop.append(_mv(_sec, "licensee" if _d < 0 else "licensor", "minor"))
+    _cal = _AB.calibre(_prop, n=80)
+    _sc += [("calibration : proportionnalite plantee retrouvee",
+             _cal["rho"] is not None and _cal["rho"] > 0.8 and _cal["r2"] > 0.5),
+            ("calibration : alpha positif", _cal["alpha"] > 0)]
+    # le contrat fusionne : dollars la ou ils existent, ordinal calibre ailleurs
+    _mk = lambda pid, sec: _pm.Parameter(
+        id=pid, name=pid, section=sec, ours="a", theirs="b",
+        options=[_pm.Option(id="a", text="modele"),
+                 _pm.Option(id="b", text="markup", ours={"revenue": -100.0},
+                            theirs={"revenue": 80.0})])
+    _el = _pm.Contract([_mk("P1", "11.1"), _mk("P2", "14.13")])
+    _c3, _j = _AB.build(_el, _prop + [_mv("14.13", "licensee", "major")], _cal,
+                        {"P1": "11.1", "P2": "14.13"}, n=80)
+    _src = {r["id"]: r["source"] for r in _j}
+    _q = _calc.params["cap"]
+    _sc += [("point chiffrable : marque calcule", _src["P1"] == "calcule"),
+            ("point non chiffrable : marque axes", _src["P2"].startswith("axes")),
+            ("point chiffrable : reprend les dollars du moteur",
+             abs(_pm.total(_c3.params["P1"].option("b").vec(), _CBB.WEIGHTS)
+                 - _pm.total(_q.option(_q.theirs).vec(), _CBB.WEIGHTS)) < 1.0),
+            ("point calibre : notre redaction vaut zero",
+             abs(_pm.total(_c3.params["P2"].option("a").vec(), _CBB.WEIGHTS)) < 1e-9),
+            ("point calibre : le markup vaut alpha x score",
+             abs(_pm.total(_c3.params["P2"].option("b").vec(), _CBB.WEIGHTS)
+                 - _cal["alpha"] * -4.0) < 1.0)]
+    _scok = all(v for _, v in _sc)
+    print(f"  pont ordinal    : {sum(v for _, v in _sc)}/{len(_sc)} "
+          f"{'OK' if _scok else 'FAIL'} (alpha {_cal['alpha']/1e6:.2f} M$/point, "
+          f"rho {_cal['rho']:+.2f}, R2 {_cal['r2']:+.2f})")
+    for _n, _v in _sc:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _scok
+
     # LES INTERACTIONS. Le theoreme de reconstruction que les papiers sur les
     # primitives d'interaction doivent DEMONTRER, on le verifie : la somme des
     # dividendes sur tous les sous-ensembles de S rend exactement U(S). Chez
@@ -1977,7 +2042,8 @@ def _tag(contract: str) -> str:
     """Le prefixe des fichiers de negociation. Trois origines de valeurs pour un
     seul simulateur : sans prefixe elles s'ecraseraient et la comparaison
     porterait sur un melange."""
-    return {"claim": "claim__", "smarter": "smarter__"}.get(contract, "")
+    return {"claim": "claim__", "smarter": "smarter__",
+            "merged": "merged__"}.get(contract, "")
 
 
 def cmd_neg(argv: list[str]) -> None:
@@ -2022,8 +2088,8 @@ def cmd_neg(argv: list[str]) -> None:
         # un tableau moyennerait des utilites qui n'ont pas la meme echelle et
         # rendrait une colonne "garde" qui ne veut rien dire. On filtre.
         tag = _tag(opts["contract"])
-        autres = [v for k, v in (("claim", "claim__"), ("smarter", "smarter__"))
-                  if v != tag]
+        autres = [v for k, v in (("claim", "claim__"), ("smarter", "smarter__"),
+                                 ("merged", "merged__")) if v != tag]
         fichiers = [f for f in sorted(out.glob("*.json"))
                     if f.name.startswith(tag)
                     and not any(f.name.startswith(a) for a in autres)]
@@ -2054,11 +2120,13 @@ def cmd_neg(argv: list[str]) -> None:
                 if opts["contract"] == "claim":
                     from . import claim_bridge as _cb
                     c_, ng.WEIGHTS = _cb.build(), _cb.WEIGHTS
-                elif opts["contract"] == "smarter":
-                    from . import parametric as _pm, smarter as _sm
-                    c_ = _pm.load((taskctx.task_dir() /
-                                   "parametric_smarter.json").read_text())
-                    ng.WEIGHTS = _sm.WEIGHTS
+                elif opts["contract"] in ("smarter", "merged"):
+                    from . import parametric as _pm, smarter as _sm, claim_bridge as _cb2
+                    nom_ = ("parametric_merged.json" if opts["contract"] == "merged"
+                            else "parametric_smarter.json")
+                    c_ = _pm.load((taskctx.task_dir() / nom_).read_text())
+                    ng.WEIGHTS = (_cb2.WEIGHTS if opts["contract"] == "merged"
+                                  else _sm.WEIGHTS)
                 else:
                     c_, _src = _neg_contract()
                 CLES = ("nash_share", "nash_dist", "ks_dist", "se", "faisable",
@@ -2109,6 +2177,17 @@ def cmd_neg(argv: list[str]) -> None:
         from . import claim_bridge
         c, src = claim_bridge.build(), "CALCULE (wm/claim_bridge.py sur wm/claim.py)"
         ng.WEIGHTS = claim_bridge.WEIGHTS
+    elif opts["contract"] == "merged":
+        # Les 14 points chiffres par le moteur ET les 12 autres, portes a la
+        # meme echelle par la calibration du profil ordinal sur la moitie ou
+        # les deux mesures coexistent. C'est le premier contrat ou les 26
+        # points ont une valeur qui ne soit pas simplement declaree.
+        from . import parametric as _pm, claim_bridge as _cbm
+        f_ = taskctx.task_dir() / "parametric_merged.json"
+        if not f_.exists():
+            raise SystemExit(f"{f_} n'existe pas - lance `python -m wm.run merge`")
+        c, src = _pm.load(f_.read_text()), f"FUSIONNE ({f_})"
+        ng.WEIGHTS = _cbm.WEIGHTS
     elif opts["contract"] == "smarter":
         # Meme domaine, meme simulateur, valeurs tirees de deux CLASSEMENTS au
         # lieu de nombres declares. Troisieme origine des chiffres : si elle
@@ -2287,6 +2366,63 @@ def _axes_docs() -> tuple[str, str]:
     if not mk:
         raise SystemExit(f"aucun markup en texte dans {d} (voir _roles.json)")
     return mk, tp
+
+
+def cmd_merge(argv: list[str]) -> None:
+    """Brancher le profil ordinal sur les points que les dollars n'atteignent pas.
+
+        python -m wm.run merge            # gratuit : lit axes_moves.json + parametric.json
+        python -m wm.run merge --n 1500   # plus de tirages pour la calibration
+
+    Ecrit parametric_merged.json, utilisable avec `neg --contract merged`.
+    """
+    from . import axes_bridge as AB, axes as AX, parametric
+    opts = {"n": "800", "seed": "0", "nous": AB.NOUS}
+    i = 0
+    while i < len(argv):
+        k = argv[i].lstrip("-")
+        if k in opts and i + 1 < len(argv):
+            opts[k] = argv[i + 1]
+            i += 2
+        else:
+            raise SystemExit(f"option inconnue : {argv[i]}")
+    T = taskctx.task_dir()
+    fm, fp = T / "axes_moves.json", T / "parametric.json"
+    if not fm.exists():
+        raise SystemExit(f"{fm} n'existe pas - lance `python -m wm.run axes --model ...`\n"
+                         f"pour classer les modifications du markup par fonction juridique.")
+    if not fp.exists():
+        raise SystemExit(f"{fp} n'existe pas - lance `python -m wm.run model --elicit`")
+    moves = [AX.Move(**m) for m in json.loads(fm.read_text())["moves"]]
+    elic = parametric.load(fp.read_text())
+    g = taskctx.gen_issues() or []
+    sec_of = {i_.id: str(getattr(i_, "section", "")) for i_ in g}
+    if not sec_of:
+        raise SystemExit("aucune liste de points : lance `python -m wm.run issues` d'abord -\n"
+                         "l'appariement entre les deux modeles se fait par numero de section.")
+    cal = AB.calibre(moves, n=int(opts["n"]), seed=int(opts["seed"]), nous=opts["nous"])
+    c2, journal = AB.build(elic, moves, cal, sec_of, n=int(opts["n"]),
+                           seed=int(opts["seed"]), nous=opts["nous"])
+    print(AB.report(cal, journal))
+    fiable = (cal["p"] is not None and cal["p"] <= 0.10 and cal["r2"] > 0.2)
+    out = T / "parametric_merged.json"
+    out.write_text(parametric.dump(c2))
+    print(f"\necrit dans {out}")
+    bad = parametric.model_sanity(c2, CB_W())
+    if bad:
+        print("\nLE CONTRAT FUSIONNE NE PASSE PAS SES PROPRES CONTROLES :")
+        for b_ in bad:
+            print("  " + b_.splitlines()[0])
+    if not fiable:
+        print("\nNE L'UTILISE PAS EN NEGOCIATION tant que l'ajustement ne tient pas : "
+              "`neg --contract\nmerged` refusera d'ailleurs si les controles se declenchent.")
+    else:
+        print("\n  python -m wm.run neg --contract merged --policies algo --n 6")
+
+
+def CB_W():
+    from . import claim_bridge
+    return claim_bridge.WEIGHTS
 
 
 def cmd_inter(argv: list[str]) -> None:
@@ -2520,6 +2656,8 @@ if __name__ == "__main__":
         cmd_axes(a[1:])
     elif a[0] == "inter":
         cmd_inter(a[1:])
+    elif a[0] == "merge":
+        cmd_merge(a[1:])
     elif a[0] == "report":
         cmd_report()
     else:
