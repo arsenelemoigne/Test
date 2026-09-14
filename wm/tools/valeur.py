@@ -86,13 +86,11 @@ def main() -> int:
                 return False
         b = [d for d in cands if d.name.startswith("B")]
         pool = [d for d in b if porte_option(d)] or b or cands
-        if not pool:
-            print(f"aucun run de contre-proposition dans {runs}.")
-            print("Le modele parametrique existe, mais rien ne l'a encore utilise :")
-            print("  python -m wm.run trial B1 z-ai/glm-4.6 1")
-            print("Les sections REPRESENTATIVITE ci-dessus ne demandent aucun run.")
-            return 0
-        cands = [pool[-1]]
+        # L'absence de run n'est pas une raison de ne rien dire : la
+        # representativite du modele ne demande aucun run, et c'est justement
+        # ce qu'on veut savoir d'un contrat qu'on vient d'encoder. Le message
+        # renvoyait a une section "ci-dessus" qui n'avait pas ete imprimee.
+        cands = [pool[-1]] if pool else []
 
     f = taskctx.task_dir() / "parametric.json"
     if not f.exists():
@@ -178,6 +176,18 @@ def main() -> int:
             print("  Le modele dit qu'y ceder est gratuit. A verifier a la main.")
 
     # --- 1 et 2 : par run --------------------------------------------------
+    if not cands:
+        print()
+        print("=" * 74)
+        print(f"AUCUN RUN DE CONTRE-PROPOSITION dans {runs}")
+        print("=" * 74)
+        print("Le modele ci-dessus existe, mais rien ne l'a encore utilise : ni")
+        print("couverture ni valeur ne sont calculables. Pour en produire un :")
+        print("  python -m wm.run trial B1 z-ai/glm-4.6 1")
+        print("Le simulateur de negociation, lui, n'a pas besoin de run prealable :")
+        print("  python -m wm.run neg --policies algo,llm_raw,llm_value --n 6 --rounds 6 \\")
+        print("      --model z-ai/glm-4.6")
+        return 0
     for d in cands:
         print()
         print("=" * 74)
