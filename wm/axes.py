@@ -42,6 +42,12 @@ AXES = {
     "remedy":       "recours : exclusivite, plafonds, credits, resiliation, acces au juge",
     "control":      "discretion : consentement, 'sole discretion', approbation, cession",
     "verification": "verification : audit, reporting, certification, escrow",
+    # Les termes de PRIX n'ont pas de fonction juridique : un escalateur qui
+    # passe de 4 % a CPI plafonne a 2 % ne deplace ni le recours ni la charge,
+    # il deplace de l'argent. Sans cet axe le classifieur les rangeait sous
+    # "remedy" et gonflait cet axe d'un cinquieme. Ils sont chiffres par
+    # claim.py ; ici on les compte, on ne les valorise pas.
+    "price":        "prix : montants, taux, escalateurs, echeances de paiement (chiffre ailleurs)",
 }
 PARTIES = ("licensor", "licensee")
 MAGNITUDES = ("minor", "moderate", "major")
@@ -244,6 +250,9 @@ Rules of thumb (the direction is a matter of legal function, not opinion):
     widened, favours the likely claimant on that clause
   - audit rights deleted: verification down, favours the audited party
   - a notice period lengthened favours the party RECEIVING the notice
+  - fees, rates, escalators, amounts: axis "price", favours the party that pays less
+    or receives more. Do NOT file price changes under "remedy": they move money,
+    not legal function
 
 AXES
 {axis_help}
