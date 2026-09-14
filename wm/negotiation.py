@@ -538,6 +538,57 @@ def pareto_local(c: pm.Contract, us: Side, them: Side, a: dict) -> int:
     return n
 
 
+def frontier(c: pm.Contract, us: Side, them: Side, n: int = 20000, seed: int = 0):
+    """Le point de Nash et le point de Kalai-Smorodinsky, sur les VRAIES utilites.
+
+    Le controle de Pareto local - "existe-t-il un changement d'UN point qui
+    ameliore les deux ?" - rend zero pour toutes les politiques, y compris
+    celles dont l'accord est manifestement moins bon pour les deux camps qu'un
+    accord atteint ailleurs. Il est trop faible : un accord peut etre localement
+    efficace et globalement domine, parce qu'il faut bouger DEUX points a la
+    fois pour s'en sortir. C'est le panel standard d'ANAC qui manquait
+    (distance au point de Nash, distance au point de Kalai-Smorodinsky).
+
+    Le desaccord est le couple des seuils de rupture : c'est ce que vaut
+    l'absence de contrat pour chacun, et c'est par rapport a lui que se
+    mesurent les gains d'un accord.
+    """
+    import random as _r
+    rng = _r.Random(seed)
+    ids = list(c.params)
+    pts = []
+    for a in (c.template, c.markup):
+        pts.append((true_u(c, us, a), true_u(c, them, a), dict(a)))
+    for _ in range(n):
+        a = {i: rng.choice([o.id for o in c.params[i].options]) for i in ids}
+        pts.append((true_u(c, us, a), true_u(c, them, a), a))
+    du, dt = us.reservation, them.reservation
+    best_n, best_ks, mu, mt = None, None, -1e18, -1e18
+    faisables = [(x, y, a) for x, y, a in pts if x >= du - 1e-9 and y >= dt - 1e-9]
+    if not faisables:
+        return None
+    for x, y, _ in faisables:
+        mu, mt = max(mu, x), max(mt, y)
+    prod = -1e18
+    for x, y, a in faisables:
+        p_ = (x - du) * (y - dt)
+        if p_ > prod:
+            prod, best_n = p_, (x, y)
+    # KS : le point faisable qui maximise le minimum des deux parts relatives
+    ks = -1e18
+    for x, y, a in faisables:
+        ru = (x - du) / (mu - du) if mu > du else 0.0
+        rt = (y - dt) / (mt - dt) if mt > dt else 0.0
+        m = min(ru, rt)
+        if m > ks:
+            ks, best_ks = m, (x, y)
+    return {"nash": best_n, "ks": best_ks, "ideal": (mu, mt), "disagree": (du, dt)}
+
+
+def _dist(a, b) -> float:
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+
+
 def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) -> dict:
     history = []
     offer = dict(them.ideal)                     # ils ouvrent avec leur markup
@@ -566,6 +617,8 @@ def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) ->
         "kept_us": (1 - true_u(c, us, final) / loss_markup) if agreed and loss_markup else None,
         "share_them": (true_u(c, them, final) / them.aspiration) if agreed and them.aspiration else None,
         "pareto_gap": pareto_local(c, us, them, final) if agreed else None,
+        **(_frontier_stats(c, us, them, final) if agreed else
+           {"nash_dist": None, "ks_dist": None, "nash_share": None}),
         "n_changed": sum(1 for pid in final if final[pid] != c.params[pid].ours) if agreed else None,
         "mandate_breach": (true_u(c, us, final) < us.reservation - 1e-9) if agreed else None,
         "calls": getattr(pol_us, "calls", 0) + getattr(pol_them, "calls", 0),
@@ -579,6 +632,28 @@ def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) ->
         "final": final, "history": history,
     }
     return res
+
+
+def _frontier_stats(c: pm.Contract, us: Side, them: Side, a: dict) -> dict:
+    """Ou l'accord tombe par rapport aux points de reference du marchandage.
+
+    Normalise par la diagonale du rectangle (desaccord -> ideaux), pour que la
+    distance se lise en part du terrain disponible et non en unites du modele.
+    """
+    f = frontier(c, us, them)
+    if not f or f["nash"] is None or f["ks"] is None:
+        return {"nash_dist": None, "ks_dist": None, "nash_share": None}
+    pt = (true_u(c, us, a), true_u(c, them, a))
+    ech = max(1e-9, _dist(f["disagree"], f["ideal"]))
+    du, dt = f["disagree"]
+    prod_max = (f["nash"][0] - du) * (f["nash"][1] - dt)
+    prod = (pt[0] - du) * (pt[1] - dt)
+    return {"nash_dist": _dist(pt, f["nash"]) / ech,
+            "ks_dist": _dist(pt, f["ks"]) / ech,
+            # part du produit de Nash atteint : 1 = l'accord maximise le gain
+            # conjoint, 0 = il n'en capte rien. C'est la mesure d'efficacite
+            # GLOBALE que le controle local ne voyait pas.
+            "nash_share": (prod / prod_max) if prod_max > 0 else None}
 
 
 # --- la campagne ------------------------------------------------------------
@@ -653,7 +728,7 @@ def summary(results: list[dict]) -> str:
         return f"{m:6.2f}±{se:.2f}"
 
     L = [f"{'politique':<11}{'n':>3}{'accord':>8}{'tours':>7}{'garde':>13}{'attendu':>9}{'eux':>13}"
-         f"{'pareto':>9}{'chang.':>8}{'hors mandat':>12}{'appels':>8}"]
+         f"{'Nash%':>8}{'d(KS)':>8}{'chang.':>8}{'hors mandat':>12}{'appels':>8}"]
     for pol, rs in by.items():
         ag = [r for r in rs if r["agreed"]]
         # VALEUR ATTENDUE : la rupture compte pour zero. Le tableau 'garde' ne
@@ -666,7 +741,8 @@ def summary(results: list[dict]) -> str:
                  f"{ms([r['kept_us'] for r in ag]):>13}"
                  f"{att:>9.2f}"
                  f"{ms([r['share_them'] for r in ag]):>13}"
-                 f"{ms([r['pareto_gap'] for r in ag]):>9}"
+                 f"{ms([r.get('nash_share') for r in ag]):>8}"
+                 f"{ms([r.get('ks_dist') for r in ag]):>8}"
                  f"{ms([r['n_changed'] for r in ag]):>8}"
                  f"{sum(1 for r in ag if r['mandate_breach']):>12}"
                  f"{sum(r['calls'] for r in rs):>8}")
@@ -676,7 +752,10 @@ def summary(results: list[dict]) -> str:
           "attendu : la meme chose, rupture comptee zero. C'est le chiffre a lire :",
           "          un accord manque n'est pas un demi-succes, c'est pas de contrat.",
           "eux     : part de la valeur de leur markup qu'ils obtiennent (selon LEUR utilite)",
-          "pareto  : changements d'un point qui amelioreraient les deux camps (0 = efficace)",
+          "Nash%   : part du produit de Nash atteinte (1 = le gain CONJOINT est maximal).",
+          "          Le controle de Pareto local rendait zero partout : un accord peut etre",
+          "          localement efficace et globalement domine s'il faut bouger deux points.",
+          "d(KS)   : distance au point de Kalai-Smorodinsky, en part du terrain disponible",
           "chang.  : points qui s'ecartent de notre modele dans l'accord (petit = marginal)",
           "hors mandat : accords conclus sous notre seuil de rupture (l'algo ne peut pas)"]
     # apparie : meme adversaire, deux politiques
