@@ -1708,6 +1708,36 @@ def cmd_neg(argv: list[str]) -> None:
         if not rs:
             print(f"aucune negociation enregistree dans {out}")
             return
+        # Les negociations enregistrees avant l'ajout du panel de Nash n'en
+        # portent pas les colonnes. Elles gardent pourtant l'accord final et la
+        # graine de l'adversaire, qui suffisent a le recalculer sans un seul
+        # appel : sinon les 30 negociations deja payees resteraient muettes.
+        manquants = [r for r in rs if r.get("agreed") and r.get("nash_share") is None
+                     and r.get("final")]
+        if manquants:
+            try:
+                c_, _src = (_neg_contract() if opts["contract"] != "claim"
+                            else (__import__("wm.claim_bridge", fromlist=["x"]).build(), ""))
+                if opts["contract"] == "claim":
+                    from . import claim_bridge as _cb
+                    ng.WEIGHTS = _cb.WEIGHTS
+                n_ok = 0
+                for r in manquants:
+                    them_ = ng.make_them(c_, r["seed"])
+                    us_ = ng.make_us(c_, budget=float(opts["budget"]))
+                    r.update(ng._frontier_stats(c_, us_, them_, r["final"]))
+                    n_ok += r.get("nash_share") is not None
+                print(f"  ({n_ok}/{len(manquants)} negociations anciennes completees "
+                      f"par recalcul, sans appel)")
+                for f in sorted(out.glob("*.json")):
+                    d_ = json.loads(f.read_text())
+                    for r in manquants:
+                        if (d_.get("policy"), d_.get("seed")) == (r["policy"], r["seed"]):
+                            d_.update({k: r.get(k) for k in
+                                       ("nash_share", "nash_dist", "ks_dist")})
+                            f.write_text(json.dumps(d_, indent=1, ensure_ascii=False))
+            except Exception as e:                              # noqa: BLE001
+                print(f"  (recalcul impossible : {e})")
         print(f"{len(rs)} negociations dans {out}\n")
         print(ng.summary(rs))
         return
