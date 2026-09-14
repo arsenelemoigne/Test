@@ -1,0 +1,573 @@
+VERDANTIA SYSTEMS, INC.
+API ACCESS AND USE AGREEMENT
+&nbsp;
+This template document (verdantia-standard-form-api-agreement.docx) is Verdantia Systems' standard-form agreement for API access engagements. All bracketed fields (e.g., [Customer Name], [Effective Date]) are placeholders to be completed for each transaction. Drafters should complete all bracketed fields, select among alternative provisions where indicated, and review all Schedules and Exhibits for completeness before circulation for execution.
+&nbsp;
+Document Classification: Internal Template — Confidential Template Version: [Version Number] Last Revised: [Date] Approved By: Office of General Counsel, Verdantia Systems, Inc.
+API ACCESS AND USE AGREEMENT
+This API Access and Use Agreement (this "Agreement") is entered into as of [Effective Date] (the "Effective Date"),
+by and between:
+Verdantia Systems, Inc., a [State of Incorporation] corporation, with its principal place of business at [Verdantia Address] ("Provider"),
+and
+[Customer Legal Name], a [Customer Entity Type and Jurisdiction], with its principal place of business at [Customer Address] ("Licensee").
+Provider and Licensee are each referred to herein individually as a "Party" and collectively as the "Parties."
+RECITALS
+WHEREAS, Provider has developed and operates certain proprietary application programming interfaces and related services (the "API Services") that enable authorized users to access, query, and integrate Provider's data and functionality into their own applications and business processes;
+WHEREAS, Licensee desires to obtain access to and use of the API Services for Licensee's internal business purposes and, where applicable, for integration into Licensee's own products and services, subject to the terms and conditions set forth herein;
+WHEREAS, the Parties desire to set forth the terms governing Licensee's access to and use of the API Services, including applicable usage tiers, rate limits, fees, service levels, intellectual property rights, and data handling obligations;
+NOW, THEREFORE, in consideration of the mutual covenants and agreements set forth herein, and for other good and valuable consideration, the receipt and sufficiency of which are hereby acknowledged, the Parties agree as follows:
+Right-click to update Table of Contents
+ARTICLE 1 — DEFINITIONS
+As used in this Agreement, the following terms shall have the meanings set forth below. Capitalized terms used but not defined in this Article 1 shall have the meanings ascribed to them elsewhere in this Agreement.
+1.1 "Affiliate" means, with respect to a Party, any entity that directly or indirectly controls, is controlled by, or is under common control with such Party. For purposes of this definition, "control" means the direct or indirect ownership of more than fifty percent (50%) of the voting securities or equivalent voting interests of an entity, or the power to direct or cause the direction of the management and policies of an entity, whether through ownership of voting securities, by contract, or otherwise.
+1.2 "API" or "API Services" means Provider's proprietary application programming interfaces, endpoints, documentation, software development kits ("SDKs"), sample code, libraries, and related tools made available to Licensee under this Agreement, as further described in Schedule A attached hereto. The term "API Services" includes all updates, upgrades, new versions, and modifications thereto that Provider may make generally available to its licensees during the Term.
+1.3 "API Credentials" means the unique authentication keys, access tokens, client identifiers, secrets, certificates, and any other credentials issued by Provider to Licensee for the purpose of authenticating Licensee's access to the API Services.
+1.4 "Authorized Users" means Licensee's employees, independent contractors, and authorized agents who are permitted to access and use the API Services on Licensee's behalf under this Agreement, subject to the requirements and limitations set forth in Section 2.3. For the avoidance of doubt, Authorized Users does not include Licensee's end users or customers unless expressly authorized in the applicable Usage Tier described in Schedule A.
+1.5 "Confidential Information" means all information disclosed by one Party (the "Disclosing Party") to the other Party (the "Receiving Party") in connection with this Agreement that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure. Without limiting the foregoing, Confidential Information includes: (a) the terms and conditions of this Agreement, including all pricing, Fee schedules, and commercial terms; (b) API documentation, technical specifications, architecture, and design information; (c) API Credentials; (d) security reports, audit findings, and vulnerability assessments; (e) Derived Data; (f) business plans, strategies, customer lists, financial information, and projections; and (g) any other non-public business, technical, or operational information disclosed by either Party. Confidential Information shall not include information that: (i) is or becomes publicly available through no fault of, or breach of this Agreement by, the Receiving Party; (ii) was already known to the Receiving Party without restriction prior to disclosure by the Disclosing Party, as documented by the Receiving Party's written records; (iii) is independently developed by the Receiving Party without use of or reference to the Disclosing Party's Confidential Information; or (iv) is rightfully received by the Receiving Party from a third party without breach of any obligation of confidentiality.
+1.6 "Derived Data" means any data, analytics, insights, aggregated or de-identified datasets, statistical analyses, models, indices, benchmarks, or derivative works generated by Provider through the processing of Licensee Data or through Licensee's use of the API Services, including any outputs resulting from Provider's aggregation of Licensee Data with data from other sources.
+1.7 "Documentation" means Provider's technical documentation, integration guides, API reference materials, specifications, developer portals, usage policies, and acceptable use policies for the API Services, as updated by Provider from time to time and made available to Licensee through the methods described in Schedule A.
+1.8 "Early Termination Fee" has the meaning set forth in Section 10.3.
+1.9 "Effective Date" has the meaning set forth in the preamble to this Agreement.
+1.10 "Fees" means all fees payable by Licensee to Provider under this Agreement, as set forth in Schedule B attached hereto, including base subscription fees, Overage Fees, setup fees, and any other charges described therein.
+1.11 "Feedback" means any suggestions, enhancement requests, feature requests, recommendations, bug reports, comments, or other feedback provided by Licensee or any Authorized User to Provider regarding the API Services, Documentation, or any related Provider products or services.
+1.12 "Force Majeure Event" has the meaning set forth in Section 15.7.
+1.13 "Initial Term" has the meaning set forth in Section 10.1.
+1.14 "Intellectual Property Rights" means all intellectual property rights of any kind, whether now known or hereafter existing, including all patents, patent applications, copyrights, moral rights, trademarks, service marks, trade dress, trade names, trade secrets, know-how, database rights, rights in designs, and all other similar proprietary rights, and all applications, registrations, renewals, extensions, and restorations thereof, in each case under the laws of any jurisdiction worldwide.
+1.15 "Liability Cap" has the meaning set forth in Section 11.1.
+1.16 "Licensee Application" means Licensee's software application(s), platform(s), or system(s) that integrate with the API Services, as identified and described in Schedule A attached hereto.
+1.17 "Licensee Data" means all data, content, materials, and information submitted, uploaded, transmitted, or otherwise provided by Licensee or its Authorized Users to the API Services, including any personal data of Licensee's customers or end users that is processed through the API Services.
+1.18 "Licensee Indemnitees" has the meaning set forth in Section 9.1.
+1.19 "Output Data" means all data, results, responses, reports, and other information returned to Licensee via the API Services in response to Licensee's authorized API calls and queries.
+1.20 "Overage Fees" means the fees payable by Licensee for API usage in excess of the Rate Limits applicable to Licensee's Usage Tier, as set forth in Schedule B.
+1.21 "Provider Indemnitees" has the meaning set forth in Section 9.3.
+1.22 "Rate Limits" means the maximum number of API calls, queries, requests, or transactions permitted within a defined time period (e.g., per minute, per hour, per day, or per month), as specified for the applicable Usage Tier in Schedule A.
+1.23 "Renewal Term" has the meaning set forth in Section 10.1.
+1.24 "Scheduled Maintenance" means planned maintenance of the API Services for which Provider provides advance notice in accordance with Section 5.2.
+1.25 "Security Incident" has the meaning given to such term in the Data Processing Addendum attached as Exhibit A.
+1.26 "SLA" means the service level commitments set forth in Schedule C attached hereto.
+1.27 "SLA Credits" has the meaning set forth in Section 5.3.
+1.28 "Term" has the meaning set forth in Section 10.1.
+1.29 "Uptime Commitment" has the meaning set forth in Section 5.1.
+1.30 "Usage Tier" means the tier of access and usage entitlements selected by Licensee, as set forth in Schedule B and further described in Schedule A, which determines the applicable Rate Limits, features, and Fee structure for Licensee's use of the API Services.
+ARTICLE 2 — GRANT OF LICENSE; USE RESTRICTIONS
+Section 2.1 — License Grant
+Subject to the terms and conditions of this Agreement, Provider hereby grants to Licensee a limited, non-exclusive, non-transferable (except as set forth in Section 15.6), non-sublicensable, revocable license to access and use the API Services during the Term, solely: (a) for Licensee's internal business purposes; and (b) for integration into the Licensee Application, in each case in accordance with this Agreement, the Documentation, and the applicable Usage Tier. The license granted under this Section 2.1 includes the right to permit Authorized Users to access and use the API Services on Licensee's behalf, subject to the requirements of Section 2.3.
+The license granted hereunder is conditioned on Licensee's continued compliance with all terms of this Agreement, including without limitation the use restrictions set forth in Section 2.2, and Licensee's timely payment of all Fees due under this Agreement. Any use of the API Services beyond the scope of the license granted in this Section 2.1 is strictly prohibited and shall constitute a material breach of this Agreement.
+Section 2.2 — Use Restrictions
+Licensee shall not, and shall not permit any Authorized User, third party, or other person or entity to, directly or indirectly:
+(a) reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code, underlying algorithms, data structures, or architecture of the API Services or any component thereof, except to the extent expressly permitted by applicable law notwithstanding this restriction;
+(b) access or use the API Services for the purpose of building, developing, marketing, or operating a product or service that is competitive with or substantially similar to the API Services or any other product or service offered by Provider;
+(c) circumvent, disable, or attempt to circumvent or disable any Rate Limits, authentication mechanisms, security measures, access controls, or other technical restrictions implemented by Provider in connection with the API Services;
+(d) share, distribute, publish, sell, lend, lease, or disclose API Credentials to any unauthorized third party, or use API Credentials issued to another licensee of Provider;
+(e) use the API Services in violation of any applicable law, statute, regulation, ordinance, or governmental order, or in a manner that infringes, misappropriates, or violates any third party's Intellectual Property Rights, privacy rights, or other rights;
+(f) resell, sublicense, redistribute, publish, or otherwise make available Output Data to any third party, whether for commercial or non-commercial purposes, except as expressly permitted in the applicable Usage Tier described in Schedule A and Schedule B;
+(g) introduce any virus, worm, Trojan horse, ransomware, or other malicious code into the API Services, or conduct any load testing, stress testing, penetration testing, or vulnerability scanning of the API Services, without Provider's prior written consent;
+(h) use the API Services in a manner that degrades the performance, stability, or availability of the API Services for Provider's other licensees or users, including by initiating excessive API calls, engaging in scraping or crawling activities, or otherwise consuming a disproportionate share of system resources;
+(i) remove, obscure, alter, or deface any proprietary notices, legends, labels, trademarks, or attribution markings contained in or displayed by the Documentation, Output Data, or any other materials provided by Provider in connection with the API Services;
+(j) use the API Services to store or transmit any content that is unlawful, defamatory, obscene, or otherwise objectionable, or that violates any third party's rights;
+(k) frame, mirror, or create derivative works based upon the API Services or any portion thereof, except as expressly authorized herein; or
+(l) authorize, encourage, or assist any third party to do any of the foregoing.
+Section 2.3 — Authorized Users; API Credentials
+Licensee is responsible for all activities conducted using its API Credentials, regardless of whether such activities are undertaken by Licensee, its Authorized Users, or any other person or entity. Licensee assumes full liability for any unauthorized use of its API Credentials.
+Licensee shall limit access to the API Services to Authorized Users who have a bona fide need to access the API Services in connection with Licensee's permitted use under this Agreement. Licensee shall ensure that each Authorized User is made aware of, and agrees to comply with, the terms of this Agreement applicable to the use of the API Services, including the use restrictions set forth in Section 2.2. Licensee shall be liable for any breach of this Agreement by its Authorized Users as if such breach were committed by Licensee itself.
+Licensee shall maintain the confidentiality and security of all API Credentials at all times. Licensee shall implement reasonable technical and organizational measures to prevent unauthorized access to, use of, or disclosure of API Credentials, including without limitation storing API Credentials in secure credential vaults or environment variables and prohibiting the inclusion of API Credentials in source code repositories, public forums, or client-side applications.
+Licensee shall promptly notify Provider in writing of any actual or suspected unauthorized access to, use of, or compromise of any API Credentials. Upon such notification, Provider may, in its sole discretion, revoke the compromised API Credentials and issue replacement credentials. Licensee shall cooperate with Provider in investigating and remediating any such incident.
+Section 2.4 — Usage Monitoring
+Provider reserves the right to monitor, log, and analyze Licensee's use of the API Services for purposes of: (a) ensuring compliance with the Rate Limits, Usage Tiers, and the terms of this Agreement; (b) maintaining and improving the performance, security, and availability of the API Services; (c) generating Derived Data; and (d) detecting and preventing unauthorized use or abuse of the API Services. Provider shall conduct such monitoring in accordance with applicable law and the terms of the Data Processing Addendum attached as Exhibit A.
+Licensee agrees to cooperate with Provider in connection with any investigation into Licensee's compliance with this Agreement and to provide such information and access as Provider may reasonably request for such purpose.
+ARTICLE 3 — RATE LIMITS AND OVERAGE MECHANICS
+Section 3.1 — Rate Limits
+Licensee's use of the API Services is subject to the Rate Limits specified in Schedule A for the applicable Usage Tier selected by Licensee. Rate Limits may apply on a per-minute, per-hour, per-day, per-month, or other periodic basis, as specified in Schedule A. Provider may implement and enforce Rate Limits through technical means, including automated throttling, queuing, or rejection of excess API calls. Licensee acknowledges that Rate Limits are an essential component of Provider's capacity management and service delivery, and that compliance with Rate Limits is a material obligation of Licensee under this Agreement.
+Provider reserves the right to modify Rate Limits upon reasonable prior written notice to Licensee, provided that any reduction in Rate Limits applicable to Licensee's Usage Tier during the then-current Term shall not take effect without Licensee's prior written consent unless necessitated by security, legal, or regulatory requirements.
+Section 3.2 — Overage Notifications
+Provider shall use commercially reasonable efforts to notify Licensee when Licensee's usage reaches [percentage threshold, e.g., 80]% of its Rate Limit allocation within a given measurement period. Such notifications may be delivered via email, the Provider developer portal, API response headers, or other reasonable means. Provider's failure to deliver an overage notification shall not relieve Licensee of its obligations with respect to Overage Fees or compliance with Rate Limits, and shall not constitute a waiver of Provider's rights under this Article 3.
+Section 3.3 — Overage Mechanics
+If Licensee exceeds its applicable Rate Limits during any measurement period, Provider may, at its sole option and discretion:
+(a) throttle or temporarily suspend Licensee's access to the API Services until the commencement of the next measurement period, without liability to Licensee; or
+(b) permit Licensee's continued access to the API Services beyond the applicable Rate Limits and charge Overage Fees as set forth in Schedule B for all API calls, queries, or transactions in excess of the applicable Rate Limits.
+Overage Fees accrue automatically upon Licensee exceeding its Rate Limits and are invoiced in accordance with Section 4.2. Provider's election to permit continued access and charge Overage Fees in any given instance shall not constitute a waiver of Provider's right to throttle or suspend access in future instances, nor shall it create any obligation for Provider to permit continued access in the future.
+Licensee may request an upgrade to a higher Usage Tier at any time by providing written notice to Provider. Upgraded Usage Tiers shall take effect upon Provider's written confirmation and corresponding adjustment of Fees. Licensee acknowledges that a downgrade to a lower Usage Tier during the Term may be subject to restrictions and may not result in a reduction of Fees already invoiced or paid.
+ARTICLE 4 — FEES AND PAYMENT
+Section 4.1 — Fee Structure
+Licensee shall pay the Fees set forth in Schedule B in accordance with the payment terms specified therein and in this Article 4. Fees shall include: (a) a base subscription fee corresponding to the applicable Usage Tier selected by Licensee; (b) any applicable Overage Fees incurred by Licensee during the relevant measurement period; and (c) any one-time setup, integration, or onboarding fees, if applicable, as described in Schedule B.
+All Fees are stated in United States Dollars (USD) and are exclusive of all applicable taxes, levies, duties, and governmental charges, which shall be Licensee's responsibility as set forth in Section 4.4.
+Section 4.2 — Invoicing; Quarterly-in-Advance Payment
+Provider shall invoice Licensee quarterly in advance for the base subscription fee applicable to the Usage Tier selected by Licensee, with the first invoice issued on or about the Effective Date. Each subsequent quarterly invoice shall be issued approximately ninety (90) days after the prior invoice, corresponding to the forthcoming quarter of service.
+Each invoice shall be due and payable within [30] days of the date of invoice, unless otherwise specified in Schedule B. Payment shall be made by wire transfer, ACH, or other method specified by Provider on the applicable invoice.
+Overage Fees, if any, shall be invoiced quarterly in arrears based on actual usage during the preceding quarter. Overage Fee invoices shall include reasonable detail of the excess usage, including the number of API calls or transactions in excess of the applicable Rate Limits and the applicable per-unit Overage Fee rate.
+Section 4.3 — Late Payment; Interest
+Any undisputed amount not paid when due shall bear interest at the lesser of: (a) one and one-half percent (1.5%) per month (or, if less, the portion thereof elapsed); or (b) the maximum rate permitted by applicable law, calculated and compounded monthly from the due date until the date of actual payment in full.
+In addition to interest charges, Provider reserves the right to suspend Licensee's access to the API Services upon fifteen (15) days' prior written notice to Licensee if any invoice remains unpaid for more than thirty (30) days past its due date. Such suspension shall not relieve Licensee of its obligation to pay all outstanding amounts, including accrued interest. Provider shall restore Licensee's access promptly upon receipt of all outstanding amounts in full. Licensee acknowledges and agrees that Provider shall not be liable for any damages, losses, or consequences arising from any suspension of access under this Section 4.3.
+Section 4.4 — Taxes
+Licensee is responsible for all sales, use, value-added, goods and services, withholding, excise, and other taxes, duties, levies, and governmental charges of any kind (collectively, "Taxes") arising from or relating to this Agreement or Licensee's use of the API Services, excluding taxes based solely on Provider's net income, net worth, or capital. If Licensee is required by applicable law to withhold or deduct any Taxes from amounts payable to Provider, Licensee shall gross up the payment so that Provider receives the full amount of the Fees without any reduction for such Taxes. If Provider is required to collect any Taxes from Licensee, Provider shall include such Taxes on the applicable invoice, and Licensee shall pay such Taxes in addition to the Fees. Licensee shall provide Provider with any tax exemption certificates or other documentation reasonably required by Provider to support any claimed exemption from applicable Taxes.
+Section 4.5 — Fee Disputes
+Licensee must notify Provider in writing of any disputed invoice amount within thirty (30) days of receipt of the applicable invoice. Such notice shall specify in reasonable detail the amount in dispute and the basis for the dispute. The Parties shall negotiate in good faith to resolve any Fee dispute promptly. During the pendency of any Fee dispute, Licensee shall continue to pay all undisputed portions of the invoice when due. Failure to dispute an invoice within the thirty (30)-day period set forth in this Section 4.5 shall constitute Licensee's acceptance of the invoiced amount.
+ARTICLE 5 — SERVICE LEVELS AND CREDITS
+Section 5.1 — Uptime Commitment
+Provider shall maintain the API Services at or above the uptime percentage specified in Schedule C (the "Uptime Commitment"), measured on a [monthly/quarterly] basis. For purposes of this Agreement, "Uptime" means the percentage of time during the applicable measurement period that the API Services are available and functional for Licensee's authorized use, as determined by Provider's monitoring systems in accordance with the measurement methodology set forth in Schedule C.
+The Uptime Commitment excludes from its calculation: (a) periods of Scheduled Maintenance performed in accordance with Section 5.2; (b) any unavailability caused by Force Majeure Events as defined in Section 15.7; (c) any unavailability resulting from Licensee's acts or omissions, including Licensee's misuse of the API Services, failure to comply with the Documentation, or use of non-supported configurations; (d) any unavailability resulting from failures or malfunctions of equipment, networks, or systems not within Provider's reasonable control; and (e) any unavailability resulting from Provider's suspension of Licensee's access in accordance with the terms of this Agreement.
+Section 5.2 — Scheduled Maintenance
+Provider shall provide at least [48/72] hours' prior written notice to Licensee of Scheduled Maintenance windows. Scheduled Maintenance shall, to the extent practicable, be performed during off-peak hours as specified in Schedule C. Provider shall use commercially reasonable efforts to minimize the duration and frequency of Scheduled Maintenance and to avoid scheduling maintenance during Licensee's peak usage periods.
+Scheduled Maintenance periods are excluded from Uptime calculations for purposes of the Uptime Commitment. Notwithstanding the foregoing, Provider reserves the right to perform emergency maintenance without prior notice if necessary to address critical security vulnerabilities, system failures, or other urgent circumstances that pose an imminent threat to the integrity, security, or availability of the API Services. Provider shall notify Licensee as soon as reasonably practicable of any emergency maintenance and shall use commercially reasonable efforts to minimize the duration and impact of such maintenance.
+Section 5.3 — Service Level Credits
+If Provider fails to meet the Uptime Commitment in any measurement period, Licensee shall be entitled to service credits ("SLA Credits") as set forth in Schedule C. SLA Credits are calculated as a percentage of the base subscription fee for the affected measurement period, based on the severity and duration of the downtime, in accordance with the SLA Credit schedule detailed in Schedule C.
+SLA Credits represent Licensee's sole and exclusive remedy, and Provider's sole and exclusive liability, for any failure by Provider to meet the Uptime Commitment. The availability of SLA Credits is without prejudice to Licensee's right to terminate this Agreement for cause under Section 10.2 in the event of a material breach by Provider.
+Section 5.4 — Credit Request Procedure
+To receive SLA Credits, Licensee must submit a written request to Provider within thirty (30) days following the end of the measurement period in which the claimed failure to meet the Uptime Commitment occurred. The request must include: (a) a description of the downtime event(s) giving rise to the claim; (b) the dates and times of the claimed downtime; and (c) any available supporting documentation, such as error logs, screenshots, or monitoring data, substantiating the claimed downtime.
+Provider shall review each SLA Credit request in good faith and shall respond to Licensee within fifteen (15) business days of receipt. If Provider confirms that the Uptime Commitment was not met during the applicable measurement period, Provider shall issue the applicable SLA Credits.
+SLA Credits shall be applied as a credit against future invoices and are not redeemable for cash or refund. SLA Credits shall not exceed the maximum credit percentage specified in Schedule C (e.g., [25]%) of the base subscription fee for the applicable measurement period. SLA Credits may not be carried forward beyond twelve (12) months from the date of issuance and shall not be applied to Overage Fees, setup fees, or other non-subscription charges.
+ARTICLE 6 — INTELLECTUAL PROPERTY OWNERSHIP
+Section 6.1 — Provider IP
+As between the Parties, Provider retains all right, title, and interest in and to: (a) the API Services, including all software, code, algorithms, models, databases, and technology underlying or comprising the API Services; (b) the Documentation; (c) all Derived Data; (d) all modifications, improvements, enhancements, updates, upgrades, and derivative works of any of the foregoing, regardless of whether created by Provider, Licensee, or any third party; and (e) all Intellectual Property Rights in and to any of the foregoing. Nothing in this Agreement shall be construed as transferring ownership of any Provider intellectual property to Licensee, and no license or right is granted to Licensee under this Agreement except as expressly set forth herein.
+Section 6.2 — Licensee IP
+As between the Parties, Licensee retains all right, title, and interest in and to: (a) Licensee Data, subject to the license granted in Section 6.4 with respect to Derived Data; and (b) the Licensee Application, including all software, code, designs, and Intellectual Property Rights therein, excluding any Provider IP embedded therein, accessed thereby, or incorporated by reference. Nothing in this Agreement shall be construed as transferring ownership of any Licensee intellectual property to Provider, except as expressly set forth in Section 6.5 with respect to Feedback.
+Section 6.3 — License to Output Data
+Subject to Licensee's continued compliance with this Agreement and timely payment of all Fees, Provider grants Licensee a limited, non-exclusive, non-transferable license to use, copy, display, and incorporate Output Data during the Term solely in connection with the permitted uses set forth in Section 2.1, including use within the Licensee Application. This license does not include the right to sublicense, resell, redistribute, or otherwise make Output Data available to third parties except as expressly permitted in the applicable Usage Tier described in Schedule A.
+The license granted in this Section 6.3 terminates automatically upon the expiration or termination of this Agreement for any reason, subject to the post-termination data return provisions of Section 10.5. Upon termination of this license, Licensee shall cease all use of Output Data and, at Provider's election, return or destroy all copies of Output Data in Licensee's possession or control.
+Section 6.4 — Derived Data
+Provider exclusively owns all right, title, and interest in and to all Derived Data, including all Intellectual Property Rights therein. Licensee acknowledges and agrees that Provider may use, process, aggregate, analyze, publish, and commercialize Derived Data for any lawful purpose, including without limitation improving, developing, and marketing Provider's products and services, creating benchmarks and industry reports, and providing services to third parties, provided that such use does not identify Licensee or disclose Licensee's Confidential Information in a manner inconsistent with Article 7 or the Data Processing Addendum attached as Exhibit A. To the extent any rights in Derived Data vest in Licensee by operation of law, Licensee hereby irrevocably assigns all such rights to Provider.
+Section 6.5 — Feedback
+Licensee hereby irrevocably assigns to Provider all right, title, and interest in and to all Feedback, including all Intellectual Property Rights therein, throughout the world. To the extent such assignment is not effective under applicable law, Licensee hereby grants Provider a perpetual, irrevocable, worldwide, royalty-free, fully paid-up, non-exclusive, sublicensable, and transferable license to use, reproduce, modify, create derivative works of, distribute, display, perform, and otherwise exploit all Feedback for any purpose without restriction or obligation to Licensee. Licensee agrees to execute any documents and take any actions reasonably requested by Provider to perfect, evidence, or enforce the assignment or license of Feedback contemplated by this Section 6.5.
+Provider shall have no obligation to use, implement, or incorporate any Feedback into the API Services or any other Provider product or service. Provider shall have no obligation to compensate Licensee for any Feedback, regardless of whether Provider uses or implements such Feedback.
+ARTICLE 7 — CONFIDENTIALITY
+Section 7.1 — Obligations
+Each Party, in its capacity as Receiving Party, shall: (a) hold the Disclosing Party's Confidential Information in strict confidence using at least the same degree of care that it uses to protect its own Confidential Information of like kind, but in no event less than a reasonable degree of care; (b) not disclose Confidential Information to any third party except to its employees, agents, contractors, Affiliates, and professional advisors who have a bona fide need to know such information for the purposes of this Agreement and who are bound by written confidentiality obligations at least as restrictive as those set forth in this Article 7; and (c) use Confidential Information solely for the purposes of exercising its rights or performing its obligations under this Agreement and for no other purpose.
+The Receiving Party shall be responsible for any breach of this Article 7 by any of its employees, agents, contractors, Affiliates, or professional advisors to whom it discloses Confidential Information.
+Section 7.2 — Exclusions
+The obligations set forth in Section 7.1 shall not apply to any information that the Receiving Party can demonstrate: (a) is or becomes publicly available through no fault of, or breach of this Agreement by, the Receiving Party; (b) was already known to the Receiving Party without restriction prior to disclosure by the Disclosing Party, as evidenced by the Receiving Party's contemporaneous written records; (c) is independently developed by the Receiving Party without use of or reference to the Disclosing Party's Confidential Information, as evidenced by the Receiving Party's contemporaneous written records; or (d) is rightfully received by the Receiving Party from a third party that is not under any obligation of confidentiality to the Disclosing Party with respect to such information.
+Section 7.3 — Compelled Disclosure
+Notwithstanding Section 7.1, the Receiving Party may disclose Confidential Information of the Disclosing Party to the extent compelled by applicable law, regulation, legal process, or governmental order, provided that the Receiving Party: (a) gives the Disclosing Party prompt written notice of such compulsion, to the extent legally permitted, so that the Disclosing Party may seek a protective order or other appropriate remedy; (b) discloses only the minimum amount of Confidential Information necessary to comply with such compulsion; and (c) cooperates with the Disclosing Party, at the Disclosing Party's expense, in any efforts to obtain confidential or protective treatment for the disclosed information. If the Disclosing Party is unable to obtain a protective order or other appropriate remedy within the timeframe required for the Receiving Party to comply with the compelled disclosure, the Receiving Party may disclose the required Confidential Information without liability under this Article 7.
+Section 7.4 — Duration
+The confidentiality obligations set forth in this Article 7 shall survive the termination or expiration of this Agreement for a period of [3/5] years from the date of such termination or expiration; provided, however, that the Receiving Party's obligations with respect to Confidential Information that constitutes trade secrets of the Disclosing Party under applicable law shall survive for as long as such information retains its status as a trade secret under applicable law.
+Section 7.5 — Return/Destruction
+Upon the termination or expiration of this Agreement, or upon the Disclosing Party's earlier written request, the Receiving Party shall, at the Disclosing Party's election, promptly: (a) return to the Disclosing Party all tangible materials containing or embodying the Disclosing Party's Confidential Information; or (b) destroy all copies of the Disclosing Party's Confidential Information in the Receiving Party's possession or control and certify such destruction in writing to the Disclosing Party.
+Notwithstanding the foregoing, the Receiving Party may retain copies of Confidential Information to the extent: (i) required by applicable law, regulation, or professional standards; or (ii) stored in automated backup or archival systems in the ordinary course of the Receiving Party's business, provided that any such retained copies shall remain subject to the confidentiality obligations of this Article 7 for the duration specified in Section 7.4.
+ARTICLE 8 — DATA PROTECTION AND SECURITY
+Section 8.1 — Data Processing
+To the extent that Licensee Data includes personal data (as defined under applicable data protection laws), the Parties shall process such personal data in accordance with the Data Processing Addendum attached hereto as Exhibit A (the "DPA"), which is incorporated into and forms an integral part of this Agreement. In the event of any conflict between the terms of this Agreement and the DPA with respect to the processing of personal data, the terms of the DPA shall prevail.
+The DPA shall set forth, among other things: (a) the respective roles of the Parties (i.e., controller and processor, or as otherwise applicable under the relevant data protection law); (b) the categories of personal data processed; (c) the categories of data subjects; (d) the purposes and duration of processing; (e) the rights and obligations of the Parties with respect to data subject access requests and other data subject rights; (f) sub-processor obligations, including notification and approval mechanisms; (g) cross-border data transfer mechanisms and safeguards; and (h) data breach notification procedures and timelines.
+Section 8.2 — Security Obligations
+Provider shall implement and maintain administrative, technical, and organizational security measures designed to protect the API Services and Licensee Data against unauthorized access, use, disclosure, loss, alteration, or destruction, consistent with industry standards and best practices and as further described in Schedule D attached hereto. Without limiting the generality of the foregoing, Provider's security measures shall include, at a minimum, the controls specified in Schedule D.
+Provider shall regularly review, test, and evaluate the effectiveness of its security measures and shall update and improve such measures as necessary to address evolving threats and changes in technology, applicable law, and industry practice.
+Provider shall promptly notify Licensee of any Security Incident (as defined in the DPA) affecting Licensee Data. Such notification shall include, to the extent known and available: (a) a description of the nature of the Security Incident; (b) the categories and approximate number of data subjects and personal data records affected; (c) the likely consequences of the Security Incident; and (d) the measures taken or proposed to be taken by Provider to address the Security Incident, including measures to mitigate its adverse effects.
+Section 8.3 — Audit Rights
+Upon thirty (30) days' prior written notice, and no more than [once/twice] per twelve (12)-month period (unless an additional audit is triggered by a confirmed Security Incident, a regulatory investigation, or a supervisory authority request), Licensee (or its designated independent third-party auditor, subject to reasonable confidentiality obligations acceptable to Provider) may audit Provider's compliance with the security and data protection obligations set forth in this Article 8 and the DPA.
+Audits shall be conducted during Provider's normal business hours and in a manner designed to minimize disruption to Provider's operations and to the operations of Provider's other customers. Licensee shall provide Provider with a reasonable scope and plan for any proposed audit in advance.
+Provider shall cooperate with such audits and provide Licensee or its designated auditor with reasonable access to relevant records, systems, facilities, and personnel. Provider may require that any third-party auditor execute a confidentiality agreement with Provider prior to commencing any audit.
+Licensee shall bear the costs of any audit conducted under this Section 8.3, unless the audit reveals a material non-compliance by Provider with its obligations under this Article 8 or the DPA, in which case Provider shall bear the reasonable costs of such audit. Provider shall promptly remediate any material non-compliance identified through an audit, and the Parties shall cooperate in good faith to agree upon an appropriate remediation plan and timeline.
+As an alternative to an on-site audit, Provider may, at its option, make available to Licensee copies of its then-current SOC 2 Type II audit report, ISO 27001 certification, or other equivalent third-party audit reports or certifications, which Licensee agrees to accept as satisfying Licensee's audit rights under this Section 8.3, except where an on-site audit is specifically required by applicable law or a supervisory authority.
+ARTICLE 9 — INDEMNIFICATION
+Section 9.1 — Provider Indemnification (IP Infringement)
+Provider shall defend, indemnify, and hold harmless Licensee and its Affiliates, and their respective officers, directors, employees, agents, successors, and assigns (collectively, the "Licensee Indemnitees") from and against any and all third-party claims, suits, actions, demands, or proceedings alleging that Licensee's authorized use of the API Services in accordance with this Agreement and the Documentation infringes or misappropriates any third party's patents, copyrights, trademarks, trade secrets, or other Intellectual Property Rights (each, an "IP Claim"). Provider shall pay all damages, settlements, costs, and expenses (including reasonable attorneys' fees and court costs) finally awarded against any Licensee Indemnitee by a court of competent jurisdiction or agreed to in a settlement approved by Provider in connection with any such IP Claim.
+Notwithstanding the foregoing, Provider shall have no obligation to defend, indemnify, or hold harmless any Licensee Indemnitee to the extent that an IP Claim arises from or is attributable to:
+(a) any modification of the API Services made by or on behalf of Licensee or any Authorized User, where such claim would not have arisen but for such modification;
+(b) Licensee's combination, integration, or use of the API Services with any non-Provider products, services, software, data, or materials, where such claim would not have arisen but for such combination, integration, or use;
+(c) use of the API Services that is not in compliance with this Agreement or the Documentation, including use beyond the scope of the license granted in Section 2.1;
+(d) Licensee Data, including any claim that Licensee Data infringes or misappropriates any third party's Intellectual Property Rights; or
+(e) Licensee's continued use of the API Services after Provider has provided Licensee with a modified or replacement version of the API Services designed to avoid the alleged infringement.
+Section 9.2 — Provider Mitigation Rights
+If the API Services become, or in Provider's reasonable opinion are likely to become, the subject of an IP Claim, Provider may, at its option and expense:
+(a) procure for Licensee the right to continue using the API Services in accordance with this Agreement;
+(b) modify or replace the API Services, or the infringing portion thereof, to make them non-infringing without material reduction in functionality or performance; or
+(c) if options (a) and (b) are not commercially practicable despite Provider's reasonable efforts, terminate the affected portion of the API Services (or, if the entirety of the API Services is affected, this Agreement in its entirety) and refund to Licensee any prepaid Fees for the unused remainder of the then-current Term on a pro-rata basis.
+The remedies set forth in this Section 9.2 and Section 9.1 state Provider's sole and exclusive liability, and Licensee's sole and exclusive remedy, with respect to any IP Claim.
+Section 9.3 — Licensee Indemnification
+Licensee shall defend, indemnify, and hold harmless Provider and its Affiliates, and their respective officers, directors, employees, agents, successors, and assigns (collectively, the "Provider Indemnitees") from and against any and all third-party claims, suits, actions, demands, or proceedings arising from or relating to:
+(a) Licensee Data, including any claim that Licensee Data infringes or misappropriates any third party's Intellectual Property Rights, privacy rights, or other rights, or otherwise violates applicable law;
+(b) the Licensee Application, including any claim arising from the design, development, operation, or distribution of the Licensee Application;
+(c) Licensee's violation of any applicable law, regulation, or governmental order in connection with Licensee's use of the API Services; or
+(d) Licensee's breach of the use restrictions set forth in Section 2.2.
+Licensee shall pay all damages, settlements, costs, and expenses (including reasonable attorneys' fees and court costs) finally awarded against any Provider Indemnitee by a court of competent jurisdiction or agreed to in a settlement approved by Licensee in connection with any such claim.
+Section 9.4 — Indemnification Procedures
+The indemnification obligations set forth in this Article 9 are subject to the following procedures:
+(a) Prompt Notice. The indemnified Party shall provide the indemnifying Party with prompt written notice of any claim for which indemnification is sought. Failure to provide prompt notice shall not relieve the indemnifying Party of its indemnification obligations except to the extent that the indemnifying Party is materially prejudiced by such failure.
+(b) Control of Defense. The indemnifying Party shall have the right to assume and control the defense of any claim for which it is obligated to indemnify the indemnified Party, including the selection of counsel, the conduct of litigation or other proceedings, and the negotiation of any settlement. The indemnifying Party shall keep the indemnified Party reasonably informed of the status of the defense.
+(c) Settlement. The indemnifying Party shall not settle any claim in a manner that: (i) admits liability or fault on the part of the indemnified Party; (ii) imposes any non-monetary obligations or restrictions on the indemnified Party; or (iii) does not include an unconditional release of the indemnified Party from all liability with respect to such claim, in each case without the prior written consent of the indemnified Party, which consent shall not be unreasonably withheld, conditioned, or delayed.
+(d) Cooperation. The indemnified Party shall cooperate with the indemnifying Party in the defense of any claim, including by providing reasonable access to relevant information, records, and personnel. The indemnified Party shall have the right to participate in the defense of any claim at its own expense and with counsel of its own choosing; provided, however, that the indemnifying Party shall retain sole control of the defense.
+(e) Mitigation. Each Party shall use commercially reasonable efforts to mitigate any damages for which it seeks indemnification under this Article 9.
+ARTICLE 10 — TERM AND TERMINATION
+Section 10.1 — Term
+This Agreement commences on the Effective Date and continues for a period of [Initial Term Length, e.g., 12/24/36 months] from the Effective Date (the "Initial Term"), unless earlier terminated in accordance with this Article 10.
+Unless either Party provides written notice of non-renewal to the other Party at least ninety (90) days prior to the expiration of the then-current term (whether the Initial Term or any Renewal Term), this Agreement shall automatically renew for successive [renewal period length, e.g., 12-month] periods (each, a "Renewal Term"), on the same terms and conditions as set forth herein, subject to any Fee adjustments made in accordance with Schedule B. The Initial Term and all Renewal Terms are collectively referred to herein as the "Term."
+Section 10.2 — Termination for Cause
+Either Party may terminate this Agreement immediately upon written notice to the other Party if:
+(a) the other Party materially breaches any provision of this Agreement and fails to cure such breach within thirty (30) days after receiving written notice from the non-breaching Party specifying the nature of the breach in reasonable detail (provided, however, that if the breach is of a nature that cannot reasonably be cured within thirty (30) days, the breaching Party shall not be in default if it commences cure within such thirty (30)-day period and diligently pursues cure to completion within a reasonable period not to exceed sixty (60) days); or
+(b) the other Party: (i) becomes the subject of a voluntary or involuntary petition in bankruptcy or any proceeding relating to insolvency, receivership, liquidation, or composition for the benefit of creditors; (ii) makes an assignment for the benefit of creditors; (iii) becomes unable to pay its debts as they become due; or (iv) ceases to conduct business in the normal course.
+Section 10.3 — Termination for Convenience
+Either Party may terminate this Agreement for convenience, without cause, upon one hundred eighty (180) days' prior written notice to the other Party.
+If Licensee terminates this Agreement for convenience, or if Provider terminates this Agreement for Licensee's uncured material breach under Section 10.2(a), Licensee shall pay an early-termination fee equal to fifty percent (50%) of the base subscription fees that would have been payable by Licensee for the remainder of the then-current term (whether the Initial Term or the then-current Renewal Term) had this Agreement not been terminated early (the "Early Termination Fee"). The Early Termination Fee is due and payable within thirty (30) days of the effective date of termination and is in addition to any Fees accrued but unpaid as of the effective date of termination. The Parties acknowledge that the Early Termination Fee represents a reasonable estimate of Provider's damages resulting from early termination and is not a penalty.
+If Provider terminates this Agreement for convenience under this Section 10.3, no Early Termination Fee shall be owed by Licensee, and Provider shall refund to Licensee any prepaid Fees on a pro-rata basis for the period following the effective date of termination. Such refund shall be paid within thirty (30) days of the effective date of termination.
+Section 10.4 — Effect of Termination
+Upon the termination or expiration of this Agreement for any reason:
+(a) all licenses and rights granted to Licensee under this Agreement, including the license granted in Section 2.1 and the license to Output Data granted in Section 6.3, shall immediately and automatically terminate;
+(b) Licensee shall immediately cease all use of the API Services and shall delete, revoke, or return all API Credentials in its possession or control;
+(c) each Party's payment obligations for amounts accrued prior to the effective date of termination or expiration shall survive, including without limitation Licensee's obligation to pay all Fees (including Overage Fees) accrued through the effective date of termination;
+(d) each Party shall comply with the obligations set forth in Section 7.5 (Return/Destruction of Confidential Information) and Section 10.5 (Post-Termination Data Return); and
+(e) the provisions identified in Section 10.6 shall survive the termination or expiration of this Agreement.
+Section 10.5 — Post-Termination Data Return
+Within thirty (30) days following the effective date of termination or expiration of this Agreement (the "Data Return Period"), Provider shall, at Licensee's written request and election, either: (a) return all Licensee Data to Licensee in a standard, machine-readable format reasonably requested by Licensee (e.g., CSV, JSON, or XML); or (b) securely delete all Licensee Data in Provider's possession or control using industry-standard data destruction methods, and certify such deletion in writing to Licensee within ten (10) business days of completing the deletion.
+If Licensee does not submit a written request for data return or deletion within the Data Return Period, Provider shall have no further obligation to retain Licensee Data and may delete all Licensee Data in its possession or control without further notice or liability to Licensee.
+This Section 10.5 does not apply to Derived Data, which remains Provider's exclusive property in accordance with Section 6.4. Additionally, Provider may retain copies of Licensee Data to the extent required by applicable law, regulation, or legal hold obligation, provided that any such retained copies shall remain subject to the confidentiality and data protection obligations of this Agreement.
+Section 10.6 — Survival
+The following provisions shall survive the termination or expiration of this Agreement: Article 1 (Definitions); Article 4 (Fees and Payment), to the extent of Fees accrued and payment obligations arising prior to or as a result of termination; Section 6.1 (Provider IP); Section 6.2 (Licensee IP); Section 6.4 (Derived Data); Section 6.5 (Feedback); Article 7 (Confidentiality); Article 8 (Data Protection and Security), to the extent applicable to any Licensee Data retained by Provider following termination; Article 9 (Indemnification); Section 10.4 (Effect of Termination); Section 10.5 (Post-Termination Data Return); this Section 10.6 (Survival); Article 11 (Limitation of Liability); Section 12.3 (Disclaimer); Article 14 (Dispute Resolution); and Article 15 (General Provisions); together with any other provisions that by their nature are intended to survive termination or expiration.
+ARTICLE 11 — LIMITATION OF LIABILITY
+Section 11.1 — Cap on Liability
+EXCEPT AS SET FORTH IN SECTION 11.3, THE AGGREGATE LIABILITY OF EITHER PARTY UNDER OR IN CONNECTION WITH THIS AGREEMENT, WHETHER ARISING IN CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY, STATUTORY LIABILITY, OR ANY OTHER LEGAL OR EQUITABLE THEORY, SHALL NOT EXCEED THE TOTAL FEES PAID OR PAYABLE BY LICENSEE TO PROVIDER DURING THE TWELVE (12)-MONTH PERIOD IMMEDIATELY PRECEDING THE FIRST EVENT GIVING RISE TO THE APPLICABLE CLAIM (THE "LIABILITY CAP"). IF THIS AGREEMENT HAS BEEN IN EFFECT FOR LESS THAN TWELVE (12) MONTHS AT THE TIME THE CLAIM ARISES, THE LIABILITY CAP SHALL BE CALCULATED BASED ON THE TOTAL FEES PAID OR PAYABLE DURING THE PERIOD FROM THE EFFECTIVE DATE THROUGH THE DATE OF THE CLAIM, ANNUALIZED.
+Section 11.2 — Exclusion of Consequential Damages
+EXCEPT AS SET FORTH IN SECTION 11.3, IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER PARTY FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF PROFITS, REVENUE, DATA, GOODWILL, BUSINESS OPPORTUNITY, OR ANTICIPATED SAVINGS, ARISING OUT OF OR RELATED TO THIS AGREEMENT, REGARDLESS OF THE CAUSE OF ACTION OR THE THEORY OF LIABILITY, AND REGARDLESS OF WHETHER SUCH DAMAGES WERE FORESEEABLE OR WHETHER SUCH PARTY HAS BEEN ADVISED OF THE POSSIBILITY THEREOF. THIS EXCLUSION SHALL APPLY EVEN IF ANY LIMITED REMEDY SET FORTH IN THIS AGREEMENT FAILS OF ITS ESSENTIAL PURPOSE.
+Section 11.3 — Uncapped Carve-Outs
+The Liability Cap set forth in Section 11.1 and the exclusion of consequential damages set forth in Section 11.2 shall not apply to, and shall not limit either Party's liability for:
+(a) a Party's willful misconduct, gross negligence, or fraud;
+(b) a Party's breach of its confidentiality obligations under Article 7;
+(c) a Party's indemnification obligations under Article 9;
+(d) Licensee's obligation to pay all Fees due and payable under this Agreement, including base subscription fees, Overage Fees, Early Termination Fees, and interest on late payments; and
+(e) Licensee's breach of the license grant and use restrictions set forth in Sections 2.1 and 2.2, including any unauthorized use, access, or distribution of the API Services, Output Data, or API Credentials.
+ARTICLE 12 — REPRESENTATIONS AND WARRANTIES; DISCLAIMERS
+Section 12.1 — Mutual Representations
+Each Party represents and warrants to the other Party that, as of the Effective Date and throughout the Term:
+(a) it is a legal entity duly organized, validly existing, and in good standing under the laws of the jurisdiction of its formation;
+(b) it has full corporate or organizational power and authority to enter into this Agreement and to perform its obligations hereunder;
+(c) the execution, delivery, and performance of this Agreement have been duly authorized by all necessary corporate or organizational action, and this Agreement constitutes a legal, valid, and binding obligation of such Party, enforceable against it in accordance with its terms;
+(d) its execution, delivery, and performance of this Agreement do not and will not conflict with, result in a breach of, or constitute a default under any other agreement, obligation, or instrument to which it is a party or by which it is bound, or any applicable law, regulation, or order; and
+(e) it will comply with all applicable laws, statutes, regulations, and governmental orders in its performance under this Agreement.
+Section 12.2 — Provider Warranty
+Provider represents and warrants that:
+(a) the API Services will perform materially in accordance with the Documentation during the Term. If Licensee notifies Provider of a material non-conformity with the Documentation, Provider shall use commercially reasonable efforts to correct the non-conformity. If Provider is unable to correct the non-conformity within a reasonable period of time, Licensee may terminate this Agreement as a material breach under Section 10.2 and receive a pro-rata refund of any prepaid Fees for the unused portion of the Term; and
+(b) Provider will provide the API Services in a professional and workmanlike manner, consistent with generally accepted industry standards and practices.
+Section 12.3 — Disclaimer
+EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, THE API SERVICES, OUTPUT DATA, DOCUMENTATION, AND ALL OTHER MATERIALS AND SERVICES PROVIDED BY PROVIDER UNDER THIS AGREEMENT ARE PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND. PROVIDER HEREBY DISCLAIMS ALL OTHER WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING WITHOUT LIMITATION ALL IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT, AND ALL WARRANTIES ARISING FROM COURSE OF DEALING, USAGE, OR TRADE PRACTICE. WITHOUT LIMITING THE FOREGOING, PROVIDER DOES NOT WARRANT THAT: (A) THE API SERVICES WILL BE UNINTERRUPTED, TIMELY, SECURE, OR ERROR-FREE; (B) THE RESULTS OBTAINED FROM THE USE OF THE API SERVICES WILL BE ACCURATE, RELIABLE, OR COMPLETE; (C) THE API SERVICES WILL MEET LICENSEE'S REQUIREMENTS OR EXPECTATIONS; OR (D) THE API SERVICES WILL BE FREE OF VIRUSES, MALWARE, OR OTHER HARMFUL COMPONENTS. LICENSEE ACKNOWLEDGES THAT THE API SERVICES ARE NOT DESIGNED, MANUFACTURED, OR INTENDED FOR USE IN HAZARDOUS ENVIRONMENTS REQUIRING FAIL-SAFE PERFORMANCE, SUCH AS THE OPERATION OF NUCLEAR FACILITIES, AIRCRAFT NAVIGATION OR COMMUNICATION SYSTEMS, AIR TRAFFIC CONTROL, OR LIFE SUPPORT MACHINES, AND PROVIDER DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR SUCH PURPOSES.
+ARTICLE 13 — INSURANCE
+Provider shall obtain and maintain throughout the Term, at its own expense, insurance coverage with financially sound and reputable insurance carriers, including at a minimum the following:
+(a) Commercial General Liability Insurance: with coverage limits of not less than $[amount] per occurrence and $[amount] in the aggregate, covering bodily injury, property damage, personal and advertising injury, and products/completed operations liability;
+(b) Professional Liability / Errors and Omissions Insurance: with coverage limits of not less than $[amount] per claim and $[amount] in the aggregate, covering claims arising from errors, omissions, negligent acts, or wrongful acts in connection with Provider's performance of the API Services;
+(c) Cyber Liability / Technology Errors and Omissions Insurance: with coverage limits of not less than $[amount] per claim and $[amount] in the aggregate, covering claims arising from data breaches, unauthorized access, loss of data, network security failures, and privacy violations; and
+(d) Workers' Compensation Insurance: in the amounts and with the coverage required by the laws of each jurisdiction in which Provider's employees perform services in connection with this Agreement, and Employer's Liability insurance with limits of not less than $[amount] per accident.
+Provider's insurance policies shall be primary and non-contributory to any insurance maintained by Licensee. Provider shall not permit any insurance policy required under this Section to be cancelled or materially modified without providing Licensee at least thirty (30) days' prior written notice.
+Upon Licensee's written request, Provider shall furnish to Licensee certificates of insurance evidencing the coverages required under this Article 13, together with evidence that Licensee has been named as an additional insured on Provider's commercial general liability and cyber liability policies (or that Provider has obtained a waiver of subrogation in favor of Licensee). Such certificates shall be delivered within ten (10) business days of Licensee's request.
+ARTICLE 14 — DISPUTE RESOLUTION
+Section 14.1 — Escalation
+Prior to initiating any formal dispute resolution proceedings under this Article 14, the Parties shall attempt in good faith to resolve any dispute, controversy, or claim arising out of or relating to this Agreement, or the breach, termination, or validity thereof, through informal negotiation. Either Party may initiate the escalation process by providing written notice to the other Party describing the dispute in reasonable detail. Within ten (10) business days of receipt of such notice, each Party shall designate a senior executive with decision-making authority to participate in the negotiations. The designated executives shall meet (in person or by videoconference) at least once and shall use good-faith efforts to resolve the dispute within a period of not less than thirty (30) days from the date of the initial notice.
+If the dispute is not resolved within such thirty (30)-day period (or such longer period as the Parties may agree in writing), either Party may proceed to initiate litigation in accordance with Sections 14.2 and 14.3.
+Section 14.2 — Governing Law
+This Agreement, and any dispute, claim, or controversy arising out of or relating to this Agreement, its subject matter, its formation, its interpretation, its performance, its breach, or its termination (including non-contractual disputes or claims), shall be governed by and construed in accordance with the laws of the State of [Governing Law State], without regard to its conflict-of-laws principles or rules that would cause the application of the laws of any other jurisdiction.
+Section 14.3 — Jurisdiction and Venue
+Any action, suit, or proceeding arising out of or relating to this Agreement shall be brought exclusively in the federal or state courts located in [Jurisdiction City, State], and each Party hereby irrevocably: (a) consents to the exclusive personal jurisdiction of such courts for such purpose; (b) waives any objection to the laying of venue in such courts; and (c) waives any claim that any such action, suit, or proceeding brought in any such court has been brought in an inconvenient forum.
+Section 14.4 — Equitable Relief
+Nothing in this Article 14 shall be construed to prevent or restrict either Party from seeking injunctive relief, specific performance, or other equitable remedies in any court of competent jurisdiction at any time, without the necessity of posting bond or proving actual damages, to prevent irreparable harm pending the resolution of any dispute. The Parties acknowledge that a breach of Article 7 (Confidentiality), Section 2.2 (Use Restrictions), or Article 6 (Intellectual Property Ownership) may cause irreparable injury for which monetary damages would be an inadequate remedy.
+ARTICLE 15 — GENERAL PROVISIONS
+Section 15.1 — Notices
+All notices, requests, consents, demands, and other communications required or permitted under this Agreement shall be in writing and shall be deemed to have been duly given: (a) when delivered personally to the recipient; (b) one (1) business day after deposit with a nationally recognized overnight courier service (e.g., FedEx, UPS, or DHL), with delivery charges prepaid and confirmed; (c) three (3) business days after being sent by registered or certified mail, return receipt requested, postage prepaid; or (d) on the date sent by email (with written confirmation of receipt by the recipient, which may include an automated receipt confirmation but does not include an automated "out of office" or similar auto-reply), in each case to the addresses or email addresses set forth on the signature page of this Agreement, or to such other address or email address as a Party may designate by written notice delivered in accordance with this Section 15.1.
+Section 15.2 — Entire Agreement
+This Agreement, together with all Exhibits, Schedules, and the DPA attached hereto and incorporated herein by reference, constitutes the entire agreement between the Parties with respect to the subject matter hereof and supersedes all prior and contemporaneous agreements, understandings, negotiations, discussions, representations, and communications, whether written or oral, between the Parties relating to such subject matter, including any prior non-disclosure agreements between the Parties to the extent they relate to the subject matter hereof (provided that any obligations of confidentiality under such prior non-disclosure agreements that are broader in scope than those set forth herein shall continue in accordance with their terms). Each Party acknowledges that it has not relied on any representation or statement not set forth in this Agreement.
+Section 15.3 — Amendments
+No amendment, modification, supplement, or waiver of any provision of this Agreement shall be effective unless it is in writing and signed by an authorized representative of each Party. No oral statements or prior written materials not specifically incorporated herein shall be of any force or effect. In the event of any conflict between the terms of this Agreement and the terms of any Schedule, Exhibit, or the DPA, the terms of the Schedule, Exhibit, or DPA shall control with respect to the subject matter thereof, except as expressly provided otherwise herein.
+Section 15.4 — Severability
+If any provision of this Agreement (or any portion thereof) is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, the remaining provisions of this Agreement shall continue in full force and effect. The Parties shall negotiate in good faith to replace the invalid, illegal, or unenforceable provision with a valid, legal, and enforceable substitute provision that most nearly achieves the original intent and economic effect of the invalid provision.
+Section 15.5 — Waiver
+No failure or delay by either Party in exercising any right, power, or remedy under this Agreement shall operate as a waiver thereof, nor shall any single or partial exercise of any such right, power, or remedy preclude any other or further exercise thereof or the exercise of any other right, power, or remedy. Any waiver of any provision of this Agreement must be in writing and signed by the Party granting the waiver, and shall be effective only in the specific instance and for the specific purpose for which it was given.
+Section 15.6 — Assignment
+Neither Party may assign, delegate, or otherwise transfer this Agreement or any of its rights or obligations hereunder without the prior written consent of the other Party, which consent shall not be unreasonably withheld, conditioned, or delayed; except that either Party may assign this Agreement without the other Party's consent:
+(a) to an Affiliate of the assigning Party, provided that the assigning Party remains liable for the performance of all obligations under this Agreement by such Affiliate; or
+(b) in connection with a merger, consolidation, reorganization, or acquisition of the assigning Party, or a sale of all or substantially all of the assigning Party's assets or business to which this Agreement relates, provided that the assignee assumes in writing all of the assigning Party's obligations under this Agreement.
+Any purported assignment, delegation, or transfer in violation of this Section 15.6 shall be null and void and of no force or effect. Subject to the foregoing, this Agreement shall be binding upon and shall inure to the benefit of the Parties and their respective permitted successors and assigns.
+Section 15.7 — Force Majeure
+Neither Party shall be liable for any failure or delay in the performance of its obligations under this Agreement (other than payment obligations) to the extent such failure or delay is caused by circumstances beyond its reasonable control, including but not limited to acts of God, natural disasters (including floods, earthquakes, hurricanes, and wildfires), epidemics, pandemics, war, armed conflict, terrorism, civil unrest, riot, sabotage, governmental actions or orders (including embargoes, sanctions, and quarantines), labor disputes (including strikes and lockouts), power failures, internet or telecommunications outages, denial-of-service attacks or other cyberattacks, failures of third-party hosting providers or cloud infrastructure, or disruptions to global supply chains (each, a "Force Majeure Event").
+The affected Party shall provide prompt written notice to the other Party of the Force Majeure Event, describing the nature and expected duration of the event and the obligations affected thereby, and shall use commercially reasonable efforts to mitigate the impact of the Force Majeure Event and to resume performance as soon as reasonably practicable.
+If a Force Majeure Event continues for more than [60/90] consecutive days, either Party may terminate this Agreement upon thirty (30) days' written notice to the other Party. In the event of such termination, Provider shall refund to Licensee any prepaid Fees on a pro-rata basis for the period following the effective date of termination, and neither Party shall have any further liability to the other Party arising from such termination, except for obligations that survive termination under Section 10.6.
+Section 15.8 — Independent Contractors
+The relationship between the Parties under this Agreement is that of independent contractors. Nothing in this Agreement shall be construed to create a partnership, joint venture, agency, franchise, or employment relationship between the Parties. Neither Party shall have the authority to bind the other Party or to incur any obligation on behalf of the other Party. Each Party is solely responsible for its own employees, agents, and contractors, and for all compensation, benefits, taxes, and other obligations with respect thereto.
+Section 15.9 — No Third-Party Beneficiaries
+This Agreement is entered into solely for the benefit of the Parties and their respective permitted successors and assigns. Nothing in this Agreement, whether express or implied, is intended to or shall confer upon any person or entity other than the Parties (and their respective permitted successors and assigns) any legal or equitable right, benefit, remedy, or claim of any kind under or by reason of this Agreement.
+Section 15.10 — Counterparts
+This Agreement may be executed in two or more counterparts, each of which shall be deemed an original and all of which together shall constitute one and the same instrument. Execution and delivery of this Agreement by electronic means, including by email transmission of a PDF copy or by electronic signature (e.g., DocuSign, Adobe Sign, or similar platforms), shall be deemed an original execution and delivery and shall be fully effective for all purposes.
+Section 15.11 — Construction
+The headings and captions in this Agreement are inserted for convenience of reference only and shall not affect the meaning, interpretation, or construction of this Agreement. Unless the context otherwise requires: (a) the word "including" (and with correlative meaning, "include" and "includes") means "including without limitation"; (b) references to "days" mean calendar days unless "business days" is expressly specified; (c) the words "herein," "hereof," "hereby," "hereunder," and words of similar import refer to this Agreement as a whole and not to any particular provision; (d) references to Articles, Sections, Schedules, and Exhibits are references to the Articles, Sections, Schedules, and Exhibits of this Agreement unless otherwise specified; (e) words in the singular include the plural and vice versa; (f) references to any law or regulation include any amendments, supplements, or successor provisions thereto; and (g) the Parties have participated jointly in the negotiation and drafting of this Agreement, and in the event of any ambiguity or question of intent or interpretation, this Agreement shall be construed as if jointly drafted by the Parties, and no presumption or burden of proof shall arise favoring or disfavoring any Party by virtue of the authorship of any provision.
+EXECUTION
+IN WITNESS WHEREOF, the Parties have caused this Agreement to be executed by their duly authorized representatives as of the Effective Date first written above.
+VERDANTIA SYSTEMS, INC.
+By: ________
+Name: [Name]
+Title: [Title]
+Date: ________
+Address for Notices: [Verdantia Address]
+Attn: [Contact Name / Title]
+Email: [Email Address]
+&nbsp;
+[CUSTOMER LEGAL NAME]
+By: ________
+Name: [Name]
+Title: [Title]
+Date: ________
+Address for Notices: [Customer Address]
+Attn: [Contact Name / Title]
+Email: [Email Address]
+SCHEDULE A — API SERVICES DESCRIPTION AND RATE LIMITS
+This Schedule A is attached to and incorporated into the API Access and Use Agreement between Verdantia Systems, Inc. and [Customer Legal Name] dated [Effective Date] (the "Agreement"). Capitalized terms used but not defined herein have the meanings set forth in the Agreement.
+1. Description of API Services
+[Placeholder for detailed description of API endpoints, functionalities, and permitted integrations. This section should include a comprehensive description of each API endpoint or service module available to Licensee under the Agreement, including the nature of the data or functionality accessible through each endpoint, the supported request and response formats (e.g., JSON, XML), authentication methods (e.g., OAuth 2.0, API key), and any versioning information.]
+2. Licensee Application
+[Placeholder for identification and description of Licensee's application(s) or system(s) that will integrate with the API Services. This section should include the application name, a brief description of its functionality, the intended integration architecture, and any relevant technical specifications.]
+3. API Environment(s)
+Environment
+URL / Access Details
+Purpose
+Production
+[URL]
+Live API access for production workloads
+Sandbox / Testing
+[URL]
+Non-production testing and development
+Licensee shall use the Sandbox environment for all development, testing, and quality assurance activities prior to deploying integrations in the Production environment. API calls made to the Sandbox environment do not count toward Rate Limits.
+4. Rate Limits by Usage Tier
+Usage Tier
+API Calls per [Minute/Hour/Day/Month]
+Concurrent Connections
+Burst Allowance
+Other Parameters
+[Tier 1 Name]
+[Number]
+[Number]
+[Number]
+[Details]
+[Tier 2 Name]
+[Number]
+[Number]
+[Number]
+[Details]
+[Tier 3 Name]
+[Number]
+[Number]
+[Number]
+[Details]
+Rate Limits are enforced on a rolling basis during the applicable measurement period. Burst Allowance permits short-duration spikes above the sustained Rate Limit, subject to the parameters specified above. Sustained usage in excess of the Rate Limits, including sustained usage at the Burst Allowance level, may result in throttling or Overage Fees in accordance with Article 3 of the Agreement.
+5. Measurement Period
+Rate Limits are measured on a [Monthly/Quarterly] basis, commencing on the first calendar day of each [month/quarter].
+6. Overage Threshold Notification
+Provider shall use commercially reasonable efforts to notify Licensee when usage reaches [Percentage]% of the applicable Rate Limit allocation within the measurement period, in accordance with Section 3.2 of the Agreement.
+7. Permitted Use Cases
+[Placeholder for specific authorized use cases and any use-case restrictions. Examples may include internal analytics, customer-facing application integration, data enrichment, and automated workflow integration. Any use cases that are expressly prohibited (beyond the general use restrictions in Section 2.2) should be identified here.]
+8. Documentation Access
+Documentation is available to Licensee at: [URL or delivery method for Documentation, e.g., https://developer.verdantia.io/docs].
+Provider shall maintain the Documentation in a current and accurate state and shall provide Licensee with reasonable notice of material updates or changes to the Documentation.
+SCHEDULE B — FEES AND USAGE TIERS
+This Schedule B is attached to and incorporated into the API Access and Use Agreement between Verdantia Systems, Inc. and [Customer Legal Name] dated [Effective Date] (the "Agreement"). Capitalized terms used but not defined herein have the meanings set forth in the Agreement.
+1. Selected Usage Tier
+Licensee has selected the following Usage Tier: [Tier Name]
+2. Base Subscription Fee
+Usage Tier
+Quarterly Fee (in advance)
+Annual Fee
+[Tier 1 Name]
+$[Amount]
+$[Amount]
+[Tier 2 Name]
+$[Amount]
+$[Amount]
+[Tier 3 Name]
+$[Amount]
+$[Amount]
+3. Overage Fees
+$[Amount] per [unit of measurement, e.g., 1,000 API calls] in excess of the Rate Limit for the applicable Usage Tier, as measured during the applicable measurement period. Overage Fees are calculated based on actual usage as recorded by Provider's monitoring systems.
+4. One-Time Setup / Integration Fee
+$[Amount] (if applicable), payable upon execution of the Agreement. The setup fee covers Provider's standard onboarding, configuration, and initial integration support services. Custom integration services, if requested by Licensee, shall be scoped and priced separately by mutual written agreement.
+5. Payment Terms
+•  Base Subscription Fees: Net [30] days from date of invoice; invoiced quarterly in advance.
+•  Overage Fees: Net [30] days from date of invoice; invoiced quarterly in arrears.
+•  Setup / Integration Fees: Due upon execution of the Agreement.
+All payments shall be made in United States Dollars (USD) by wire transfer or ACH to the account designated by Provider on the applicable invoice.
+6. Late Payment Interest Rate
+[1.5]% per month (or the maximum rate permitted by applicable law, if less), compounded monthly, calculated on any undisputed amount from its due date until payment in full, as further described in Section 4.3 of the Agreement.
+7. Early Termination Fee
+Fifty percent (50%) of the base subscription fees remaining in the then-current term (whether the Initial Term or the then-current Renewal Term), calculated as of the effective date of termination, payable in accordance with Section 10.3 of the Agreement.
+8. Fee Adjustment
+Provider may adjust Fees upon renewal by providing Licensee with written notice at least [60/90] days prior to the start of a Renewal Term. Any Fee increase during the Initial Term requires the mutual written agreement of both Parties.
+SCHEDULE C — SERVICE LEVEL AGREEMENT (SLA)
+This Schedule C is attached to and incorporated into the API Access and Use Agreement between Verdantia Systems, Inc. and [Customer Legal Name] dated [Effective Date] (the "Agreement"). Capitalized terms used but not defined herein have the meanings set forth in the Agreement.
+1. Uptime Commitment
+Provider commits to maintaining the API Services at an availability level of not less than [Percentage, e.g., 99.9]%, measured on a [monthly] basis (the "Uptime Commitment").
+2. Measurement Methodology
+Uptime is measured using [description of methodology — e.g., Provider's synthetic monitoring agents that perform periodic health checks against designated API endpoints at intervals of no greater than one (1) minute from multiple geographically distributed monitoring locations]. The measurement excludes: (a) Scheduled Maintenance windows; (b) periods of unavailability attributable to Force Majeure Events; (c) unavailability caused by Licensee's acts or omissions; and (d) unavailability caused by factors outside Provider's reasonable control, as further described in Section 5.1 of the Agreement.
+Uptime is calculated as follows:
+Uptime % = ((Total Minutes in Measurement Period – Excluded Minutes – Downtime Minutes) / (Total Minutes in Measurement Period – Excluded Minutes)) × 100
+3. Scheduled Maintenance Window
+•  Standard Maintenance Window: [Day(s) and time(s), e.g., Sundays 02:00–06:00 UTC]
+•  Advance Notice Period: [48/72] hours prior written notice
+•  Maximum Scheduled Maintenance per Month: [Number] hours
+4. SLA Credit Schedule
+Uptime Achieved
+SLA Credit (% of quarterly base subscription fee)
+[99.0]% – < [99.9]%
+[5]%
+[95.0]% – < [99.0]%
+[10]%
+< [95.0]%
+[25]%
+5. Maximum SLA Credit per Measurement Period
+SLA Credits shall not exceed [25]% of the base subscription fee for the affected measurement period.
+6. Credit Request Deadline
+Licensee must submit its SLA Credit request in writing within thirty (30) days following the end of the affected measurement period, in accordance with Section 5.4 of the Agreement.
+7. Sole Remedy
+SLA Credits are Licensee's sole and exclusive remedy, and Provider's sole and exclusive liability, for any failure by Provider to meet the Uptime Commitment.
+8. Incident Reporting and Response Times
+[Placeholder for severity classifications and response/resolution targets, if applicable. Example:]
+Severity Level
+Description
+Initial Response Time
+Target Resolution Time
+Critical (Sev 1)
+Complete service outage or data loss
+[15] minutes
+[4] hours
+High (Sev 2)
+Major functionality impaired
+[1] hour
+[8] hours
+Medium (Sev 3)
+Minor functionality impaired
+[4] hours
+[24] hours
+Low (Sev 4)
+Cosmetic or non-critical issue
+[1] business day
+[5] business days
+9. Support Contact Information
+[Placeholder — e.g., support email, phone number, support portal URL, hours of availability, and escalation contacts.]
+SCHEDULE D — SECURITY REQUIREMENTS
+This Schedule D is attached to and incorporated into the API Access and Use Agreement between Verdantia Systems, Inc. and [Customer Legal Name] dated [Effective Date] (the "Agreement"). Capitalized terms used but not defined herein have the meanings set forth in the Agreement.
+1. Security Standards
+Provider shall maintain information security controls consistent with [ISO 27001 / SOC 2 Type II / other applicable standard], and shall operate an information security management system that is reviewed, tested, and updated on a regular basis to address evolving threats and risks.
+2. Encryption
+•  Data in Transit: All data transmitted between Licensee and the API Services shall be encrypted using Transport Layer Security (TLS) [version, e.g., 1.2 or higher].
+•  Data at Rest: All Licensee Data stored by Provider shall be encrypted using Advanced Encryption Standard (AES)-[256]-bit encryption or an equivalent industry-standard encryption algorithm.
+•  Key Management: Provider shall implement and maintain secure key management practices, including the use of hardware security modules (HSMs) or equivalent technology for the storage and management of encryption keys.
+3. Access Controls
+•  Role-based access controls (RBAC) for all personnel with access to the API Services infrastructure and Licensee Data.
+•  Multi-factor authentication (MFA) required for all administrative and privileged access to systems that store or process Licensee Data.
+•  Principle of least privilege applied to all user accounts and system processes.
+•  Regular access reviews conducted at least quarterly to ensure appropriateness of access levels.
+•  Immediate revocation of access upon employee termination or role change.
+4. Network Security
+•  Enterprise-grade firewalls and network segmentation to isolate systems that store or process Licensee Data.
+•  Intrusion detection and prevention systems (IDS/IPS) deployed and monitored on a continuous basis.
+•  Distributed denial-of-service (DDoS) mitigation capabilities.
+•  Web application firewalls (WAF) to protect API endpoints from common web application attacks.
+5. Vulnerability Management
+•  Regular vulnerability scanning of all systems and applications involved in the delivery of the API Services, conducted at least [monthly/quarterly].
+•  Annual penetration testing by a qualified independent third party.
+•  Remediation timelines:
+Severity
+Remediation Timeline
+Critical
+Within [24–72] hours
+High
+Within [7] days
+Medium
+Within [30] days
+Low
+Within [90] days
+6. Logging and Monitoring
+•  Comprehensive audit logging of all access to Licensee Data, including user identity, timestamp, action performed, and source IP address.
+•  Centralized log aggregation and analysis using security information and event management (SIEM) or equivalent tooling.
+•  Log retention period of not less than twelve (12) months.
+•  Real-time alerting for anomalous or unauthorized activity.
+7. Business Continuity / Disaster Recovery
+•  [Placeholder for RTO and RPO targets, e.g.:]
+•  Recovery Time Objective (RTO): [Number] hours
+•  Recovery Point Objective (RPO): [Number] hours
+•  Provider shall maintain and test a documented business continuity and disaster recovery plan at least annually.
+8. Personnel Security
+•  Background checks (including criminal history, identity verification, and employment history verification) for all personnel with access to Licensee Data or the API Services infrastructure, conducted prior to granting access.
+•  Mandatory security awareness training for all Provider personnel upon hire and annually thereafter.
+•  Confidentiality and non-disclosure agreements executed by all Provider personnel with access to Licensee Data.
+9. Third-Party / Sub-processor Security
+Provider shall ensure that all sub-processors engaged in the processing of Licensee Data comply with security standards substantially equivalent to those set forth in this Schedule D. Provider shall conduct due diligence assessments of sub-processors' security practices prior to engagement and on at least an annual basis thereafter.
+10. Certifications
+Provider shall furnish to Licensee, upon reasonable request and subject to confidentiality obligations, copies of its then-current security certifications and third-party audit reports, including SOC 2 Type II reports, ISO 27001 certificates, and penetration testing summaries. Provider shall promptly notify Licensee of any material adverse findings in such reports or any revocation or suspension of any security certification.
+EXHIBIT A — DATA PROCESSING ADDENDUM (DPA)
+This Data Processing Addendum ("DPA") is attached to and incorporated into the API Access and Use Agreement between Verdantia Systems, Inc. ("Provider" or "Processor") and [Customer Legal Name] ("Licensee" or "Controller") dated [Effective Date] (the "Agreement"). This DPA sets forth the terms and conditions governing the processing of personal data by Provider on behalf of Licensee in connection with the API Services. In the event of any conflict between this DPA and the Agreement with respect to the processing of personal data, this DPA shall prevail.
+1. Scope and Purpose
+This DPA governs the processing of personal data by Provider on behalf of Licensee in connection with the provision of the API Services under the Agreement. Provider shall process personal data solely for the purposes of performing its obligations under the Agreement and in accordance with Licensee's documented instructions, except where otherwise required by applicable law.
+2. Definitions
+For purposes of this DPA, the following terms shall have the meanings set forth below. Terms not defined in this DPA shall have the meanings ascribed to them in the Agreement or, where applicable, in the relevant data protection law.
+•  "Applicable Data Protection Law" means all applicable laws, statutes, regulations, and binding guidance relating to the processing of personal data, including the General Data Protection Regulation (EU) 2016/679 ("GDPR"), the UK Data Protection Act 2018 and UK GDPR, the California Consumer Privacy Act as amended by the California Privacy Rights Act ("CCPA/CPRA"), and any other applicable data protection or privacy laws in the jurisdictions where Licensee or its data subjects are located.
+•  "Controller" means the natural or legal person, public authority, agency, or other body which, alone or jointly with others, determines the purposes and means of the processing of personal data.
+•  "Data Subject" means an identified or identifiable natural person to whom personal data relates.
+•  "Personal Data" means any information relating to a Data Subject that is processed by Provider in connection with the API Services, as further described in Annex 1 to this DPA.
+•  "Processing" means any operation or set of operations performed on personal data, whether or not by automated means, including collection, recording, organization, structuring, storage, adaptation, alteration, retrieval, consultation, use, disclosure, dissemination, alignment, combination, restriction, erasure, or destruction.
+•  "Processor" means a natural or legal person, public authority, agency, or other body which processes personal data on behalf of the Controller.
+•  "Sub-processor" means any third party engaged by Provider to process personal data on behalf of Licensee in connection with the API Services.
+3. Roles of the Parties
+[Placeholder — The Parties acknowledge and agree that, with respect to the processing of personal data under this DPA, Licensee acts as the Controller and Provider acts as the Processor. If the relationship between the Parties is more accurately characterized as joint controllers or as independent controllers with respect to certain categories of processing, the Parties shall document such characterization and the corresponding allocation of responsibilities in an amendment to this DPA.]
+4. Subject Matter and Duration of Processing
+Provider shall process personal data contained within Licensee Data for the duration of the Agreement, unless otherwise specified herein. Processing shall commence on the Effective Date and shall continue until the earlier of: (a) the expiration or termination of the Agreement; or (b) the completion of Provider's obligations under Section 10.5 of the Agreement (Post-Termination Data Return).
+5. Nature and Purpose of Processing
+[Placeholder — Provider processes personal data for the purpose of providing the API Services as described in Schedule A of the Agreement, including receiving, storing, processing, analyzing, and returning data in response to Licensee's authorized API calls.]
+6. Types of Personal Data
+[Placeholder — Categories of personal data processed may include, as applicable: name, email address, phone number, IP address, device identifiers, location data, transaction data, account identifiers, and such other categories as specified by Licensee.]
+7. Categories of Data Subjects
+[Placeholder — Categories of data subjects may include, as applicable: Licensee's employees, contractors, customers, end users, prospects, and business contacts.]
+8. Processor Obligations
+Provider, as Processor, shall:
+(a) process personal data only on documented instructions from Licensee (the Controller), unless required to do so by applicable law, in which case Provider shall inform Licensee of that legal requirement before processing (unless prohibited by law from doing so);
+(b) ensure that all personnel authorized to process personal data have committed themselves to confidentiality or are under an appropriate statutory obligation of confidentiality;
+(c) implement and maintain the technical and organizational security measures described in Schedule D of the Agreement and in this DPA, and take all measures required pursuant to Article 32 of the GDPR (or equivalent provisions of other Applicable Data Protection Law);
+(d) comply with the conditions for engaging Sub-processors as set forth in Section 9 of this DPA;
+(e) taking into account the nature of the processing, assist Licensee by implementing appropriate technical and organizational measures, insofar as this is possible, for the fulfillment of Licensee's obligation to respond to requests from Data Subjects exercising their rights under Applicable Data Protection Law;
+(f) assist Licensee in ensuring compliance with its obligations under Articles 32 through 36 of the GDPR (or equivalent provisions of other Applicable Data Protection Law), including with respect to security of processing, notification of personal data breaches, data protection impact assessments, and prior consultation with supervisory authorities;
+(g) at Licensee's election, delete or return all personal data to Licensee after the end of the provision of the API Services, in accordance with Section 10.5 of the Agreement, and delete existing copies unless applicable law requires storage of the personal data; and
+(h) make available to Licensee all information necessary to demonstrate compliance with the obligations set forth in this DPA and allow for and contribute to audits, including inspections, conducted by Licensee or its designated auditor, in accordance with Section 8.3 of the Agreement.
+9. Sub-processors
+Provider shall not engage any Sub-processor to process personal data on behalf of Licensee without Licensee's prior written authorization. Licensee hereby provides general written authorization for Provider to engage Sub-processors, subject to the following conditions:
+(a) Provider shall maintain a current list of Sub-processors and make it available to Licensee upon request;
+(b) Provider shall inform Licensee of any intended changes concerning the addition or replacement of Sub-processors at least [30] days in advance, thereby giving Licensee the opportunity to object to such changes;
+(c) If Licensee reasonably objects to a new or replacement Sub-processor on legitimate data protection grounds, Provider shall use commercially reasonable efforts to make available an alternative solution that avoids the processing of personal data by the objected-to Sub-processor. If no alternative is available, either Party may terminate the affected portion of the Agreement upon [30] days' written notice;
+(d) Provider shall impose on each Sub-processor, by way of a written contract, data protection obligations no less protective than those set forth in this DPA; and
+(e) Provider shall remain fully liable to Licensee for the performance of each Sub-processor's obligations.
+10. Cross-Border Transfers
+Provider shall not transfer personal data to any country or territory outside the European Economic Area (EEA), the United Kingdom, or any other jurisdiction that imposes restrictions on cross-border transfers of personal data, unless appropriate safeguards are in place in accordance with Applicable Data Protection Law. Such safeguards may include:
+(a) the European Commission's Standard Contractual Clauses (SCCs), as amended or replaced from time to time;
+(b) an adequacy decision by the relevant supervisory authority or governmental body;
+(c) binding corporate rules approved by a competent supervisory authority; or
+(d) any other transfer mechanism approved under Applicable Data Protection Law.
+Provider shall implement supplementary measures as required to ensure that the level of protection afforded to personal data is not undermined by the transfer.
+11. Data Breach Notification
+Provider shall notify Licensee without undue delay, and in any event within seventy-two (72) hours, of becoming aware of a personal data breach affecting personal data processed on behalf of Licensee. Such notification shall include, to the extent known and available:
+(a) a description of the nature of the personal data breach, including, where possible, the categories and approximate number of Data Subjects concerned and the categories and approximate number of personal data records concerned;
+(b) the name and contact details of Provider's data protection officer or other contact point;
+(c) a description of the likely consequences of the personal data breach; and
+(d) a description of the measures taken or proposed to be taken by Provider to address the personal data breach, including, where appropriate, measures to mitigate its possible adverse effects.
+Provider shall cooperate with Licensee and take commercially reasonable steps to assist in the investigation, mitigation, and remediation of each personal data breach. Provider shall not notify any third party, supervisory authority, or Data Subject of a personal data breach without first consulting with Licensee, unless required to do so by applicable law.
+12. Audit Rights
+Licensee's audit rights with respect to Provider's compliance with this DPA are as set forth in Section 8.3 of the Agreement, which is incorporated herein by reference.
+13. Liability
+The liability of each Party under this DPA is subject to the limitations and exclusions set forth in Article 11 (Limitation of Liability) of the Agreement, except as otherwise required by Applicable Data Protection Law.
+14. Governing Law of DPA
+This DPA shall be governed by and construed in accordance with the governing law specified in Section 14.2 of the Agreement, except to the extent that Applicable Data Protection Law requires the application of a different governing law, in which case such Applicable Data Protection Law shall govern to the extent of such requirement.
+Annex 1 — Details of Processing
+Element
+Description
+Subject matter of processing
+[Placeholder — Processing of Licensee Data in connection with the API Services]
+Duration of processing
+[For the Term of the Agreement]
+Nature and purpose of processing
+[Placeholder]
+Types of personal data
+[Placeholder]
+Categories of data subjects
+[Placeholder]
+Competent supervisory authority
+[Placeholder]
+Annex 2 — List of Sub-processors
+Sub-processor Name
+Processing Activities
+Location
+[Placeholder]
+[Placeholder]
+[Placeholder]
+[Placeholder]
+[Placeholder]
+[Placeholder]
+Annex 3 — Technical and Organizational Security Measures
+As described in Schedule D to the Agreement, which is incorporated herein by reference.
+End of API Access and Use Agreement — Verdantia Systems, Inc. Template Version: [Version Number] — Last Revised: [Date] This document is confidential and intended solely for internal use. Do not distribute externally without approval from the Office of General Counsel.

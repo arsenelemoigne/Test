@@ -61,15 +61,27 @@ class Hunk:
     before: str = ""   # la version du template pour une section reecrite
 
 
-_SEC = re.compile(r"Section\s+([0-9A-Z]+(?:\.[0-9]+)*(?:\([a-z]\))?)\s*[—-]\s*([^.\n]{0,80})")
-_HEAD = re.compile(r"^(?:\*\*)?Section\s+([0-9A-Z]+(?:\.[0-9]+)*)")
+# Un en-tete est une LIGNE : "Section 2.1 — Grant", "Article 3 — Fees",
+# "A.1 — Annual License Fee", "SCHEDULE A — PRICING". Chercher "Section X" au
+# milieu d'un corps de texte rattachait un alinea a la section qu'il CITE, pas
+# a celle ou il se trouve ; et les annexes, qui n'ecrivent pas "Section",
+# n'avaient aucune adresse - vingt-quatre modifications d'un bareme se sont
+# retrouvees sous la derniere clause du corps.
+_HEAD_LINE = re.compile(
+    r"^\s*(?:\*\*)?(?:\{[+-])?\s*(?:(?:Section|Article|SECTION|ARTICLE)\s+)?"
+    r"((?:[A-Z]\.)?\d+(?:\.\d+)*(?:\([a-z]\))?|(?:SCHEDULE|EXHIBIT|Schedule|Exhibit)\s+[A-Z])"
+    r"\s*[—–-]\s*([^\n]{1,80})")
+_SEC = re.compile(r"Section\s+([0-9A-Z]+(?:\.[0-9]+)*(?:\([a-z]\))?)\s*[—–-]\s*([^.\n]{0,80})")
+_HEAD = re.compile(r"^(?:\*\*)?(?:\{[+-])?\s*(?:Section\s+)?((?:[A-Z]\.)?\d+(?:\.\d+)*|(?:SCHEDULE|EXHIBIT|Schedule|Exhibit)\s+[A-Z])\s*[—–-]")
 
 
 def _section_of(text: str) -> tuple[str, str]:
-    m = _SEC.search(text)
-    if not m:
-        return "", ""
-    return m.group(1), m.group(2).replace("**", "").strip().strip('"')
+    for ln in text.split("\n"):
+        m = _HEAD_LINE.match(ln)
+        if m:
+            head = m.group(2).replace("**", "").strip().strip('"').rstrip("+}-").strip()
+            return m.group(1).strip(), head.split(". ")[0][:80]
+    return "", ""
 
 
 def _blocks(lines: list[str]) -> list[tuple[str, list[str]]]:
@@ -168,7 +180,7 @@ def hunks(markup: str, template: str = "") -> list[Hunk]:
             base = h.section.split("(")[0]
             if h.kind in ("added", "deleted") or h.deleted > 300:
                 h.before = idx.get(h.section, "") or idx.get(base, "")
-        tmpl_secs = {m[0] for m in _SEC.findall(template)}
+        tmpl_secs = {_section_of(ln)[0] for ln in template.split("\n") if _HEAD.match(ln)}
         # seules les sections portant LEUR propre en-tete comptent comme deja
         # vues : un alinea rattache par heritage a 14.12 ne prouve pas que
         # 14.12 a ete marquee

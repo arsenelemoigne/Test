@@ -1,0 +1,168 @@
+--- sheet: Cover & Reference
+Field | Value
+Agreement Title | API Access and Use Agreement — Schedule A: Pricing and Usage Tiers
+Verdantia Internal Reference | VER-API-2025-0047
+Hollowell Matter Reference | HIG-DT-2025-312
+Licensor | Verdantia Systems Inc., a Delaware C-Corporation
+Licensor Principal Office | 440 Crescent Ridge Boulevard, Suite 800, Wilmington, DE 19801
+Licensor EIN | 84-3291057
+Licensee | Hollowell Industries Group LLC, a Delaware LLC
+Licensee Principal Office | 70 Gramercy Park South, 14th Floor, New York, NY 10003
+Licensee EIN | 82-6174390
+API Product Name | Verdantia Nexus API
+Licensee Platform | Hollowell SCM
+Verdantia Initial Draft Sent | June 6, 2025
+Hollowell First Markup Received | June 27, 2025
+Number of Proposed Changes in Hollowell Markup | 34
+Internal Counter-Turn Target | July 7, 2025
+Proposed Effective Date | August 1, 2025
+Initial Term End | July 31, 2028
+Initial Term Length | 3 years
+Renewal | Auto-renewal for successive 1-year terms; 90 days' written notice to non-renew
+Verdantia Outside Counsel | Linden & Foss LLP, 1285 Avenue of the Americas, 30th Floor, New York, NY 10019
+Verdantia Lead Counsel | Marcus Trevino, Partner
+Verdantia Business Contact | Jordan Ngata, Senior Director, Platform Partnerships
+Verdantia Legal Contact | Priya Chandrasekaran, VP & Associate General Counsel
+Hollowell Outside Counsel | Whitmore Beck & Alden LLP, 600 Lexington Avenue, 22nd Floor, New York, NY 10022
+Hollowell Lead Counsel | Sandra Yuen, Partner
+Hollowell Business Contact | Rachel Fernsby, VP, Digital Transformation
+Hollowell Legal Contact | Derek Calloway, Senior Corporate Counsel
+SOC 2 Type II Auditor | Clairemont & Sadler CPAs LLP
+--- sheet: License Fee & TCV
+Parameter | Verdantia Draft | Hollowell Markup | Verdantia Counter-Position | Playbook Guidance
+Cure Period for Material Breach | 30 days | 45 days | — | —
+Post-Termination Data Return | 30 days | 30 days | 30 days | Agreed by both parties
+Post-Termination Read-Only Access (free) | Not offered | 90 days at no charge | 60 days at no charge | Playbook max: 60 days free
+Post-Termination Read-Only Access (paid) | N/A | N/A | Standard rates after 60 days | —
+Auto-Renewal Term | 1-year terms | 1-year terms | 1-year terms | Agreed
+Non-Renewal Notice | 90 days' written notice | 90 days' written notice | 90 days' written notice | Agreed
+--- sheet: Quarterly Invoice Schedule
+Parameter | Verdantia Draft | Hollowell Markup | Verdantia Counter-Position
+Scheduled Maintenance Window (hours/month) | 4 hours | 2 hours | 3 hours
+Advance Notice Requirement | 72 hours | 5 business days | 96 hours (4 business days)
+Maintenance Excluded from Uptime Calc | Yes | Yes | Yes
+--- sheet: Usage Tiers & Overage Rates
+Item # | Topic / Clause | Verdantia Draft Position | Hollowell Markup Position | Verdantia Counter-Position | Playbook / Internal Guidance | Financial Impact
+1 | Payment Terms | Net 30 | Net 45 | — | Acceptable up to Net 45 | Delayed cash receipt by 15 days per quarter
+2 | Late-Payment Interest | 1.5%/month | Lesser of 1.0%/month or statutory max | — | Floor: 1.0% with statutory cap | Reduced late-fee revenue potential
+3 | Overage Rate | $0.004/call | $0.002/call | $0.003/call; $0.0025 above 10M calls/month | Floor: $0.003/call | See Overage Cost Scenarios sheet
+4 | Burst Allowance | 150% (7.5M calls) | 200% (10M calls) | — | Max concession: 175% (8.75M calls) | Higher burst = deferred overage revenue
+5 | Uptime SLA | 99.9% | 99.95% | 99.9% + enhanced P1 response (<30 min) | Hold 99.9%; offer P1 response alternative | See SLA Credit Calculations sheet
+6 | SLA Credit per 0.1% | 5% ($5,250) | 10% ($10,500) | 7.5% ($7,875) | — | $7,875 per 0.1% shortfall
+7 | SLA Credit Cap | 30% ($31,500) | 100% ($105,000) | 50% ($52,500) | — | Max monthly exposure: $52,500
+8 | Maintenance Window | 4 hrs/month, 72 hrs notice | 2 hrs/month, 5 biz days notice | 3 hrs/month, 96 hrs (4 biz days) notice | — | Reduced ops flexibility
+9 | Derived Data Ownership | Verdantia owns; term-limited license to Hollowell | Hollowell sole ownership from Hollowell Input Data | — | Never assign Derived Data ownership | IP valuation risk
+10 | Feedback IP | Feedback becomes Verdantia IP | Mutual license for feedback | — | Must retain sole ownership of feedback | IP control risk
+11 | General Liability Cap | 1× ($1,260,000) | 2× ($2,520,000) | 1.5× ($1,890,000) | — | $630,000 incremental exposure vs. draft
+12 | Data-Breach Liability | Subject to general cap | Uncapped | Super cap at 3× ($3,780,000) | — | $3,780,000 max exposure
+13 | Consequential Damages Carve-Out | None | IP infringement + data breaches | IP indemnity only; data breach subject to $3,780,000 super cap | Never remove 'authorized use' qualifier from IP indemnity | Risk containment
+14 | Data-Breach Indemnity Trigger | — | Verdantia negligence | Breach of Sec. 7 security obligations only | — | Narrower trigger
+15 | Cure Period | 30 days | 45 days | — | — | Extended cure delays remedies
+16 | Early-Termination Notice | 180 days | 90 days | — | Floor: 120 days | See ETF sheet
+17 | Early-Termination Fee | 50% remaining annual fees | No ETF | 25% remaining annual fees | Floor: 25% | See ETF Calculations sheet
+18 | Post-Termination Read-Only Access | Not offered | 90 days free | 60 days free, then standard rates | Max: 60 days free | Revenue after 60 days
+19 | Audit Rights | 1×/year, 30 days notice, Hollowell expense | 2×/year, 15 days notice, Verdantia expense | 1×/year + post-incident, 20 biz days notice, each party own expense | — | Cost sharing
+20 | Sub-Processing Authorization | General authorization, 30 days notice | Specific prior written consent | General authorization, 45 days notice, 20 biz day objection window | — | Operational flexibility
+21 | Governing Law / Dispute Resolution | Delaware law, Court of Chancery | New York law, AAA arbitration in Manhattan | Delaware law, AAA arbitration in Wilmington, 3-arbitrator panel for disputes >$500,000 | — | Forum preference
+22 | Assignment (M&A) | — | Assignment w/o consent for M&A/asset sale | Accept with competitor exclusion + obligation assumption | — | Risk mitigation
+23 | Cyber-Liability Insurance | — | $10,000,000 minimum | $5,000,000 minimum (current policy limit) | — | Avoids $5M+ incremental premium
+24 | MFC Pricing Parity | Not included | MFC pricing parity clause | Reject; offer benchmarking report instead | Reject MFC | Pricing flexibility risk
+25 | Post-Termination Data Return | 30 days | 30 days | 30 days | Agreed | No financial impact
+--- sheet: Overage Cost Scenarios
+Line Item | Amount / Value | Basis / Calculation | Notes
+Annual License Fee | $1,260,000 | Per Agreement Schedule A | Fixed for initial 3-year term
+Quarterly Invoice Amount | $315,000 | $1,260,000 ÷ 4 | Invoiced quarterly in advance
+Monthly Fee (for SLA credit calculations) | $105,000 | $1,260,000 ÷ 12 | Used as basis for SLA credit and cap computations
+Total Contract Value (TCV) — 3-Year Initial Term | $3,780,000 | $1,260,000 × 3 | August 1, 2025 – July 31, 2028
+--- Payment Terms Comparison ---
+Verdantia Draft Payment Terms | Net 30 from invoice date | Quarterly in advance | Original draft position
+Hollowell Markup Payment Terms | Net 45 from invoice date | Quarterly in advance | Hollowell requests extended terms
+Playbook Acceptable Range | Up to Net 45 |  | Within acceptable concession range
+--- Late-Payment Interest Comparison ---
+Verdantia Draft Late-Payment Interest | 1.5% per month |  | Original draft position
+Hollowell Markup Late-Payment Interest | Lesser of 1.0% per month or statutory maximum |  | Hollowell requested reduction
+Playbook Floor | 1.0% per month with statutory cap |  | Acceptable to concede to 1.0% with statutory cap language
+--- Cash Flow Impact of Net 45 vs Net 30 ---
+Incremental Days Outstanding per Quarter | 15 days | Net 45 − Net 30 | Applied to each quarterly invoice of $315,000
+--- sheet: SLA Credit Calculations
+Invoice # | Period Start | Period End | Invoice Amount | Cumulative Invoiced | Remaining TCV
+1 | August 1, 2025 | October 31, 2025 | $315,000 | $315,000 | $3,465,000
+2 | November 1, 2025 | January 31, 2026 | $315,000 | $630,000 | $3,150,000
+3 | February 1, 2026 | April 30, 2026 | $315,000 | $945,000 | $2,835,000
+4 | May 1, 2026 | July 31, 2026 | $315,000 | $1,260,000 | $2,520,000
+5 | August 1, 2026 | October 31, 2026 | $315,000 | $1,575,000 | $2,205,000
+6 | November 1, 2026 | January 31, 2027 | $315,000 | $1,890,000 | $1,890,000
+7 | February 1, 2027 | April 30, 2027 | $315,000 | $2,205,000 | $1,575,000
+8 | May 1, 2027 | July 31, 2027 | $315,000 | $2,520,000 | $1,260,000
+9 | August 1, 2027 | October 31, 2027 | $315,000 | $2,835,000 | $945,000
+10 | November 1, 2027 | January 31, 2028 | $315,000 | $3,150,000 | $630,000
+11 | February 1, 2028 | April 30, 2028 | $315,000 | $3,465,000 | $315,000
+12 | May 1, 2028 | July 31, 2028 | $315,000 | $3,780,000 | $0
+--- sheet: SLA Credit Annual Impact
+Parameter | Verdantia Draft | Hollowell Markup | Verdantia Counter-Position | Playbook Floor / Notes
+Base Tier (included calls/month) | 5,000,000 | 5,000,000 | 5,000,000 | Agreed by both parties
+Overage Rate — Standard Tier (per call) | $0.004 | $0.002 | $0.003 | Playbook floor: $0.003/call
+Overage Rate — High-Volume Tier (above 10,000,000 calls/month) | N/A (flat rate) | N/A | $0.0025 | Step-down offered as counter incentive
+Step-Down Threshold | N/A | N/A | 10,000,000 calls/month | Applies to calls above threshold in a calendar month
+Burst Allowance (% of Base Tier) | 150% | 200% | — | Playbook max concession: 175%
+Burst Allowance (calls/month) | 7,500,000 | 10,000,000 | — | = Base Tier × Burst %; 175% = 8,750,000
+Overage Calculation Trigger | Above 5,000,000 calls | Above 5,000,000 calls | Above 5,000,000 calls | Overage applies to calls exceeding base tier
+Rate Card Effective Period | Fixed for initial 3-year term | Fixed for initial 3-year term | Fixed for initial 3-year term | Subject to CPI adjustment on renewal
+--- sheet: Liability Caps
+Monthly Call Volume | Overage Calls | Verdantia Draft @ $0.004 | Hollowell Markup @ $0.002 | Verdantia Counter (blended) | Delta: Draft vs Hollowell | Delta: Draft vs Counter
+5,000,000 | 0 | $0 | $0 | $0 | $0 | $0
+6,000,000 | 1,000,000 | $4,000 | $2,000 | $3,000 | $2,000 | $1,000
+7,500,000 | 2,500,000 | $10,000 | $5,000 | $7,500 | $5,000 | $2,500
+10,000,000 | 5,000,000 | $20,000 | $10,000 | $15,000 | $10,000 | $5,000
+12,000,000 | 7,000,000 | $28,000 | $14,000 | $20,000 | $14,000 | $8,000
+15,000,000 | 10,000,000 | $40,000 | $20,000 | $27,500 | $20,000 | $12,500
+20,000,000 | 15,000,000 | $60,000 | $30,000 | $40,000 | $30,000 | $20,000
+25,000,000 | 20,000,000 | $80,000 | $40,000 | $52,500 | $40,000 | $27,500
+--- sheet: Early Termination Fees
+Parameter | Verdantia Draft | Hollowell Markup | Verdantia Counter-Position
+Uptime SLA Target | 99.9% | 99.95% | 99.9%
+Approx. Max Downtime/Month | ~43.2 minutes | ~21.6 minutes | ~43.2 minutes
+Monthly Fee Basis | $105,000 | $105,000 | $105,000
+Credit per 0.1% Shortfall (% of monthly fee) | 5.0% | 10.0% | 7.5%
+Credit per 0.1% Shortfall ($) | $5,250 | $10,500 | $7,875
+Maximum Monthly Credit Cap (% of monthly fee) | 30% | 100% | 50%
+Maximum Monthly Credit Cap ($) | $31,500 | $105,000 | $52,500
+Enhanced P1 Incident Response (<30 min) | Not included | Not included | Offered as alternative to 99.95% SLA
+--- Credit Schedule by Shortfall ---
+Actual Uptime: 99.8% (shortfall 0.1%) | $5,250 | $10,500 | $7,875
+Actual Uptime: 99.7% (shortfall 0.2%) | $10,500 | $21,000 | $15,750
+Actual Uptime: 99.6% (shortfall 0.3%) | $15,750 | $31,500 | $23,625
+Actual Uptime: 99.5% (shortfall 0.4%) | $21,000 | $42,000 | $31,500
+Actual Uptime: 99.4% (shortfall 0.5%) | $26,250 | $52,500 | $39,375
+Actual Uptime: 99.3% (shortfall 0.6%) | $31,500 (cap reached) | $63,000 | $47,250
+Actual Uptime: 99.2% (shortfall 0.7%) | $31,500 (capped) | $73,500 | $52,500 (cap reached)
+Actual Uptime: 99.0% (shortfall 0.9%) | $31,500 (capped) | $94,500 | $52,500 (capped)
+Actual Uptime: 98.9% (shortfall 1.0%) | $31,500 (capped) | $105,000 (cap reached) | $52,500 (capped)
+Actual Uptime: 98.0% (shortfall 1.9%) | $31,500 (capped) | $105,000 (capped) | $52,500 (capped)
+--- sheet: Post-Termination & Transition
+Metric | Verdantia Draft | Hollowell Markup | Verdantia Counter
+Max Monthly Credit | $31,500 | $105,000 | $52,500
+Max Annual Credit Exposure (12 months at cap) | $378,000 | $1,260,000 | $630,000
+Annual Credit as % of Annual Fee | 30% | 100% | 50%
+Net Minimum Annual Revenue (worst case) | $882,000 | $0 | $630,000
+3-Year Worst-Case Credit Exposure | $1,134,000 | $3,780,000 | $1,890,000
+--- sheet: Maintenance Windows
+Liability Parameter | Verdantia Draft | Hollowell Markup | Verdantia Counter-Position
+General Liability Cap (multiple of annual fee) | 1× annual fees | 2× annual fees | 1.5× annual fees
+General Liability Cap ($) | $1,260,000 | $2,520,000 | $1,890,000
+Data-Breach Liability | Subject to general cap | Uncapped | Super cap at 3× annual fees
+Data-Breach Liability Cap ($) | $1,260,000 (general cap) | Unlimited | $3,780,000
+Consequential Damages Carve-Out | None | IP infringement and data breaches | IP indemnity only; data-breach consequentials subject to $3,780,000 super cap
+Data-Breach Indemnity Trigger | — | Verdantia negligence | Limited to breaches of Section 7 security obligations
+Cyber-Liability Insurance Minimum | — | $10,000,000 | $5,000,000 (current policy limit)
+Incremental Exposure vs. Verdantia Draft (General Cap) | — | +$1,260,000 | +$630,000
+--- sheet: Negotiation Summary Matrix
+Termination Scenario | Termination Date | Months Remaining in Current Annual Period | Remaining Fees in Annual Period | Verdantia Draft ETF (50%) | Hollowell Markup ETF ($0) | Verdantia Counter ETF (25%) | Notice Period — Verdantia Draft | Notice Period — Hollowell Markup | Notice Period — Playbook Floor
+End of Q1 Year 1 | October 31, 2025 | 9 | $945,000 | $472,500 | $0 | $236,250 | 180 days | 90 days | 120 days
+End of Q2 Year 1 | January 31, 2026 | 6 | $630,000 | $315,000 | $0 | $157,500 | 180 days | 90 days | 120 days
+End of Q3 Year 1 | April 30, 2026 | 3 | $315,000 | $157,500 | $0 | $78,750 | 180 days | 90 days | 120 days
+End of Year 1 / Start Year 2 | July 31, 2026 | 12 | $1,260,000 | $630,000 | $0 | $315,000 | 180 days | 90 days | 120 days
+Mid Year 2 (Q2) | January 31, 2027 | 6 | $630,000 | $315,000 | $0 | $157,500 | 180 days | 90 days | 120 days
+End of Year 2 / Start Year 3 | July 31, 2027 | 12 | $1,260,000 | $630,000 | $0 | $315,000 | 180 days | 90 days | 120 days
+Mid Year 3 (Q2) | January 31, 2028 | 6 | $630,000 | $315,000 | $0 | $157,500 | 180 days | 90 days | 120 days
+End of Q3 Year 3 | April 30, 2028 | 3 | $315,000 | $157,500 | $0 | $78,750 | 180 days | 90 days | 120 days

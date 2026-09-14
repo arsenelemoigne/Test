@@ -1,0 +1,24 @@
+{
+  "other": [
+    "exhibit-b-sla-terms.docx",
+    "exhibit-c-data-processing-addendum.docx",
+    "verdantia-standard-form-api-agreement.docx"
+  ],
+  "email": [
+    "forwarding-email-priya-to-marcus.eml",
+    "hollowell-transmittal-email.eml"
+  ],
+  "markup": [
+    "hollowell-first-markup-redline.docx"
+  ],
+  "pricing": [
+    "schedule-a-pricing-and-usage-tiers.xlsx"
+  ],
+  "template": [
+    "verdantia-api-access-agreement-initial-draft.docx"
+  ],
+  "memo": [
+    "verdantia-api-negotiation-playbook.docx",
+    "internal-alignment-memo.docx"
+  ]
+}

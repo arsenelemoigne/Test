@@ -1,0 +1,585 @@
+API ACCESS AND USE AGREEMENT
+Verdantia Systems Inc. — Internal Reference VER-API-2025-0047
+API ACCESS AND USE AGREEMENT
+Between Verdantia Systems Inc., a Delaware C-Corporation, with principal offices at 440 Crescent Ridge Boulevard, Suite 800, Wilmington, DE 19801 ("Verdantia" or "Provider")
+and Hollowell Industries Group LLC, a Delaware limited liability company, with principal offices at 70 Gramercy Park South, 14th Floor, New York, NY 10003 ("Licensee" or "Hollowell")
+Effective Date: August 1, 2025
+This API Access and Use Agreement, including all Schedules and Exhibits attached hereto (collectively, the "Agreement"), sets forth the terms and conditions under which Verdantia will provide Hollowell with access to and use of the Verdantia Nexus API. Each of Verdantia and Hollowell may be referred to individually as a "Party" and collectively as the "Parties."
+RECITALS
+WHEREAS, Verdantia has developed, operates, and maintains the proprietary application programming interface known as the Verdantia Nexus API, which provides supply-chain data enrichment, analytics, and integration services; and
+WHEREAS, Hollowell desires to obtain access to and use of the Verdantia Nexus API in connection with the Hollowell SCM platform for Hollowell's internal business operations; and
+WHEREAS, the Parties desire to set forth their respective rights and obligations with respect to such access and use;
+NOW, THEREFORE, in consideration of the mutual covenants and agreements set forth herein, and for other good and valuable consideration, the receipt and sufficiency of which are hereby acknowledged, the Parties agree as follows:
+Right-click to update Table of Contents
+Article 1 — Definitions
+As used in this Agreement, the following terms shall have the meanings set forth below. Capitalized terms used but not defined in any Schedule or Exhibit shall have the meanings assigned to them in this Article 1 or elsewhere in the body of this Agreement.
+"Agreement" means this API Access and Use Agreement, including all Schedules and Exhibits attached hereto and incorporated herein by reference, as the same may be amended, modified, or supplemented from time to time in accordance with Section 19.2.
+"Annual License Fee" means the annual license fee payable by Licensee to Verdantia for access to and use of the Verdantia Nexus API during each year of the Term, as set forth in Schedule A.
+"API" or "Verdantia Nexus API" means Verdantia's proprietary application programming interface known as the Verdantia Nexus API, including all endpoints, functions, protocols, tools, and related technical infrastructure made available by Verdantia to Licensee under this Agreement, as further described in Exhibit A (API Specifications), together with all updates, upgrades, modifications, patches, and enhancements thereto provided by Verdantia during the Term.
+"API Call" means each individual request made by Licensee's systems to any endpoint of the Verdantia Nexus API, whether such request is successful, unsuccessful, or results in an error response. For the avoidance of doubt, each HTTP request transmitted by Licensee's systems to an API endpoint shall constitute one (1) API Call, regardless of the volume of data returned or the processing required to fulfill such request.
+"Authorized Use" means use of the Verdantia Nexus API by Licensee solely for Licensee's internal business operations in connection with the Hollowell SCM platform, in accordance with the documentation, specifications, and use restrictions set forth in this Agreement, including without limitation the restrictions set forth in Article 3.
+"Base Tier" means the monthly allocation of five million (5,000,000) API Calls per calendar month included in the Annual License Fee, as set forth in Schedule A.
+"Burst Allowance" means up to one hundred fifty percent (150%) of the Base Tier rate in any rolling sixty (60) minute window, as further specified in Section 4.3 of this Agreement.
+"Confidential Information" means all non-public information disclosed by one Party (the "Disclosing Party") to the other Party (the "Receiving Party") in connection with this Agreement, whether oral, written, electronic, or visual, including without limitation: (i) the terms and conditions of this Agreement (including all pricing terms); (ii) trade secrets, proprietary data, know-how, inventions, processes, techniques, algorithms, and software (including source code and object code); (iii) business plans, strategies, financial information, projections, customer lists, and supplier information; (iv) technical information, specifications, designs, drawings, and configurations relating to the Verdantia Nexus API; (v) Hollowell Input Data; and (vi) any other information that is designated as "confidential," "proprietary," or with a similar legend at the time of disclosure, or that a reasonable person would understand to be confidential given the nature of the information and the circumstances of disclosure.
+"Derived Data" means any data, analytics, models, indices, aggregated or de-identified data sets, statistical analyses, benchmarks, insights, or other outputs generated by Verdantia's systems through the processing of Licensee's API Calls and Hollowell Input Data via the Verdantia Nexus API. For the avoidance of doubt, Derived Data does not include Hollowell Input Data in its original or unprocessed form.
+"Downtime" means the total number of minutes during a calendar month in which the Verdantia Nexus API is unavailable to Licensee due to an outage or service disruption, as measured by Verdantia's monitoring systems. Downtime shall not include periods of Scheduled Maintenance or other exclusions set forth in Section 6.4.
+"Effective Date" means August 1, 2025.
+"Feedback" means any suggestions, enhancement requests, recommendations, corrections, ideas, concepts, techniques, comments, or other feedback provided by Licensee or its employees, agents, or representatives regarding the Verdantia Nexus API, its documentation, or related services.
+"Hollowell Input Data" means data submitted by Licensee to the Verdantia Nexus API for processing, which is owned by and originates from Licensee or is data that Licensee has the right to submit for processing. Hollowell Input Data includes, without limitation, supply-chain data, logistics data, inventory data, and transactional data transmitted by Licensee through API Calls.
+"Hollowell SCM Platform" means Licensee's proprietary supply chain management platform, as currently operated by Licensee for its internal business operations.
+"Initial Term" has the meaning set forth in Section 11.1.
+"Licensee" or "Hollowell" means Hollowell Industries Group LLC, a Delaware limited liability company.
+"Monthly Fee" means one hundred five thousand dollars ($105,000), being one-twelfth (1/12) of the Annual License Fee.
+"Overage Rate" means four-tenths of one cent ($0.004) per API Call in excess of the Base Tier in any calendar month, as set forth in Schedule A.
+"Party" or "Parties" means Verdantia and Hollowell, individually or collectively, as the context may require.
+"Provider" or "Verdantia" means Verdantia Systems Inc., a Delaware C-Corporation.
+"Quarterly Invoice" means three hundred fifteen thousand dollars ($315,000), being one-quarter (1/4) of the Annual License Fee.
+"Renewal Term" has the meaning set forth in Section 11.2.
+"Scheduled Maintenance" means planned periods of unavailability of the Verdantia Nexus API for maintenance, upgrades, patches, or other administrative purposes, as described in Section 6.2.
+"Security Incident" means any unauthorized access to, use of, disclosure of, modification of, or destruction of data exchanged between the Parties under this Agreement, or any event that compromises the security, confidentiality, or integrity of such data or the systems used to process or store such data.
+"SLA" means the service level commitments set forth in Article 6 and Exhibit B of this Agreement.
+"SLA Credit" means the service credits described in Section 6.3, calculated in accordance with the SLA Credit table set forth in Exhibit B.
+"SOC 2 Type II Report" means the System and Organization Controls 2 Type II audit report, prepared in accordance with the AICPA Trust Services Criteria, by an independent third-party auditor, covering the security, availability, processing integrity, confidentiality, and privacy trust services categories, as applicable.
+"Sub-processor" means any third party (other than Verdantia's employees) engaged by Verdantia to process Hollowell Input Data or personal data on Verdantia's behalf in connection with the performance of Verdantia's obligations under this Agreement.
+"Term" means the Initial Term together with any Renewal Terms, as set forth in Article 11.
+"Uptime Availability" means the percentage of time during a calendar month (excluding Scheduled Maintenance windows) that the Verdantia Nexus API is available and responsive to Licensee's API Calls, calculated in accordance with Exhibit B.
+Article 2 — Grant of License
+Section 2.1 — License Grant
+Subject to the terms and conditions of this Agreement, including Licensee's payment of all applicable fees, Verdantia hereby grants to Hollowell a non-exclusive, non-transferable, non-sublicensable right and license to access and use the Verdantia Nexus API during the Term, solely for Authorized Use and in accordance with the documentation and specifications set forth in Exhibit A. This license is limited to the scope of use expressly set forth herein and does not convey any ownership interest in the Verdantia Nexus API or any component thereof.
+Section 2.2 — Scope of Authorized Use
+Licensee may use the Verdantia Nexus API solely for Licensee's internal business operations in connection with the Hollowell SCM Platform. Without limiting the generality of the foregoing, Authorized Use encompasses: (a) submitting API Calls to the Verdantia Nexus API endpoints for the purpose of enriching, analyzing, and processing supply-chain data within the Hollowell SCM Platform; (b) receiving and incorporating response data from the Verdantia Nexus API into the Hollowell SCM Platform for internal analytics and operational decision-making; and (c) integrating the Verdantia Nexus API with the Hollowell SCM Platform's existing workflows and data pipelines, subject to the technical specifications and integration guidance set forth in Exhibit A. Licensee shall not use the Verdantia Nexus API to provide services to any third party, resell or redistribute access to the Verdantia Nexus API, or create derivative works based on the Verdantia Nexus API, except as expressly permitted in this Agreement.
+Section 2.3 — Reservation of Rights
+Except for the limited license expressly granted in Section 2.1, Verdantia retains all right, title, and interest in and to the Verdantia Nexus API, all related documentation, all updates, upgrades, modifications, patches, and enhancements thereto, all underlying technology, algorithms, and software, and all intellectual property rights embodied therein, including without limitation all patent rights, copyrights, trademark rights, trade secret rights, and any other proprietary rights. No rights are granted to Licensee by implication, estoppel, exhaustion, or otherwise, except as expressly set forth in this Agreement. Verdantia reserves the right to modify, improve, and update the Verdantia Nexus API at any time, provided that such modifications do not materially diminish the functionality described in Exhibit A during the Term without Licensee's prior written consent.
+Article 3 — Permitted Use and Restrictions
+Section 3.1 — Permitted Uses
+Subject to the terms and conditions of this Agreement, Licensee may use the Verdantia Nexus API for the following purposes:
+(a) Integration with Hollowell SCM Platform. Licensee may integrate the Verdantia Nexus API with the Hollowell SCM Platform for the purpose of transmitting Hollowell Input Data to and receiving response data from Verdantia's systems, in accordance with the technical specifications and integration guidance set forth in Exhibit A.
+(b) Internal Analytics. Licensee may use data received from the Verdantia Nexus API, including Derived Data licensed to Licensee under Section 8.3, for Licensee's internal analytics, reporting, dashboarding, and operational decision-making purposes within the Hollowell SCM Platform.
+(c) Internal Business Operations. Licensee may use the Verdantia Nexus API in connection with Licensee's day-to-day internal business operations, including supply chain planning, demand forecasting, inventory optimization, logistics coordination, and procurement activities, provided that all such uses are internal to Hollowell and do not involve making the Verdantia Nexus API or its outputs available to any third party.
+Section 3.2 — Use Restrictions
+Licensee shall not, directly or indirectly, and shall not permit any third party to:
+(a) sublicense, lease, rent, sell, distribute, provide, or otherwise make available access to the Verdantia Nexus API or any portion thereof to any third party, whether on a commercial or non-commercial basis;
+(b) reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code, algorithms, data structures, or underlying ideas or architecture of the Verdantia Nexus API or any component thereof, except to the extent expressly permitted by applicable law notwithstanding this restriction;
+(c) circumvent, disable, bypass, or otherwise interfere with any rate limits, access controls, security mechanisms, authentication protocols, or other technical restrictions implemented by Verdantia in connection with the Verdantia Nexus API;
+(d) use the Verdantia Nexus API or any data obtained therefrom for benchmarking, competitive analysis, or any purpose intended to compete with or replicate the functionality of the Verdantia Nexus API, without Verdantia's prior written consent;
+(e) transmit any malicious code, virus, worm, Trojan horse, ransomware, spyware, adware, or other harmful or disruptive computer code or program through the Verdantia Nexus API or in connection with any API Call;
+(f) use the Verdantia Nexus API in violation of any applicable federal, state, local, or foreign law, regulation, ordinance, or governmental order, including without limitation any data protection, privacy, export control, anti-corruption, or sanctions laws;
+(g) share, disclose, or otherwise make available API credentials, keys, tokens, or other authentication mechanisms to any person or entity that is not an authorized employee or contractor of Licensee with a bona fide need to access the Verdantia Nexus API in connection with Authorized Use;
+(h) modify, adapt, translate, or create derivative works based on the Verdantia Nexus API, except as expressly permitted herein;
+(i) remove, alter, or obscure any proprietary notices, labels, or marks on or in the Verdantia Nexus API or any documentation; or
+(j) access or use the Verdantia Nexus API in a manner that exceeds the scope of the license granted in Section 2.1 or that is inconsistent with the Authorized Use.
+Section 3.3 — Credentials and Security
+Hollowell shall be solely responsible for safeguarding all API keys, tokens, credentials, and other authentication mechanisms issued by Verdantia in connection with this Agreement. Hollowell shall implement and maintain commercially reasonable technical and organizational measures to prevent unauthorized access to, use of, or disclosure of such credentials. Without limiting the foregoing, Hollowell shall: (a) restrict access to API credentials to authorized personnel on a need-to-know basis; (b) store API credentials using industry-standard encryption methods; (c) rotate API credentials at intervals consistent with industry best practices and as reasonably directed by Verdantia; and (d) promptly disable any credentials that are no longer needed or that have been assigned to personnel who no longer require access.
+Hollowell shall notify Verdantia in writing within twenty-four (24) hours of becoming aware of any suspected or confirmed compromise, unauthorized access to, or unauthorized use of API credentials or the Verdantia Nexus API. Upon receipt of such notification, Verdantia shall promptly issue replacement credentials and take such other steps as are reasonably necessary to mitigate the impact of any compromise. Hollowell shall cooperate fully with Verdantia's investigation and remediation efforts following any credential compromise.
+Article 4 — Rate Limits and Usage Tiers
+Section 4.1 — Base Tier
+Subject to Licensee's payment of the Annual License Fee, Licensee is entitled to make up to five million (5,000,000) API Calls per calendar month under the Base Tier, as further described in Schedule A. The Base Tier allocation resets at the beginning of each calendar month at 12:00 AM Eastern Time. Unused API Calls from any calendar month shall not carry over to any subsequent month.
+Section 4.2 — Overage
+API Calls made by Licensee in excess of the Base Tier allocation in any calendar month shall be invoiced at the Overage Rate of four-tenths of one cent ($0.004) per API Call. Overage amounts shall be calculated on a calendar-month basis based on Verdantia's metering systems, which shall be the authoritative source for determining API Call volumes. Overage charges shall be invoiced in arrears and included as a separate line item on the next Quarterly Invoice following the month in which the overage occurred. By way of example, if Licensee makes 5,500,000 API Calls in a given calendar month, the overage charge for that month would be 500,000 × $0.004 = $2,000.
+Section 4.3 — Burst Allowance
+Licensee may burst up to one hundred fifty percent (150%) of the Base Tier rate in any rolling sixty (60) minute window without penalty (the "Burst Allowance"). The Burst Allowance is intended to accommodate temporary spikes in API Call volume associated with batch processing, peak operational periods, or other short-duration increases in demand. API Calls made within the Burst Allowance shall count toward the monthly Base Tier allocation and, if the Base Tier is exceeded, shall be subject to the Overage Rate set forth in Section 4.2.
+API Calls that exceed the Burst Allowance in any rolling sixty (60) minute window shall be subject to throttling by Verdantia's systems. Upon throttling, Verdantia's systems will return HTTP 429 (Too Many Requests) responses for API Calls exceeding the Burst Allowance until the Licensee's request rate falls below the Burst Allowance threshold. No SLA Credit shall be issued, and Verdantia shall have no liability, for throttle events caused by Licensee exceeding the Burst Allowance.
+Section 4.4 — Monitoring and Reporting
+Verdantia shall make usage dashboards available to Licensee through Verdantia's online portal, showing real-time and historical API Call volumes, including daily, weekly, and monthly usage summaries, Burst Allowance utilization, overage tracking, error rates, and latency metrics. Verdantia shall use commercially reasonable efforts to ensure that usage data displayed on the dashboard is current within a fifteen (15) minute delay from the time of the relevant API Call. Licensee shall have the right to export usage data from the dashboard in CSV or JSON format for its internal record-keeping purposes.
+In the event of any discrepancy between Licensee's internal usage records and Verdantia's metering systems, Verdantia's metering systems shall be presumed correct absent manifest error. Licensee may request a detailed usage audit for any calendar month by providing written notice to Verdantia within thirty (30) days following the end of the month in question. Verdantia shall cooperate in good faith with any such audit request and shall provide Licensee with detailed API Call logs for the relevant period within fifteen (15) business days of receiving such request.
+Article 5 — Fees and Payment
+Section 5.1 — Annual License Fee
+In consideration of the license granted herein and the services provided by Verdantia, Licensee shall pay Verdantia an Annual License Fee of one million two hundred sixty thousand dollars ($1,260,000) per year during the Term. The Annual License Fee covers access to the Verdantia Nexus API, the Base Tier allocation of API Calls, the SLA commitments set forth in Article 6 and Exhibit B, and the support and maintenance services described in this Agreement and the applicable Exhibits. The Annual License Fee does not include overage charges, which shall be invoiced separately in accordance with Section 4.2.
+Section 5.2 — Quarterly Invoicing
+Verdantia shall invoice Licensee quarterly in advance in the amount of three hundred fifteen thousand dollars ($315,000) per quarter, representing one-quarter (1/4) of the Annual License Fee. The first Quarterly Invoice shall be issued on or about the Effective Date, covering the period from August 1, 2025 through October 31, 2025. Subsequent Quarterly Invoices shall be issued on or about the first day of each successive quarter during the Term. Each Quarterly Invoice shall set forth in reasonable detail the charges covered by such invoice, the billing period, and any applicable overage charges from prior months.
+Section 5.3 — Payment Terms
+All invoices are due and payable within thirty (30) days of the invoice date ("Net 30"). All payments shall be made in United States dollars by wire transfer or Automated Clearing House (ACH) transfer to a bank account designated by Verdantia in writing. Verdantia shall provide Licensee with its banking information and any updates thereto in writing at least ten (10) business days prior to the due date of any invoice. Licensee shall be responsible for all bank transfer fees and charges imposed by Licensee's financial institution.
+Section 5.4 — Late Payments
+Any amount not paid when due under this Agreement shall accrue interest at the rate of one and one-half percent (1.5%) per month (or, if less, the maximum rate permitted by applicable law), calculated from the original due date until the date of actual payment. Such interest shall be compounded monthly. In addition to accrued interest, Licensee shall reimburse Verdantia for all reasonable costs and expenses (including reasonable attorneys' fees) incurred by Verdantia in collecting any overdue amounts. Verdantia reserves the right, upon not less than fifteen (15) days' prior written notice to Licensee, to suspend Licensee's access to the Verdantia Nexus API in the event that any undisputed invoice remains unpaid for more than forty-five (45) days past the due date. Any such suspension shall not relieve Licensee of its obligation to pay all amounts owed under this Agreement, and Verdantia shall promptly restore access upon receipt of full payment of all outstanding amounts, including accrued interest.
+Section 5.5 — Taxes
+All fees set forth in this Agreement are exclusive of any and all applicable taxes, duties, levies, or similar governmental charges. Licensee shall be responsible for and shall pay all sales taxes, use taxes, value-added taxes, goods and services taxes, withholding taxes, and any other similar taxes or governmental charges arising from or related to the transactions contemplated by this Agreement, excluding only taxes imposed on Verdantia's net income, capital, or franchise taxes assessed against Verdantia by any jurisdiction. If Licensee is required by applicable law to withhold or deduct any taxes from payments due to Verdantia under this Agreement, the amount payable to Verdantia shall be increased as necessary so that, after making all required withholdings or deductions, Verdantia receives an amount equal to the amount it would have received had no such withholding or deduction been made.
+Section 5.6 — Invoice Disputes
+In the event that Licensee, in good faith, disputes any portion of a Quarterly Invoice or any overage charge, Licensee shall notify Verdantia of such dispute in writing within fifteen (15) days of receipt of the applicable invoice. Such notice shall specify in reasonable detail the nature and basis of the dispute and the amount disputed. Notwithstanding any such dispute, Licensee shall pay the undisputed portion of the invoice in full by the applicable due date in accordance with Section 5.3. The Parties shall use good faith efforts to resolve any invoice dispute within thirty (30) days of Verdantia's receipt of Licensee's dispute notice. If the Parties are unable to resolve the dispute within such period, either Party may pursue the dispute resolution mechanisms set forth in Article 16.
+Article 6 — Service Levels and Uptime
+Section 6.1 — Uptime Commitment
+Verdantia commits to providing Uptime Availability of ninety-nine and nine-tenths percent (99.9%) for the Verdantia Nexus API, measured on a calendar month basis in accordance with the calculation methodology set forth in Exhibit B. The 99.9% Uptime Availability commitment permits approximately forty-three and two-tenths (43.2) minutes of total Downtime per calendar month (based on a thirty (30) day month). Verdantia shall use commercially reasonable efforts to exceed the 99.9% Uptime Availability commitment and to minimize the duration and frequency of any Downtime events.
+Section 6.2 — Scheduled Maintenance
+Verdantia may perform Scheduled Maintenance on the Verdantia Nexus API and its supporting infrastructure for up to four (4) hours per calendar month. Verdantia shall provide Licensee with not less than seventy-two (72) hours' prior written notice of each Scheduled Maintenance window, specifying the anticipated start time, duration, and scope of the maintenance. Verdantia shall use commercially reasonable efforts to schedule maintenance during off-peak hours, defined as weekends or weekday hours between 12:00 AM and 6:00 AM Eastern Time, to minimize disruption to Licensee's operations. Scheduled Maintenance windows that comply with the notice and duration requirements of this Section 6.2 shall not count toward Downtime for purposes of calculating Uptime Availability. In the event that Scheduled Maintenance exceeds the four (4) hour monthly allocation or is performed without the required seventy-two (72) hours' prior written notice, the excess time or unnoticed maintenance period shall be treated as Downtime.
+Section 6.3 — SLA Credits
+If Verdantia fails to meet the 99.9% Uptime Availability commitment in any given calendar month, Licensee shall be entitled to SLA Credits calculated as follows:
+(a) For each one-tenth of one percent (0.1%) of Uptime Availability below 99.9%, Licensee shall receive a credit equal to five percent (5%) of the Monthly Fee of one hundred five thousand dollars ($105,000), resulting in a credit of five thousand two hundred fifty dollars ($5,250) per 0.1% shortfall.
+(b) SLA Credits in any single calendar month shall not exceed thirty percent (30%) of the Monthly Fee, representing a maximum SLA Credit of thirty-one thousand five hundred dollars ($31,500) per calendar month.
+(c) SLA Credits shall be applied as a credit against the next Quarterly Invoice following the determination of the credit amount. In the event that no future invoices are anticipated (e.g., due to impending termination of the Agreement), Verdantia shall, upon Licensee's written request, refund the applicable SLA Credit amount to Licensee within thirty (30) days.
+The SLA Credit schedule is set forth in detail in the SLA Credit Calculation table in Exhibit B. SLA Credits are Licensee's sole and exclusive remedy, and Verdantia's sole and exclusive liability, for any failure by Verdantia to meet the Uptime Availability commitment set forth in this Article 6.
+Section 6.4 — Exclusions
+SLA Credits shall not be available, and Verdantia shall have no liability under this Article 6, with respect to any Downtime or service degradation resulting from:
+(a) Scheduled Maintenance performed in accordance with Section 6.2;
+(b) Licensee's acts, omissions, or failures, including without limitation misuse of the API, errors in Hollowell Input Data, or failures in Licensee's systems, networks, or infrastructure;
+(c) force majeure events as described in Article 18;
+(d) throttling resulting from Licensee exceeding the Burst Allowance as described in Section 4.3;
+(e) failures, outages, or degradation in third-party systems, networks, infrastructure, or services that are outside Verdantia's reasonable control, including internet backbone outages, DNS failures, or cloud provider outages; or
+(f) suspension of access pursuant to Section 5.4 (late payment) or Section 3.2 (use restriction violations).
+Section 6.5 — Credit Request Procedure
+To receive SLA Credits, Licensee must submit a written SLA Credit request to Verdantia within thirty (30) calendar days following the end of the calendar month in which the Downtime giving rise to the credit request occurred. Each credit request shall include: (i) the date(s) and time(s) of the Downtime event(s); (ii) the duration of each Downtime event; (iii) a description of the impact on Licensee's use of the Verdantia Nexus API; and (iv) any supporting evidence, including error logs, screenshots, or monitoring data, reasonably available to Licensee. Verdantia shall review each credit request and respond in writing within fifteen (15) business days, confirming or disputing the request with reasonable supporting detail. Failure by Licensee to submit a credit request within the thirty (30) day period shall constitute a waiver of Licensee's right to SLA Credits for the applicable month. Detailed procedures for submitting and processing SLA Credit requests are set forth in Exhibit B.
+Article 7 — Security Obligations
+Section 7.1 — Verdantia Security Standards
+Verdantia shall implement and maintain administrative, technical, and physical safeguards that are consistent with industry standards and best practices and that are designed to protect the confidentiality, integrity, and availability of Hollowell Input Data and any personal data processed in connection with this Agreement. Without limiting the generality of the foregoing, Verdantia's security measures shall include:
+(a) encryption of data in transit using TLS 1.2 or higher and encryption of data at rest using AES-256 or an equivalent standard;
+(b) access controls, including multi-factor authentication for administrative access to systems that process or store Hollowell Input Data;
+(c) network security measures, including firewalls, intrusion detection and prevention systems, and vulnerability scanning;
+(d) regular security assessments, including penetration testing conducted at least annually by a qualified third party;
+(e) employee security training and background checks for personnel with access to Hollowell Input Data;
+(f) business continuity and disaster recovery plans, tested at least annually; and
+(g) secure software development practices, including code review, security testing, and vulnerability management.
+Verdantia shall maintain SOC 2 Type II compliance throughout the Term and shall provide Licensee with a copy of its then-current SOC 2 Type II Report, as audited by Clairemont & Sadler CPAs LLP or a successor independent auditor reasonably acceptable to Licensee, on an annual basis and, additionally, within fifteen (15) business days of Licensee's reasonable written request therefor. Verdantia shall promptly notify Licensee of any material changes to its security program or SOC 2 Type II compliance status.
+Section 7.2 — Licensee Security Obligations
+Hollowell shall implement and maintain commercially reasonable security measures for its systems, networks, and infrastructure that interface with or connect to the Verdantia Nexus API. Such measures shall include, at a minimum: (a) securing all API credentials in accordance with Section 3.3; (b) maintaining up-to-date software, operating systems, and security patches on systems used to access the Verdantia Nexus API; (c) implementing access controls to restrict access to the Verdantia Nexus API to authorized personnel; and (d) maintaining logs of API access and usage sufficient to support security monitoring and incident investigation.
+Section 7.3 — Incident Notification
+Each Party shall notify the other Party in writing within seventy-two (72) hours upon becoming aware of any Security Incident affecting data exchanged under this Agreement. Such notification shall include, to the extent known at the time of notification: (a) the nature and scope of the Security Incident; (b) the data affected or potentially affected; (c) the actions taken or planned to investigate, contain, and remediate the Security Incident; and (d) a designated point of contact for communications regarding the Security Incident. Each Party shall provide reasonable updates regarding the status of any Security Incident investigation and remediation efforts and shall cooperate in good faith with the other Party's investigation. The notification obligations of this Section 7.3 are in addition to, and not in lieu of, any notification obligations under applicable data protection laws or the Data Processing Addendum attached as Exhibit C.
+Section 7.4 — Audit Rights
+Verdantia shall permit Licensee (or a qualified independent third-party auditor selected by Licensee and reasonably acceptable to Verdantia) to audit Verdantia's compliance with the security obligations set forth in this Article 7 once per twelve (12) month period, upon not less than thirty (30) days' prior written notice to Verdantia. Such audit shall be conducted during Verdantia's normal business hours at a mutually agreed-upon date and time, at Hollowell's sole cost and expense (including all fees and expenses of any third-party auditor), and shall not unreasonably interfere with Verdantia's business operations. The scope of such audit shall be limited to Verdantia's compliance with the security obligations set forth in this Article 7 and shall not require Verdantia to disclose information that would compromise the security of Verdantia's systems or violate Verdantia's obligations to other customers or third parties. Any third-party auditor engaged by Licensee shall execute a confidentiality agreement with Verdantia on terms reasonably acceptable to Verdantia prior to commencing any audit. Verdantia shall cooperate in good faith with any such audit and shall provide the auditor with reasonable access to relevant personnel, systems, documentation, and records. In addition to the annual audit right, Licensee may request an additional audit in the event of a confirmed Security Incident affecting Hollowell Input Data, provided that such additional audit is limited in scope to the Security Incident and its remediation.
+Article 8 — Intellectual Property
+Section 8.1 — Verdantia IP
+As between the Parties, Verdantia retains all right, title, and interest in and to the Verdantia Nexus API, including all source code, object code, algorithms, data models, architectures, and technical infrastructure; all documentation, specifications, user guides, and technical materials; all improvements, modifications, updates, upgrades, patches, and enhancements thereto, whether developed independently by Verdantia or in response to Feedback from Licensee; and all intellectual property rights embodied in or related to any of the foregoing, including without limitation all patents, copyrights, trademarks, trade secrets, and other proprietary rights. Nothing in this Agreement shall be construed as transferring any ownership interest in the Verdantia Nexus API or any Verdantia intellectual property to Licensee.
+Section 8.2 — Hollowell Input Data
+As between the Parties, Hollowell retains all right, title, and interest in and to Hollowell Input Data, including all intellectual property rights therein. Hollowell hereby grants to Verdantia a limited, non-exclusive, royalty-free, non-transferable (except as permitted under Article 17), non-sublicensable (except to Sub-processors in accordance with Section 9.2) license to use, process, store, and transmit Hollowell Input Data solely as necessary to perform Verdantia's obligations under this Agreement during the Term. Such license shall automatically terminate upon expiration or termination of this Agreement, subject to Verdantia's data return and deletion obligations under Section 11.6.
+Section 8.3 — Derived Data
+All Derived Data shall be and remain the sole and exclusive property of Verdantia. As between the Parties, Verdantia owns all right, title, and interest in and to all Derived Data, including all intellectual property rights therein. Verdantia hereby grants to Licensee a non-exclusive, non-transferable, non-sublicensable license to access and use Derived Data solely for Licensee's internal business purposes during the Term, subject to the terms and conditions of this Agreement. For the avoidance of doubt, Licensee shall not distribute, sell, license, or otherwise make Derived Data available to any third party. Upon expiration or termination of this Agreement for any reason, Licensee's license to use Derived Data shall immediately and automatically terminate, and Licensee shall promptly cease all use of Derived Data and, upon Verdantia's written request, certify in writing the destruction of all copies of Derived Data in Licensee's possession or control.
+Section 8.4 — Feedback
+All Feedback provided by Licensee to Verdantia shall become and remain the sole and exclusive property of Verdantia. Licensee hereby irrevocably and unconditionally assigns to Verdantia all right, title, and interest in and to any Feedback, including all intellectual property rights therein, without the need for any further action by either Party. To the extent that any such assignment is not effective under applicable law, Licensee hereby grants to Verdantia a perpetual, irrevocable, worldwide, royalty-free, fully paid-up, exclusive, sublicensable, and transferable license to use, reproduce, modify, create derivative works based upon, distribute, publicly perform, publicly display, and otherwise exploit any and all Feedback for any purpose whatsoever, without restriction, attribution, or compensation. Licensee agrees to execute such documents and take such further actions as Verdantia may reasonably request to effectuate the foregoing assignment or license. Verdantia shall be free to use, reproduce, modify, distribute, and otherwise exploit Feedback for any purpose, including the improvement, enhancement, and development of the Verdantia Nexus API and other Verdantia products and services, without restriction, attribution, or compensation to Licensee.
+Article 9 — Data Processing
+Section 9.1 — Data Processing Addendum
+To the extent that Verdantia processes personal data on behalf of Hollowell in connection with the Verdantia Nexus API, such processing shall be governed by the Data Processing Addendum attached hereto as Exhibit C and incorporated herein by reference. The Data Processing Addendum sets forth the Parties' respective rights and obligations with respect to the processing of personal data, including the subject matter and duration of processing, the nature and purpose of processing, the types of personal data processed, and the categories of data subjects. In the event of any conflict or inconsistency between the terms of this Agreement and the terms of the Data Processing Addendum (Exhibit C) with respect to the processing of personal data, the terms of Exhibit C shall prevail and control.
+Section 9.2 — Sub-processors
+Verdantia may engage Sub-processors to assist in the performance of Verdantia's obligations under this Agreement, including the processing of Hollowell Input Data and personal data, subject to the following conditions:
+(a) General Authorization. Licensee hereby grants general authorization for Verdantia to engage Sub-processors, subject to the notification and objection procedures set forth in this Section 9.2.
+(b) Sub-processor List. Verdantia shall maintain a current list of all Sub-processors engaged to process Hollowell Input Data or personal data and shall make such list available to Licensee upon request. The initial list of Sub-processors as of the Effective Date is set forth in Exhibit C.
+(c) Notice of New Sub-processors. Verdantia shall provide Licensee with not less than thirty (30) days' prior written notice of any proposed new Sub-processor engagement, including the name, location, and description of the processing activities to be performed by the new Sub-processor.
+(d) Objection Right. If Licensee reasonably objects to a proposed new Sub-processor on legitimate data protection grounds, Licensee shall notify Verdantia of such objection in writing within the thirty (30) day notice period. The Parties shall discuss the objection in good faith and Verdantia shall use commercially reasonable efforts to address Licensee's concerns. If the Parties are unable to resolve the objection within thirty (30) days following Verdantia's receipt of the objection notice, Licensee may terminate this Agreement upon sixty (60) days' prior written notice, and such termination shall not be subject to any early-termination fee.
+(e) Deemed Consent. If Licensee does not object in writing within the thirty (30) day notice period described in subsection (c) above, Licensee shall be deemed to have consented to the engagement of the new Sub-processor.
+(f) Sub-processor Obligations. Verdantia shall impose on each Sub-processor data protection and security obligations that are no less protective than those imposed on Verdantia under this Agreement and the Data Processing Addendum. Verdantia shall remain fully responsible for the acts and omissions of its Sub-processors.
+Section 9.3 — Data Localization
+Verdantia shall process and store Hollowell Input Data and personal data in accordance with the data residency and geographic requirements specified in Exhibit C. Unless otherwise agreed by the Parties in writing or as set forth in Exhibit C, Hollowell Input Data shall be processed and stored within the United States. Any transfer of Hollowell Input Data or personal data to a jurisdiction outside the United States shall be subject to the international transfer mechanisms set forth in Exhibit C, Section C.9, and shall comply with all applicable data protection laws.
+Article 10 — Confidentiality
+Section 10.1 — Obligations
+Each Party acknowledges that, in connection with this Agreement, it may receive or have access to Confidential Information of the other Party. The Receiving Party agrees: (a) to hold the Disclosing Party's Confidential Information in strict confidence; (b) not to disclose the Disclosing Party's Confidential Information to any third party, except to the Receiving Party's employees, officers, directors, agents, advisors, contractors, and affiliates (collectively, "Representatives") who have a bona fide need to know such information for the purposes of this Agreement and who are bound by confidentiality obligations no less protective than those set forth in this Article 10; (c) to use the Disclosing Party's Confidential Information solely for the purposes of exercising its rights or performing its obligations under this Agreement; and (d) to protect the Disclosing Party's Confidential Information using commercially reasonable measures that are no less protective than those the Receiving Party uses to protect its own confidential information of a similar nature, but in no event less than a reasonable standard of care. Each Party shall be responsible for any breach of this Article 10 by its Representatives.
+Section 10.2 — Exclusions
+The obligations set forth in Section 10.1 shall not apply to any information that the Receiving Party can demonstrate by competent evidence:
+(a) was publicly available or in the public domain at the time of disclosure, or becomes publicly available or enters the public domain after disclosure through no fault or action of the Receiving Party;
+(b) was independently developed by the Receiving Party without reference to or use of the Disclosing Party's Confidential Information, as evidenced by contemporaneous written records;
+(c) was lawfully received by the Receiving Party from a third party without restriction on disclosure and without breach of any obligation of confidentiality owed to the Disclosing Party; or
+(d) was already known to the Receiving Party at the time of disclosure, as evidenced by written records predating such disclosure.
+Section 10.3 — Compelled Disclosure
+If the Receiving Party is compelled by applicable law, regulation, legal process, subpoena, civil investigative demand, or order of a court, tribunal, or governmental authority to disclose Confidential Information of the Disclosing Party, the Receiving Party shall: (a) provide the Disclosing Party with prompt written notice of such compulsion (to the extent legally permitted) to allow the Disclosing Party an opportunity to seek a protective order, injunction, or other appropriate remedy; (b) cooperate reasonably with the Disclosing Party's efforts to obtain such protective order or other remedy; (c) disclose only such portion of the Confidential Information as is legally required to be disclosed; and (d) use commercially reasonable efforts to ensure that any Confidential Information so disclosed is afforded confidential treatment by the recipient.
+Section 10.4 — Duration
+The confidentiality obligations set forth in this Article 10 shall survive the expiration or termination of this Agreement for a period of three (3) years from the date of such expiration or termination; provided, however, that with respect to any Confidential Information that constitutes a trade secret under applicable law, the obligations of confidentiality shall continue for so long as such information retains its status as a trade secret.
+Article 11 — Term and Termination
+Section 11.1 — Initial Term
+This Agreement shall commence on the Effective Date (August 1, 2025) and shall continue in force for an initial term of three (3) years, expiring on July 31, 2028 (the "Initial Term"), unless earlier terminated in accordance with the provisions of this Article 11.
+Section 11.2 — Renewal
+Following the expiration of the Initial Term, this Agreement shall automatically renew for successive periods of one (1) year each (each, a "Renewal Term"), unless either Party provides the other Party with written notice of non-renewal at least ninety (90) days prior to the expiration of the then-current term (i.e., the Initial Term or the then-current Renewal Term, as applicable). The terms and conditions of this Agreement, including the Annual License Fee and all usage terms, shall remain in effect during each Renewal Term, unless the Parties agree in writing to modifications prior to the commencement of such Renewal Term. For the avoidance of doubt, Verdantia reserves the right to propose adjustments to the Annual License Fee for any Renewal Term by providing written notice to Licensee not less than one hundred twenty (120) days prior to the commencement of such Renewal Term, and the Parties shall negotiate any such proposed adjustments in good faith.
+Section 11.3 — Termination for Cause
+Either Party may terminate this Agreement upon thirty (30) days' prior written notice to the other Party if the other Party materially breaches any provision of this Agreement and fails to cure such breach within such thirty (30) day notice period. The notice of termination for cause shall specify in reasonable detail the nature of the material breach. If the breaching Party cures the breach within the thirty (30) day cure period to the non-breaching Party's reasonable satisfaction, the notice of termination shall be deemed withdrawn and this Agreement shall continue in full force and effect. Notwithstanding the foregoing, in the event of a material breach that is not capable of cure, the non-breaching Party may terminate this Agreement immediately upon written notice to the breaching Party.
+Section 11.4 — Termination for Convenience
+Either Party may terminate this Agreement for convenience upon one hundred eighty (180) days' prior written notice to the other Party. In the event that Hollowell terminates this Agreement for convenience, Hollowell shall pay to Verdantia an early-termination fee equal to fifty percent (50%) of the remaining fees that would have been payable during the then-current annual period (calculated based on the Annual License Fee for the remaining months in the then-current annual period, including the 180-day notice period). The early-termination fee shall be payable within thirty (30) days following the effective date of termination. In the event that Verdantia terminates this Agreement for convenience, no early-termination fee shall be payable by either Party, and Verdantia shall refund to Licensee a pro rata portion of any prepaid fees attributable to the period following the effective date of termination.
+Section 11.5 — Effect of Termination
+Upon the expiration or termination of this Agreement for any reason:
+(a) Licensee's right to access and use the Verdantia Nexus API shall immediately and automatically cease, and Verdantia shall deactivate all API credentials, keys, and tokens issued to Licensee;
+(b) all licenses granted to Licensee under this Agreement, including without limitation the licenses granted under Sections 2.1, 8.2, and 8.3, shall immediately and automatically terminate;
+(c) each Party shall, within thirty (30) days of the effective date of expiration or termination, return to the other Party or securely destroy (at the Disclosing Party's election) all tangible embodiments of the other Party's Confidential Information in its possession or control, and shall certify in writing to the other Party that it has done so, provided that each Party may retain one (1) archival copy of the other Party's Confidential Information solely for legal compliance and record-keeping purposes, subject to the continuing confidentiality obligations of Article 10; and
+(d) all accrued and unpaid obligations, including without limitation Licensee's obligation to pay all fees and charges accrued prior to the effective date of expiration or termination (including overage charges and any applicable early-termination fee), shall survive and remain enforceable.
+Section 11.6 — Post-Termination Data Return
+Verdantia shall, within thirty (30) days following the effective date of expiration or termination of this Agreement, make available to Hollowell a complete copy of all Hollowell Input Data in Verdantia's possession or control, in a standard, machine-readable format reasonably agreed upon by the Parties (e.g., CSV, JSON, or XML). Verdantia shall provide Hollowell with reasonable assistance in connection with the data return process, including making the data available for download through a secure portal or transmitting it via encrypted file transfer. Hollowell shall have thirty (30) days from the date on which Verdantia makes the data available to download or retrieve such data (the "Retrieval Period"). Following the expiration of the Retrieval Period, or upon Verdantia's receipt of written confirmation from Hollowell that it has successfully received all Hollowell Input Data (whichever occurs first), Verdantia shall securely delete and destroy all Hollowell Input Data remaining in Verdantia's systems and storage, including any backup copies, in accordance with industry-standard data destruction practices. Verdantia shall certify in writing to Hollowell within fifteen (15) days following such deletion that all Hollowell Input Data has been securely deleted from Verdantia's systems, except to the extent that retention is required by applicable law, in which case Verdantia shall identify the data retained and the legal basis for retention.
+Section 11.7 — Survival
+The following provisions of this Agreement shall survive the expiration or termination of this Agreement for any reason: Article 1 (Definitions), Article 5 (Fees and Payment, solely with respect to accrued and unpaid amounts), Article 8 (Intellectual Property), Article 10 (Confidentiality), Article 12 (Indemnification), Article 13 (Limitation of Liability), Section 11.5 (Effect of Termination), Section 11.6 (Post-Termination Data Return), Article 16 (Governing Law and Dispute Resolution), Article 19 (Miscellaneous), and such other provisions of this Agreement as by their nature or context are intended to survive expiration or termination.
+Article 12 — Indemnification
+Section 12.1 — Verdantia Indemnification
+Verdantia shall defend, indemnify, and hold harmless Hollowell, and its officers, directors, members, managers, employees, agents, successors, and permitted assigns (collectively, the "Hollowell Indemnitees"), from and against any and all third-party claims, suits, demands, actions, or proceedings (each, a "Claim"), and all associated damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees and costs of litigation) (collectively, "Losses"), arising from or relating to any Claim that Hollowell's Authorized Use of the Verdantia Nexus API in accordance with the terms and conditions of this Agreement infringes or misappropriates any third party's patent, copyright, trademark, trade secret, or other intellectual property right, subject to the limitations of liability set forth in Article 13.
+In the event that the Verdantia Nexus API, or any portion thereof, is held to infringe or misappropriate a third party's intellectual property rights, or if Verdantia reasonably determines that such a claim is likely, Verdantia shall, at its sole cost and expense and at its option: (a) obtain for Licensee the right to continue using the Verdantia Nexus API; (b) modify the Verdantia Nexus API so that it is no longer infringing, provided that such modification does not materially diminish the functionality of the Verdantia Nexus API; or (c) replace the infringing component with a non-infringing alternative of substantially equivalent functionality. If none of the foregoing options is reasonably available, Verdantia may terminate this Agreement upon written notice to Licensee and shall refund to Licensee a pro rata portion of any prepaid fees attributable to the period following the effective date of such termination.
+Section 12.2 — Exclusions from Verdantia Indemnity
+Verdantia's indemnification obligations under Section 12.1 shall not apply to any Claim to the extent arising from:
+(a) use of the Verdantia Nexus API in combination with any third-party products, software, services, data, or equipment not provided, approved, or specified by Verdantia, where the infringement would not have occurred but for such combination;
+(b) modifications to the Verdantia Nexus API made by Licensee or any third party at Licensee's direction, where the infringement would not have occurred but for such modification;
+(c) Licensee's failure to use the most current version or release of the Verdantia Nexus API within a reasonable period after such version or release has been made available to Licensee by Verdantia, to the extent such current version or release would have avoided the alleged infringement; or
+(d) any use of the Verdantia Nexus API by Licensee outside the scope of the Authorized Use or in breach of this Agreement.
+Section 12.3 — Licensee Indemnification
+Hollowell shall defend, indemnify, and hold harmless Verdantia, and its officers, directors, stockholders, employees, agents, successors, and permitted assigns (collectively, the "Verdantia Indemnitees"), from and against any and all third-party Claims, and all associated Losses, arising from or relating to:
+(a) Hollowell Input Data, including without limitation any Claim that Hollowell Input Data or Verdantia's processing thereof in accordance with this Agreement infringes or misappropriates any third party's intellectual property or proprietary rights, or violates any applicable law;
+(b) Hollowell's breach of the use restrictions set forth in Section 3.2, or any use of the Verdantia Nexus API by Hollowell outside the scope of the Authorized Use; or
+(c) the negligence, recklessness, or willful misconduct of Hollowell or its employees, agents, or contractors in connection with this Agreement.
+Section 12.4 — Indemnification Procedures
+The indemnification obligations of each Party under this Article 12 are conditioned upon the following:
+(a) Prompt Notice. The indemnified Party (the "Indemnified Party") shall provide the indemnifying Party (the "Indemnifying Party") with prompt written notice of any Claim for which indemnification is sought; provided, however, that any delay in providing such notice shall not relieve the Indemnifying Party of its indemnification obligations except to the extent the Indemnifying Party is materially prejudiced by such delay.
+(b) Sole Control. The Indemnifying Party shall have the sole right to control the defense and settlement of any Claim (including the selection of counsel), at the Indemnifying Party's sole cost and expense, provided that the Indemnifying Party shall not settle any Claim in a manner that (i) imposes any obligation, restriction, or liability on the Indemnified Party without the Indemnified Party's prior written consent (not to be unreasonably withheld, conditioned, or delayed), or (ii) does not include a complete and unconditional release of the Indemnified Party from all liability with respect to such Claim.
+(c) Cooperation. The Indemnified Party shall cooperate fully and in good faith with the Indemnifying Party in the defense and settlement of any Claim, including by providing reasonable access to relevant personnel, documents, records, and information. The Indemnifying Party shall reimburse the Indemnified Party for reasonable out-of-pocket expenses incurred in providing such cooperation.
+(d) No Settlement Without Consent. The Indemnified Party shall not settle, compromise, or consent to the entry of judgment with respect to any Claim without the prior written consent of the Indemnifying Party (not to be unreasonably withheld, conditioned, or delayed).
+Article 13 — Limitation of Liability
+Section 13.1 — Aggregate Cap
+EXCEPT AS SET FORTH IN SECTION 13.3, EACH PARTY'S TOTAL AGGREGATE LIABILITY TO THE OTHER PARTY UNDER OR IN CONNECTION WITH THIS AGREEMENT, WHETHER ARISING IN CONTRACT, TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY, OR ANY OTHER LEGAL OR EQUITABLE THEORY, SHALL NOT EXCEED THE TOTAL FEES ACTUALLY PAID OR PAYABLE BY LICENSEE TO VERDANTIA DURING THE TWELVE (12) MONTH PERIOD IMMEDIATELY PRECEDING THE FIRST EVENT GIVING RISE TO THE APPLICABLE CLAIM (I.E., ONE MILLION TWO HUNDRED SIXTY THOUSAND DOLLARS ($1,260,000)). THIS AGGREGATE CAP SHALL APPLY REGARDLESS OF THE NUMBER OF CLAIMS ASSERTED AND REGARDLESS OF WHETHER SUCH LIABILITY IS BASED ON WARRANTY, CONTRACT, TORT, STATUTE, OR OTHERWISE.
+Section 13.2 — Exclusion of Consequential Damages
+IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER PARTY OR ANY THIRD PARTY FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION DAMAGES FOR LOSS OF PROFITS, LOSS OF REVENUE, LOSS OF BUSINESS OPPORTUNITIES, LOSS OF GOODWILL, LOSS OF DATA, COST OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, BUSINESS INTERRUPTION, OR ANY OTHER COMMERCIAL DAMAGES OR LOSSES, ARISING OUT OF OR RELATED TO THIS AGREEMENT, REGARDLESS OF THE THEORY OF LIABILITY (WHETHER IN CONTRACT, TORT, STRICT LIABILITY, OR OTHERWISE) AND EVEN IF SUCH PARTY HAS BEEN ADVISED OF, KNEW OF, OR SHOULD HAVE KNOWN OF THE POSSIBILITY OF SUCH DAMAGES. THIS EXCLUSION SHALL APPLY WITHOUT CARVE-OUTS AND TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW.
+Section 13.3 — Uncapped Carve-Outs
+The limitations and exclusions set forth in Sections 13.1 and 13.2 shall not apply to:
+(a) either Party's liability arising from willful misconduct or gross negligence;
+(b) either Party's liability arising from a breach of Article 10 (Confidentiality); or
+(c) either Party's indemnification obligations under Article 12 (Indemnification).
+The Parties acknowledge and agree that the limitations of liability and exclusions of damages set forth in this Article 13 represent a fair and reasonable allocation of risk between the Parties and form an essential basis of the bargain between the Parties, and that the Parties would not have entered into this Agreement without such limitations and exclusions.
+Article 14 — Insurance
+Verdantia shall obtain and maintain throughout the Term, at its own cost and expense, the following insurance coverages with carriers having an A.M. Best rating of A- VII or better:
+(a) Commercial General Liability Insurance. Coverage with limits of not less than two million dollars ($2,000,000) per occurrence and four million dollars ($4,000,000) in the annual aggregate, covering bodily injury, property damage, personal injury, and advertising injury.
+(b) Professional Liability / Errors and Omissions Insurance. Coverage with limits of not less than five million dollars ($5,000,000) per claim and five million dollars ($5,000,000) in the annual aggregate, covering claims arising from errors, omissions, negligent acts, or wrongful acts in connection with the professional services provided under this Agreement, including technology and professional services liability.
+(c) Cyber Liability / Technology Errors and Omissions Insurance. Coverage with limits of not less than five million dollars ($5,000,000) per claim and five million dollars ($5,000,000) in the annual aggregate, covering claims arising from data breaches, unauthorized access, data loss, privacy violations, and technology-related liabilities, including costs of notification, credit monitoring, forensic investigation, and regulatory fines and penalties.
+(d) Workers' Compensation Insurance. Coverage in accordance with applicable statutory requirements and employer's liability insurance with limits of not less than one million dollars ($1,000,000) per accident, one million dollars ($1,000,000) per employee for disease, and one million dollars ($1,000,000) policy limit for disease.
+Upon Licensee's written request, Verdantia shall provide Licensee with certificates of insurance evidencing the coverages required by this Article 14, including evidence of the policy limits, deductibles, and named insured. Verdantia shall provide Licensee with not less than thirty (30) days' prior written notice of any material change in, cancellation of, or non-renewal of any required insurance coverage. The requirements of this Article 14 shall not limit Verdantia's liability under this Agreement.
+Article 15 — Representations and Warranties
+Section 15.1 — Mutual Representations
+Each Party represents and warrants to the other Party that, as of the Effective Date and throughout the Term:
+(a) it is duly organized, validly existing, and in good standing under the laws of the jurisdiction of its formation and has all necessary corporate or organizational power and authority to conduct its business as currently conducted;
+(b) it has full right, power, and authority to enter into this Agreement and to perform its obligations hereunder, and the execution, delivery, and performance of this Agreement have been duly authorized by all necessary corporate or organizational action;
+(c) this Agreement constitutes a legal, valid, and binding obligation of such Party, enforceable against it in accordance with its terms, subject to applicable bankruptcy, insolvency, reorganization, moratorium, and similar laws affecting creditors' rights generally, and to general principles of equity;
+(d) the execution, delivery, and performance of this Agreement do not and will not conflict with, result in a breach of, or constitute a default under any other agreement, contract, instrument, order, judgment, decree, or applicable law to which such Party is a party or by which it is bound; and
+(e) no consent, approval, or authorization of, or declaration, filing, or registration with, any governmental authority or other third party is required in connection with the execution, delivery, or performance of this Agreement, except as has been duly obtained or made.
+Section 15.2 — Verdantia Warranties
+Verdantia represents and warrants to Hollowell that:
+(a) the Verdantia Nexus API will materially conform to the specifications, descriptions, and functionality set forth in Exhibit A (API Specifications) during the Term, and Verdantia will not materially diminish the functionality of the Verdantia Nexus API during the Term without Licensee's prior written consent;
+(b) the services provided under this Agreement, including the Verdantia Nexus API and related support services, will be performed in a professional and workmanlike manner, consistent with generally accepted industry standards and practices;
+(c) the Verdantia Nexus API, when used by Licensee for the Authorized Use and in accordance with the terms and conditions of this Agreement, will not, to Verdantia's knowledge as of the Effective Date, infringe or misappropriate any third party's intellectual property rights; and
+(d) Verdantia will comply with all applicable laws, rules, and regulations in performing its obligations under this Agreement.
+Section 15.3 — Disclaimer
+EXCEPT AS EXPRESSLY SET FORTH IN THIS AGREEMENT, VERDANTIA MAKES NO REPRESENTATIONS OR WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO THE VERDANTIA NEXUS API, THE DERIVED DATA, OR ANY OTHER SERVICES PROVIDED HEREUNDER, AND VERDANTIA HEREBY DISCLAIMS ALL IMPLIED WARRANTIES, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT, AND ALL WARRANTIES ARISING FROM COURSE OF DEALING, USAGE, OR TRADE PRACTICE. WITHOUT LIMITING THE FOREGOING, VERDANTIA DOES NOT WARRANT THAT THE VERDANTIA NEXUS API WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPLETELY SECURE, OR THAT ALL DEFECTS WILL BE CORRECTED. LICENSEE ACKNOWLEDGES THAT THE VERDANTIA NEXUS API IS PROVIDED "AS IS" EXCEPT TO THE EXTENT OF THE EXPRESS WARRANTIES SET FORTH IN THIS AGREEMENT.
+Article 16 — Governing Law and Dispute Resolution
+Section 16.1 — Governing Law
+This Agreement, and all disputes, claims, or controversies arising out of or relating to this Agreement, including the negotiation, interpretation, validity, performance, breach, or termination thereof, shall be governed by and construed in accordance with the laws of the State of Delaware, without giving effect to any choice of law or conflict of laws rules or provisions (whether of the State of Delaware or any other jurisdiction) that would cause the application of the laws of any jurisdiction other than the State of Delaware.
+Section 16.2 — Exclusive Jurisdiction
+The Parties hereby irrevocably and unconditionally submit to the exclusive jurisdiction and venue of the Court of Chancery of the State of Delaware, sitting in New Castle County, Delaware (or, if the Court of Chancery declines to accept jurisdiction, the Superior Court of the State of Delaware, sitting in New Castle County, Delaware, or the United States District Court for the District of Delaware) for the resolution of any and all disputes, claims, or controversies arising out of or relating to this Agreement. Each Party hereby irrevocably waives any objection that it may now or hereafter have to the laying of venue of any such action or proceeding in any such court, and irrevocably waives any claim that any such action or proceeding brought in any such court has been brought in an inconvenient forum. Process in any such action or proceeding may be served on any Party anywhere in the world, whether within or without the jurisdiction of any such court, in the manner provided by applicable law.
+Section 16.3 — Equitable Relief
+Nothing in this Article 16 shall be construed to prevent either Party from seeking injunctive relief, specific performance, or other equitable relief in any court of competent jurisdiction at any time, without the necessity of posting a bond or proving actual damages, in order to protect its Confidential Information, intellectual property rights, or other proprietary interests. The Parties acknowledge and agree that a breach of Article 10 (Confidentiality) or Article 8 (Intellectual Property) would cause irreparable harm for which monetary damages alone would be an inadequate remedy.
+Article 17 — Assignment
+Neither Party may assign, transfer, delegate, or otherwise dispose of this Agreement, or any of its rights, obligations, or interests hereunder, whether by operation of law or otherwise, without the prior written consent of the other Party, which consent shall not be unreasonably withheld, conditioned, or delayed; provided, however, that Verdantia may assign this Agreement without the consent of Hollowell to a successor entity in connection with a merger, consolidation, reorganization, acquisition, or sale of all or substantially all of Verdantia's assets or equity interests, provided that the assignee expressly assumes in writing all of Verdantia's obligations under this Agreement. Any purported assignment, transfer, or delegation in violation of this Article 17 shall be null and void and of no force or effect. Subject to the foregoing restrictions, this Agreement shall be binding upon and inure to the benefit of the Parties and their respective successors and permitted assigns.
+Article 18 — Force Majeure
+Neither Party shall be liable for, or be considered to be in breach of or default under this Agreement on account of, any delay or failure to perform any obligation hereunder (other than an obligation to make payments when due) to the extent such delay or failure results from causes beyond such Party's reasonable control, including but not limited to: acts of God; fire; flood; earthquake; hurricane; tornado; epidemic or pandemic; explosion; war (whether declared or undeclared); invasion; armed conflict; terrorism; riot; civil unrest; strike, lockout, or other labor dispute; embargo; trade sanctions; action or inaction of any governmental authority (including the enactment of laws, regulations, orders, or other governmental directives); power failure or outage; telecommunications or internet disruption; cyberattack or distributed denial-of-service attack on internet infrastructure not directed at the affected Party's systems; or other event of force majeure (each, a "Force Majeure Event").
+The Party affected by a Force Majeure Event shall: (a) provide prompt written notice to the other Party, describing the nature and expected duration of the Force Majeure Event and the obligations affected; (b) use commercially reasonable efforts to mitigate the impact of the Force Majeure Event and resume performance of its obligations as soon as reasonably practicable; and (c) provide regular updates to the other Party regarding the status of the Force Majeure Event and the affected Party's efforts to resume performance.
+If a Force Majeure Event continues for a period of sixty (60) or more consecutive days, either Party may terminate this Agreement upon thirty (30) days' prior written notice to the other Party, and such termination shall not be subject to any early-termination fee. In the event of such termination, Verdantia shall refund to Licensee a pro rata portion of any prepaid fees attributable to the period following the effective date of termination.
+Article 19 — Miscellaneous
+Section 19.1 — Entire Agreement
+This Agreement, including all Schedules and Exhibits attached hereto and incorporated herein by reference (Schedule A — Pricing and Usage Tiers; Exhibit A — API Specifications; Exhibit B — SLA Terms; and Exhibit C — Data Processing Addendum), constitutes the entire agreement between the Parties with respect to the subject matter hereof and supersedes all prior and contemporaneous agreements, understandings, representations, warranties, and communications, whether written or oral, between the Parties with respect to such subject matter. Each Party acknowledges that, in entering into this Agreement, it has not relied on any statement, representation, warranty, or understanding (whether negligently or innocently made) of any person other than as expressly set forth in this Agreement.
+Section 19.2 — Amendments
+No amendment, modification, supplement, or waiver of any provision of this Agreement shall be effective unless made in writing and signed by duly authorized representatives of both Parties. No oral agreement, course of dealing, or course of performance shall be deemed to amend, modify, or supplement any provision of this Agreement.
+Section 19.3 — Waiver
+No failure or delay by either Party in exercising any right, power, or remedy under this Agreement shall operate as a waiver thereof, nor shall any single or partial exercise of any right, power, or remedy preclude any other or further exercise thereof or the exercise of any other right, power, or remedy. All waivers must be in writing and signed by the waiving Party to be effective.
+Section 19.4 — Severability
+If any provision of this Agreement (or any portion thereof) is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, such invalidity, illegality, or unenforceability shall not affect any other provision of this Agreement, and this Agreement shall be construed as if such invalid, illegal, or unenforceable provision had never been contained herein. The Parties shall negotiate in good faith to replace any invalid, illegal, or unenforceable provision with a valid, legal, and enforceable provision that, to the greatest extent possible, achieves the original intent and economic effect of the invalid, illegal, or unenforceable provision.
+Section 19.5 — Notices
+All notices, requests, demands, consents, and other communications required or permitted under this Agreement shall be in writing and shall be deemed duly given: (a) when delivered personally; (b) one (1) business day after deposit with a nationally recognized overnight courier service, with delivery charges prepaid; (c) three (3) business days after being sent by certified or registered mail, return receipt requested, postage prepaid; or (d) when transmitted by electronic mail with confirmation of receipt (provided that any notice given by electronic mail shall be followed by delivery of a copy by one of the methods described in clauses (a), (b), or (c) above within two (2) business days). Notices shall be addressed to the Parties at the following addresses (or to such other address as may be designated in writing by a Party in accordance with this Section):
+If to Verdantia:
+Verdantia Systems Inc. 440 Crescent Ridge Boulevard, Suite 800 Wilmington, DE 19801
+Attn: VP & Associate General Counsel (Priya Chandrasekaran)
+Email: pchandrasekaran@verdantia.com
+With a copy to (which shall not constitute notice):
+Linden & Foss LLP 1285 Avenue of the Americas, 30th Floor New York, NY 10019
+Attn: Marcus Trevino
+Email: mtrevino@lindenfoss.com
+If to Hollowell:
+Hollowell Industries Group LLC 70 Gramercy Park South, 14th Floor New York, NY 10003
+Attn: Senior Corporate Counsel (Derek Calloway)
+Email: dcalloway@hollowell.com
+With a copy to (which shall not constitute notice):
+Whitmore Beck & Alden LLP 600 Lexington Avenue, 22nd Floor New York, NY 10022
+Attn: Sandra Yuen
+Email: syuen@whitmorebalden.com
+Section 19.6 — Counterparts
+This Agreement may be executed in two or more counterparts, each of which shall be deemed an original and all of which together shall constitute one and the same instrument. Execution and delivery of this Agreement by exchange of facsimile copies or electronically transmitted copies bearing the facsimile or electronic signature of a Party shall constitute a valid and binding execution and delivery of this Agreement by such Party and shall have the same force and effect as delivery of an original executed copy.
+Section 19.7 — Independent Contractors
+The relationship of the Parties under this Agreement is that of independent contractors. Nothing contained in this Agreement shall be construed to create a partnership, joint venture, agency, fiduciary, franchise, or employment relationship between the Parties. Neither Party shall have any right, power, or authority to assume, create, or incur any obligation, liability, or expense on behalf of the other Party, or to bind the other Party in any manner whatsoever.
+Section 19.8 — Third-Party Beneficiaries
+This Agreement is entered into solely for the benefit of the Parties and their respective successors and permitted assigns. Nothing in this Agreement, express or implied, is intended to or shall confer upon any person or entity other than the Parties and their respective successors and permitted assigns any legal or equitable right, benefit, remedy, or claim under or by reason of this Agreement.
+Section 19.9 — Construction
+The headings and captions used in this Agreement are for convenience of reference only and shall not affect the interpretation or construction of this Agreement. As used in this Agreement, the words "include," "includes," and "including" shall be deemed to be followed by the phrase "without limitation." The terms "herein," "hereof," "hereunder," and similar terms refer to this Agreement as a whole and not to any particular provision. References to any "Article," "Section," "Schedule," or "Exhibit" refer to the corresponding Article, Section, Schedule, or Exhibit of or to this Agreement, unless otherwise specified. This Agreement was drafted jointly by the Parties, and no presumption or rule of construction shall apply against either Party as the drafter of this Agreement. In the event of any conflict between the body of this Agreement and any Schedule or Exhibit, the body of this Agreement shall control, unless the Schedule or Exhibit expressly provides otherwise.
+[Remainder of this page intentionally left blank. Signature page follows.]
+SIGNATURE PAGE TO API ACCESS AND USE AGREEMENT
+IN WITNESS WHEREOF, the Parties hereto have caused this API Access and Use Agreement to be executed by their respective duly authorized representatives as of the Effective Date first written above.
+VERDANTIA SYSTEMS INC.
+By: ________
+Name: Priya Chandrasekaran
+Title: VP & Associate General Counsel
+Date: ________
+HOLLOWELL INDUSTRIES GROUP LLC
+By: ________
+Name: Derek Calloway
+Title: Senior Corporate Counsel
+Date: ________
+SCHEDULE A — PRICING AND USAGE TIERS
+This Schedule A is attached to and forms an integral part of the API Access and Use Agreement (the "Agreement") between Verdantia Systems Inc. ("Verdantia") and Hollowell Industries Group LLC ("Hollowell"), dated as of August 1, 2025. Capitalized terms used but not defined herein shall have the meanings set forth in the Agreement.
+A.1 — Annual License Fee
+The Annual License Fee for access to and use of the Verdantia Nexus API during the Term is one million two hundred sixty thousand dollars ($1,260,000) per year.
+A.2 — Total Contract Value (Initial Term)
+The total contract value for the Initial Term (August 1, 2025 through July 31, 2028) is three million seven hundred eighty thousand dollars ($3,780,000), calculated as follows:
+Year
+Period
+Annual License Fee
+Year 1
+August 1, 2025 – July 31, 2026
+$1,260,000
+Year 2
+August 1, 2026 – July 31, 2027
+$1,260,000
+Year 3
+August 1, 2027 – July 31, 2028
+$1,260,000
+Total
+$3,780,000
+The Total Contract Value does not include overage charges, taxes, or other amounts that may become payable under the Agreement.
+A.3 — Quarterly Invoice Amount
+The Quarterly Invoice amount is three hundred fifteen thousand dollars ($315,000) per quarter, invoiced in advance. The quarterly invoicing schedule for Year 1 is as follows:
+Quarter
+Invoice Date (approx.)
+Period Covered
+Amount
+Q1
+August 1, 2025
+Aug 1 – Oct 31, 2025
+$315,000
+Q2
+November 1, 2025
+Nov 1, 2025 – Jan 31, 2026
+$315,000
+Q3
+February 1, 2026
+Feb 1 – Apr 30, 2026
+$315,000
+Q4
+May 1, 2026
+May 1 – Jul 31, 2026
+$315,000
+Annual Total
+$1,260,000
+Subsequent years shall follow the same quarterly invoicing pattern.
+A.4 — Monthly Fee (for SLA Calculations)
+The Monthly Fee is one hundred five thousand dollars ($105,000), being one-twelfth (1/12) of the Annual License Fee. The Monthly Fee is used as the basis for calculating SLA Credits pursuant to Section 6.3 of the Agreement and Exhibit B.
+A.5 — Base Tier
+The Base Tier allocation is five million (5,000,000) API Calls per calendar month. The Base Tier allocation resets at the beginning of each calendar month and does not carry over unused API Calls from prior months. The Base Tier is included in the Annual License Fee at no additional charge.
+A.6 — Overage Rate
+The Overage Rate is four-tenths of one cent ($0.004) per API Call in excess of the Base Tier in any calendar month. Overage charges are calculated on a monthly basis and invoiced in arrears as a separate line item on the next Quarterly Invoice. The following table illustrates sample overage calculations:
+Monthly API Calls
+Overage Calls
+Overage Charge
+5,000,000
+0
+$0
+5,500,000
+500,000
+$2,000
+6,000,000
+1,000,000
+$4,000
+7,500,000
+2,500,000
+$10,000
+10,000,000
+5,000,000
+$20,000
+A.7 — Burst Allowance
+The Burst Allowance permits Licensee to make API Calls at a rate of up to one hundred fifty percent (150%) of the Base Tier rate in any rolling sixty (60) minute window. API Calls exceeding the Burst Allowance are subject to HTTP 429 (Too Many Requests) throttling by Verdantia's systems. No SLA Credits are available for throttle events resulting from Licensee exceeding the Burst Allowance.
+A.8 — Payment Terms
+All invoices are due and payable Net 30 from the invoice date. Payments shall be made in United States dollars by wire transfer or ACH to an account designated by Verdantia in writing.
+A.9 — Late Payment Interest
+Late payments shall accrue interest at the rate of one and one-half percent (1.5%) per month (or, if less, the maximum rate permitted by applicable law), calculated from the original due date until the date of actual payment, compounded monthly.
+A.10 — Early-Termination Fee
+In the event that Licensee terminates this Agreement for convenience pursuant to Section 11.4, Licensee shall pay an early-termination fee equal to fifty percent (50%) of the remaining fees that would have been payable during the then-current annual period. By way of example, if Licensee terminates for convenience with six (6) months remaining in the then-current annual period, the early-termination fee would be calculated as: 50% x ($105,000 x 6 months) = $315,000.
+EXHIBIT A — API SPECIFICATIONS
+This Exhibit A is attached to and forms an integral part of the API Access and Use Agreement (the "Agreement") between Verdantia Systems Inc. ("Verdantia") and Hollowell Industries Group LLC ("Hollowell"), dated as of August 1, 2025. Capitalized terms used but not defined herein shall have the meanings set forth in the Agreement.
+A.1 — Product Name
+Verdantia Nexus API
+A.2 — Overview
+The Verdantia Nexus API is Verdantia's proprietary application programming interface designed to provide supply-chain data enrichment, analytics, predictive modeling, and integration services. The Verdantia Nexus API enables Licensee to submit supply-chain data, logistics data, inventory data, and transactional data for processing by Verdantia's systems and to receive enriched, analyzed, and aggregated data outputs in return.
+Authentication. The Verdantia Nexus API supports the following authentication mechanisms:
+(a) OAuth 2.0 — Client credentials grant flow for server-to-server authentication. Licensee will be issued a Client ID and Client Secret upon execution of this Agreement. Access tokens are issued by Verdantia's authorization server and have a configurable expiration period (default: 3,600 seconds / 1 hour).
+(b) API Key Authentication — Static API key authentication for legacy integrations. API keys are issued by Verdantia upon request and must be included in the HTTP header of each API Call. API key authentication is supported but OAuth 2.0 is the recommended and preferred authentication method.
+Supported Data Formats. The Verdantia Nexus API supports the following data interchange formats:
+•  JSON (JavaScript Object Notation) — Primary and recommended format for request and response payloads.
+•  XML (Extensible Markup Language) — Supported for request and response payloads upon configuration.
+Protocol. All API communications shall be conducted over HTTPS (TLS 1.2 or higher). Unencrypted HTTP connections are not supported and will be rejected.
+Integration Guidance. Verdantia shall provide Licensee with technical integration guidance, including sample code, SDK libraries (where available), and implementation best practices, to facilitate the integration of the Verdantia Nexus API with the Hollowell SCM Platform.
+A.3 — Endpoints
+The Verdantia Nexus API provides the following categories of endpoints (detailed endpoint specifications, including request/response schemas, are maintained in Verdantia's online developer documentation portal):
+(a) /v2/supply-chain/enrich — Supply chain data enrichment endpoint. Accepts Hollowell Input Data and returns enriched data outputs.
+(b) /v2/analytics/query — Analytics query endpoint. Supports parameterized queries against Verdantia's analytics engine.
+(c) /v2/predict/forecast — Predictive forecasting endpoint. Accepts historical data and configuration parameters and returns demand and supply forecasts.
+(d) /v2/inventory/optimize — Inventory optimization endpoint. Accepts inventory data and returns optimization recommendations.
+(e) /v2/logistics/route — Logistics routing endpoint. Accepts origin/destination and constraint data and returns optimized routing recommendations.
+(f) /v2/status — Health check and status endpoint. Returns current API status, version, and system health information.
+(g) /v2/usage — Usage reporting endpoint. Returns current API Call counts, rate limit status, and Burst Allowance utilization for the authenticated Licensee.
+Error Codes. The Verdantia Nexus API uses standard HTTP status codes and returns structured error response payloads. Key error codes include:
+HTTP Status Code
+Description
+200 OK
+Request successful
+201 Created
+Resource created
+400 Bad Request
+Malformed request or invalid parameters
+401 Unauthorized
+Authentication failure
+403 Forbidden
+Insufficient permissions
+404 Not Found
+Resource not found
+429 Too Many Requests
+Burst Allowance exceeded; throttling in effect
+500 Internal Server Error
+Verdantia system error
+503 Service Unavailable
+Temporary service outage
+Rate Limit Headers. Each API response includes the following rate limit headers:
+•  `X-RateLimit-Limit` — The maximum number of API Calls permitted in the current window.
+•  `X-RateLimit-Remaining` — The number of API Calls remaining in the current window.
+•  `X-RateLimit-Reset` — The time (in UTC epoch seconds) at which the current rate limit window resets.
+•  `Retry-After` — (Included in HTTP 429 responses only) The number of seconds until the Licensee may retry the request.
+A.4 — Documentation
+Complete API documentation, including endpoint specifications, request/response schemas, authentication guides, code samples, SDK references, change logs, and FAQs, shall be maintained by Verdantia on its online developer documentation portal. The URL of the developer portal shall be provided to Licensee upon execution of this Agreement. Verdantia shall keep the documentation current with the latest version of the Verdantia Nexus API and shall notify Licensee of material updates to the documentation.
+A.5 — Versioning and Deprecation
+Verdantia employs semantic versioning (major.minor.patch) for the Verdantia Nexus API. Verdantia's versioning and deprecation policy is as follows:
+(a) Major Version Changes (e.g., v2 to v3) may include breaking changes. Verdantia shall provide not less than twelve (12) months' prior written notice of any major version deprecation and shall maintain the deprecated major version in production for not less than twelve (12) months following the release of the successor major version.
+(b) Minor Version Changes (e.g., v2.1 to v2.2) are backward-compatible and may include new features, new endpoints, or enhancements. Verdantia shall provide not less than sixty (60) days' prior written notice of any minor version deprecation.
+(c) Patch Changes (e.g., v2.1.0 to v2.1.1) include bug fixes, security patches, and performance improvements. Patch changes are backward-compatible and may be deployed without prior notice.
+(d) Backward Compatibility. Verdantia shall use commercially reasonable efforts to maintain backward compatibility within the same major version. In the event that a change within the same major version introduces a backward-incompatible modification, Verdantia shall treat such change as a major version change for purposes of the deprecation notice requirements.
+A.6 — Testing and Sandbox Environment
+Verdantia shall provide Licensee with access to a sandbox/staging environment for integration testing and development purposes prior to production deployment and on an ongoing basis during the Term. The sandbox environment shall mirror the production API's functionality, endpoints, authentication mechanisms, and response formats, but shall use synthetic or test data. API Calls made to the sandbox environment shall not count toward the Base Tier allocation or Overage calculations. Verdantia shall use commercially reasonable efforts to maintain the sandbox environment in a state that is representative of the current production API version.
+EXHIBIT B — SLA TERMS
+This Exhibit B is attached to and forms an integral part of the API Access and Use Agreement (the "Agreement") between Verdantia Systems Inc. ("Verdantia") and Hollowell Industries Group LLC ("Hollowell"), dated as of August 1, 2025. Capitalized terms used but not defined herein shall have the meanings set forth in the Agreement.
+B.1 — Uptime Availability
+Verdantia commits to providing ninety-nine and nine-tenths percent (99.9%) monthly Uptime Availability for the Verdantia Nexus API. Uptime Availability is calculated using the following formula:
+Uptime Availability (%) = ((Total Minutes in Calendar Month - Downtime Minutes) / (Total Minutes in Calendar Month - Scheduled Maintenance Minutes)) x 100
+Where:
+•  Total Minutes in Calendar Month = the total number of minutes in the applicable calendar month (e.g., 43,200 minutes for a 30-day month; 44,640 minutes for a 31-day month).
+•  Downtime Minutes = the total number of minutes during the calendar month in which the Verdantia Nexus API was unavailable, as measured by Verdantia's monitoring systems, excluding Scheduled Maintenance.
+•  Scheduled Maintenance Minutes = the total number of minutes of Scheduled Maintenance performed during the calendar month in accordance with Section B.2.
+The 99.9% Uptime Availability commitment permits approximately 43.2 minutes of total Downtime per calendar month (based on a 30-day month, excluding Scheduled Maintenance). For a 31-day month, the permitted Downtime is approximately 44.6 minutes.
+B.2 — Scheduled Maintenance
+Verdantia may perform Scheduled Maintenance on the Verdantia Nexus API for up to four (4) hours per calendar month. The following conditions apply:
+(a) Notice. Verdantia shall provide Licensee with not less than seventy-two (72) hours' prior written notice of each Scheduled Maintenance window, specifying the anticipated start time, estimated duration, and description of the maintenance activities.
+(b) Timing. Scheduled Maintenance windows shall be scheduled during off-peak hours to minimize disruption to Licensee's operations. Off-peak hours are defined as: (i) weekends (Saturday 12:00 AM ET through Sunday 11:59 PM ET); or (ii) weekday overnight hours (12:00 AM ET through 6:00 AM ET).
+(c) Duration. Individual Scheduled Maintenance windows shall not exceed two (2) hours in duration, except in exceptional circumstances with Licensee's prior written consent.
+(d) Exclusion from Downtime. Scheduled Maintenance windows that comply with the notice requirements of this Section B.2 shall not be counted as Downtime for purposes of calculating Uptime Availability.
+(e) Excess Maintenance. Any maintenance time exceeding the four (4) hour monthly allocation, or any maintenance performed without the required seventy-two (72) hours' prior written notice, shall be counted as Downtime.
+B.3 — SLA Credit Calculation
+If Verdantia fails to achieve 99.9% Uptime Availability in any calendar month, Licensee shall be entitled to SLA Credits in accordance with the following schedule:
+Uptime Availability
+Credit (% of Monthly Fee)
+Credit Amount
+99.8% – < 99.9%
+5%
+$5,250
+99.7% – < 99.8%
+10%
+$10,500
+99.6% – < 99.7%
+15%
+$15,750
+99.5% – < 99.6%
+20%
+$21,000
+99.4% – < 99.5%
+25%
+$26,250
+< 99.4%
+30% (cap)
+$31,500
+Maximum SLA Credit: The maximum SLA Credit available in any single calendar month shall not exceed thirty percent (30%) of the Monthly Fee, representing a maximum SLA Credit of thirty-one thousand five hundred dollars ($31,500) per calendar month, regardless of the actual Uptime Availability achieved.
+Calculation Basis: The Monthly Fee for purposes of SLA Credit calculations is one hundred five thousand dollars ($105,000) ($1,260,000 Annual License Fee / 12 months).
+B.4 — Credit Request Procedure
+To request SLA Credits, Licensee must submit a written credit request to Verdantia within thirty (30) calendar days following the end of the calendar month in which the Downtime occurred. Credit requests shall be submitted via email to sla-credits@verdantia.com (or such other address as Verdantia may designate in writing) and shall include:
+(a) Licensee's name and account identifier;
+(b) the calendar month for which the credit is requested;
+(c) the date(s), start time(s), and end time(s) (in Eastern Time) of each Downtime event;
+(d) a description of the impact on Licensee's operations;
+(e) any supporting evidence reasonably available to Licensee, including error logs, monitoring data, screenshots, or correspondence with Verdantia support; and
+(f) the SLA Credit amount requested.
+Verdantia shall review each credit request and respond in writing within fifteen (15) business days, either approving the credit request, approving a modified credit amount with supporting explanation, or denying the credit request with a detailed written explanation. Approved SLA Credits shall be applied to the next Quarterly Invoice following the determination. In the event that Licensee disagrees with Verdantia's determination, the Parties shall seek to resolve the disagreement in good faith within thirty (30) days. If the disagreement is not resolved within such period, either Party may pursue the dispute resolution procedures set forth in Article 16 of the Agreement.
+B.5 — Sole Remedy
+SLA Credits are Licensee's sole and exclusive remedy, and Verdantia's sole and exclusive liability, for any failure by Verdantia to meet the Uptime Availability commitment set forth in this Exhibit B and Article 6 of the Agreement. The availability and payment of SLA Credits shall not limit or affect Licensee's right to terminate the Agreement for cause pursuant to Section 11.3 of the Agreement if the failure to meet Uptime Availability commitments constitutes a material breach of the Agreement.
+B.6 — Exclusions
+SLA Credits shall not be available, and shall not accrue, with respect to any Downtime or service degradation resulting from:
+(a) Scheduled Maintenance performed in accordance with Section B.2;
+(b) issues caused by Licensee's actions, omissions, or failures, including misuse of the API, errors in Hollowell Input Data, failures in Licensee's systems, networks, or infrastructure, or Licensee's failure to comply with Verdantia's documentation or specifications;
+(c) force majeure events as described in Article 18 of the Agreement;
+(d) throttling resulting from Licensee exceeding the Burst Allowance as described in Section 4.3 of the Agreement;
+(e) failures, outages, or degradation in third-party systems, networks, infrastructure, or services that are outside Verdantia's reasonable control, including internet backbone outages, DNS failures, or cloud provider outages; or
+(f) suspension of access pursuant to Section 5.4 of the Agreement (late payment).
+B.7 — Incident Response
+Verdantia maintains an incident response program with the following severity classifications and target response times:
+Severity Level
+Description
+Target Initial Response
+Target Resolution
+P1 — Critical
+Complete API outage; all endpoints unavailable; widespread impact to Licensee's production operations
+15 minutes
+4 hours
+P2 — High
+Significant degradation in API performance or availability; one or more critical endpoints unavailable or severely degraded; material impact to Licensee's operations
+30 minutes
+8 hours
+P3 — Medium
+Partial degradation in API performance; non-critical endpoints affected; limited impact to Licensee's operations
+2 hours
+2 business days
+P4 — Low
+Minor issue with no material impact on Licensee's operations; cosmetic or informational issues; feature requests
+1 business day
+Next scheduled release
+Escalation. Licensee may escalate an incident's severity classification by contacting Verdantia's on-call engineering team at the escalation contact provided in the developer portal. Verdantia shall acknowledge all escalation requests within thirty (30) minutes and shall reassess the severity classification in good faith.
+Post-Incident Review. For all P1 (Critical) and P2 (High) incidents, Verdantia shall provide Licensee with a written post-incident report (root cause analysis) within five (5) business days following resolution of the incident, describing the cause of the incident, the timeline of events, the remediation actions taken, and the steps being implemented to prevent recurrence.
+EXHIBIT C — DATA PROCESSING ADDENDUM
+This Data Processing Addendum ("DPA") is attached to and forms an integral part of the API Access and Use Agreement (the "Agreement") between Verdantia Systems Inc. ("Verdantia") and Hollowell Industries Group LLC ("Hollowell"), dated as of August 1, 2025. Capitalized terms used but not defined herein shall have the meanings set forth in the Agreement.
+C.1 — Scope and Purpose
+This DPA governs the processing of personal data by Verdantia on behalf of Hollowell in connection with Verdantia's provision of the Verdantia Nexus API and related services under the Agreement. This DPA applies to the extent that Hollowell Input Data submitted to the Verdantia Nexus API contains personal data relating to identified or identifiable natural persons.
+The subject matter, duration, nature, purpose, types of personal data, and categories of data subjects are as follows:
+•  Subject Matter: Processing of personal data contained within Hollowell Input Data through the Verdantia Nexus API.
+•  Duration: The Term of the Agreement, plus the period required for data return and deletion pursuant to Section 11.6 of the Agreement.
+•  Nature and Purpose: Data enrichment, analytics, predictive modeling, and supply-chain optimization processing performed by Verdantia's systems on Hollowell Input Data, solely as necessary to perform Verdantia's obligations under the Agreement.
+•  Types of Personal Data: May include, to the extent submitted by Hollowell: contact information (names, email addresses, phone numbers), shipping and delivery addresses, employee identifiers, vendor and supplier representative information, and transactional data containing personal data elements.
+•  Categories of Data Subjects: May include, to the extent applicable: Hollowell employees, Hollowell customers, vendors, suppliers, logistics partners, and other individuals whose personal data is included in Hollowell Input Data.
+C.2 — Roles
+For purposes of this DPA and applicable data protection laws:
+(a) Hollowell is the Controller (as defined under the GDPR) or Business (as defined under the CCPA/CPRA) with respect to personal data contained in Hollowell Input Data.
+(b) Verdantia is the Processor (as defined under the GDPR) or Service Provider (as defined under the CCPA/CPRA) with respect to personal data contained in Hollowell Input Data that Verdantia processes on behalf of Hollowell under the Agreement.
+C.3 — Processing Instructions
+Verdantia shall process personal data contained in Hollowell Input Data solely in accordance with Hollowell's documented instructions and solely as necessary to perform Verdantia's obligations under the Agreement. Hollowell's instructions as of the Effective Date consist of the processing described in the Agreement and this DPA. Verdantia shall not process personal data for any other purpose, including for Verdantia's own purposes, unless: (a) Hollowell provides additional documented instructions; (b) processing is required by applicable law, in which case Verdantia shall inform Hollowell of such legal requirement before processing (unless prohibited by law from doing so); or (c) the Parties agree in writing to additional processing purposes. Verdantia shall promptly inform Hollowell if, in Verdantia's opinion, a processing instruction from Hollowell infringes applicable data protection laws.
+C.4 — Sub-processors
+Verdantia's engagement of Sub-processors is governed by Section 9.2 of the Agreement. Verdantia shall impose on each Sub-processor data processing obligations that are substantially the same as, and no less protective than, those imposed on Verdantia under this DPA. Verdantia shall remain fully liable to Hollowell for the performance of each Sub-processor's obligations. The current list of approved Sub-processors as of the Effective Date is as follows:
+Sub-processor Name
+Location
+Processing Activity
+Meridian Cloud Services Inc.
+United States (Virginia)
+Cloud infrastructure and hosting
+DataLoom Analytics Corp.
+United States (Oregon)
+Data processing and analytics engine
+NovaSentry Security Ltd.
+United States (Texas)
+Security monitoring and threat detection
+Verdantia shall update this list in accordance with the notice procedures set forth in Section 9.2 of the Agreement.
+C.5 — Security Measures
+Verdantia shall implement and maintain the administrative, technical, and physical safeguards described in Article 7 of the Agreement. Such measures include, but are not limited to: encryption of personal data in transit and at rest; access controls and authentication; network security; vulnerability management; employee training; and business continuity planning. Verdantia shall maintain SOC 2 Type II compliance and shall provide Hollowell with its then-current SOC 2 Type II Report, as audited by Clairemont & Sadler CPAs LLP (or a successor independent auditor reasonably acceptable to Hollowell), on an annual basis and upon Hollowell's reasonable written request.
+C.6 — Data Breach Notification
+In the event of a confirmed Security Incident involving personal data processed under this DPA (a "Personal Data Breach"), Verdantia shall notify Hollowell in writing without undue delay and in any event within seventy-two (72) hours of becoming aware of the Personal Data Breach. Such notification shall include, to the extent known:
+(a) a description of the nature of the Personal Data Breach, including the categories and approximate number of data subjects and personal data records affected;
+(b) the name and contact details of Verdantia's data protection point of contact;
+(c) a description of the likely consequences of the Personal Data Breach;
+(d) a description of the measures taken or proposed to be taken by Verdantia to address the Personal Data Breach, including measures to mitigate its possible adverse effects; and
+(e) such other information as may be required under applicable data protection laws.
+Verdantia shall cooperate with Hollowell and take commercially reasonable steps to assist in the investigation, containment, remediation, and mitigation of the Personal Data Breach. Verdantia shall not notify any data subject, regulatory authority, or other third party of a Personal Data Breach without Hollowell's prior written consent, unless required to do so by applicable law.
+C.7 — Data Subject Rights
+Verdantia shall, taking into account the nature of the processing, assist Hollowell by implementing appropriate technical and organizational measures, insofar as this is reasonably possible, for the fulfillment of Hollowell's obligation to respond to requests from data subjects exercising their rights under applicable data protection laws. Such rights may include the right of access, rectification, erasure, restriction of processing, data portability, and the right to object. Verdantia shall promptly notify Hollowell if Verdantia receives a request directly from a data subject and shall not respond to such request without Hollowell's prior written instructions, unless required by applicable law. Verdantia shall provide such assistance at Hollowell's reasonable cost and expense, except to the extent the request arises from Verdantia's breach of this DPA.
+C.8 — Data Return and Deletion
+Upon expiration or termination of the Agreement, Verdantia shall return or delete personal data in accordance with Section 11.6 of the Agreement. Specifically, Verdantia shall make available to Hollowell all personal data in Verdantia's possession or control within thirty (30) days following the effective date of expiration or termination, in a standard machine-readable format. Following the Retrieval Period (as defined in Section 11.6), Verdantia shall securely delete all personal data from its systems, including backup copies, and shall certify such deletion in writing. Verdantia may retain personal data only to the extent required by applicable law, and any such retained data shall remain subject to the confidentiality and security obligations of this DPA and the Agreement.
+C.9 — International Transfers
+To the extent that Verdantia transfers personal data outside the United States or, if applicable, outside the European Economic Area ("EEA"), the United Kingdom, or Switzerland, Verdantia shall ensure that such transfers are made in compliance with applicable data protection laws. Where required by applicable law, the Parties shall enter into the Standard Contractual Clauses adopted by the European Commission (as may be updated or replaced from time to time) or other legally recognized transfer mechanisms, as supplementary agreements to this DPA. Verdantia shall implement appropriate supplementary measures, including technical, organizational, and contractual safeguards, to ensure that personal data transferred internationally receives a level of protection substantially equivalent to that required by applicable data protection laws.
+C.10 — Audit
+Verdantia shall make available to Hollowell all information reasonably necessary to demonstrate compliance with this DPA and shall allow for and contribute to audits, including inspections, conducted by Hollowell or a qualified third-party auditor mandated by Hollowell, in accordance with Section 7.4 of the Agreement. Verdantia's provision of the SOC 2 Type II Report shall be deemed to satisfy Hollowell's audit rights under this Section C.10, unless Hollowell can demonstrate, on reasonable grounds, that additional audit activities are necessary to verify Verdantia's compliance with its obligations under this DPA.
+C.11 — Governing Data Protection Laws
+This DPA and the processing activities described herein shall be conducted in compliance with all applicable data protection legislation, including without limitation:
+(a) the General Data Protection Regulation (EU) 2016/679 ("GDPR") and any applicable national implementing legislation, to the extent that Hollowell Input Data contains personal data of data subjects located in the European Economic Area;
+(b) the UK General Data Protection Regulation and the UK Data Protection Act 2018, to the extent that Hollowell Input Data contains personal data of data subjects located in the United Kingdom;
+(c) the California Consumer Privacy Act, Cal. Civ. Code Section 1798.100 et seq., as amended by the California Privacy Rights Act of 2020 ("CCPA/CPRA"), to the extent that Hollowell Input Data contains personal information of California consumers;
+(d) any other applicable federal, state, local, or foreign data protection, data privacy, or data security laws, rules, or regulations that apply to the processing of personal data under this Agreement.
+In the event of any conflict between this DPA and the Agreement with respect to the processing of personal data, the terms of this DPA shall prevail and control.
+[End of Exhibit C — Data Processing Addendum]
+[End of Agreement]

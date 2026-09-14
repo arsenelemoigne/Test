@@ -1,0 +1,516 @@
+VERDANTIA SYSTEMS INC. INTERNAL MEMORANDUM Privileged & Confidential — Attorney Work Product
+TO: Hollowell Deal Team
+FROM: Jordan Ngata, Senior Director, Platform Partnerships (with input from Priya Chandrasekaran, VP & Associate General Counsel)
+DATE: June 28, 2025
+RE: Agreed Counter-Positions for Hollowell Industries Group LLC — Verdantia Nexus API License Agreement (VER-API-2025-0047) — First Markup Response
+OUTSIDE COUNSEL: Marcus Trevino, Linden & Foss LLP
+Right-click to update Table of Contents
+I. Purpose & Background
+This memorandum documents the business and legal teams' fully aligned positions on each of the thirty-four (34) proposed changes contained in Hollowell Industries Group LLC's ("Hollowell") first markup of the Verdantia Nexus API License Agreement (VER-API-2025-0047), which was received by the deal team on June 27, 2025 (Hollowell Matter Ref: HIG-DT-2025-312).
+Verdantia Systems Inc.'s ("Verdantia") initial draft of the Agreement was transmitted to Hollowell on June 6, 2025. The internal counter-turn target for delivery of the revised draft incorporating the positions set forth herein is July 7, 2025, with the parties' mutually proposed Effective Date of August 1, 2025. Maintaining fidelity to this timeline is critical; any material delay risks pushing the Effective Date into September and disrupting both parties' planned integration milestones.
+Marcus Trevino at Linden & Foss LLP ("L&F") will incorporate the positions documented below into the counter-markup of the Agreement for Verdantia internal review by July 3, 2025, with the objective of delivering the final counter-draft to Hollowell on or before the July 7 target date.
+For each of the thirty-four (34) changes identified in Hollowell's markup, this memorandum records:
+(a) Hollowell's requested change, with reference to the applicable Agreement section;
+(b) Verdantia's recommended response: Accept, Reject, or Counter;
+(c) Specific counter-language or positional guidance, where applicable, for incorporation by L&F into the counter-markup; and
+(d) The business rationale supporting the recommended response, including references to the Verdantia Nexus API Playbook (the "Playbook"), platform engineering input, and outside counsel guidance where relevant.
+Unless otherwise noted, all dollar figures referenced in this memorandum are based on the pricing set forth in Schedule A to the Agreement, specifically: an Annual License Fee of $1,260,000, a Quarterly Invoice of $315,000, and a Monthly Fee of $105,000. The initial three-year term yields a Total Contract Value ("TCV") of $3,780,000.
+This memorandum is organized by subject matter corresponding to the relevant sections of the Agreement. The positions reflect the joint alignment of the business team (Jordan Ngata, Platform Partnerships) and the legal team (Priya Chandrasekaran, Associate General Counsel), with input from Marcus Trevino on regulatory and enforceability considerations as noted.
+II. Commercial Terms (Schedule A / Articles 4–5)
+The following five changes relate to the core commercial terms of the Agreement, including payment mechanics, overage pricing, burst capacity, and pricing parity.
+Change 1 — Payment Terms (Section 5.3)
+Hollowell Request: Extend payment terms from Net 30 to Net 45 from invoice date.
+Response: ACCEPT.
+Position: Verdantia will revise Section 5.3 to provide for payment within forty-five (45) days of the invoice date (Net 45). The quarterly-in-advance invoicing structure remains unchanged, with invoices issued at the beginning of each calendar quarter in the amount of $315,000 per quarter. No other modifications to Section 5.3 are contemplated.
+Business Rationale: Net 45 falls within Verdantia's Playbook-acceptable range for enterprise API customers. Accommodating this request at the outset builds goodwill and avoids an unnecessary early-stage negotiation friction point. Hollowell's VP of Digital Transformation, Rachel Fernsby, communicated during the pre-markup scoping call that Hollowell's standard accounts payable cycle is 40–45 days, and that Net 30 would have required an internal exception process. Aligning with Hollowell's existing AP workflow is a low-cost concession that facilitates timely payment.
+Change 2 — Late-Payment Interest (Section 5.4)
+Hollowell Request: Reduce late-payment interest from 1.5% per month to the lesser of 1.0% per month or the maximum rate permitted by applicable law.
+Response: ACCEPT.
+Position: Verdantia will revise Section 5.4 to state that overdue amounts shall accrue interest at a rate of 1.0% per month, or the maximum rate permitted by applicable law, whichever is lesser. The revised language should read substantially as follows:
+"Any amounts not paid when due shall bear interest at a rate equal to the lesser of (a) one percent (1.0%) per month or (b) the maximum rate permitted by applicable law, calculated from the date such payment was due until the date of actual payment."
+Business Rationale: A rate of 1.0% per month (12% annualized) with a statutory cap is the Playbook floor for late-payment interest provisions. The reduction from 1.5% to 1.0% per month is commercially immaterial in practice—Verdantia has not assessed late-payment interest against any Nexus API customer in the past eighteen months—and the inclusion of the statutory cap eliminates a potential enforceability challenge in jurisdictions with usury limitations. This is a clean, low-risk concession.
+Change 3 — Overage Rate (Section 4.2 / Schedule A)
+Hollowell Request: Reduce the per-call overage rate from $0.004/call to $0.002/call above the 5,000,000-call/month base tier.
+Response: COUNTER.
+Position: Verdantia will propose a tiered overage structure in lieu of both the initial flat rate and Hollowell's requested flat rate. The revised Schedule A should include the following overage pricing:
+"For API calls in excess of the Base Tier in any calendar month:
+(i) calls 5,000,001 through 10,000,000: $0.003 per call; and
+(ii) calls above 10,000,000: $0.0025 per call."
+The Base Tier of 5,000,000 calls per calendar month, as defined in Schedule A, remains unchanged.
+Business Rationale: The $0.003 per-call rate is the Playbook floor overage rate; Verdantia cannot agree to $0.002 flat without setting a below-cost precedent. Verdantia's marginal infrastructure cost at high call volumes is approximately $0.0022/call (per the Platform Engineering team's most recent cost model, updated Q1 2025). At a flat rate of $0.002, Verdantia would fail to recover incremental infrastructure costs at sustained high volumes, effectively subsidizing Hollowell's usage growth.
+The tiered step-down to $0.0025 per call above 10,000,000 monthly calls serves a dual purpose: it incentivizes Hollowell to scale usage on the Nexus API platform (which drives platform adoption metrics and strengthens the commercial relationship), while preserving Verdantia's marginal-cost recovery at all volume levels. Based on Hollowell's projected Year 2 usage of approximately 7,500,000 calls/month, the tiered structure yields an estimated 25% reduction in effective overage charges relative to the $0.004 flat rate in Verdantia's initial draft—a meaningful concession that can be presented to Hollowell's procurement team as significant cost savings at scale.
+This is expected to be one of the primary open commercial items requiring discussion during the business-track call with Rachel Fernsby (see Section XII, Next Steps).
+Change 4 — Burst Allowance (Section 4.3)
+Hollowell Request: Increase burst allowance from 150% to 200% of the base tier (i.e., from 7,500,000 to 10,000,000 calls/month before throttling applies).
+Response: COUNTER.
+Position: Verdantia will propose a burst allowance of 175% of the base tier, establishing a burst ceiling of 8,750,000 calls per calendar month before rate-limiting or throttling measures apply. The revised Section 4.3 should reflect this threshold and clarify that API calls above the burst ceiling are subject to Verdantia's standard throttling protocols, with excess calls queued rather than rejected where technically feasible.
+Business Rationale: The 175% burst ceiling is the maximum concession permitted under the Playbook. Verdantia's platform engineering team, consulted by Jordan Ngata in connection with the preparation of this memorandum, has confirmed that 175% burst capacity (8,750,000 calls/month) is sustainable within the current Nexus API infrastructure provisioning without requiring additional dedicated capacity allocation.
+A 200% burst ceiling (10,000,000 calls/month) would require pre-provisioned headroom that Verdantia's infrastructure team has not budgeted for this engagement. The cost of such pre-provisioning is not justified at the current TCV of $3,780,000. Verdantia's standard practice is to consider 200% burst thresholds only for enterprise customers with TCV exceeding $6,000,000, where the additional infrastructure investment is amortized over a larger fee base.
+The 175% threshold represents a meaningful upward adjustment (a 25-percentage-point increase from the initial draft) and provides Hollowell with substantial headroom for periodic usage spikes associated with seasonal supply chain activity.
+Change 5 — Most-Favored-Customer Pricing (Section 5.7)
+Hollowell Request: Insert a most-favored-customer ("MFC") pricing parity clause requiring Verdantia to offer Hollowell the lowest rate available to any similarly situated customer during the term of the Agreement.
+Response: REJECT.
+Position: The proposed MFC clause should be deleted in its entirety. It is a Playbook-prohibited provision. In lieu of the MFC clause, Verdantia will offer Hollowell a confidential benchmarking report at each renewal date (i.e., at the commencement of each successive 1-year renewal term), which will compare Hollowell's effective rate (inclusive of base fees and overage charges) to anonymized market comparables drawn from Verdantia's Nexus API customer base. The benchmarking report will be prepared by Verdantia's finance team and provided solely for informational purposes; it shall not create any obligation on Verdantia's part to adjust pricing. Revised language for Section 5.7 reflecting this alternative (in lieu of Hollowell's MFC clause) should be drafted by L&F.
+Business Rationale: MFC clauses present two categories of risk that Verdantia cannot accept. First, from an operational standpoint, MFC provisions require ongoing monitoring and comparison of pricing across the entire Nexus API customer portfolio—an administratively burdensome exercise that is particularly difficult given the wide variation in customer-specific pricing structures, volume tiers, and bundled service packages across Verdantia's customer base. "Similarly situated" is inherently ambiguous and would invite disputes over comparability.
+Second, Marcus Trevino has advised that MFC clauses can create antitrust exposure under certain market conditions, particularly where they have the effect of dampening price competition or facilitating tacit coordination. While the risk in this specific context may be modest, the institutional precedent of accepting an MFC clause in a standard API license agreement would be problematic across Verdantia's broader customer portfolio.
+The confidential benchmarking alternative addresses Hollowell's underlying commercial interest—namely, assurance that it is receiving competitive pricing—without constraining Verdantia's pricing flexibility or creating the legal and operational risks associated with a formal MFC commitment.
+III. Service Levels & Uptime (Article 6)
+The following three changes relate to the service level commitments in Section 5 of the Agreement, including the uptime guarantee, credit structure, and scheduled maintenance parameters.
+Change 6 — Uptime Commitment (Section 6.1)
+Hollowell Request: Increase the monthly uptime commitment from 99.9% (approximately 43.2 minutes of maximum permissible downtime per month) to 99.95% (approximately 21.6 minutes of maximum permissible downtime per month).
+Response: REJECT / COUNTER with Alternative.
+Position: Verdantia will maintain the 99.9% monthly uptime commitment as set forth in the initial draft. As an alternative to the higher availability threshold, Verdantia will add a new Section 6.1(b) providing an enhanced Priority 1 incident response commitment, as follows:
+"Section 6.1(b) — Priority 1 Incident Response. For any Priority 1 (service-down) incident, Verdantia shall (i) provide an initial response to Licensee's designated point of contact within thirty (30) minutes of the incident being logged in Verdantia's support system, and (ii) provide continuous status updates every fifteen (15) minutes thereafter until the incident is resolved or downgraded to a lower priority level. Priority 1 incidents shall receive continuous engineering attention until resolution."
+Business Rationale: Increasing the uptime commitment to 99.95% would require Verdantia to invest in redundant failover infrastructure—specifically, active-active geographic redundancy in the Nexus API hosting environment—that is not currently budgeted for this engagement or any engagement at this TCV level. The estimated capital expenditure for such redundancy is in excess of $800,000, with ongoing annual maintenance costs of approximately $180,000. These costs cannot be absorbed within the current pricing structure.
+The enhanced P1 incident response commitment directly addresses Hollowell's stated operational concern, as articulated by Derek Calloway during the June 20 business requirements call: minimizing the business impact of outages on Hollowell's supply chain management workflows. The 30-minute initial response and 15-minute rolling updates ensure that Hollowell's operations team has real-time visibility into service restoration efforts, enabling them to activate contingency workflows with minimal delay. This approach provides material operational value without altering the availability SLA itself.
+Priya Chandrasekaran additionally notes that a 99.95% commitment would create a misalignment with the uptime commitments Verdantia has made to other Nexus API customers, potentially triggering MFC-like renegotiation demands from existing customers who learn of the higher threshold through audit or benchmarking processes.
+Change 7 — SLA Credits (Section 6.3)
+Hollowell Request: Increase SLA credits from 5% of the Monthly Fee per 0.1% uptime shortfall (capped at 30% of the Monthly Fee, i.e., $31,500) to 10% per 0.1% shortfall (capped at 100% of the Monthly Fee, i.e., $105,000).
+Response: COUNTER.
+Position: Verdantia will propose the following revised SLA credit structure for Section 6.3:
+SLA credits shall be calculated at 7.5% of the Monthly Fee ($105,000) per 0.1% of uptime shortfall below the 99.9% threshold. This yields a credit of $7,875 per 0.1% increment.
+The aggregate SLA credits in any single calendar month shall be capped at 50% of the Monthly Fee ($52,500).
+SLA credits shall be issued as offsets against the next quarterly invoice following the month in which the uptime shortfall occurred. If the Agreement has terminated or expired and no further invoice is due, Verdantia shall issue a cash refund in the amount of any accrued and unpaid SLA credits within thirty (30) days.
+SLA credits shall constitute Hollowell's sole and exclusive monetary remedy for uptime shortfalls below the 99.9% monthly availability commitment.
+Business Rationale: The proposed 7.5% per 0.1% credit rate represents a 50% increase per increment over the 5% rate in Verdantia's initial draft, signaling Verdantia's seriousness about service quality and its willingness to accept meaningful financial consequences for underperformance. The 50% monthly cap ($52,500) raises the original cap of $31,500 by roughly two-thirds (a 20-percentage-point increase, from 30% to 50% of the Monthly Fee), providing Hollowell with substantially greater protection.
+However, Hollowell's request for a 100% monthly cap ($105,000) is commercially untenable. At a 100% cap, a single month of substandard performance—even if the actual uptime were 99.5% (still a high-availability threshold)—could eliminate an entire month's revenue. This is disproportionate to the commercial impact on Hollowell and would create perverse incentives for premature termination rather than collaborative remediation.
+The sole-and-exclusive-remedy designation is critical and must be retained in the counter-markup. Without it, Hollowell could stack SLA credits on top of general breach-of-contract claims for the same uptime shortfall, resulting in double recovery.
+This is expected to be one of the primary open commercial items requiring discussion during the business-track call (see Section XII, Next Steps).
+Change 8 — Scheduled Maintenance Window (Section 6.2)
+Hollowell Request: Reduce scheduled maintenance from 4 hours per month with 72 hours' advance notice to 2 hours per month with 5 business days' (approximately 120 hours) advance notice.
+Response: COUNTER.
+Position: Verdantia will propose the following revised maintenance parameters for Section 6.2:
+Scheduled maintenance: 3 hours per calendar month.
+Advance notice: 96 hours (4 business days) prior written notice via the operational notice channels designated under Section 19.5.
+Maintenance windows shall be limited to Saturday 02:00–06:00 ET, or as otherwise mutually agreed in writing by the parties' designated operational contacts.
+Scheduled maintenance performed within the designated window and in accordance with the notice requirements shall not be counted as downtime for purposes of the uptime calculation under Section 6.1.
+Business Rationale: Three hours per month is the minimum maintenance window identified by Verdantia's platform engineering team as necessary to perform routine security patching, database optimization, and infrastructure updates for the Nexus API platform. Compressing this to 2 hours would require Verdantia to either defer critical patches (creating security risk) or perform rolling updates during production hours (creating unscheduled disruption risk)—neither of which serves Hollowell's interests.
+The 96-hour notice period (an increase from the 72 hours in Verdantia's initial draft) provides Hollowell with four full business days to adjust its supply chain management workflows around the maintenance window. The Saturday 02:00–06:00 ET window was selected to minimize impact on Hollowell's manufacturing operations, which Rachel Fernsby confirmed run Monday through Friday with limited weekend batch processing.
+This package—3 hours, 96-hour notice, weekend-only window—represents a balanced compromise between Verdantia's operational requirements and Hollowell's continuity needs.
+IV. Intellectual Property (Article 8)
+The following two changes address intellectual property ownership and licensing matters that are among the most sensitive provisions in the Agreement.
+Change 9 — Derived Data Ownership (Section 8.3)
+Hollowell Request: Transfer sole ownership of Derived Data generated from Hollowell Input Data to Hollowell.
+Response: REJECT / COUNTER.
+Position: Verdantia will retain ownership of all Derived Data. In lieu of an ownership transfer, Verdantia will grant Hollowell the following license, to be set forth in a revised Section 8.3:
+"Verdantia hereby grants to Licensee a perpetual, irrevocable, non-exclusive, royalty-free, worldwide license to use, reproduce, and create derivative works of Derived Data generated by the Verdantia Nexus API from Licensee's Input Data, solely for Licensee's internal business purposes. This license shall survive any termination or expiration of this Agreement.
+Verdantia retains the right to use Derived Data in de-identified and aggregated form for purposes of product improvement, benchmarking, analytics, and the training of machine learning models, provided that such use shall not (a) identify Licensee or any of Licensee's customers, suppliers, or business partners by name or by reasonably identifiable inference, or (b) disclose Licensee's Confidential Information."
+Business Rationale: Derived Data ownership is a bright-line Playbook prohibition. Verdantia's product roadmap—including the Nexus API v4.0 release planned for Q1 2026—depends on the ability to aggregate Derived Data across its entire customer base to train machine learning models, refine prediction algorithms, and improve platform performance. Transferring ownership of any subset of Derived Data to a single customer would fragment Verdantia's data estate and create legal ambiguity about Verdantia's rights to use that data, even in aggregated form.
+The perpetual, irrevocable license provides Hollowell with the full practical utility of its Derived Data outputs, including the ability to use that data indefinitely for its internal business operations. Because the license survives termination, Hollowell is not commercially disadvantaged by the ownership structure—it retains access to and use of the Derived Data regardless of the status of the Agreement.
+The de-identification and aggregation restrictions directly address the competitive sensitivity concern raised by Derek Calloway during the pre-markup call—namely, that Verdantia might use Hollowell-specific Derived Data to benefit Hollowell's competitors. The restrictions ensure that Verdantia's use of Derived Data is limited to anonymized, aggregated applications where no individual customer's data can be identified or reverse-engineered.
+This is expected to be a significant legal-track discussion item with Derek Calloway and Sandra Yuen at Whitmore Beck & Alden LLP (see Section XII, Next Steps).
+Change 10 — Feedback IP (Section 8.4)
+Hollowell Request: Replace Verdantia's sole ownership of Hollowell feedback with a mutual license structure: each party licenses feedback to the other on a non-exclusive, royalty-free basis, while the providing party retains ownership.
+Response: REJECT.
+Position: Verdantia must retain sole ownership of all feedback, suggestions, enhancement requests, and other input provided by Hollowell relating to the Verdantia Nexus API (collectively, "Feedback"). The mutual license structure proposed by Hollowell is not acceptable.
+As a concession to address Hollowell's underlying concern, Verdantia will add a non-assertion covenant to Section 8.4, substantially as follows:
+"Notwithstanding the foregoing, Verdantia covenants that it will not assert any intellectual property rights arising from Licensee's Feedback against Licensee's use, development, or commercialization of Licensee's own pre-existing intellectual property, provided that this covenant shall not limit Verdantia's rights in or to the Verdantia Nexus API or any derivative works thereof."
+Business Rationale: Sole ownership of Feedback is a non-negotiable Playbook requirement. The mutual license structure proposed by Hollowell would create co-ownership ambiguities and could impede Verdantia's ability to incorporate Feedback into the Nexus API platform without ongoing tracking of licensing obligations. As a practical matter, Verdantia's engineering team regularly receives enhancement suggestions from multiple customers, and determining which suggestions originated from which customer—and applying different licensing regimes accordingly—would be operationally unworkable.
+The non-assertion covenant protects Hollowell's legitimate commercial interest: the assurance that contributing Feedback to Verdantia will not "boomerang" into infringement claims against Hollowell's own pre-existing intellectual property. The covenant is narrowly scoped to Hollowell's pre-existing IP and expressly preserves Verdantia's rights in the Nexus API itself, ensuring that Hollowell cannot use the covenant as a basis for challenging Verdantia's platform IP.
+V. Data Security & Privacy (Articles 7 & 9)
+The following four changes relate to data security, sub-processor management, incident response, and insurance requirements.
+Change 11 — SOC 2 Type II Report Access (Section 7.1)
+Hollowell Request: Require Verdantia to provide the most current SOC 2 Type II report within 10 business days of written request.
+Response: ACCEPT.
+Position: Verdantia will revise Section 7.1 to provide that, upon Hollowell's written request, Verdantia shall deliver its most recent SOC 2 Type II report (currently audited by Clairemont & Sadler CPAs LLP) within ten (10) business days of receipt of such request. Delivery shall be subject to execution of a reasonable nondisclosure agreement or reliance letter in a form mutually agreed by the parties (or, if Hollowell has already executed a form NDA acceptable to Clairemont & Sadler, delivery under the existing NDA).
+Business Rationale: Providing the SOC 2 Type II report upon request is Verdantia's existing practice across its enterprise customer base. Verdantia's current SOC 2 Type II report covers the twelve-month period ending March 31, 2025, and an updated report for the period ending September 30, 2025 is expected in Q4 2025. This change imposes no incremental operational burden and demonstrates Verdantia's commitment to security transparency.
+Change 12 — Sub-Processor Authorization (Section 9.2)
+Hollowell Request: Replace the general authorization framework for sub-processors (with 30 days' advance notice of new sub-processors) with a requirement for Hollowell's specific prior written consent for each sub-processor.
+Response: COUNTER.
+Position: Verdantia will retain the general authorization framework as the baseline structure. In lieu of specific prior written consent, Verdantia will enhance the notice and objection mechanism as follows:
+"Verdantia shall provide Licensee with no less than forty-five (45) calendar days' advance written notice before engaging a new sub-processor or materially changing the scope of processing activities performed by an existing sub-processor in connection with Licensee's data.
+Licensee shall have twenty (20) business days from receipt of such notice to object in writing to the proposed sub-processor engagement, provided that any such objection must be based on reasonable and documented data-security grounds.
+If Licensee timely objects, the parties shall discuss the objection in good faith and endeavor to resolve Licensee's concerns within fifteen (15) business days following receipt of the objection. If the parties are unable to resolve the objection within such period, Licensee may terminate the affected data processing activity upon written notice to Verdantia, provided that such termination shall not constitute a termination of this Agreement or relieve Licensee of its payment obligations except with respect to fees directly attributable to the terminated data processing activity."
+Business Rationale: Hollowell's request for specific prior written consent would effectively grant Hollowell a unilateral veto over Verdantia's vendor selection decisions, creating operational bottlenecks that could impede Verdantia's ability to maintain and improve the Nexus API platform. In practice, Verdantia currently engages approximately twelve sub-processors across its infrastructure stack, and changes to sub-processor relationships occur with regularity as Verdantia optimizes for performance, cost, and security.
+The enhanced framework proposed above—45 days' notice (up from 30), a 20-business-day objection window, good-faith discussion, and a targeted termination right—provides Hollowell with meaningful oversight and a commercially significant remedy if a sub-processor concern cannot be resolved, all while preserving Verdantia's operational agility. Marcus Trevino has confirmed that this structure is consistent with standard data processing agreement market practice and aligns with the GDPR-derived sub-processor notification framework that has become the de facto standard in U.S. enterprise contracts.
+Critically, the targeted termination right (termination of the affected data processing activity, not the entire Agreement) is proportionate: it gives Hollowell an exit from the specific processing concern without unwinding the entire commercial relationship.
+Change 13 — Data Breach Notification Timeline (Section 7.3)
+Hollowell Request: Reduce the breach notification period from 72 hours to 48 hours following confirmed discovery of a Security Incident involving Hollowell data.
+Response: ACCEPT.
+Position: Verdantia will revise Section 7.3 to require notification to Hollowell within forty-eight (48) hours of the confirmed discovery of a Security Incident involving Hollowell data. The definition of "confirmed discovery" (the point at which Verdantia has a reasonable basis to conclude that a Security Incident has occurred) remains as defined in the initial draft.
+Business Rationale: Verdantia's internal incident response plan already targets a 24-hour internal escalation timeline (from initial detection through confirmation and executive notification). Moving the external notification obligation from 72 hours to 48 hours post-confirmation is operationally achievable within the existing incident response framework and does not require changes to Verdantia's security operations center procedures. Accepting this change demonstrates Verdantia's commitment to transparency and positions it well in light of evolving regulatory expectations—notably, the SEC's incident disclosure rules and several state-level breach notification statutes that are converging toward 48-to-72-hour timelines.
+Change 14 — Cyber-Liability Insurance (Article 14)
+Hollowell Request: Require Verdantia to maintain cyber-liability insurance coverage with a minimum limit of $10,000,000.
+Response: COUNTER.
+Position: Verdantia will commit to maintaining cyber-liability insurance with a minimum limit of $5,000,000 per occurrence and in the aggregate. The applicable provision in Article 14 (Insurance) should state:
+"During the term of this Agreement, Verdantia shall maintain cyber-liability insurance (including coverage for network security liability, privacy liability, and data breach response costs) with limits of not less than Five Million Dollars ($5,000,000) per occurrence and in the aggregate. Verdantia shall provide Licensee with a certificate of insurance evidencing such coverage upon written request."
+Business Rationale: Verdantia's current cyber-liability insurance policy, underwritten by Meridian National Insurance Company, carries a $5,000,000 per-occurrence and aggregate limit. This policy limit is consistent with the data-breach super cap of $3,780,000 proposed in Change 21 below, ensuring that Verdantia's contractual liability exposure is backstopped by insurance.
+Increasing the policy limit to $10,000,000 would require procurement of an excess layer at an estimated additional annual premium of approximately $85,000–$110,000. This cost is not reflected in the pricing for the Hollowell Agreement and cannot be absorbed within the current fee structure. Moreover, establishing a $10,000,000 insurance floor for a single API license customer would set an unsustainable precedent across the Nexus API customer base. Verdantia's risk management team has confirmed that the $5,000,000 limit is appropriate for the data categories and volumes processed under this Agreement.
+VI. Indemnification (Article 12)
+The following four changes address the indemnification framework, including new indemnification obligations proposed by Hollowell and modifications to existing provisions.
+Change 15 — Data Breach Indemnity (Section 12.1A — New)
+Hollowell Request: Add a new indemnification obligation requiring Verdantia to indemnify, defend, and hold harmless Hollowell against third-party claims arising from any data breach caused by Verdantia's negligence.
+Response: ACCEPT with Limitation.
+Position: Verdantia will accept a new Section 12.1A providing for indemnification of Hollowell against third-party claims arising from a data breach, subject to the following limitation: the indemnification obligation shall apply only to the extent that the data breach was caused by Verdantia's breach of its security obligations under Section 7 of the Agreement. The general "negligence" trigger proposed by Hollowell is overbroad and should be replaced with the specific contractual trigger. Proposed language:
+"Verdantia shall indemnify, defend, and hold harmless Licensee from and against any third-party claims, damages, losses, and reasonable expenses (including reasonable attorneys' fees) arising from a breach of security involving Licensee's data, to the extent such breach of security results from Verdantia's failure to comply with its obligations under Section 7 of this Agreement."
+The data-breach indemnity is subject to the data-breach super cap set forth in Section 13.3 (see Change 21 below).
+Business Rationale: Tying the indemnity to Verdantia's specific security commitments under Section 7—rather than to an undefined "negligence" standard—ensures that Verdantia's indemnification exposure is proportionate to the security obligations it has contractually undertaken. A negligence-based trigger could be construed to encompass scenarios where the breach resulted from Hollowell's own security failures (e.g., compromised API credentials), third-party attacks exploiting zero-day vulnerabilities beyond Verdantia's reasonable control, or the acts of Hollowell's own sub-processors. By anchoring the indemnity to Section 7 compliance, Verdantia is accountable for what it has promised—no more, no less.
+Change 16 — Mutual Law-Violation Indemnity (Section 12.3 — Licensee Indemnification)
+Hollowell Request: Add mutual indemnification for each party's violation of applicable laws in connection with performance under the Agreement.
+Response: ACCEPT.
+Position: Verdantia will accept revised Section 12.3 (and a corresponding addition to Section 12.1) providing for mutual indemnification. Proposed language:
+"Each party (as indemnifying party) shall indemnify, defend, and hold harmless the other party from and against any third-party claims, damages, losses, and reasonable expenses (including reasonable attorneys' fees) arising from the indemnifying party's violation of applicable law in connection with its performance under this Agreement."
+Business Rationale: Mutuality is appropriate for law-violation indemnities, and the provision is consistent with Verdantia's regulatory compliance posture. Because both parties bear the same obligation, the provision does not create asymmetric risk. The scope is appropriately limited to violations "in connection with" performance under the Agreement, preventing overreach into unrelated regulatory matters.
+Change 17 — IP Indemnity "Authorized Use" Qualifier (Sections 12.1 / 12.2)
+Hollowell Request: Remove the qualifier in Section 12.1 that limits Verdantia's intellectual property indemnification obligation to claims arising from Hollowell's "authorized use" of the Verdantia Nexus API.
+Response: REJECT.
+Position: The "authorized use" qualifier must be retained in Section 12.1 without modification. Verdantia's IP indemnification obligation covers claims arising from Hollowell's use of the Verdantia Nexus API as authorized under the license grant in Article 2 of the Agreement. Verdantia will not indemnify Hollowell for infringement claims arising from:
+(a) Hollowell's unauthorized modification of the API or API outputs;
+(b) Hollowell's combination of the Verdantia Nexus API with third-party software, systems, or data not approved by Verdantia, where the infringement would not have occurred absent such combination;
+(c) Hollowell's use of the Verdantia Nexus API outside the scope of the license grant; or
+(d) Hollowell's continued use of an allegedly infringing version of the Verdantia Nexus API after Verdantia has made available a non-infringing replacement or update.
+These exclusions should be set forth as enumerated carve-outs in Section 12.2.
+Business Rationale: The "authorized use" qualifier is a Playbook non-negotiable. Without it, Verdantia would be indemnifying Hollowell for infringement claims caused by Hollowell's own conduct—modifications to API calls, integration with unapproved third-party systems, or use beyond the licensed scope. The qualifier is standard in software and API licensing agreements and reflects the fundamental principle that a licensor's infringement warranty extends to the licensed technology as delivered, not to the licensee's alterations or unauthorized applications of that technology.
+Removing the qualifier would expose Verdantia to indemnification claims over which it has no visibility or control, particularly in the context of Hollowell's planned integration of the Nexus API with its proprietary supply chain management platform and potentially with third-party logistics and ERP systems.
+Change 18 — Cure-or-Terminate for IP Infringement (Section 12.1)
+Hollowell Request: Add a right for Hollowell to cure or terminate the Agreement upon Verdantia's receipt of an IP infringement claim relating to the Verdantia Nexus API, with a full refund of prepaid fees.
+Response: ACCEPT with Addition.
+Position: Verdantia will accept the cure-or-terminate framework, with the following addition to preserve commercial flexibility:
+"Upon receipt of an infringement claim covered by Section 12.1, Verdantia may, at its option and expense: (a) obtain for Licensee a license or right to continue using the affected component of the Verdantia Nexus API; (b) modify the affected component to make it non-infringing without materially reducing its functionality; or (c) replace the affected component with a functionally equivalent non-infringing alternative.
+If none of the foregoing options is commercially practicable, Verdantia may terminate the affected component of the Verdantia Nexus API and issue a pro-rata refund of prepaid fees attributable to the terminated component for the remainder of the then-current term.
+If the terminated component is material to Licensee's use of the Verdantia Nexus API (as reasonably determined by Licensee), Licensee may terminate this Agreement upon thirty (30) days' written notice and receive a pro-rata refund of all prepaid fees for the remainder of the then-current term."
+Business Rationale: The pro-rata termination alternative (option (c) of Verdantia's cure remedies, followed by component termination if cure is unavailable) preserves the broader commercial relationship when only a discrete, severable component of the Nexus API is the subject of an infringement claim. An all-or-nothing termination framework would force both parties to unwind the entire engagement over what may be a narrow IP issue affecting a single endpoint or module.
+At the same time, Hollowell's right to terminate the entire Agreement when the affected component is material to its use ensures that Hollowell is not left with a substantially degraded platform that fails to meet its operational requirements. The "as reasonably determined by Licensee" standard appropriately places the materiality judgment with the party best positioned to assess the operational impact.
+VII. Liability (Article 13)
+The following three changes address the liability framework, including the general cap, consequential damages waiver, and a proposed data-breach-specific super cap.
+Change 19 — General Liability Cap (Section 13.1)
+Hollowell Request: Increase the general liability cap from 1× annual fees ($1,260,000) to 2× annual fees ($2,520,000).
+Response: COUNTER.
+Position: Verdantia will propose a general liability cap of 1.5× annual fees = $1,890,000. The revised Section 13.1 should read:
+"Except for the Excluded Claims set forth in Section 13.3, the aggregate liability of either party to the other party for all claims arising under or in connection with this Agreement shall not exceed one and one-half times (1.5×) the Annual License Fee, which as of the Effective Date equals One Million Eight Hundred Ninety Thousand Dollars ($1,890,000)."
+Business Rationale: A cap of 1.5× annual fees splits the difference between the parties' respective positions and aligns with the risk profile of an enterprise platform integration. Exceeding 2× annual fees would set a precedent across Verdantia's Nexus API customer portfolio that the finance and risk management teams have identified as unsustainable, particularly for customers at similar or lower TCV levels.
+At $1,890,000, the general cap is a commercially significant sum that demonstrates Verdantia's confidence in the quality and reliability of the Nexus API platform. It also represents a 50% increase over the initial draft cap, which should be presented to Hollowell as a meaningful concession.
+Change 20 — Consequential Damages Carve-Out (Section 13.2)
+Hollowell Request: Carve out both IP infringement claims and data breach claims from the mutual waiver of consequential, incidental, and indirect damages.
+Response: COUNTER.
+Position: Verdantia will accept a carve-out from the consequential damages waiver for IP indemnification obligations under Section 12.1 only. Data-breach consequential damages shall not be carved out from the waiver; instead, they shall be subject to the data-breach super cap described in Change 21 below ($3,780,000). The revised Section 13.2 should state:
+"Neither party shall be liable to the other for any indirect, incidental, consequential, special, or punitive damages arising out of or relating to this Agreement, regardless of the form of action or theory of liability, except that this limitation shall not apply to (a) a party's indemnification obligations under Section 12.1 (IP indemnification), or (b) a party's breach of Article 10 (Confidentiality). For the avoidance of doubt, claims arising from data breaches, including claims under Section 12.1A, shall be subject to the data breach liability cap set forth in Section 13.3."
+Business Rationale: An uncapped carve-out of data-breach consequential damages from the mutual waiver would expose Verdantia to theoretically unlimited liability—a position that is fundamentally incompatible with responsible enterprise contracting. Supply chain disruption damages in Hollowell's industry could be extraordinarily large, and consequential damages theories could extend liability well beyond the direct costs of breach remediation.
+Channeling data-breach consequential damages into the $3,780,000 super cap (Change 21) provides Hollowell with meaningful recovery for breach-related losses while keeping Verdantia's total exposure bounded and insurable. The IP indemnification carve-out is appropriate because IP claims inherently involve third-party damages that may be consequential in nature, and the indemnification obligation itself is the appropriate mechanism for addressing such exposure.
+The confidentiality breach carve-out is included because Verdantia's initial draft already carved out confidentiality obligations from the consequential damages waiver; retaining this carve-out is consistent with the original draft position.
+Change 21 — Data Breach Liability Cap (Section 13.3)
+Hollowell Request: Uncapped liability for data breaches.
+Response: COUNTER.
+Position: Verdantia will propose a revised Section 13.3 establishing a separate super cap for data-breach liability at 3× annual fees = $3,780,000, which is equal to the TCV of the initial three-year term. The super cap shall apply to all claims arising from data breaches, including:
+(a) indemnification obligations under Section 12.1A;
+(b) direct damages arising from data breaches;
+(c) consequential damages arising from data breaches (as channeled from Section 13.2); and
+(d) regulatory fines and penalties to the extent included in the indemnification obligation.
+Proposed language for Section 13.3:
+"Notwithstanding Section 13.1, Verdantia's aggregate liability for all claims arising from or relating to a breach of security involving Licensee's data (including without limitation claims under Section 12.1A and any consequential damages arising therefrom) shall not exceed three times (3×) the Annual License Fee, which as of the Effective Date equals Three Million Seven Hundred Eighty Thousand Dollars ($3,780,000) (the 'Data Breach Super Cap'). The Data Breach Super Cap shall be separate from and in addition to the general liability cap set forth in Section 13.1."
+Business Rationale: A super cap of 3× annual fees ($3,780,000) provides meaningful coverage for data-breach-related losses—three times the general liability cap and equal to the full TCV of the initial term. This level of exposure is commercially significant and reflects the heightened risk associated with data security obligations.
+The $3,780,000 super cap is aligned with Verdantia's $5,000,000 cyber-liability insurance policy limit, ensuring that the contractual cap is backstopped by insurance coverage with additional headroom. An uncapped data-breach liability provision would render the Agreement commercially unviable and potentially uninsurable, as Verdantia's insurer has indicated that uncapped contractual liability assumptions may void the policy's contractual liability coverage endorsement.
+This is expected to be a significant legal-track discussion item (see Section XII, Next Steps).
+VIII. Term, Termination & Transition (Article 11)
+The following five changes address the Agreement's duration, termination mechanics, and post-termination transition provisions.
+Change 22 — Cure Period (Section 11.3)
+Hollowell Request: Extend the cure period for material breach from 30 days to 45 days.
+Response: ACCEPT.
+Position: Verdantia will revise Section 11.3 to provide for a forty-five (45) day cure period for material breach, measured from the date of written notice specifying the breach in reasonable detail. The extended cure period shall not apply to (a) payment defaults, which shall remain subject to a 15-day cure period following written notice, or (b) breaches that are incapable of cure.
+Business Rationale: A 45-day cure period is commercially reasonable given the complexity of the integration between the Verdantia Nexus API and Hollowell's supply chain management platform. Material breaches in a platform integration context often involve technical issues that require root cause analysis, remediation development, testing, and deployment—a process that can realistically exceed 30 days. Providing adequate cure time reduces the risk of premature termination and preserves the commercial relationship, which is in both parties' interests. The carve-outs for payment defaults and incurable breaches ensure that the extended cure period is not abused.
+Change 23 — Termination for Convenience — Notice Period (Section 11.4)
+Hollowell Request: Reduce the termination-for-convenience notice period from 180 days to 90 days and eliminate the early-termination fee entirely.
+Response: COUNTER.
+Position: Verdantia will propose the following revised termination-for-convenience terms:
+Notice period: 120 days' prior written notice.
+Early-termination fee: 25% of remaining fees in the then-current annual period, payable within 30 days of the effective date of termination.
+Proposed language for Section 11.4:
+"Either party may terminate this Agreement for convenience upon not less than one hundred twenty (120) days' prior written notice to the other party. In the event of termination for convenience by Licensee, Licensee shall pay to Verdantia an early-termination fee equal to twenty-five percent (25%) of the remaining fees payable for the then-current annual period, calculated from the effective date of termination through the end of such annual period. The early-termination fee shall be payable within thirty (30) days of the effective date of termination."
+Business Rationale: The 120-day notice period is the Playbook floor for termination-for-convenience provisions and provides Verdantia with sufficient lead time to re-allocate dedicated infrastructure capacity and reassign support resources. A 90-day notice period would be insufficient for Verdantia to wind down the provisioned capacity associated with Hollowell's integration without incurring stranded infrastructure costs.
+The early-termination fee of 25% of remaining annual fees (reduced from 50% in the initial draft) is a meaningful concession that maintains an appropriate switching cost while avoiding the perception that Hollowell is locked into an inflexible commercial arrangement. At an illustrative mid-year termination (6 months remaining, $630,000 in remaining annual fees × 25% = $157,500), the fee is modest relative to the TCV and sufficient to deter frivolous termination without creating an unreasonable barrier to exit.
+Eliminating the early-termination fee entirely, as Hollowell has requested, would remove any disincentive to mid-term termination and expose Verdantia to the risk of stranded infrastructure costs with no recovery mechanism.
+This is expected to be one of the primary open commercial items requiring discussion during the business-track call (see Section XII, Next Steps).
+Change 24 — Post-Termination Data Return (Section 11.6)
+Hollowell Request: Provide a 30-day period for data export and deletion following termination or expiration.
+Response: ACCEPT.
+Position: Verdantia will revise Section 11.6 to provide that, for a period of thirty (30) calendar days following the effective date of termination or expiration of the Agreement, Verdantia will maintain Hollowell's access to data export functionality sufficient to enable Hollowell to retrieve all Hollowell data stored on Verdantia's systems. Following the expiration of the 30-day data export period, Verdantia will delete all Hollowell data from its active systems and, within 90 days thereafter, from its backup and archival systems, except to the extent that retention is required by applicable law, regulation, or legal hold obligation.
+Business Rationale: Both parties are aligned on the 30-day data export window; Hollowell's markup requested the same timeframe contemplated in Verdantia's internal draft. The addition of the 90-day backup deletion timeline and the legal-hold carve-out provides clarity on the complete data lifecycle post-termination and is consistent with Verdantia's standard data retention practices.
+Change 25 — Post-Termination Derived Data License (Section 11.7 — Survival)
+Hollowell Request: Confirm that Hollowell retains its rights to Derived Data following termination or expiration of the Agreement.
+Response: ACCEPT.
+Position: Consistent with the Derived Data ownership and licensing framework established in Change 9 above, Section 11.7 (Survival) will confirm that the perpetual, irrevocable, non-exclusive, royalty-free license granted to Hollowell under Section 8.3 for Derived Data generated from Hollowell Input Data survives termination or expiration of the Agreement. No additional language is required beyond the survivability provision already incorporated into the Section 8.3 license grant.
+Business Rationale: This is a natural corollary of the Derived Data position articulated in Change 9. Because Verdantia retains ownership of Derived Data, Hollowell's perpetual license is the mechanism that ensures Hollowell is not commercially disadvantaged post-termination. Confirming survivability in the termination provisions provides clarity and eliminates any argument that the license terminates with the Agreement.
+Change 26 — Post-Termination Read-Only Access (Section 11.5A — New)
+Hollowell Request: Provide 90 days of read-only API access at no additional charge following termination or expiration, to facilitate data migration and transition.
+Response: COUNTER.
+Position: Verdantia will offer 60 days of read-only access to the Verdantia Nexus API at no additional charge following termination or expiration, solely for the purpose of data migration and transition activities. A new Section 11.5A should be drafted as follows:
+"For a period of sixty (60) days following the effective date of termination or expiration of this Agreement (the 'Transition Period'), Verdantia shall provide Licensee with read-only access to the Verdantia Nexus API solely for purposes of data migration and transition. During the Transition Period, Licensee shall not process new transactions through the Verdantia Nexus API, and all usage shall be limited to data retrieval and export.
+If Licensee requires continued access beyond the Transition Period, such access shall be provided at Verdantia's then-current standard rates, subject to execution of a short-term access agreement."
+Business Rationale: Sixty days is the Playbook maximum for free post-termination access and provides adequate transition time for Hollowell to complete the migration of its supply chain management workflows off the Nexus API platform. Hollowell's 90-day request exceeds the Playbook ceiling by 30 days. The 60-day period, combined with the 30-day data export window under Change 24, provides a total of 60 days of read-only API access and 30 days of data export functionality—more than sufficient for a well-planned migration.
+The provision for continued access at standard rates beyond the 60-day Transition Period ensures that Hollowell is not stranded if its migration takes longer than anticipated, while protecting Verdantia from bearing ongoing infrastructure costs for an indefinite free-access period.
+IX. Audit Rights (Section 7.4)
+The following change addresses audit frequency, notice, and cost allocation.
+Change 27 — Audit Frequency and Notice (Section 7.4)
+Hollowell Request: Increase audit rights from one (1) audit per year with 30 days' advance notice (at Hollowell's expense) to two (2) audits per year with 15 days' advance notice (at Verdantia's expense).
+Response: COUNTER.
+Position: Verdantia will propose the following revised audit framework:
+Routine Audit: Hollowell shall have the right to conduct one (1) audit per calendar year of Verdantia's compliance with its obligations under the Agreement, including data security obligations under Section 7.
+Post-Incident Audit: In addition to the routine audit right, Hollowell shall have the right to conduct one (1) additional audit following a confirmed Security Incident involving Hollowell data, provided that such audit is initiated within sixty (60) days of the Security Incident notification.
+Notice: Hollowell shall provide Verdantia with no less than twenty (20) business days' advance written notice prior to the commencement of any audit.
+Scope and Conduct: Audits shall be conducted during normal business hours, at Verdantia's offices or (for remote systems) via secure remote access, and shall be limited in scope to the obligations relevant to the audit purpose. Hollowell may engage an independent third-party auditor, subject to such auditor's execution of a confidentiality agreement acceptable to Verdantia.
+Costs: Each party shall bear its own costs and expenses incurred in connection with any audit.
+Business Rationale: The post-incident audit right directly and specifically addresses Hollowell's core data security concern—ensuring that Hollowell can verify Verdantia's security posture and remediation efforts in the wake of an actual Security Incident—without imposing the burden of two routine annual audits. Routine audits are resource-intensive for both parties, requiring coordination of personnel, documentation assembly, and facility access. A second routine annual audit, without a triggering event, provides limited incremental value relative to the operational burden.
+The 20-business-day notice period (increased from Hollowell's requested 15 calendar days) provides Verdantia with adequate preparation time to assemble documentation and make relevant personnel available, resulting in a more productive and efficient audit process for both parties.
+The cost-sharing approach—each party bears its own costs—eliminates the moral hazard associated with cost-free audits (which can incentivize excessive or unfocused audit requests) while being equitable to both parties. Verdantia's initial draft placed all costs on Hollowell; the counter-position of mutual cost-bearing is a concession that should be highlighted to Hollowell's team.
+X. General Provisions (Articles 16–19)
+The following seven changes address governing law, assignment, force majeure, renewal mechanics, notice provisions, confidentiality, and interpretation.
+Change 28 — Governing Law (Sections 16.1 / 16.2)
+Hollowell Request: Change governing law from Delaware to New York. Change dispute resolution from the Court of Chancery of the State of Delaware to AAA arbitration seated in Manhattan, New York.
+Response: COUNTER.
+Position: Verdantia will retain Delaware governing law. As a significant concession on the dispute resolution mechanism, Verdantia will accept binding arbitration administered by the American Arbitration Association under the AAA Commercial Arbitration Rules, but with the seat of arbitration in Wilmington, Delaware rather than Manhattan. The following framework should be incorporated into Sections 16.1 and 16.2:
+"This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of laws principles.
+Any dispute, controversy, or claim arising out of or relating to this Agreement, or the breach, termination, or validity thereof, shall be resolved by binding arbitration administered by the American Arbitration Association in accordance with its Commercial Arbitration Rules then in effect. The seat of arbitration shall be Wilmington, Delaware.
+For disputes with an amount in controversy exceeding Five Hundred Thousand Dollars ($500,000), the arbitration shall be conducted by a panel of three (3) arbitrators. For disputes with an amount in controversy at or below Five Hundred Thousand Dollars ($500,000), the arbitration shall be conducted by a single arbitrator.
+Each party shall bear its own attorneys' fees and costs incurred in connection with any arbitration, except as the arbitrator(s) may otherwise award in the final award.
+The arbitrator(s) shall have no authority to award punitive or exemplary damages. The arbitration award shall be final and binding, and judgment thereon may be entered in any court of competent jurisdiction."
+Business Rationale: Both Verdantia and Hollowell are Delaware entities; Delaware law is the natural governing law for the Agreement, and Verdantia's form agreements across its customer base are uniformly governed by Delaware law. Switching to New York law for a single customer would introduce inconsistency in Verdantia's contract portfolio and require New York law analysis of provisions (particularly the liability and indemnification provisions) that have been drafted and validated under Delaware law.
+However, accepting AAA arbitration—Hollowell's preferred dispute resolution mechanism—is a significant concession that should substantially neutralize Hollowell's venue objection. The Wilmington seat reflects Delaware's nexus to both parties and avoids the higher administrative costs associated with Manhattan proceedings.
+The three-arbitrator panel threshold at $500,000 ensures robust, panel-based adjudication for material disputes (which, given the general liability cap of $1,890,000 and the data-breach super cap of $3,780,000, are likely to exceed $500,000 if they proceed to arbitration), while keeping costs proportionate for smaller claims through the use of a single arbitrator. Marcus Trevino has confirmed that this tiered structure is consistent with AAA best practices and is commonly used in technology licensing agreements.
+Change 29 — Assignment (Article 17)
+Hollowell Request: Either party may assign the Agreement without the other party's consent in connection with a merger, acquisition, or sale of substantially all assets.
+Response: ACCEPT with Conditions.
+Position: Verdantia will accept the M&A assignment right for both parties, subject to the following conditions:
+(i) The assignee is not a direct competitor of the non-assigning party, as reasonably determined by the non-assigning party. For purposes of this provision, a "direct competitor" means an entity that derives more than twenty-five percent (25%) of its annual revenue from products or services that compete directly with the core products or services of the non-assigning party.
+(ii) The assignee expressly assumes in writing all obligations of the assigning party under the Agreement, and a copy of such assumption agreement is provided to the non-assigning party within ten (10) business days of the effective date of the assignment.
+Business Rationale: The competitor exclusion protects Verdantia's competitive position in the event that Hollowell is acquired by a platform competitor that might otherwise gain access to the Nexus API under terms negotiated with Hollowell. The exclusion is reciprocal and thus also protects Hollowell in the event that Verdantia undergoes a change of control. The 25% revenue threshold provides an objective, administrable standard for determining competitor status.
+The written assumption requirement ensures continuity of all contractual obligations—particularly data security commitments under Section 7 and IP provisions under Section 6—through any corporate transaction. Without an express assumption, there is a risk that the acquirer could disclaim certain obligations or assert that they did not survive the transaction structure.
+Change 30 — Force Majeure Fee Carve-Out (Article 18)
+Hollowell Request: During a force majeure event exceeding 10 consecutive business days, Hollowell's payment obligations for the affected services are suspended until service is restored.
+Response: ACCEPT.
+Position: Verdantia will add the following provision to Article 18 (Force Majeure):
+"If a force majeure event prevents Verdantia from providing the Verdantia Nexus API for a period exceeding ten (10) consecutive business days, the fees attributable to the affected services shall be suspended for the duration of the interruption, and Licensee shall receive a pro-rata credit for the period during which the affected services were unavailable. Such credit shall be applied against the next quarterly invoice, or, if the Agreement has terminated, refunded to Licensee within thirty (30) days."
+Business Rationale: This provision is commercially fair and consistent with the principle that Hollowell should not be required to pay for services it cannot access due to circumstances beyond either party's control. The 10-business-day threshold ensures that brief, transient interruptions (which may be addressed through SLA credits under Section 6.3) do not trigger the fee suspension mechanism. The pro-rata credit approach is administrable and avoids the complexity of a full fee abatement.
+Change 31 — Renewal Terms (Section 11.2)
+Hollowell Request: Clarify the auto-renewal mechanics and confirm that 90 days' prior written notice is required for non-renewal.
+Response: ACCEPT.
+Position: Section 11.2 should be revised to state clearly:
+"The initial term of this Agreement shall commence on August 1, 2025 and shall expire on July 31, 2028 (the 'Initial Term'). Upon expiration of the Initial Term, this Agreement shall automatically renew for successive periods of one (1) year each (each, a 'Renewal Term'), unless either party provides the other party with written notice of non-renewal at least ninety (90) days prior to the end of the then-current term (whether the Initial Term or a Renewal Term). The Initial Term and all Renewal Terms are collectively referred to as the 'Term.'"
+Business Rationale: The substance of this provision is consistent with Verdantia's initial draft; Hollowell's markup sought clarification of the auto-renewal mechanics rather than a substantive change. The revised language provides clean, unambiguous drafting that eliminates any potential dispute over the renewal process.
+Change 32 — Notice Provisions (Section 19.5)
+Hollowell Request: Update notice addresses for both parties and add email as a permitted notice method.
+Response: ACCEPT.
+Position: Section 19.5 should be revised to include the following notice addresses and delivery methods:
+Notices to Verdantia:
+Verdantia Systems Inc. 440 Crescent Ridge Boulevard, Suite 800 Wilmington, DE 19801
+Attn: VP & Associate General Counsel
+With a copy (which shall not constitute notice) to:
+Linden & Foss LLP 1285 Avenue of the Americas, 30th Floor New York, NY 10019
+Attn: Marcus Trevino
+Notices to Hollowell:
+Hollowell Industries Group LLC 70 Gramercy Park South, 14th Floor New York, NY 10003
+Attn: Senior Corporate Counsel
+With a copy (which shall not constitute notice) to:
+Whitmore Beck & Alden LLP 600 Lexington Avenue, 22nd Floor New York, NY 10022
+Attn: Sandra Yuen
+Formal legal notices (including notices of breach, termination, non-renewal, indemnification claims, and assignment) shall be delivered by nationally recognized overnight courier service or by hand delivery, and shall be deemed given upon receipt.
+Email shall be an acceptable supplementary notice method—but not the sole method—for routine operational notices under Sections 5 (Service Levels) and 7 (Data Security) only, including scheduled maintenance notices, incident notifications, and sub-processor change notices. Email notices shall be sent to designated operational contacts identified by each party in writing within 30 days of the Effective Date.
+Business Rationale: Permitting email as a supplementary method for operational notices (maintenance windows, incident notifications) is practical and reflects the real-time nature of these communications. However, formal legal notices—termination, breach, indemnification—should continue to require traditional delivery methods (overnight courier or hand delivery) for evidentiary reliability. This distinction ensures that the most consequential communications are documented through verifiable delivery mechanisms while allowing day-to-day operational communications to proceed efficiently.
+Change 33 — Confidentiality Carve-Out for Advisors (Section 10.1)
+Hollowell Request: Expand the definition of "permitted recipients" of Confidential Information to include each party's outside legal and financial advisors.
+Response: ACCEPT.
+Position: Section 10.1 should be revised to include the following language:
+"Notwithstanding the foregoing, a receiving party may disclose Confidential Information to its outside legal counsel and financial advisors who have a need to know such information in connection with the transactions contemplated by this Agreement, provided that such advisors are bound by confidentiality obligations no less protective than those set forth in this Article 10."
+Business Rationale: This is a standard market provision in enterprise technology agreements. Verdantia already shares Agreement terms and related Confidential Information with Linden & Foss LLP under the existing engagement letter confidentiality provisions. Similarly, both parties may need to share Agreement terms with financial advisors in connection with financial reporting, audit, or M&A due diligence. The requirement that advisors be bound by confidentiality obligations at least as protective as Section 8 ensures adequate protection.
+Change 34 — Interpretation / Order of Precedence (Section 19.9)
+Hollowell Request: Add an order-of-precedence clause specifying that, in the event of a conflict between the body of the Agreement and any Schedule or Exhibit, the body of the Agreement controls.
+Response: ACCEPT.
+Position: Section 19.9 (Construction) already contains an order-of-precedence provision to this effect; it should be confirmed (and, if Hollowell requests a standalone clause, restated) substantially as follows:
+"In the event of any conflict or inconsistency between the terms of the main body of this Agreement and the terms of any Schedule, Exhibit, or other attachment hereto, the terms of the main body of this Agreement shall control, unless the applicable Schedule, Exhibit, or attachment expressly states that it is intended to supersede a specific, identified provision of the main body."
+Business Rationale: This is consistent with standard contract architecture and protects Verdantia's core legal terms—including the liability limitations, IP provisions, and indemnification framework in the main body—from being inadvertently overridden or contradicted by provisions in commercial schedules or technical exhibits. The narrow exception (express, specific supersession) preserves the ability to include schedule-specific terms where the parties intentionally agree that a schedule provision should take precedence, while ensuring that any such override is deliberate and clearly documented.
+XI. Summary of Positions
+The following table summarizes Verdantia's recommended response to each of the thirty-four (34) changes in Hollowell's first markup:
+Change #
+Section
+Description
+Response
+Key Figure / Metric
+1
+5.3
+Payment terms: Net 30 → Net 45
+Accept
+Net 45
+2
+5.4
+Late-payment interest: 1.5% → 1.0%/mo
+Accept
+1.0%/mo (or statutory max)
+3
+4.2 / Sch. A
+Overage rate: $0.004 → $0.002/call
+Counter
+$0.003/call (5–10M); $0.0025/call (>10M)
+4
+4.3
+Burst allowance: 150% → 200%
+Counter
+175% (8,750,000 calls/mo)
+5
+5.7
+Most-favored-customer pricing clause
+Reject
+Benchmarking report alternative
+6
+6.1
+Uptime: 99.9% → 99.95%
+Reject/Counter
+99.9% retained; P1 response ≤ 30 min
+7
+6.3
+SLA credits: 5%/0.1% (cap 30%) → 10%/0.1% (cap 100%)
+Counter
+7.5%/0.1% ($7,875); cap 50% ($52,500)
+8
+6.2
+Maintenance: 4 hrs → 2 hrs; 72 hrs → 5 BD notice
+Counter
+3 hrs/mo; 96 hrs notice; Sat 02:00–06:00 ET
+9
+8.3
+Derived Data ownership → Hollowell
+Reject/Counter
+Perpetual license; Verdantia retains ownership
+10
+8.4
+Feedback IP: mutual license
+Reject
+Sole ownership + non-assertion covenant
+11
+7.1
+SOC 2 Type II within 10 BD of request
+Accept
+10 business days
+12
+9.2
+Sub-processor: specific prior consent
+Counter
+45-day notice / 20 BD objection window
+13
+7.3
+Breach notification: 72 hrs → 48 hrs
+Accept
+48 hours
+14
+14
+Cyber-liability insurance: $10M minimum
+Counter
+$5,000,000 minimum
+15
+12.1A (New)
+Data breach indemnity (negligence trigger)
+Accept w/ Limitation
+Tied to Section 7 obligations
+16
+12.3
+Mutual law-violation indemnity
+Accept
+Mutual
+17
+12.1
+Remove "authorized use" qualifier from IP indemnity
+Reject
+"Authorized use" retained
+18
+12.1
+Cure-or-terminate for IP infringement + refund
+Accept w/ Addition
+Pro-rata component termination option
+19
+13.1
+General liability cap: 1× → 2× annual fees
+Counter
+1.5× ($1,890,000)
+20
+13.2
+Consequential damages carve-out: IP + data breach
+Counter
+IP carve-out only; data breach → super cap
+21
+13.3
+Data breach liability: uncapped
+Counter
+3× annual fees ($3,780,000) super cap
+22
+11.3
+Cure period: 30 → 45 days
+Accept
+45 days
+23
+11.4
+T-for-convenience: 180 → 90 days; eliminate ETF
+Counter
+120 days; 25% remaining annual fees ETF
+24
+11.6
+Post-termination data return: 30 days
+Accept
+30 days
+25
+11.7
+Post-termination Derived Data license
+Accept
+Perpetual license survives
+26
+11.5A (New)
+Post-termination read-only access: 90 days
+Counter
+60 days free; then standard rates
+27
+7.4
+Audit: 2×/yr, 15 days' notice, Verdantia's cost
+Counter
+1×/yr + post-incident; 20 BD notice; each bears own costs
+28
+16.1 / 16.2
+Governing law: DE → NY; venue: CoC → AAA Manhattan
+Counter
+DE law; AAA Wilmington; 3-panel > $500K
+29
+17
+Assignment: M&A without consent
+Accept w/ Conditions
+Competitor exclusion + written assumption
+30
+18
+Force majeure fee suspension after 10 BD
+Accept
+Pro-rata credit after 10 consecutive BD
+31
+11.2
+Renewal clarification: auto-renew, 90-day non-renewal
+Accept
+3-year initial; 1-year auto-renewal; 90-day notice
+32
+19.5
+Notice addresses + email as permitted method
+Accept
+Email for operational notices only (Sec. 5, 7)
+33
+10.1
+Confidentiality: expand to outside advisors
+Accept
+Advisors bound by equivalent obligations
+34
+19.9
+Order of precedence: body controls over schedules
+Accept
+Body controls unless express supersession
+Tally:
+•  Accepted: 14
+•  Rejected: 4
+•  Countered: 16
+The primary open commercial items expected to require the most substantive discussion with Hollowell during the counter-turn are:
+1.  Change 3 — Overage Pricing (tiered structure vs. Hollowell's flat $0.002 rate)
+2.  Change 7 — SLA Credits (7.5%/0.1% at 50% cap vs. Hollowell's 10%/0.1% at 100% cap)
+3.  Change 9 — Derived Data Ownership (perpetual license vs. Hollowell's ownership transfer)
+4.  Changes 19–21 — Liability Caps (1.5× general cap, 3× data-breach super cap vs. Hollowell's 2× general and uncapped data breach)
+5.  Change 23 — Early-Termination Fee (120 days' notice with 25% ETF vs. Hollowell's 90 days with no ETF)
+These five items represent the areas of greatest commercial and legal divergence between the parties and should be prioritized in the business-track and legal-track calls described in Section XII below.
+XII. Next Steps
+The following action items have been agreed upon by the deal team to maintain the July 7, 2025 counter-draft delivery target and the August 1, 2025 Effective Date:
+1.  Counter-Markup Preparation (Due: July 3, 2025). Marcus Trevino at Linden & Foss LLP will prepare the counter-markup of the Agreement reflecting all thirty-four positions documented in this memorandum. The counter-markup will be delivered to Jordan Ngata and Priya Chandrasekaran for Verdantia internal review no later than July 3, 2025. L&F should prepare the counter-markup in redline format against Hollowell's first markup (not against Verdantia's initial draft), so that Hollowell can track changes from its own submission.
+2.  Business-Track Call (Week of July 7, 2025). Jordan Ngata and Rachel Fernsby (Hollowell VP of Digital Transformation) will schedule a business-track call during the week of July 7, 2025 to walk through the counter-positions on the primary open commercial items: overage pricing (Change 3), burst allowance (Change 4), MFC alternative (Change 5), SLA credits (Change 7), and termination-for-convenience terms (Change 23). The objective of this call is to identify areas of potential compromise before the legal teams engage on the full counter-markup, reducing the number of issues requiring legal-track resolution.
+3.  Legal-Track Call (Week of July 7, 2025). Priya Chandrasekaran and Derek Calloway (Hollowell Senior Corporate Counsel), with Sandra Yuen at Whitmore Beck & Alden LLP participating as needed, will conduct a parallel legal-track call during the same week to address the primary open legal items: Derived Data ownership (Change 9), Feedback IP (Change 10), data-breach indemnity scope (Change 15), IP indemnity "authorized use" qualifier (Change 17), liability caps and consequential damages (Changes 19–21), and governing law and dispute resolution (Change 28). Marcus Trevino will be available to join this call on Verdantia's behalf if legal-track issues require outside counsel engagement.
+4.  Counter-Draft Delivery (Target: July 7, 2025). Following incorporation of any adjustments arising from the internal review and the business-track/legal-track calls, the revised counter-draft will be delivered to Hollowell no later than July 7, 2025, preserving the parties' target Effective Date of August 1, 2025. If significant changes result from the calls, Jordan Ngata will circulate an updated positions memo before finalizing the counter-draft.
+5.  Escalation Protocol. If either the business-track or legal-track calls reveal irreconcilable positions on any of the five primary open items, Jordan Ngata and Priya Chandrasekaran will escalate to the executive sponsors (Verdantia: COO; Hollowell: SVP of Operations) for resolution no later than July 14, 2025, in order to preserve the August 1 Effective Date.
+This memorandum reflects the aligned business and legal positions of Verdantia Systems Inc. and is prepared in anticipation of legal advice from Linden & Foss LLP. This document is protected by the attorney-client privilege and the work product doctrine. Privileged and Confidential — Do Not Distribute Outside the Deal Team. Any unauthorized distribution, copying, or disclosure of this memorandum or its contents is strictly prohibited.
+— END OF MEMORANDUM —

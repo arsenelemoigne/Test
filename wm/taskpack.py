@@ -213,12 +213,31 @@ def parties(texts: dict[str, str], roles: dict[str, list[str]]) -> dict:
     dans sa signature.
     """
     import re as _re
+    # L'e-mail de renvoi n'est pas toujours classe avec le markup : sur une
+    # tache il portait le role "email", et les parties restaient anonymes. On
+    # prend, parmi tous les e-mails, celui dont l'objet parle du markup.
     cible = None
-    for n in roles.get("markup", []):
-        t = texts.get(pathlib.Path(n).stem)
-        if t and t.lstrip().startswith("From:"):
-            cible = t
-            break
+    cands = []
+    for role in ("markup", "email", "other"):
+        for n in roles.get(role, []):
+            t = texts.get(pathlib.Path(n).stem)
+            if t and t.lstrip().startswith("From:"):
+                cands.append((n.lower(), t))
+
+    def score(item):
+        # l'e-mail de RENVOI vient du conseil adverse : "transmittal" dans son
+        # nom, le markup dans son objet, et un expediteur d'un autre domaine que
+        # le destinataire. Le message interne qui le fait suivre (Priya -> Marcus)
+        # a le meme objet, et le prendre faisait de nos propres juristes "eux".
+        n, t = item
+        sub = _re.search(r"^Subject:\s*(.*)$", t, _re.M)
+        dom = lambda champ: (_re.search(rf"^{champ}:[^\n]*@([\w.-]+)", t, _re.M) or [None, ""])[1]
+        return ((("transmittal" in n) or ("return" in n)) * 4
+                + bool(sub and _re.search(r"markup|redline|mark-up", sub.group(1), _re.I)) * 2
+                + (dom("From") != dom("To")) * 1
+                - ("forward" in n) * 3)
+    if cands:
+        cible = max(cands, key=score)[1]
     if not cible:
         return {}
 
