@@ -1891,17 +1891,24 @@ def cmd_neg(argv: list[str]) -> None:
         python -m wm.run neg --policies algo --n 6 --roles both            # les deux cotes
         python -m wm.run neg --contract smarter --policies algo --n 6      # valeurs par rangs
         python -m wm.run neg --report
+        python -m wm.run neg --recompute      # refait les metriques sur disque, sans appel
     """
     from . import negotiation as ng
     opts = {"policies": "algo", "n": "3", "rounds": str(ng.DEFAULT_ROUNDS),
             "model": llm.FRONTIER, "them": "algo", "budget": "0.35", "seed0": "0",
             "contract": "elicited", "workers": "4", "roles": "modele"}
-    report_only = False
+    report_only = recompute = False
     i = 0
     while i < len(argv):
         a = argv[i]
         if a == "--report":
             report_only = True
+            i += 1
+            continue
+        if a == "--recompute":
+            # refait toutes les metriques derivees sur les fichiers existants,
+            # sans un appel : a lancer apres tout changement de metrique
+            report_only = recompute = True
             i += 1
             continue
         k = a.lstrip("-")
@@ -1931,13 +1938,21 @@ def cmd_neg(argv: list[str]) -> None:
                      f"- voir --contract)" if autres_n else ""))
             return
         print(f"origine des valeurs : {opts['contract']}")
-        # Les negociations enregistrees avant l'ajout du panel de Nash n'en
-        # portent pas les colonnes. Elles gardent pourtant l'accord final et la
-        # graine de l'adversaire, qui suffisent a le recalculer sans un seul
-        # appel : sinon les 30 negociations deja payees resteraient muettes.
-        manquants = [r for r in rs if r.get("agreed") and r.get("nash_share") is None
-                     and r.get("final")]
-        if manquants:
+        # TOUT CE QUI SE RECALCULE SE RECALCULE. Une negociation enregistree
+        # garde l'accord final, la graine de l'adversaire et l'historique
+        # complet des offres : de quoi refaire tout ce qui n'est pas un appel
+        # au modele. C'est ce qui sauve les negociations deja payees quand une
+        # metrique change - et elles ont change deux fois : le panel de Nash a
+        # ete ajoute apres coup, puis la frontiere tiree au hasard a ete
+        # remplacee par un balayage exact, ce qui rendait tous les Nash%
+        # anterieurs trop flatteurs (le denominateur etait sous-estime).
+        #
+        # Par defaut on ne complete que ce qui MANQUE ; --recompute refait tout.
+        forcer = recompute
+        besoin = [r for r in rs if r.get("final") and (
+            forcer or (r.get("agreed") and r.get("nash_share") is None)
+            or r.get("se") is None or r.get("fuite") is None)]
+        if besoin:
             try:
                 if opts["contract"] == "claim":
                     from . import claim_bridge as _cb
@@ -1949,20 +1964,37 @@ def cmd_neg(argv: list[str]) -> None:
                     ng.WEIGHTS = _sm.WEIGHTS
                 else:
                     c_, _src = _neg_contract()
+                CLES = ("nash_share", "nash_dist", "ks_dist", "se", "faisable",
+                        "part_us", "part_them", "part_pol", "part_autre",
+                        "breach_pol", "breach_autre", "fuite", "fuite_courbe",
+                        "u_pol", "res_pol", "role", "pol_side")
                 n_ok = 0
-                for r in manquants:
+                for r in besoin:
                     them_ = ng.make_them(c_, r["seed"])
                     us_ = ng.make_us(c_, budget=float(opts["budget"]))
+                    role = r.get("role", "modele")
+                    cote = us_ if role == "modele" else them_
+                    autre = them_ if role == "modele" else us_
                     r.update(ng._frontier_stats(c_, us_, them_, r["final"]))
+                    lk, courbe = ng.fuite(c_, cote, r.get("history") or [])
+                    r.update({
+                        "role": role, "pol_side": "us" if role == "modele" else "them",
+                        "u_pol": ng.true_u(c_, cote, r["final"]),
+                        "res_pol": cote.reservation,
+                        "part_pol": r.get("part_us" if role == "modele" else "part_them"),
+                        "part_autre": r.get("part_them" if role == "modele" else "part_us"),
+                        "breach_pol": ng.true_u(c_, cote, r["final"]) < cote.reservation - 1e-9,
+                        "breach_autre": ng.true_u(c_, autre, r["final"]) < autre.reservation - 1e-9,
+                        "fuite": lk, "fuite_courbe": courbe})
                     n_ok += r.get("nash_share") is not None
-                print(f"  ({n_ok}/{len(manquants)} negociations anciennes completees "
-                      f"par recalcul, sans appel)")
-                for f in sorted(out.glob("*.json")):
+                print(f"  ({n_ok}/{len(besoin)} negociations recalculees sur disque, "
+                      f"sans un seul appel)")
+                for f in fichiers:
                     d_ = json.loads(f.read_text())
-                    for r in manquants:
-                        if (d_.get("policy"), d_.get("seed")) == (r["policy"], r["seed"]):
-                            d_.update({k: r.get(k) for k in
-                                       ("nash_share", "nash_dist", "ks_dist")})
+                    for r in besoin:
+                        if ((d_.get("policy"), d_.get("seed"), d_.get("role", "modele"))
+                                == (r["policy"], r["seed"], r.get("role", "modele"))):
+                            d_.update({k: r.get(k) for k in CLES})
                             f.write_text(json.dumps(d_, indent=1, ensure_ascii=False))
             except Exception as e:                              # noqa: BLE001
                 print(f"  (recalcul impossible : {e})")
