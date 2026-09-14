@@ -34,6 +34,34 @@ gagne une echelle dont la construction se verifie.
 Le domaine (quels points, quelles redactions) est REPRIS du modele declare.
 Seules les VALEURS changent, donc la comparaison entre les deux elicitations
 ne porte que sur ce qu'on veut comparer.
+
+CE QUE LA MESURE A DONNE - et elle contredit ce qui precede.
+------------------------------------------------------------------
+Contrat 1 (licence Veridian, 26 points, GLM-4.6), correlation de rang avec les
+dollars calcules par le moteur de scenarios, sur les 10 points que les deux
+modeles partagent :
+
+    elicitation directe (nombres)   rho = +0,81   (n = 10, p = 0,005)
+    elicitation par rangs (ROC)     rho = +0,52   (n = 10, p = 0,128)
+
+Le remede est moins bon que le mal suppose. Et le modele par rangs echoue en
+plus ses propres controles la ou le modele declare les passait : il fait
+demander a l'adversaire 4 redactions contre son propre interet, et rend 15
+redactions sur 52 meilleures pour nous que les notres - ce qui voudrait dire
+que nous avons envoye un modele sous-optimal.
+
+Pourquoi, vraisemblablement. ROC transforme un RANG en poids, donc impose une
+decroissance geometrique : ici le premier point pese 100 fois le dernier, par
+construction et non par mesure. Quand les ecarts reels sont plus plats que
+cela, la forme imposee est plus fausse que les nombres bruts. Et deux
+classements independants (le notre, le leur) n'ont aucune raison d'etre
+coherents entre eux : rien ne les rattache a une echelle commune, alors qu'une
+elicitation en nombres, meme mal calibree, est ancree des deux cotes sur la
+meme redaction de reference.
+
+Ce module reste dans l'arbre parce que le resultat negatif est un resultat :
+il ferme une piste que la litterature recommandait, et il le fait avec un
+chiffre. Il ne doit pas servir de source de valeur par defaut.
 """
 
 from __future__ import annotations

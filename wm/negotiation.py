@@ -538,7 +538,42 @@ def pareto_local(c: pm.Contract, us: Side, them: Side, a: dict) -> int:
     return n
 
 
-def frontier(c: pm.Contract, us: Side, them: Side, n: int = 20000, seed: int = 0):
+def _contrib(c: pm.Contract, side: Side, pid: str, oid: str) -> float:
+    """Ce que la redaction `oid` apporte a `side`, isolement.
+
+    L'utilite est additive par point (les couplages mis a part) et la fixation
+    ne fait que tripler le poids d'UN point : la contribution d'une redaction
+    se calcule donc sans connaitre les autres. C'est ce qui permet d'optimiser
+    exactement, point par point, au lieu de tirer au hasard.
+    """
+    v = pm.total(c.params[pid].option(oid).vec(side.whose), side.weights)
+    return v * (3.0 if side.fixation == pid else 1.0)
+
+
+def _balayage(c: pm.Contract, us: Side, them: Side, n_lam: int = 201) -> list[dict]:
+    """La frontiere de Pareto, par somme ponderee, exactement.
+
+    Pour chaque lambda, l'assignation qui maximise lambda*u_nous +
+    (1-lambda)*u_eux se construit point par point : le probleme est separable.
+    Un tirage aleatoire, lui, ne trouve jamais l'optimum sur 26 points a 2 ou 3
+    redactions - 3^26 vaut 2,5 mille milliards, et 20 000 tirages n'en voient
+    rien. C'etait le bug : l'accord conclu par l'algorithme battait le meilleur
+    point echantillonne, donc SE+ et Nash% sortaient AU-DESSUS de 1, ce qui
+    n'a pas de sens pour des parts.
+    """
+    out = []
+    for k in range(n_lam):
+        lam = k / (n_lam - 1)
+        a = {}
+        for pid, p in c.params.items():
+            a[pid] = max(p.options, key=lambda o: (lam * _contrib(c, us, pid, o.id)
+                                                   + (1 - lam) * _contrib(c, them, pid, o.id))).id
+        out.append(a)
+    return out
+
+
+def frontier(c: pm.Contract, us: Side, them: Side, n: int = 2000, seed: int = 0,
+             extra: dict | None = None):
     """Le point de Nash et le point de Kalai-Smorodinsky, sur les VRAIES utilites.
 
     Le controle de Pareto local - "existe-t-il un changement d'UN point qui
@@ -552,23 +587,28 @@ def frontier(c: pm.Contract, us: Side, them: Side, n: int = 20000, seed: int = 0
     Le desaccord est le couple des seuils de rupture : c'est ce que vaut
     l'absence de contrat pour chacun, et c'est par rapport a lui que se
     mesurent les gains d'un accord.
+
+    Les candidats : le balayage exact de la frontiere, le modele, le markup,
+    l'accord lui-meme (`extra`) - sans quoi une part pourrait depasser 1 - et
+    un tirage aleatoire qui sert de filet pour les couplages, que le balayage
+    separable ignore.
     """
     import random as _r
     rng = _r.Random(seed)
     ids = list(c.params)
-    pts = []
-    for a in (c.template, c.markup):
-        pts.append((true_u(c, us, a), true_u(c, them, a), dict(a)))
+    cands = _balayage(c, us, them) + [dict(c.template), dict(c.markup)]
+    if extra:
+        cands.append(dict(extra))
     for _ in range(n):
-        a = {i: rng.choice([o.id for o in c.params[i].options]) for i in ids}
-        pts.append((true_u(c, us, a), true_u(c, them, a), a))
+        cands.append({i: rng.choice([o.id for o in c.params[i].options]) for i in ids})
+    pts = [(true_u(c, us, a), true_u(c, them, a), a) for a in cands]
     du, dt = us.reservation, them.reservation
     best_n, best_ks, mu, mt = None, None, -1e18, -1e18
     faisables = [(x, y, a) for x, y, a in pts if x >= du - 1e-9 and y >= dt - 1e-9]
     if not faisables:
-        # Aucun contrat echantillonne ne satisfait les deux seuils : il n'y a
-        # pas de zone d'accord. Un accord conclu ici est un FAUX ACCORD au sens
-        # de TERMS-Bench, et le mesurer demande de savoir que l'episode etait
+        # Aucun contrat trouve ne satisfait les deux seuils : il n'y a pas de
+        # zone d'accord. Un accord conclu ici est un FAUX ACCORD au sens de
+        # TERMS-Bench, et le mesurer demande de savoir que l'episode etait
         # infaisable - d'ou ce retour explicite plutot qu'un None muet.
         return {"nash": None, "ks": None, "ideal": None, "disagree": (du, dt),
                 "max_sum": None, "faisable": False}
@@ -710,7 +750,7 @@ def _frontier_stats(c: pm.Contract, us: Side, them: Side, a: dict) -> dict:
     Normalise par la diagonale du rectangle (desaccord -> ideaux), pour que la
     distance se lise en part du terrain disponible et non en unites du modele.
     """
-    f = frontier(c, us, them)
+    f = frontier(c, us, them, extra=a)
     if not f or f["nash"] is None or f["ks"] is None:
         return {"nash_dist": None, "ks_dist": None, "nash_share": None,
                 "se": None, "part_us": None, "part_them": None,

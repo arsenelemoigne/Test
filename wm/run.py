@@ -1042,6 +1042,21 @@ def cmd_selftest() -> None:
             # role-swap introduirait autre chose que le changement de siege.
             ("role-swap : la partie elle-meme est inchangee (algo vs algo)",
              _r_mod["final"] == _r_swp["final"] and _r_mod["rounds"] == _r_swp["rounds"])]
+    # AUCUNE PART NE PEUT DEPASSER 1. Le tirage aleatoire ne trouvait jamais
+    # l'optimum sur 26 points (3^26 = 2,5e12 assignations) : l'accord de
+    # l'algorithme battait le meilleur point echantillonne et SE+, Nash% et
+    # 'part' sortaient au-dessus de 1. Le balayage exact de la frontiere le
+    # rend impossible - et c'est ce qu'on verifie ici, sur un vrai accord.
+    _st2 = _NG._frontier_stats(_c2, _us2, _NG.make_them(_c2, 0), _r_mod["final"]) \
+        if _r_mod["final"] else {}
+    _bornes = [v for k, v in (("se", _st2.get("se")), ("nash_share", _st2.get("nash_share")),
+                              ("part_us", _st2.get("part_us")),
+                              ("part_them", _st2.get("part_them"))) if v is not None]
+    _nt += [("aucune part ne depasse 1 sur un vrai accord",
+             bool(_bornes) and all(v <= 1.0 + 1e-9 for v in _bornes)),
+            ("le balayage bat le tirage aleatoire",
+             max(_NG.true_u(_c2, _us2, a) for a in _NG._balayage(_c2, _us2, _them2))
+             >= _NG.true_u(_c2, _us2, dict(_c2.template)) - 1e-9)]
     _ntok = all(v for _, v in _nt)
     print(f"  roles + TERMS   : {sum(v for _, v in _nt)}/{len(_nt)} "
           f"{'OK' if _ntok else 'FAIL'} (fuite ideal {_f0:.2f} / au seuil {_f1:.2f} "
@@ -1976,6 +1991,22 @@ def cmd_neg(argv: list[str]) -> None:
         ng.WEIGHTS = _sm.WEIGHTS
     else:
         c, src = _neg_contract()
+    if opts["contract"] != "claim":
+        # LE SIMULATEUR NE VALIDAIT PAS SON CONTRAT. B0 refuse depuis toujours
+        # de tourner sur un modele qui ne passe pas ses propres controles ; neg
+        # ne le faisait pas, et a produit un tableau d'apparence normale sur un
+        # modele ou l'adversaire demandait des redactions contre son propre
+        # interet. Les parts y depassaient 1 - le seul indice visible.
+        from . import parametric as _pmv
+        _bad = _pmv.model_sanity(c, ng.WEIGHTS)
+        if _bad and os.environ.get("WM_ALLOW_BAD_MODEL", "") != "1":
+            raise SystemExit(
+                "le contrat ne passe pas ses propres controles :\n  "
+                + "\n  ".join(b.splitlines()[0] for b in _bad)
+                + f"\n\nsource : {src}\n"
+                "Negocier la-dessus produit un tableau lisible et faux. Relance "
+                "l'elicitation,\nou force avec WM_ALLOW_BAD_MODEL=1 en sachant que "
+                "le resultat ne mesure alors\nque la mecanique du simulateur.")
     policies = [x.strip() for x in opts["policies"].split(",") if x.strip()]
     roles = (["modele", "markup"] if opts["roles"] in ("both", "les-deux", "2")
              else [x.strip() for x in opts["roles"].split(",") if x.strip()])
