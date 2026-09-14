@@ -349,9 +349,16 @@ def compliant_counter(issue: GenIssue) -> str:
     for l in issue.limits:
         k, unit = l.get("kind"), l.get("unit")
         if k == "max_quantity":
-            bounds.setdefault(unit, {})["max"] = float(l["value"])
+            # Le plus BAS des plafonds, pas le dernier lu. Un point peut porter
+            # deux plafonds dans la meme unite - un credit de 7,5 % par tranche
+            # ET un cumul mensuel de 50 % : ecraser l'un par l'autre faisait
+            # ecrire au stub une position qui enfreignait la limite qu'il etait
+            # cense respecter, et le selftest echouait sur son propre exemple.
+            b = bounds.setdefault(unit, {})
+            b["max"] = min(float(l["value"]), b.get("max", float("inf")))
         elif k == "min_quantity":
-            bounds.setdefault(unit, {})["min"] = float(l["value"])
+            b = bounds.setdefault(unit, {})
+            b["min"] = max(float(l["value"]), b.get("min", float("-inf")))
         elif k == "require_quantity":
             bounds.setdefault(unit, {})
         elif k == "max_money":
@@ -366,7 +373,8 @@ def compliant_counter(issue: GenIssue) -> str:
     for unit, b in bounds.items():
         lo, hi = b.get("min"), b.get("max")
         if lo is not None and hi is not None:
-            v = hi if lo <= hi else hi          # unsatisfiable; emit the ceiling
+            # contradictoires : on emet le plafond, et le controle le dira
+            v = hi
         elif hi is not None:
             v = hi
         elif lo is not None:

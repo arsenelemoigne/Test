@@ -891,6 +891,25 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _ok
 
+    # DEUX PLAFONDS DANS LA MEME UNITE. Un point peut en porter plusieurs - un
+    # credit de 7,5 % par tranche et un cumul mensuel de 50 % - et c'est le plus
+    # bas qui lie. Le stub gardait le dernier lu et ecrivait une position que le
+    # controle rejetait : le selftest echouait sur son propre exemple.
+    from .issuegen import compliant_counter as _cc, GenIssue as _GI2, check_generic as _cg2
+    _deux = _GI2(id="D1", name="credits", question="?", limits=[
+        {"kind": "max_quantity", "unit": "percent", "value": 50, "message": "cumul"},
+        {"kind": "max_quantity", "unit": "percent", "value": 7.5, "message": "par tranche"}])
+    _mini = _GI2(id="D2", name="preavis", question="?", limits=[
+        {"kind": "min_quantity", "unit": "day", "value": 30, "message": "a"},
+        {"kind": "min_quantity", "unit": "day", "value": 90, "message": "b"}])
+    _cnt = [_cc(_deux), _cc(_mini)]
+    _viol = sum(len(_cg2([Decision(issue_id=g.id, disposition=Disposition.MODIFY,
+                                   counter=c, rationale="")], [g]))
+                for g, c in zip((_deux, _mini), _cnt))
+    print(f"  limites doubles : {2 - _viol}/2 positions conformes  "
+          f"({_cnt[0].strip()[:28]} | {_cnt[1].strip()[:24]})")
+    ok &= (_viol == 0)
+
     # LES AXES. Extraction des trois notations d'un markup, oracle par regles
     # sur des formes canoniques, lecture d'une reponse de classification avec
     # rejets, arithmetique du profil.
