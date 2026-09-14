@@ -177,7 +177,97 @@ def cmd_pool() -> int:
     return 0
 
 
+def cmd_calib() -> int:
+    """Le vrai test de calibration : le vecteur DECLARE contre les dollars CALCULES.
+
+    Le test de fermete compare une magnitude a une categorie juridique, et ne
+    sait pas distinguer "le modele est mal calibre" de "fermete et magnitude
+    sont deux choses differentes" - un walk-away sur qui paie l'audit est ferme
+    et petit, un plafond a 34 M$ n'est qu'une fourchette et il est enorme. La
+    remarque vaut contre mon propre test, et elle le disqualifie comme preuve.
+
+    Ici les deux grandeurs sont de meme nature : ce que l'elicitation DIT que
+    coute une redaction, et ce que le moteur de scenarios CALCULE qu'elle
+    coute, sur les points ou les deux existent. Rien n'y est categorie. Si
+    elles ne se suivent pas, l'une des deux se trompe, et ce n'est pas
+    ambigu.
+    """
+    import os
+    from wm import claim_bridge, claim as C
+    T = pathlib.Path(__file__).resolve().parents[1] / "tasks" / \
+        "license-agreement-first-turn-redline-scenario-04"
+    f = T / "parametric.json"
+    if not f.exists():
+        print(f"{f} n'existe pas - lance `model --elicit` sur ce contrat.")
+        return 1
+    os.environ["WM_TASK_DIR"] = str(T)
+    elic = parametric.load(f.read_text())
+    g = taskctx.gen_issues() or []
+    sec_of = {i.id: str(getattr(i, "section", "")).strip() for i in g}
+    nom_of = {i.id: i.name for i in g}
+
+    calc = claim_bridge.build(n=800)
+    # les deux modeles nomment leurs points differemment : on apparie par
+    # numero de section, la seule adresse qu'ils partagent
+    par_sec = {}
+    for pid, prm in elic.params.items():
+        sec = sec_of.get(pid, "").split("(")[0].strip()
+        if sec:
+            par_sec.setdefault(sec, []).append(pid)
+
+    lignes = []
+    for pid, nom, sec, _ in claim_bridge.VERIDIAN:
+        base = sec.split("(")[0].strip()
+        cands = par_sec.get(base) or []
+        if not cands:
+            continue
+        e = elic.params[cands[0]]
+        c = calc.params[pid]
+        try:
+            d_dec = abs(parametric.total(e.option(e.theirs).vec())
+                        - parametric.total(e.option(e.ours).vec()))
+            d_cal = abs(parametric.total(c.option(c.theirs).vec(), claim_bridge.WEIGHTS)
+                        - parametric.total(c.option(c.ours).vec(), claim_bridge.WEIGHTS))
+        except KeyError:
+            continue
+        lignes.append((nom, nom_of.get(cands[0], cands[0]), d_dec, d_cal))
+
+    print("=" * 82)
+    print("CALIBRATION : le vecteur DECLARE (LLM) contre les dollars CALCULES (scenarios)")
+    print("=" * 82)
+    if len(lignes) < 4:
+        print(f"seulement {len(lignes)} points apparies - pas assez pour correler.")
+        return 0
+    print(f"{'point (moteur)':<34}{'point (elicite)':<30}{'declare':>10}{'calcule $':>14}")
+    print("-" * 82)
+    for a, b, dd, dc in sorted(lignes, key=lambda r: -r[3]):
+        print(f"{a[:33]:<34}{b[:29]:<30}{dd:>10.0f}{dc/1e6:>13.2f}M")
+    rho = spearman([r[2] for r in lignes], [r[3] for r in lignes])
+    n = len(lignes)
+    print("-" * 82)
+    if rho is None:
+        print("rho indefini (trop peu de variation).")
+        return 0
+    t = abs(rho) * ((n - 2) / max(1e-12, 1 - rho ** 2)) ** 0.5
+    pval = math.erfc(t / 2 ** 0.5)
+    print(f"correlation de rang declare / calcule : rho = {rho:+.2f}  (n={n}, p ~ {pval:.3f})")
+    print()
+    if pval <= 0.05:
+        print("  Les deux modeles classent les points dans le meme ordre. Le vecteur")
+        print("  declare n'est pas calibre en niveau, mais il l'est en RANG - et c'est")
+        print("  tout ce dont la negociation par ratios a besoin.")
+    else:
+        print("  Les deux modeles ne se suivent pas. Comme le moteur de scenarios, lui,")
+        print("  se derive de termes verifiables contre le texte, c'est le vecteur")
+        print("  declare qui est en cause : il ne mesure pas ce qu'il pretend mesurer.")
+        print("  C'est l'argument le plus direct pour remplacer l'elicitation par")
+        print("  des comparaisons par paires, ou par le moteur lui-meme.")
+    return 0
+
+
 def main() -> int:
+    if "--calib" in sys.argv:
+        return cmd_calib()
     if "--pool" in sys.argv:
         return cmd_pool()
     runs = taskctx.runs_dir()
