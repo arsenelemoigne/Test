@@ -2297,7 +2297,7 @@ def cmd_inter(argv: list[str]) -> None:
         python -m wm.run inter --couplages      # confronte les couplages DECLARES
     """
     from . import interactions as I
-    opts = {"ordre": "2", "n": "300", "party": "licensor", "top": "12"}
+    opts = {"ordre": "2", "n": "800", "party": "licensor", "top": "12"}
     coup = False
     i = 0
     while i < len(argv):
@@ -2312,7 +2312,10 @@ def cmd_inter(argv: list[str]) -> None:
         else:
             raise SystemExit(f"option inconnue : {argv[i]}")
     m = I.carte(ordre=int(opts["ordre"]), party=opts["party"], n=int(opts["n"]))
-    print(I.report(m, top=int(opts["top"])))
+    # le chiffre porte sa barre d'erreur : a n = 150 l'ecart allait de 12 % a
+    # 39 % selon la graine. Trois tirages de plus coutent 45 evaluations.
+    inc = I.bruit(party=opts["party"], n=int(opts["n"]))
+    print(I.report(m, top=int(opts["top"]), incertitude=inc))
     if not coup:
         return
     # Le modele DECLARE porte un champ "couplings" que l'elicitation demande au

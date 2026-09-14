@@ -110,7 +110,26 @@ class Champ:
         return tot
 
 
-def carte(ordre: int = 2, party: str = "licensor", n: int = 600, seed: int = 0,
+def bruit(party="licensor", n=800, graines=(0, 1, 2)) -> tuple[float, float]:
+    """L'ecart a l'additivite, mesure sur plusieurs tirages.
+
+    Sans cela le chiffre n'a pas d'echelle. Mesure : a n = 150 l'ecart va de
+    12 % a 39 % selon la graine - c'est du bruit ; a n = 800 et plus il se
+    stabilise autour de 26 % avec un ecart-type de 2 points. Un resultat qui
+    bouge avec la graine n'est pas un resultat, et le seul moyen de le savoir
+    est de changer la graine.
+    """
+    import statistics
+    xs = []
+    for g in graines:
+        ch = Champ(party=party, n=n, seed=g)
+        ids = [pid for pid, _, _, _ in CB.VERIDIAN]
+        add = sum(ch.dividende([pid]) for pid in ids)
+        xs.append((ch.U(ids) - ch.U([])) - add)
+    return statistics.mean(xs), (statistics.pstdev(xs) if len(xs) > 1 else 0.0)
+
+
+def carte(ordre: int = 2, party: str = "licensor", n: int = 800, seed: int = 0,
           points: list[str] | None = None):
     """Tous les dividendes jusqu'a `ordre`, plus l'ecart total a l'additivite."""
     ch = Champ(party=party, n=n, seed=seed)
@@ -134,7 +153,7 @@ def carte(ordre: int = 2, party: str = "licensor", n: int = 600, seed: int = 0,
             "par_ordre": par_ordre, "appels": ch.appels, "champ": ch}
 
 
-def report(m: dict, top: int = 12) -> str:
+def report(m: dict, top: int = 12, incertitude: tuple | None = None) -> str:
     L = ["LES INTERACTIONS ENTRE CLAUSES, CALCULEES (pas estimees)", "=" * 78, "",
          f"{len(m['ids'])} points chiffrables, {m['appels']} evaluations du contrat.",
          "U(S) = ce que vaut le contrat pour nous quand on concede les points de S.", ""]
@@ -145,6 +164,12 @@ def report(m: dict, top: int = 12) -> str:
     ec, base = m["ecart"], abs(m["additif"]) or 1.0
     L.append(f"  ecart a l'additivite            : {ec/1e6:>10.2f} M$"
              f"   ({abs(ec)/base:.1%} de la somme)")
+    if incertitude:
+        mu, sd = incertitude
+        L.append(f"  sur 3 tirages independants      : {mu/1e6:>10.2f} M$ "
+                 f"+/- {sd/1e6:.2f}  (ecart-type)")
+        if abs(mu) < 3 * sd:
+            L.append("  ATTENTION : l'ecart n'est pas distinguable du bruit de tirage.")
     L.append("")
     if abs(ec) / base < 0.05:
         L += ["  L'hypothese d'additivite tient sur ce contrat. Les trois endroits qui la",
