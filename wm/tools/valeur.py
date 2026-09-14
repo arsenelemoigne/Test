@@ -58,6 +58,59 @@ def _fermete(iss) -> float:
     return float(max((_RANG.get(l.get("kind"), 0) for l in ls), default=0))
 
 
+def _betacf(a, b, x, iters=200):
+    """Fraction continue de la beta incomplete (Lentz). Sans scipy."""
+    tiny = 1e-30
+    qab, qap, qam = a + b, a + 1.0, a - 1.0
+    c, d = 1.0, 1.0 - qab * x / qap
+    d = tiny if abs(d) < tiny else d
+    d = 1.0 / d
+    h = d
+    for m in range(1, iters + 1):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1.0 + aa * d
+        d = tiny if abs(d) < tiny else d
+        c = 1.0 + aa / c
+        c = tiny if abs(c) < tiny else c
+        d = 1.0 / d
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1.0 + aa * d
+        d = tiny if abs(d) < tiny else d
+        c = 1.0 + aa / c
+        c = tiny if abs(c) < tiny else c
+        d = 1.0 / d
+        de = d * c
+        h *= de
+        if abs(de - 1.0) < 3e-12:
+            break
+    return h
+
+
+def p_student(t: float, df: int) -> float:
+    """p bilaterale d'un t de Student a df degres de liberte.
+
+    L'approximation normale qui etait utilisee ici est fausse aux petits n, et
+    dans le mauvais sens : pour rho = +0,81 sur n = 10 elle rendait p < 0,001
+    la ou la loi de Student rend p ~ 0,005. Cinquante fois trop sur - et c'est
+    exactement le regime dans lequel nous travaillons, une douzaine de points
+    apparies. Le resultat reste significatif ; l'approximation, elle, ne
+    l'etait pas.
+    """
+    if df <= 0:
+        return 1.0
+    x = df / (df + t * t)
+    a, b = df / 2.0, 0.5
+    lbeta = (math.lgamma(a) + math.lgamma(b) - math.lgamma(a + b))
+    if x < (a + 1.0) / (a + b + 2.0):
+        ib = math.exp(a * math.log(x) + b * math.log(1 - x) - lbeta) * _betacf(a, b, x) / a
+    else:
+        ib = 1.0 - math.exp(b * math.log(1 - x) + a * math.log(x) - lbeta) * \
+            _betacf(b, a, 1 - x) / b
+    return min(1.0, max(0.0, ib))
+
+
 def spearman(xs, ys):
     """Sans scipy. Rend None si un rang est indefini."""
     n = len(xs)
@@ -281,7 +334,7 @@ def cmd_calib() -> int:
             print(f"{nom:<26} rho indefini (trop peu de variation)")
             return None, None
         t = abs(rho) * ((len(xs) - 2) / max(1e-12, 1 - rho ** 2)) ** 0.5
-        pval = math.erfc(t / 2 ** 0.5)
+        pval = p_student(t, len(xs) - 2)
         print(f"{nom:<26} rho = {rho:+.2f}   (n={len(xs)}, p ~ {pval:.3f})")
         return rho, pval
 
@@ -425,7 +478,7 @@ def main() -> int:
             # approximation normale du test de Student, suffisante ici : elle
             # sert a dire "ce rho n'est pas distinguable de zero", pas a publier.
             import math
-            pval = math.erfc(t / (2 ** 0.5))
+            pval = p_student(t, n - 2)
             print(f"rho = {rho:+.2f}  (n={n}, p ~ {pval:.2f})")
             if pval > 0.05:
                 print("  A ce n, ce rho n'est PAS distinguable de zero. La")
