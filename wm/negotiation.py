@@ -523,20 +523,29 @@ def summary(results: list[dict]) -> str:
         se = (statistics.pstdev(xs) / math.sqrt(len(xs))) if len(xs) > 1 else 0.0
         return f"{m:6.2f}±{se:.2f}"
 
-    L = [f"{'politique':<11}{'n':>3}{'accord':>8}{'tours':>7}{'garde':>13}{'eux':>13}"
+    L = [f"{'politique':<11}{'n':>3}{'accord':>8}{'tours':>7}{'garde':>13}{'attendu':>9}{'eux':>13}"
          f"{'pareto':>9}{'chang.':>8}{'hors mandat':>12}{'appels':>8}"]
     for pol, rs in by.items():
         ag = [r for r in rs if r["agreed"]]
+        # VALEUR ATTENDUE : la rupture compte pour zero. Le tableau 'garde' ne
+        # porte que sur les accords, donc une politique qui ne conclut qu'une
+        # fois sur deux n'y est jugee que sur ses reussites - un biais de
+        # survie qui flatte exactement la politique qui echoue le plus.
+        att = sum(r["kept_us"] for r in ag if r["kept_us"] is not None) / len(rs)
         L.append(f"{pol:<11}{len(rs):>3}{len(ag)/len(rs):>8.0%}"
                  f"{statistics.mean(r['rounds'] for r in rs):>7.1f}"
                  f"{ms([r['kept_us'] for r in ag]):>13}"
+                 f"{att:>9.2f}"
                  f"{ms([r['share_them'] for r in ag]):>13}"
                  f"{ms([r['pareto_gap'] for r in ag]):>9}"
                  f"{ms([r['n_changed'] for r in ag]):>8}"
                  f"{sum(1 for r in ag if r['mandate_breach']):>12}"
                  f"{sum(r['calls'] for r in rs):>8}")
     L += ["",
-          "garde   : part de ce que leur markup nous prenait que nous avons gardee (1 = tout)",
+          "garde   : part de ce que leur markup nous prenait que nous avons gardee (1 = tout),",
+          "          ACCORDS SEULEMENT - ne juge une politique que sur ses reussites",
+          "attendu : la meme chose, rupture comptee zero. C'est le chiffre a lire :",
+          "          un accord manque n'est pas un demi-succes, c'est pas de contrat.",
           "eux     : part de la valeur de leur markup qu'ils obtiennent (selon LEUR utilite)",
           "pareto  : changements d'un point qui amelioreraient les deux camps (0 = efficace)",
           "chang.  : points qui s'ecartent de notre modele dans l'accord (petit = marginal)",
@@ -545,13 +554,13 @@ def summary(results: list[dict]) -> str:
     pols = list(by)
     if len(pols) >= 2:
         L.append("")
-        L.append("COMPARAISONS APPARIEES (meme adversaire) sur 'garde', accords seulement :")
+        L.append("COMPARAISONS APPARIEES (meme adversaire), rupture comptee zero :")
         for i in range(len(pols)):
             for j in range(i + 1, len(pols)):
                 A = {r["seed"]: r for r in by[pols[i]]}
                 B = {r["seed"]: r for r in by[pols[j]]}
-                d = [A[s]["kept_us"] - B[s]["kept_us"] for s in A if s in B
-                     and A[s]["kept_us"] is not None and B[s]["kept_us"] is not None]
+                v = lambda r: (r["kept_us"] or 0.0) if r["agreed"] else 0.0
+                d = [v(A[s]) - v(B[s]) for s in A if s in B]
                 if not d:
                     L.append(f"  {pols[i]} vs {pols[j]} : aucune paire d'accords")
                     continue

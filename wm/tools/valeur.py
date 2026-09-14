@@ -85,11 +85,14 @@ def main() -> int:
             except Exception:                                   # noqa: BLE001
                 return False
         b = [d for d in cands if d.name.startswith("B")]
-        avec = [d for d in b if porte_option(d)]
-        cands = [(avec or b or cands)[-1]]
-    if not cands:
-        print(f"aucun run avec decisions.json dans {runs}")
-        return 1
+        pool = [d for d in b if porte_option(d)] or b or cands
+        if not pool:
+            print(f"aucun run de contre-proposition dans {runs}.")
+            print("Le modele parametrique existe, mais rien ne l'a encore utilise :")
+            print("  python -m wm.run trial B1 z-ai/glm-4.6 1")
+            print("Les sections REPRESENTATIVITE ci-dessus ne demandent aucun run.")
+            return 0
+        cands = [pool[-1]]
 
     f = taskctx.task_dir() / "parametric.json"
     if not f.exists():
