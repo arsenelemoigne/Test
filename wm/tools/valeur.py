@@ -193,7 +193,7 @@ def cmd_calib() -> int:
     ambigu.
     """
     import os
-    from wm import claim_bridge, claim as C
+    from wm import claim_bridge, smarter
     T = pathlib.Path(__file__).resolve().parents[1] / "tasks" / \
         "license-agreement-first-turn-redline-scenario-04"
     f = T / "parametric.json"
@@ -202,6 +202,8 @@ def cmd_calib() -> int:
         return 1
     os.environ["WM_TASK_DIR"] = str(T)
     elic = parametric.load(f.read_text())
+    fs = T / "parametric_smarter.json"
+    rang = parametric.load(fs.read_text()) if fs.exists() else None
     g = taskctx.gen_issues() or []
     sec_of = {i.id: str(getattr(i, "section", "")).strip() for i in g}
     nom_of = {i.id: i.name for i in g}
@@ -215,55 +217,119 @@ def cmd_calib() -> int:
         if sec:
             par_sec.setdefault(sec, []).append(pid)
 
+    def ecart(c, pid, w=None):
+        p_ = c.params[pid]
+        return abs(parametric.total(p_.option(p_.theirs).vec(), w)
+                   - parametric.total(p_.option(p_.ours).vec(), w))
+
     lignes = []
     for pid, nom, sec, _ in claim_bridge.VERIDIAN:
         base = sec.split("(")[0].strip()
         cands = par_sec.get(base) or []
         if not cands:
             continue
-        e = elic.params[cands[0]]
-        c = calc.params[pid]
         try:
-            d_dec = abs(parametric.total(e.option(e.theirs).vec())
-                        - parametric.total(e.option(e.ours).vec()))
-            d_cal = abs(parametric.total(c.option(c.theirs).vec(), claim_bridge.WEIGHTS)
-                        - parametric.total(c.option(c.ours).vec(), claim_bridge.WEIGHTS))
+            d_dec = ecart(elic, cands[0])
+            d_cal = ecart(calc, pid, claim_bridge.WEIGHTS)
+            d_rng = (ecart(rang, cands[0], smarter.WEIGHTS)
+                     if rang is not None and cands[0] in rang.params else None)
         except KeyError:
             continue
-        lignes.append((nom, nom_of.get(cands[0], cands[0]), d_dec, d_cal))
+        lignes.append((nom, nom_of.get(cands[0], cands[0]), d_dec, d_cal, d_rng,
+                       cands[0]))
 
-    print("=" * 82)
-    print("CALIBRATION : le vecteur DECLARE (LLM) contre les dollars CALCULES (scenarios)")
-    print("=" * 82)
-    if len(lignes) < 4:
-        print(f"seulement {len(lignes)} points apparies - pas assez pour correler.")
+    # Deux points du moteur peuvent tomber sur la meme section - le niveau de
+    # service et la resiliation pour defaillance chronique sont tous deux
+    # annexe C. Ils recoivent alors le MEME point elicite, et le compter deux
+    # fois gonflerait n avec une observation qui n'en est pas une. On garde le
+    # premier et on le dit.
+    vus, uniques, doublons = set(), [], []
+    for r in lignes:
+        (doublons if r[5] in vus else uniques).append(r)
+        vus.add(r[5])
+
+    print("=" * 92)
+    print("CALIBRATION : ce que l'elicitation DIT, contre ce que les scenarios CALCULENT")
+    print("=" * 92)
+    if len(uniques) < 4:
+        print(f"seulement {len(uniques)} points apparies - pas assez pour correler.")
         return 0
-    print(f"{'point (moteur)':<34}{'point (elicite)':<30}{'declare':>10}{'calcule $':>14}")
-    print("-" * 82)
-    for a, b, dd, dc in sorted(lignes, key=lambda r: -r[3]):
-        print(f"{a[:33]:<34}{b[:29]:<30}{dd:>10.0f}{dc/1e6:>13.2f}M")
-    rho = spearman([r[2] for r in lignes], [r[3] for r in lignes])
-    n = len(lignes)
-    print("-" * 82)
-    if rho is None:
-        print("rho indefini (trop peu de variation).")
-        return 0
-    t = abs(rho) * ((n - 2) / max(1e-12, 1 - rho ** 2)) ** 0.5
-    pval = math.erfc(t / 2 ** 0.5)
-    print(f"correlation de rang declare / calcule : rho = {rho:+.2f}  (n={n}, p ~ {pval:.3f})")
+    a_rang = rang is not None and any(r[4] is not None for r in lignes)
+    print(f"{'point (moteur)':<32}{'point (elicite)':<28}{'declare':>10}"
+          + (f"{'rangs':>10}" if a_rang else "") + f"{'calcule $':>14}")
+    print("-" * 92)
+    dbl = {id(r) for r in doublons}
+    for r in sorted(lignes, key=lambda r: -r[3]):
+        a, b, dd, dc, dr = r[0], r[1], r[2], r[3], r[4]
+        col = ""
+        if a_rang:
+            col = f"{dr:>10.0f}" if dr is not None else f"{'-':>10}"
+        marque = "  (meme section, non compte)" if id(r) in dbl else ""
+        print(f"{a[:31]:<32}{b[:27]:<28}{dd:>10.0f}{col}{dc/1e6:>13.2f}M{marque}")
+    print("-" * 92)
+    if doublons:
+        print(f"{len(doublons)} point(s) du moteur partagent une section avec un autre "
+              f"et sont exclus\nde la correlation : "
+              + ", ".join(x[0][:28] for x in doublons))
+
+    lignes = uniques
+    cal = [r[3] for r in lignes]
+
+    def rapporte(nom, xs, ys):
+        rho = spearman(xs, ys)
+        if rho is None:
+            print(f"{nom:<26} rho indefini (trop peu de variation)")
+            return None, None
+        t = abs(rho) * ((len(xs) - 2) / max(1e-12, 1 - rho ** 2)) ** 0.5
+        pval = math.erfc(t / 2 ** 0.5)
+        print(f"{nom:<26} rho = {rho:+.2f}   (n={len(xs)}, p ~ {pval:.3f})")
+        return rho, pval
+
+    print("correlation de rang avec les dollars calcules :")
+    r_dec, p_dec = rapporte("  elicitation directe", [r[2] for r in lignes], cal)
+    r_rng = p_rng = None
+    if a_rang:
+        pairs = [(r[4], r[3]) for r in lignes if r[4] is not None]
+        r_rng, p_rng = rapporte("  elicitation par rangs", [x for x, _ in pairs],
+                                [y for _, y in pairs])
     print()
-    if pval <= 0.05:
-        print("  Les deux modeles classent les points dans le meme ordre. Le vecteur")
-        print("  declare n'est pas calibre en niveau, mais il l'est en RANG - et c'est")
-        print("  tout ce dont la negociation par ratios a besoin.")
-    else:
-        print("  Les deux modeles ne se suivent pas. Comme le moteur de scenarios, lui,")
-        print("  se derive de termes verifiables contre le texte, c'est le vecteur")
-        print("  declare qui est en cause : il ne mesure pas ce qu'il pretend mesurer.")
-        print("  C'est l'argument le plus direct pour remplacer l'elicitation par")
-        print("  des comparaisons par paires, ou par le moteur lui-meme.")
-    return 0
 
+    def verdict(r, p, quoi):
+        if r is None:
+            return
+        if p <= 0.05:
+            print(f"  {quoi} suit le moteur en RANG. Elle n'est pas calibree en")
+            print("  niveau, mais la negociation par ratios n'a besoin que de l'ordre.")
+        else:
+            print(f"  {quoi} ne suit pas le moteur. Comme le moteur, lui, se")
+            print("  derive de termes verifiables contre le texte, c'est l'elicitation")
+            print("  qui est en cause : elle ne mesure pas ce qu'elle pretend mesurer.")
+
+    verdict(r_dec, p_dec, "L'elicitation directe")
+    if r_rng is None:
+        print()
+        print("  (pas de modele par rangs : `python -m wm.run model --smarter` en construit")
+        print("   un sur le MEME domaine, et cette table gagne une colonne.)")
+        return 0
+    print()
+    verdict(r_rng, p_rng, "L'elicitation par rangs")
+    print()
+    d = r_rng - r_dec
+    print(f"  ecart rangs - direct : {d:+.2f}")
+    if abs(d) < 0.15:
+        print(f"  Les deux elicitations se valent sur ce contrat. A n = {len(lignes)}")
+        print("  points, un ecart de cette taille ne se distingue pas du bruit : ne pas")
+        print("  conclure que les rangs n'apportent rien, conclure que ce test ne le")
+        print("  montre pas.")
+    elif d > 0:
+        print("  Les rangs sont mieux calibres. Reste la question qui compte : est-ce")
+        print("  que cela se voit en negociation ? `neg --contract smarter` contre")
+        print("  `neg --contract elicited`, meme simulateur, memes adversaires, le dit.")
+    else:
+        print("  Les rangs sont MOINS bien calibres que les nombres declares. Le remede")
+        print("  que propose la litterature ne marche pas ici : le dire, et garder le")
+        print("  moteur de scenarios comme source de valeur partout ou il s'applique.")
+    return 0
 
 def main() -> int:
     if "--calib" in sys.argv:

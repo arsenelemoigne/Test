@@ -984,6 +984,59 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _aok
 
+    # L'ELICITATION PAR RANGS. Les poids ROC, les omissions declarees plutot
+    # que silencieuses (un point oublie recevrait le poids le plus faible sans
+    # que personne l'ait decide), et le fait que des classements IDENTIQUES des
+    # deux cotes - le mode d'echec d'un modele qui repond deux fois la meme
+    # chose - declenchent les controles au lieu de passer pour un contrat.
+    from . import smarter as _SM, parametric as _PM
+    _w = [_SM.roc(i, 5) for i in range(1, 6)]
+    _sm_t = [("poids ROC : somme = 1", abs(sum(_w) - 1.0) < 1e-9),
+             ("poids ROC : decroissants", all(_w[i] > _w[i + 1] for i in range(4))),
+             ("poids ROC : premier >> dernier", _w[0] / _w[-1] > 5)]
+    _dom = _PM.Contract([
+        _PM.Parameter(id="P1", name="plafond", section="9.1", ours="a", theirs="b",
+                      options=[_PM.Option(id="a", text="cap 12 mois"),
+                               _PM.Option(id="b", text="cap illimite")]),
+        _PM.Parameter(id="P2", name="preavis", section="3.2", ours="a", theirs="b",
+                      options=[_PM.Option(id="a", text="90 jours"),
+                               _PM.Option(id="b", text="30 jours")]),
+        _PM.Parameter(id="P3", name="audit", section="12.1", ours="a", theirs="b",
+                      options=[_PM.Option(id="a", text="annuel"),
+                               _PM.Option(id="b", text="trimestriel")])])
+    _rp, _ro, _why_sm = _SM.parse_ranks(
+        '{"points": ["P2", "P1"], "options": {"P1": ["a", "b"], "P2": ["b"]}}', _dom)
+    _sm_t += [("omission d'un point : mise en queue ET signalee",
+               _rp.get("P3") == 3 and any("P3" in w for w in _why_sm)),
+              ("omission d'une redaction : idem",
+               _ro["P2"].get("a") == 2 and any("P2" in w for w in _why_sm)),
+              ("reponse sans JSON : rejet motive",
+               _SM.parse_ranks("je ne peux pas classer", _dom)[2] != [])]
+    _ordre = {"points": ["P1", "P2", "P3"],
+              "options": {"P1": ["a", "b"], "P2": ["a", "b"], "P3": ["a", "b"]}}
+    _r1 = _SM.parse_ranks(json.dumps(_ordre), _dom)
+    _r2 = _SM.parse_ranks(json.dumps({"points": ["P3", "P2", "P1"],
+                                      "options": {"P1": ["b", "a"], "P2": ["b", "a"],
+                                                  "P3": ["b", "a"]}}), _dom)
+    _miroir = _SM.contract_from_ranks(_dom, _r1[0], _r1[1], _r1[0], _r1[1])
+    _croise = _SM.contract_from_ranks(_dom, _r1[0], _r1[1], _r2[0], _r2[1])
+    _sm_t += [("classements identiques des deux cotes : controles declenches",
+               bool(_PM.model_sanity(_miroir, _SM.WEIGHTS))),
+              ("classements opposes : aucun controle declenche",
+               not _PM.model_sanity(_croise, _SM.WEIGHTS)),
+              ("le point classe premier pese le plus",
+               abs(_PM.total(_croise.params["P1"].option("b").vec(), _SM.WEIGHTS))
+               > abs(_PM.total(_croise.params["P3"].option("b").vec(), _SM.WEIGHTS))),
+              ("notre redaction de reference vaut zero pour nous",
+               abs(_PM.total(_croise.params["P1"].option("a").vec(), _SM.WEIGHTS)) < 1e-9)]
+    _smok = all(v for _, v in _sm_t)
+    print(f"  rangs (SMARTER) : {sum(v for _, v in _sm_t)}/{len(_sm_t)} "
+          f"{'OK' if _smok else 'FAIL'}")
+    for _n, _v in _sm_t:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _smok
+
     # the generic checker too, since a ported task uses that path instead
     from .issuegen import GenIssue, check_generic
     gi = [GenIssue(id="G1", name="cap", question="?", limits=[
@@ -1557,6 +1610,63 @@ def cmd_model_elicit() -> None:
     print(llm.spend_report())
 
 
+def cmd_model_smarter() -> None:
+    """L'elicitation par RANGS, sur le domaine deja construit. Voir wm/smarter.py.
+
+    Le domaine - quels points, quelles redactions - est REPRIS de
+    parametric.json. Seules les VALEURS changent. Sans cela, comparer les deux
+    elicitations comparerait aussi deux decoupages du contrat, et on ne saurait
+    pas laquelle des deux differences explique l'ecart.
+    """
+    from . import parametric, smarter, taskctx
+    T = taskctx.task_dir()
+    f = T / "parametric.json"
+    if not f.exists():
+        print(f"{f} n'existe pas - lance d'abord `python -m wm.run model --elicit` :\n"
+              f"l'elicitation par rangs reprend SON domaine et n'en construit pas un autre.")
+        return
+    c = parametric.load(f.read_text())
+    from .render import _partie
+    try:
+        us_name, them_name = _partie("us"), _partie("them")
+    except Exception:                                           # noqa: BLE001
+        us_name, them_name = "our client", "the counterparty"
+    mandate = ""
+    try:
+        mandate = "\n".join(
+            f"- {i.name}: {i.authority}" + (f" [LIMITE FERME: {i.hard_limit}]"
+                                            if getattr(i, "hard_limit", "") else "")
+            for i in taskctx.issues())
+        mandate = "MANDATE\n" + mandate
+    except RuntimeError:
+        pass
+    print(f"{len(c.params)} points, {sum(len(p_.options) for p_ in c.params.values())} "
+          f"redactions -> {llm.FRONTIER} ; deux appels, deux classements.", flush=True)
+    call = llm.model(llm.FRONTIER)
+    raw: list[str] = []
+    c2, why = smarter.elicit(c, call, us_name, them_name, mandate=mandate, raw_out=raw)
+    (T / "_smarter_raw.txt").write_text("\n\n===== 2 =====\n\n".join(raw))
+    print()
+    for w in why:
+        print(f"  ! {w}")
+    print()
+    print(smarter.report(c2))
+    print()
+    bad = parametric.model_sanity(c2, smarter.WEIGHTS)
+    print(parametric.sanity_report(c2, smarter.WEIGHTS))
+    (T / "parametric_smarter.json").write_text(parametric.dump(c2))
+    print(f"\necrit dans {T / 'parametric_smarter.json'}")
+    print("compare les deux elicitations contre les dollars calculés :\n"
+          "  python3 wm/tools/valeur.py --calib")
+    print("puis fais negocier les deux, meme simulateur :\n"
+          "  python -m wm.run neg --contract smarter --policies algo --n 6")
+    if bad:
+        print("\nLES CONTROLES DU MODELE SE DECLENCHENT. Des rangs identiques des deux "
+              "cotes\nproduisent des ratios uniformes : relis la sortie brute dans "
+              f"{T / '_smarter_raw.txt'}.")
+    print(llm.spend_report())
+
+
 def cmd_parametric_demo() -> None:
     """Le contrat comme objet parametrique. Aucun appel API."""
     from . import parametric, parametric_example
@@ -1675,6 +1785,13 @@ def _neg_contract():
     raise SystemExit(f"{f} n'existe pas - lance `python -m wm.run model --elicit`")
 
 
+def _tag(contract: str) -> str:
+    """Le prefixe des fichiers de negociation. Trois origines de valeurs pour un
+    seul simulateur : sans prefixe elles s'ecraseraient et la comparaison
+    porterait sur un melange."""
+    return {"claim": "claim__", "smarter": "smarter__"}.get(contract, "")
+
+
 def cmd_neg(argv: list[str]) -> None:
     """Simulateur de negociation. Voir wm/negotiation.py.
 
@@ -1704,10 +1821,23 @@ def cmd_neg(argv: list[str]) -> None:
     out = taskctx.runs_dir() / "neg"
     out.mkdir(parents=True, exist_ok=True)
     if report_only:
-        rs = [json.loads(f.read_text()) for f in sorted(out.glob("*.json"))]
+        # Un seul repertoire, trois origines de valeurs. Melanger les trois dans
+        # un tableau moyennerait des utilites qui n'ont pas la meme echelle et
+        # rendrait une colonne "garde" qui ne veut rien dire. On filtre.
+        tag = _tag(opts["contract"])
+        autres = [v for k, v in (("claim", "claim__"), ("smarter", "smarter__"))
+                  if v != tag]
+        fichiers = [f for f in sorted(out.glob("*.json"))
+                    if f.name.startswith(tag)
+                    and not any(f.name.startswith(a) for a in autres)]
+        rs = [json.loads(f.read_text()) for f in fichiers]
         if not rs:
-            print(f"aucune negociation enregistree dans {out}")
+            autres_n = sum(1 for _ in out.glob("*.json"))
+            print(f"aucune negociation '{opts['contract']}' dans {out}"
+                  + (f" ({autres_n} enregistrees sous une autre origine de valeurs "
+                     f"- voir --contract)" if autres_n else ""))
             return
+        print(f"origine des valeurs : {opts['contract']}")
         # Les negociations enregistrees avant l'ajout du panel de Nash n'en
         # portent pas les colonnes. Elles gardent pourtant l'accord final et la
         # graine de l'adversaire, qui suffisent a le recalculer sans un seul
@@ -1716,11 +1846,16 @@ def cmd_neg(argv: list[str]) -> None:
                      and r.get("final")]
         if manquants:
             try:
-                c_, _src = (_neg_contract() if opts["contract"] != "claim"
-                            else (__import__("wm.claim_bridge", fromlist=["x"]).build(), ""))
                 if opts["contract"] == "claim":
                     from . import claim_bridge as _cb
-                    ng.WEIGHTS = _cb.WEIGHTS
+                    c_, ng.WEIGHTS = _cb.build(), _cb.WEIGHTS
+                elif opts["contract"] == "smarter":
+                    from . import parametric as _pm, smarter as _sm
+                    c_ = _pm.load((taskctx.task_dir() /
+                                   "parametric_smarter.json").read_text())
+                    ng.WEIGHTS = _sm.WEIGHTS
+                else:
+                    c_, _src = _neg_contract()
                 n_ok = 0
                 for r in manquants:
                     them_ = ng.make_them(c_, r["seed"])
@@ -1749,6 +1884,18 @@ def cmd_neg(argv: list[str]) -> None:
         from . import claim_bridge
         c, src = claim_bridge.build(), "CALCULE (wm/claim_bridge.py sur wm/claim.py)"
         ng.WEIGHTS = claim_bridge.WEIGHTS
+    elif opts["contract"] == "smarter":
+        # Meme domaine, meme simulateur, valeurs tirees de deux CLASSEMENTS au
+        # lieu de nombres declares. Troisieme origine des chiffres : si elle
+        # negocie mieux que l'elicitation directe, la qualite de la
+        # representation compte ; sinon, ce qui compte est qu'il y ait un
+        # objectif numerique coherent, pas qu'il soit juste.
+        from . import parametric as _pm, smarter as _sm
+        f_ = taskctx.task_dir() / "parametric_smarter.json"
+        if not f_.exists():
+            raise SystemExit(f"{f_} n'existe pas - lance `python -m wm.run model --smarter`")
+        c, src = _pm.load(f_.read_text()), f"RANGS ({f_})"
+        ng.WEIGHTS = _sm.WEIGHTS
     else:
         c, src = _neg_contract()
     policies = [x.strip() for x in opts["policies"].split(",") if x.strip()]
@@ -1779,7 +1926,7 @@ def cmd_neg(argv: list[str]) -> None:
           f"tours : {T}   budget de concession : {float(opts['budget']):.0%}\n")
 
     def save(r):
-        tag = "claim__" if opts["contract"] == "claim" else ""
+        tag = _tag(opts["contract"])
         f = out / f"{tag}{r['policy']}__{slug(opts['model']) if r['policy'] != 'algo' else 'none'}__cp{r['seed']}.json"
         f.write_text(json.dumps(r, indent=1, ensure_ascii=False))
         etat = ("accord tour %d par %s" % (r["rounds"], r["accepted_by"])) if r["agreed"] else "RUPTURE"
@@ -1788,7 +1935,7 @@ def cmd_neg(argv: list[str]) -> None:
         print(f"  {r['policy']:<10} adversaire {r['seed']:>2} ({r['them']['label']:<10}) {etat:<22}{garde}{extra}")
 
     # reprise : ce qui est deja sur disque n'est pas rejoue
-    tag = "claim__" if opts["contract"] == "claim" else ""
+    tag = _tag(opts["contract"])
     done = set()
     for pol in policies:
         m = slug(opts["model"]) if pol != "algo" else "none"
@@ -2012,6 +2159,8 @@ if __name__ == "__main__":
     elif a[0] == "model":
         if len(a) > 1 and a[1] in ("--elicit", "elicit"):
             cmd_model_elicit()
+        elif len(a) > 1 and a[1] in ("--smarter", "smarter"):
+            cmd_model_smarter()
         else:
             cmd_parametric_demo()
     elif a[0] == "drift":
