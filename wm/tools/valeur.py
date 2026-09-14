@@ -18,6 +18,7 @@ deux autres :
 import json
 import pathlib
 import sys
+import math
 import statistics
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
@@ -36,6 +37,25 @@ def charge_decisions(d: pathlib.Path):
         x.option_id = str(r.get("option_id", "") or "")
         out.append(x)
     return out
+
+
+# La FERMETE d'un point, lue dans la NATURE de ses limites, pas dans leur
+# nombre. Sur le second contrat, 22 points sur 24 en portaient exactement une :
+# la variable de reference etait quasi constante et une correlation de rang n'y
+# mesurait rien - le rho de 0,13 ne disait pas que le modele est mal calibre,
+# il disait que le test etait aveugle.
+#   3  forbid_accept          la position ne peut pas etre acceptee : walk-away
+#   2  forbid/require_phrase  une formule precise est imposee ou interdite
+#   1  max/min quantity, money  une fourchette, negociable a l'interieur
+#   0  aucune limite
+_RANG = {"forbid_accept": 3, "forbid_phrase": 2, "require_phrase": 2,
+         "max_quantity": 1, "min_quantity": 1, "max_money": 1,
+         "require_quantity": 1, "require_money": 1}
+
+
+def _fermete(iss) -> float:
+    ls = getattr(iss, "limits", None) or []
+    return float(max((_RANG.get(l.get("kind"), 0) for l in ls), default=0))
 
 
 def spearman(xs, ys):
@@ -67,7 +87,99 @@ def spearman(xs, ys):
     return num / den if den else None
 
 
+def _rho_fermete(task_dir) -> tuple[float | None, int, dict]:
+    """(rho, n, distribution de fermete) pour une tache, sans aucun run."""
+    import os
+    prev = os.environ.get("WM_TASK_DIR")
+    os.environ["WM_TASK_DIR"] = str(task_dir)
+    try:
+        f = pathlib.Path(task_dir) / "parametric.json"
+        if not f.exists():
+            return None, 0, {}
+        c = parametric.load(f.read_text())
+        g = taskctx.gen_issues()
+        iss = {i.id: i for i in g} if g else {}
+        amp, fer = [], []
+        for pid, prm in c.params.items():
+            try:
+                a = parametric.total(prm.option(prm.ours).vec())
+                b = parametric.total(prm.option(prm.theirs).vec())
+            except KeyError:
+                continue
+            amp.append(abs(b - a))
+            fer.append(_fermete(iss.get(pid)))
+        from collections import Counter
+        return spearman(amp, fer), len(amp), dict(sorted(Counter(fer).items()))
+    finally:
+        if prev is None:
+            os.environ.pop("WM_TASK_DIR", None)
+        else:
+            os.environ["WM_TASK_DIR"] = prev
+
+
+def cmd_pool() -> int:
+    """La calibration sur TOUS les contrats encodes, combinee.
+
+    A n = 24 un rho de 0,30 n'est pas distinguable de zero ; deux contrats
+    independants qui vont dans le meme sens le sont peut-etre. Les rho sont
+    combines par la transformation z de Fisher, ponderes par n - 3 : c'est la
+    facon standard d'agreger des correlations, et elle ne suppose pas que les
+    deux contrats aient la meme echelle de valeur.
+    """
+    base = pathlib.Path(__file__).resolve().parents[1] / "tasks"
+    rows = []
+    for d in sorted(base.iterdir()):
+        if not (d / "parametric.json").exists():
+            continue
+        rho, n, rep = _rho_fermete(d)
+        rows.append((d.name, rho, n, rep))
+    dflt = pathlib.Path(__file__).resolve().parents[1] / "task"
+    if (dflt / "parametric.json").exists():
+        rows.append(("task (DSA)",) + _rho_fermete(dflt))
+    if not rows:
+        print("aucun contrat encode (parametric.json) sous wm/tasks/")
+        return 1
+
+    print("=" * 74)
+    print("CALIBRATION COMBINEE - l'ampleur prêtee a un point suit-elle la")
+    print("fermete du mandat sur ce point ?")
+    print("=" * 74)
+    num = den = 0.0
+    for nom, rho, n, rep in rows:
+        dist = " ".join(f"{int(k)}:{v}" for k, v in rep.items())
+        if rho is None or n < 4:
+            print(f"  {nom[:46]:<48} n={n:<4} rho indefini   [{dist}]")
+            continue
+        z = 0.5 * math.log((1 + rho) / (1 - rho))
+        num += (n - 3) * z
+        den += (n - 3)
+        print(f"  {nom[:46]:<48} n={n:<4} rho {rho:+.2f}      [{dist}]")
+    if den <= 0:
+        print("\npas assez de points pour combiner.")
+        return 0
+    z = num / den
+    rho_c = (math.exp(2 * z) - 1) / (math.exp(2 * z) + 1)
+    se = 1 / math.sqrt(den)
+    p = math.erfc(abs(z / se) / math.sqrt(2))
+    print("-" * 74)
+    print(f"  {'COMBINE (Fisher z, ponderation n-3)':<48} n={int(den) + 3 * len(rows):<4} "
+          f"rho {rho_c:+.2f}   p ~ {p:.3f}")
+    print()
+    if p <= 0.05:
+        print("  La concordance avec le mandat est etablie a ce seuil. Elle reste une")
+        print("  CONCORDANCE : le mandat a servi a l'elicitation, donc les deux ne sont")
+        print("  pas independants. Elle ne dit pas que les dollars sont justes, elle dit")
+        print("  que le modele ne range pas les points au hasard.")
+    else:
+        print("  Toujours pas distinguable de zero. Il faut soit d'autres contrats, soit")
+        print("  une elicitation qui ne demande pas des nombres - des comparaisons par")
+        print("  paires, par exemple, dont la coherence se mesure.")
+    return 0
+
+
 def main() -> int:
+    if "--pool" in sys.argv:
+        return cmd_pool()
     runs = taskctx.runs_dir()
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     cands = [d for d in sorted(runs.glob("*__*__seed*"))
@@ -127,13 +239,6 @@ def main() -> int:
     #   2  forbid/require_phrase  une formule precise est imposee ou interdite
     #   1  max/min quantity, money  une fourchette, negociable a l'interieur
     #   0  aucune limite
-    RANG = {"forbid_accept": 3, "forbid_phrase": 2, "require_phrase": 2,
-            "max_quantity": 1, "min_quantity": 1, "max_money": 1,
-            "require_quantity": 1, "require_money": 1}
-
-    def fermete(iss) -> float:
-        ls = getattr(iss, "limits", None) or []
-        return float(max((RANG.get(l.get("kind"), 0) for l in ls), default=0))
 
     for pid, p in c.params.items():
         try:
@@ -142,7 +247,7 @@ def main() -> int:
         except KeyError:
             continue
         ampleur.append(abs(v_eux - v_nous))
-        ferme.append(fermete(issues.get(pid)))
+        ferme.append(_fermete(issues.get(pid)))
         noms.append(p.name)
 
     if ampleur and any(ferme):
