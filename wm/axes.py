@@ -81,9 +81,23 @@ _SEC = re.compile(r"Section\s+([0-9A-Z]+(?:\.[0-9]+)*(?:\([a-z]\))?)\s*[—–-]
 _HEAD = re.compile(r"^(?:\*\*)?(?:\{[+-])?\s*(?:Section\s+)?((?:[A-Z]\.)?\d+(?:\.\d+)*|(?:SCHEDULE|EXHIBIT|Schedule|Exhibit)\s+[A-Z])\s*[—–-]")
 
 
+_MARQ = re.compile(r"^\s*\[(?:ADDED|DELETED):\s*")
+
+
+def _nu(ln: str) -> str:
+    """La ligne sans son marqueur d'ouverture de bloc.
+
+    "[DELETED: Section 12.1 - Audit..." porte bien un en-tete de section, mais
+    _HEAD_LINE ancre en debut de ligne et le crochet le masquait. La PREMIERE
+    ligne d'un bloc perdait donc son adresse et heritait de la section
+    precedente - l'article 12 supprime se retrouvait sous la 9.1.
+    """
+    return _MARQ.sub("", ln)
+
+
 def _section_of(text: str) -> tuple[str, str]:
     for ln in text.split("\n"):
-        m = _HEAD_LINE.match(ln)
+        m = _HEAD_LINE.match(_nu(ln))
         if m:
             head = m.group(2).replace("**", "").strip().strip('"').rstrip("+}-").strip()
             return m.group(1).strip(), head.split(". ")[0][:80]
@@ -138,6 +152,42 @@ def parties(template: str) -> tuple[str, str]:
     return find("Licensor"), find("Licensee")
 
 
+def _fend(buf: list[str], sec0: str, head0: str) -> list[tuple[str, str, list[str]]]:
+    """Fend un bloc [ADDED:] / [DELETED:] a chaque nouvelle SECTION qu'il contient.
+
+    Un seul bloc peut ajouter plusieurs sections d'un coup : dans ce markup,
+    un [ADDED: ...] court de 14.12 a 14.14 et le crochet ne se referme qu'a la
+    fin. Attribue en entier a sa PREMIERE section, il faisait disparaitre la
+    non-sollicitation ET la clause du client le plus favorise - deux clauses
+    entieres, dont une que le memo du client classe en walk-away. Elles
+    n'apparaissaient nulle part dans le profil, et leur point sortait avec un
+    score de zero qu'on aurait pu lire comme "le markup n'y touche pas".
+
+    Les alineas restent avec leur section : 14.12(a) a (e) ne fendent rien,
+    seul le passage a 14.13 fend.
+    """
+    pieces, cur = [], []
+    sec, head = sec0, head0          # l'adresse de la piece EN COURS
+    for ln in buf:
+        m = _HEAD_LINE.match(_nu(ln))
+        if m:
+            base = m.group(1).split("(")[0]
+            if cur and base != (sec or "").split("(")[0]:
+                pieces.append((sec, head, cur))
+                cur, sec, head = [], "", ""
+            if not sec:
+                # la premiere adresse rencontree dans la piece la nomme ; les
+                # suivantes sont ses alineas et ne la renomment pas, sinon
+                # 14.12(a)-(e) ressortait sous "14.12(e)"
+                sec, head = _section_of(_nu(ln))
+                if not sec:
+                    sec, head = m.group(1).strip(), m.group(2)[:80]
+        cur.append(ln)
+    if cur:
+        pieces.append((sec, head, cur))
+    return pieces
+
+
 def hunks(markup: str, template: str = "") -> list[Hunk]:
     """Chaque modification du markup, dans l'ordre du document.
 
@@ -162,12 +212,16 @@ def hunks(markup: str, template: str = "") -> list[Hunk]:
             # n'avait pas d'adresse
             sec, head = last_sec, (last_head + " (suite)") if last_head else ""
         if kind in ("added", "deleted"):
-            n += 1
-            body = re.sub(r"\[(ADDED|DELETED):\s*", "", text).rstrip("]")
-            out.append(Hunk(id=f"h{n:02d}", section=sec, heading=head, kind=kind,
-                            text=("{+" + body + "+}") if kind == "added" else ("{-" + body + "-}"),
-                            inserted=len(body) if kind == "added" else 0,
-                            deleted=len(body) if kind == "deleted" else 0))
+            for sec_i, head_i, sub in _fend(buf, sec, head):
+                n += 1
+                body = re.sub(r"\[(ADDED|DELETED):\s*", "", "\n".join(sub)).rstrip("]")
+                out.append(Hunk(
+                    id=f"h{n:02d}", section=sec_i or sec, heading=head_i or head, kind=kind,
+                    text=("{+" + body + "+}") if kind == "added" else ("{-" + body + "-}"),
+                    inserted=len(body) if kind == "added" else 0,
+                    deleted=len(body) if kind == "deleted" else 0))
+                if sec_i:
+                    last_sec, last_head = sec_i, head_i
         elif "{+" in text or "{-" in text:
             n += 1
             ins = sum(len(x) for x in re.findall(r"\{\+(.*?)\+\}", text, re.S))

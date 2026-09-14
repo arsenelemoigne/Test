@@ -947,10 +947,26 @@ def cmd_selftest() -> None:
                "Section 9.1 — Cure. Licensee may terminate if Licensor fails to cure within {-thirty (30) days-} {+sixty (60) days+}.\n"
                "[DELETED: Section 12.1 — Audit. Licensor may audit.\nAudits at Licensee's offices.]\n"
                "Section 14.12 — Escrow. Licensor shall deposit the source code.\n"
-               "(b) [ADDED: Licensor's obligations under Section 10.1;\n(c)] any liability.")
+               "(b) [ADDED: Licensor's obligations under Section 10.1;\n(c)] any liability.\n"
+               "[ADDED: Section 20.1 — Escrow. Licensor shall deposit.\n"
+               "Section 20.1(a) — Costs. Licensor bears them.\n"
+               "Section 20.2 — Non-Solicitation. Neither Party shall solicit.\n"
+               "Section 20.3 — Most-Favored-Customer. Licensor shall adjust fees.]")
     _hs = _AX.hunks(_mini_m, _mini_t)
     _kinds = sorted(h.kind for h in _hs)
-    _ax = [("extraction : 5 modifications", len(_hs) == 5),
+    # UN BLOC [ADDED:] PEUT AJOUTER PLUSIEURS SECTIONS D'UN COUP. Attribue en
+    # entier a sa premiere, il en faisait disparaitre le reste : sur le vrai
+    # markup, l'annexe C (sept sections), l'article 12 supprime (trois) et la
+    # clause du client le plus favorise - que le memo classe en walk-away -
+    # etaient invisibles. 45 modifications extraites au lieu de 55.
+    _t20 = {h.section: h for h in _hs if h.section.startswith("20")}
+    _ax = [("extraction : 8 modifications", len(_hs) == 8),
+           ("bloc ADDED multi-sections : fendu par section",
+            set(_t20) == {"20.1", "20.2", "20.3"}),
+           ("l'alinea reste avec sa section, il ne la renomme pas",
+            "20.1(a)" not in _t20 and "Costs" in _t20.get("20.1", _hs[0]).text),
+           ("chaque section fendue garde son propre en-tete",
+            _t20["20.3"].heading.startswith("Most-Favored")),
            ("extraction : bloc DELETED multi-lignes", "deleted" in _kinds),
            ("extraction : section nouvelle sans marqueur", any(h.section == "14.12" and h.kind == "new_section" for h in _hs)),
            ("extraction : alinea herite de sa section", all(h.section for h in _hs))]
