@@ -984,6 +984,73 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _aok
 
+    # LES DEUX ROLES, ET LE VOCABULAIRE DE TERMS-BENCH. Quatre choses : la
+    # fuite de la limite se lit sur nos propres offres et rien d'autre ; SE+
+    # vaut 1 au point qui maximise le surplus conjoint ; un episode sans zone
+    # d'accord est reconnu comme tel (sinon FAGR- ne veut rien dire) ; et la
+    # politique testee joue bien l'autre camp quand on echange les roles.
+    from . import negotiation as _NG, parametric_example as _PE
+    _c2 = _PE.contract()
+    _us2, _them2 = _NG.make_us(_c2), _NG.make_them(_c2, 0)
+    _h_ideal = [{"t": 0, "by": "us", "offer": dict(_us2.ideal)}]
+    _f0 = _NG.fuite(_c2, _us2, _h_ideal)[0]
+    # une offre exactement au seuil : la borne que l'adversaire peut en tirer
+    # EST le seuil, donc la fuite vaut 1
+    _au_seuil = _NG.concede_greedy(_c2, _us2, _them2.whose, dict(_us2.ideal),
+                                   _us2.reservation)
+    _h2 = _h_ideal + [{"t": 1, "by": "us", "offer": _au_seuil}]
+    _f1 = _NG.fuite(_c2, _us2, _h2)[0]
+    _h3 = _h2 + [{"t": 2, "by": "us", "offer": dict(_c2.markup)}]   # tout brader
+    _f2 = _NG.fuite(_c2, _us2, _h3)[0]
+    _fr = _NG.frontier(_c2, _us2, _them2)
+    _nash_a = max(((_NG.true_u(_c2, _us2, a), _NG.true_u(_c2, _them2, a))
+                   for a in (_c2.template, _c2.markup)), key=lambda x: x[0] + x[1])
+    _dur = _NG.make_us(_c2, budget=0.0)
+    _dur.reservation = 1e9                      # aucun contrat ne peut le satisfaire
+    _fr_vide = _NG.frontier(_c2, _dur, _them2)
+    # sur un ACCORD atteignable, pas sur le markup : le markup nous place sous
+    # notre seuil, donc hors de la zone d'accord, et SE+ n'y est pas defini
+    # entre 0 et 1 - le mesurer la serait une erreur de lecture, pas un bug.
+    _acc = _NG.concede_greedy(_c2, _us2, _them2.whose, dict(_us2.ideal), _us2.reservation)
+    _st = _NG._frontier_stats(_c2, _us2, _them2, _acc)
+    _nt = [("fuite : n'offrir que notre ideal ne revele rien", abs(_f0) < 1e-6),
+           # la concession s'arrete au dernier changement qui tient encore : on
+           # frole le seuil sans l'atteindre exactement, parce que les
+           # redactions sont discretes. C'est proche de 1, pas egal a 1.
+           ("fuite : ceder jusqu'a son seuil le revele presque entierement",
+            0.8 < _f1 <= 1.0),
+           ("fuite : offrir sous notre seuil depasse 1", _f2 > 1.0),
+           ("fuite : lit NOS offres, pas les leurs",
+            _NG.fuite(_c2, _us2, [{"t": 0, "by": "them", "offer": dict(_c2.markup)}])[0] is None),
+           ("frontiere : surplus conjoint maximal >= celui du markup",
+            _fr["max_sum"] >= (_nash_a[1] - _them2.reservation) - 1e-6),
+           ("episode infaisable reconnu", _fr_vide.get("faisable") is False),
+           ("SE+ defini et dans [0, 1]", _st["se"] is not None and 0 <= _st["se"] <= 1.0001),
+           ("parts relatives definies pour les deux camps",
+            _st["part_us"] is not None and _st["part_them"] is not None)]
+    _r_mod = _NG._one(_c2, "algo", 0, _NG.make_them(_c2, 0), 4, None, "algo", 0.35,
+                      "nous", "eux", role="modele")
+    _r_swp = _NG._one(_c2, "algo", 0, _NG.make_them(_c2, 0), 4, None, "algo", 0.35,
+                      "nous", "eux", role="markup")
+    _nt += [("role-swap : le camp teste change",
+             (_r_mod["pol_side"], _r_swp["pol_side"]) == ("us", "them")),
+            ("role-swap : 'part' suit le camp teste",
+             _r_mod["part_pol"] == _r_mod["part_us"]
+             and _r_swp["part_pol"] == _r_swp["part_them"]),
+            # algo contre algo : echanger les roles ne change pas la partie,
+            # seulement le camp qu'on mesure. Si la trajectoire changeait, le
+            # role-swap introduirait autre chose que le changement de siege.
+            ("role-swap : la partie elle-meme est inchangee (algo vs algo)",
+             _r_mod["final"] == _r_swp["final"] and _r_mod["rounds"] == _r_swp["rounds"])]
+    _ntok = all(v for _, v in _nt)
+    print(f"  roles + TERMS   : {sum(v for _, v in _nt)}/{len(_nt)} "
+          f"{'OK' if _ntok else 'FAIL'} (fuite ideal {_f0:.2f} / au seuil {_f1:.2f} "
+          f"/ sous le seuil {_f2:.2f})")
+    for _n, _v in _nt:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _ntok
+
     # L'ELICITATION PAR RANGS. Les poids ROC, les omissions declarees plutot
     # que silencieuses (un point oublie recevrait le poids le plus faible sans
     # que personne l'ait decide), et le fait que des classements IDENTIQUES des
@@ -1785,6 +1852,15 @@ def _neg_contract():
     raise SystemExit(f"{f} n'existe pas - lance `python -m wm.run model --elicit`")
 
 
+def _nom(opts: dict, pol: str, seed: int, role: str) -> str:
+    """Le nom de fichier d'une negociation. Il porte l'origine des valeurs ET le
+    role joue : deux runs qui ne different que par l'un des deux ne doivent pas
+    s'ecraser, ni etre moyennes ensemble."""
+    m = slug(opts["model"]) if pol != "algo" else "none"
+    r = "" if role == "modele" else "swap__"
+    return f"{_tag(opts['contract'])}{r}{pol}__{m}__cp{seed}.json"
+
+
 def _tag(contract: str) -> str:
     """Le prefixe des fichiers de negociation. Trois origines de valeurs pour un
     seul simulateur : sans prefixe elles s'ecraseraient et la comparaison
@@ -1797,12 +1873,14 @@ def cmd_neg(argv: list[str]) -> None:
 
         python -m wm.run neg --policies algo --n 5 --rounds 6          # gratuit
         python -m wm.run neg --policies algo,llm_raw,llm_value --n 3 --rounds 4 --model z-ai/glm-4.6
+        python -m wm.run neg --policies algo --n 6 --roles both            # les deux cotes
+        python -m wm.run neg --contract smarter --policies algo --n 6      # valeurs par rangs
         python -m wm.run neg --report
     """
     from . import negotiation as ng
     opts = {"policies": "algo", "n": "3", "rounds": str(ng.DEFAULT_ROUNDS),
             "model": llm.FRONTIER, "them": "algo", "budget": "0.35", "seed0": "0",
-            "contract": "elicited", "workers": "4"}
+            "contract": "elicited", "workers": "4", "roles": "modele"}
     report_only = False
     i = 0
     while i < len(argv):
@@ -1899,6 +1977,11 @@ def cmd_neg(argv: list[str]) -> None:
     else:
         c, src = _neg_contract()
     policies = [x.strip() for x in opts["policies"].split(",") if x.strip()]
+    roles = (["modele", "markup"] if opts["roles"] in ("both", "les-deux", "2")
+             else [x.strip() for x in opts["roles"].split(",") if x.strip()])
+    for r_ in roles:
+        if r_ not in ("modele", "markup"):
+            raise SystemExit(f"role inconnu : {r_} (modele | markup | both)")
     n, T = int(opts["n"]), int(opts["rounds"])
     seeds = list(range(int(opts["seed0"]), int(opts["seed0"]) + n))
     need_llm = any(p_ != "algo" for p_ in policies) or opts["them"] == "llm"
@@ -1910,6 +1993,7 @@ def cmd_neg(argv: list[str]) -> None:
             raise SystemExit(f"{e} - export OPENROUTER_API_KEY='...' dans ce terminal")
         per_round = (1 if opts["them"] == "algo" else 2) * len([p_ for p_ in policies if p_ != "algo"])
         per_round += (1 if opts["them"] == "llm" else 0) * len([p_ for p_ in policies if p_ == "algo"])
+        per_round *= len(roles)
         print(f"budget d'appels au plus : {n} adversaires x {T} tours x {per_round} = "
               f"{n * T * per_round} appels ; un modele a raisonnement ecrit 3-5k tokens par "
               f"offre,\n  soit 1-2 min par appel - compter "
@@ -1926,8 +2010,7 @@ def cmd_neg(argv: list[str]) -> None:
           f"tours : {T}   budget de concession : {float(opts['budget']):.0%}\n")
 
     def save(r):
-        tag = _tag(opts["contract"])
-        f = out / f"{tag}{r['policy']}__{slug(opts['model']) if r['policy'] != 'algo' else 'none'}__cp{r['seed']}.json"
+        f = out / _nom(opts, r["policy"], r["seed"], r.get("role", "modele"))
         f.write_text(json.dumps(r, indent=1, ensure_ascii=False))
         etat = ("accord tour %d par %s" % (r["rounds"], r["accepted_by"])) if r["agreed"] else "RUPTURE"
         garde = "" if r["kept_us"] is None else f"  garde {r['kept_us']:.2f}  eux {r['share_them']:.2f}"
@@ -1935,28 +2018,28 @@ def cmd_neg(argv: list[str]) -> None:
         print(f"  {r['policy']:<10} adversaire {r['seed']:>2} ({r['them']['label']:<10}) {etat:<22}{garde}{extra}")
 
     # reprise : ce qui est deja sur disque n'est pas rejoue
-    tag = _tag(opts["contract"])
     done = set()
     for pol in policies:
-        m = slug(opts["model"]) if pol != "algo" else "none"
-        for seed in seeds:
-            if (out / f"{tag}{pol}__{m}__cp{seed}.json").exists():
-                done.add((pol, seed))
+        for role in roles:
+            for seed in seeds:
+                if (out / _nom(opts, pol, seed, role)).exists():
+                    done.add((pol, seed, role))
     if done:
         print(f"  {len(done)} negociations deja faites, sautees (reprise).")
     if need_llm:
         print(f"  {opts['workers']} negociations en parallele ; Ctrl-C ne perd rien, relancer reprend.\n")
     rs = ng.run_campaign(c, policies, seeds, T, call=call, them_mode=opts["them"],
                          budget=float(opts["budget"]), us_name=us_name, them_name=them_name,
-                         on_result=save, skip=done, workers=int(opts["workers"]))
+                         on_result=save, skip=done, workers=int(opts["workers"]),
+                         roles=roles)
     # le resume porte sur TOUT ce qui est sur disque pour ces politiques/adversaires
     rs = []
     for pol in policies:
-        m = slug(opts["model"]) if pol != "algo" else "none"
-        for seed in seeds:
-            f = out / f"{tag}{pol}__{m}__cp{seed}.json"
-            if f.exists():
-                rs.append(json.loads(f.read_text()))
+        for role in roles:
+            for seed in seeds:
+                f = out / _nom(opts, pol, seed, role)
+                if f.exists():
+                    rs.append(json.loads(f.read_text()))
     print()
     print(ng.summary(rs))
     if need_llm:

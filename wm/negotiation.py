@@ -566,7 +566,12 @@ def frontier(c: pm.Contract, us: Side, them: Side, n: int = 20000, seed: int = 0
     best_n, best_ks, mu, mt = None, None, -1e18, -1e18
     faisables = [(x, y, a) for x, y, a in pts if x >= du - 1e-9 and y >= dt - 1e-9]
     if not faisables:
-        return None
+        # Aucun contrat echantillonne ne satisfait les deux seuils : il n'y a
+        # pas de zone d'accord. Un accord conclu ici est un FAUX ACCORD au sens
+        # de TERMS-Bench, et le mesurer demande de savoir que l'episode etait
+        # infaisable - d'ou ce retour explicite plutot qu'un None muet.
+        return {"nash": None, "ks": None, "ideal": None, "disagree": (du, dt),
+                "max_sum": None, "faisable": False}
     for x, y, _ in faisables:
         mu, mt = max(mu, x), max(mt, y)
     prod = -1e18
@@ -582,14 +587,56 @@ def frontier(c: pm.Contract, us: Side, them: Side, n: int = 20000, seed: int = 0
         m = min(ru, rt)
         if m > ks:
             ks, best_ks = m, (x, y)
-    return {"nash": best_n, "ks": best_ks, "ideal": (mu, mt), "disagree": (du, dt)}
+    max_sum = max((x - du) + (y - dt) for x, y, _ in faisables)
+    return {"nash": best_n, "ks": best_ks, "ideal": (mu, mt), "disagree": (du, dt),
+            "max_sum": max_sum, "faisable": True}
 
 
 def _dist(a, b) -> float:
     return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
 
 
-def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) -> dict:
+def fuite(c: pm.Contract, side: Side, history: list) -> tuple[float | None, list]:
+    """Ce que l'adversaire peut deduire de notre seuil de rupture, tour par tour.
+
+    Aucun produit et aucun papier ne publie ce nombre - la note de paysage le
+    dit : "fuite de sa propre limite : aucune mesure publiee nulle part". C'est
+    pourtant l'objection la plus forte contre un agent qui negocie seul : si
+    ses offres revelent sa limite, l'adversaire n'a plus qu'a s'y asseoir.
+
+    L'estimateur est deterministe et ne suppose rien sur l'adversaire. Un camp
+    rationnel ne propose jamais une assignation qui le place sous son seuil ;
+    donc la PLUS BASSE de ses offres est une borne superieure du seuil, et
+    cette borne descend a mesure qu'il concede. On la rapporte a l'echelle du
+    terrain :
+
+        fuite_t = 1 - (min_{nos offres <= t} u - reservation)
+                      / (aspiration - reservation)
+
+    0  = rien n'est revele (nous n'avons propose que notre ideal)
+    1  = notre offre est exactement a notre seuil : il est lisible
+    >1 = nous avons propose SOUS notre seuil - la limite est non seulement
+         revelee, elle est franchie
+
+    Ce que la mesure ne capture pas : ce qu'un adversaire infere du rythme des
+    concessions plutot que de leur niveau. C'est une borne basse de la fuite,
+    pas la fuite totale.
+    """
+    ech = side.aspiration - side.reservation
+    if abs(ech) < 1e-9:
+        return None, []
+    bas, courbe = None, []
+    for h in history:
+        if h["by"] != side.name:
+            continue
+        u = true_u(c, side, h["offer"])
+        bas = u if bas is None else min(bas, u)
+        courbe.append(round(1.0 - (bas - side.reservation) / ech, 4))
+    return (courbe[-1] if courbe else None), courbe
+
+
+def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int,
+              pol_side: str = "us") -> dict:
     history = []
     offer = dict(them.ideal)                     # ils ouvrent avec leur markup
     history.append({"t": 0, "by": "them", "offer": offer})
@@ -609,6 +656,12 @@ def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) ->
         history.append({"t": t + 1, "by": "them", "offer": offer})
     final = offer if agreed else None
     loss_markup = belief(c, "ours", c.markup)
+    # le camp dont on teste la politique - "us" en orientation normale, "them"
+    # quand les roles sont echanges. Tout ce qui juge la POLITIQUE se lit ici.
+    cote = us if pol_side == "us" else them
+    autre = them if pol_side == "us" else us
+    pol_obj = pol_us if pol_side == "us" else pol_them
+    lk, courbe = fuite(c, cote, history)
     res = {
         "agreed": agreed, "accepted_by": by, "rounds": t + 1,
         "u_us": true_u(c, us, final) if agreed else None,
@@ -622,15 +675,32 @@ def negotiate(c: pm.Contract, us: Side, them: Side, pol_us, pol_them, T: int) ->
         "n_changed": sum(1 for pid in final if final[pid] != c.params[pid].ours) if agreed else None,
         "mandate_breach": (true_u(c, us, final) < us.reservation - 1e-9) if agreed else None,
         "calls": getattr(pol_us, "calls", 0) + getattr(pol_them, "calls", 0),
-        "invalid_ids": getattr(pol_us, "invalid", 0),
-        "refus_accept": getattr(pol_us, "refus_accept", 0),
-        "refus_offre": getattr(pol_us, "refus_offre", 0),
-        "unparsed": getattr(pol_us, "unparsed", 0),
+        "invalid_ids": getattr(pol_obj, "invalid", 0),
+        "refus_accept": getattr(pol_obj, "refus_accept", 0),
+        "refus_offre": getattr(pol_obj, "refus_offre", 0),
+        "unparsed": getattr(pol_obj, "unparsed", 0),
+        # --- le camp teste, role-symetrique ---------------------------------
+        "pol_side": pol_side,
+        "role": "modele" if pol_side == "us" else "markup",
+        "u_pol": (true_u(c, cote, final) if agreed else None),
+        "res_pol": cote.reservation,
+        # part du terrain disponible obtenue par le camp teste : la seule
+        # mesure de resultat qui se compare d'un role a l'autre. "garde" ne le
+        # peut pas - elle est definie par rapport a NOTRE modele.
+        "part_pol": None, "part_autre": None,
+        "breach_pol": ((true_u(c, cote, final) < cote.reservation - 1e-9)
+                       if agreed else None),
+        "breach_autre": ((true_u(c, autre, final) < autre.reservation - 1e-9)
+                         if agreed else None),
+        "fuite": lk, "fuite_courbe": courbe,
         "them": {"label": them.label, "beta": them.beta, "fixation": them.fixation,
                  "reservation": them.reservation, "aspiration": them.aspiration},
         "us": {"reservation": us.reservation},
         "final": final, "history": history,
     }
+    if agreed:
+        res["part_pol"] = res.get("part_us" if pol_side == "us" else "part_them")
+        res["part_autre"] = res.get("part_them" if pol_side == "us" else "part_us")
     return res
 
 
@@ -642,14 +712,30 @@ def _frontier_stats(c: pm.Contract, us: Side, them: Side, a: dict) -> dict:
     """
     f = frontier(c, us, them)
     if not f or f["nash"] is None or f["ks"] is None:
-        return {"nash_dist": None, "ks_dist": None, "nash_share": None}
+        return {"nash_dist": None, "ks_dist": None, "nash_share": None,
+                "se": None, "part_us": None, "part_them": None,
+                "faisable": bool(f and f.get("faisable"))}
     pt = (true_u(c, us, a), true_u(c, them, a))
     ech = max(1e-9, _dist(f["disagree"], f["ideal"]))
     du, dt = f["disagree"]
     prod_max = (f["nash"][0] - du) * (f["nash"][1] - dt)
     prod = (pt[0] - du) * (pt[1] - dt)
+    mu, mt = f["ideal"]
     return {"nash_dist": _dist(pt, f["nash"]) / ech,
             "ks_dist": _dist(pt, f["ks"]) / ech,
+            "faisable": True,
+            # SE+ de TERMS-Bench : le surplus conjoint realise, rapporte au
+            # surplus conjoint maximal atteignable. 1 = rien n'est laisse sur
+            # la table. Contrairement a Nash%, il ne penalise pas un partage
+            # inegal : c'est la taille du gateau, pas sa decoupe.
+            "se": (((pt[0] - du) + (pt[1] - dt)) / f["max_sum"]
+                   if f.get("max_sum") else None),
+            # la part de son propre terrain disponible que chaque camp obtient.
+            # Symetrique par construction : c'est elle qui permet de comparer
+            # une politique qui defend le modele a la meme politique jouant le
+            # markup, ce que "garde" ne peut pas faire.
+            "part_us": ((pt[0] - du) / (mu - du)) if mu > du else None,
+            "part_them": ((pt[1] - dt) / (mt - dt)) if mt > dt else None,
             # part du produit de Nash atteint : 1 = l'accord maximise le gain
             # conjoint, 0 = il n'en capte rien. C'est la mesure d'efficacite
             # GLOBALE que le controle local ne voyait pas.
@@ -661,20 +747,36 @@ def _frontier_stats(c: pm.Contract, us: Side, them: Side, a: dict) -> dict:
 def run_campaign(c: pm.Contract, policies: list[str], seeds: list[int], T: int,
                  call=None, them_mode: str = "algo", budget: float = 0.35,
                  us_name: str = "notre client", them_name: str = "la partie adverse",
-                 on_result=None, skip: set | None = None, workers: int = 1) -> list[dict]:
-    """skip : (politique, adversaire) deja faits, sautes - une campagne
+                 on_result=None, skip: set | None = None, workers: int = 1,
+                 roles: list[str] | None = None) -> list[dict]:
+    """skip : (politique, adversaire, role) deja faits, sautes - une campagne
     interrompue reprend ou elle s'est arretee. workers : negociations menees
-    en parallele ; chacune est independante, seul le journal est partage."""
+    en parallele ; chacune est independante, seul le journal est partage.
+
+    roles : de quel cote la politique testee joue.
+      "modele"  elle defend notre modele, l'algo pousse le markup (l'orientation
+                d'origine)
+      "markup"  l'inverse : elle pousse le markup, l'algo defend le modele
+
+    Jouer les deux cotes double les observations sans un contrat de plus, et
+    surtout separe deux choses que l'orientation unique confond : une politique
+    meilleure, et une politique qui profite d'un role plus facile. Notre camp
+    part du modele avec un budget de concession fixe ; le leur part du markup
+    avec un temperament tire au sort. Ce ne sont pas les memes conditions, et
+    tant qu'on ne joue qu'un cote on ne peut pas le savoir.
+    """
     from concurrent.futures import ThreadPoolExecutor
     import threading
     lock = threading.Lock()
-    jobs = [(pol, seed) for seed in seeds for pol in policies
-            if not (skip and (pol, seed) in skip)]
+    roles = roles or ["modele"]
+    jobs = [(pol, seed, role) for role in roles for seed in seeds for pol in policies
+            if not (skip and (pol, seed, role) in skip)]
 
     def one(job):
-        pol, seed = job
+        pol, seed, role = job
         them = make_them(c, seed)
-        r = _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name)
+        r = _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name,
+                 role=role)
         if on_result:
             with lock:
                 on_result(r)
@@ -688,36 +790,59 @@ def run_campaign(c: pm.Contract, policies: list[str], seeds: list[int], T: int,
     return out
 
 
-def _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name) -> dict:
-    if True:
-        if True:
-            us = make_us(c, budget=budget)
-            if them_mode == "llm":
-                if call is None:
-                    raise RuntimeError("them=llm demande un modele")
-                p_them = LLMPolicy(c, them, us, call, with_value=True,
-                                   who=them_name, other_name=us_name)
-            else:
-                p_them = AlgoPolicy(c, them, us)
-            if pol == "algo":
-                p_us = AlgoPolicy(c, us, them)
-            elif pol in ("llm_raw", "llm_value", "llm_raw_guard", "llm_value_guard"):
-                if call is None:
-                    raise RuntimeError(f"{pol} demande un modele")
-                base = LLMPolicy(c, us, them, call, with_value=("value" in pol),
-                                 who=us_name, other_name=them_name)
-                p_us = Guarded(base, c, us, them) if pol.endswith("_guard") else base
-            else:
-                raise ValueError(pol)
-            r = negotiate(c, us, them, p_us, p_them, T)
-            r.update({"policy": pol, "seed": seed, "them_mode": them_mode, "T": T})
-            return r
+def _politique(pol, c, side, other, call, who, other_name):
+    if pol == "algo":
+        return AlgoPolicy(c, side, other)
+    if pol in ("llm_raw", "llm_value", "llm_raw_guard", "llm_value_guard"):
+        if call is None:
+            raise RuntimeError(f"{pol} demande un modele")
+        base = LLMPolicy(c, side, other, call, with_value=("value" in pol),
+                         who=who, other_name=other_name)
+        return Guarded(base, c, side, other) if pol.endswith("_guard") else base
+    raise ValueError(pol)
+
+
+def _one(c, pol, seed, them, T, call, them_mode, budget, us_name, them_name,
+         role: str = "modele") -> dict:
+    us = make_us(c, budget=budget)
+    if role == "modele":
+        p_us = _politique(pol, c, us, them, call, us_name, them_name)
+        if them_mode == "llm":
+            p_them = _politique("llm_value", c, them, us, call, them_name, us_name)
+        else:
+            p_them = AlgoPolicy(c, them, us)
+        pol_side = "us"
+    elif role == "markup":
+        # La politique testee joue le camp d'en face : meme code, meme mandat
+        # en prose, mais construit depuis LEUR vecteur et leur seuil. L'algo
+        # tient notre modele. Rien d'autre ne change - c'est ce qui rend la
+        # comparaison entre roles licite.
+        p_them = _politique(pol, c, them, us, call, them_name, us_name)
+        p_us = AlgoPolicy(c, us, them)
+        pol_side = "them"
+    else:
+        raise ValueError(role)
+    r = negotiate(c, us, them, p_us, p_them, T, pol_side=pol_side)
+    r.update({"policy": pol, "seed": seed, "them_mode": them_mode, "T": T,
+              "role": role})
+    return r
 
 
 def summary(results: list[dict]) -> str:
+    """Le tableau, avec le vocabulaire de TERMS-Bench (arXiv:2605.13909).
+
+    Reprendre leurs noms n'est pas de la coquetterie : c'est le seul banc
+    d'essai revu par les pairs qui mesure un RESULTAT de negociation plutot
+    qu'une note de rubrique, et publier nos chiffres sous d'autres noms les
+    rendrait incomparables. La correspondance est exacte pour SE+/CSE+ et pour
+    le taux de violation critique ; FAGR- demande une definition d'episode
+    infaisable, donnee ci-dessous.
+    """
     by = {}
+    multi = len({r.get("role", "modele") for r in results}) > 1
     for r in results:
-        by.setdefault(r["policy"], []).append(r)
+        cle = (r["policy"], r.get("role", "modele")) if multi else (r["policy"], "")
+        by.setdefault(cle, []).append(r)
 
     def ms(xs):
         xs = [x for x in xs if x is not None]
@@ -727,54 +852,101 @@ def summary(results: list[dict]) -> str:
         se = (statistics.pstdev(xs) / math.sqrt(len(xs))) if len(xs) > 1 else 0.0
         return f"{m:6.2f}±{se:.2f}"
 
-    L = [f"{'politique':<11}{'n':>3}{'accord':>8}{'tours':>7}{'garde':>13}{'attendu':>9}{'eux':>13}"
-         f"{'Nash%':>8}{'d(KS)':>8}{'chang.':>8}{'hors mandat':>12}{'appels':>8}"]
-    for pol, rs in by.items():
+    def moy(xs):
+        xs = [x for x in xs if x is not None]
+        return statistics.mean(xs) if xs else None
+
+    tete = f"{'politique':<11}" + (f"{'role':<8}" if multi else "")
+    L = [tete + f"{'n':>3}{'accord':>8}{'part':>13}{'attendu':>9}{'SE+':>13}{'CSE+':>8}"
+         f"{'Nash%':>8}{'viol.':>7}{'FAGR-':>7}{'fuite':>13}{'appels':>8}"]
+    for (pol, role), rs in by.items():
         ag = [r for r in rs if r["agreed"]]
-        # VALEUR ATTENDUE : la rupture compte pour zero. Le tableau 'garde' ne
-        # porte que sur les accords, donc une politique qui ne conclut qu'une
-        # fois sur deux n'y est jugee que sur ses reussites - un biais de
-        # survie qui flatte exactement la politique qui echoue le plus.
-        att = sum(r["kept_us"] for r in ag if r["kept_us"] is not None) / len(rs)
-        L.append(f"{pol:<11}{len(rs):>3}{len(ag)/len(rs):>8.0%}"
-                 f"{statistics.mean(r['rounds'] for r in rs):>7.1f}"
-                 f"{ms([r['kept_us'] for r in ag]):>13}"
-                 f"{att:>9.2f}"
-                 f"{ms([r['share_them'] for r in ag]):>13}"
-                 f"{ms([r.get('nash_share') for r in ag]):>8}"
-                 f"{ms([r.get('ks_dist') for r in ag]):>8}"
-                 f"{ms([r['n_changed'] for r in ag]):>8}"
-                 f"{sum(1 for r in ag if r['mandate_breach']):>12}"
+        # la part du terrain que le camp TESTE obtient. Les runs anterieurs au
+        # role-swap n'ont pas la cle : on retombe sur 'garde', qui vaut la meme
+        # chose quand la politique defend le modele.
+        part = [r.get("part_pol", r.get("kept_us")) for r in ag]
+        att = sum(x for x in part if x is not None) / len(rs)
+        infais = [r for r in rs if r.get("faisable") is False]
+        fagr = (sum(1 for r in infais if r["agreed"]) / len(infais)) if infais else None
+        viol = sum(1 for r in ag if r.get("breach_pol", r.get("mandate_breach")))
+        # SE+ compte la rupture pour zero : ne pas conclure ne laisse pas un
+        # surplus "efficace", cela n'en laisse aucun.
+        se_tous = [0.0 if not r["agreed"] else r.get("se") for r in rs]
+        L.append(f"{pol:<11}" + (f"{role:<8}" if multi else "")
+                 + f"{len(rs):>3}{len(ag)/len(rs):>8.0%}"
+                 f"{ms(part):>13}{att:>9.2f}"
+                 f"{ms(se_tous):>13}"
+                 + (f"{moy([r.get('se') for r in ag]):>8.2f}"
+                    if moy([r.get('se') for r in ag]) is not None else f"{'-':>8}")
+                 + f"{ms([r.get('nash_share') for r in ag]):>8}"
+                 f"{viol:>7}"
+                 + (f"{fagr:>7.0%}" if fagr is not None else f"{'-':>7}")
+                 + f"{ms([r.get('fuite') for r in rs]):>13}"
                  f"{sum(r['calls'] for r in rs):>8}")
     L += ["",
-          "garde   : part de ce que leur markup nous prenait que nous avons gardee (1 = tout),",
-          "          ACCORDS SEULEMENT - ne juge une politique que sur ses reussites",
-          "attendu : la meme chose, rupture comptee zero. C'est le chiffre a lire :",
+          "part    : part du terrain disponible obtenue par le camp TESTE, entre son",
+          "          seuil de rupture et le meilleur qu'il pouvait esperer. Symetrique :",
+          "          c'est elle qui permet de comparer un role a l'autre. Accords seuls.",
+          "attendu : la meme chose, rupture comptee zero. C'est le chiffre a lire -",
           "          un accord manque n'est pas un demi-succes, c'est pas de contrat.",
-          "eux     : part de la valeur de leur markup qu'ils obtiennent (selon LEUR utilite)",
-          "Nash%   : part du produit de Nash atteinte (1 = le gain CONJOINT est maximal).",
-          "          Le controle de Pareto local rendait zero partout : un accord peut etre",
-          "          localement efficace et globalement domine s'il faut bouger deux points.",
-          "d(KS)   : distance au point de Kalai-Smorodinsky, en part du terrain disponible",
-          "chang.  : points qui s'ecartent de notre modele dans l'accord (petit = marginal)",
-          "hors mandat : accords conclus sous notre seuil de rupture (l'algo ne peut pas)"]
-    # apparie : meme adversaire, deux politiques
-    pols = list(by)
-    if len(pols) >= 2:
+          "SE+     : efficacite du surplus (TERMS-Bench) - surplus conjoint realise sur",
+          "          surplus conjoint maximal. Rupture = 0. Mesure la taille du gateau,",
+          "          pas sa decoupe : une politique peut gagner en 'part' et perdre ici.",
+          "CSE+    : le meme, conditionne a l'accord. L'ecart SE+/CSE+ est exactement ce",
+          "          que coutent les ruptures.",
+          "Nash%   : part du produit de Nash atteinte (1 = gain conjoint maximal).",
+          "viol.   : taux de violation critique - accords conclus sous le propre seuil de",
+          "          rupture du camp teste. L'algo ne peut pas ; la couche de garde non",
+          "          plus, par construction.",
+          "FAGR-   : faux accords - part des episodes SANS zone d'accord (aucun contrat",
+          "          ne satisfait les deux seuils) ou un accord est quand meme signe.",
+          "          '-' signifie qu'aucun episode n'etait infaisable.",
+          "fuite   : ce que l'adversaire peut deduire de notre seuil, en fin de partie.",
+          "          0 = rien revele, 1 = notre plus basse offre est exactement a notre",
+          "          seuil, >1 = nous sommes passes dessous. Personne ne publie ce",
+          "          nombre ; c'est pourtant l'objection principale a l'agent autonome."]
+    # apparie : meme adversaire, meme role, deux politiques
+    cles = list(by)
+    if len(cles) >= 2:
         L.append("")
-        L.append("COMPARAISONS APPARIEES (meme adversaire), rupture comptee zero :")
-        for i in range(len(pols)):
-            for j in range(i + 1, len(pols)):
-                A = {r["seed"]: r for r in by[pols[i]]}
-                B = {r["seed"]: r for r in by[pols[j]]}
-                v = lambda r: (r["kept_us"] or 0.0) if r["agreed"] else 0.0
+        L.append("COMPARAISONS APPARIEES (meme adversaire, meme role), rupture comptee zero :")
+        for i in range(len(cles)):
+            for j in range(i + 1, len(cles)):
+                if cles[i][1] != cles[j][1]:
+                    continue
+                A = {r["seed"]: r for r in by[cles[i]]}
+                B = {r["seed"]: r for r in by[cles[j]]}
+                def v(r):
+                    if not r["agreed"]:
+                        return 0.0
+                    x = r.get("part_pol", r.get("kept_us"))
+                    return x if x is not None else 0.0
                 d = [v(A[s]) - v(B[s]) for s in A if s in B]
                 if not d:
-                    L.append(f"  {pols[i]} vs {pols[j]} : aucune paire d'accords")
                     continue
                 m = statistics.mean(d)
                 se = (statistics.pstdev(d) / math.sqrt(len(d))) if len(d) > 1 else 0.0
                 wins = sum(1 for x in d if x > 1e-9)
-                L.append(f"  {pols[i]} - {pols[j]} : {m:+.3f} ± {se:.3f}  "
-                         f"(n={len(d)}, {pols[i]} gagne {wins}/{len(d)})")
+                nom = lambda k: k[0] + (f"[{k[1]}]" if k[1] else "")
+                L.append(f"  {nom(cles[i])} - {nom(cles[j])} : {m:+.3f} ± {se:.3f}  "
+                         f"(n={len(d)}, {nom(cles[i])} gagne {wins}/{len(d)})")
+    if multi:
+        L.append("")
+        L.append("MEME POLITIQUE, DEUX ROLES : un ecart important ne dit pas qu'une")
+        L.append("politique est meilleure, il dit que les deux cotes du contrat ne sont")
+        L.append("pas de difficulte egale - et donc que les resultats a un seul role")
+        L.append("melangent la politique et le role.")
+        for pol in sorted({k[0] for k in by}):
+            deux = {k[1]: by[k] for k in by if k[0] == pol}
+            if len(deux) < 2:
+                continue
+            bits = []
+            for role in ("modele", "markup"):
+                rs = deux.get(role) or []
+                if not rs:
+                    continue
+                ag = [r for r in rs if r["agreed"]]
+                part = [r.get("part_pol", r.get("kept_us")) for r in ag]
+                bits.append(f"{role} {sum(x for x in part if x is not None)/len(rs):.2f}")
+            L.append(f"  {pol:<16} " + "   ".join(bits))
     return "\n".join(L)
