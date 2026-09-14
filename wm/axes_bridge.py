@@ -122,12 +122,19 @@ def calibre(moves, n: int = 800, seed: int = 0, nous: str = NOUS) -> dict:
     # une partition sur les sections du MOTEUR : chaque mouvement compte une
     # fois et une seule, pour le point le plus specifique qui le couvre
     part = repartit(moves, [sec for _, _, sec, _ in CB.VERIDIAN])
-    obs = []
+    obs, absents = [], []
     for pid, nom, sec, _opts in CB.VERIDIAN:
         p = calc.params[pid]
         d = (pm.total(p.option(p.theirs).vec(), CB.WEIGHTS)
              - pm.total(p.option(p.ours).vec(), CB.WEIGHTS))
-        obs.append((pid, nom, sec, _net(part[sec], nous), d))
+        ligne = (pid, nom, sec, _net(part[sec], nous), d)
+        # UN ZERO MESURE N'EST PAS UNE DONNEE MANQUANTE. Une section dont tous
+        # les mouvements sont ambigus ou neutres vaut vraiment zero. Une
+        # section a laquelle AUCUN mouvement n'a ete attribue n'a pas ete
+        # mesuree - l'extracteur a range la modification ailleurs, ou il n'y en
+        # avait pas. La faire entrer dans la regression avec un zero plante
+        # revient a affirmer une observation qu'on n'a pas.
+        (obs if part[sec] else absents).append(ligne)
     xs = [o[3] for o in obs]
     ys = [o[4] for o in obs]
     den = sum(x * x for x in xs)
@@ -137,7 +144,16 @@ def calibre(moves, n: int = 800, seed: int = 0, nous: str = NOUS) -> dict:
     ss_tot = sum(y * y for y in ys)
     r2 = 1.0 - ss_res / ss_tot if ss_tot else 0.0
     rho, p_rho = _spearman(xs, ys)
-    return {"alpha": alpha, "r2": r2, "rho": rho, "p": p_rho, "obs": obs, "n": len(obs)}
+    # exploratoire : quel AXE, s'il en est un, suit les dollars. Neuf axes sur
+    # une douzaine de points ne se teste pas serieusement ; cela sert a voir si
+    # la structure est la, pas a conclure.
+    par_axe = {}
+    for a in AX.AXES:
+        xa = [_net([m for m in part[o[2]] if m.axis == a], nous) for o in obs]
+        if len(set(xa)) > 2:
+            par_axe[a] = _spearman(xa, ys)
+    return {"alpha": alpha, "r2": r2, "rho": rho, "p": p_rho, "obs": obs,
+            "n": len(obs), "absents": absents, "par_axe": par_axe}
 
 
 def _spearman(xs, ys):
@@ -280,6 +296,9 @@ def report(cal: dict, journal: list[dict]) -> str:
          "-" * 84]
     for pid, nom, sec, s, d in sorted(cal["obs"], key=lambda o: o[4]):
         L.append(f"{nom[:39]:<40}{s:>10.0f}{d/1e6:>13.2f}M{a*s/1e6:>13.2f}M")
+    for pid, nom, sec, s, d in sorted(cal.get("absents") or [], key=lambda o: o[4]):
+        L.append(f"{nom[:39]:<40}{'aucun':>10}{d/1e6:>13.2f}M{'-':>14}"
+                 f"   section {sec} : non apparie, hors regression")
     L += ["-" * 84,
           f"alpha = {a/1e6:.3f} M$ par point de net ordinal",
           f"R2 = {r2:+.2f}" + (f"   rho = {rho:+.2f} (p ~ {p:.3f})" if rho is not None else ""),
@@ -297,6 +316,13 @@ def report(cal: dict, journal: list[dict]) -> str:
               "  vaut mieux que de rendre un nombre calibre sur rien.",
               "  Causes a regarder dans l'ordre : la classification des modifications",
               "  (axes --report), l'appariement par section, et le signe de NOUS."]
+    if cal.get("par_axe"):
+        L += ["", "PAR AXE - lequel, s'il en est un, suit les dollars ? (EXPLORATOIRE :",
+              f"neuf axes sur {cal['n']} points ne se teste pas serieusement)", "-" * 84]
+        for ax, (r, pv) in sorted(cal["par_axe"].items(),
+                                  key=lambda kv: -(abs(kv[1][0]) if kv[1][0] else 0)):
+            if r is not None:
+                L.append(f"  {ax:<16}rho = {r:+.2f}   (p ~ {pv:.3f})")
     L += ["", "LE CONTRAT FUSIONNE, POINT PAR POINT", "-" * 84,
           f"{'point':<40}{'source':<16}{'ordinal':>9}{'valeur $':>14}"]
     for r in sorted(journal, key=lambda r: r["dollars"]):
