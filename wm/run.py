@@ -1122,6 +1122,25 @@ def cmd_selftest() -> None:
             ("point calibre : le markup vaut alpha x score",
              abs(_pm.total(_c3.params["P2"].option("b").vec(), _CBB.WEIGHTS)
                  - _cal["alpha"] * -4.0) < 1.0)]
+    # L'APPARIEMENT DES SECTIONS, qui a fait echouer la premiere calibration
+    # reelle : "sched. C" ne s'appariait a aucun "C.1", "13" a aucun "13.1",
+    # et cinq des quatorze points chiffrables sortaient avec un score de zero.
+    _mvs = [_mv("C.1", "licensee", "major"), _mv("13.1", "licensee", "minor"),
+            _mv("13.2", "licensor", "major"), _mv("7.2(a)", "licensee", "moderate"),
+            _mv("99.9", "licensee", "major")]
+    _r = _AB.repartit(_mvs, ["sched. C", "13", "7.2"])
+    _sc += [("section : 'sched. C' couvre 'C.1'", _AB._couvre("sched. C", "C.1")),
+            ("section : '13' couvre '13.1'", _AB._couvre("13", "13.1")),
+            ("section : '7.2' couvre '7.2(a)'", _AB._couvre("7.2", "7.2(a)")),
+            ("section : '11.1' ne couvre pas '11.3'", not _AB._couvre("11.1", "11.3")),
+            ("partition : chaque mouvement va a un point et un seul",
+             sum(len(v) for v in _r.values()) == 4),
+            ("partition : un mouvement sans point d'accueil est laisse dehors",
+             all(_m.section != "99.9" for v in _r.values() for _m in v)),
+            ("partition : le plus specifique gagne",
+             len(_r["13"]) == 2 and len(_r["sched. C"]) == 1),
+            ("scores : les sous-sections s'additionnent avec leur signe",
+             _AB._net(_r["13"]) == 3.0)]
     _scok = all(v for _, v in _sc)
     print(f"  pont ordinal    : {sum(v for _, v in _sc)}/{len(_sc)} "
           f"{'OK' if _scok else 'FAIL'} (alpha {_cal['alpha']/1e6:.2f} M$/point, "
@@ -2405,8 +2424,17 @@ def cmd_merge(argv: list[str]) -> None:
                            seed=int(opts["seed"]), nous=opts["nous"])
     print(AB.report(cal, journal))
     fiable = (cal["p"] is not None and cal["p"] <= 0.10 and cal["r2"] > 0.2)
-    out = T / "parametric_merged.json"
+    # UN MODELE DONT LA CALIBRATION A ECHOUE N'EST PAS UTILISABLE. La premiere
+    # version l'ecrivait quand meme sous son nom normal, et `neg --contract
+    # merged` a tourne dessus sans broncher : le tableau qui en sort a l'air
+    # d'un resultat. Il est ecrit sous un autre nom, que neg ne trouvera pas.
+    out = T / ("parametric_merged.json" if fiable else "parametric_merged.REJETE.json")
     out.write_text(parametric.dump(c2))
+    autre = T / "parametric_merged.json"
+    if not fiable and autre.exists():
+        autre.rename(T / "parametric_merged.PERIME.json")
+        print(f"\n{autre.name} datait d'une calibration precedente : renomme en "
+              f"parametric_merged.PERIME.json\npour qu'il ne serve pas par accident.")
     print(f"\necrit dans {out}")
     bad = parametric.model_sanity(c2, CB_W())
     if bad:
@@ -2414,8 +2442,8 @@ def cmd_merge(argv: list[str]) -> None:
         for b_ in bad:
             print("  " + b_.splitlines()[0])
     if not fiable:
-        print("\nNE L'UTILISE PAS EN NEGOCIATION tant que l'ajustement ne tient pas : "
-              "`neg --contract\nmerged` refusera d'ailleurs si les controles se declenchent.")
+        print("\nCe modele n'est pas utilisable en negociation, et le nom du fichier le dit :"
+              "\n`neg --contract merged` ne le trouvera pas.")
     else:
         print("\n  python -m wm.run neg --contract merged --policies algo --n 6")
 

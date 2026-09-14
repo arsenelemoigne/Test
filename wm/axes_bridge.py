@@ -52,21 +52,52 @@ _W = {"minor": 1.0, "moderate": 2.0, "major": 4.0}
 
 
 def _sec(x: str) -> str:
-    return str(x or "").split("(")[0].strip()
+    """Normalise un numero de section pour pouvoir en comparer deux.
 
-
-def score(moves, section: str, nous: str = NOUS) -> float:
-    """Le net ordinal d'une section : somme des poids signes.
-
-    Positif = le markup nous renforce sur cette section. Negatif = il nous
-    affaiblit. Les mouvements ambigus et neutres comptent zero - c'est
-    volontaire : axes.py les signale au lieu de les deviner, et deviner ici
-    reviendrait a defaire ce choix.
+    Les deux modeles ne les ecrivent pas pareil : le moteur dit "sched. C" la
+    ou l'extracteur dit "C.1", "13" la ou il dit "13.1", "7.2" la ou il dit
+    "7.2(a)". Une egalite de chaines rate tout cela.
     """
-    s, cible = 0.0, _sec(section)
+    t = str(x or "").lower().split("(")[0]
+    for m in ("schedule", "sched.", "sched", "section", "art.", "annexe"):
+        t = t.replace(m, " ")
+    return t.strip(" .:")
+
+
+def _couvre(point: str, move: str) -> bool:
+    """La section `move` tombe-t-elle sous la section `point` ?"""
+    a, b = _sec(point), _sec(move)
+    return bool(a) and (b == a or b.startswith(a + "."))
+
+
+def repartit(moves, sections) -> dict[str, list]:
+    """Chaque mouvement va au point LE PLUS SPECIFIQUE qui le couvre.
+
+    C'est ce qui manquait, et c'est ce qui a fait echouer la premiere
+    calibration : "sched. C" ne s'appariait a aucun "C.1", "13" a aucun
+    "13.1", et cinq des quatorze points chiffrables sortaient donc avec un
+    score de zero - dont la resiliation pour defaillance chronique, le plus
+    gros poste du markup a -4,7 M$. Une correlation calculee sur cinq zeros
+    plantes ne mesurait rien.
+
+    Le plus specifique, et pas tous ceux qui couvrent : sinon un mouvement en
+    13.1 compterait a la fois pour "loi applicable" et pour "13", et le meme
+    poids serait compte deux fois. Chaque mouvement va a un point et un seul -
+    c'est une partition, et c'est ce qui rend la somme des scores lisible.
+    """
+    out = {s: [] for s in sections}
     for m in moves:
-        if _sec(getattr(m, "section", "")) != cible:
+        ms = getattr(m, "section", "")
+        cands = [s for s in sections if _couvre(s, ms)]
+        if not cands:
             continue
+        out[max(cands, key=lambda s: len(_sec(s)))].append(m)
+    return out
+
+
+def _net(moves, nous: str = NOUS) -> float:
+    s = 0.0
+    for m in moves:
         f = getattr(m, "favours", "")
         if f == nous:
             s += _W.get(getattr(m, "magnitude", ""), 0.0)
@@ -75,16 +106,28 @@ def score(moves, section: str, nous: str = NOUS) -> float:
     return s
 
 
+def score(moves, section: str, nous: str = NOUS) -> float:
+    """Le net ordinal d'une section, prise seule (elle et ses sous-sections).
+
+    Positif = le markup nous renforce. Les mouvements ambigus et neutres
+    comptent zero - c'est volontaire : axes.py les signale au lieu de les
+    deviner, et les compter reviendrait a defaire ce choix.
+    """
+    return _net([m for m in moves if _couvre(section, getattr(m, "section", ""))], nous)
+
+
 def calibre(moves, n: int = 800, seed: int = 0, nous: str = NOUS) -> dict:
     """Ajuste dollars ~= alpha * ordinal sur les points ou les deux existent."""
     calc = CB.build(n=n, seed=seed)
+    # une partition sur les sections du MOTEUR : chaque mouvement compte une
+    # fois et une seule, pour le point le plus specifique qui le couvre
+    part = repartit(moves, [sec for _, _, sec, _ in CB.VERIDIAN])
     obs = []
     for pid, nom, sec, _opts in CB.VERIDIAN:
         p = calc.params[pid]
         d = (pm.total(p.option(p.theirs).vec(), CB.WEIGHTS)
              - pm.total(p.option(p.ours).vec(), CB.WEIGHTS))
-        s = score(moves, sec, nous)
-        obs.append((pid, nom, sec, s, d))
+        obs.append((pid, nom, sec, _net(part[sec], nous), d))
     xs = [o[3] for o in obs]
     ys = [o[4] for o in obs]
     den = sum(x * x for x in xs)
@@ -138,11 +181,24 @@ def build(elic: pm.Contract, moves, cal: dict, sec_of: dict, n: int = 800,
     calc = CB.build(n=n, seed=seed)
     par_sec = {_sec(sec): pid for pid, _, sec, _ in CB.VERIDIAN}
     alpha = cal["alpha"]
-    params, journal = [], []
+    # une partition sur les sections du modele ELICITE, distincte de celle du
+    # moteur : chaque partition est interne a son modele, et chacune fait
+    # tomber chaque mouvement dans exactement un point.
+    part = repartit(moves, [_sec(sec_of.get(pid, "")) for pid in elic.params])
+    net_de = {pid: _net(part.get(_sec(sec_of.get(pid, "")), []), nous)
+              for pid in elic.params}
+    params, journal, deja = [], [], set()
     for pid, p in elic.params.items():
         sec = _sec(sec_of.get(pid, ""))
         jumeau = par_sec.get(sec)
+        if jumeau in deja:
+            # deux points elicites tombent sur le meme point du moteur (la
+            # garantie et la garantie de conformite legale sont toutes deux en
+            # 7.2) : le second recevrait les memes dollars et les compterait
+            # une seconde fois. Il repasse par l'echelle ordinale.
+            jumeau = None
         if jumeau and jumeau in calc.params:
+            deja.add(jumeau)
             # CALCULE : on prend le point du moteur tel quel, en gardant les
             # identifiants du modele elicite pour que le reste de la pile suive
             q = calc.params[jumeau]
@@ -175,7 +231,7 @@ def build(elic: pm.Contract, moves, cal: dict, sec_of: dict, n: int = 800,
                 opts.append(pm.Option(id=o.id, text=o.text,
                                       ours=dict(src.ours), theirs=dict(src.theirs)))
             journal.append({"id": pid, "nom": p.name, "section": sec, "source": "calcule",
-                            "ordinal": score(moves, sec, nous),
+                            "ordinal": net_de.get(pid, 0.0),
                             "dollars": pm.total(
                                 next(o for o in opts if o.id == p.theirs).vec(),
                                 CB.WEIGHTS)})
@@ -185,7 +241,7 @@ def build(elic: pm.Contract, moves, cal: dict, sec_of: dict, n: int = 800,
         # ORDINAL CALIBRE : l'echelle du point vient de alpha x son score ; la
         # forme a l'interieur du point vient du vecteur declare, qui est
         # calibre en rang et sert donc a ordonner les redactions entre elles.
-        s = score(moves, sec, nous)
+        s = net_de.get(pid, 0.0)
         cible = alpha * s
         base_o = pm.total(p.option(p.ours).vec())
         base_t = pm.total(p.option(p.theirs).vec())
