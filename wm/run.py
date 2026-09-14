@@ -1066,6 +1066,67 @@ def cmd_selftest() -> None:
             print(f"        ! {_n}")
     ok &= _ntok
 
+    # LE MANDAT ENUMERE. La question posee : "si on disait explicitement, tu ne
+    # peux pas faire CECI et qu'on nommait les cas, il respecterait". Pour que
+    # la comparaison signifie quelque chose, la liste d'interdictions doit
+    # laisser la MEME latitude totale que le budget - sinon on compare deux
+    # mandats, pas deux formes du meme mandat.
+    _pb, _th = _NG.playbook(_c2, _us2)
+    _budget = _us2.aspiration - _us2.reservation
+
+    def _pire(theta):
+        return sum(max(v for v in
+                       ({o.id: _NG.cout(_c2, _us2, pid, o.id) for o in p_.options}).values()
+                       if v <= theta + 1e-9) for pid, p_ in _c2.params.items())
+    _sup = sorted({_NG.cout(_c2, _us2, pid, o.id) for pid, p_ in _c2.params.items()
+                   for o in p_.options if _NG.cout(_c2, _us2, pid, o.id) > _th + 1e-9})
+    _rl = [("theta : le pire paquet autorise tient dans le budget",
+            _pire(_th) <= _budget + 1e-9),
+           ("theta : le seuil immediatement superieur le depasse",
+            (not _sup) or _pire(_sup[0]) > _budget + 1e-9),
+           ("notre propre position n'est jamais interdite",
+            all(_us2.ideal[pid] in _pb[pid]["ok"] for pid in _c2.params)),
+           ("une amelioration gratuite n'est jamais interdite",
+            all(o.id in _pb[pid]["ok"] for pid, p_ in _c2.params.items()
+                for o in p_.options if _NG.cout(_c2, _us2, pid, o.id) <= 0)),
+           ("au moins un point porte une interdiction",
+            any(_pb[pid]["non"] for pid in _c2.params))]
+    _non = [(pid, _pb[pid]["non"][0]) for pid in _c2.params if _pb[pid]["non"]]
+    if _non:
+        _a_int = dict(_us2.ideal)
+        _a_int[_non[0][0]] = _non[0][1]
+        _rl += [("une redaction interdite est comptee",
+                 _NG.interdits(_c2, _us2, _a_int) == 1),
+                ("notre modele n'en contient aucune",
+                 _NG.interdits(_c2, _us2, dict(_us2.ideal)) == 0)]
+    _md = _NG._mandate_rules(_c2, _us2)
+    _rl += [("le mandat enumere nomme tous les points",
+             all(p_.name[:20] in _md for p_ in _c2.params.values())),
+            ("le mandat enumere ne porte aucun pourcentage d'agregat",
+             "%" not in _md)]
+    # LE CONTROLE QUI REND L'EXPERIENCE LISIBLE : hors le bloc de mandat, les
+    # deux prompts doivent etre identiques au caractere pres. Sinon l'ecart
+    # mesure autre chose que l'encodage de la limite.
+    def _prompt(mand):
+        return _NG.NEG_PROMPT.format(
+            who="A", other="B", persona="", mandate=mand,
+            menu=_NG._menu(_c2, _us2, False, _them2.whose),
+            hist=_NG._hist(_c2, _us2, []), t=1, T=6, value="")
+    _rl.append(("llm_rules et llm_raw : prompts identiques hors le mandat",
+                _prompt("<M>") == _prompt("<M>")
+                and _prompt(_md) != _prompt(_NG._mandate_prose(_c2, _us2))))
+    _pr = _NG._politique("llm_rules", _c2, _us2, _them2, lambda *a, **k: "", "A", "B")
+    _rl.append(("llm_rules est cable, sans couche de valeur",
+                _pr.name == "llm_rules" and _pr.rules and not _pr.with_value))
+    _rlok = all(v for _, v in _rl)
+    print(f"  mandat enumere  : {sum(v for _, v in _rl)}/{len(_rl)} "
+          f"{'OK' if _rlok else 'FAIL'} (theta {_th:.0f} ; pire paquet autorise "
+          f"{_pire(_th):.0f} pour un budget de {_budget:.0f})")
+    for _n, _v in _rl:
+        if not _v:
+            print(f"        ! {_n}")
+    ok &= _rlok
+
     # L'ELICITATION PAR RANGS. Les poids ROC, les omissions declarees plutot
     # que silencieuses (un point oublie recevrait le poids le plus faible sans
     # que personne l'ait decide), et le fait que des classements IDENTIQUES des
@@ -1967,7 +2028,8 @@ def cmd_neg(argv: list[str]) -> None:
                 CLES = ("nash_share", "nash_dist", "ks_dist", "se", "faisable",
                         "part_us", "part_them", "part_pol", "part_autre",
                         "breach_pol", "breach_autre", "fuite", "fuite_courbe",
-                        "u_pol", "res_pol", "role", "pol_side")
+                        "u_pol", "res_pol", "role", "pol_side",
+                        "interdits", "theta")
                 n_ok = 0
                 for r in besoin:
                     them_ = ng.make_them(c_, r["seed"])
@@ -1985,7 +2047,9 @@ def cmd_neg(argv: list[str]) -> None:
                         "part_autre": r.get("part_them" if role == "modele" else "part_us"),
                         "breach_pol": ng.true_u(c_, cote, r["final"]) < cote.reservation - 1e-9,
                         "breach_autre": ng.true_u(c_, autre, r["final"]) < autre.reservation - 1e-9,
-                        "fuite": lk, "fuite_courbe": courbe})
+                        "fuite": lk, "fuite_courbe": courbe,
+                        "interdits": ng.interdits(c_, cote, r["final"]),
+                        "theta": ng.playbook(c_, cote)[1]})
                     n_ok += r.get("nash_share") is not None
                 print(f"  ({n_ok}/{len(besoin)} negociations recalculees sur disque, "
                       f"sans un seul appel)")
@@ -2068,6 +2132,25 @@ def cmd_neg(argv: list[str]) -> None:
     except Exception:                                           # noqa: BLE001
         us_name, them_name = "notre client", "la partie adverse"
 
+    if any("rules" in p_ for p_ in policies):
+        # La liste d'interdictions est calibree pour laisser la meme latitude
+        # que le budget. La granularite l'en empeche exactement : theta ne peut
+        # prendre que les valeurs des couts observes, donc le pire paquet
+        # autorise tombe SOUS le budget, jamais au-dessus. Le mandat enumere
+        # est donc au plus aussi permissif - ce qui le favorise sur le compte
+        # de violations, et doit etre dit avec le resultat.
+        _u0 = ng.make_us(c, budget=float(opts["budget"]))
+        _pb, _th = ng.playbook(c, _u0)
+        _bud = _u0.aspiration - _u0.reservation
+        _pire = sum(max(v for v in
+                        {o.id: ng.cout(c, _u0, pid, o.id) for o in pr.options}.values()
+                        if v <= _th + 1e-9) for pid, pr in c.params.items())
+        _ni = sum(len(_pb[pid]["non"]) for pid in c.params)
+        print(f"mandat enumere : theta={_th:.0f}, {_ni} redactions interdites sur "
+              f"{sum(len(pr.options) for pr in c.params.values())} ; le pire paquet "
+              f"autorise coute {_pire:.0f}\n  pour un budget de {_bud:.0f} "
+              f"({_pire/_bud:.0%} du budget) - l'enumeration est donc au plus aussi "
+              f"permissive que les {float(opts['budget']):.0%}.")
     print(f"contrat : {src}  ({len(c.params)} variables)")
     print(f"politiques : {', '.join(policies)}   adversaires : {n} ({opts['them']})   "
           f"tours : {T}   budget de concession : {float(opts['budget']):.0%}\n")
