@@ -289,6 +289,20 @@ def test_rl_train_runs_on_the_toy_model(toy):
     log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
     assert all(e["entropy"] > 0 and 0 <= e["no_think_accuracy"] <= 1 for e in log)
     assert [e["lr"] for e in log] == [1e-4, 1e-4]  # two cycles of one step each: every step restarts
+    out = work / "rl-guard"
+    run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+        "--sources", "toy", "--out", str(out), "--steps", "4", "--questions", "2", "--group", "3",
+        "--max-tokens", "40", "--backend", "hf", "--redundant", "none", "--dtype", "float32",
+        "--guard-every", "1", "--guard-data", str(work / "rl-data.jsonl"), "--guard-questions", "3",
+        "--guard-drop", "-1", "--guard-patience", "3", cwd=ROOT)
+    guard = json.loads((out / "guard.json").read_text())
+    # a drop of -1 can never be met: each miss rolls back to the start and halves the pressure,
+    # and the third miss in a row stops the run
+    assert len(guard["checks"]) == 3 and guard["best"] is None and not (out / "best").exists()
+    assert [s["soften"] for s in guard["softened"]] == [0.5, 0.25]
+    assert all(s["restored"] == "start" for s in guard["softened"])
+    log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+    assert len(log) == 3 and log[1]["rolled_back_to"] == "start"
 
 
 def test_learning_rate_schedule_and_group_split():
@@ -374,3 +388,27 @@ def test_steering_bias_adds_the_vector_to_the_attention_output(tmp_path):
     assert torch.allclose(shift, vector.expand_as(shift), atol=1e-4)
     groups = [([0], [[1] * 10, [1] * 3, [1] * 4], [True, True, False]), ([0], [[1] * 4, [1] * 5], [True, True])]
     assert concise_verbose_pairs(groups, 1.5) == [([0], [1] * 3, [1] * 10)]
+
+
+def test_blended_adapter_is_the_weighted_sum_of_the_two_deltas(tmp_path):
+    import torch
+    from peft import LoraConfig, PeftModel, get_peft_model
+    from transformers import Qwen3Config, Qwen3ForCausalLM
+    config = Qwen3Config(vocab_size=50, hidden_size=32, intermediate_size=64, num_hidden_layers=1,
+                         num_attention_heads=4, num_key_value_heads=2, head_dim=16)
+    torch.manual_seed(0)
+    Qwen3ForCausalLM(config).save_pretrained(tmp_path / "base")
+    for name in ("one", "two"):
+        model = get_peft_model(Qwen3ForCausalLM.from_pretrained(tmp_path / "base"), LoraConfig(
+            r=4, lora_alpha=8, target_modules=["q_proj", "down_proj"], init_lora_weights=False))
+        model.save_pretrained(tmp_path / name)
+    run(str(ROOT / "blend_adapters.py"), str(tmp_path / "one"), str(tmp_path / "two"), "--weight", "0.3",
+        "--out", str(tmp_path / "mix"), cwd=ROOT)
+
+    def delta(adapter):
+        model = PeftModel.from_pretrained(Qwen3ForCausalLM.from_pretrained(tmp_path / "base"), adapter)
+        return model.merge_and_unload().model.layers[0].self_attn.q_proj.weight.detach()
+
+    plain = Qwen3ForCausalLM.from_pretrained(tmp_path / "base").model.layers[0].self_attn.q_proj.weight.detach()
+    expected = 0.3 * (delta(tmp_path / "one") - plain) + 0.7 * (delta(tmp_path / "two") - plain)
+    assert torch.allclose(delta(tmp_path / "mix") - plain, expected, atol=1e-5)
