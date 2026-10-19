@@ -4,15 +4,26 @@ and push length pressure onto the thinking tokens that carry no information.
 Each step samples --group replies to each of --questions training questions with the current
 LoRA, then takes one policy-gradient step (GRPO-style group advantages, on-policy):
 
-  reward    0 for a wrong or cut-off reply. A correct reply gets 1 - alpha * |len - L*| / L*,
-            where L* is the length of the shortest correct reply in its group (ShorterBetter's
-            "sample optimal length"): every question sets its own budget.
+  reward    a correct reply gets 1 - alpha * |len - L*| / L*, a wrong or cut-off one
+            -alpha * |len - L*| / L*, where L* is the length of the shortest correct reply in its
+            group, or the group mean when none is correct (ShorterBetter's "sample optimal
+            length"): every question sets its own budget.
   advantage reward minus the group mean, over the group's standard deviation.
   per token on correct replies, thinking tokens marked redundant get an extra -lambda. Two
             markers: "confidence" (tokens the policy itself found unlikely, in the bottom
             --redundant-quantile of the reply: exploratory filler, as in TokenProbe), or
             "settle" (tokens after the point where p(correct answer) settled, read with
             probe_curve.probe_scores: the model already knew).
+  TokenProbe ("On the Token Value Inequality in Efficient Reasoning", --redundant tokenprobe-rs or
+            tokenprobe-kl): each reply's token log-probs are z-scored (NormLP); the K best
+            non-overlapping W-token windows by summed NormLP are "core", the rest redundant.
+            Redundant tokens are pressed only when the reply is over budget L = core_len * scale,
+            scale annealed from --scale-start to --scale-end.
+              rs: A_t += beta * (alpha_core * NormLP_t [core] - lam * max(0, T - L) / T [redundant])
+              kl: core tokens (and in-budget replies) are anchored to the base model with a KL
+                  term beta_kl; over-budget redundant tokens lose the anchor and get
+                  -gamma_t * log pi with gamma_t = lam_decay * (T - L) / T.
+            Wrong replies get the plain update (plus the KL anchor in kl mode).
 
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
@@ -46,7 +57,17 @@ def parse_arguments():
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--alpha", type=float, default=0.5, help="weight of the distance to L*")
     parser.add_argument("--lam", type=float, default=0.1, help="extra penalty per redundant token")
-    parser.add_argument("--redundant", choices=["confidence", "settle", "none"], default="confidence")
+    parser.add_argument("--redundant", default="confidence",
+                        choices=["confidence", "settle", "tokenprobe-rs", "tokenprobe-kl", "none"])
+    parser.add_argument("--window", type=int, default=10, help="TokenProbe core window W")
+    parser.add_argument("--windows", type=int, default=10, help="TokenProbe core windows K")
+    parser.add_argument("--scale-start", type=float, default=3.0, help="budget = core_len * scale")
+    parser.add_argument("--scale-end", type=float, default=1.5)
+    parser.add_argument("--rs-beta", type=float, default=1.0)
+    parser.add_argument("--rs-alpha", type=float, default=0.05)
+    parser.add_argument("--rs-lam", type=float, default=0.08)
+    parser.add_argument("--kl-beta", type=float, default=5e-3)
+    parser.add_argument("--lam-decay", type=float, default=0.2)
     parser.add_argument("--redundant-quantile", type=float, default=0.2)
     parser.add_argument("--settle-threshold", type=float, default=0.9)
     parser.add_argument("--lr", type=float, default=2e-5)
@@ -62,12 +83,17 @@ def parse_arguments():
 # ---------------------------------------------------------------- rewards (pure, tested)
 
 def length_rewards(lengths, correct, alpha):
-    """ShorterBetter-style rewards for one group: 0 if wrong, else 1 - alpha * |len - L*| / L*."""
+    """ShorterBetter-style rewards for one group.
+
+    L* is the shortest correct reply's length, or the group's mean length when none is correct
+    (ShorterBetter's neutral fallback: without it, its shortest-length variants collapsed).
+    A correct reply gets 1 - alpha * |len - L*| / L*, floored at 0; a wrong one gets
+    -alpha * |len - L*| / L*, so a wrong reply never beats a correct one.
+    """
     lengths_correct = [n for n, ok in zip(lengths, correct) if ok]
-    if not lengths_correct:
-        return [0.0] * len(lengths)
-    target = min(lengths_correct)
-    return [max(0.0, 1 - alpha * abs(n - target) / target) if ok else 0.0
+    target = min(lengths_correct) if lengths_correct else sum(lengths) / len(lengths)
+    target = max(target, 1)
+    return [max(0.0, 1 - alpha * abs(n - target) / target) if ok else -alpha * abs(n - target) / target
             for n, ok in zip(lengths, correct)]
 
 
@@ -96,6 +122,45 @@ def settle_redundant(p_gold_by_cut, thinking_len, threshold):
         else:
             settle = None
     return set() if settle is None else set(range(settle, thinking_len))
+
+
+def norm_lp(logps):
+    """TokenProbe Eq. 1: each token's log-prob z-scored within its reply."""
+    mean = sum(logps) / len(logps)
+    spread = math.sqrt(sum((x - mean) ** 2 for x in logps) / len(logps))
+    return [(x - mean) / (spread + 1e-6) for x in logps]
+
+
+def core_positions(scores, window, windows):
+    """The best non-overlapping windows by summed score, greedily, at most `windows` of them."""
+    if len(scores) <= window:
+        return set(range(len(scores)))
+    sums = [sum(scores[i:i + window]) for i in range(len(scores) - window + 1)]
+    taken = set()
+    for start in sorted(range(len(sums)), key=lambda i: -sums[i]):
+        if len(taken) >= windows * window:
+            break
+        span = set(range(start, start + window))
+        if not span & taken:
+            taken |= span
+    return taken
+
+
+def rs_advantages(advantage, scores, core, budget, beta, alpha, lam):
+    """TokenProbe Eq. 6 on a correct reply: core tokens gain alpha * NormLP, redundant ones pay
+    lam * (T - L) / T when the reply is over budget."""
+    over = max(0, len(scores) - budget) / len(scores)
+    return [advantage + beta * (alpha * z if i in core else -lam * over) for i, z in enumerate(scores)]
+
+
+def kl_coefficients(length, core, budget, beta, lam_decay):
+    """TokenProbe Eq. 4: (beta_t, gamma_t) per token. Over budget, redundant tokens drop the KL
+    anchor and get gamma_t = lam_decay * (T - L) / T; everything else keeps beta."""
+    if length <= budget:
+        return [beta] * length, [0.0] * length
+    gamma = lam_decay * (length - budget) / length
+    return ([beta if i in core else 0.0 for i in range(length)],
+            [0.0 if i in core else gamma for i in range(length)])
 
 
 def token_advantages(advantage, length, redundant, lam):
@@ -186,6 +251,7 @@ def main():
     log = []
 
     for step in range(args.steps):
+        scale = args.scale_start + (args.scale_end - args.scale_start) * step / max(1, args.steps - 1)
         questions = [pool[(step * args.questions + i) % len(pool)] for i in range(args.questions)]
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
@@ -220,13 +286,38 @@ def main():
             logps = torch.log_softmax(logits.float(), dim=-1).gather(
                 1, torch.tensor(reply, device=device)[:, None])[:, 0]
             redundant = set()
-            if ok and args.redundant == "confidence":
-                redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
-            elif ok and args.redundant == "settle":
-                redundant = settle_redundant(probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
-                                             thinking_len, args.settle_threshold)
-            weights = torch.tensor(token_advantages(advantage, len(reply), redundant, args.lam), device=device)
-            loss = -(weights * logps).sum() / total_tokens
+            betas = gammas = None
+            if args.redundant.startswith("tokenprobe"):
+                scores = norm_lp(logps.tolist())
+                core = core_positions(scores, args.window, args.windows)
+                budget = len(core) * scale
+                if args.redundant == "tokenprobe-rs":
+                    advantages_t = (rs_advantages(advantage, scores, core, budget, args.rs_beta,
+                                                  args.rs_alpha, args.rs_lam) if ok else [advantage] * len(reply))
+                else:
+                    advantages_t = [advantage] * len(reply)
+                    betas, gammas = (kl_coefficients(len(reply), core, budget, args.kl_beta, args.lam_decay)
+                                     if ok else ([args.kl_beta] * len(reply), [0.0] * len(reply)))
+            else:
+                if ok and args.redundant == "confidence":
+                    redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
+                elif ok and args.redundant == "settle":
+                    redundant = settle_redundant(probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
+                                                 thinking_len, args.settle_threshold)
+                advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
+            weights = torch.tensor(advantages_t, device=device)
+            per_token = -weights * logps
+            if betas is not None:
+                with torch.no_grad(), model.disable_adapter():
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        ref_logits = model(input_ids=ids).logits[0, len(prompt) - 1:-1]
+                    ref = torch.log_softmax(ref_logits.float(), dim=-1).gather(
+                        1, torch.tensor(reply, device=device)[:, None])[:, 0]
+                gap = ref - logps  # k3 estimator of KL(pi || ref), per token
+                kl = torch.exp(gap) - gap - 1
+                per_token = per_token + torch.tensor(betas, device=device) * kl \
+                    + torch.tensor(gammas, device=device) * logps
+            loss = per_token.sum() / total_tokens
             scaler.scale(loss).backward()
             loss_sum += loss.item()
         scaler.unscale_(optimizer)

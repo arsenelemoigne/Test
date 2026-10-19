@@ -243,10 +243,11 @@ def test_packed_probe_matches_scoring_each_cut_from_scratch():
 def test_length_rewards_follow_the_shortest_correct_reply():
     from rl_train import group_advantages, length_rewards
     rewards = length_rewards([100, 50, 80, 20], [True, True, False, False], alpha=0.5)
-    assert rewards == [0.5, 1.0, 0.0, 0.0]  # L* = 50; wrong replies get nothing however short
-    assert length_rewards([10, 20], [False, False], 0.5) == [0.0, 0.0]
+    assert rewards[:2] == [0.5, 1.0] and rewards[2] < 0 and rewards[3] < 0  # L* = 50
+    assert max(rewards[2:]) < min(rewards[:2])  # a wrong reply never beats a correct one
+    assert length_rewards([10, 30], [False, False], 0.5) == [-0.25, -0.25]  # no correct: L* = mean
     advantages = group_advantages(rewards)
-    assert advantages[1] > advantages[0] > advantages[2] == advantages[3]
+    assert advantages[1] > advantages[0] > max(advantages[2:])
     assert group_advantages([1.0, 1.0]) == [0.0, 0.0]
 
 
@@ -271,7 +272,7 @@ def test_rl_train_runs_on_the_toy_model(toy):
     rows = [{"prompt": [{"role": "user", "content": toy_question(n)}], "answer": str(n), "task": "math",
              "source": "toy"} for n in NUMBERS[:6]]
     (work / "rl-data.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
-    for mode in ("confidence", "settle"):
+    for mode in ("confidence", "settle", "tokenprobe-rs", "tokenprobe-kl"):
         out = work / f"rl-{mode}"
         run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
             "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
@@ -279,3 +280,18 @@ def test_rl_train_runs_on_the_toy_model(toy):
         log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
         assert [e["step"] for e in log] == [1, 2] and all(0 <= e["accuracy"] <= 1 for e in log)
         assert (out / "adapter_config.json").exists()
+
+
+def test_tokenprobe_core_windows_budget_and_coefficients():
+    from rl_train import core_positions, kl_coefficients, norm_lp, rs_advantages
+    z = norm_lp([-1.0, -1.0, -3.0, -3.0])
+    assert abs(sum(z)) < 1e-6 and z[0] > 0 > z[2]
+    scores = [0, 0, 5, 5, 0, -1, 4, 4, -2, 0]
+    assert core_positions(scores, 2, 2) == {2, 3, 6, 7}  # the two best non-overlapping windows
+    assert core_positions(scores, 2, 1) == {2, 3}
+    adv = rs_advantages(1.0, [1.0, -1.0, 0.5, -0.5], {0, 2}, budget=2, beta=1.0, alpha=0.1, lam=0.2)
+    assert adv == [1.1, 0.9, 1.05, 0.9]  # over budget by 2/4: redundant tokens pay 0.2 * 0.5
+    assert rs_advantages(1.0, [1.0, -1.0], {0}, budget=5, beta=1.0, alpha=0.1, lam=0.2)[1] == 1.0
+    betas, gammas = kl_coefficients(4, {0, 1}, budget=2, beta=0.01, lam_decay=0.4)
+    assert betas == [0.01, 0.01, 0.0, 0.0] and gammas == [0.0, 0.0, 0.2, 0.2]
+    assert kl_coefficients(2, {0}, budget=3, beta=0.01, lam_decay=0.4) == ([0.01, 0.01], [0.0, 0.0])
