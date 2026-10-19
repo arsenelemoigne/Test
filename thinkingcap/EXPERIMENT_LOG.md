@@ -1,5 +1,24 @@
 # Experiment log (Qwen3-0.6B, shorter thinking)
 
+## Findings so far (updated as results come in)
+
+1. **Imitation (SFT on cut traces) teaches underthinking.** +39-60% shorter but -6 to -8 points;
+   SVAMP -24. The model learns "stop early", not "stop when done".
+2. **RL keeps accuracy.** Rewarding short *correct* answers never pays a wrong one, so accuracy
+   holds (loop 1: -1.2 points). On its home subjects it is even more accurate than the raw
+   model (held-out 58.8% vs 45.7%), because the raw model often rambles past the token cap.
+3. **Transfer is the bottleneck, not overfitting.** Training answers got 44% shorter, test answers
+   6%. Each question is seen once, so it is not memorisation: training is maths and multiple
+   choice, the test adds code, function calling and instructions. Code (MBPP+) never got shorter.
+4. **More pressure buys length with accuracy.** Loop 3 (twice the length weight) reached +24% but
+   -6 points, losses concentrated on code and SVAMP.
+5. **Length vs accuracy is a dial.** Mixing two adapters' weight changes interpolates between them:
+   25% loop 3 gives +15% at +0.5 points, 50% gives +20% at -2.8, 75% gives +20% at -7.7.
+6. **A steering vector works a little, for free.** Pushing the residual stream along the
+   concise-minus-verbose direction (one bias, no training) gives up to -9% tokens with higher
+   accuracy at x2; at x4 accuracy drops.
+
+
 Goal: cut tokens as much as possible while losing **at most 3 accuracy points** on the
 evaluation. Everything is measured with the official `evaluate.py` / `compare.py` on the same
 subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
@@ -117,8 +136,10 @@ as a v_proj bias. Same held-out check as above (128 questions x 4).
 | raw + steer x0.5 | 45.7% / 1,069 | 82.0% / 486 | 52.3% / 520 | 44.5% / 1,369 | 3.9% / 1,902 |
 | raw + steer x1 | 48.6% / 1,029 | 83.6% / 473 | 61.7% / 441 | 45.3% / 1,303 | 3.9% / 1,899 |
 | raw + steer x2 | 52.0% / 991 | 82.8% / 493 | 59.4% / 462 | 60.2% / 1,143 | 5.5% / 1,867 |
+| raw + steer x4 | 43.4% / 959 | 75.8% / 424 | 55.5% / 406 | 34.4% / 1,112 | 7.8% / 1,894 |
 
-The effect grows with strength and is still far from loop 1 (58.8% / 859): larger strengths next.
+Up to x2 the push makes replies shorter and more accurate (fewer replies cut off at the cap); at x4 it
+keeps shortening but accuracy falls below the raw model, so x2 is the sweet spot on this check.
 
 ## Evaluation details
 
