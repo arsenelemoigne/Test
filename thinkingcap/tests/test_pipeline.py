@@ -1,0 +1,217 @@
+"""Tests for prune_traces.py and sft.py, runnable without a GPU or Qwen3's weights.
+
+The unit tests check the pruning logic directly. The end-to-end test trains a tiny Qwen3-shaped
+model on a toy task where the answer is only knowable from one "key" paragraph of the thinking,
+surrounded by filler before it and re-checking after it. The pruner should keep the key
+paragraph and drop the rest, and sft.py should train on the result.
+
+    python -m pytest tests -q        # from the directory holding prune_traces.py
+"""
+
+import json
+import random
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from probe_curve import gold_probability  # noqa: E402
+from prune_traces import drop_flat, flat_steps, settle_index, split_steps, thinking_text  # noqa: E402
+
+FILLER = ["Let me read the question again.", "Okay, I need to find the number.",
+          "Hmm, this looks like a lookup.", "Let me think about it carefully."]
+CHECKS = ["Wait, let me double check that.", "Yes, that seems right.", "Let me verify once more."]
+NUMBERS = list(range(10, 50))
+
+
+# ---------------------------------------------------------------- unit tests
+
+def test_split_steps_keeps_separators_and_drops_blank_parts():
+    assert split_steps("\nA one.\n\nB two.\n\nC three.") == ["\nA one.\n\n", "B two.\n\n", "C three."]
+    assert "".join(split_steps("x\n\ny\n\n")) == "x\n\ny\n\n"
+
+
+def test_thinking_text_matches_qwen_layout():
+    assert thinking_text(["\nA.\n\n", "B.\n\n"]) == "<think>\nA.\n\nB.\n</think>\n\n"
+
+
+def test_settle_index_requires_staying_above():
+    assert settle_index([0.1, 0.95, 0.5, 0.92, 0.97], 0.9) == 3
+    assert settle_index([0.95, 0.96], 0.9) == 0
+    assert settle_index([0.1, 0.95, 0.5], 0.9) is None
+
+
+def test_flat_steps_measures_gain_over_best_earlier_point():
+    curve = [0.1, 0.1, 0.6, 0.5, 0.95]  # step 0 flat, 1 raises, 2 drops, 3 raises
+    assert flat_steps(curve, range(4), 0.02) == [0, 2]
+
+
+def test_drop_flat_finds_every_removable_step_with_few_checks():
+    essential = {3, 11}
+    calls = []
+
+    def accept(kept):
+        calls.append(kept)
+        return essential <= set(kept)
+
+    kept = drop_flat(range(16), list(range(16)), accept)
+    assert kept == sorted(essential)
+    assert len(calls) < 16  # group testing beats one check per step
+
+
+def test_drop_flat_keeps_everything_when_nothing_can_go():
+    assert drop_flat([0, 1, 2], [0, 1, 2], lambda kept: len(kept) == 3) == [0, 1, 2]
+
+
+def test_gold_probability_is_raw_for_math_and_a_share_for_choices():
+    assert gold_probability([0.02], "math") == 0.02  # a lone candidate must not read 100%
+    assert gold_probability([0.2, 0.2, 0.1], "multiple_choice") == 0.4
+
+
+# ---------------------------------------------------------------- end to end
+
+def toy_thinking(rng, number, before=2, after=2):
+    before = rng.sample(FILLER, before)
+    after = rng.sample(CHECKS, after)
+    return "\n" + "\n\n".join(before + [f"So the number is {number}."] + after) + "\n"
+
+
+def toy_question(number):
+    # Nothing in the question may hint at the number: only the key paragraph knows it.
+    return "Find the number. Put the final answer on the last line, like: Final answer: 7"
+
+
+@pytest.fixture(scope="module")
+def toy(tmp_path_factory):
+    """A tiny Qwen3 that copies the number from the key paragraph, plus rollouts in probe_curve's format."""
+    import torch
+    from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
+    from transformers import PreTrainedTokenizerFast, Qwen3Config, Qwen3ForCausalLM
+
+    work = tmp_path_factory.mktemp("toy")
+    rng = random.Random(0)
+    texts = []
+    for _ in range(600):
+        number = rng.choice(NUMBERS)
+        texts.append(f"<|im_start|>user\n{toy_question(number)}<|im_end|>\n<|im_start|>assistant\n"
+                     # varied lengths, so the model can answer from a shortened trace like a real one
+                     f"<think>{toy_thinking(rng, number, rng.randint(0, 2), rng.randint(0, 2))}</think>\n\nFinal answer: {number}<|im_end|>")
+    specials = ["<|im_end|>", "<|im_start|>", "<think>", "</think>"]
+    tokenizer = Tokenizer(models.BPE())
+    tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+    tokenizer.decoder = decoders.ByteLevel()
+    tokenizer.train_from_iterator(texts, trainers.BpeTrainer(
+        vocab_size=600, special_tokens=specials, initial_alphabet=pre_tokenizers.ByteLevel.alphabet()))
+    hf = PreTrainedTokenizerFast(tokenizer_object=tokenizer, eos_token="<|im_end|>", pad_token="<|im_end|>")
+    hf.save_pretrained(work / "model")
+
+    torch.manual_seed(0)
+    model = Qwen3ForCausalLM(Qwen3Config(
+        vocab_size=len(hf), hidden_size=64, intermediate_size=128, num_hidden_layers=2,
+        num_attention_heads=4, num_key_value_heads=2, head_dim=16, max_position_embeddings=512,
+        eos_token_id=hf.eos_token_id, pad_token_id=hf.eos_token_id))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-3)
+    batches = [hf(texts[i:i + 16], return_tensors="pt", padding=True) for i in range(0, len(texts), 16)]
+    for _ in range(30):
+        for batch in batches:
+            labels = batch["input_ids"].masked_fill(batch["attention_mask"] == 0, -100)
+            loss = model(**batch, labels=labels).loss
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+    model.save_pretrained(work / "model")
+
+    rollouts = []
+    for qid in range(6):
+        number = rng.choice(NUMBERS)
+        prompt = hf.encode(f"<|im_start|>user\n{toy_question(number)}<|im_end|>\n<|im_start|>assistant\n")
+        for sample, final in enumerate([number, number + 3, number + 7]):  # wrong finals become candidates
+            thinking = hf.encode("<think>" + toy_thinking(rng, number))
+            output = thinking + hf.encode(f"</think>\n\nFinal answer: {number}<|im_end|>")
+            rollouts.append({"id": f"toy-{qid}", "source": "toy", "task": "math", "answer": str(number),
+                             "question": toy_question(number), "sample": sample, "prompt_ids": prompt,
+                             "thinking_ids": thinking, "output_ids": output, "output_tokens": len(output),
+                             "closed_thinking": True, "truncated": False, "correct": True,
+                             "final": str(final)})
+    (work / "rollouts.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rollouts))
+    return work, loss.item()
+
+
+def run(*arguments, cwd):
+    result = subprocess.run([sys.executable, *arguments], cwd=cwd, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    return result.stdout
+
+
+def test_toy_model_learned_the_task(toy):
+    _, final_loss = toy
+    assert final_loss < 0.6
+
+
+def test_prune_keeps_the_key_step_and_drops_filler(toy):
+    work, _ = toy
+    out = work / "prune"
+    run(str(ROOT / "prune_traces.py"), "--model", str(work / "model"), "--rollouts", str(work / "rollouts.jsonl"),
+        "--out", str(out), "--dtype", "float32", "--threshold", "0.8", "--check-samples", "2", cwd=ROOT)
+    targets = [json.loads(line) for line in (out / "sft.jsonl").read_text().splitlines()]
+    log = [json.loads(line) for line in (out / "log.jsonl").read_text().splitlines()]
+    print((out / "summary.txt").read_text())
+
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(work / "model")
+    pruned = [t for t in targets if t["kind"] in ("pruned", "truncated")]
+    assert len(pruned) >= 4, log  # most questions get a shortened target
+    for target in pruned:
+        text = tokenizer.decode(target["completion_ids"])
+        assert f"So the number is {target['answer']}." in text  # the step that carries the answer stays
+        assert not any(check in text for check in CHECKS)       # re-checking after the answer goes
+        assert text.rstrip().endswith(f"Final answer: {target['answer']}<|im_end|>")
+        assert len(target["completion_ids"]) < target["original_tokens"]
+    assert any(t["kind"] == "pruned" and not any(f in tokenizer.decode(t["completion_ids"]) for f in FILLER)
+               for t in pruned)  # and some filler before it is gone too
+
+
+def test_sft_trains_and_saves_a_loadable_adapter(toy):
+    work, _ = toy
+    data = work / "prune" / "sft.jsonl"
+    if not data.exists():
+        pytest.skip("needs the pruning test's output")
+    adapter = work / "adapter"
+    stdout = run(str(ROOT / "sft.py"), "--model", str(work / "model"), "--data", str(data), "--out", str(adapter),
+                 "--epochs", "3", "--accum", "2", "--lr", "1e-3", "--rank", "4", "--log-every", "1", cwd=ROOT)
+    losses = [float(line.split("loss ")[1].split()[0]) for line in stdout.splitlines() if line.startswith("step ")]
+    assert losses and all(loss == loss for loss in losses)  # finite
+    assert (adapter / "adapter_model.safetensors").exists()
+
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM
+    PeftModel.from_pretrained(AutoModelForCausalLM.from_pretrained(work / "model"), adapter)
+
+
+def test_probe_curve_scores_the_toy_rollouts(toy):
+    import shutil
+    work, _ = toy
+    out = work / "probe"
+    out.mkdir()
+    shutil.copy(work / "rollouts.jsonl", out / "rollouts.jsonl")  # skips the vLLM phase
+    stdout = run(str(ROOT / "probe_curve.py"), "--model", str(work / "model"), "--out", str(out),
+                 "--stride", "2", "--dtype", "float32", cwd=ROOT)
+    print(stdout)
+    results = [json.loads(line) for line in (out / "probes.jsonl").read_text().splitlines()]
+    assert (out / "curve.png").exists()
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(work / "model")
+    rollouts = {(r["id"], r["sample"]): r for r in map(json.loads, (work / "rollouts.jsonl").read_text().splitlines())}
+    for result in results:
+        thinking = rollouts[(result["id"], result["sample"])]["thinking_ids"]
+        # the first cut that contains the number itself
+        key = next(k for k in range(len(thinking) + 1)
+                   if f"is {result['answer']}" in tokenizer.decode(thinking[:k]))
+        before = [p["p_gold"] for p in result["probes"] if p["k"] < key]
+        after = [p["p_gold"] for p in result["probes"] if p["k"] >= key]
+        assert sum(before) / len(before) < 0.1  # the number is unknown before the key paragraph (a guess may spike)
+        assert max(after) > 0.8   # and known right after it
