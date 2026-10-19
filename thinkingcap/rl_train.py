@@ -71,6 +71,8 @@ def parse_arguments():
     parser.add_argument("--redundant-quantile", type=float, default=0.2)
     parser.add_argument("--settle-threshold", type=float, default=0.9)
     parser.add_argument("--lr", type=float, default=2e-5)
+    parser.add_argument("--batch-tokens", type=int, default=4096,
+                        help="padded tokens per training forward pass")
     parser.add_argument("--rank", type=int, default=16, help="only used without --init-adapter")
     parser.add_argument("--backend", choices=["vllm", "hf"], default="vllm")
     parser.add_argument("--attention-backend", default=None, help="vLLM backend; TRITON_ATTN on a T4")
@@ -139,6 +141,46 @@ def balanced_order(rows, rng):
         order += [q[index] for q in queues if index < len(q)]
         index += 1
     return order
+
+
+def batch_logps(model, rows, device):
+    """log pi(reply token | prefix) for each (prompt, reply) row, in one right-padded forward pass.
+
+    Logits are computed only on reply positions, through the output head, so memory grows with
+    the reply tokens rather than with batch x sequence x vocabulary.
+    """
+    import torch
+
+    from probe_curve import decoder_and_head
+    body, head = decoder_and_head(model)
+    width = max(len(p) + len(r) for p, r in rows)
+    ids = torch.zeros(len(rows), width, dtype=torch.long)
+    mask = torch.zeros(len(rows), width, dtype=torch.long)
+    for i, (prompt, reply) in enumerate(rows):
+        ids[i, :len(prompt) + len(reply)] = torch.tensor(prompt + reply)
+        mask[i, :len(prompt) + len(reply)] = 1
+    hidden = body(input_ids=ids.to(device), attention_mask=mask.to(device)).last_hidden_state
+    out = []
+    for i, (prompt, reply) in enumerate(rows):
+        positions = torch.arange(len(prompt) - 1, len(prompt) + len(reply) - 1, device=device)
+        logp = torch.log_softmax(head(hidden[i, positions]).float(), dim=-1)
+        out.append(logp.gather(1, torch.tensor(reply, device=device)[:, None])[:, 0])
+    return out
+
+
+def token_batches(jobs, budget):
+    """Jobs grouped so each group's padded size (rows x longest) stays within budget."""
+    jobs = sorted(jobs, key=lambda j: len(j[0]) + len(j[1]))
+    batches, current = [], []
+    for job in jobs:
+        longest = max([len(j[0]) + len(j[1]) for j in current] + [len(job[0]) + len(job[1])])
+        if current and longest * (len(current) + 1) > budget:
+            batches.append(current)
+            current = []
+        current.append(job)
+    if current:
+        batches.append(current)
+    return batches
 
 
 def norm_lp(logps):
@@ -293,49 +335,48 @@ def main():
         total_tokens = max(1, sum(len(j[1]) for j in jobs))
         model.train()
         loss_sum = 0.0
-        for prompt, reply, ok, advantage, thinking_len, question in jobs:
-            if not reply or (advantage == 0 and not ok):
-                continue
-            ids = torch.tensor([prompt + reply], device=device)
+        active = [j for j in jobs if j[1] and not (j[3] == 0 and not j[2])]
+        for batch in token_batches(active, args.batch_tokens):
             with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
-                logits = model(input_ids=ids).logits[0, len(prompt) - 1:-1]
-            logps = torch.log_softmax(logits.float(), dim=-1).gather(
-                1, torch.tensor(reply, device=device)[:, None])[:, 0]
-            redundant = set()
-            betas = gammas = None
-            if args.redundant.startswith("tokenprobe"):
-                scores = norm_lp(logps.tolist())
-                core = core_positions(scores, args.window, args.windows)
-                budget = len(core) * scale
-                if args.redundant == "tokenprobe-rs":
-                    advantages_t = (rs_advantages(advantage, scores, core, budget, args.rs_beta,
-                                                  args.rs_alpha, args.rs_lam) if ok else [advantage] * len(reply))
-                else:
-                    advantages_t = [advantage] * len(reply)
-                    betas, gammas = (kl_coefficients(len(reply), core, budget, args.kl_beta, args.lam_decay)
-                                     if ok else ([args.kl_beta] * len(reply), [0.0] * len(reply)))
-            else:
-                if ok and args.redundant == "confidence":
-                    redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
-                elif ok and args.redundant == "settle":
-                    redundant = settle_redundant(probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
-                                                 thinking_len, args.settle_threshold)
-                advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
-            weights = torch.tensor(advantages_t, device=device)
-            per_token = -weights * logps
-            if betas is not None:
+                batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+            refs = None
+            if args.redundant == "tokenprobe-kl":
                 with torch.no_grad(), model.disable_adapter():
                     with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
-                        ref_logits = model(input_ids=ids).logits[0, len(prompt) - 1:-1]
-                    ref = torch.log_softmax(ref_logits.float(), dim=-1).gather(
-                        1, torch.tensor(reply, device=device)[:, None])[:, 0]
-                gap = ref - logps  # k3 estimator of KL(pi || ref), per token
-                kl = torch.exp(gap) - gap - 1
-                per_token = per_token + torch.tensor(betas, device=device) * kl \
-                    + torch.tensor(gammas, device=device) * logps
-            loss = per_token.sum() / total_tokens
+                        refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+            loss = 0.0
+            for index, (prompt, reply, ok, advantage, thinking_len, question) in enumerate(batch):
+                logps = batch_lp[index]
+                redundant = set()
+                betas = gammas = None
+                if args.redundant.startswith("tokenprobe"):
+                    scores = norm_lp(logps.tolist())
+                    core = core_positions(scores, args.window, args.windows)
+                    budget = len(core) * scale
+                    if args.redundant == "tokenprobe-rs":
+                        advantages_t = (rs_advantages(advantage, scores, core, budget, args.rs_beta,
+                                                      args.rs_alpha, args.rs_lam) if ok else [advantage] * len(reply))
+                    else:
+                        advantages_t = [advantage] * len(reply)
+                        betas, gammas = (kl_coefficients(len(reply), core, budget, args.kl_beta, args.lam_decay)
+                                         if ok else ([args.kl_beta] * len(reply), [0.0] * len(reply)))
+                else:
+                    if ok and args.redundant == "confidence":
+                        redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
+                    elif ok and args.redundant == "settle":
+                        redundant = settle_redundant(
+                            probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
+                            thinking_len, args.settle_threshold)
+                    advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
+                per_token = -torch.tensor(advantages_t, device=device) * logps
+                if betas is not None:
+                    gap = refs[index] - logps  # k3 estimator of KL(pi || ref), per token
+                    kl = torch.exp(gap) - gap - 1
+                    per_token = per_token + torch.tensor(betas, device=device) * kl \
+                        + torch.tensor(gammas, device=device) * logps
+                loss = loss + per_token.sum() / total_tokens
             scaler.scale(loss).backward()
-            loss_sum += loss.item()
+            loss_sum += float(loss)
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(trainable, 1.0)
         scaler.step(optimizer)

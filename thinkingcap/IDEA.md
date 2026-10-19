@@ -88,6 +88,20 @@ annealed from 3 to 1.5) the other tokens lose their KL anchor to the base model 
 down. A variant marks redundant tokens with our own probe instead (everything after p(correct)
 settles).
 
+RL loop 1 (12 steps x 32 questions x 8 samples from the base model, GSM8K/ARC/CSQA, KL
+variant, alpha 0.5, lr 2e-5, LoRA r16, ~1h on an L4):
+
+| | tokens saved | accuracy change |
+|---|---|---|
+| BFCL (3 subsets) | +4% to +12% | -5.0 to +8.8 pp |
+| IFEval | +16% | -1.3 pp |
+| MBPP+ | -18% (longer) | -3.8 pp |
+| SVAMP | +13% | -1.3 pp |
+| **average** | **+5.7% [-4.0, 14.9]** | **-1.2 pp [-4.8, 2.7]** |
+
+Accuracy is preserved (within noise), unlike both SFT rounds, but 12 steps barely move the
+length: the published runs use hundreds of steps.
+
 ROUND3
 
 ## What did not work / limits

@@ -304,3 +304,24 @@ def test_balanced_order_interleaves_sources():
     assert [r["source"] for r in order] == ["a", "b", "a", "b", "a", "a", "a"]
     assert sorted(r["i"] for r in order if r["source"] == "a") == list(range(5))
     assert [r["i"] for r in balanced_order(rows, random.Random(1))] != [r["i"] for r in order]
+
+
+def test_batched_logps_match_one_row_at_a_time():
+    import torch
+    from transformers import Qwen3Config, Qwen3ForCausalLM
+
+    from rl_train import batch_logps, token_batches
+    torch.manual_seed(0)
+    model = Qwen3ForCausalLM(Qwen3Config(
+        vocab_size=50, hidden_size=32, intermediate_size=64, num_hidden_layers=2, num_attention_heads=4,
+        num_key_value_heads=2, head_dim=8, max_position_embeddings=128)).eval()
+    rows = [([1, 2, 3], [4, 5, 6, 7]), ([8, 9], [10]), ([11, 12, 13, 14], [15, 16])]
+    with torch.no_grad():
+        together = batch_logps(model, rows, "cpu")
+        alone = [batch_logps(model, [row], "cpu")[0] for row in rows]
+    for a, b in zip(together, alone):
+        assert torch.allclose(a, b, atol=1e-5)
+    jobs = [([0] * n, [0] * n) for n in (1, 2, 3, 4, 5)]
+    batches = token_batches(jobs, budget=12)
+    assert sum(len(b) for b in batches) == 5
+    assert all(max(len(p) + len(r) for p, r in b) * len(b) <= 12 or len(b) == 1 for b in batches)
