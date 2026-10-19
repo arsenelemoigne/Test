@@ -57,6 +57,11 @@ def main():
     targets, log = [], []
     for number, group in enumerate(by_question.values(), 1):
         accepted = []
+        if group[0]["source"] in args.full_sources:  # e.g. math: the reasoning is needed to the end
+            full = [original_target(r) for r in group if r["correct"] and not r["truncated"] and r["closed_thinking"]]
+            if full:
+                targets.append(min(full, key=lambda t: len(t["completion_ids"])))
+            continue
         for rollout in group:
             if not (rollout["correct"] and rollout["closed_thinking"]):
                 continue
@@ -88,6 +93,8 @@ def parse_arguments():
     parser.add_argument("--travel", type=float, default=256,
                         help="mvt travel cost c in tokens: the answer that follows anyway; larger stays longer")
     parser.add_argument("--adapter", help="LoRA to merge into --model before scoring and checking")
+    parser.add_argument("--full-sources", type=lambda text: set(text.split(",")), default=set(),
+                        help="datasets kept whole (shortest correct rollout, no cut), e.g. gsm8k")
     parser.add_argument("--threshold", type=float, default=0.9, help="p(gold) a kept trace must reach")
     parser.add_argument("--flat", type=float, default=0.02,
                         help="a step whose p(gold) gain over the best earlier point is at most this is 'flat'")

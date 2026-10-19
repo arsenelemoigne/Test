@@ -31,7 +31,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "scores"))
+    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -39,13 +39,14 @@ def main():
     parser.add_argument("--word-step", type=float, default=0.1, help="fading: words compacted per round; 0 = paragraphs only")
     parser.add_argument("--tag", default="", help="suffix for the fading run's directories")
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--full-sources", default="", help="mvt: datasets whose traces stay whole, e.g. gsm8k")
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
     update()
     globals()[args.stage](args)
 
 
-def update():
+def update(restart=True):
     """On Colab, pull this branch's scripts before every stage, so a pushed fix needs no restart."""
     if os.environ.get("TRACK_UPDATED") or not Path("/content").exists():
         return
@@ -56,13 +57,15 @@ def update():
         print("could not update the scripts; running the local copies", flush=True)
         return
     changed = False
-    for source in (clone / "thinkingcap").glob("*.py"):
+    for source in [*(clone / "thinkingcap").glob("*.py"), clone / "thinkingcap" / "plan.txt"]:
+        if not source.exists():
+            continue
         if not Path(source.name).exists() or not filecmp.cmp(source, source.name, shallow=False):
             shutil.copy(source, source.name)
             changed |= source.name == "track.py"
     print("scripts at " + subprocess.run(["git", "-C", str(clone), "log", "-1", "--format=%h %s"],
                                          capture_output=True, text=True).stdout.strip(), flush=True)
-    if changed:
+    if changed and restart:
         os.execve(sys.executable, [sys.executable, *sys.argv], os.environ | {"TRACK_UPDATED": "1"})
 
 
@@ -103,11 +106,12 @@ def rollouts(args):
 
 
 def mvt(args):
-    name = f"mvth{args.travel:g}"  # "h": the full look-ahead rule (the 2-step one, "mvt256", left at 0 on math)
+    name = f"mvth{args.travel:g}" + (f"-full-{args.full_sources.replace(',', '-')}" if args.full_sources else "")  # "h": the full look-ahead rule (the 2-step one, "mvt256", left at 0 on math)
     prune, adapter, out = ROOT / f"prune-{name}", Path("adapters") / name, ROOT / f"eval-{name}"
     if not (prune / "sft.jsonl").exists():
         py("prune_traces.py", "--rollouts", ROLLOUTS, "--out", prune, "--rule", "mvt", "--travel", args.travel,
-           "--check-samples", 4, "--dtype", args.dtype)
+           "--check-samples", 4, "--dtype", args.dtype,
+           *(["--full-sources", args.full_sources] if args.full_sources else []))
     print((prune / "summary.txt").read_text())
     if not (adapter / "adapter_config.json").exists():
         py("sft.py", "--data", prune / "sft.jsonl", "--out", adapter, "--max-per-source", 70, "--dtype", args.dtype)
@@ -193,7 +197,33 @@ def diagnose(out, dataset="svamp", examples=2):
     return "\n".join(lines)
 
 
+def plan(args):
+    """Run every line of plan.txt (track.py arguments) in order, rereading it after each stage.
+
+    plan.txt comes from the branch, so pushing a line queues a new stage without touching the
+    notebook. Stages skip finished work, so a line already done costs nothing.
+    """
+    done = set()
+    while True:
+        lines = [l.split("#")[0].strip() for l in Path("plan.txt").read_text().splitlines()] \
+            if Path("plan.txt").exists() else []
+        todo = [l for l in lines if l and l not in done]
+        if not todo:
+            return
+        print(f"plan: {todo[0]}", flush=True)
+        if subprocess.run([sys.executable, "track.py", *todo[0].split()], env=os.environ | {"TRACK_UPDATED": ""}).returncode:
+            print(f"plan: '{todo[0]}' failed; moving on", flush=True)
+        done.add(todo[0])
+        update_files()
+
+
+def update_files():
+    os.environ.pop("TRACK_UPDATED", None)
+    update(restart=False)
+
+
 def scores(args):
+    plan(args)  # the notebook's last cell: work through the queued plan first
     for out in sorted(ROOT.glob("eval-*")):
         if out != BASE and (out / "results.json").exists():
             print(score_line(out.name.removeprefix("eval-"), out))
