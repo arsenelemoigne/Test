@@ -131,3 +131,24 @@ run with this rule was stopped after 20 questions: it would cut math the same wa
 **Fix (`d96087f`)**: leave only when no later point of the trace pays better per token than
 the average rate g(t) / (t + c). With a step-shaped curve, it waits for the jump. Runs with
 this rule are named `mvth<c>`.
+
+### Run mvth1024 (full look-ahead rule, travel 1024)
+
+Same settings as mvt256. Pruning: 302 targets (285 pruned, 8 truncated, 9 original); mean
+completion 576 -> 129 tokens (-78%): ARC -78%, CSQA -78%, GSM8K -77% (1,024 -> 239).
+Only 17 of 512 correct rollouts failed the check. Settle vs MVT: median thinking kept settle
+214, MVT 51; MVT earlier 34%, later 4%, same 63%.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | -1% / +27% / +24% | -5.0 / -2.5 / +2.5 |
+| IFEval | +59% | +3.7 |
+| MBPP+ | +64% | -8.7 |
+| SVAMP | +54% | **-23.7** |
+| **average** | **+51.2%** | **-7.6 pp [-11.8, -3.5]**: outside the limit |
+
+The fixed rule no longer leaves math at p(gold) 0, yet SVAMP falls as much as before, and the
+most patient travel cost tried still cuts the training traces by 78%. The cut point is not the
+problem: one-shot SFT on traces that end right after the number appears teaches the model to
+stop reasoning early, on held-out math too. Every one-cut SFT variant so far (settle, settle +
+margin, MVT 256, MVT 1024) lands between -6 and -8 points with SVAMP -21 to -24.
