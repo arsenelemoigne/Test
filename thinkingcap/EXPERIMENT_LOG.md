@@ -87,6 +87,21 @@ On these subjects RL makes the model both shorter and more accurate: the raw mod
 past the 2,048-token cap on math and never answers. The weak point is transfer to the test
 benchmarks (code, function calling, instructions), which training does not cover.
 
+## Steering vector (no training)
+
+Concise-minus-verbose direction from 97 pairs of correct replies to the same question
+(concise 369 tokens, verbose 913 on average), residual stream after layer 14 of 28, stored
+as a v_proj bias. Same held-out check as above (128 questions x 4).
+
+| model | all | ARC | CSQA | GSM8K | Skywork |
+|---|---|---|---|---|---|
+| raw | 45.7% / 1,092 | 85.2% / 495 | 57.0% / 502 | 38.3% / 1,475 | 2.3% / 1,898 |
+| raw + steer x0.5 | 45.7% / 1,069 | 82.0% / 486 | 52.3% / 520 | 44.5% / 1,369 | 3.9% / 1,902 |
+| raw + steer x1 | 48.6% / 1,029 | 83.6% / 473 | 61.7% / 441 | 45.3% / 1,303 | 3.9% / 1,899 |
+| raw + steer x2 | 52.0% / 991 | 82.8% / 493 | 59.4% / 462 | 60.2% / 1,143 | 5.5% / 1,867 |
+
+The effect grows with strength and is still far from loop 1 (58.8% / 859): larger strengths next.
+
 ## Evaluation details
 
 **Blend 50/50** (accuracy / mean tokens, raw in brackets): BFCL irrelevance 80.0% / 193 (85.0 / 205);
