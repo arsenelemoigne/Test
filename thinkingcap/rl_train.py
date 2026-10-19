@@ -79,6 +79,8 @@ def parse_arguments():
     parser.add_argument("--gpu-memory", type=float, default=0.35, help="vLLM share of the GPU")
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--eval-only", action="store_true",
+                        help="no training: score --init-adapter (or the base model) on the first --questions of --data")
     return parser.parse_args()
 
 
@@ -249,7 +251,7 @@ class Sampler:
             from vllm.lora.request import LoRARequest
             params = SamplingParams(n=self.args.group, max_tokens=self.args.max_tokens,
                                     seed=self.args.seed + step, stop_token_ids=[eos], **SAMPLING)
-            lora = LoRARequest(f"step{step}", step + 1, str(Path(adapter_dir).resolve()))
+            lora = LoRARequest(f"step{step}", step + 1, str(Path(adapter_dir).resolve())) if adapter_dir else None
             outputs = self.engine.generate([{"prompt_token_ids": p} for p in prompts], params, lora_request=lora)
             return [[list(o.token_ids) for o in out.outputs] for out in outputs]
         import torch
@@ -271,8 +273,39 @@ class Sampler:
 
 # ---------------------------------------------------------------- training
 
+def held_out_eval(args):
+    """Accuracy and length on a fixed, never-trained-on question set, per source."""
+    from transformers import AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
+    keep = set(args.sources.split(","))
+    questions = balanced_order([r for r in read_jsonl(Path(args.data)) if r["source"] in keep],
+                               random.Random(0))[:args.questions]
+    prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
+                                             enable_thinking=True) for q in questions]
+    replies = Sampler(args, tokenizer).sample(prompts, args.init_adapter, 0)
+    stats = {}
+    for question, group in zip(questions, replies):
+        entry = stats.setdefault(question["source"], {"correct": 0, "replies": 0, "tokens": 0})
+        for reply in group:
+            entry["correct"] += bool(reply) and reply[-1] == eos and is_task_correct(
+                tokenizer.decode(reply, skip_special_tokens=True), question["answer"], question["task"])
+            entry["replies"] += 1
+            entry["tokens"] += len(reply)
+    rows = {source: {"accuracy": e["correct"] / e["replies"], "mean_tokens": e["tokens"] / e["replies"]}
+            for source, e in sorted(stats.items())}
+    total = {k: sum(e[k] for e in stats.values()) for k in ("correct", "replies", "tokens")}
+    rows["all"] = {"accuracy": total["correct"] / total["replies"], "mean_tokens": total["tokens"] / total["replies"]}
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "held_out.json").write_text(json.dumps(rows, indent=1))
+    print(json.dumps(rows), flush=True)
+
+
 def main():
     args = parse_arguments()
+    if args.eval_only:
+        return held_out_eval(args)
     import torch
     from peft import LoraConfig, PeftModel, get_peft_model
     from transformers import AutoModelForCausalLM, AutoTokenizer
