@@ -64,7 +64,31 @@ immediately".
 require 4 correct natural answers instead of 2 (`--check-samples 4`), and cap training at
 70 traces per dataset (`--max-per-source 70`).
 
-ROUND2
+Rerun on an L4 in bf16, with its own base run on the same subset:
+
+| | tokens saved | accuracy change |
+|---|---|---|
+| BFCL (3 subsets) | +32% to +39% | -10.0 to -3.8 pp |
+| IFEval | +40% | +3.8 pp |
+| MBPP+ | +86% | -6.3 pp |
+| SVAMP | +49% | -23.8 pp |
+| **average** | **+59.6% [51.2, 67.7]** | **-8.0 pp [-12.2, -4.0]** |
+
+More shortening, no accuracy recovery: SVAMP gets worse. Imitating pruned traces teaches
+"short" faster than it teaches "correct". The TokenProbe paper reports the same thing (SFT on
+compressed traces degenerates), and both it and ShorterBetter train with RL from the base
+model, where a wrong answer always loses reward. That is the next stage.
+
+**Round 3: RL from the base model** (`rl_train.py`). Per question, 8 sampled replies.
+Reply-level reward from ShorterBetter: correct replies are rewarded for being close to the
+group's shortest correct length L* (the group mean when none is correct), wrong ones never
+beat a correct one. Token-level pressure from TokenProbe: each reply's log-probs are z-scored,
+the best 10-token windows are "core", and in replies over a budget (core length x a scale
+annealed from 3 to 1.5) the other tokens lose their KL anchor to the base model and are pushed
+down. A variant marks redundant tokens with our own probe instead (everything after p(correct)
+settles).
+
+ROUND3
 
 ## What did not work / limits
 

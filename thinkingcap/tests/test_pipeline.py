@@ -295,3 +295,12 @@ def test_tokenprobe_core_windows_budget_and_coefficients():
     betas, gammas = kl_coefficients(4, {0, 1}, budget=2, beta=0.01, lam_decay=0.4)
     assert betas == [0.01, 0.01, 0.0, 0.0] and gammas == [0.0, 0.0, 0.2, 0.2]
     assert kl_coefficients(2, {0}, budget=3, beta=0.01, lam_decay=0.4) == ([0.01, 0.01], [0.0, 0.0])
+
+
+def test_balanced_order_interleaves_sources():
+    from rl_train import balanced_order
+    rows = [{"source": "a", "i": i} for i in range(5)] + [{"source": "b", "i": i} for i in range(2)]
+    order = balanced_order(rows, random.Random(0))
+    assert [r["source"] for r in order] == ["a", "b", "a", "b", "a", "a", "a"]
+    assert sorted(r["i"] for r in order if r["source"] == "a") == list(range(5))
+    assert [r["i"] for r in balanced_order(rows, random.Random(1))] != [r["i"] for r in order]

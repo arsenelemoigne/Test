@@ -49,7 +49,7 @@ def parse_arguments():
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
     parser.add_argument("--init-adapter", help="LoRA to continue from (the SFT warm start)")
     parser.add_argument("--data", default="data/train.jsonl")
-    parser.add_argument("--sources", default="gsm8k,arc_easy,commonsense_qa")
+    parser.add_argument("--sources", default="gsm8k,skywork,arc_easy,commonsense_qa")
     parser.add_argument("--out", required=True)
     parser.add_argument("--steps", type=int, default=6)
     parser.add_argument("--questions", type=int, default=32, help="questions per step")
@@ -122,6 +122,23 @@ def settle_redundant(p_gold_by_cut, thinking_len, threshold):
         else:
             settle = None
     return set() if settle is None else set(range(settle, thinking_len))
+
+
+def balanced_order(rows, rng):
+    """Rows shuffled within each source, then interleaved round-robin, so every step sees every
+    source in equal measure however unequal their sizes; --seed picks a different slice."""
+    by_source = {}
+    for row in rows:
+        by_source.setdefault(row["source"], []).append(row)
+    queues = []
+    for source in sorted(by_source):
+        rng.shuffle(by_source[source])
+        queues.append(by_source[source])
+    order, index = [], 0
+    while any(index < len(q) for q in queues):
+        order += [q[index] for q in queues if index < len(q)]
+        index += 1
+    return order
 
 
 def norm_lp(logps):
@@ -243,8 +260,7 @@ def main():
     eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
 
     keep = set(args.sources.split(","))
-    pool = [r for r in read_jsonl(Path(args.data)) if r["source"] in keep]
-    random.shuffle(pool)
+    pool = balanced_order([r for r in read_jsonl(Path(args.data)) if r["source"] in keep], random.Random(args.seed))
     current = out / "current"
     model.save_pretrained(current)
     sampler = Sampler(args, tokenizer)
