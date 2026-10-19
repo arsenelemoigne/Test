@@ -280,6 +280,29 @@ def test_rl_train_runs_on_the_toy_model(toy):
         log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
         assert [e["step"] for e in log] == [1, 2] and all(0 <= e["accuracy"] <= 1 for e in log)
         assert (out / "adapter_config.json").exists()
+    out = work / "rl-stable"
+    run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+        "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
+        "--max-tokens", "40", "--backend", "hf", "--redundant", "tokenprobe-kl", "--dtype", "float32",
+        "--updates", "2", "--lr", "1e-4", "--lr-end", "1e-6", "--restarts", "2", "--entropy-coef", "0.01",
+        "--no-think-share", "0.34", "--no-think-bonus", "0.1", cwd=ROOT)
+    log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+    assert all(e["entropy"] > 0 and 0 <= e["no_think_accuracy"] <= 1 for e in log)
+    assert [e["lr"] for e in log] == [1e-4, 1e-4]  # two cycles of one step each: every step restarts
+
+
+def test_learning_rate_schedule_and_group_split():
+    from rl_train import learning_rate, split_groups
+    assert learning_rate(3, 10, 1e-4, None, 1) == 1e-4
+    assert learning_rate(0, 10, 1e-4, 1e-6, 1) == 1e-4
+    assert abs(learning_rate(9, 10, 1e-4, 1e-6, 1) - 1e-6) < 1e-12
+    assert learning_rate(5, 10, 1e-4, 1e-6, 2) == 1e-4  # second cycle restarts at the top
+    questions = [{"q": i} for i in range(3)]
+    jobs = [("p", [1], True, 0.5, 0, q) for q in questions for _ in range(4)]
+    chunks = split_groups(jobs, 2, random.Random(0))
+    assert len(chunks) == 2 and sum(map(len, chunks)) == 12
+    for chunk in chunks:  # a question's replies never straddle two optimizer steps
+        assert all(sum(j[5] is q for j in chunk) in (0, 4) for q in questions)
 
 
 def test_tokenprobe_core_windows_budget_and_coefficients():
@@ -325,3 +348,29 @@ def test_batched_logps_match_one_row_at_a_time():
     batches = token_batches(jobs, budget=12)
     assert sum(len(b) for b in batches) == 5
     assert all(max(len(p) + len(r) for p, r in b) * len(b) <= 12 or len(b) == 1 for b in batches)
+
+
+def test_steering_bias_adds_the_vector_to_the_attention_output(tmp_path):
+    import torch
+    from transformers import Qwen3Config, Qwen3ForCausalLM
+
+    from steer import concise_verbose_pairs, steered_model
+    config = Qwen3Config(vocab_size=50, hidden_size=32, intermediate_size=64, num_hidden_layers=2,
+                         num_attention_heads=4, num_key_value_heads=2, head_dim=16)
+    torch.manual_seed(0)
+    Qwen3ForCausalLM(config).save_pretrained(tmp_path / "base")
+    vector = torch.randn(32)
+    steered = steered_model(str(tmp_path / "base"), 1, vector, torch.float32)
+    steered.save_pretrained(tmp_path / "steered")
+    plain = Qwen3ForCausalLM.from_pretrained(tmp_path / "base")
+    reloaded = Qwen3ForCausalLM.from_pretrained(tmp_path / "steered")
+    captured = {}
+    for name, model in (("plain", plain), ("steered", reloaded)):
+        model.model.layers[1].self_attn.register_forward_hook(
+            lambda module, inputs, output, name=name: captured.__setitem__(name, output[0]))
+        model(input_ids=torch.tensor([[1, 5, 9, 3, 7]]))
+    # layer 0 is untouched, so layer 1 sees the same input; every position's attention output moves by v
+    shift = captured["steered"] - captured["plain"]
+    assert torch.allclose(shift, vector.expand_as(shift), atol=1e-4)
+    groups = [([0], [[1] * 10, [1] * 3, [1] * 4], [True, True, False]), ([0], [[1] * 4, [1] * 5], [True, True])]
+    assert concise_verbose_pairs(groups, 1.5) == [([0], [1] * 3, [1] * 10)]

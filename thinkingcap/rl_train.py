@@ -25,6 +25,17 @@ LoRA, then takes one policy-gradient step (GRPO-style group advantages, on-polic
                   -gamma_t * log pi with gamma_t = lam_decay * (T - L) / T.
             Wrong replies get the plain update (plus the KL anchor in kl mode).
 
+Stability knobs (DLER: the penalty matters less than stable training): --lr-end with
+--restarts gives a cosine decay that restarts --restarts times; --updates splits each step's
+groups into that many optimizer steps; --entropy-coef adds a bonus on the policy's mean token
+entropy, which is logged every step so a collapse (the model no longer exploring) shows.
+
+AdaptThink (--no-think-share): that share of each group starts with an empty
+"<think>\n\n</think>\n\n", the prefix Qwen3's own non-thinking mode uses, as part of the reply.
+The policy is trained on those prefix tokens too, so it learns when skipping the thinking still
+gives a correct answer; that reply is the group's shortest, so the length reward favours it
+whenever it is right. --no-think-bonus adds AdaptThink's delta to correct no-think replies.
+
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
     python rl_train.py --init-adapter adapters/pruned_v2 --out adapters/rl --steps 6
@@ -71,6 +82,13 @@ def parse_arguments():
     parser.add_argument("--redundant-quantile", type=float, default=0.2)
     parser.add_argument("--settle-threshold", type=float, default=0.9)
     parser.add_argument("--lr", type=float, default=2e-5)
+    parser.add_argument("--lr-end", type=float, help="cosine-decay the lr to this (default: constant)")
+    parser.add_argument("--restarts", type=int, default=1, help="cosine cycles over the run (warm restarts)")
+    parser.add_argument("--updates", type=int, default=1, help="optimizer steps per sampling step")
+    parser.add_argument("--entropy-coef", type=float, default=0.0, help="bonus on mean token entropy")
+    parser.add_argument("--no-think-share", type=float, default=0.0,
+                        help="share of each group sampled with an empty thinking block (AdaptThink)")
+    parser.add_argument("--no-think-bonus", type=float, default=0.0)
     parser.add_argument("--batch-tokens", type=int, default=4096,
                         help="padded tokens per training forward pass")
     parser.add_argument("--rank", type=int, default=16, help="only used without --init-adapter")
@@ -99,6 +117,25 @@ def length_rewards(lengths, correct, alpha):
     target = max(target, 1)
     return [max(0.0, 1 - alpha * abs(n - target) / target) if ok else -alpha * abs(n - target) / target
             for n, ok in zip(lengths, correct)]
+
+
+def learning_rate(step, steps, lr, lr_end, restarts):
+    """Cosine from lr to lr_end within each of `restarts` equal cycles; constant without lr_end."""
+    if lr_end is None:
+        return lr
+    cycle = max(1, math.ceil(steps / max(1, restarts)))
+    position = (step % cycle) / max(1, cycle - 1)
+    return lr_end + (lr - lr_end) * (1 + math.cos(math.pi * position)) / 2
+
+
+def split_groups(jobs, parts, rng):
+    """Jobs split into `parts` chunks of whole question groups (a group's advantages stay together)."""
+    groups = {}
+    for job in jobs:
+        groups.setdefault(id(job[5]), []).append(job)
+    order = list(groups.values())
+    rng.shuffle(order)
+    return [[j for g in order[i::parts] for j in g] for i in range(parts) if order[i::parts]]
 
 
 def group_advantages(rewards):
@@ -145,7 +182,7 @@ def balanced_order(rows, rng):
     return order
 
 
-def batch_logps(model, rows, device):
+def batch_logps(model, rows, device, entropies=None):
     """log pi(reply token | prefix) for each (prompt, reply) row, in one right-padded forward pass.
 
     Logits are computed only on reply positions, through the output head, so memory grows with
@@ -167,6 +204,8 @@ def batch_logps(model, rows, device):
         positions = torch.arange(len(prompt) - 1, len(prompt) + len(reply) - 1, device=device)
         logp = torch.log_softmax(head(hidden[i, positions]).float(), dim=-1)
         out.append(logp.gather(1, torch.tensor(reply, device=device)[:, None])[:, 0])
+        if entropies is not None:
+            entropies.append(-(logp.exp() * logp).sum(-1))
     return out
 
 
@@ -231,6 +270,8 @@ def token_advantages(advantage, length, redundant, lam):
 
 # ---------------------------------------------------------------- sampling
 
+NO_THINK = "<think>\n\n</think>\n\n"  # what Qwen3's chat template inserts with enable_thinking=False
+
 class Sampler:
     """Replies from the current adapter: vLLM on a GPU (reloads the LoRA each step), HF otherwise."""
 
@@ -244,28 +285,44 @@ class Sampler:
                               max_lora_rank=64, gpu_memory_utilization=args.gpu_memory,
                               max_model_len=args.max_tokens + 1024, generation_config="vllm", **extra)
 
-    def sample(self, prompts, adapter_dir, step, model=None):
+    def sample(self, prompts, adapter_dir, step, model=None, no_think=0):
+        """--group replies per prompt; the last `no_think` of each group start with an empty
+        thinking block, which is returned as part of the reply."""
         eos = self.tokenizer.convert_tokens_to_ids("<|im_end|>")
+        prefix = self.tokenizer.encode(NO_THINK, add_special_tokens=False)
+        counts = [(self.args.group - no_think, []), (no_think, prefix)]
         if self.args.backend == "vllm":
             from vllm import SamplingParams
             from vllm.lora.request import LoRARequest
-            params = SamplingParams(n=self.args.group, max_tokens=self.args.max_tokens,
-                                    seed=self.args.seed + step, stop_token_ids=[eos], **SAMPLING)
             lora = LoRARequest(f"step{step}", step + 1, str(Path(adapter_dir).resolve())) if adapter_dir else None
-            outputs = self.engine.generate([{"prompt_token_ids": p} for p in prompts], params, lora_request=lora)
-            return [[list(o.token_ids) for o in out.outputs] for out in outputs]
+            requests, params = [], []
+            for n, start in counts:
+                if n:
+                    requests += [{"prompt_token_ids": p + start} for p in prompts]
+                    params += [SamplingParams(n=n, max_tokens=self.args.max_tokens - len(start),
+                                              seed=self.args.seed + step, stop_token_ids=[eos],
+                                              **SAMPLING)] * len(prompts)
+            outputs = self.engine.generate(requests, params, lora_request=lora)
+            replies = [[] for _ in prompts]
+            for index, out in enumerate(outputs):
+                start = counts[0][1] if index < len(prompts) and counts[0][0] else prefix
+                replies[index % len(prompts)] += [start + list(o.token_ids) for o in out.outputs]
+            return replies
         import torch
         replies = []
         model.eval()
         for prompt in prompts:
-            ids = torch.tensor([prompt], device=model.device)
-            with torch.no_grad():
-                out = model.generate(ids, attention_mask=torch.ones_like(ids), do_sample=True,
-                                     num_return_sequences=self.args.group, max_new_tokens=self.args.max_tokens,
-                                     eos_token_id=eos, pad_token_id=eos, **SAMPLING)
             group = []
-            for row in out[:, len(prompt):].tolist():
-                group.append(row[:row.index(eos) + 1] if eos in row else row)
+            for n, start in counts:
+                if not n:
+                    continue
+                ids = torch.tensor([prompt + start], device=model.device)
+                with torch.no_grad():
+                    out = model.generate(ids, attention_mask=torch.ones_like(ids), do_sample=True,
+                                         num_return_sequences=n, max_new_tokens=self.args.max_tokens - len(start),
+                                         eos_token_id=eos, pad_token_id=eos, **SAMPLING)
+                for row in out[:, len(prompt) + len(start):].tolist():
+                    group.append(start + (row[:row.index(eos) + 1] if eos in row else row))
             replies.append(group)
         model.train()
         return replies
@@ -284,18 +341,24 @@ def held_out_eval(args):
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
     replies = Sampler(args, tokenizer).sample(prompts, args.init_adapter, 0)
+    close_id = tokenizer.convert_tokens_to_ids("</think>")
+    keys = ("correct", "replies", "tokens", "thinking", "skipped")
     stats = {}
     for question, group in zip(questions, replies):
-        entry = stats.setdefault(question["source"], {"correct": 0, "replies": 0, "tokens": 0})
+        entry = stats.setdefault(question["source"], dict.fromkeys(keys, 0))
         for reply in group:
+            thinking = reply.index(close_id) if close_id in reply else len(reply)
             entry["correct"] += bool(reply) and reply[-1] == eos and is_task_correct(
                 tokenizer.decode(reply, skip_special_tokens=True), question["answer"], question["task"])
             entry["replies"] += 1
             entry["tokens"] += len(reply)
-    rows = {source: {"accuracy": e["correct"] / e["replies"], "mean_tokens": e["tokens"] / e["replies"]}
+            entry["thinking"] += thinking
+            entry["skipped"] += thinking <= 4  # "<think>\n\n" only
+    stats["all"] = {k: sum(e[k] for e in stats.values()) for k in keys}
+    rows = {source: {"accuracy": e["correct"] / e["replies"], "mean_tokens": e["tokens"] / e["replies"],
+                     "mean_thinking_tokens": e["thinking"] / e["replies"],
+                     "skipped_thinking": e["skipped"] / e["replies"]}
             for source, e in sorted(stats.items())}
-    total = {k: sum(e[k] for e in stats.values()) for k in ("correct", "replies", "tokens")}
-    rows["all"] = {"accuracy": total["correct"] / total["replies"], "mean_tokens": total["tokens"] / total["replies"]}
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "held_out.json").write_text(json.dumps(rows, indent=1))
@@ -340,21 +403,30 @@ def main():
     model.save_pretrained(current)
     sampler = Sampler(args, tokenizer)
     log = []
+    rng = random.Random(args.seed)
 
     for step in range(args.steps):
         scale = args.scale_start + (args.scale_end - args.scale_start) * step / max(1, args.steps - 1)
         questions = [pool[(step * args.questions + i) % len(pool)] for i in range(args.questions)]
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
-        replies = sampler.sample(prompts, current, step, model)
+        no_think = round(args.group * args.no_think_share)
+        replies = sampler.sample(prompts, current, step, model, no_think)
 
-        jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0}
+        jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
+                           "no_think_correct": 0, "no_think_replies": 0}
         for question, prompt, group in zip(questions, prompts, replies):
             correct = [bool(r) and r[-1] == eos and is_task_correct(
                 tokenizer.decode(r, skip_special_tokens=True), question["answer"], question["task"])
                 for r in group]
             rewards = length_rewards([len(r) for r in group], correct, args.alpha)
+            skipped = [i >= len(group) - no_think for i in range(len(group))]
+            rewards = [r + (args.no_think_bonus if ok and skip else 0.0)
+                       for r, ok, skip in zip(rewards, correct, skipped)]
             advantages = group_advantages(rewards)
+            stats["no_think_correct"] += sum(ok for ok, skip in zip(correct, skipped) if skip)
+            stats["no_think_replies"] += sum(skipped)
+            stats["thinking"] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
             stats["correct"] += sum(correct)
             stats["replies"] += len(group)
             stats["tokens"] += sum(map(len, group))
@@ -364,62 +436,75 @@ def main():
                 thinking_len = reply.index(close_id) if close_id in reply else len(reply)
                 jobs.append((prompt, reply, ok, advantage, thinking_len, question))
 
-        # one on-policy step: loss = -sum_t A_t log pi(token_t), averaged over all tokens
-        total_tokens = max(1, sum(len(j[1]) for j in jobs))
+        # on-policy update(s): loss = -sum_t A_t log pi(token_t), averaged over the chunk's tokens
+        lr = learning_rate(step, args.steps, args.lr, args.lr_end, args.restarts)
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr
         model.train()
-        loss_sum = 0.0
+        loss_sum, entropy_sum, entropy_count = 0.0, 0.0, 0
         active = [j for j in jobs if j[1] and not (j[3] == 0 and not j[2])]
-        for batch in token_batches(active, args.batch_tokens):
-            with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
-                batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device)
-            refs = None
-            if args.redundant == "tokenprobe-kl":
-                with torch.no_grad(), model.disable_adapter():
-                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
-                        refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
-            loss = 0.0
-            for index, (prompt, reply, ok, advantage, thinking_len, question) in enumerate(batch):
-                logps = batch_lp[index]
-                redundant = set()
-                betas = gammas = None
-                if args.redundant.startswith("tokenprobe"):
-                    scores = norm_lp(logps.tolist())
-                    core = core_positions(scores, args.window, args.windows)
-                    budget = len(core) * scale
-                    if args.redundant == "tokenprobe-rs":
-                        advantages_t = (rs_advantages(advantage, scores, core, budget, args.rs_beta,
-                                                      args.rs_alpha, args.rs_lam) if ok else [advantage] * len(reply))
+        for chunk in split_groups(active, args.updates, rng):
+            total_tokens = max(1, sum(len(j[1]) for j in chunk))
+            for batch in token_batches(chunk, args.batch_tokens):
+                with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                    entropies = []
+                    batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
+                refs = None
+                if args.redundant == "tokenprobe-kl":
+                    with torch.no_grad(), model.disable_adapter():
+                        with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                            refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                loss = 0.0
+                for index, (prompt, reply, ok, advantage, thinking_len, question) in enumerate(batch):
+                    logps = batch_lp[index]
+                    redundant = set()
+                    betas = gammas = None
+                    if args.redundant.startswith("tokenprobe"):
+                        scores = norm_lp(logps.tolist())
+                        core = core_positions(scores, args.window, args.windows)
+                        budget = len(core) * scale
+                        if args.redundant == "tokenprobe-rs":
+                            advantages_t = (rs_advantages(advantage, scores, core, budget, args.rs_beta,
+                                                          args.rs_alpha, args.rs_lam) if ok else [advantage] * len(reply))
+                        else:
+                            advantages_t = [advantage] * len(reply)
+                            betas, gammas = (kl_coefficients(len(reply), core, budget, args.kl_beta, args.lam_decay)
+                                             if ok else ([args.kl_beta] * len(reply), [0.0] * len(reply)))
                     else:
-                        advantages_t = [advantage] * len(reply)
-                        betas, gammas = (kl_coefficients(len(reply), core, budget, args.kl_beta, args.lam_decay)
-                                         if ok else ([args.kl_beta] * len(reply), [0.0] * len(reply)))
-                else:
-                    if ok and args.redundant == "confidence":
-                        redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
-                    elif ok and args.redundant == "settle":
-                        redundant = settle_redundant(
-                            probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
-                            thinking_len, args.settle_threshold)
-                    advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
-                per_token = -torch.tensor(advantages_t, device=device) * logps
-                if betas is not None:
-                    gap = refs[index] - logps  # k3 estimator of KL(pi || ref), per token
-                    kl = torch.exp(gap) - gap - 1
-                    per_token = per_token + torch.tensor(betas, device=device) * kl \
-                        + torch.tensor(gammas, device=device) * logps
-                loss = loss + per_token.sum() / total_tokens
-            scaler.scale(loss).backward()
-            loss_sum += float(loss)
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(trainable, 1.0)
-        scaler.step(optimizer)
-        scaler.update()
-        optimizer.zero_grad(set_to_none=True)
+                        if ok and args.redundant == "confidence":
+                            redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
+                        elif ok and args.redundant == "settle":
+                            redundant = settle_redundant(
+                                probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
+                                thinking_len, args.settle_threshold)
+                        advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
+                    per_token = -torch.tensor(advantages_t, device=device) * logps
+                    if betas is not None:
+                        gap = refs[index] - logps  # k3 estimator of KL(pi || ref), per token
+                        kl = torch.exp(gap) - gap - 1
+                        per_token = per_token + torch.tensor(betas, device=device) * kl \
+                            + torch.tensor(gammas, device=device) * logps
+                    if args.entropy_coef:
+                        per_token = per_token - args.entropy_coef * entropies[index]
+                    entropy_sum += float(entropies[index].detach().sum())
+                    entropy_count += len(reply)
+                    loss = loss + per_token.sum() / total_tokens
+                scaler.scale(loss).backward()
+                loss_sum += float(loss)
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
         model.save_pretrained(current)
 
         entry = {"step": step + 1, "accuracy": stats["correct"] / stats["replies"],
                  "mean_tokens": stats["tokens"] / stats["replies"],
-                 "questions_with_signal": stats["signal"], "loss": loss_sum}
+                 "mean_thinking_tokens": stats["thinking"] / stats["replies"],
+                 "questions_with_signal": stats["signal"], "loss": loss_sum, "lr": lr,
+                 "entropy": entropy_sum / max(1, entropy_count)}
+        if stats["no_think_replies"]:
+            entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)
         print(json.dumps(entry), flush=True)
 
