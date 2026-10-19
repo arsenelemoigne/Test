@@ -22,6 +22,7 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 | RL loop 1 | RL, TokenProbe-KL + ShorterBetter, alpha 0.5 | +5.7% | -1.2 pp | yes |
 | RL loop 2 | same as loop 1, continued | stopped at step 4 (lengths not falling) | - | - |
 | RL loop 3 | RL continued from loop 1, stronger pressure | +23.6% | -6.0 pp | no |
+| **Blend 50/50** | loop 3 and loop 1 add-ons mixed exactly (no training) | **+19.5%** | **-2.8 pp** | **yes (best so far)** |
 
 Accuracy ranges (95%) are about +/-4 pp on this subset, so differences under ~3 pp are noise.
 
@@ -85,6 +86,11 @@ past the 2,048-token cap on math and never answers. The weak point is transfer t
 benchmarks (code, function calling, instructions), which training does not cover.
 
 ## Evaluation details
+
+**Blend 50/50** (accuracy / mean tokens, raw in brackets): BFCL irrelevance 80.0% / 193 (85.0 / 205);
+BFCL multiple 75.0% / 187 (76.3 / 223); BFCL simple 77.5% / 157 (82.5 / 190);
+IFEval 57.5% / 478 (52.5 / 710); MBPP+ 50.0% / 1,725 (57.5 / 1,699); SVAMP 76.3% / 551 (81.3 / 778).
+Accuracy CI [-7.1, +1.2] pp: inside the limit, but only just.
 
 **RL loop 3**: BFCL irrelevance +0.6% / -8.8; BFCL multiple +18.6% / -3.8; BFCL simple
 +19.9% / -3.8; IFEval +33.8% / 0.0; MBPP+ +7.7% / -8.8; SVAMP +35.8% / -10.0.
