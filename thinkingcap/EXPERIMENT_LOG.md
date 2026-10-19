@@ -22,6 +22,7 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 | RL loop 1 | RL, TokenProbe-KL + ShorterBetter, alpha 0.5 | +5.7% | -1.2 pp | yes |
 | RL loop 2 | same as loop 1, continued | stopped at step 4 (lengths not falling) | - | - |
 | RL loop 3 | RL continued from loop 1, stronger pressure | +23.6% | -6.0 pp | no |
+| **Blend 25/75** | 25% loop 3 + 75% loop 1 | **+15.4%** | **+0.5 pp** | **yes (safest)** |
 | **Blend 50/50** | loop 3 and loop 1 add-ons mixed exactly (no training) | **+19.5%** | **-2.8 pp** | **yes (best so far)** |
 
 Accuracy ranges (95%) are about +/-4 pp on this subset, so differences under ~3 pp are noise.
