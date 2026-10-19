@@ -137,9 +137,11 @@ as a v_proj bias. Same held-out check as above (128 questions x 4).
 | raw + steer x1 | 48.6% / 1,029 | 83.6% / 473 | 61.7% / 441 | 45.3% / 1,303 | 3.9% / 1,899 |
 | raw + steer x2 | 52.0% / 991 | 82.8% / 493 | 59.4% / 462 | 60.2% / 1,143 | 5.5% / 1,867 |
 | raw + steer x4 | 43.4% / 959 | 75.8% / 424 | 55.5% / 406 | 34.4% / 1,112 | 7.8% / 1,894 |
+| raw + steer x8 | 22.9% / 1,116 | 46.9% / 474 | 42.2% / 434 | 1.6% / 1,594 | 0.8% / 1,962 |
 
 Up to x2 the push makes replies shorter and more accurate (fewer replies cut off at the cap); at x4 it
-keeps shortening but accuracy falls below the raw model, so x2 is the sweet spot on this check.
+keeps shortening but accuracy falls below the raw model; at x8 the model breaks (maths 1.6%, and
+replies get longer again). x2 is the sweet spot on this check.
 
 ## Evaluation details
 
