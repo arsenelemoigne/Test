@@ -40,6 +40,8 @@ def main():
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
     model.print_trainable_parameters()
     trainable = [p for p in model.parameters() if p.requires_grad]
+    for parameter in trainable:  # fp16 gradients cannot be unscaled: keep the LoRA weights in fp32
+        parameter.data = parameter.data.float()
     optimizer = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.0)
     total_steps = math.ceil(len(rows) * args.epochs / args.accum)
     warmup = max(1, total_steps // 20)
