@@ -78,6 +78,9 @@ def parse_arguments():
     parser.add_argument("--flat", type=float, default=0.02,
                         help="a step whose p(gold) gain over the best earlier point is at most this is 'flat'")
     parser.add_argument("--min-steps", type=int, default=1, help="never prune the thinking below this")
+    parser.add_argument("--margin", type=int, default=0,
+                        help="steps kept after the settle point: p(gold) can settle before a small model "
+                             "has done the work its sampled answer needs")
     parser.add_argument("--check-samples", type=int, default=2,
                         help="natural answers that must all be correct; 0 skips the check")
     parser.add_argument("--answer-tokens", type=int, default=512, help="cap on a natural answer")
@@ -116,7 +119,7 @@ class Pruner:
         if settle is None:
             return {"targets": [], "log": log | {"status": "unsettled"}}
 
-        truncated = list(range(min(len(steps), max(settle, args.min_steps))))
+        truncated = list(range(min(len(steps), max(settle + args.margin, args.min_steps))))
         flat = flat_steps(curve, truncated, args.flat)
         pruned = drop_flat(truncated, flat, lambda kept: len(kept) >= args.min_steps
                            and p_gold([kept])[0] >= args.threshold)

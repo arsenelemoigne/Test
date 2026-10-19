@@ -29,6 +29,16 @@ def main():
     rows = [r for r in rows if len(r["prompt_ids"]) + len(r["completion_ids"]) <= args.max_len]
     if not rows:
         raise SystemExit(f"No rows of {args.data} fit in --max-len {args.max_len}")
+    if args.max_per_source:
+        # Easy multiple-choice traces are short and plentiful; left alone they teach "stop at once".
+        shuffled = random.Random(args.seed).sample(rows, len(rows))
+        kept, seen = [], {}
+        for row in shuffled:
+            seen[row["source"]] = seen.get(row["source"], 0) + 1
+            if seen[row["source"]] <= args.max_per_source:
+                kept.append(row)
+        rows = kept
+    print(f"training on {len(rows)} rows", flush=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
@@ -97,6 +107,7 @@ def parse_arguments():
     parser.add_argument("--log-every", type=int, default=10)
     parser.add_argument("--dtype", default="bfloat16", help="float16 on a T4")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--max-per-source", type=int, default=0, help="cap rows per dataset; 0 keeps all")
     return parser.parse_args()
 
 
