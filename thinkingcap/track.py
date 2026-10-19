@@ -113,6 +113,7 @@ def mvt(args):
         py("sft.py", "--data", prune / "sft.jsonl", "--out", adapter, "--max-per-source", 70, "--dtype", args.dtype)
     evaluate(out, adapter)
     print(score_line(name, out))
+    print(diagnose(out))
 
 
 def report(args):
@@ -144,6 +145,7 @@ def fade(args):
         evaluate(out, adapter)
         line, delta = score_line(f"{tag} r{k}", out, with_delta=True)
         print(line, flush=True)
+        print(diagnose(out), flush=True)
         if delta < LIMIT:
             print(f"round {k} is past the {LIMIT:+.0f}-point limit: stop; the answer is round {k - 1}")
             return
@@ -171,10 +173,31 @@ def score_line(name, out, with_delta=False):
     return (line, delta) if with_delta else line
 
 
+def diagnose(out, dataset="svamp", examples=2):
+    """How the candidate fails where the base succeeds on one benchmark: lengths, error kinds, examples."""
+    def load(directory):
+        rows = [json.loads(l) for l in (Path(directory) / "records.jsonl").read_text().splitlines() if l.strip()]
+        return {(r["id"], r["sample_index"]): r for r in rows if r["dataset"] == dataset}
+    base, new = load(BASE), load(out)
+    lost = [(base[k], new[k]) for k in base if k in new and base[k].get("correct") and not new[k].get("correct")]
+    gained = sum(1 for k in base if k in new and not base[k].get("correct") and new[k].get("correct"))
+    kinds = {}
+    for _, r in lost:
+        kind = "truncated" if r["truncated"] else (r.get("parse_error") or "wrong number")
+        kinds[kind] = kinds.get(kind, 0) + 1
+    mean = lambda xs: sum(xs) / max(1, len(xs))
+    lines = [f"   {dataset}: lost {len(lost)}, gained {gained}; lost by {kinds}; reasoning tokens on lost rows "
+             f"base {mean([b['reasoning_tokens'] for b, _ in lost]):.0f} -> {mean([r['reasoning_tokens'] for _, r in lost]):.0f}"]
+    for _, r in lost[:examples]:
+        lines.append("   --- lost example: " + r["text"][-500:].replace("\n", " / "))
+    return "\n".join(lines)
+
+
 def scores(args):
     for out in sorted(ROOT.glob("eval-*")):
         if out != BASE and (out / "results.json").exists():
             print(score_line(out.name.removeprefix("eval-"), out))
+            print(diagnose(out, examples=0))
 
 
 if __name__ == "__main__":
