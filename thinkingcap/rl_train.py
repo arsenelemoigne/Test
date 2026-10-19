@@ -85,6 +85,7 @@ def parse_arguments():
     parser.add_argument("--lr-end", type=float, help="cosine-decay the lr to this (default: constant)")
     parser.add_argument("--restarts", type=int, default=1, help="cosine cycles over the run (warm restarts)")
     parser.add_argument("--updates", type=int, default=1, help="optimizer steps per sampling step")
+    parser.add_argument("--save-every", type=int, default=0, help="also keep the adapter every N steps (out/stepN)")
     parser.add_argument("--entropy-coef", type=float, default=0.0, help="bonus on mean token entropy")
     parser.add_argument("--no-think-share", type=float, default=0.0,
                         help="share of each group sampled with an empty thinking block (AdaptThink)")
@@ -497,6 +498,8 @@ def main():
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
         model.save_pretrained(current)
+        if args.save_every and (step + 1) % args.save_every == 0:
+            model.save_pretrained(out / f"step{step + 1}")
 
         entry = {"step": step + 1, "accuracy": stats["correct"] / stats["replies"],
                  "mean_tokens": stats["tokens"] / stats["replies"],
