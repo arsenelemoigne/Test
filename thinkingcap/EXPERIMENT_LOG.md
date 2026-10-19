@@ -77,3 +77,57 @@ MBPP+ -18.1% / -3.8; SVAMP +12.6% / -1.3.
 
 **Round 2 (SFT)**: BFCL +32-39% / -3.8 to -10.0; IFEval +40.3% / +3.8; MBPP+ +86.4% / -6.3;
 SVAMP +48.8% / -23.8.
+
+---
+
+# Track 2: MVT cut, fading worked examples, marginal token analysis (branch `mvt-fading`)
+
+Own Colab runtime (L4, bf16), same subset (40 questions per benchmark, 240 total, 2 samples).
+Everything runs through `track.py` from `mvt_fading_colab.ipynb`.
+
+## Reference rerun on this runtime (raw Qwen3-0.6B)
+
+| benchmark | accuracy | mean tokens |
+|---|---|---|
+| SVAMP | 82.5% | 821 |
+| MBPP+ | 57.5% | 1,699 |
+| IFEval | 56.3% | 833 |
+| BFCL irrelevance / multiple / simple | 83.8 / 76.3 / 82.5% | 202 / 223 / 190 |
+
+## Training data
+
+`track.py rollouts`: the same slice as SFT rounds 1-2. 450 training questions (GSM8K,
+ARC-Easy, CommonsenseQA, 150 each), 2 samples, 2,048-token cap, eval sampling settings.
+
+## Experiment 1: Marginal Value Theorem cut
+
+### Run mvt256 (2-step look-ahead rule; flawed, see below)
+
+`prune_traces.py --rule mvt --travel 256 --check-samples 4`, SFT `--max-per-source 70`
+(LoRA r16, lr 1e-4, 2 epochs, 205 rows).
+
+Pruning: 302 targets from 450 questions (236 pruned, 5 truncated, 61 original);
+mean completion 576 -> 245 tokens (-57%): ARC -67%, CSQA -65%, GSM8K -43%.
+112 of 512 correct rollouts failed the natural-answer check.
+
+Settle vs MVT cut (500 rollouts with both): median thinking tokens kept settle 214, MVT 0;
+MVT earlier 52%, later 0%, same 48%.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +29% / +29% / +25% | +2.5 / -7.5 / -1.3 |
+| IFEval | +67% | +6.3 |
+| MBPP+ | +85% | -8.8 |
+| SVAMP | +39% | **-21.3** |
+| **average** | **+61.6% [52.9, 70.3]** | **-6.5 pp [-10.7, -2.1]**: outside the limit |
+
+**Why it failed.** `mvt_report.py` shows the median p(gold) at the MVT cut on GSM8K is 0.00
+for every travel cost (32 to 2,048). On math, p(gold) of the exact number stays near 0 until
+the computation ends, then jumps. The rule compared the gain over the next 2 steps (0) with
+the average rate (0) and left at once. ARC-Easy settles at 0 tokens anyway (the model knows
+the answer before thinking), so MC traces are cut to one paragraph by either rule. The c=64
+run with this rule was stopped after 20 questions: it would cut math the same way.
+
+**Fix (`d96087f`)**: leave only when no later point of the trace pays better per token than
+the average rate g(t) / (t + c). With a step-shaped curve, it waits for the jump. Runs with
+this rule are named `mvth<c>`.
