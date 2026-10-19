@@ -16,6 +16,9 @@ steps:
      and round k keeps the best 1 - k x --word-step of them. Words with digits or math
      symbols always stay. "Okay, so 3 bags of 12 apples, that means 3 times 12 is 36"
      becomes something like "3 bags 12 apples 3 times 12 is 36".
+     --word-scorer marginal scores each word with our own model instead (marginal token
+     analysis): delete that one word from the whole trace and measure how much log p(gold)
+     drops. A word the answer does not need scores about 0 and goes first.
   4. The current model (--adapter, round k-1's LoRA) answers naturally from the shortened
      thinking --check-samples times. The trace is kept only if every answer is correct;
      otherwise the question keeps its round k-1 trace (--previous), so hard questions stay
@@ -35,8 +38,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from types import SimpleNamespace
 
-from probe_curve import candidates, read_jsonl, write_jsonl
-from prune_traces import Pruner, avg, mvt_index, original_target, split_steps, step_positions
+from probe_curve import candidates, read_jsonl, score, write_jsonl
+from prune_traces import Pruner, avg, mvt_index, original_target, split_steps, step_positions, thinking_text
 
 
 def main():
@@ -54,7 +57,10 @@ def main():
               if (ok := [r for r in group if r["correct"] and r["closed_thinking"] and not r["truncated"]])}
     previous = {row["id"]: row for row in read_jsonl(Path(args.previous))} if args.previous else {}
     cache = {row["id"]: row for row in read_jsonl(Path(args.cache))} if args.cache else {}
-    scorer = WordScorer(args.word_model, pruner.device) if args.word_step > 0 else None
+    scorer = None
+    if args.word_step > 0:
+        scorer = MarginalScorer(pruner, args.batch_tokens) if args.word_scorer == "marginal" \
+            else WordScorer(args.word_model, pruner.device)
     keep_rate = max(args.min_keep, 1 - args.round * args.word_step)
     fallback_rate = max(args.min_keep, 1 - (args.round - 1) * args.word_step)
 
@@ -69,7 +75,10 @@ def main():
             curve = base_curve(pruner, rollout, by_question[qid], steps)
             word_scores = None
         if scorer and word_scores is None:
-            word_scores = [scorer.scores(words_of(step)) for step in steps]
+            if isinstance(scorer, MarginalScorer):
+                word_scores = scorer.trace_scores(rollout, by_question[qid], steps)
+            else:
+                word_scores = [scorer.scores(words_of(step)) for step in steps]
         curves.append({"id": qid, "curve": curve, "positions": positions, "word_scores": word_scores})
 
         floor = positions[mvt_index(curve, positions, args.floor_travel, args.smooth)] \
@@ -127,6 +136,8 @@ def parse_arguments():
     parser.add_argument("--word-step", type=float, default=0.1,
                         help="share of the words compacted away per round inside kept steps; 0 turns it off")
     parser.add_argument("--min-keep", type=float, default=0.3, help="never keep fewer than this share of words")
+    parser.add_argument("--word-scorer", choices=("lingua", "marginal"), default="lingua",
+                        help="lingua: LLMLingua-2's filler classifier; marginal: log p(gold) lost without the word")
     parser.add_argument("--word-model", default="microsoft/llmlingua-2-xlm-roberta-large-meetingbank")
     parser.add_argument("--smooth", type=int, default=2)
     parser.add_argument("--min-steps", type=int, default=1)
@@ -189,7 +200,12 @@ def compact(step, scores, rate):
         return step
     droppable = sorted((score, i) for i, (word, score) in enumerate(zip(flat, scores))
                        if not PROTECTED.search(word))
-    dropped = {i for _, i in droppable[:int(round((1 - rate) * len(droppable)))]}
+    return without(step, {i for _, i in droppable[:int(round((1 - rate) * len(droppable)))]})
+
+
+def without(step, dropped):
+    """The step with the words at the `dropped` positions (words_of order) removed."""
+    lines = [line.split() for line in step.rstrip("\n").split("\n")]
     out, index = [], 0
     for line in lines:
         kept = [word for word in line if (index := index + 1) - 1 not in dropped]
@@ -197,6 +213,36 @@ def compact(step, scores, rate):
             out.append(" ".join(kept))
     trailing = step[len(step.rstrip("\n")):]
     return "\n".join(out) + trailing
+
+
+class MarginalScorer:
+    """Our model's own marginal value of each word: log p(gold) lost when only that word is deleted.
+
+    Every one-word deletion of the trace is scored by teacher forcing, batched like the probe.
+    Words with digits or math symbols are never deleted, so they are not scored (kept at 99).
+    """
+
+    def __init__(self, pruner, batch_tokens):
+        self.pruner, self.batch_tokens = pruner, batch_tokens
+
+    def trace_scores(self, rollout, siblings, steps):
+        pruner = self.pruner
+        answers, terminated = candidates(rollout, siblings)
+        suffix = pruner.encode(" " + answers[0]) + ([pruner.end_of_turn] if terminated else [])
+        words = [words_of(step) for step in steps]
+        variants = [(None, None)] + [(s, j) for s, ws in enumerate(words) for j, w in enumerate(ws)
+                                     if not PROTECTED.search(w)]
+        rows = []
+        for v, (s, j) in enumerate(variants):
+            edited = steps if s is None else steps[:s] + [without(steps[s], {j})] + steps[s + 1:]
+            context = rollout["prompt_ids"] + pruner.encode(thinking_text(edited) + "Final answer:")
+            rows.append((v, 0, context, suffix))
+        logps = score(pruner.model, rows, self.batch_tokens, pruner.device)
+        full = logps[(0, 0)]
+        result = [[99.0] * len(ws) for ws in words]
+        for v, (s, j) in enumerate(variants[1:], 1):
+            result[s][j] = round(full - logps[(v, 0)], 4)
+        return result
 
 
 class WordScorer:

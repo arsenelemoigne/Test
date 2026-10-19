@@ -8,12 +8,16 @@ Run from the ThinkingCap-Test root, with this repo's scripts copied next to eval
     python track.py rollouts              # the model's own replies to 450 training questions
     python track.py mvt --travel 256      # experiment 1: MVT cut -> SFT -> evaluate
     python track.py report                # where MVT cuts vs the settle rule, for many travel costs
-    python track.py fade --rounds 5       # experiment 2: fading paragraphs + words, stops past -3 points
+    python track.py fade --rounds 2       # experiment 2: fading paragraphs + words, stops past -3 points
+    python track.py fade --rounds 4 --word-scorer marginal   # experiment 3: words scored by our own model
     python track.py scores                # every evaluated run against the base
 """
 
 import argparse
+import filecmp
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -35,8 +39,31 @@ def main():
     parser.add_argument("--word-step", type=float, default=0.1, help="fading: words compacted per round; 0 = paragraphs only")
     parser.add_argument("--tag", default="", help="suffix for the fading run's directories")
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
+    update()
     globals()[args.stage](args)
+
+
+def update():
+    """On Colab, pull this branch's scripts before every stage, so a pushed fix needs no restart."""
+    if os.environ.get("TRACK_UPDATED") or not Path("/content").exists():
+        return
+    clone = Path("/content/T")
+    shutil.rmtree(clone, ignore_errors=True)
+    if subprocess.run(["git", "clone", "-q", "--depth", "1", "-b", "mvt-fading",
+                       "https://github.com/arsenelemoigne/Test", str(clone)]).returncode:
+        print("could not update the scripts; running the local copies", flush=True)
+        return
+    changed = False
+    for source in (clone / "thinkingcap").glob("*.py"):
+        if not Path(source.name).exists() or not filecmp.cmp(source, source.name, shallow=False):
+            shutil.copy(source, source.name)
+            changed |= source.name == "track.py"
+    print("scripts at " + subprocess.run(["git", "-C", str(clone), "log", "-1", "--format=%h %s"],
+                                         capture_output=True, text=True).stdout.strip(), flush=True)
+    if changed:
+        os.execve(sys.executable, [sys.executable, *sys.argv], os.environ | {"TRACK_UPDATED": "1"})
 
 
 def run(*command):
@@ -96,7 +123,8 @@ def report(args):
 
 
 def fade(args):
-    tag = f"fade-{args.order}" + ("-words" if args.word_step > 0 else "") + (f"-floor{args.floor_travel:g}" if args.floor_travel is not None else "") + args.tag
+    words = ("-marginal" if args.word_scorer == "marginal" else "-words") if args.word_step > 0 else ""
+    tag = f"fade-{args.order}" + words + (f"-floor{args.floor_travel:g}" if args.floor_travel is not None else "") + args.tag
     previous = None
     for k in range(1, args.rounds + 1):
         data, adapter, out = ROOT / tag / f"r{k}", Path("adapters") / tag / f"r{k}", ROOT / f"eval-{tag}-r{k}"
@@ -108,7 +136,7 @@ def fade(args):
             if args.floor_travel is not None:
                 extra += ["--floor-travel", args.floor_travel]
             py("fade_traces.py", "--rollouts", ROLLOUTS, "--out", data, "--round", k, "--order", args.order,
-               "--word-step", args.word_step, "--dtype", args.dtype, *extra)
+               "--word-step", args.word_step, "--word-scorer", args.word_scorer, "--dtype", args.dtype, *extra)
         print((data / "summary.txt").read_text())
         if not (adapter / "adapter_config.json").exists():
             py("sft.py", "--data", data / "sft.jsonl", "--out", adapter, "--epochs", 1, "--max-per-source", 100,
