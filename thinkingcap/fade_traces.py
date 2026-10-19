@@ -11,10 +11,16 @@ steps:
      with the smallest probe gain first (--order gain), or the earliest ones (--order early).
      With --floor-travel C it never goes below the Marginal Value Theorem cut for travel cost
      C (prune_traces.mvt_index): MVT sets the final target length.
-  3. The current model (--adapter, round k-1's LoRA) answers naturally from the shortened
+  3. Inside the steps that remain, compact the words (TokenSkip, Xia et al. 2025): a
+     token classifier trained to tell filler from content (LLMLingua-2) scores every word,
+     and round k keeps the best 1 - k x --word-step of them. Words with digits or math
+     symbols always stay. "Okay, so 3 bags of 12 apples, that means 3 times 12 is 36"
+     becomes something like "3 bags 12 apples 3 times 12 is 36".
+  4. The current model (--adapter, round k-1's LoRA) answers naturally from the shortened
      thinking --check-samples times. The trace is kept only if every answer is correct;
      otherwise the question keeps its round k-1 trace (--previous), so hard questions stay
-     long instead of dropping out and leaving only the easy ones.
+     long instead of dropping out and leaving only the easy ones. Before falling back it
+     tries once more with round k-1's word compaction.
 
     python fade_traces.py --rollouts runs/probe/rollouts.jsonl --out runs/fade/r1 --round 1
     python sft.py --data runs/fade/r1/sft.jsonl --out adapters/fade-r1 --epochs 1
@@ -24,6 +30,7 @@ steps:
 """
 
 import argparse
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from types import SimpleNamespace
@@ -47,16 +54,23 @@ def main():
               if (ok := [r for r in group if r["correct"] and r["closed_thinking"] and not r["truncated"]])}
     previous = {row["id"]: row for row in read_jsonl(Path(args.previous))} if args.previous else {}
     cache = {row["id"]: row for row in read_jsonl(Path(args.cache))} if args.cache else {}
+    scorer = WordScorer(args.word_model, pruner.device) if args.word_step > 0 else None
+    keep_rate = max(args.min_keep, 1 - args.round * args.word_step)
+    fallback_rate = max(args.min_keep, 1 - (args.round - 1) * args.word_step)
 
     curves, targets, log = [], [], []
     for number, (qid, rollout) in enumerate(chosen.items(), 1):
         steps = split_steps(pruner.decode_thinking(rollout["thinking_ids"]))
         if qid in cache:
             curve, positions = cache[qid]["curve"], cache[qid]["positions"]
+            word_scores = cache[qid].get("word_scores")
         else:
             positions = step_positions([len(pruner.encode(step)) for step in steps])
             curve = base_curve(pruner, rollout, by_question[qid], steps)
-        curves.append({"id": qid, "curve": curve, "positions": positions})
+            word_scores = None
+        if scorer and word_scores is None:
+            word_scores = [scorer.scores(words_of(step)) for step in steps]
+        curves.append({"id": qid, "curve": curve, "positions": positions, "word_scores": word_scores})
 
         floor = positions[mvt_index(curve, positions, args.floor_travel, args.smooth)] \
             if args.floor_travel is not None else 0
@@ -64,18 +78,29 @@ def main():
         earlier = previous.get(qid)
         entry = {"id": qid, "source": rollout["source"], "steps": len(steps), "kept_steps": len(kept),
                  "thinking_tokens": positions[-1], "floor": floor}
-        if earlier is not None and earlier["kind"] != "original" and earlier["steps"] <= len(kept):
-            target, status = earlier, "at_floor"  # nothing more to delete
-        elif len(kept) == len(steps):
+
+        def shortened(rate):
+            if not scorer or rate >= 1:
+                return [steps[i] for i in kept]
+            return [compact(steps[i], word_scores[i], rate) for i in kept]
+
+        rates = [keep_rate] + ([fallback_rate] if scorer and fallback_rate != keep_rate else [])
+        if len(kept) == len(steps) and (not scorer or keep_rate >= 1):
             target, status = original_target(rollout), "nothing_to_delete"
         else:
-            target = pruner.checked_target(rollout, [steps[i] for i in kept], "faded")
-            status = "faded"
+            target, status = None, None
+            for attempt, rate in enumerate(rates):
+                target = pruner.checked_target(rollout, shortened(rate), "faded")
+                if target is not None:
+                    target |= {"word_keep": rate}
+                    status = "faded" if attempt == 0 else "faded_fewer_words"
+                    break
             if target is None:
                 target = earlier or original_target(rollout)
                 status = "kept_previous" if earlier else "kept_original"
         if target is not None:
-            targets.append(target | {"round": args.round if status == "faded" else target.get("round", 0)})
+            fresh = status in ("faded", "faded_fewer_words")
+            targets.append(target | {"round": args.round if fresh else target.get("round", 0)})
         log.append(entry | {"status": status})
         if number % 20 == 0 or number == len(chosen):
             print(f"faded {number}/{len(chosen)} questions", flush=True)
@@ -99,6 +124,10 @@ def parse_arguments():
     parser.add_argument("--previous", help="round k-1's sft.jsonl: the fallback when a trace fails the check")
     parser.add_argument("--cache", help="an earlier round's curves.jsonl, to skip rescoring the base curves")
     parser.add_argument("--floor-travel", type=float, help="never shorten below the MVT cut for this travel cost")
+    parser.add_argument("--word-step", type=float, default=0.1,
+                        help="share of the words compacted away per round inside kept steps; 0 turns it off")
+    parser.add_argument("--min-keep", type=float, default=0.3, help="never keep fewer than this share of words")
+    parser.add_argument("--word-model", default="microsoft/llmlingua-2-xlm-roberta-large-meetingbank")
     parser.add_argument("--smooth", type=int, default=2)
     parser.add_argument("--min-steps", type=int, default=1)
     parser.add_argument("--check-samples", type=int, default=2)
@@ -141,10 +170,68 @@ def fade(curve, positions, share, order, floor=0, min_steps=1):
     return sorted(kept)
 
 
+PROTECTED = re.compile(r"[0-9=+\-*/×÷^%$<>()]")
+
+
+def words_of(step):
+    """The words of a step, line by line, in reading order."""
+    return [word for line in step.split("\n") for word in line.split()]
+
+
+def compact(step, scores, rate):
+    """The step with only the best-scored `rate` of its words; words with digits or math stay.
+
+    Line breaks and the step's trailing blank line are kept, so the thinking keeps its layout.
+    """
+    lines = [line.split() for line in step.rstrip("\n").split("\n")]
+    flat = [word for line in lines for word in line]
+    if len(flat) != len(scores):
+        return step
+    droppable = sorted((score, i) for i, (word, score) in enumerate(zip(flat, scores))
+                       if not PROTECTED.search(word))
+    dropped = {i for _, i in droppable[:int(round((1 - rate) * len(droppable)))]}
+    out, index = [], 0
+    for line in lines:
+        kept = [word for word in line if (index := index + 1) - 1 not in dropped]
+        if kept or not line:
+            out.append(" ".join(kept))
+    trailing = step[len(step.rstrip("\n")):]
+    return "\n".join(out) + trailing
+
+
+class WordScorer:
+    """LLMLingua-2's token classifier: p(keep) per word, averaged over the word's sub-tokens."""
+
+    def __init__(self, name, device):
+        import torch
+        from transformers import AutoModelForTokenClassification, AutoTokenizer
+
+        self.torch, self.device = torch, device
+        self.tokenizer = AutoTokenizer.from_pretrained(name)
+        self.model = AutoModelForTokenClassification.from_pretrained(name).to(device).eval()
+
+    def scores(self, words, window=200):
+        result = []
+        for start in range(0, len(words), window):
+            chunk = words[start:start + window]
+            encoded = self.tokenizer(chunk, is_split_into_words=True, truncation=True, max_length=512,
+                                     return_tensors="pt")
+            with self.torch.no_grad():
+                keep = self.model(**encoded.to(self.device)).logits.softmax(-1)[0, :, 1].tolist()
+            per_word = defaultdict(list)
+            for position, word in enumerate(encoded.word_ids()):
+                if word is not None:
+                    per_word[word].append(keep[position])
+            # a word cut off by truncation has no score: keep it
+            result += [round(avg(per_word[j]), 4) if per_word[j] else 1.0 for j in range(len(chunk))]
+        return result
+
+
 def report(targets, log, chosen, out, args):
-    lines = [f"round {args.round}: target {min(1.0, args.round * args.step):.0%} of the thinking removed, "
+    lines = [f"round {args.round}: target {min(1.0, args.round * args.step):.0%} of the steps' tokens removed, "
+             f"words kept inside steps {max(args.min_keep, 1 - args.round * args.word_step):.0%}, "
              f"order {args.order}, floor travel {args.floor_travel}", "",
-             f"{'source':<16}{'questions':>10}{'faded':>7}{'prev':>6}{'orig':>6}{'floor':>7}"
+             f"{'source':<16}{'questions':>10}{'faded':>7}{'fewer':>7}{'prev':>6}{'orig':>6}"
              f"{'tokens before':>15}{'after':>8}{'saved':>8}"]
     for source in sorted({e["source"] for e in log}) + ["ALL"]:
         entries = [e for e in log if source in ("ALL", e["source"])]
@@ -153,11 +240,11 @@ def report(targets, log, chosen, out, args):
         before = [chosen[t["id"]]["output_tokens"] for t in group]
         after = [len(t["completion_ids"]) for t in group]
         saved = 1 - sum(after) / sum(before) if before else float("nan")
-        lines.append(f"{source:<16}{len(entries):>10}{status['faded']:>7}{status['kept_previous']:>6}"
-                     f"{status['kept_original'] + status['nothing_to_delete']:>6}{status['at_floor']:>7}"
+        lines.append(f"{source:<16}{len(entries):>10}{status['faded']:>7}{status['faded_fewer_words']:>7}"
+                     f"{status['kept_previous']:>6}{status['kept_original'] + status['nothing_to_delete']:>6}"
                      f"{avg(before):>15.0f}{avg(after):>8.0f}{saved:>8.0%}")
-    lines += ["", "faded: shortened this round and passed the check; prev: failed, kept round k-1's trace;",
-              "orig: failed with no earlier trace, or nothing to delete; floor: already at the MVT floor",
+    lines += ["", "faded: shortened this round and passed the check; fewer: passed only with round k-1's",
+              "word compaction; prev: failed, kept round k-1's trace; orig: failed with no earlier trace",
               "tokens: mean completion length (thinking + answer) of the question's rollout before and after"]
     text = "\n".join(lines)
     print(text)

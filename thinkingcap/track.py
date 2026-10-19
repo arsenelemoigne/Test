@@ -8,7 +8,7 @@ Run from the ThinkingCap-Test root, with this repo's scripts copied next to eval
     python track.py rollouts              # the model's own replies to 450 training questions
     python track.py mvt --travel 256      # experiment 1: MVT cut -> SFT -> evaluate
     python track.py report                # where MVT cuts vs the settle rule, for many travel costs
-    python track.py fade --rounds 5       # experiment 2: fading rounds, stops past -3 points
+    python track.py fade --rounds 5       # experiment 2: fading paragraphs + words, stops past -3 points
     python track.py scores                # every evaluated run against the base
 """
 
@@ -32,6 +32,7 @@ def main():
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
     parser.add_argument("--floor-travel", type=float)
+    parser.add_argument("--word-step", type=float, default=0.1, help="fading: words compacted per round; 0 = paragraphs only")
     parser.add_argument("--tag", default="", help="suffix for the fading run's directories")
     parser.add_argument("--dtype", default="bfloat16")
     args = parser.parse_args()
@@ -95,7 +96,7 @@ def report(args):
 
 
 def fade(args):
-    tag = f"fade-{args.order}" + (f"-floor{args.floor_travel:g}" if args.floor_travel is not None else "") + args.tag
+    tag = f"fade-{args.order}" + ("-words" if args.word_step > 0 else "") + (f"-floor{args.floor_travel:g}" if args.floor_travel is not None else "") + args.tag
     previous = None
     for k in range(1, args.rounds + 1):
         data, adapter, out = ROOT / tag / f"r{k}", Path("adapters") / tag / f"r{k}", ROOT / f"eval-{tag}-r{k}"
@@ -107,7 +108,7 @@ def fade(args):
             if args.floor_travel is not None:
                 extra += ["--floor-travel", args.floor_travel]
             py("fade_traces.py", "--rollouts", ROLLOUTS, "--out", data, "--round", k, "--order", args.order,
-               "--dtype", args.dtype, *extra)
+               "--word-step", args.word_step, "--dtype", args.dtype, *extra)
         print((data / "summary.txt").read_text())
         if not (adapter / "adapter_config.json").exists():
             py("sft.py", "--data", data / "sft.jsonl", "--out", adapter, "--epochs", 1, "--max-per-source", 100,

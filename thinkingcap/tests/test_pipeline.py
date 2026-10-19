@@ -400,3 +400,17 @@ def test_fade_deletes_low_gain_steps_first_and_respects_the_floor():
     assert fade(curve, positions, 0.5, "early") == [2, 3]
     assert fade(curve, positions, 0.9, "gain", floor=20) == [1, 3]
     assert len(fade(curve, positions, 1.0, "gain", min_steps=1)) == 1
+
+
+def test_compact_drops_low_scored_words_but_keeps_math_and_layout():
+    from fade_traces import compact, words_of
+
+    step = "Okay so Tom has 3 bags.\nSo 3 * 12 = 36 apples.\n\n"
+    words = words_of(step)
+    scores = [0.1, 0.2, 0.9, 0.8, 0.5, 0.9, 0.3, 0.5, 0.5, 0.5, 0.5, 0.5, 0.9]
+    assert compact(step, scores, 1.0) == step
+    short = compact(step, scores, 0.6)
+    assert short.endswith("\n\n") and "Okay" not in short and "so" not in short
+    assert all(w in short for w in ["3", "12", "=", "36"])
+    assert len(short.split()) < len(words)
+    assert compact(step, scores[:-1], 0.5) == step  # scores that do not match: untouched
