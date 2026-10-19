@@ -40,6 +40,7 @@ def parse_arguments():
     parser.add_argument("--ratio", type=float, default=1.5, help="verbose reply at least this much longer")
     parser.add_argument("--layer", type=int, help="decoder layer that receives the vector (default: middle)")
     parser.add_argument("--strengths", default="0.5,1,2")
+    parser.add_argument("--vector", help="reuse a saved vector.pt (skips sampling); needs --layer")
     parser.add_argument("--slice-seed", type=int, default=99, help="question slice, apart from the RL runs'")
     parser.add_argument("--backend", choices=["vllm", "hf"], default="vllm")
     parser.add_argument("--attention-backend", default=None)
@@ -108,6 +109,12 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
+    if args.vector:
+        vector = torch.load(args.vector)
+        summary = {"vector": args.vector, "layer": args.layer, "vector_norm": float(vector.norm()), "strengths": {}}
+        return write_strengths(args, tokenizer, args.layer, vector, dtype, out, summary)
     eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
     close_id = tokenizer.convert_tokens_to_ids("</think>")
     keep = set(args.sources.split(","))
@@ -116,8 +123,6 @@ def main():
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
     model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to(device)
     if args.adapter:
         from peft import PeftModel
@@ -143,6 +148,10 @@ def main():
                "verbose_tokens": sum(len(v) for _, _, v in pairs) / len(pairs),
                "adapter": args.adapter, "strengths": {}}
     del model
+    write_strengths(args, tokenizer, layer, vector, dtype, out, summary)
+
+
+def write_strengths(args, tokenizer, layer, vector, dtype, out, summary):
     for strength in [float(s) for s in args.strengths.split(",")]:
         steered = steered_model(args.model, layer, strength * vector, dtype)
         target = out / f"s{strength:g}"
