@@ -47,7 +47,7 @@ def main():
 
     configs = [json.loads((Path(a) / CONFIG).read_text()) for a in (args.first, args.second)]
     scales = [c["lora_alpha"] / c["r"] for c in configs]
-    if abs(scales[0] - scales[1]) > 1e-9 or configs[0]["target_modules"] != configs[1]["target_modules"]:
+    if abs(scales[0] - scales[1]) > 1e-9 or set(configs[0]["target_modules"]) != set(configs[1]["target_modules"]):
         raise SystemExit("adapters differ in scale or target modules")
     weights = blend(load_file(Path(args.first) / WEIGHTS), load_file(Path(args.second) / WEIGHTS), args.weight)
     out = Path(args.out)
