@@ -238,3 +238,44 @@ def test_packed_probe_matches_scoring_each_cut_from_scratch():
         assert packed.keys() == scratch.keys()
         for key in packed:
             assert abs(packed[key] - scratch[key]) < 1e-4, (budget, key)
+
+
+def test_length_rewards_follow_the_shortest_correct_reply():
+    from rl_train import group_advantages, length_rewards
+    rewards = length_rewards([100, 50, 80, 20], [True, True, False, False], alpha=0.5)
+    assert rewards == [0.5, 1.0, 0.0, 0.0]  # L* = 50; wrong replies get nothing however short
+    assert length_rewards([10, 20], [False, False], 0.5) == [0.0, 0.0]
+    advantages = group_advantages(rewards)
+    assert advantages[1] > advantages[0] > advantages[2] == advantages[3]
+    assert group_advantages([1.0, 1.0]) == [0.0, 0.0]
+
+
+def test_redundant_tokens_and_their_extra_penalty():
+    from rl_train import confidence_redundant, settle_redundant, token_advantages
+    logps = [-0.1, -3.0, -0.2, -2.5, -0.1, -9.0]  # the last token is the answer, outside the thinking
+    assert confidence_redundant(logps, 5, 0.4) == {1, 3}
+    assert settle_redundant({1: 0.2, 3: 0.95, 5: 0.97}, 6, 0.9) == {3, 4, 5}
+    assert settle_redundant({1: 0.95, 3: 0.2}, 6, 0.9) == set()
+    assert token_advantages(1.0, 3, {2}, 0.25) == [1.0, 1.0, 0.75]
+
+
+def test_rl_train_runs_on_the_toy_model(toy):
+    import shutil
+    work, _ = toy
+    model = work / "rl-model"
+    shutil.copytree(work / "model", model, dirs_exist_ok=True)
+    config = json.loads((model / "tokenizer_config.json").read_text())
+    config["chat_template"] = ("{% for m in messages %}<|im_start|>{{ m['role'] }}\n{{ m['content'] }}<|im_end|>\n"
+                               "{% endfor %}<|im_start|>assistant\n")
+    (model / "tokenizer_config.json").write_text(json.dumps(config))
+    rows = [{"prompt": [{"role": "user", "content": toy_question(n)}], "answer": str(n), "task": "math",
+             "source": "toy"} for n in NUMBERS[:6]]
+    (work / "rl-data.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    for mode in ("confidence", "settle"):
+        out = work / f"rl-{mode}"
+        run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+            "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
+            "--max-tokens", "40", "--backend", "hf", "--redundant", mode, "--dtype", "float32", cwd=ROOT)
+        log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+        assert [e["step"] for e in log] == [1, 2] and all(0 <= e["accuracy"] <= 1 for e in log)
+        assert (out / "adapter_config.json").exists()

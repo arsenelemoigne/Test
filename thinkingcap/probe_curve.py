@@ -234,8 +234,8 @@ def probe_scores(model, prompt, thinking, closings, suffixes, device, budget=614
     """
     import torch
 
-    body, head = model.base_model, model.get_output_embeddings()
-    dtype = next(model.parameters()).dtype
+    body, head = decoder_and_head(model)
+    dtype = head.weight.dtype
     blocked = torch.finfo(dtype).min
     context = prompt + thinking
     segments = [(cut, row, closing + suffix, len(closing))
@@ -276,11 +276,17 @@ def probe_scores(model, prompt, thinking, closings, suffixes, device, budget=614
     return scores
 
 
+def decoder_and_head(model):
+    """The transformer body and the output projection, through a PEFT wrapper if there is one."""
+    inner = model.get_base_model() if hasattr(model, "get_base_model") else model
+    return inner.base_model, inner.get_output_embeddings()
+
+
 def score(model, rows, batch_tokens, device):
     """{(cut, candidate): log p(suffix | context)} for rows of (cut, candidate, context, suffix)."""
     import torch
 
-    body, head = model.base_model, model.get_output_embeddings()
+    body, head = decoder_and_head(model)
 
     rows = sorted(rows, key=lambda row: len(row[2]) + len(row[3]))
     scores, start = {}, 0
