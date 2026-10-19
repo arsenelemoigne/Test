@@ -21,7 +21,7 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 | Round 2 | SFT on pruned traces, margin + balanced | +59.6% | -8.0 pp | no |
 | RL loop 1 | RL, TokenProbe-KL + ShorterBetter, alpha 0.5 | +5.7% | -1.2 pp | yes |
 | RL loop 2 | same as loop 1, continued | stopped at step 4 (lengths not falling) | - | - |
-| RL loop 3 | RL continued from loop 1, stronger pressure | running | | |
+| RL loop 3 | RL continued from loop 1, stronger pressure | +23.6% | -6.0 pp | no |
 
 Accuracy ranges (95%) are about +/-4 pp on this subset, so differences under ~3 pp are noise.
 
@@ -64,12 +64,30 @@ questions, so these jump around with question difficulty; the trend matters, not
 
 **RL loop 3**
 
-| step | 1 | 2 |
-|---|---|---|
-| accuracy % | 55 | 49 |
-| mean tokens | 977 | 830 |
+| step | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| accuracy % | 55 | 49 | 53 | 52 | 56 | 60 | 57 | 46 | 47 | 56 | 64 | 57 | 71 | 54 | 60 | 50 | 67 | 42 | 48 | - |
+| mean tokens | 977 | 830 | 859 | 817 | 809 | 879 | 863 | 898 | 853 | 805 | 729 | 820 | 672 | 811 | 775 | 743 | 736 | 845 | 964 | - |
+
+## Held-out check: same questions for every model
+
+128 questions from the validation split (32 per source, never trained on), 4 answers each,
+2,048-token cap. This compares the models on their home subjects with identical questions.
+
+| model | all | ARC | CSQA | GSM8K | Skywork |
+|---|---|---|---|---|---|
+| raw | 45.7% / 1,092 tok | 85.2% / 495 | 57.0% / 502 | 38.3% / 1,475 | 2.3% / 1,898 |
+| RL loop 1 | **58.8% / 859** | 85.2% / 425 | 57.8% / 349 | 78.1% / 854 | 14.1% / 1,807 |
+| RL loop 3 | 55.3% / 772 | 77.3% / 319 | 57.0% / 235 | 63.3% / 855 | 23.4% / 1,681 |
+
+On these subjects RL makes the model both shorter and more accurate: the raw model often runs
+past the 2,048-token cap on math and never answers. The weak point is transfer to the test
+benchmarks (code, function calling, instructions), which training does not cover.
 
 ## Evaluation details
+
+**RL loop 3**: BFCL irrelevance +0.6% / -8.8; BFCL multiple +18.6% / -3.8; BFCL simple
++19.9% / -3.8; IFEval +33.8% / 0.0; MBPP+ +7.7% / -8.8; SVAMP +35.8% / -10.0.
 
 **RL loop 1** (tokens saved / accuracy change): BFCL irrelevance +4.3% / -5.0;
 BFCL multiple +12.2% / +8.8; BFCL simple +9.0% / +1.3; IFEval +16.1% / -1.3;
