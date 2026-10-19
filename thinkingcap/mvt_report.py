@@ -19,7 +19,6 @@ def main():
     parser.add_argument("log")
     parser.add_argument("--travel", default="32,128,256,512,1024,2048")
     parser.add_argument("--threshold", type=float, default=0.9)
-    parser.add_argument("--smooth", type=int, default=2)
     args = parser.parse_args()
     entries = [json.loads(line) for line in Path(args.log).read_text().splitlines() if line.strip()]
     entries = [e for e in entries if "positions" in e]
@@ -31,7 +30,7 @@ def main():
             settle = settle_index(e["curve"], args.threshold)
             if settle is None:
                 continue
-            mvt = mvt_index(e["curve"], e["positions"], travel, args.smooth)
+            mvt = mvt_index(e["curve"], e["positions"], travel)
             row = (e["positions"][-1], e["positions"][settle], e["positions"][mvt], max(e["curve"][:mvt + 1]))
             by_source[e["source"]].append(row)
             by_source["ALL"].append(row)

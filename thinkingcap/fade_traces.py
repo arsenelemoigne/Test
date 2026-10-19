@@ -81,7 +81,7 @@ def main():
                 word_scores = [scorer.scores(words_of(step)) for step in steps]
         curves.append({"id": qid, "curve": curve, "positions": positions, "word_scores": word_scores})
 
-        floor = positions[mvt_index(curve, positions, args.floor_travel, args.smooth)] \
+        floor = positions[mvt_index(curve, positions, args.floor_travel)] \
             if args.floor_travel is not None else 0
         kept = fade(curve, positions, args.round * args.step, args.order, floor, args.min_steps)
         earlier = previous.get(qid)
@@ -139,7 +139,6 @@ def parse_arguments():
     parser.add_argument("--word-scorer", choices=("lingua", "marginal"), default="lingua",
                         help="lingua: LLMLingua-2's filler classifier; marginal: log p(gold) lost without the word")
     parser.add_argument("--word-model", default="microsoft/llmlingua-2-xlm-roberta-large-meetingbank")
-    parser.add_argument("--smooth", type=int, default=2)
     parser.add_argument("--min-steps", type=int, default=1)
     parser.add_argument("--check-samples", type=int, default=2)
     parser.add_argument("--answer-tokens", type=int, default=512)

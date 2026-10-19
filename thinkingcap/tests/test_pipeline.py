@@ -381,10 +381,10 @@ def test_mvt_cut_leaves_when_the_gain_slows_and_travel_makes_it_stay():
 
     positions = step_positions([50] * 6)
     curve = [0.1, 0.5, 0.85, 0.9, 0.91, 0.91, 0.92]  # fast rise, then a plateau
-    assert mvt_index(curve, positions, travel=50) == 1   # next 2 steps earn 0.004/token < 0.5/100
-    assert mvt_index(curve, positions, travel=500) == 2  # a larger travel cost stays longer
-    assert mvt_index([0.0, 0.2, 0.4, 0.8], step_positions([10] * 3), travel=10, smooth=1) == 3  # still rising
-    assert mvt_index([0.3, 0.9, 0.2, 0.2], step_positions([10] * 3), travel=10, smooth=1) == 1  # a dip loses nothing
+    assert mvt_index(curve, positions, travel=50) == 2
+    assert mvt_index(curve, positions, travel=5000) == 4  # a larger travel cost stays longer
+    assert mvt_index([0.0, 0.0, 0.0, 0.9], step_positions([10] * 3), travel=10) == 3  # waits for a late jump
+    assert mvt_index([0.3, 0.9, 0.2, 0.2], step_positions([10] * 3), travel=10) == 1  # a dip loses nothing
     assert mvt_index([0.5], [0], travel=10) == 0
 
 

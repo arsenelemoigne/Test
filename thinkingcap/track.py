@@ -103,7 +103,7 @@ def rollouts(args):
 
 
 def mvt(args):
-    name = f"mvt{args.travel:g}"
+    name = f"mvth{args.travel:g}"  # "h": the full look-ahead rule (the 2-step one, "mvt256", left at 0 on math)
     prune, adapter, out = ROOT / f"prune-{name}", Path("adapters") / name, ROOT / f"eval-{name}"
     if not (prune / "sft.jsonl").exists():
         py("prune_traces.py", "--rollouts", ROLLOUTS, "--out", prune, "--rule", "mvt", "--travel", args.travel,
@@ -116,7 +116,7 @@ def mvt(args):
 
 
 def report(args):
-    logs = sorted(ROOT.glob("prune-mvt*/log.jsonl"))
+    logs = sorted(ROOT.glob("prune-mvt*/log.jsonl"))  # any run: the curves do not depend on the rule
     if not logs:
         raise SystemExit("run `track.py mvt` first: the report reads its log")
     py("mvt_report.py", logs[0])

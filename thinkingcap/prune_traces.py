@@ -17,8 +17,8 @@ For each correct rollout from probe_curve.py:
 --rule mvt replaces step 2's fixed threshold with the Marginal Value Theorem (Charnov 1976):
 thinking is foraging for certainty, g(t) is p(gold) after t thinking tokens (its running
 maximum, the gain secured so far), and the model should leave the patch at the first t where
-the gain from staying a little longer, g'(t) over the next --smooth steps, drops to the
-average rate g(t) / (t + c). The travel cost c (--travel) is the answer tokens that follow
+the best gain rate still available, (g(t') - g(t)) / (t' - t) for any later t', drops to the
+average rate g(t) / (t + c) at every later point. The travel cost c (--travel) is the answer tokens that follow
 anyway: a larger c means staying longer. Step 3 then keeps a deletion if p(gold) stays at the
 level the cut reached (or the threshold, whichever is lower).
 
@@ -87,7 +87,6 @@ def parse_arguments():
                              "mvt: cut where the marginal gain drops to the average rate (Charnov)")
     parser.add_argument("--travel", type=float, default=256,
                         help="mvt travel cost c in tokens: the answer that follows anyway; larger stays longer")
-    parser.add_argument("--smooth", type=int, default=2, help="mvt: steps ahead the marginal gain is measured over")
     parser.add_argument("--adapter", help="LoRA to merge into --model before scoring and checking")
     parser.add_argument("--threshold", type=float, default=0.9, help="p(gold) a kept trace must reach")
     parser.add_argument("--flat", type=float, default=0.02,
@@ -134,7 +133,7 @@ class Pruner:
         curve = p_gold([range(n) for n in range(len(steps) + 1)])
         positions = step_positions([len(self.encode(step)) for step in steps])
         settle = settle_index(curve, args.threshold)
-        mvt = mvt_index(curve, positions, args.travel, args.smooth)
+        mvt = mvt_index(curve, positions, args.travel)
         log = {"steps": len(steps), "settle_step": settle, "mvt_step": mvt, "positions": positions,
                "curve": [round(p, 4) for p in curve]}
         cut = mvt if args.rule == "mvt" else settle
@@ -235,13 +234,15 @@ def step_positions(lengths):
     return positions
 
 
-def mvt_index(curve, positions, travel, smooth=2):
+def mvt_index(curve, positions, travel):
     """Steps to keep under the Marginal Value Theorem: the first n where staying stops paying.
 
     g is the running maximum of p(gold) (the certainty secured so far, never lost by a dip).
-    Stay while the marginal gain of the next `smooth` steps, per token, beats the average
-    rate g(t) / (t + travel); leave at the first n where it does not. Keeps everything when
-    the gain never slows down.
+    Stay while some later point of the trace pays better per token than the average rate so
+    far, g(t) / (t + travel); leave at the first n where none does. Looking at every later
+    point, not only the next steps, matters on math: p(gold) of the exact number stays near 0
+    until the computation ends, then jumps, and a short look-ahead would leave at 0.
+    Keeps everything when the gain never slows down.
     """
     gain, best = [], 0.0
     for p in curve:
@@ -249,9 +250,8 @@ def mvt_index(curve, positions, travel, smooth=2):
         gain.append(best)
     last = len(curve) - 1
     for n in range(last):
-        ahead = min(last, n + smooth)
-        spent = max(1, positions[ahead] - positions[n])
-        if (gain[ahead] - gain[n]) / spent <= gain[n] / (positions[n] + travel):
+        ahead = max((gain[m] - gain[n]) / max(1, positions[m] - positions[n]) for m in range(n + 1, last + 1))
+        if ahead <= gain[n] / (positions[n] + travel):
             return n
     return last
 
