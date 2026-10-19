@@ -28,6 +28,24 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 
 Accuracy ranges (95%) are about +/-4 pp on this subset, so differences under ~3 pp are noise.
 
+## Ablation: what each ingredient adds (running overnight)
+
+Every run starts from the raw model with the same seed (same questions in the same order),
+20 steps x 32 questions x 8 samples, alpha 0.5, LoRA r16, and is scored on the same 240-question
+subset. Each run adds one ingredient to the previous one, so the difference between two
+neighbours is that ingredient's marginal effect. The guard only measures (no rollbacks).
+
+| run | ingredients | tokens saved | accuracy change |
+|---|---|---|---|
+| S | steering vector only (no training), strengths 2 and 4 | | |
+| A | RL with the ShorterBetter length reward, lr 2e-5 | | |
+| B | A + TokenProbe-KL (core tokens anchored, filler pushed down over budget) | | |
+| C | B + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step | | |
+| D | C + AdaptThink (2 of 8 samples start with an empty thinking block) | | |
+
+Loop 4 (stacked on loop 1, lr 5e-5, entropy bonus 1e-3) was stopped after 3 steps for this:
+its entropy rose 0.80 -> 1.01 -> 1.16, a sign the entropy bonus with that lr destabilises it.
+
 ## Training data
 
 | run | questions | sources | samples per question | token cap |
