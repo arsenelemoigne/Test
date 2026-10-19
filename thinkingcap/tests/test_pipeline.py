@@ -215,3 +215,26 @@ def test_probe_curve_scores_the_toy_rollouts(toy):
         after = [p["p_gold"] for p in result["probes"] if p["k"] >= key]
         assert sum(before) / len(before) < 0.1  # the number is unknown before the key paragraph (a guess may spike)
         assert max(after) > 0.8   # and known right after it
+
+
+def test_packed_probe_matches_scoring_each_cut_from_scratch():
+    import torch
+    from transformers import Qwen3Config, Qwen3ForCausalLM
+
+    from probe_curve import probe_scores, score
+    torch.manual_seed(0)
+    model = Qwen3ForCausalLM(Qwen3Config(
+        vocab_size=50, hidden_size=32, intermediate_size=64, num_hidden_layers=2, num_attention_heads=4,
+        num_key_value_heads=2, head_dim=8, max_position_embeddings=128)).eval()
+    rng = random.Random(0)
+    prompt, thinking = [rng.randrange(50) for _ in range(7)], [rng.randrange(50) for _ in range(20)]
+    closings = {0: [3, 4, 5], 6: [4, 5], 13: [3, 4, 5], 20: [4, 5]}
+    suffixes = [[7], [8, 9, 1], [10, 11]]  # unequal lengths exercise the padding
+    rows = [(cut, index, prompt + thinking[:cut] + closing, suffix)
+            for cut, closing in closings.items() for index, suffix in enumerate(suffixes)]
+    scratch = score(model, rows, 10_000, "cpu")
+    for budget in (6144, 7):  # one forward pass, then a few
+        packed = probe_scores(model, prompt, thinking, closings, suffixes, "cpu", budget)
+        assert packed.keys() == scratch.keys()
+        for key in packed:
+            assert abs(packed[key] - scratch[key]) < 1e-4, (budget, key)

@@ -3,8 +3,9 @@
 For each question this samples full rollouts, then cuts each rollout's thinking after k tokens
 (k = 0, stride, 2*stride, ...), closes it with "\\n</think>\\n\\nFinal answer:" (the newline only
 when the cut does not already end with one, as Qwen3 writes it) and reads the
-model's probability of every candidate answer by teacher forcing -- no sampling, one forward
-pass per cut. The curve p(gold | first k thinking tokens) shows how much of the thinking comes
+model's probability of every candidate answer by teacher forcing -- no sampling. The rollout
+is read once and every cut is scored as a short segment attached to it, so a cut costs only
+its closing tokens. The curve p(gold | first k thinking tokens) shows how much of the thinking comes
 after the answer is already settled.
 
 Drop this file at the root of ThinkingCap-Test (next to train.py) and run:
@@ -13,8 +14,9 @@ Drop this file at the root of ThinkingCap-Test (next to train.py) and run:
     python probe_curve.py --out runs/probe --per-source 50      # GSM8K, Skywork, CSQA, ARC
     python probe_curve.py --out runs/probe --summarize-only     # re-read the results
 
-Phase 1 generates with vLLM (the eval's sampling settings); phase 2 scores with Transformers.
-Both write to --out, and phase 1 is skipped when its rollouts already exist.
+Phase 1 generates with vLLM (the eval's sampling settings) in a child process, so the GPU is
+free again for phase 2, which scores with Transformers. Both write to --out, and phase 1 is
+skipped when its rollouts already exist.
 """
 
 import argparse
@@ -23,6 +25,8 @@ import math
 import os
 import random
 import re
+import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -39,10 +43,13 @@ def main():
     args = parse_arguments()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    if args.generate_only:
+        write_jsonl(out / ROLLOUTS, generate(load_questions(args), args))
+        return
     if not args.summarize_only:
         if not (out / ROLLOUTS).exists():
-            questions = load_questions(args)
-            write_jsonl(out / ROLLOUTS, generate(questions, args))
+            # vLLM keeps most of the GPU until its process exits, so it samples in a child process.
+            subprocess.run([sys.executable, *sys.argv, "--generate-only"], check=True)
         rollouts = read_jsonl(out / ROLLOUTS)
         write_jsonl(out / PROBES, probe_all(rollouts, args))
     summarize(read_jsonl(out / PROBES), args.threshold, out)
@@ -63,7 +70,10 @@ def parse_arguments():
     parser.add_argument("--threshold", type=float, default=0.9,
                         help="p(gold) that counts as 'settled' in the summary")
     parser.add_argument("--dtype", default="bfloat16", help="float16 on a T4")
+    parser.add_argument("--attention-backend", default=None,
+                        help="vLLM attention backend; TRITON_ATTN on a T4, where FlashInfer prefill fails")
     parser.add_argument("--summarize-only", action="store_true")
+    parser.add_argument("--generate-only", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
 
 
@@ -93,9 +103,10 @@ def generate(questions, args):
     eos_ids = eos if isinstance(eos, list) else [eos]
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
+    extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
     engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.85,
                  max_model_len=args.max_tokens + max(len(p) for p in prompts) + 16,
-                 generation_config="vllm")
+                 generation_config="vllm", **extra)
     params = SamplingParams(n=args.samples, max_tokens=args.max_tokens, seed=SEED,
                             stop_token_ids=eos_ids, **SAMPLING)
     outputs = engine.generate([{"prompt_token_ids": p} for p in prompts], params)
@@ -174,10 +185,8 @@ def probe_all(rollouts, args):
         # The rollout opens with <think>: the first probe keeps it, giving Qwen3's empty "<think>\n</think>".
         first = 1 if thinking and thinking[0] == open_id else 0
         cuts = sorted(set(range(first, len(thinking) + 1, args.stride)) | {first, len(thinking)})
-        rows = [(cut, index, rollout["prompt_ids"] + thinking[:cut]
-                 + bridges[cut > 0 and thinking[cut - 1] in newline_ending], suffix)
-                for cut in cuts for index, suffix in enumerate(suffixes)]
-        scores = score(model, rows, args.batch_tokens, device)
+        closings = {cut: bridges[cut > 0 and thinking[cut - 1] in newline_ending] for cut in cuts}
+        scores = probe_scores(model, rollout["prompt_ids"], thinking, closings, suffixes, device)
 
         probes = []
         for cut in cuts:
@@ -212,9 +221,63 @@ def gold_probability(raw, task):
     return raw[0]
 
 
+def probe_scores(model, prompt, thinking, closings, suffixes, device, budget=6144):
+    """{(cut, candidate): log p(suffix | prompt + thinking[:cut] + closing)} for every cut of one rollout.
+
+    Every cut is a prefix of the same rollout, so the rollout is run once and each cut's
+    closing + candidate is appended after it as a segment that attends only to the first
+    len(prompt) + cut positions and to itself, at the positions it would have there. One forward
+    pass scores up to `budget` segment tokens, and the result equals scoring each cut from scratch.
+    """
+    import torch
+
+    body, head = model.base_model, model.get_output_embeddings()
+    dtype = next(model.parameters()).dtype
+    blocked = torch.finfo(dtype).min
+    context = prompt + thinking
+    segments = [(cut, row, closing + suffix, len(closing))
+                for cut, closing in closings.items() for row, suffix in enumerate(suffixes)]
+
+    def causal(size):
+        return torch.full((size, size), blocked, dtype=dtype, device=device).triu(1)
+
+    scores, start = {}, 0
+    while start < len(segments):
+        group, size = [], 0
+        while start < len(segments) and (not group or size + len(segments[start][2]) <= budget):
+            group.append(segments[start])
+            size += len(segments[start][2])
+            start += 1
+        total = len(context) + size
+        ids, positions = list(context), list(range(len(context)))
+        mask = torch.full((total, total), blocked, dtype=dtype, device=device)
+        mask[:len(context), :len(context)] = causal(len(context))
+        spans, offset = [], len(context)
+        for cut, row, tokens, closing in group:
+            length, width = len(prompt) + cut, len(tokens)
+            ids += tokens
+            positions += range(length, length + width)
+            mask[offset:offset + width, :length] = 0
+            mask[offset:offset + width, offset:offset + width] = causal(width)
+            spans.append((cut, row, offset + closing, tokens[closing:]))
+            offset += width
+        with torch.no_grad():
+            hidden = body(input_ids=torch.tensor([ids], device=device), attention_mask=mask[None, None],
+                          position_ids=torch.tensor([positions], device=device)).last_hidden_state[0]
+            for cut, row, first, suffix in spans:
+                # Position t predicts token t + 1, so the suffix is read one step early.
+                read = torch.arange(first - 1, first - 1 + len(suffix), device=device)
+                logp = torch.log_softmax(head(hidden[read]).float(), dim=-1)
+                target = torch.tensor(suffix, device=device)
+                scores[(cut, row)] = logp.gather(1, target[:, None]).sum().item()
+    return scores
+
+
 def score(model, rows, batch_tokens, device):
     """{(cut, candidate): log p(suffix | context)} for rows of (cut, candidate, context, suffix)."""
     import torch
+
+    body, head = model.base_model, model.get_output_embeddings()
 
     rows = sorted(rows, key=lambda row: len(row[2]) + len(row[3]))
     scores, start = {}, 0
@@ -231,13 +294,15 @@ def score(model, rows, batch_tokens, device):
             ids[row, :len(sequence)] = torch.tensor(sequence)
             mask[row, :len(sequence)] = 1
         with torch.no_grad():
-            logits = model(input_ids=ids.to(device), attention_mask=mask.to(device)).logits
-        for row, (cut, candidate, context, suffix) in enumerate(batch):
-            # The logits at position t predict token t + 1, so the suffix is read one step early.
-            positions = torch.arange(len(context) - 1, len(context) + len(suffix) - 1, device=device)
-            logp = torch.log_softmax(logits[row, positions].float(), dim=-1)
-            target = torch.tensor(suffix, device=device)
-            scores[(cut, candidate)] = logp.gather(1, target[:, None]).sum().item()
+            # Logits only where the suffix is read: the full vocabulary at every position would
+            # take batch_tokens x 152k values.
+            hidden = body(input_ids=ids.to(device), attention_mask=mask.to(device)).last_hidden_state
+            for row, (cut, candidate, context, suffix) in enumerate(batch):
+                # Position t predicts token t + 1, so the suffix is read one step early.
+                positions = torch.arange(len(context) - 1, len(context) + len(suffix) - 1, device=device)
+                logp = torch.log_softmax(head(hidden[row, positions]).float(), dim=-1)
+                target = torch.tensor(suffix, device=device)
+                scores[(cut, candidate)] = logp.gather(1, target[:, None]).sum().item()
         start = end
     return scores
 
