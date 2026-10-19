@@ -61,6 +61,7 @@ def parse_arguments():
     parser.add_argument("--data", default="data/val.jsonl")
     parser.add_argument("--out", required=True)
     parser.add_argument("--per-source", type=int, default=50, help="questions per dataset")
+    parser.add_argument("--sources", help="comma-separated datasets to keep (default: all)")
     parser.add_argument("--samples", type=int, default=4, help="rollouts per question")
     parser.add_argument("--max-tokens", type=int, default=4096)
     parser.add_argument("--stride", type=int, default=16,
@@ -78,9 +79,11 @@ def parse_arguments():
 
 
 def load_questions(args):
+    keep = set(args.sources.split(",")) if args.sources else None
     by_source = defaultdict(list)
     for index, row in enumerate(read_jsonl(Path(args.data))):
-        by_source[row["source"]].append({**row, "id": f"{row['source']}-{index}"})
+        if keep is None or row["source"] in keep:
+            by_source[row["source"]].append({**row, "id": f"{row['source']}-{index}"})
     rng = random.Random(SEED)
     picked = []
     for rows in by_source.values():
