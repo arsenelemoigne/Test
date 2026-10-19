@@ -152,3 +152,28 @@ most patient travel cost tried still cuts the training traces by 78%. The cut po
 problem: one-shot SFT on traces that end right after the number appears teaches the model to
 stop reasoning early, on held-out math too. Every one-cut SFT variant so far (settle, settle +
 margin, MVT 256, MVT 1024) lands between -6 and -8 points with SVAMP -21 to -24.
+
+## Experiment 2: fading worked examples, paragraphs + words (LLMLingua-2 scores)
+
+`fade_traces.py`: one target per question (its shortest correct rollout, 302 questions).
+Round k deletes the lowest-gain paragraphs until k x 10% of the thinking tokens are gone, then
+keeps the best (1 - k x 10%) of the words inside the remaining paragraphs, scored by
+LLMLingua-2 (`microsoft/llmlingua-2-xlm-roberta-large-meetingbank`); words with digits or
+math symbols always stay. The current adapter answers naturally twice from each shortened
+trace; on failure the trace retries with round k-1's word share, then falls back to round
+k-1's trace. SFT: 1 epoch per round from the previous round's adapter, lr 1e-4, r16,
+`--max-per-source 100`.
+
+### Round 1 (10% of paragraphs, 90% of words kept)
+
+Targets: 277 faded, 13 faded with fewer words cut, 12 original. Mean completion 518 -> 401
+tokens (-23%): ARC -28%, CSQA -27%, GSM8K -15%. SFT on 265 rows (final loss ~0.9, higher
+than the cut-trace runs: compacted text is less natural).
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +5% / +9% / -12% | -1.3 / +3.8 / -2.5 |
+| IFEval | +27% | +1.2 |
+| MBPP+ | -39% (longer) | -5.0 |
+| SVAMP | +17% | -6.2 |
+| **average** | **+4.6%** | **-2.5 pp**: within the limit |
