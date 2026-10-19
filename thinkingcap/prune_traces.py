@@ -14,6 +14,14 @@ For each correct rollout from probe_curve.py:
   4. Let the model answer naturally from the edited thinking (no forced "Final answer:")
      --check-samples times. The trace is kept only if every answer is graded correct.
 
+--rule mvt replaces step 2's fixed threshold with the Marginal Value Theorem (Charnov 1976):
+thinking is foraging for certainty, g(t) is p(gold) after t thinking tokens (its running
+maximum, the gain secured so far), and the model should leave the patch at the first t where
+the gain from staying a little longer, g'(t) over the next --smooth steps, drops to the
+average rate g(t) / (t + c). The travel cost c (--travel) is the answer tokens that follow
+anyway: a larger c means staying longer. Step 3 then keeps a deletion if p(gold) stays at the
+level the cut reached (or the threshold, whichever is lower).
+
 Per question it keeps the shortest accepted completion (thinking + answer, as the evaluation
 counts it). Questions whose p(gold) never settles keep their shortest correct original
 rollout, so training does not teach "always stop early" on the hard ones.
@@ -74,6 +82,13 @@ def parse_arguments():
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
     parser.add_argument("--rollouts", required=True, help="rollouts.jsonl from probe_curve.py")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--rule", choices=("settle", "mvt"), default="settle",
+                        help="settle: cut where p(gold) reaches --threshold and stays; "
+                             "mvt: cut where the marginal gain drops to the average rate (Charnov)")
+    parser.add_argument("--travel", type=float, default=256,
+                        help="mvt travel cost c in tokens: the answer that follows anyway; larger stays longer")
+    parser.add_argument("--smooth", type=int, default=2, help="mvt: steps ahead the marginal gain is measured over")
+    parser.add_argument("--adapter", help="LoRA to merge into --model before scoring and checking")
     parser.add_argument("--threshold", type=float, default=0.9, help="p(gold) a kept trace must reach")
     parser.add_argument("--flat", type=float, default=0.02,
                         help="a step whose p(gold) gain over the best earlier point is at most this is 'flat'")
@@ -100,6 +115,9 @@ class Pruner:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = AutoModelForCausalLM.from_pretrained(
             args.model, dtype=getattr(torch, args.dtype)).to(self.device).eval()
+        if getattr(args, "adapter", None):
+            from peft import PeftModel
+            self.model = PeftModel.from_pretrained(self.model, args.adapter).merge_and_unload().eval()
         self.end_of_turn = self.tokenizer.convert_tokens_to_ids("<|im_end|>")
         self.open_id = self.tokenizer.convert_tokens_to_ids("<think>")
 
@@ -114,15 +132,20 @@ class Pruner:
             return self.p_gold(rollout, [[steps[i] for i in kept] for kept in variants], suffixes)
 
         curve = p_gold([range(n) for n in range(len(steps) + 1)])
+        positions = step_positions([len(self.encode(step)) for step in steps])
         settle = settle_index(curve, args.threshold)
-        log = {"steps": len(steps), "settle_step": settle, "curve": [round(p, 4) for p in curve]}
-        if settle is None:
+        mvt = mvt_index(curve, positions, args.travel, args.smooth)
+        log = {"steps": len(steps), "settle_step": settle, "mvt_step": mvt, "positions": positions,
+               "curve": [round(p, 4) for p in curve]}
+        cut = mvt if args.rule == "mvt" else settle
+        if cut is None:
             return {"targets": [], "log": log | {"status": "unsettled"}}
 
-        truncated = list(range(min(len(steps), max(settle + args.margin, args.min_steps))))
+        truncated = list(range(min(len(steps), max(cut + args.margin, args.min_steps))))
+        level = args.threshold if args.rule == "settle" else min(args.threshold, curve[len(truncated)])
         flat = flat_steps(curve, truncated, args.flat)
         pruned = drop_flat(truncated, flat, lambda kept: len(kept) >= args.min_steps
-                           and p_gold([kept])[0] >= args.threshold)
+                           and p_gold([kept])[0] >= level)
         log |= {"truncated_steps": len(truncated), "pruned_steps": len(pruned), "flat_steps": len(flat)}
 
         targets = []
@@ -204,6 +227,35 @@ def settle_index(curve, threshold):
     return settle
 
 
+def step_positions(lengths):
+    """Thinking tokens spent after the first n steps, n = 0..len(lengths)."""
+    positions = [0]
+    for length in lengths:
+        positions.append(positions[-1] + length)
+    return positions
+
+
+def mvt_index(curve, positions, travel, smooth=2):
+    """Steps to keep under the Marginal Value Theorem: the first n where staying stops paying.
+
+    g is the running maximum of p(gold) (the certainty secured so far, never lost by a dip).
+    Stay while the marginal gain of the next `smooth` steps, per token, beats the average
+    rate g(t) / (t + travel); leave at the first n where it does not. Keeps everything when
+    the gain never slows down.
+    """
+    gain, best = [], 0.0
+    for p in curve:
+        best = max(best, p)
+        gain.append(best)
+    last = len(curve) - 1
+    for n in range(last):
+        ahead = min(last, n + smooth)
+        spent = max(1, positions[ahead] - positions[n])
+        if (gain[ahead] - gain[n]) / spent <= gain[n] / (positions[n] + travel):
+            return n
+    return last
+
+
 def flat_steps(curve, indices, tolerance):
     """Steps that did not raise p(gold) above the best point before them.
 
@@ -260,6 +312,7 @@ def report(targets, log, by_question, out):
         saved = 1 - sum(after) / sum(before) if before else float("nan")
         lines.append(f"{source:<16}{questions:>10}{len(group):>9}{kinds['pruned']:>8}{kinds['truncated']:>7}"
                      f"{kinds['original']:>6}{avg(before):>15.0f}{avg(after):>8.0f}{saved:>8.0%}")
+    lines += ["", *cut_comparison(log)]
     statuses = Counter(entry["status"] for entry in log)
     lines += ["", "correct rollouts: " + ", ".join(f"{k} {v}" for k, v in sorted(statuses.items())),
               "pruned/trunc/orig: which variant became the question's target (shortest accepted)",
@@ -267,6 +320,26 @@ def report(targets, log, by_question, out):
     text = "\n".join(lines)
     print(text)
     (out / "summary.txt").write_text(text + "\n")
+
+
+def cut_comparison(log):
+    """Where the MVT cut falls against the settle cut, in thinking tokens, over the rollouts both define."""
+    pairs = [(entry["positions"][entry["settle_step"]], entry["positions"][entry["mvt_step"]])
+             for entry in log if entry.get("mvt_step") is not None and entry.get("settle_step") is not None]
+    if not pairs:
+        return ["settle vs mvt: no rollout has both cuts"]
+    earlier = sum(m < s for s, m in pairs) / len(pairs)
+    later = sum(m > s for s, m in pairs) / len(pairs)
+    return [f"settle vs mvt cut over {len(pairs)} rollouts: median thinking tokens kept "
+            f"settle {median([s for s, _ in pairs]):.0f}, mvt {median([m for _, m in pairs]):.0f}, "
+            f"median (mvt - settle) {median([m - s for s, m in pairs]):+.0f}; "
+            f"mvt earlier {earlier:.0%}, later {later:.0%}, same {1 - earlier - later:.0%}"]
+
+
+def median(values):
+    values = sorted(values)
+    middle = len(values) // 2
+    return values[middle] if len(values) % 2 else (values[middle - 1] + values[middle]) / 2
 
 
 def avg(values):

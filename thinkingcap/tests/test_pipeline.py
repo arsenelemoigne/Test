@@ -374,3 +374,29 @@ def test_steering_bias_adds_the_vector_to_the_attention_output(tmp_path):
     assert torch.allclose(shift, vector.expand_as(shift), atol=1e-4)
     groups = [([0], [[1] * 10, [1] * 3, [1] * 4], [True, True, False]), ([0], [[1] * 4, [1] * 5], [True, True])]
     assert concise_verbose_pairs(groups, 1.5) == [([0], [1] * 3, [1] * 10)]
+
+
+def test_mvt_cut_leaves_when_the_gain_slows_and_travel_makes_it_stay():
+    from prune_traces import mvt_index, step_positions
+
+    positions = step_positions([50] * 6)
+    curve = [0.1, 0.5, 0.85, 0.9, 0.91, 0.91, 0.92]  # fast rise, then a plateau
+    assert mvt_index(curve, positions, travel=50) == 1   # next 2 steps earn 0.004/token < 0.5/100
+    assert mvt_index(curve, positions, travel=500) == 2  # a larger travel cost stays longer
+    assert mvt_index([0.0, 0.2, 0.4, 0.8], step_positions([10] * 3), travel=10, smooth=1) == 3  # still rising
+    assert mvt_index([0.3, 0.9, 0.2, 0.2], step_positions([10] * 3), travel=10, smooth=1) == 1  # a dip loses nothing
+    assert mvt_index([0.5], [0], travel=10) == 0
+
+
+def test_fade_deletes_low_gain_steps_first_and_respects_the_floor():
+    from fade_traces import fade
+    from prune_traces import step_positions
+
+    curve = [0.1, 0.1, 0.8, 0.8, 0.9]  # steps 0 and 2 add nothing, step 1 is the key one
+    positions = step_positions([10, 10, 10, 10])
+    assert fade(curve, positions, 0.0, "gain") == [0, 1, 2, 3]
+    assert fade(curve, positions, 0.25, "gain") == [0, 1, 3]  # the later flat step goes first
+    assert fade(curve, positions, 0.5, "gain") == [1, 3]
+    assert fade(curve, positions, 0.5, "early") == [2, 3]
+    assert fade(curve, positions, 0.9, "gain", floor=20) == [1, 3]
+    assert len(fade(curve, positions, 1.0, "gain", min_steps=1)) == 1

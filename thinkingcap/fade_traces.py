@@ -1,0 +1,168 @@
+"""Fading worked examples: shorten the model's own correct traces a little more every round.
+
+One brutal cut (prune_traces.py) taught the model to stop right after restating the question.
+Here the reasoning is removed gradually, as in fading worked examples (Renkl) and Stepwise
+Internalization (Deng et al. 2024), so each round the model only has to absorb a few skipped
+steps:
+
+  1. Per question, take its shortest correct rollout and split the thinking into steps
+     (paragraphs). Score p(gold) after every step once, with the base model (cached).
+  2. Round k deletes steps until about k x --step of the thinking tokens are gone: the steps
+     with the smallest probe gain first (--order gain), or the earliest ones (--order early).
+     With --floor-travel C it never goes below the Marginal Value Theorem cut for travel cost
+     C (prune_traces.mvt_index): MVT sets the final target length.
+  3. The current model (--adapter, round k-1's LoRA) answers naturally from the shortened
+     thinking --check-samples times. The trace is kept only if every answer is correct;
+     otherwise the question keeps its round k-1 trace (--previous), so hard questions stay
+     long instead of dropping out and leaving only the easy ones.
+
+    python fade_traces.py --rollouts runs/probe/rollouts.jsonl --out runs/fade/r1 --round 1
+    python sft.py --data runs/fade/r1/sft.jsonl --out adapters/fade-r1 --epochs 1
+    python fade_traces.py --rollouts runs/probe/rollouts.jsonl --out runs/fade/r2 --round 2 \\
+        --adapter adapters/fade-r1 --previous runs/fade/r1/sft.jsonl --cache runs/fade/r1/curves.jsonl
+    python sft.py --data runs/fade/r2/sft.jsonl --out adapters/fade-r2 --epochs 1 --init-adapter adapters/fade-r1
+"""
+
+import argparse
+from collections import Counter, defaultdict
+from pathlib import Path
+from types import SimpleNamespace
+
+from probe_curve import candidates, read_jsonl, write_jsonl
+from prune_traces import Pruner, avg, mvt_index, original_target, split_steps, step_positions
+
+
+def main():
+    args = parse_arguments()
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    pruner = Pruner(SimpleNamespace(model=args.model, adapter=args.adapter, dtype=args.dtype,
+                                    check_samples=args.check_samples, answer_tokens=args.answer_tokens,
+                                    batch_tokens=args.batch_tokens))
+
+    by_question = defaultdict(list)
+    for rollout in read_jsonl(Path(args.rollouts)):
+        by_question[rollout["id"]].append(rollout)
+    chosen = {qid: min(ok, key=lambda r: r["output_tokens"]) for qid, group in by_question.items()
+              if (ok := [r for r in group if r["correct"] and r["closed_thinking"] and not r["truncated"]])}
+    previous = {row["id"]: row for row in read_jsonl(Path(args.previous))} if args.previous else {}
+    cache = {row["id"]: row for row in read_jsonl(Path(args.cache))} if args.cache else {}
+
+    curves, targets, log = [], [], []
+    for number, (qid, rollout) in enumerate(chosen.items(), 1):
+        steps = split_steps(pruner.decode_thinking(rollout["thinking_ids"]))
+        if qid in cache:
+            curve, positions = cache[qid]["curve"], cache[qid]["positions"]
+        else:
+            positions = step_positions([len(pruner.encode(step)) for step in steps])
+            curve = base_curve(pruner, rollout, by_question[qid], steps)
+        curves.append({"id": qid, "curve": curve, "positions": positions})
+
+        floor = positions[mvt_index(curve, positions, args.floor_travel, args.smooth)] \
+            if args.floor_travel is not None else 0
+        kept = fade(curve, positions, args.round * args.step, args.order, floor, args.min_steps)
+        earlier = previous.get(qid)
+        entry = {"id": qid, "source": rollout["source"], "steps": len(steps), "kept_steps": len(kept),
+                 "thinking_tokens": positions[-1], "floor": floor}
+        if earlier is not None and earlier["kind"] != "original" and earlier["steps"] <= len(kept):
+            target, status = earlier, "at_floor"  # nothing more to delete
+        elif len(kept) == len(steps):
+            target, status = original_target(rollout), "nothing_to_delete"
+        else:
+            target = pruner.checked_target(rollout, [steps[i] for i in kept], "faded")
+            status = "faded"
+            if target is None:
+                target = earlier or original_target(rollout)
+                status = "kept_previous" if earlier else "kept_original"
+        if target is not None:
+            targets.append(target | {"round": args.round if status == "faded" else target.get("round", 0)})
+        log.append(entry | {"status": status})
+        if number % 20 == 0 or number == len(chosen):
+            print(f"faded {number}/{len(chosen)} questions", flush=True)
+
+    write_jsonl(out / "curves.jsonl", curves)
+    write_jsonl(out / "sft.jsonl", targets)
+    write_jsonl(out / "log.jsonl", log)
+    report(targets, log, chosen, out, args)
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
+    parser.add_argument("--adapter", help="the current learner (round k-1's LoRA): it scores the natural-answer check")
+    parser.add_argument("--rollouts", required=True, help="rollouts.jsonl from probe_curve.py")
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--round", type=int, required=True, help="k: delete about k x --step of the thinking")
+    parser.add_argument("--step", type=float, default=0.1, help="share of the thinking removed per round")
+    parser.add_argument("--order", choices=("gain", "early"), default="gain",
+                        help="gain: smallest probe gain first; early: earliest steps first")
+    parser.add_argument("--previous", help="round k-1's sft.jsonl: the fallback when a trace fails the check")
+    parser.add_argument("--cache", help="an earlier round's curves.jsonl, to skip rescoring the base curves")
+    parser.add_argument("--floor-travel", type=float, help="never shorten below the MVT cut for this travel cost")
+    parser.add_argument("--smooth", type=int, default=2)
+    parser.add_argument("--min-steps", type=int, default=1)
+    parser.add_argument("--check-samples", type=int, default=2)
+    parser.add_argument("--answer-tokens", type=int, default=512)
+    parser.add_argument("--batch-tokens", type=int, default=32768)
+    parser.add_argument("--dtype", default="bfloat16")
+    return parser.parse_args()
+
+
+def base_curve(pruner, rollout, siblings, steps):
+    """p(gold) after each prefix of the steps, scored once (with --adapter merged, if given)."""
+    answers, terminated = candidates(rollout, siblings)
+    suffixes = [pruner.encode(" " + a) + ([pruner.end_of_turn] if terminated else []) for a in answers]
+    curve = pruner.p_gold(rollout, [steps[:n] for n in range(len(steps) + 1)], suffixes)
+    return [round(p, 4) for p in curve]
+
+
+def fade(curve, positions, share, order, floor=0, min_steps=1):
+    """Indices of the steps kept once about `share` of the thinking tokens are deleted.
+
+    Steps go in order of their probe gain (curve[i + 1] - curve[i], smallest first, the later
+    step first on ties) or from the start. A step is skipped if deleting it would take the
+    thinking under `floor` tokens or under `min_steps` steps.
+    """
+    count = len(curve) - 1
+    lengths = [positions[i + 1] - positions[i] for i in range(count)]
+    total = positions[-1]
+    if order == "gain":
+        queue = sorted(range(count), key=lambda i: (curve[i + 1] - curve[i], -i))
+    else:
+        queue = list(range(count))
+    kept, removed = set(range(count)), 0
+    for i in queue:
+        if removed >= share * total:
+            break
+        if len(kept) <= min_steps or total - removed - lengths[i] < floor:
+            continue
+        kept.discard(i)
+        removed += lengths[i]
+    return sorted(kept)
+
+
+def report(targets, log, chosen, out, args):
+    lines = [f"round {args.round}: target {min(1.0, args.round * args.step):.0%} of the thinking removed, "
+             f"order {args.order}, floor travel {args.floor_travel}", "",
+             f"{'source':<16}{'questions':>10}{'faded':>7}{'prev':>6}{'orig':>6}{'floor':>7}"
+             f"{'tokens before':>15}{'after':>8}{'saved':>8}"]
+    for source in sorted({e["source"] for e in log}) + ["ALL"]:
+        entries = [e for e in log if source in ("ALL", e["source"])]
+        group = [t for t in targets if source in ("ALL", t["source"])]
+        status = Counter(e["status"] for e in entries)
+        before = [chosen[t["id"]]["output_tokens"] for t in group]
+        after = [len(t["completion_ids"]) for t in group]
+        saved = 1 - sum(after) / sum(before) if before else float("nan")
+        lines.append(f"{source:<16}{len(entries):>10}{status['faded']:>7}{status['kept_previous']:>6}"
+                     f"{status['kept_original'] + status['nothing_to_delete']:>6}{status['at_floor']:>7}"
+                     f"{avg(before):>15.0f}{avg(after):>8.0f}{saved:>8.0%}")
+    lines += ["", "faded: shortened this round and passed the check; prev: failed, kept round k-1's trace;",
+              "orig: failed with no earlier trace, or nothing to delete; floor: already at the MVT floor",
+              "tokens: mean completion length (thinking + answer) of the question's rollout before and after"]
+    text = "\n".join(lines)
+    print(text)
+    (out / "summary.txt").write_text(text + "\n")
+
+
+if __name__ == "__main__":
+    main()

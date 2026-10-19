@@ -45,9 +45,13 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to(device)
     model.gradient_checkpointing_enable()
     model.enable_input_require_grads()
-    model = get_peft_model(model, LoraConfig(
-        r=args.rank, lora_alpha=2 * args.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
+    if args.init_adapter:  # continue an earlier round's LoRA (fading worked examples)
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, args.init_adapter, is_trainable=True)
+    else:
+        model = get_peft_model(model, LoraConfig(
+            r=args.rank, lora_alpha=2 * args.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
     model.print_trainable_parameters()
     trainable = [p for p in model.parameters() if p.requires_grad]
     for parameter in trainable:  # fp16 gradients cannot be unscaled: keep the LoRA weights in fp32
@@ -108,6 +112,7 @@ def parse_arguments():
     parser.add_argument("--dtype", default="bfloat16", help="float16 on a T4")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-per-source", type=int, default=0, help="cap rows per dataset; 0 keeps all")
+    parser.add_argument("--init-adapter", help="start from this LoRA instead of a fresh one")
     return parser.parse_args()
 
 
