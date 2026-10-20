@@ -500,3 +500,8 @@ reasoning goes, not where exactly the cut falls.
 
 (The Colab page lost its Google sign-in and then its output stream at ~13:50; the runtime kept
 running. Results read from /content/track_log.txt through the Files panel.)
+| **code-mvt1024-tokens32** | **+24.1%** | **-1.9** | MBPP+ +57% / -5.6 | everything a little shorter (BFCL 12-19%), ~no loss |
+
+Code-mvt with 32-token batches: 225 checked, 162 passed. Paragraphs made the code cut all-or-
+nothing (one long paragraph per plan, so MVT usually kept 0 tokens: MBPP+ +93% / -13.7); token
+batches keep the first useful part of the plan (+57% / -5.6). **For code, cut by token batches.**
