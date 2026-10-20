@@ -44,6 +44,10 @@ def main():
     parser.add_argument("--mc", help="mix: sft.jsonl giving the non-math rows")
     parser.add_argument("--math", help="mix: sft.jsonl giving the GSM8K rows")
     parser.add_argument("--name", help="mix: run name")
+    parser.add_argument("--plan-file", default="plan.txt", help="plan: the queue this runtime works through")
+    parser.add_argument("--wait-hours", type=float, default=0,
+                        help="plan: when the queue is empty, keep polling the branch this long; a running cell "
+                             "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
     parser.add_argument("--min-steps", type=int, default=1, help="mvt: never cut below this many paragraphs")
@@ -66,9 +70,7 @@ def update(restart=True):
         print("could not update the scripts; running the local copies", flush=True)
         return
     changed = False
-    for source in [*(clone / "thinkingcap").glob("*.py"), clone / "thinkingcap" / "plan.txt"]:
-        if not source.exists():
-            continue
+    for source in [*(clone / "thinkingcap").glob("*.py"), *(clone / "thinkingcap").glob("plan*.txt")]:
         if not Path(source.name).exists() or not filecmp.cmp(source, source.name, shallow=False):
             shutil.copy(source, source.name)
             changed |= source.name == "track.py"
@@ -264,13 +266,20 @@ def plan(args):
     plan.txt comes from the branch, so pushing a line queues a new stage without touching the
     notebook. Stages skip finished work, so a line already done costs nothing.
     """
-    done = set()
+    import time
+    done, idle_since = set(), None
     while True:
-        lines = [l.split("#")[0].strip() for l in Path("plan.txt").read_text().splitlines()] \
-            if Path("plan.txt").exists() else []
+        plan_file = Path(args.plan_file)
+        lines = [l.split("#")[0].strip() for l in plan_file.read_text().splitlines()] if plan_file.exists() else []
         todo = [l for l in lines if l and l not in done]
         if not todo:
-            return
+            idle_since = idle_since or time.time()
+            if time.time() - idle_since > args.wait_hours * 3600:
+                return
+            time.sleep(300)
+            update_files()
+            continue
+        idle_since = None
         print(f"plan: {todo[0]}", flush=True)
         if subprocess.run([sys.executable, "track.py", *todo[0].split()], env=os.environ | {"TRACK_UPDATED": ""}).returncode:
             print(f"plan: '{todo[0]}' failed; moving on", flush=True)
