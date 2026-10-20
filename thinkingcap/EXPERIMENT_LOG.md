@@ -683,6 +683,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 |---|---|---|---|---|---|
 | tool-whole | 189 / 0 | 201 -> 183 | +5.2% | +0.3 | BFCL irr +6% / 0.0, mult +5% / +0.6, simple +6% / -3.1; IFEval -4% / -0.6; MBPP+ +6% / +0.6; SVAMP +12% / +1.9 |
 | tool-mvt1024 | 189 / 178 | 201 -> 142 | +17.6% | +1.7 | BFCL irr +38% / -1.2, mult +55% / -3.1, simple +42% / +1.9; IFEval +6% / +9.4; MBPP+ +2% / -3.1; SVAMP +8% / +1.3 |
+| tool-mvt256 | 189 / 173 | 201 -> 121 | +25.8% | +0.6 | BFCL irr +45% / +3.1, mult +55% / -1.9, simple +36% / +0.6; IFEval +11% / +6.9; MBPP+ +30% / -4.4; SVAMP +10% / -0.6 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -690,3 +691,6 @@ tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 1
 tool-mvt1024 cuts BFCL by 38-55% at no cost (all within the +/-4-point noise) but, unlike the old
 Hermes run (MBPP+ +68%, IFEval +26%), barely spills brevity onto the other benchmarks, so the
 average saving is +17.6% (old +42.0%). tool-mvt256: 351 checked, 314 pass; 173 cut, 201 -> 121 (-40%).
+
+tool-mvt256 (stops sooner): same BFCL saving, more spill-over brevity (MBPP+ +30%, -4.4, within
+noise): +25.8% / +0.6. tool-mvt1024-tokens32: 406 checked, 373 pass; 176 cut, 201 -> 106 (-47%).
