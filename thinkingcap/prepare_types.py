@@ -89,10 +89,11 @@ def hermes_tools(args, rng):
     for row in load_dataset("NousResearch/hermes-function-calling-v1", "func_calling_singleturn", split="train"):
         turns = {t["from"]: t["value"] for t in row["conversations"]}
         try:
-            tools = json.loads(TOOLS.search(turns["system"]).group(1))
+            # the prose mentions "<tools> </tools>" before the real block: take the last non-empty one
+            tools = json.loads([b for b in TOOLS.findall(turns["system"]) if b.strip()][-1])
             calls = [json.loads(c) for c in CALL.findall(turns["gpt"])]
             functions = [bfcl_function(t) for t in tools]
-        except (AttributeError, KeyError, ValueError, TypeError):
+        except (IndexError, KeyError, ValueError, TypeError):
             continue
         if len(calls) != 1 or not isinstance(calls[0].get("arguments"), dict):
             continue

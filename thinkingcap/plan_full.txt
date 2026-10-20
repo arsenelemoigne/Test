@@ -2,6 +2,7 @@
 # The per-type grid first, then the full evaluation of the final model.
 base
 grid_data
+grid_data --per-source 250
 grid --type code --method mvt --travel 1024
 recheck
 grid --type math --method whole

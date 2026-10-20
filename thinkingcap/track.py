@@ -220,14 +220,26 @@ TYPES = {"math": ("gsm8k", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("h
 
 def grid_data(args):
     """Training questions of every kind, and the model's own replies to them (2 per question)."""
-    if not Path("data/types.jsonl").exists():
+    wanted = [source for source, _ in TYPES.values()]
+    questions = Path("data/types.jsonl")
+    have = {json.loads(l)["source"] for l in questions.read_text().splitlines() if l.strip()} \
+        if questions.exists() else set()
+    if set(wanted) - have:
         py("prepare_types.py", "--per-source", 400)
     probe = GRID / "probe"
-    if not (probe / "rollouts.jsonl").exists():
-        py("probe_curve.py", "--data", "data/types.jsonl", "--sources", ",".join(s for s, _ in TYPES.values()),
-           "--per-source", args.per_source, "--samples", 2, "--max-tokens", 2048, "--out", probe,
-           "--dtype", args.dtype, "--generate-only")
-    rows = [json.loads(l) for l in (probe / "rollouts.jsonl").read_text().splitlines() if l.strip()]
+    rollouts = probe / "rollouts.jsonl"
+    done = {json.loads(l)["source"] for l in rollouts.read_text().splitlines() if l.strip()} \
+        if rollouts.exists() else set()
+    missing = [source for source in wanted if source not in done]
+    if missing:  # sample only what is missing and append it, so earlier replies stay as they are
+        extra = GRID / "probe-extra"
+        shutil.rmtree(extra, ignore_errors=True)
+        py("probe_curve.py", "--data", questions, "--sources", ",".join(missing), "--per-source", args.per_source,
+           "--samples", 2, "--max-tokens", 2048, "--out", extra, "--dtype", args.dtype, "--generate-only")
+        probe.mkdir(parents=True, exist_ok=True)
+        with rollouts.open("a") as handle:
+            handle.write((extra / "rollouts.jsonl").read_text())
+    rows = [json.loads(l) for l in rollouts.read_text().splitlines() if l.strip()]
     for source in sorted({r["source"] for r in rows}):
         group = [r for r in rows if r["source"] == source]
         print(f"   {source:<14} {len(group)} replies, {sum(r['correct'] for r in group) / len(group):.0%} correct, "
