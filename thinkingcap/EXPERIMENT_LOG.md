@@ -552,3 +552,4 @@ Same as math: fading works up to round 2 (40% of the paragraphs) and breaks at r
 
 Fading does not suit tool calls: the answers get longer (the model hesitates on "no tool
 fits"); the MVT cut (+42%, -0.7) stays far ahead.
+| tool-fade-r2 | +10.3% | -2.4 | BFCL +40/+30/+26% / +1.2/+0.6/-3.1 | MBPP+ -8.7 |
