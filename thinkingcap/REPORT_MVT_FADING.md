@@ -23,7 +23,19 @@ calling (BFCL) is 14-25% shorter with no loss; math (SVAMP) is 18% shorter for -
 code (MBPP+) is 67% shorter but loses 8 pts, the weak spot.
 
 A slightly bolder version (same recipe without showing math twice) saves **43.8%** for
-**-2.1 pts** (4 answers per question), also within the limit. RECHECK256
+**-2.1 pts** (4 answers per question), also within the limit.
+Stopping a little sooner (c=256) saves more: **49.7%** for **-2.7 pts**, or **42.0%** for **-2.1
+pts** with math shown twice (4 answers per question), both within the limit.
+
+All runs that stay within the limit, 4 answers per question:
+
+| run | tokens saved | accuracy |
+|---|---|---|
+| 1b, c=1024, math x2 | 39.1% | -1.0 |
+| 1b, c=256, math x2 | 42.0% | -2.1 |
+| 1b, c=1024 | 43.8% | -2.1 |
+| 1b, c=256 | 49.7% | -2.7 |
+| experiment 3, round 1 | 5.3% | -2.0 |
 
 ## How we got there: the three experiments, simply
 
@@ -80,6 +92,12 @@ deletions better. But round 2 broke it (-8.8 pts, answers even longer): too much
 thinking makes it hesitate, especially on code. It costs about 85 minutes of GPU to score
 every word once.
 
+*Follow-up.* Applying the same word scoring to the easy questions only, with math kept whole,
+did not shorten anything (round 1 level: 2.6% longer, -1.5 pts) or broke the model (round 2
+level: 7.2% longer, -5.6 pts). So experiment 3's savings came from compacting the math, which
+is also what costs math accuracy. **Removing whole useless paragraphs works; removing
+scattered words makes text the model cannot learn to write.**
+
 ## What we learned
 
 1. **Where the waste is depends on the task.** On easy and language questions most thinking
@@ -90,14 +108,17 @@ every word once.
    points, with math -21 to -24.
 3. **Measure with enough samples.** With 2 answers per question the average moves by about
    +/-4 points; two conclusions flipped once rechecked with 4 answers.
-4. **Code is the open problem.** We never train on code, and every method loses 5-10 points
+4. **Delete paragraphs, not words.** Word-level trimming (experiments 2 and 3) gives
+   telegraphic text; past one light round the model hesitates and writes more, not less.
+5. **Code is the open problem.** We never train on code, and every method loses 5-10 points
    there even when the average holds.
 
 ## Suggested next steps
 
 - Run the winner on the full evaluation (2,759 questions x 8 answers) before trusting it.
 - Add code examples (kept whole, like math) to the training mix to protect MBPP+.
-- Try experiment 3's word scoring on the easy examples only, with math kept whole.
+- Keep experiment 3's model-based scoring, but at the paragraph level: score each paragraph
+  by the certainty lost without it, instead of each word.
 
 ## Honest caveats
 
