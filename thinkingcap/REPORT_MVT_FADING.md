@@ -12,15 +12,17 @@ of accuracy against the untouched model, measured on the same 240 test questions
 
 **Best result: "short on easy questions, full on math" (experiment 1b, math examples shown twice).**
 
-| | tokens saved | accuracy change |
+| answers per question | tokens saved | accuracy change [95% interval] |
 |---|---|---|
-| 2 answers per question | 40.7% | -1.0 pts |
-| **4 answers per question (more reliable)** | **39.1% [31.5, 47.5]** | **-1.0 pts [-4.2, +2.1]** |
+| 2 | 40.7% | -1.0 pts |
+| 4 | 39.1% [31.5, 47.5] | -1.0 pts [-4.2, +2.1] |
+| **8 (most reliable)** | **37.1% [32.1, 42.2]** | **-0.6 pts [-3.05, +1.74]** |
 
-The model writes about **40% fewer tokens** and stays well inside the 3-point limit.
-On instruction following (IFEval) it is 39% shorter **and** better (+5.6 pts); function
-calling (BFCL) is 14-25% shorter with no loss; math (SVAMP) is 18% shorter for -3.1 pts;
-code (MBPP+) is 67% shorter but loses 8 pts, the weak spot.
+The model writes about **37% fewer tokens** and loses only 0.6 points, well inside the 3-point
+limit. With 8 answers per question (the official count, on our 240-question subset):
+instruction following (IFEval) is 37% shorter **and** better (+4.7 pts); function calling
+(BFCL) is 17-21% shorter with no real change (-1.3 to +1.6); code (MBPP+) is 65% shorter for
+-2.2 pts; math (SVAMP) is 13.5% shorter for -5.0 pts, the remaining weak spot.
 
 A slightly bolder version (same recipe without showing math twice) saves **43.8%** for
 **-2.1 pts** (4 answers per question), also within the limit.
@@ -107,7 +109,8 @@ scattered words makes text the model cannot learn to write.**
    Every run that cut the math examples in one go (4 runs, across two sessions) lost 6-8
    points, with math -21 to -24.
 3. **Measure with enough samples.** With 2 answers per question the average moves by about
-   +/-4 points; two conclusions flipped once rechecked with 4 answers.
+   +/-4 points; two conclusions flipped once rechecked with 4 answers. The code loss of the
+   winner looked like -8 with 4 answers and is -2.2 with 8.
 4. **Delete paragraphs, not words.** Word-level trimming (experiments 2 and 3) gives
    telegraphic text; past one light round the model hesitates and writes more, not less.
 5. **Code is the open problem.** We never train on code, and every method loses 5-10 points
@@ -123,5 +126,5 @@ scattered words makes text the model cannot learn to write.**
 ## Honest caveats
 
 - 240 questions, 2-4 answers each: a development signal, not the leaderboard score.
-- The 4-answer rechecks share their first 2 answers with the first tests (same seeds).
+- The 4- and 8-answer rechecks share their first answers with the earlier tests (same seeds).
 - Training used 450 practice questions from 3 sources (GSM8K, ARC-Easy, CommonsenseQA).

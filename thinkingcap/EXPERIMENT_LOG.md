@@ -410,3 +410,40 @@ compaction makes answers longer and wrong. Experiment 3's round-1 saving came fr
 compacted GSM8K traces (SVAMP +28%), which is also what costs math accuracy. Deleting
 scattered words gives text the model does not learn to write; deleting whole paragraphs
 (the MVT cut) does.
+
+### 8-sample recheck of the winner (mvth1024-full-gsm8k-xgsm8k2)
+
+8 samples per question (the recipe's count) on the 240-question subset, against an 8-sample base.
+
+| benchmark | tokens saved | accuracy change [95% CI] |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +21% / +17% / +17% | +1.6 / -1.3 / -0.3 |
+| IFEval | +37% | +4.7 [-0.9, +10.0] |
+| MBPP+ | +65% | -2.2 [-8.4, +4.1] |
+| SVAMP | +13.5% | -5.0 [-10.3, -0.3] |
+| **average** | **+37.1% [32.1, 42.2]** | **-0.6 pp [-3.05, +1.74]**: within the limit |
+
+The best-measured result of the track. The remaining loss is SVAMP (34 lost, 18 gained;
+mostly wrong numbers).
+
+## Scoreboard, this track (vs the raw model on this runtime)
+
+| run | method | samples | tokens saved | accuracy change | within -3? |
+|---|---|---|---|---|---|
+| mvt256 | MVT cut, 2-step look-ahead | 2 | +61.6% | -6.5 | no |
+| mvth1024 | MVT cut, full look-ahead | 2 | +51.2% | -7.6 | no |
+| fade-gain-words r1 | exp 2 round 1 | 4 | +4.1% | -3.2 | no (edge) |
+| fade-gain-words r2 | exp 2 round 2 | 2 | +14.3% | -4.3 | no |
+| fade-gain-marginal r1 | exp 3 round 1 | 4 | +5.3% | -2.0 | yes |
+| fade-gain-marginal r2 | exp 3 round 2 | 4 | +1.8% | -6.2 | no |
+| mvth1024-full-gsm8k | 1b: MVT on ARC/CSQA, GSM8K whole | 4 | +43.8% | -2.1 | yes |
+| mvth256-full-gsm8k | 1b, travel 256 | 4 | +49.7% | -2.7 | yes (edge) |
+| **mvth1024-full-gsm8k-xgsm8k2** | **1b, GSM8K twice** | **8** | **+37.1%** | **-0.6** | **yes** |
+| mvth256-full-gsm8k-xgsm8k2 | 1b, travel 256, GSM8K twice | 4 | +42.0% | -2.1 | yes |
+| mvth1024-full-gsm8k-min2 | 1b, 2 paragraphs minimum | 2 | +13.1% | -2.8 | yes, saves little |
+| mvth1024-full-gsm8k-cap35 | 1b, 35 rows per source | 2 | +63.4% | -11.5 | no |
+| mix-mvt1024-marginal1-x2 | 1b + GSM8K compacted by exp 3 | 2 | +34.6% | -3.1 | no |
+| mix-marginal1-mathwhole-x2 | exp 3 r1 on ARC/CSQA, GSM8K whole | 2 | -2.6% | -1.5 | yes, saves nothing |
+| mix-marginal2-mathwhole-x2 | exp 3 r2 on ARC/CSQA, GSM8K whole | 2 | -7.2% | -5.6 | no |
+
+Plain-language summary: `REPORT_MVT_FADING.md`.
