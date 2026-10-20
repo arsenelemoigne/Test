@@ -49,7 +49,25 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     if args.generate_only:
-        write_jsonl(out / ROLLOUTS, generate(load_questions(args), args))
+        questions = load_questions(args)
+        if not args.chunk:
+            write_jsonl(out / ROLLOUTS, generate(questions, args))
+            return
+        # Save every chunk as it finishes, and skip the questions already saved: a disconnect costs
+        # one chunk, not the whole run. Chunks mix the sources so long and short replies share a batch.
+        partial = out / (ROLLOUTS + ".partial")
+        done = {r["id"] for r in read_jsonl(partial)} if partial.exists() else set()
+        todo = [q for q in questions if q["id"] not in done]
+        random.Random(SEED).shuffle(todo)
+        print(f"{len(done)} questions already sampled, {len(todo)} to go", flush=True)
+
+        def save(rows):
+            with partial.open("a") as handle:
+                handle.write("".join(json.dumps(r) + "\n" for r in rows))
+
+        if todo:
+            generate(todo, args, sink=save)
+        partial.rename(out / ROLLOUTS)
         return
     if not args.summarize_only:
         if not (out / ROLLOUTS).exists():
@@ -79,6 +97,9 @@ def parse_arguments():
     parser.add_argument("--dtype", default="bfloat16", help="float16 on a T4")
     parser.add_argument("--attention-backend", default=None,
                         help="vLLM attention backend; TRITON_ATTN on a T4, where FlashInfer prefill fails")
+    parser.add_argument("--chunk", type=int, default=0,
+                        help="sample this many questions at a time and append each chunk to rollouts.jsonl.partial, "
+                             "resuming from it after a disconnect (0: one batch, saved at the end)")
     parser.add_argument("--summarize-only", action="store_true")
     parser.add_argument("--generate-only", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
@@ -100,7 +121,7 @@ def load_questions(args):
 
 # ---------------------------------------------------------------- phase 1: rollouts
 
-def generate(questions, args):
+def generate(questions, args, sink=None):
     """Sample `--samples` full replies per question with the evaluation's sampling settings."""
     os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
     from transformers import AutoTokenizer
@@ -120,8 +141,21 @@ def generate(questions, args):
     params = [SamplingParams(n=args.samples, seed=SEED, stop_token_ids=eos_ids, **SAMPLING,
                              max_tokens=args.code_max_tokens if q["task"] == "code" else args.max_tokens)
               for q in questions]
-    outputs = engine.generate([{"prompt_token_ids": p} for p in prompts], params)
+    size = args.chunk or len(questions)
+    rollouts = []
+    for start in range(0, len(questions), size):
+        part = slice(start, start + size)
+        outputs = engine.generate([{"prompt_token_ids": p} for p in prompts[part]], params[part])
+        rows = rollout_rows(questions[part], prompts[part], outputs, tokenizer, close_id, eos_ids)
+        if sink:
+            sink(rows)
+            print(f"sampled {min(start + size, len(questions))}/{len(questions)} questions", flush=True)
+        else:
+            rollouts += rows
+    return rollouts
 
+
+def rollout_rows(questions, prompts, outputs, tokenizer, close_id, eos_ids):
     rollouts = []
     for question, prompt, output in zip(questions, prompts, outputs):
         for sample, result in enumerate(output.outputs):

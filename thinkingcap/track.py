@@ -123,7 +123,7 @@ def rollouts(args):
         # The same training slice as SFT rounds 1-2: 150 questions per source, 2 samples, 2,048 tokens.
         py("probe_curve.py", "--data", "data/train.jsonl", "--sources", "gsm8k,arc_easy,commonsense_qa",
            "--per-source", 150, "--samples", 2, "--max-tokens", 2048, "--out", ROLLOUTS.parent,
-           "--dtype", args.dtype, "--generate-only")
+           "--dtype", args.dtype, "--generate-only", "--chunk", 150)
 
 
 def mvt(args):
@@ -254,7 +254,7 @@ def grid_data(args):
         extra = GRID / "probe-extra"
         shutil.rmtree(extra, ignore_errors=True)
         py("probe_curve.py", "--data", questions, "--sources", ",".join(missing), "--per-source", args.per_source,
-           "--samples", 2, "--out", extra, "--dtype", args.dtype, "--generate-only")
+           "--samples", 2, "--out", extra, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
         probe.mkdir(parents=True, exist_ok=True)
         with rollouts.open("a") as handle:
             handle.write((extra / "rollouts.jsonl").read_text())
@@ -445,7 +445,7 @@ def bon(args):
            args.per_source, "--out", data)
     if not (probe / "rollouts.jsonl").exists():
         py("probe_curve.py", "--data", data, "--sources", BON_SOURCES, "--per-source", args.per_source,
-           "--samples", 8, "--out", probe, "--dtype", args.dtype, "--generate-only")
+           "--samples", 8, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
     if not (select / "sft.jsonl").exists():
         py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", select,
            "--easy-tokens", "gsm8k_all=700")
