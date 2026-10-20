@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -51,6 +51,8 @@ def main():
     parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
     parser.add_argument("--inputs", nargs="*", default=[],
                         help="combine: sft.jsonl[:source[:source...]] files whose rows (of those sources) are pooled")
+    parser.add_argument("--margin", type=float, default=-2.5,
+                        help="fullbest: lowest 4-sample accuracy change (points) a candidate may have")
     parser.add_argument("--plan-file", default="plan.txt", help="plan: the queue this runtime works through")
     parser.add_argument("--wait-hours", type=float, default=0,
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
@@ -105,10 +107,10 @@ def setup(args):
         py("subset_questions.py", "--per-dataset", 40, "--out", QUESTIONS)
 
 
-def evaluate(out, adapter=None, samples=2, questions=QUESTIONS):
+def evaluate(out, adapter=None, samples=2, questions=QUESTIONS, model=None):
     if not (Path(out) / "results.json").exists():
         py("evaluate.py", "--questions", questions, "--samples", samples, "--out", out,
-           *(["--adapter", adapter] if adapter else []))
+           *(["--adapter", adapter] if adapter else []), *(["--model", model] if model else []))
 
 
 def base(args):
@@ -323,6 +325,51 @@ def combine(args):
     evaluate(base, samples=4)
     evaluate(out, adapter, samples=4)
     print(score_line(f"combine-{args.name}", out, base=base), flush=True)
+    print(diagnose(out, base=base))
+
+
+def merge(args):
+    """Add per-kind adapters into the base weights at chosen strengths, then score with 4 samples."""
+    model = Path("models") / f"merge-{args.name}"
+    if not (model / "config.json").exists():
+        py("merge.py", "--out", model, "--adapters", *args.inputs)
+    base, out = ROOT / "s4-base", GRID / f"eval-merge-{args.name}"
+    evaluate(base, samples=4)
+    evaluate(out, samples=4, model=model)
+    print(score_line(f"merge-{args.name}", out, base=base), flush=True)
+    print(diagnose(out, base=base))
+
+
+def fullbest(args):
+    """Run the full evaluation on the candidate that saves most while staying within --margin of the base.
+
+    Candidates are name=spec pairs: the 4-sample run directory's name under runs/ and either
+    adapter:<path> or model:<path>. Chosen on the 4-sample subset scores, so the full evaluation
+    goes to one model only.
+    """
+    best = None
+    for candidate in args.inputs:
+        run, spec = candidate.split("=", 1)
+        kind, path = spec.split(":", 1)
+        compared = Path("runs") / run / "compare.json"
+        if not compared.exists():
+            print(f"fullbest: {run} has no 4-sample comparison; skipped", flush=True)
+            continue
+        average = json.loads(compared.read_text())["average"]
+        saved, delta = average["token_reduction"] or 0, 100 * average["accuracy_delta"]
+        print(f"fullbest: {run}: {saved:+.1%} tokens, {delta:+.1f} pts", flush=True)
+        if delta >= args.margin and (best is None or saved > best[0]):
+            best = (saved, run, kind, path)
+    if best is None:
+        raise SystemExit("fullbest: no candidate within the margin")
+    _, run, kind, path = best
+    print(f"fullbest: full evaluation of {run} ({kind} {path})", flush=True)
+    base = ROOT / "full-base"
+    evaluate(base, samples=8, questions="questions")
+    out = ROOT / f"full-{run.split('/')[-1].removeprefix('eval-')}"
+    evaluate(out, samples=8, questions="questions",
+             **({"adapter": path} if kind == "adapter" else {"model": path}))
+    print(score_line(f"{run} (full evaluation)", out, base=base))
     print(diagnose(out, base=base))
 
 
