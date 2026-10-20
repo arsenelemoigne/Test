@@ -293,3 +293,15 @@ by 15 feet... Hmm, let me think." then "Final answer: 120"). That is exactly wha
 targets look like: the MVT cut keeps only the first paragraph, the restatement. Queued:
 `--min-steps 2` (keep restatement + one reasoning paragraph) and `--repeat gsm8k:2` (whole
 math traces shown twice).
+
+### 4-sample recheck of experiment 2 round 1 (fade-gain-words r1)
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +9% / +3% / +6% | -4.4 / -5.6 / -1.9 |
+| IFEval | +17% | +2.5 |
+| MBPP+ | -29% (longer) | -7.5 |
+| SVAMP | +16% | -3.7 (12 lost, 6 gained; all wrong numbers) |
+| **average** | **+4.1%** | **-3.2 pp**: just outside the limit |
+
+The 2-sample -2.5 was optimistic: experiment 2's round 1 sits on the edge and saves almost nothing.
