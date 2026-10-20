@@ -103,6 +103,16 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 
 Accuracy ranges (95%) are about +/-4 pp on this subset, so differences under ~3 pp are noise.
 
+## Queued on 20 Oct (results copied to Drive: MyDrive/thinkingcap_runs)
+
+| run | what | why |
+|---|---|---|
+| A (rebuild) | same as ablation A, seed 0 | the adapter was lost with the VM |
+| C | A + lr 4e-5 cosine to 4e-6, 2 restarts, 2 updates per step | lost overnight |
+| steer mix | steering vector from 640 questions incl. coding (HumanEval, unit tests) | retry with broader data |
+| P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | shorten maths and quiz, keep code intact |
+| P2 | as P1, maths (GSM8K, Skywork) also protected | shorten quiz only; tests whether protecting maths costs SVAMP savings |
+
 ## Ablation: what each ingredient adds (running overnight)
 
 Every run starts from the raw model with the same seed (same questions in the same order),
