@@ -12,8 +12,8 @@ on the 240-question benchmark subset. Adapter: `adapters/ablA` on the Colab VM.
 |---|---|---|---|
 | A: RL, short-and-correct reward | +19.6% | +0.3 | works best |
 | B: A + TokenProbe (anchor key words, push filler) | +6.1% | -0.3 | hurts: shortening stays on the training subjects |
-| C: A + higher lr with decay and restarts, 2 updates per step | see below | | learns faster on the held-out check |
-| D: C + AdaptThink (learn to skip thinking) | see below | | |
+| C: A + higher lr with decay and restarts, 2 updates per step | lost (see incident) | | at step 5 held-out 58.6% / 846 tokens vs A's 53.1% / 1,031: learns ~2x faster |
+| D: C + AdaptThink (learn to skip thinking) | lost (see incident) | | not measured |
 | steering vector alone (x2 / x4) | ~0% / some | -4.0 / -15.1 | does not transfer to the benchmarks |
 | mixing loop 1 and loop 3 adapters (25% / 50%) | +15% / +20% | +0.5 / -2.8 | a dial, not a method |
 
@@ -32,7 +32,11 @@ constraint types; worth deciding whether that counts as too close to the benchma
 session. Ablation B finished; the first try at C was lost and restarted on top of A. While
 recovering, an empty T4 runtime was briefly allocated and deleted. Compute used overnight is
 about 3 units an hour while two sessions run (this one and the MVT/fading one); about 78 units
-were left at 5:20.
+were left at 5:20. The browser pane closed again around 6:30; by 9:10 Colab had reclaimed
+the L4 VM, so C and D's results **and every adapter on it, including the best one (A)**, are
+gone. Only what is in this log survives. Lesson: copy adapters off the VM (Google Drive mount, or
+a download) as soon as each run finishes. Rebuilding A takes ~1h45 on an L4 (seed 0 reproduces
+the same questions).
 
 
 ## Findings so far (updated as results come in)
@@ -112,8 +116,8 @@ neighbours is that ingredient's marginal effect. The guard only measures (no rol
 | S x4 | steering vector only, strength 4 | (code shorter, BFCL longer) | -15.1 pp [-19.9, -10.4] |
 | **A** | RL with the ShorterBetter length reward, lr 2e-5 | **+19.6% [8.8, 29.5]** | **+0.3 pp [-3.0, +3.7]** |
 | B | A + TokenProbe-KL (core tokens anchored, filler pushed down over budget) | +6.1% [-6.5, 17.8] | -0.3 pp [-4.6, +4.0] |
-| C | **A** + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step (built on A, since B < A) | running | |
-| D | C + AdaptThink (2 of 8 samples start with an empty thinking block) | queued | |
+| C | **A** + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step (built on A, since B < A) | lost (VM reclaimed); held-out at step 5: 58.6% / 846 tok | |
+| D | C + AdaptThink (2 of 8 samples start with an empty thinking block) | lost | |
 
 Loop 4 (stacked on loop 1, lr 5e-5, entropy bonus 1e-3) was stopped after 3 steps for this:
 its entropy rose 0.80 -> 1.01 -> 1.16, a sign the entropy bonus with that lr destabilises it.
