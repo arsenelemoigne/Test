@@ -1,5 +1,40 @@
 # Experiment log (Qwen3-0.6B, shorter thinking)
 
+## Morning summary (20 Oct 2026)
+
+**Best result:** ablation A, plain RL with a "short and correct" reward, 20 steps from the raw
+model on four training subjects. It uses **19.6% fewer tokens with no accuracy loss (+0.3 points)**
+on the 240-question benchmark subset. Adapter: `adapters/ablA` on the Colab VM.
+
+**What the night showed, each idea tested on its own against the raw model:**
+
+| idea | tokens saved | accuracy | verdict |
+|---|---|---|---|
+| A: RL, short-and-correct reward | +19.6% | +0.3 | works best |
+| B: A + TokenProbe (anchor key words, push filler) | +6.1% | -0.3 | hurts: shortening stays on the training subjects |
+| C: A + higher lr with decay and restarts, 2 updates per step | see below | | learns faster on the held-out check |
+| D: C + AdaptThink (learn to skip thinking) | see below | | |
+| steering vector alone (x2 / x4) | ~0% / some | -4.0 / -15.1 | does not transfer to the benchmarks |
+| mixing loop 1 and loop 3 adapters (25% / 50%) | +15% / +20% | +0.5 / -2.8 | a dial, not a method |
+
+**Main insight:** making the model think shorter on maths and quiz questions is easy (held-out
+answers 28% shorter and 15 points more accurate). Carrying that over to code, function calling
+and instructions is the hard part, and anything that anchors the model to its old behaviour
+(TokenProbe's KL term, steering learned on maths) makes the carry-over worse. Code (MBPP+)
+barely shortens in any run.
+
+**Next:** train with questions that look like the test but are not the test: coding questions
+with unit tests (`code_tasks.py`, HumanEval, ready) and possibly instruction-following data
+(open question for you: RLVR-IFeval is a separate dataset but built to mimic IFEval's
+constraint types; worth deciding whether that counts as too close to the benchmark).
+
+**Incident:** around 4:30 the browser pane closed and reopening Colab detached the running
+session. Ablation B finished; the first try at C was lost and restarted on top of A. While
+recovering, an empty T4 runtime was briefly allocated and deleted. Compute used overnight is
+about 3 units an hour while two sessions run (this one and the MVT/fading one); about 78 units
+were left at 5:20.
+
+
 ## Findings so far (updated as results come in)
 
 1. **Imitation (SFT on cut traces) teaches underthinking.** +39-60% shorter but -6 to -8 points;

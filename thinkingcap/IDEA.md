@@ -102,8 +102,30 @@ variant, alpha 0.5, lr 2e-5, LoRA r16, ~1h on an L4):
 Accuracy is preserved (within noise), unlike both SFT rounds, but 12 steps barely move the
 length: the published runs use hundreds of steps.
 
-ROUND3
+**Ablation (20 steps each, from the raw model, same seed and questions; GSM8K, Skywork, ARC,
+CommonsenseQA balanced).** Each run adds one ingredient to the previous one:
+
+| | tokens saved | accuracy change |
+|---|---|---|
+| A: ShorterBetter length reward only | **+19.6%** [8.8, 29.5] | **+0.3 pp** [-3.0, 3.7] |
+| B: A + TokenProbe-KL | +6.1% [-6.5, 17.8] | -0.3 pp [-4.6, 4.0] |
+
+On a held-out check of the training subjects (128 validation questions), A and B are the same:
+45% -> 60% accuracy and 1,065 -> ~780 tokens. TokenProbe's KL anchor to the base model keeps the
+model's behaviour unchanged where it was not trained (code, function calling, instructions), so
+the length gain does not transfer. The plain reward transfers: SVAMP -30% tokens at equal
+accuracy, BFCL -15 to -22% with higher accuracy, IFEval -26%.
+
+A training-free steering vector (concise-minus-verbose direction from 97 pairs of correct
+replies, stored as a v_proj bias so the model still loads with no custom code) shortens maths
+replies a little at strength 2 but costs 4 points on the benchmarks, 15 at strength 4.
 
 ## What did not work / limits
 
-LIMITS
+- **Code does not shorten.** MBPP+ replies stay ~1,650-1,900 tokens in every run: no coding
+  question is in the training mix. `code_tasks.py` adds HumanEval with a unit-test reward.
+- **Imitation underthinks** (both SFT rounds, finding above).
+- **The subset is small.** 240 questions x 2 samples gives roughly +/-4 points on accuracy and
+  +/-10 points on tokens saved; the full evaluation (2,759 x 8) is the real test.
+- **More pressure costs accuracy where it was not trained** (loop 3: +24% at -6 points, mostly
+  code and SVAMP).
