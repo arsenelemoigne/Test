@@ -540,3 +540,8 @@ runs). Candidate for the math part of the combined model.
 
 Math fading sweet spot: round 2 (40% of the paragraphs). Round 3 (60%; 912 -> 376 tokens)
 starts costing math. Two combined models will be scored: math whole x2, or math faded to round 2 x2.
+| code-fade-r1 | +10.9% | -2.8 | MBPP+ +20% / -10.6 | small |
+| code-fade-r2 | +24.1% | -2.1 | MBPP+ +33% / -3.1 | IFEval -5.0, all 16-27% shorter |
+
+Code fading round 2 (875 -> 511 tokens, all 113 passed) ties code MVT by token batches overall
+(+24%, about -2): MVT shortens code more (+57% vs +33%), fading loses less on it (-3.1 vs -5.6).
