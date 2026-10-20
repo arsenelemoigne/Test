@@ -10,3 +10,7 @@ mvt --travel 1024 --full-sources gsm8k --repeat gsm8k:2
 recheck --adapter adapters/fade-gain-marginal/r1
 recheck --adapter adapters/mvth1024-full-gsm8k-xgsm8k2
 mvt --travel 256 --full-sources gsm8k --repeat gsm8k:2
+mix --mc runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl --math runs/mvtf/fade-gain-marginal/r1/sft.jsonl --repeat gsm8k:2 --name mvt1024-marginal1-x2
+fade --rounds 2 --order gain --word-scorer marginal --ignore-limit
+recheck --adapter adapters/fade-gain-marginal/r2
+mix --mc runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl --math runs/mvtf/fade-gain-marginal/r2/sft.jsonl --repeat gsm8k:2 --name mvt1024-marginal2-x2

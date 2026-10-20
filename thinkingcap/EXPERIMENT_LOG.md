@@ -332,3 +332,24 @@ Same pruning as mvth1024-full-gsm8k; the 65 whole GSM8K traces appear twice in S
 | MBPP+ | +64% | -2.5 |
 | SVAMP | +3% | -6.2 (8 lost, 3 gained: wrong reasoning on tricky wording, 2 truncated) |
 | **average** | **+40.7%** | **-1.0 pp**: within the limit, the smallest loss so far |
+
+### 4-sample rechecks (continued)
+
+| run | tokens saved | accuracy change [95% CI] |
+|---|---|---|
+| mvth1024-full-gsm8k-xgsm8k2 | **+39.1% [31.5, 47.5]** | **-1.0 pp [-4.2, +2.1]** (SVAMP -3.1, MBPP+ -8.1, IFEval +5.6) |
+| fade-gain-marginal r1 (experiment 3) | +5.3% [-2.1, 13.2] | -2.0 pp [-5.1, +1.0] (within) |
+
+With 4 samples experiment 3's round 1 is within the limit (-2.0) and experiment 2's is not
+(-3.2): the reverse of the 2-sample ranking. The stop rule cut experiment 3 after one round on
+a noisy measurement, so round 2 is run anyway (`--ignore-limit`).
+
+### Run mvth256-full-gsm8k-xgsm8k2 (2 samples)
+
++43.0% tokens saved, -2.5 pp (within): BFCL +19/+23/+22% (+1.2/+3.8/+2.5), IFEval +43% (+2.5),
+MBPP+ +73% (-10.0), SVAMP +13% (-5.0).
+
+## Combination: MVT cut on the easy sources + math compacted by experiment 3
+
+`track.py mix`: ARC/CSQA rows from the MVT cut (mvth1024-full-gsm8k), GSM8K rows from
+experiment 3's faded traces (paragraphs and model-scored words removed, checked), shown twice.

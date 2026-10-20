@@ -31,7 +31,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "scores"))
+    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -40,6 +40,10 @@ def main():
     parser.add_argument("--tag", default="", help="suffix for the fading run's directories")
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--adapter", help="recheck: the adapter to score; none scores the base")
+    parser.add_argument("--ignore-limit", action="store_true", help="fade: keep going past the -3-point limit")
+    parser.add_argument("--mc", help="mix: sft.jsonl giving the non-math rows")
+    parser.add_argument("--math", help="mix: sft.jsonl giving the GSM8K rows")
+    parser.add_argument("--name", help="mix: run name")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
     parser.add_argument("--min-steps", type=int, default=1, help="mvt: never cut below this many paragraphs")
@@ -161,10 +165,32 @@ def fade(args):
         line, delta = score_line(f"{tag} r{k}", out, with_delta=True)
         print(line, flush=True)
         print(diagnose(out), flush=True)
-        if delta < LIMIT:
+        if delta < LIMIT and not args.ignore_limit:
             print(f"round {k} is past the {LIMIT:+.0f}-point limit: stop; the answer is round {k - 1}")
             return
         previous = (data, adapter)
+
+
+def mix(args):
+    """SFT on the non-math rows of one target file and the GSM8K rows of another, then evaluate.
+
+    For example the MVT-cut ARC/CSQA traces with GSM8K traces compacted by experiment 3.
+    """
+    data, adapter, out = ROOT / f"mix-{args.name}", Path("adapters") / f"mix-{args.name}", ROOT / f"eval-mix-{args.name}"
+    if not (data / "sft.jsonl").exists():
+        data.mkdir(parents=True, exist_ok=True)
+        rows = [l for l in Path(args.mc).read_text().splitlines() if l.strip() and json.loads(l)["source"] != "gsm8k"]
+        rows += [l for l in Path(args.math).read_text().splitlines() if l.strip() and json.loads(l)["source"] == "gsm8k"]
+        (data / "sft.jsonl").write_text("".join(l + "\n" for l in rows))
+    math = [json.loads(l) for l in (data / "sft.jsonl").read_text().splitlines() if '"gsm8k"' in l]
+    print(f"mix {args.name}: {len(math)} GSM8K rows, mean completion "
+          f"{sum(len(r['completion_ids']) for r in math) / max(1, len(math)):.0f} tokens", flush=True)
+    if not (adapter / "adapter_config.json").exists():
+        py("sft.py", "--data", data / "sft.jsonl", "--out", adapter, "--max-per-source", args.max_per_source,
+           "--dtype", args.dtype, *(["--repeat", args.repeat] if args.repeat else []))
+    evaluate(out, adapter)
+    print(score_line(f"mix-{args.name}", out))
+    print(diagnose(out))
 
 
 def recheck(args):
