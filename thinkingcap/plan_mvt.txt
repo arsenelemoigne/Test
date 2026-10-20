@@ -1,7 +1,7 @@
 # MVT on every data type, matched data (TRACK_SET=matched). One line = one stage; edit and push to queue more.
 base
 recheck
-grid_data
+grid_data --per-source 300
 grid --type tool --method whole
 grid --type tool --method mvt --travel 1024
 grid --type tool --method mvt --travel 256

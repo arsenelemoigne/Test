@@ -125,6 +125,12 @@ def toolace(args, rng):
         except Exception:
             calls = None
         if calls is None:
+            # BFCL's irrelevance means no function fits; ToolACE's prose replies are often a fitting
+            # function lacking a required argument ("please provide ..."): that teaches not calling
+            if not re.search(r"\b(none of|do(es)? not|cannot|can't|unable|not (designed|suitable|relevant))\b", reply, re.I) \
+                    or any(old in reply or new in reply for old, new in names.items()) or re.search(
+                    r"\b(missing|required|lacks|necessary|specify|more (information|details))\b", reply, re.I):
+                continue
             kind, reference = "irrelevance", None
         elif len(calls) == 1:
             name, arguments = next(iter(calls[0].items()))
