@@ -11,6 +11,12 @@ transfers). RL with the short-and-correct reward is the method to push; accuracy
 recovered with more training: longer runs (long C, 60 steps) and next, bigger rounds (64-128
 questions per step instead of 32; DLER attributes accuracy drops to small training sets).
 
+**Long C stopped at step 23 (20 Oct, evening).** Guard: step 10 55.6% / 1,036 tok, step 20 54.7% /
+1,080 (raw 50.9% / 1,281). After the lr restart at step 21 entropy ran away (1.52 -> 1.87 -> 2.09 ->
+2.84) and length fell fast (1,007 -> 728). The 124 HumanEval problems ran out at about step 20, so
+code was no longer in the mix. Checkpoints (best = step 10, step 20) are in Drive under Clong.
+Next: `PLAN_DLER.md` (DLER's recipe at a proper scale).
+
 ## Morning summary (20 Oct 2026)
 
 **Best result:** ablation A, plain RL with a "short and correct" reward, 20 steps from the raw
