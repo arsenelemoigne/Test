@@ -41,3 +41,7 @@ merge --name full --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/
 # the full evaluation (2,759 questions x 8 samples) of the best candidate within -2.5 pts on the 4-sample subset
 fullbest --inputs mvtf/s4-mvth1024-full-gsm8k-xgsm8k2=adapter:adapters/mvth1024-full-gsm8k-xgsm8k2 grid/eval-combine-final-light=adapter:adapters/combine-final-light grid/eval-merge-tool=model:models/merge-tool grid/eval-merge-half=model:models/merge-half grid/eval-merge-full=model:models/merge-full
 stats --inputs mvtf/full-base
+stats --inputs mvtf/full-combine-final-light
+# shortest-of-8 self-distillation on data matched to the evaluation, checked on the real test sample
+bon --per-source 300 --max-per-source 300
+stats --inputs bon/probe/rollouts.jsonl mvtf/s4-bon-r1

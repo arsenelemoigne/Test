@@ -42,7 +42,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like}
+                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice}
     for source in args.sources.split(","):
         build = builders[source]
         built = list(build(args, rng))
@@ -58,6 +58,14 @@ def gsm8k(args, rng):
     for line in Path("data/train.jsonl").read_text().splitlines():
         row = json.loads(line)
         if row["source"] == "gsm8k":
+            yield row
+
+
+def multiple_choice(args, rng):
+    """ARC-Easy and CommonsenseQA from data/train.jsonl: not in the evaluation, but brevity there spills over."""
+    for line in Path("data/train.jsonl").read_text().splitlines():
+        row = json.loads(line)
+        if row["source"] in ("arc_easy", "commonsense_qa"):
             yield row
 
 

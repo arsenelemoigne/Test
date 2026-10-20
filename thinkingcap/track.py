@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -408,6 +408,42 @@ def stats(args):
         print(f"STATS-BEGIN {name}", flush=True)
         print(json.dumps(rows, separators=(",", ":")), flush=True)
         print(f"STATS-END {name}", flush=True)
+
+
+BON = Path("runs/bon")
+BON_SOURCES = "gsm8k_all,mbpp_train,toolace,ifeval_like,arc_easy,commonsense_qa"
+
+
+def bon(args):
+    """Shortest-of-8 self-distillation: the model's own shortest correct reply per question, nothing edited.
+
+    Data matched to the evaluation (GSM8K filtered to SVAMP-like difficulty, MBPP minus MBPP+,
+    ToolACE in BFCL's format and mix, IFEval-like, a little multiple choice), 8 replies per
+    question at the evaluation's token caps, a contamination check, one gentle SFT pass, then
+    the 240-question test sample with 4 samples against the raw model.
+    """
+    name = args.name or "r1"
+    data, probe, select = Path("data/bon.jsonl"), BON / "probe", BON / f"select-{name}"
+    if not data.exists():
+        py("prepare_types.py", "--sources", "gsm8k_all,mbpp_train,toolace,ifeval_like,mc", "--per-source",
+           args.per_source, "--out", data)
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", BON_SOURCES, "--per-source", args.per_source,
+           "--samples", 8, "--out", probe, "--dtype", args.dtype, "--generate-only")
+    if not (select / "sft.jsonl").exists():
+        py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", select,
+           "--easy-tokens", "gsm8k_all=700")
+        py("contamination.py", "--data", select / "sft.jsonl", "--rollouts", probe / "rollouts.jsonl")
+    print((select / "summary.txt").read_text(), flush=True)
+    adapter = Path("adapters") / f"bon-{name}"
+    if not (adapter / "adapter_config.json").exists():
+        py("sft.py", "--data", select / "sft.jsonl", "--out", adapter, "--epochs", 1, "--lr", 5e-5,
+           "--max-per-source", args.max_per_source, "--dtype", args.dtype)
+    base, out = ROOT / "s4-base", ROOT / f"s4-bon-{name}"
+    evaluate(base, samples=4)
+    evaluate(out, adapter, samples=4)
+    print(score_line(f"bon-{name} (4 samples, 240 test questions)", out, base=base), flush=True)
+    print(diagnose(out, base=base))
 
 
 def gridtable(args):
