@@ -545,3 +545,6 @@ starts costing math. Two combined models will be scored: math whole x2, or math 
 
 Code fading round 2 (875 -> 511 tokens, all 113 passed) ties code MVT by token batches overall
 (+24%, about -2): MVT shortens code more (+57% vs +33%), fading loses less on it (-3.1 vs -5.6).
+| code-fade-r3 | +21.0% | -5.9 | MBPP+ +14% / **-13.1** | BFCL -4.4, IFEval -6.9 |
+
+Same as math: fading works up to round 2 (40% of the paragraphs) and breaks at round 3.
