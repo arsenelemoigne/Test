@@ -1,0 +1,307 @@
+<title>Qwen3 Token Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a lab notebook. One column of figures, each answering one question, a sticky run switcher on top. */
+:root {
+  --bg: #f6f7f8;
+  --panel: #ffffff;
+  --ink: #15181c;
+  --ink-2: #4c535c;
+  --ink-3: #7a828c;
+  --rule: #dfe3e8;
+  --grid: #eceff2;
+  --accent: #2a78d6;
+  --good: #1f8a4c;
+  --mixed: #b9bec6;
+  --bad: #c8463f;
+  --t-math: #2a78d6;
+  --t-code: #eb6834;
+  --t-tool: #1baf7a;
+  --t-instructions: #eda100;
+  --t-choice: #e87ba4;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121417; --panel: #1a1d21; --ink: #f1f3f5; --ink-2: #b4bbc4; --ink-3: #868e98;
+    --rule: #2d3238; --grid: #23272c; --accent: #3987e5; --good: #3fae6c; --mixed: #4d535b; --bad: #e0625b;
+    --t-math: #3987e5; --t-code: #d95926; --t-tool: #199e70; --t-instructions: #c98500; --t-choice: #d55181;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121417; --panel: #1a1d21; --ink: #f1f3f5; --ink-2: #b4bbc4; --ink-3: #868e98;
+  --rule: #2d3238; --grid: #23272c; --accent: #3987e5; --good: #3fae6c; --mixed: #4d535b; --bad: #e0625b;
+  --t-math: #3987e5; --t-code: #d95926; --t-tool: #199e70; --t-instructions: #c98500; --t-choice: #d55181;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 600 12px/1 var(--f-data); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font: 800 clamp(30px, 5vw, 46px)/1.02 var(--f-display); font-stretch: 75%; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.lede { max-width: 68ch; color: var(--ink-2); margin: 0; }
+.switch { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.switch label { font: 600 12px var(--f-data); color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 13px var(--f-body); color: var(--ink-2); background: none; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+section.fig { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: grid; gap: 12px; min-width: 0; }
+.fig h2 { font: 700 20px/1.2 var(--f-display); font-stretch: 88%; margin: 0; text-wrap: balance; }
+.fig .q { font: 600 12px var(--f-data); color: var(--accent); letter-spacing: .04em; }
+.fig p.note { margin: 0; color: var(--ink-2); max-width: 72ch; font-size: 14px; }
+.chart { width: 100%; overflow-x: auto; }
+.chart svg { display: block; }
+svg text { fill: var(--ink-2); font-family: var(--f-body); font-size: 12px; }
+svg .num { font-family: var(--f-data); font-size: 11px; fill: var(--ink-3); }
+svg .lab { fill: var(--ink); font-weight: 600; }
+svg .gridline { stroke: var(--grid); stroke-width: 1; }
+svg .axis { stroke: var(--rule); stroke-width: 1; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+th { font: 600 11px var(--f-data); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+td.mono { font-family: var(--f-data); }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.chip i { width: 8px; height: 8px; border-radius: 2px; }
+.role { font: 600 10px var(--f-data); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+#tip { position: fixed; pointer-events: none; z-index: 10; background: var(--ink); color: var(--bg); font: 12px/1.45 var(--f-data); padding: 8px 10px; border-radius: 8px; max-width: 280px; opacity: 0; transition: opacity .08s; }
+footer { color: var(--ink-3); font-size: 13px; max-width: 72ch; }
+@media (prefers-reduced-motion: reduce) { #tip { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ThinkingCap Test · Qwen3-0.6B · branch mvt-fading</div>
+    <h1>How long Qwen3-0.6B thinks, and when it pays</h1>
+    <p class="lede">The untouched model on the data we train on and the questions it is tested on, by kind of task. Length is everything it writes for one answer, thinking included. Each question was asked several times, which shows how much luck moves both the length and the score.</p>
+  </header>
+
+  <div class="switch" role="group" aria-label="Which model">
+    <label for="run-base">Model</label>
+    <div class="seg" id="runs"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <section class="fig">
+    <div class="q">Summary</div>
+    <h2>What each dataset looks like</h2>
+    <p class="note">Mean over questions. "Spread" is the typical gap in length between two answers to the same question, as a share of its mean (coefficient of variation).</p>
+    <div class="tablewrap"><table id="summary"></table></div>
+  </section>
+
+  <section class="fig">
+    <div class="q">Q1 · How long are the answers?</div>
+    <h2>Tokens per answer, question by question</h2>
+    <p class="note">How many questions fall at each length (log scale). Bars are scaled within each row; the black tick is the median question. A pile-up at the right edge means answers hitting the token cap.</p>
+    <div class="chart" id="strip"></div>
+  </section>
+
+  <section class="fig">
+    <div class="q">Q2 · Does thinking longer help?</div>
+    <h2>Accuracy against length</h2>
+    <p class="note">Questions are split into five equal groups by mean length. Each point is a group: its median length and the share of answers that were correct. A falling line means long answers are the ones the model gets wrong.</p>
+    <div class="chart" id="acc"></div>
+  </section>
+
+  <section class="fig">
+    <div class="q">Q3 · Same question, same answer?</div>
+    <h2>How often repeated answers agree</h2>
+    <p class="note">For every question asked several times: all answers right, all wrong, or a mix. Mixed questions are where luck decides the score.</p>
+    <div class="chart" id="agree"></div>
+  </section>
+
+  <section class="fig">
+    <div class="q">Q4 · Same question, same length?</div>
+    <h2>Length spread across repeated answers</h2>
+    <p class="note">For each question, the standard deviation of its answer lengths divided by their mean, shown as a histogram per dataset. 0.5 means two answers to the same question typically differ by half their length.</p>
+    <div class="chart" id="spread"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const RUNS = __RUNS__;
+
+const KIND = {
+  gsm8k: ["math", "train"], svamp: ["math", "test"],
+  mbpp_train: ["code", "train"], mbpp: ["code", "test"],
+  hermes_tools: ["tool", "train"], bfcl_simple_python: ["tool", "test"], bfcl_multiple: ["tool", "test"], bfcl_irrelevance: ["tool", "test"],
+  ifeval_like: ["instructions", "train"], ifeval: ["instructions", "test"],
+  arc_easy: ["choice", "train"], commonsense_qa: ["choice", "train"],
+};
+const TYPES = [["math", "Math"], ["code", "Code"], ["tool", "Tool calls"], ["instructions", "Instructions"], ["choice", "Multiple choice"]];
+const LABEL = { gsm8k: "GSM8K", svamp: "SVAMP", mbpp_train: "MBPP train tasks", mbpp: "MBPP+", hermes_tools: "Hermes tools",
+  bfcl_simple_python: "BFCL simple", bfcl_multiple: "BFCL multiple", bfcl_irrelevance: "BFCL irrelevance",
+  ifeval_like: "IFEval-like", ifeval: "IFEval", arc_easy: "ARC-Easy", commonsense_qa: "CommonsenseQA" };
+const EDGES = Array.from({ length: 25 }, (_, i) => 2 ** (4 + 0.375 * i));
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const color = t => css("--t-" + t);
+const NS = "http://www.w3.org/2000/svg";
+const fmt = n => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : Math.round(n).toString();
+const pct = x => Math.round(100 * x) + "%";
+let current = Object.keys(RUNS)[0];
+
+function el(tag, attrs = {}, parent) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+function text(parent, x, y, s, cls = "", anchor = "start") { const t = el("text", { x, y, class: cls, "text-anchor": anchor }, parent); t.textContent = s; return t; }
+const tip = document.getElementById("tip");
+function hover(node, html) {
+  node.addEventListener("mousemove", e => { tip.innerHTML = html; tip.style.opacity = 1; tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + "px"; tip.style.top = (e.clientY + 14) + "px"; });
+  node.addEventListener("mouseleave", () => { tip.style.opacity = 0; });
+}
+
+function datasets() {
+  const run = RUNS[current].data, order = Object.keys(KIND);
+  return Object.entries(run).filter(([ds]) => KIND[ds]).sort((a, b) => {
+    const ta = TYPES.findIndex(t => t[0] === KIND[a[0]][0]), tb = TYPES.findIndex(t => t[0] === KIND[b[0]][0]);
+    return ta - tb || (KIND[a[0]][1] === "train" ? -1 : 1) - (KIND[b[0]][1] === "train" ? -1 : 1) || order.indexOf(a[0]) - order.indexOf(b[0]);
+  });
+}
+
+function renderSwitch() {
+  const seg = document.getElementById("runs"); seg.innerHTML = "";
+  for (const [key, run] of Object.entries(RUNS)) {
+    const b = document.createElement("button"); b.type = "button"; b.id = "run-" + key; b.textContent = run.label;
+    b.setAttribute("aria-pressed", key === current); b.onclick = () => { current = key; renderAll(); };
+    seg.appendChild(b);
+  }
+  document.getElementById("legend").innerHTML = TYPES.map(([t, n]) => `<span><i style="background:${color(t)}"></i>${n}</span>`).join("");
+}
+
+function renderSummary(data) {
+  const rows = data.map(([ds, d]) => {
+    const [t, role] = KIND[ds];
+    return `<tr><td><span class="chip"><i style="background:${color(t)}"></i>${LABEL[ds]}</span></td><td><span class="role">${role}</span></td>
+      <td class="mono">${d.q}</td><td class="mono">${d.k}</td><td class="mono">${fmt(d.mean)}</td><td class="mono">${fmt(d.think)}</td>
+      <td class="mono">${pct(d.acc)}</td><td class="mono">${d.cv == null ? "-" : d.cv.toFixed(2)}</td><td class="mono">${pct(d.cap)}</td></tr>`;
+  });
+  document.getElementById("summary").innerHTML = `<thead><tr><th>Dataset</th><th>Role</th><th>Questions</th><th>Asked</th>
+    <th>Median tokens</th><th>Median thinking</th><th>Accuracy</th><th>Spread</th><th>Hit cap</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
+// one row per dataset: a histogram drawn as bars, scaled to the row's own peak
+function ridges(host, data, opts) {
+  host.innerHTML = "";
+  const W = 1000, rowH = 40, top = 24, left = 200, right = 24, H = top + rowH * data.length + 26;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", style: "min-width:640px" }, host);
+  const span = W - left - right, nb = opts.bins;
+  const X = f => left + span * f;
+  for (const [f, lab] of opts.ticks) { el("line", { x1: X(f), x2: X(f), y1: top - 4, y2: H - 22, class: "gridline" }, svg); text(svg, X(f), H - 6, lab, "num", "middle"); }
+  text(svg, W - right, 12, opts.axis, "num", "end");
+  data.forEach(([ds, d], i) => {
+    const [t, role] = KIND[ds], y = top + i * rowH, counts = opts.counts(d), peak = Math.max(...counts, 1), w = span / nb;
+    text(svg, 0, y + rowH / 2 + 4, LABEL[ds], "lab");
+    text(svg, left - 12, y + rowH / 2 + 4, role, "num", "end");
+    el("line", { x1: left, x2: W - right, y1: y + rowH - 4, y2: y + rowH - 4, class: "axis" }, svg);
+    counts.forEach((c, b) => {
+      if (!c) return;
+      const h = (rowH - 10) * c / peak;
+      const bar = el("rect", { x: X(b / nb) + 1, y: y + rowH - 4 - h, width: Math.max(1, w - 2), height: h, rx: 2, fill: color(t) }, svg);
+      hover(bar, `${LABEL[ds]}<br>${opts.binLabel(b)}<br>${c} question${c > 1 ? "s" : ""} (${pct(c / d.q)})`);
+    });
+    const m = opts.median(d);
+    if (m != null) {
+      el("line", { x1: X(m), x2: X(m), y1: y + 4, y2: y + rowH - 4, stroke: "var(--ink)", "stroke-width": 2, "stroke-linecap": "round" }, svg);
+      text(svg, X(m) + 5, y + 12, opts.medianLabel(d), "num");
+    }
+  });
+}
+
+function renderAcc(data) {
+  const host = document.getElementById("acc"); host.innerHTML = "";
+  // the three BFCL subsets share a color: average them into one line
+  const lines = [], bfcl = data.filter(([ds]) => ds.startsWith("bfcl_"));
+  for (const [ds, d] of data) if (!ds.startsWith("bfcl_")) lines.push({ ds, label: LABEL[ds], t: KIND[ds][0], role: KIND[ds][1], bins: d.bins });
+  if (bfcl.length) lines.push({ ds: "bfcl", label: "BFCL (3 parts)", t: "tool", role: "test",
+    bins: bfcl[0][1].bins.map((_, i) => [bfcl.reduce((s, [, d]) => s + d.bins[i][0], 0) / bfcl.length,
+      bfcl.reduce((s, [, d]) => s + d.bins[i][1], 0) / bfcl.length, bfcl.reduce((s, [, d]) => s + d.bins[i][2], 0)]) });
+  const types = TYPES.filter(([t]) => lines.some(l => l.t === t));
+  const PW = 330, PH = 220, cols = 3, rows = Math.ceil(types.length / cols), W = cols * PW, H = rows * PH;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", style: "min-width:640px" }, host);
+  types.forEach(([t, name], k) => {
+    const ox = (k % cols) * PW, oy = Math.floor(k / cols) * PH, l = ox + 44, r = ox + PW - 20, tp = oy + 30, bt = oy + PH - 36;
+    const mine = lines.filter(x => x.t === t), xs = mine.flatMap(x => x.bins.map(p => p[0]));
+    const lo = Math.log(Math.min(...xs) / 1.3), hi = Math.log(Math.max(...xs) * 1.3);
+    const X = v => l + (r - l) * (Math.log(v) - lo) / (hi - lo), Y = a => bt - (bt - tp) * a;
+    text(svg, ox + 8, oy + 16, name, "lab");
+    for (const a of [0, .5, 1]) { el("line", { x1: l, x2: r, y1: Y(a), y2: Y(a), class: "gridline" }, svg); text(svg, l - 6, Y(a) + 4, pct(a), "num", "end"); }
+    const ticks = [16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].filter(v => Math.log(v) >= lo && Math.log(v) <= hi);
+    ticks.filter((_, i) => ticks.length <= 4 || i % 2 === 0).forEach(v => text(svg, X(v), bt + 16, fmt(v), "num", "middle"));
+    const labels = [];
+    for (const line of mine) {
+      const pts = line.bins, stroke = color(t);
+      el("path", { d: pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join(""), fill: "none", stroke, "stroke-width": 2, "stroke-dasharray": line.role === "train" ? "5 4" : "none" }, svg);
+      for (const p of pts) {
+        const c = el("circle", { cx: X(p[0]), cy: Y(p[1]), r: 4.5, fill: line.role === "train" ? "var(--panel)" : stroke, stroke, "stroke-width": 2 }, svg);
+        hover(c, `${line.label} (${line.role})<br>${p[2]} questions around ${fmt(p[0])} tokens<br>${pct(p[1])} of answers correct`);
+      }
+      const last = pts[pts.length - 1];
+      labels.push({ x: X(last[0]), y: Y(last[1]) - 9, s: line.label });
+    }
+    labels.sort((a, b) => a.y - b.y).forEach((lab, i, all) => { if (i && lab.y - all[i - 1].y < 13) lab.y = all[i - 1].y + 13; text(svg, Math.min(lab.x + 4, r), lab.y, lab.s, "num", "end"); });
+  });
+  text(svg, W - 8, H - 4, "solid = test set, dashed = training data", "num", "end");
+}
+
+function renderAgree(data) {
+  const host = document.getElementById("agree"); host.innerHTML = "";
+  const W = 1000, rowH = 30, top = 30, left = 200, right = 24, H = top + rowH * data.length + 8, span = W - left - right;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", style: "min-width:640px" }, host);
+  const keys = [["all answers right", "--good"], ["mixed", "--mixed"], ["all answers wrong", "--bad"]];
+  keys.forEach(([k, v], i) => { el("rect", { x: left + i * 170, y: 6, width: 10, height: 10, rx: 2, fill: css(v) }, svg); text(svg, left + i * 170 + 16, 15, k); });
+  data.forEach(([ds, d], i) => {
+    const y = top + i * rowH, role = KIND[ds][1];
+    text(svg, 0, y + rowH / 2 + 4, LABEL[ds], "lab");
+    text(svg, left - 12, y + rowH / 2 + 4, `${role} · asked ${d.k}×`, "num", "end");
+    let x0 = left;
+    d.agree.forEach((p, j) => {
+      const w = Math.max(0, span * p - 2);
+      const rect = el("rect", { x: x0, y: y + 5, width: w, height: rowH - 10, rx: 3, fill: css(keys[j][1]) }, svg);
+      hover(rect, `${LABEL[ds]}: ${keys[j][0]}<br>${pct(p)} of ${d.q} questions`);
+      if (p > 0.07) text(svg, x0 + 6, y + rowH / 2 + 4, pct(p), "num").style.fill = j === 1 ? "var(--ink)" : "var(--panel)";
+      x0 += span * p;
+    });
+  });
+}
+
+function renderAll() {
+  renderSwitch();
+  const data = datasets();
+  renderSummary(data);
+  const logPos = v => (Math.log2(v) - 4) / 9;
+  ridges(document.getElementById("strip"), data, {
+    bins: 24, counts: d => d.hist, axis: "tokens per answer, log scale",
+    ticks: [16, 64, 256, 1024, 4096, 8192].map(v => [logPos(v), v.toLocaleString("en-US")]),
+    binLabel: b => `${fmt(EDGES[b])} to ${fmt(EDGES[b + 1])} tokens`,
+    median: d => logPos(d.mean), medianLabel: d => fmt(d.mean),
+  });
+  renderAcc(data);
+  renderAgree(data);
+  ridges(document.getElementById("spread"), data.filter(([, d]) => d.k > 1), {
+    bins: 12, counts: d => d.cvh, axis: "length spread across repeated answers (sd / mean)",
+    ticks: [0, .25, .5, .75, 1, 1.2].map(v => [v / 1.2, v.toFixed(2)]),
+    binLabel: b => b === 11 ? "spread 1.1 or more" : `spread ${(b / 10).toFixed(1)} to ${((b + 1) / 10).toFixed(1)}`,
+    median: d => d.cv == null ? null : Math.min(d.cv, 1.2) / 1.2, medianLabel: d => d.cv.toFixed(2),
+  });
+  document.getElementById("foot").textContent = RUNS[current].note;
+}
+renderAll();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+</script>
