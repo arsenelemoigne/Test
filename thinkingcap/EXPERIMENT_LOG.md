@@ -618,3 +618,14 @@ code and instructions untouched).
 
 Math fading, safe when math is trained alone, breaks math once pooled with the other cuts.
 Retraining the 1b winner gives +31-39% / -1 to -2: training randomness matters at this size.
+| **combine-final-light: MC MVT + tool MVT + math whole x2 (code, instructions untouched)** | 502 | **+48.6%** | **-2.3** (within) |
+
+Light mix per benchmark: BFCL +40/+48/+27% / +6.2/0.0/-0.6; IFEval +49% / 0.0; SVAMP +4% / +1.2;
+MBPP+ +77% / **-12.5** (code is cut by spill-over although no code trace is in the data).
+
+## Weight merging (queued)
+
+`merge.py`: W = W0 + sum w_i dW_i over per-kind adapters, so each kind's update stays separate
+and can be turned down. Candidates: 1b winner + tool MVT (1.0); + tool, code tokens32 and
+math-fade r2 at 0.5; all at 1.0. `fullbest` then sends the candidate saving most within -2.5
+pts (4 samples) to the full evaluation.
