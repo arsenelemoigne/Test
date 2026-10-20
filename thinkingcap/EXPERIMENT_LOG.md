@@ -613,3 +613,8 @@ SVAMP +12% / -5.0. **The cuts add up**: each kind's best cut is safe alone, but 
 push brevity everywhere (code is cut 81%, against 57% when trained alone). Queued: the 1b winner
 retrained (GSM8K x2) and rechecked with 4 samples, and a light mix (MC + tool MVT, math whole x2,
 code and instructions untouched).
+| combine-final-mathfade: same with GSM8K faded to round 2 | 860 | +55.3% | **-5.9** (SVAMP +50% / -10.0; lost rows' reasoning 966 -> 357) |
+| mvth1024-full-gsm8k-xgsm8k2 retrained (1b winner) | 270 | +31.1% | **-2.2** (within; yesterday's training +39.1% / -1.0) |
+
+Math fading, safe when math is trained alone, breaks math once pooled with the other cuts.
+Retraining the 1b winner gives +31-39% / -1 to -2: training randomness matters at this size.
