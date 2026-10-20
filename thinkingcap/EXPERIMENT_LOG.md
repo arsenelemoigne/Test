@@ -447,3 +447,36 @@ mostly wrong numbers).
 | mix-marginal2-mathwhole-x2 | exp 3 r2 on ARC/CSQA, GSM8K whole | 2 | -7.2% | -5.6 | no |
 
 Plain-language summary: `REPORT_MVT_FADING.md`.
+
+---
+
+# Track 2b: per-type method grid (one runtime; the account allows 2 GPU sessions)
+
+New training data, graded by the evaluation's own checkers (`prepare_types.py`, `typed.py`):
+GSM8K (math), MBPP minus every MBPP+ task (code), Hermes single tool calls + 25% "no tool fits"
+pairs (tool), argilla IFEval-like (instructions). 250 questions per kind, 2 replies each,
+2,048-token cap. For code/tool/instructions the probe reads p(own correct answer | thinking).
+
+| kind | replies | correct | capped | mean tokens |
+|---|---|---|---|---|
+| math (gsm8k) | 500 | 34% | 39% | 1,465 |
+| code (mbpp_train) | 500 | 37% | 36% | 1,375 |
+| tool (hermes_tools) | 500 | 52% | 2% | 476 |
+| instructions (ifeval_like) | 500 | 73% | 3% | 433 |
+
+Each grid cell trains on one kind only (LoRA r16, lr 1e-4, 2 epochs) and is scored on all four
+benchmarks with 4 samples against a 4-sample base (`track.py grid`, `gridtable`).
+
+| run | tokens saved | accuracy | own benchmark (saved / acc) | notable spill-over |
+|---|---|---|---|---|
+| code-mvt1024 | +57.6% | -3.4 | MBPP+ +93% / -13.7 | BFCL +22-42%, IFEval +27% / -2.5 |
+| math-whole | -0.9% | -2.2 | SVAMP +1% / +3.7 | IFEval -6.2 |
+| code-whole | -4.0% | -3.5 | MBPP+ -9% / -6.2 | IFEval -8.1 |
+| tool-whole | +1.7% | -3.3 | BFCL +2-13% / ~0 | IFEval -7.5, MBPP+ -9.4 |
+
+Code-mvt pruning: 215 traces checked, 154 passed; targets 974 -> 405 tokens (-58%); the MVT
+cut is at 0 thinking tokens for most code traces (p(own code) barely rises with thinking).
+
+**Training on one kind of the model's own whole replies already costs 2-3.5 points**, mostly
+IFEval and MBPP+: the SFT itself has a price, apart from any cut. Compare each method to the
+"whole" run of the same kind.
