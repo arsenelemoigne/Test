@@ -177,3 +177,22 @@ than the cut-trace runs: compacted text is less natural).
 | MBPP+ | -39% (longer) | -5.0 |
 | SVAMP | +17% | -6.2 |
 | **average** | **+4.6%** | **-2.5 pp**: within the limit |
+
+### Round 2 (20% of paragraphs, 80% of words kept), from round 1's adapter
+
+Targets: 292 faded, 6 with fewer words cut, 4 kept round 1's trace. Mean completion 518 -> 324
+tokens (-38%): ARC -42%, CSQA -40%, GSM8K -32%.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | -0% / +2% / +22% | -7.5 / -1.2 / -8.7 |
+| IFEval | +26% | -1.2 |
+| MBPP+ | -19% (longer) | -6.2 |
+| SVAMP | +33% | -3.7 |
+| **average** | **+14.3%** | **-4.3 pp**: outside the limit, so the stop rule ends it |
+
+**Experiment 2 answer: round 1 (+4.6%, -2.5 pp).** Fading protects math far better than one
+cut (SVAMP -3.7 at round 2 vs -21 to -24 for every one-cut run), but the model takes up
+only part of the shortening (training traces -38%, its own answers -14%), and accuracy
+drifts down on the benchmarks it never trained on (BFCL, MBPP+). MBPP+ answers get longer
+in both rounds: the telegraphic thinking may not suit code.
