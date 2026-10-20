@@ -1,0 +1,89 @@
+TASK: run the MVT (Marginal Value Theorem) cut on every data type, on data matched to the evaluation,
+and report the gain per data type. You start with no context: everything you need is below.
+
+=== 1. THE CHALLENGE ===
+BottleCapAI ThinkingCap Test (github.com/BottleCapAI/ThinkingCap-Test): make Qwen3-0.6B write fewer
+tokens (thinking included) while keeping accuracy. Our own limit: accuracy change >= -3 points vs the
+raw model. Rules (README): start from Qwen3-0.6B; LoRA or changed weights are fine, but the model must
+load in plain Transformers and vLLM (no custom code); do NOT train on the evaluation benchmarks; keep
+the evaluation settings unchanged (prompt, sampling, TOKEN CAP: 4,096 tokens, 8,192 for MBPP+ code).
+Evaluation: 4 benchmarks, each counts 25% of the score: SVAMP (math, 1,000 q), MBPP+ (code, 378 q),
+BFCL (tool calls, 840 q in 3 parts: simple_python 400, multiple 200, irrelevance 240), IFEval
+(instructions, 541 q). Full run = 2,759 questions x 8 samples. Accuracy change = mean over the 4
+benchmarks; tokens saved = 1 - geometric mean of per-benchmark token ratios. Answers cut off by the
+token cap count as wrong.
+
+=== 2. WHERE THINGS ARE ===
+Repo: github.com/arsenelemoigne/Test, folder thinkingcap/.
+YOUR branch: mvt-pertype (already created). Push ONLY there. Never push to mvt-fading (another Claude
+session works there) or to ccr-f7e14615-o4qu8r (a third session doing RL).
+Read first, in this order:
+  - thinkingcap/REPORT_MVT_FADING.md            plain-language summary of night 1
+  - thinkingcap/EXPERIMENT_LOG.md               every run; read "Track 2" and "Track 2b" (the per-type grid)
+  - thinkingcap/track.py                        the stage runner; read grid_data, grid, grid_evaluate, gridtable, combine
+Key code: prune_traces.py (MVT rule: --rule mvt --travel C --unit paragraph|tokens32), probe_curve.py
+(sampling, caps 4,096 and 8,192 for code), prepare_types.py (the data), typed.py (graders = the
+evaluation's own), check_vllm.py (batched natural-answer check), sft.py (LoRA r16), merge.py, typed.py.
+
+=== 3. WHAT MVT IS (short) ===
+For each correct reply of the model, we measure after every paragraph (or every 32-token batch) how
+sure the model is of its own correct answer (teacher forcing). The MVT says: stop thinking at the
+first point where no later part of the thinking pays better per token than the average so far,
+g(t)/(t + c). c ("travel cost") is patience: c=1024 stays longer, c=256 stops sooner. The cut trace is
+kept only if the model, answering naturally from it twice, is still correct. Then LoRA SFT on the cut
+traces, and evaluation.
+
+=== 4. WHAT WE ALREADY KNOW (from mvt-fading, old data) ===
+Per type, trained alone, 4 samples on the 240-question test sample (tokens saved / accuracy):
+  tools   MVT paragraphs c=1024: +42% / -0.7   (free)        tokens32: +4% / -1.6
+  code    MVT paragraphs c=1024: +58% / -3.4 (MBPP+ -13.7)   tokens32: +24% / -1.9 (MBPP+ -5.6)
+  math    MVT paragraphs: +50% / -11.5 (SVAMP -16)  -> cutting math breaks it
+  text    MVT paragraphs: +13% / -1.5                       tokens32: +5% / +0.6
+  Training on one kind's own whole replies ("whole") already costs 2-3.5 points: compare each MVT
+  run to the "whole" run of the same type, not only to the raw model.
+  Combining every type's best cut in one training makes the cuts ADD UP (-6.2): see "Combined models".
+  Best model so far: "light mix" (multiple-choice + tool MVT cuts, math whole x2): +48.6% / -2.3.
+Old data was mismatched: GSM8K much harder than SVAMP, Hermes tools unlike BFCL, a 2,048 cap.
+
+=== 5. WHAT IS NEW: THE MATCHED DATA (TRACK_SET=matched) ===
+  math   gsm8k_all  GSM8K train+test, filtered to questions with a correct reply <= 700 tokens (SVAMP-like)
+  code   mbpp_train MBPP tasks minus every MBPP+ task
+  tool   toolace    ToolACE: BFCL's function format and call syntax, BFCL's mix (48% one function,
+                    24% several, 28% no function fits); names with spaces become identifiers
+  text   ifeval_like argilla/ifeval-like-data (filtered), graded by IFEval's own verifiers
+  choice arc_easy + commonsense_qa (not in the evaluation; their cuts spill over usefully)
+300 questions per source, 2 replies each, caps 4,096 and 8,192 for code. Do NOT use ASDiv, MAWPS,
+MultiArith or Orca-Math: SVAMP was built from ASDiv/MAWPS (rule 2). The other session builds the same
+questions (same seed) with 8 replies each for "shortest of 8"; keep --seed 0 so both match.
+
+=== 6. HOW TO RUN ===
+COLAB LIMIT: the account allows only 2 GPU sessions at once and both may already be in use (the
+mvt-fading full evaluation and the RL session's thinking_probe_colab). Ask the user which one may be
+stopped, or to use another Google account. Never terminate a session without the user's yes.
+Open https://colab.research.google.com/github/arsenelemoigne/Test/blob/mvt-pertype/thinkingcap/mvt_pertype_colab.ipynb
+(L4 is preset), Runtime -> Run all. It sets TRACK_BRANCH=mvt-pertype and TRACK_SET=matched, installs,
+then the last cell works through thinkingcap/plan_mvt.txt from YOUR branch, rereading it after every
+stage: push a line to queue more, no restart needed. Stages skip finished work.
+plan_mvt.txt already holds: base, recheck (4-sample base), grid_data, then for every type
+(tool, text, choice, code, math): whole, MVT c=1024 and c=256, by paragraphs and by 32-token batches,
+then gridtable. About 25 runs x 15-20 min. Reorder or trim it if the budget is short.
+Compute: an L4 burns ~3.1 Colab units per hour; check the balance under Runtime -> View resources.
+Colab wipes the runtime disk when it disconnects (idle or when the tab is closed): log every result
+in EXPERIMENT_LOG.md on your branch as soon as it appears. Reading results: the cell output can stop
+streaming after a reconnect; then open /content/track_log.txt from the Files panel (refresh the panel
+first) and read its text.
+First real use of the ToolACE parser on the GPU: check the grid_data output ("toolace simple/multiple/
+irrelevance: N usable") and fix prepare_types.py on your branch if it fails.
+
+=== 7. WHAT TO REPORT ===
+For every type: tokens saved and accuracy change on its OWN benchmark and on the other three
+(spill-over), vs the raw model AND vs that type's "whole" run; which MVT setting (c, unit) is best
+per type. `python track.py gridtable` prints the matrix. Then build one model from the per-type
+winners with `track.py combine` (pool their sft.jsonl rows; remember cuts add up, start light), score
+it with 4 samples, and log it. Explain results to the user simply (they want plain language, no
+jargon). Add a "Track 3: MVT per type, matched data" section to EXPERIMENT_LOG.md on mvt-pertype.
+
+=== 8. CONVENTIONS ===
+Git commits end with: Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Hard rule: accuracy within -3 points of the raw model on the same questions and samples.
+Small test samples (40 q x 4) swing by about +/-4 points: say so when a difference is within that.
