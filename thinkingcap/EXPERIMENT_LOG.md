@@ -395,3 +395,18 @@ code and function calling fall most. Experiment 3's answer is round 1.
 
 `mix` with ARC/CSQA rows from experiment 3 (round 1 or 2) and GSM8K whole (twice): does
 experiment 3 hurt only because it touches math?
+
+| mvth256-full-gsm8k-xgsm8k2 | +42.0% [33.7, 51.1] | -2.1 pp [-5.8, +1.4] (within) |
+
+### Experiment 3's word scoring on the easy sources, math kept whole (2 samples)
+
+| run | tokens saved | accuracy change |
+|---|---|---|
+| mix-marginal1-mathwhole-x2 (ARC/CSQA from round 1) | -2.6% (longer) | -1.5 pp |
+| mix-marginal2-mathwhole-x2 (ARC/CSQA from round 2) | -7.2% (longer) | -5.6 pp (SVAMP lost rows hit the cap: 1,401 -> 2,529 reasoning tokens) |
+
+With math whole, light word compaction of the easy examples shortens nothing, and heavier
+compaction makes answers longer and wrong. Experiment 3's round-1 saving came from the
+compacted GSM8K traces (SVAMP +28%), which is also what costs math accuracy. Deleting
+scattered words gives text the model does not learn to write; deleting whole paragraphs
+(the MVT cut) does.
