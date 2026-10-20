@@ -41,6 +41,7 @@ def main():
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--adapter", help="recheck: the adapter to score; none scores the base")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
+    parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
     parser.add_argument("--full-sources", default="", help="mvt: datasets whose traces stay whole, e.g. gsm8k")
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
@@ -108,15 +109,18 @@ def rollouts(args):
 
 
 def mvt(args):
-    name = f"mvth{args.travel:g}" + (f"-full-{args.full_sources.replace(',', '-')}" if args.full_sources else "")  # "h": the full look-ahead rule (the 2-step one, "mvt256", left at 0 on math)
-    prune, adapter, out = ROOT / f"prune-{name}", Path("adapters") / name, ROOT / f"eval-{name}"
+    name = f"mvth{args.travel:g}" + (f"-full-{args.full_sources.replace(',', '-')}" if args.full_sources else "") \
+        + (f"-cap{args.max_per_source}" if args.max_per_source != 70 else "")  # "h": the full look-ahead rule (the 2-step one, "mvt256", left at 0 on math)
+    prune = ROOT / f"prune-{name.split('-cap')[0]}"  # the cap only changes the SFT rows
+    adapter, out = Path("adapters") / name, ROOT / f"eval-{name}"
     if not (prune / "sft.jsonl").exists():
         py("prune_traces.py", "--rollouts", ROLLOUTS, "--out", prune, "--rule", "mvt", "--travel", args.travel,
            "--check-samples", 4, "--dtype", args.dtype,
            *(["--full-sources", args.full_sources] if args.full_sources else []))
     print((prune / "summary.txt").read_text())
     if not (adapter / "adapter_config.json").exists():
-        py("sft.py", "--data", prune / "sft.jsonl", "--out", adapter, "--max-per-source", 70, "--dtype", args.dtype)
+        py("sft.py", "--data", prune / "sft.jsonl", "--out", adapter, "--max-per-source", args.max_per_source,
+           "--dtype", args.dtype)
     evaluate(out, adapter)
     print(score_line(name, out))
     print(diagnose(out))

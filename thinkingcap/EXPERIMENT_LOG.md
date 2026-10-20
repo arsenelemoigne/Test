@@ -223,3 +223,28 @@ shrink 2.6x more (+12.1% vs +4.6%), so the model takes up model-chosen deletions
 LLMLingua's. The extra accuracy loss is almost all MBPP+ (code, never trained on). With 40
 questions per benchmark the average's interval is about +/-4 pp, so -2.5 vs -5.2 is not a
 reliable difference: see the 4-sample recheck below.
+
+## Experiment 1b: MVT cut on the easy sources, math kept whole
+
+Idea from the per-benchmark split of experiment 1: the cut saved 59-67% on IFEval with no
+loss, while math and code broke. `prune_traces.py --full-sources gsm8k` keeps every GSM8K
+question's shortest correct rollout uncut; ARC and CSQA get the MVT cut. SFT as before
+(`--max-per-source 70`: 70 ARC + 70 CSQA + 65 GSM8K = 205 rows).
+
+### Run mvth1024-full-gsm8k
+
+Targets: ARC 445 -> 91 tokens (-80%), CSQA 464 -> 97 (-79%), GSM8K whole (984).
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +8% / +12% / +21% | +2.5 / +8.8 / +1.3 |
+| IFEval | +53% | +3.7 |
+| MBPP+ | +76% | -5.0 |
+| SVAMP | +22% | -8.7 (10 lost, 3 gained) |
+| **average** | **+47.6%** | **-1.5 pp**: within the limit |
+
+The best trade-off so far. SVAMP still loses 8.7 points: of the 10 lost answers, 5 are wrong
+numbers after one short paragraph ("I need the total area." then a guess), 3 hit the token
+cap, 1 writes "Final answer: 4 + 22 + 16 = 42" (trailing content). SVAMP questions are short
+and easy-looking, so the model gives them the brief treatment it learned on ARC/CSQA.
+Next: a 4-sample recheck, and a run with fewer MC rows (35 per source) so math weighs more.
