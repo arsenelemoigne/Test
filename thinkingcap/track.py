@@ -239,7 +239,7 @@ def grid_data(args):
         extra = GRID / "probe-extra"
         shutil.rmtree(extra, ignore_errors=True)
         py("probe_curve.py", "--data", questions, "--sources", ",".join(missing), "--per-source", args.per_source,
-           "--samples", 2, "--max-tokens", 2048, "--out", extra, "--dtype", args.dtype, "--generate-only")
+           "--samples", 2, "--out", extra, "--dtype", args.dtype, "--generate-only")
         probe.mkdir(parents=True, exist_ok=True)
         with rollouts.open("a") as handle:
             handle.write((extra / "rollouts.jsonl").read_text())

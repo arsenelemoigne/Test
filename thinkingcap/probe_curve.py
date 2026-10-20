@@ -68,7 +68,8 @@ def parse_arguments():
     parser.add_argument("--per-source", type=int, default=50, help="questions per dataset")
     parser.add_argument("--sources", help="comma-separated datasets to keep (default: all)")
     parser.add_argument("--samples", type=int, default=4, help="rollouts per question")
-    parser.add_argument("--max-tokens", type=int, default=4096)
+    parser.add_argument("--max-tokens", type=int, default=4096, help="token cap, as the evaluation's (4,096)")
+    parser.add_argument("--code-max-tokens", type=int, default=8192, help="token cap for code, as MBPP+'s (8,192)")
     parser.add_argument("--stride", type=int, default=16,
                         help="thinking tokens between probes; 1 probes every marginal token")
     parser.add_argument("--batch-tokens", type=int, default=32768,
@@ -113,10 +114,12 @@ def generate(questions, args):
                                              enable_thinking=True) for q in questions]
     extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
     engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.85,
-                 max_model_len=args.max_tokens + max(len(p) for p in prompts) + 16,
+                 max_model_len=max(args.max_tokens, args.code_max_tokens) + max(len(p) for p in prompts) + 16,
                  generation_config="vllm", **extra)
-    params = SamplingParams(n=args.samples, max_tokens=args.max_tokens, seed=SEED,
-                            stop_token_ids=eos_ids, **SAMPLING)
+    # one cap per question, as the evaluation does: 8,192 for code, 4,096 for everything else
+    params = [SamplingParams(n=args.samples, seed=SEED, stop_token_ids=eos_ids, **SAMPLING,
+                             max_tokens=args.code_max_tokens if q["task"] == "code" else args.max_tokens)
+              for q in questions]
     outputs = engine.generate([{"prompt_token_ids": p} for p in prompts], params)
 
     rollouts = []
