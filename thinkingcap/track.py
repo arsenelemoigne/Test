@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -49,6 +49,8 @@ def main():
     parser.add_argument("--method", choices=("whole", "mvt", "marginal", "fade"), help="grid: how its traces are shortened")
     parser.add_argument("--unit", default="paragraph", help="grid: paragraph, sentence or tokensN")
     parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
+    parser.add_argument("--inputs", nargs="*", default=[],
+                        help="combine: sft.jsonl[:source[:source...]] files whose rows (of those sources) are pooled")
     parser.add_argument("--plan-file", default="plan.txt", help="plan: the queue this runtime works through")
     parser.add_argument("--wait-hours", type=float, default=0,
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
@@ -295,6 +297,33 @@ def grid_evaluate(name, adapter, args):
     rows = [l for l in (GRID / "grid.jsonl").read_text().splitlines() if json.loads(l)["name"] != name] \
         if (GRID / "grid.jsonl").exists() else []
     (GRID / "grid.jsonl").write_text("".join(l + "\n" for l in rows + [json.dumps(row)]))
+
+
+def combine(args):
+    """One model from the best method per kind: pool chosen rows of several runs, train, score with 4 samples."""
+    data, adapter = GRID / f"combine-{args.name}", Path("adapters") / f"combine-{args.name}"
+    if not (data / "sft.jsonl").exists():
+        rows = []
+        for spec in args.inputs:
+            path, *sources = spec.split(":")
+            for line in Path(path).read_text().splitlines():
+                if line.strip() and (not sources or json.loads(line)["source"] in sources):
+                    rows.append(line)
+        data.mkdir(parents=True, exist_ok=True)
+        (data / "sft.jsonl").write_text("".join(l + "\n" for l in rows))
+    pooled = [json.loads(l) for l in (data / "sft.jsonl").read_text().splitlines() if l.strip()]
+    for source in sorted({r["source"] for r in pooled}):
+        group = [r for r in pooled if r["source"] == source]
+        print(f"   {source:<16} {len(group)} rows, mean completion "
+              f"{sum(len(r['completion_ids']) for r in group) / len(group):.0f} tokens", flush=True)
+    if not (adapter / "adapter_config.json").exists():
+        py("sft.py", "--data", data / "sft.jsonl", "--out", adapter, "--max-per-source", args.max_per_source,
+           "--dtype", args.dtype, *(["--repeat", args.repeat] if args.repeat else []))
+    base, out = ROOT / "s4-base", GRID / f"eval-combine-{args.name}"
+    evaluate(base, samples=4)
+    evaluate(out, adapter, samples=4)
+    print(score_line(f"combine-{args.name}", out, base=base), flush=True)
+    print(diagnose(out, base=base))
 
 
 def gridtable(args):
