@@ -704,3 +704,8 @@ on irrelevance (-8.7): as on the old data, **paragraphs win for tool calls**.
 +17.6% / +1.7 (cleaner). Token batches over-cut (-47 to -56% of the targets) and lose irrelevance
 (-8.7, -10.0); c=256 by batches is outside the limit (-4.5, SVAMP -10.6).
 text-whole: 259 of 300 questions have a correct reply; targets 347 -> 312 (shortest correct reply).
+
+Why the old tool run spread brevity onto code (MBPP+ +68%) and this one does not (+2%): not the
+prompt format (Hermes questions were already in BFCL's format). Likely the strength of the lesson:
+old targets 291 -> 163 (44% removed, ~130 tokens per trace, 258 traces), new 201 -> 142 (30%, ~60
+tokens, 189 traces); tool-mvt256 here (40% removed) does spread to code (+30%). Untested guess.
