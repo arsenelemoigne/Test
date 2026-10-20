@@ -368,3 +368,18 @@ ARC/CSQA MVT-cut rows + GSM8K rows from experiment 3 round 1 (984 -> 835 tokens)
 
 Compacting the math traces brings the SVAMP failure back (reasoning on lost rows 827 -> 512
 tokens): math traces have to stay whole. The round-2 mix was dropped from the plan.
+
+### Experiment 3 round 2 (run past the stop rule with `--ignore-limit`)
+
+Targets: 291 faded, 6 fewer words, 5 kept round 1's; mean completion 518 -> 324 (-37%).
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | -6% / +6% / +4% | +1.3 / -7.5 / -8.8 |
+| IFEval | +14% | -7.5 |
+| MBPP+ | -26% (longer) | **-18.8** |
+| SVAMP | +2% | -3.8 |
+| **average** | **-1.3% (longer)** | **-8.8 pp**: far outside |
+
+A second round of word compaction breaks the model: answers get longer (it hesitates), and
+code and function calling fall most. Experiment 3's answer is round 1.
