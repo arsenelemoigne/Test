@@ -6,6 +6,11 @@
 MVT track's winner (+37.1%, -0.6 pp at 8 samples). Long C (60 steps, code protected with a 4,096
 cap, maths alpha 0.25, rolling-back guard) is running.
 
+**Decisions (20 Oct):** TokenProbe and steering are dropped (both tested several ways; neither
+transfers). RL with the short-and-correct reward is the method to push; accuracy is to be
+recovered with more training: longer runs (long C, 60 steps) and next, bigger rounds (64-128
+questions per step instead of 32; DLER attributes accuracy drops to small training sets).
+
 ## Morning summary (20 Oct 2026)
 
 **Best result:** ablation A, plain RL with a "short and correct" reward, 20 steps from the raw
