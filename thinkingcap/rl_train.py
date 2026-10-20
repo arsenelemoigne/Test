@@ -98,6 +98,9 @@ def parse_arguments():
     parser.add_argument("--kl-beta", type=float, default=5e-3)
     parser.add_argument("--protect-sources", default="",
                         help="comma-separated sources trained for correctness only (no length pressure)")
+    parser.add_argument("--source-alpha", default="",
+                        help="per-source length weight overriding --alpha, e.g. gsm8k=0.25,skywork=0.25")
+    parser.add_argument("--mirror", help="copy --out here after every saved checkpoint (e.g. a Drive folder)")
     parser.add_argument("--protect-kl", type=float, default=0.0,
                         help="KL anchor to the base model on protected sources' tokens")
     parser.add_argument("--lam-decay", type=float, default=0.2)
@@ -459,6 +462,12 @@ def main():
     sampler = Sampler(args, tokenizer)
     log = []
     protect = set(filter(None, args.protect_sources.split(",")))
+    source_alpha = {k: float(v) for k, v in (item.split("=") for item in filter(None, args.source_alpha.split(",")))}
+
+    def mirror():
+        if args.mirror:
+            import shutil
+            shutil.copytree(out, args.mirror, dirs_exist_ok=True)
     soften = 1.0  # halved each time the guard rolls back
     guard = None
     if args.guard_every:
@@ -491,7 +500,8 @@ def main():
                 for r in group]
             protected = question["source"] in protect
             rewards = ([1.0 if ok else 0.0 for ok in correct] if protected
-                       else length_rewards([len(r) for r in group], correct, args.alpha * soften))
+                       else length_rewards([len(r) for r in group], correct,
+                                           source_alpha.get(question["source"], args.alpha) * soften))
             if protected:
                 stats["protected_correct"] += sum(correct)
                 stats["protected_replies"] += len(group)
@@ -581,6 +591,8 @@ def main():
         model.save_pretrained(current)
         if args.save_every and (step + 1) % args.save_every == 0:
             model.save_pretrained(out / f"step{step + 1}")
+            (out / "rl_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in log))
+            mirror()
 
         entry = {"step": step + 1, "accuracy": stats["correct"] / stats["replies"],
                  "mean_tokens": stats["tokens"] / stats["replies"],
@@ -625,6 +637,7 @@ def main():
     (out / "rl_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in log))
     if guard:
         (out / "guard.json").write_text(json.dumps(guard, indent=1))
+    mirror()
     print(f"saved {out}")
 
 

@@ -15,6 +15,7 @@ bubblewrap is unavailable: only on a disposable VM.
 
 import argparse
 import json
+import random
 import re
 import subprocess
 import sys
@@ -76,12 +77,18 @@ def is_code_correct(reply, answer):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", default="data/code.jsonl")
+    parser.add_argument("--held-out", type=int, default=0,
+                        help="keep this many problems (a fixed random choice) out of --out, in --held-out-out")
+    parser.add_argument("--held-out-out", default="data/code_val.jsonl")
     args = parser.parse_args()
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
     written = list(rows())
-    out.write_text("".join(json.dumps(r) + "\n" for r in written))
-    print(f"{len(written)} coding questions -> {out}")
+    random.Random(0).shuffle(written)
+    splits = [(Path(args.held_out_out), written[:args.held_out])] if args.held_out else []
+    splits.append((Path(args.out), written[args.held_out:]))
+    for path, part in splits:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("".join(json.dumps(r) + "\n" for r in part))
+        print(f"{len(part)} coding questions -> {path}")
 
 
 if __name__ == "__main__":
