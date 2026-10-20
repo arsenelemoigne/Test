@@ -39,9 +39,9 @@ merge --name tool --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/
 merge --name half --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/tool-mvt1024:0.5 adapters/grid/code-mvt1024-tokens32:0.5 adapters/grid/math-fade/r2:0.5
 merge --name full --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/tool-mvt1024:1 adapters/grid/code-mvt1024-tokens32:1 adapters/grid/math-fade/r2:1
 # the full evaluation (2,759 questions x 8 samples) of the best candidate within -2.5 pts on the 4-sample subset
-fullbest --inputs mvtf/s4-mvth1024-full-gsm8k-xgsm8k2=adapter:adapters/mvth1024-full-gsm8k-xgsm8k2 grid/eval-combine-final-light=adapter:adapters/combine-final-light grid/eval-merge-tool=model:models/merge-tool grid/eval-merge-half=model:models/merge-half grid/eval-merge-full=model:models/merge-full
-stats --inputs mvtf/full-base
-stats --inputs mvtf/full-combine-final-light
+# (dropped: the full 2,759 x 8 evaluation; we validate on the 240-question sample) fullbest --inputs mvtf/s4-mvth1024-full-
+# (dropped: the full 2,759 x 8 evaluation; we validate on the 240-question sample) stats --inputs mvtf/full-base
+# (dropped: the full 2,759 x 8 evaluation; we validate on the 240-question sample) stats --inputs mvtf/full-combine-final-l
 # shortest-of-8 self-distillation on data matched to the evaluation, checked on the real test sample
 bon --per-source 300 --max-per-source 300
 stats --inputs bon/probe/rollouts.jsonl mvtf/s4-bon-r1
