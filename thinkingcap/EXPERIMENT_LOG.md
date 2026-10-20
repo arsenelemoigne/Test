@@ -687,6 +687,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | tool-mvt1024-tokens32 | 189 / 176 | 201 -> 106 | +18.1% | -2.7 | BFCL irr +54% / **-8.7**, mult +24% / 0.0, simple +39% / -1.3; IFEval +3% / +1.2; MBPP+ 0% / -6.9; SVAMP +24% / -1.9 |
 | tool-mvt256-tokens32 | 189 / 167 | 201 -> 89 | +11.5% | **-4.5** | BFCL irr +54% / **-10.0**, mult +24% / -1.9, simple +47% / -0.6; IFEval -6% / +3.7; MBPP+ -5% / -6.9; SVAMP +7% / **-10.6** |
 | text-whole | 259 / 0 | 347 -> 312 | +6.1% | -0.5 | BFCL +5/+6/+5% / -1.2/+0.6/0.0; IFEval +6% / +2.5; MBPP+ -2% / -1.9; SVAMP +14% / -2.5 |
+| text-mvt1024 | 259 / 238 | 347 -> 234 | +15.1% | -0.9 | BFCL +11/+9/+11% / -5.6/+3.1/-1.3; IFEval +24% / +5.6; MBPP+ +8% / -6.2; SVAMP +17% / -1.9 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -716,3 +717,6 @@ matched ToolACE uncut run costs nothing (+0.6). The Hermes data itself disturbs 
 add the brevity spill-over. Likely cause (untested): easy Hermes questions, a quarter of them
 synthetic "no tool fits" pairs, get cut to almost no thinking, as easy multiple choice did on night 1.
 text-mvt1024: 503 checked, 445 pass; 238 of 259 cut, targets 347 -> 234 (-33%).
+
+text-mvt1024: IFEval 24% shorter and +5.6 (old data: +11% / -3.1). MBPP+ -6.2 again (cf. tool cuts).
+text-mvt256: 483 checked, 412 pass; 227 cut, 347 -> 190 (-45%).
