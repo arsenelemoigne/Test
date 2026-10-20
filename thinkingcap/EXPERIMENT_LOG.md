@@ -25,7 +25,12 @@
    20 steps, GSM8K + Skywork + ARC + CSQA, from the raw model): +19.6% tokens saved at +0.3 points.
    Held-out guard: 45.3% -> 60.2% accuracy, 1,065 -> 769 tokens. SVAMP -30% tokens at equal
    accuracy, BFCL -15 to -22% with higher accuracy; code still barely shorter (-3%).
-9. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
+9. **TokenProbe hurts transfer.** B = A + TokenProbe-KL, otherwise identical: on the held-out
+   maths/quiz check B matches A (60.5% / 796 tokens vs 60.2% / 769), but on the benchmarks it
+   saves only 6% (A: 20%). The KL anchor to the base model keeps behaviour near the original
+   outside the training subjects, so the shortening stays local. Per benchmark B: BFCL +5 to +7%,
+   IFEval +14%, MBPP+ -8% (longer), SVAMP +11% / -6 pp.
+10. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
    problems with unit tests, not an evaluation benchmark) with a reward that runs the tests, in
    MBPP+'s prompt format. Ready to run as experiment E after the ablation.
 
@@ -71,9 +76,9 @@ neighbours is that ingredient's marginal effect. The guard only measures (no rol
 | S x2 | steering vector only (no training), strength 2 | ~0% (code and BFCL longer) | -4.0 pp [-8.0, -0.1] |
 | S x4 | steering vector only, strength 4 | (code shorter, BFCL longer) | -15.1 pp [-19.9, -10.4] |
 | **A** | RL with the ShorterBetter length reward, lr 2e-5 | **+19.6% [8.8, 29.5]** | **+0.3 pp [-3.0, +3.7]** |
-| B | A + TokenProbe-KL (core tokens anchored, filler pushed down over budget) | | |
-| C | B + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step | | |
-| D | C + AdaptThink (2 of 8 samples start with an empty thinking block) | | |
+| B | A + TokenProbe-KL (core tokens anchored, filler pushed down over budget) | +6.1% [-6.5, 17.8] | -0.3 pp [-4.6, +4.0] |
+| C | **A** + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step (built on A, since B < A) | running | |
+| D | C + AdaptThink (2 of 8 samples start with an empty thinking block) | queued | |
 
 Loop 4 (stacked on loop 1, lr 5e-5, entropy bonus 1e-3) was stopped after 3 steps for this:
 its entropy rose 0.80 -> 1.01 -> 1.16, a sign the entropy bonus with that lr destabilises it.
