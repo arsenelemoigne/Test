@@ -111,7 +111,7 @@ machines. Only compare a candidate against the base measured on the same VM.
 
 | run | what | why |
 |---|---|---|
-| A (rebuild) | same as ablation A, seed 0 | the adapter was lost with the VM |
+| A (rebuild) | same as ablation A, seed 0 | **done: +22.1% [14.7, 29.0], -1.2 pp [-5.4, +3.1]**. BFCL irr/mult/simple +4.7/+19.3/+11.5% (+1.3/+3.8/0 pp); IFEval +28.5% (+1.3); MBPP+ +0.1% (0); SVAMP +41.4% (-7.5). Guard 49.6% -> 59.0%, 1,073 -> 774 tok. Saved to Drive |
 | C | A + lr 4e-5 cosine to 4e-6, 2 restarts, 2 updates per step | lost overnight |
 | steer mix | steering vector from 640 questions incl. coding (HumanEval, unit tests) | retry with broader data |
 | P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | shorten maths and quiz, keep code intact |
