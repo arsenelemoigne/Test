@@ -3,6 +3,6 @@ mvt --travel 1024 --full-sources gsm8k
 mvt --travel 256 --full-sources gsm8k
 recheck
 recheck --adapter adapters/mvth1024-full-gsm8k
+mvt --travel 1024 --full-sources gsm8k --max-per-source 35
 recheck --adapter adapters/fade-gain-words/r1
 recheck --adapter adapters/fade-gain-marginal/r1
-mvt --travel 1024 --full-sources gsm8k --max-per-source 35
