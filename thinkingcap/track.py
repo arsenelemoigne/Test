@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -371,6 +371,43 @@ def fullbest(args):
              **({"adapter": path} if kind == "adapter" else {"model": path}))
     print(score_line(f"{run} (full evaluation)", out, base=base))
     print(diagnose(out, base=base))
+
+
+def stats(args):
+    """Per-question length and accuracy summaries, printed between markers so they can be read from the log.
+
+    --inputs are evaluation run directories (records.jsonl) or rollouts.jsonl files, relative to
+    runs/. One row per question: [dataset, kind, samples, mean tokens, sd tokens, min, max,
+    accuracy, mean thinking tokens].
+    """
+    import statistics
+
+    for name in args.inputs:
+        path = Path("runs") / name
+        file = path / "records.jsonl" if path.is_dir() else path
+        if not file.exists():
+            print(f"stats: {name} missing; skipped", flush=True)
+            continue
+        groups = {}
+        for line in file.read_text().splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            dataset = r.get("dataset") or r.get("source")
+            kind = r.get("task") or dataset
+            thinking = r.get("reasoning_tokens", len(r.get("thinking_ids", [])))
+            groups.setdefault((dataset, kind, str(r["id"])), []).append(
+                (r["output_tokens"], bool(r.get("correct")), thinking))
+        rows = []
+        for (dataset, kind, _), samples in groups.items():
+            tokens = [t for t, _, _ in samples]
+            rows.append([dataset, kind, len(samples), round(statistics.mean(tokens), 1),
+                         round(statistics.pstdev(tokens), 1), min(tokens), max(tokens),
+                         round(sum(c for _, c, _ in samples) / len(samples), 3),
+                         round(statistics.mean(h for _, _, h in samples), 1)])
+        print(f"STATS-BEGIN {name}", flush=True)
+        print(json.dumps(rows, separators=(",", ":")), flush=True)
+        print(f"STATS-END {name}", flush=True)
 
 
 def gridtable(args):
