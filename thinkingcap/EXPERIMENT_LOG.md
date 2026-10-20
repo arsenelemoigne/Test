@@ -383,3 +383,15 @@ Targets: 291 faded, 6 fewer words, 5 kept round 1's; mean completion 518 -> 324 
 
 A second round of word compaction breaks the model: answers get longer (it hesitates), and
 code and function calling fall most. Experiment 3's answer is round 1.
+
+### 4-sample rechecks (continued)
+
+| run | tokens saved | accuracy change [95% CI] |
+|---|---|---|
+| mvth256-full-gsm8k | **+49.7% [42.7, 57.4]** | -2.7 pp [-6.2, +0.7] (within, close to the edge; IFEval +8.8, MBPP+ -10.0, SVAMP -8.8) |
+| fade-gain-marginal r2 | +1.8% | -6.2 pp [-9.4, -3.1] (outside; BFCL multiple -19.4) |
+
+### Queued: experiment 3's word scoring on the easy sources, math kept whole
+
+`mix` with ARC/CSQA rows from experiment 3 (round 1 or 2) and GSM8K whole (twice): does
+experiment 3 hurt only because it touches math?
