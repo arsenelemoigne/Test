@@ -513,3 +513,12 @@ well paragraphed, and mid-paragraph cuts make the model write more elsewhere.
 
 MVT part of the grid done. Best unit per kind: tool -> paragraphs (+42%, -0.7); code -> 32-token
 batches (+24%, -1.9); instructions -> paragraphs (+13%, -1.5; batches +5%, +0.6); math -> no cut.
+| math-marginal | +57.5% | **-19.0** | SVAMP +97% / **-46.2** | IFEval -67% (longer) / -11.9, MBPP+ -17.5 |
+| code-marginal | +72.9% | **-18.8** | MBPP+ +90% / -25.6 | SVAMP +90% / -41.2 |
+| tool-marginal | +24.1% | -3.0 | BFCL +35/+30/+33% / +0.6/-2.5/-1.9 | MBPP+ -10.0, IFEval -5.0 |
+
+Paragraph marginal (leave-one-out) analysis deletes far too much where steps are redundant:
+code targets 974 -> 96 tokens, math 979 -> 287. Deleting any single math or code paragraph
+barely moves p(gold) because another paragraph carries the same information, so each looks
+free alone, and drop_flat then removes them together while the group test, scored by teacher
+forcing on a trace the model did not write, still passes. The MVT cut beats it on every kind.
