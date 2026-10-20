@@ -18,3 +18,4 @@ recheck --adapter adapters/mvth256-full-gsm8k-xgsm8k2
 mix --mc runs/mvtf/fade-gain-marginal/r1/sft.jsonl --math runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl --repeat gsm8k:2 --name marginal1-mathwhole-x2
 mix --mc runs/mvtf/fade-gain-marginal/r2/sft.jsonl --math runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl --repeat gsm8k:2 --name marginal2-mathwhole-x2
 recheck --samples 8 --adapter adapters/mvth1024-full-gsm8k-xgsm8k2
+full --adapter adapters/mvth1024-full-gsm8k-xgsm8k2

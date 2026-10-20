@@ -31,7 +31,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "scores"))
+    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -96,9 +96,9 @@ def setup(args):
         py("subset_questions.py", "--per-dataset", 40, "--out", QUESTIONS)
 
 
-def evaluate(out, adapter=None, samples=2):
+def evaluate(out, adapter=None, samples=2, questions=QUESTIONS):
     if not (Path(out) / "results.json").exists():
-        py("evaluate.py", "--questions", QUESTIONS, "--samples", samples, "--out", out,
+        py("evaluate.py", "--questions", questions, "--samples", samples, "--out", out,
            *(["--adapter", adapter] if adapter else []))
 
 
@@ -191,6 +191,18 @@ def mix(args):
     evaluate(out, adapter)
     print(score_line(f"mix-{args.name}", out))
     print(diagnose(out))
+
+
+def full(args):
+    """The full evaluation: every question (2,759) x the recipe's 8 samples, base then adapter."""
+    base = ROOT / "full-base"
+    evaluate(base, samples=8, questions="questions")
+    if args.adapter:
+        name = args.adapter.removeprefix("adapters/").replace("/", "-")
+        out = ROOT / f"full-{name}"
+        evaluate(out, args.adapter, samples=8, questions="questions")
+        print(score_line(f"{name} (full evaluation)", out, base=base))
+        print(diagnose(out, base=base))
 
 
 def recheck(args):
