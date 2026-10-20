@@ -505,3 +505,7 @@ running. Results read from /content/track_log.txt through the Files panel.)
 Code-mvt with 32-token batches: 225 checked, 162 passed. Paragraphs made the code cut all-or-
 nothing (one long paragraph per plan, so MVT usually kept 0 tokens: MBPP+ +93% / -13.7); token
 batches keep the first useful part of the plan (+57% / -5.6). **For code, cut by token batches.**
+| tool-mvt1024-tokens32 | +3.9% | -1.6 | BFCL +32/+15/+36% / +1.9/-3.1/-3.1 | IFEval -20% (longer) / +3.7, SVAMP -11%, MBPP+ -7.5 |
+
+For tool calls paragraphs win (+42.0% / -0.7 vs +3.9% / -1.6): tool thinking is short and
+well paragraphed, and mid-paragraph cuts make the model write more elsewhere.
