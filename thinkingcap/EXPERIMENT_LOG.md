@@ -102,6 +102,10 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 | Blend 75/25 | 75% loop 3 + 25% loop 1 | +19.6% | -7.7 pp | no |
 
 Accuracy ranges (95%) are about +/-4 pp on this subset, so differences under ~3 pp are noise.
+**The baseline itself moves.** Re-running the raw model on a new L4 VM (20 Oct, same questions,
+same eval seed) gave SVAMP 940 tokens instead of 778 and IFEval 734 instead of 710 (accuracy:
+SVAMP 81.3% both times, IFEval 53.8% vs 52.5%); vLLM sampling is not bit-reproducible across
+machines. Only compare a candidate against the base measured on the same VM.
 
 ## Queued on 20 Oct (results copied to Drive: MyDrive/thinkingcap_runs)
 
