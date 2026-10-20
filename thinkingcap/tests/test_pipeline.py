@@ -294,7 +294,8 @@ def test_rl_train_runs_on_the_toy_model(toy):
         "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
         "--max-tokens", "40", "--backend", "hf", "--redundant", "none", "--dtype", "float32",
         "--protect-sources", "toy", "--protect-kl", "0.01", "--source-alpha", "toy=0.25",
-        "--save-every", "1", "--mirror", str(work / "rl-protect-mirror"), cwd=ROOT)
+        "--save-every", "1", "--mirror", str(work / "rl-protect-mirror"),
+        "--max-tokens-by-source", "toy=20", cwd=ROOT)
     assert (work / "rl-protect-mirror" / "step2" / "adapter_config.json").exists()
     log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
     assert all(0 <= e["protected_accuracy"] <= 1 and e["protected_tokens"] > 0 for e in log)

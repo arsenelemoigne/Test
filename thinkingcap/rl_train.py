@@ -68,6 +68,11 @@ def is_correct(text, question):
     return is_task_correct(text, question["answer"], question["task"])
 
 
+def source_caps(args):
+    """{source: reply token cap} from --max-tokens-by-source."""
+    return {k: int(v) for k, v in (item.split("=") for item in filter(None, args.max_tokens_by_source.split(",")))}
+
+
 def read_rows(paths):
     """Rows of one or several comma-separated jsonl files."""
     return [row for path in paths.split(",") for row in read_jsonl(Path(path))]
@@ -98,6 +103,8 @@ def parse_arguments():
     parser.add_argument("--kl-beta", type=float, default=5e-3)
     parser.add_argument("--protect-sources", default="",
                         help="comma-separated sources trained for correctness only (no length pressure)")
+    parser.add_argument("--max-tokens-by-source", default="",
+                        help="per-source reply cap overriding --max-tokens, e.g. humaneval=4096")
     parser.add_argument("--source-alpha", default="",
                         help="per-source length weight overriding --alpha, e.g. gsm8k=0.25,skywork=0.25")
     parser.add_argument("--mirror", help="copy --out here after every saved checkpoint (e.g. a Drive folder)")
@@ -320,12 +327,14 @@ class Sampler:
             extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
             self.engine = LLM(model=args.model, dtype=args.dtype, seed=args.seed, enable_lora=True,
                               max_lora_rank=64, gpu_memory_utilization=args.gpu_memory,
-                              max_model_len=args.max_tokens + 1024, generation_config="vllm", **extra)
+                              max_model_len=max([args.max_tokens, *source_caps(args).values()]) + 1024,
+                              generation_config="vllm", **extra)
 
-    def sample(self, prompts, adapter_dir, step, model=None, no_think=0, group=None, lora_id=None):
+    def sample(self, prompts, adapter_dir, step, model=None, no_think=0, group=None, lora_id=None, caps=None):
         """`group` (default --group) replies per prompt; the last `no_think` of each group start
         with an empty thinking block, which is returned as part of the reply. Without
-        adapter_dir the raw model answers."""
+        adapter_dir the raw model answers. `caps` gives each prompt its own reply cap."""
+        caps = caps or [self.args.max_tokens] * len(prompts)
         eos = self.tokenizer.convert_tokens_to_ids("<|im_end|>")
         prefix = self.tokenizer.encode(NO_THINK, add_special_tokens=False)
         counts = [((group or self.args.group) - no_think, []), (no_think, prefix)]
@@ -338,9 +347,8 @@ class Sampler:
             for n, start in counts:
                 if n:
                     requests += [{"prompt_token_ids": p + start} for p in prompts]
-                    params += [SamplingParams(n=n, max_tokens=self.args.max_tokens - len(start),
-                                              seed=self.args.seed + step, stop_token_ids=[eos],
-                                              **SAMPLING)] * len(prompts)
+                    params += [SamplingParams(n=n, max_tokens=cap - len(start), seed=self.args.seed + step,
+                                              stop_token_ids=[eos], **SAMPLING) for cap in caps]
             outputs = self.engine.generate(requests, params, lora_request=lora)
             replies = [[] for _ in prompts]
             for index, out in enumerate(outputs):
@@ -352,14 +360,14 @@ class Sampler:
         raw = model.disable_adapter() if adapter_dir is None and hasattr(model, "disable_adapter") \
             else contextlib.nullcontext()
         with raw:
-            replies = self._hf_sample(model, prompts, counts, eos)
+            replies = self._hf_sample(model, prompts, counts, eos, caps)
         model.train()
         return replies
 
-    def _hf_sample(self, model, prompts, counts, eos):
+    def _hf_sample(self, model, prompts, counts, eos, caps):
         import torch
         replies = []
-        for prompt in prompts:
+        for prompt, cap in zip(prompts, caps):
             group = []
             for n, start in counts:
                 if not n:
@@ -367,7 +375,7 @@ class Sampler:
                 ids = torch.tensor([prompt + start], device=model.device)
                 with torch.no_grad():
                     out = model.generate(ids, attention_mask=torch.ones_like(ids), do_sample=True,
-                                         num_return_sequences=n, max_new_tokens=self.args.max_tokens - len(start),
+                                         num_return_sequences=n, max_new_tokens=cap - len(start),
                                          eos_token_id=eos, pad_token_id=eos, **SAMPLING)
                 for row in out[:, len(prompt) + len(start):].tolist():
                     group.append(start + (row[:row.index(eos) + 1] if eos in row else row))
@@ -468,6 +476,7 @@ def main():
         if args.mirror:
             import shutil
             shutil.copytree(out, args.mirror, dirs_exist_ok=True)
+    caps = source_caps(args)
     soften = 1.0  # halved each time the guard rolls back
     guard = None
     if args.guard_every:
@@ -475,7 +484,8 @@ def main():
 
         def guard_check(adapter_dir, index):
             replies = sampler.sample(guard_prompts, adapter_dir, 10 ** 6, model, group=args.guard_group,
-                                     lora_id=10 ** 6 + index)
+                                     lora_id=10 ** 6 + index,
+                                     caps=[caps.get(q["source"], args.max_tokens) for q in guard_questions])
             return score_replies(guard_questions, replies, tokenizer)["all"]
 
         guard = {"raw": guard_check(None, 0), "best": None, "misses": 0, "checks": [], "softened": []}
@@ -489,7 +499,8 @@ def main():
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
         no_think = round(args.group * args.no_think_share)
-        replies = sampler.sample(prompts, current, step, model, no_think)
+        replies = sampler.sample(prompts, current, step, model, no_think,
+                                 caps=[caps.get(q["source"], args.max_tokens) for q in questions])
 
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0, "protected_correct": 0,
