@@ -30,4 +30,5 @@ gridtable
 rollouts
 mvt --travel 1024 --full-sources gsm8k
 combine --name final --inputs runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl:arc_easy:commonsense_qa runs/grid/math-whole/sft.jsonl:gsm8k runs/grid/code-mvt1024-tokens32/sft.jsonl:mbpp_train runs/grid/tool-mvt1024/sft.jsonl:hermes_tools runs/grid/text-mvt1024/sft.jsonl:ifeval_like --repeat gsm8k:2 --max-per-source 150
-full --adapter adapters/combine-final
+combine --name final-mathfade --inputs runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl:arc_easy:commonsense_qa runs/grid/math-fade/r2/sft.jsonl:gsm8k runs/grid/code-mvt1024-tokens32/sft.jsonl:mbpp_train runs/grid/tool-mvt1024/sft.jsonl:hermes_tools runs/grid/text-mvt1024/sft.jsonl:ifeval_like --repeat gsm8k:2 --max-per-source 150
+# full: the better of the two combined models (set once both are scored)

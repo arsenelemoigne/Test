@@ -536,3 +536,7 @@ Math fading round 1 (20% of the paragraphs, lowest probe gain first; 79 of 122 t
 Round 2 (40%; 93 of 122 passed; 912 -> 622 tokens): math itself still shortens without loss;
 the drop is spill-over onto IFEval and MBPP+, the cost of training on one kind (see the whole
 runs). Candidate for the math part of the combined model.
+| math-fade-r3 | +23.0% | -4.7 | SVAMP +50% / **-5.6** | MBPP+ -10.6 |
+
+Math fading sweet spot: round 2 (40% of the paragraphs). Round 3 (60%; 912 -> 376 tokens)
+starts costing math. Two combined models will be scored: math whole x2, or math faded to round 2 x2.
