@@ -27,7 +27,4 @@ grid --type math --method mvt --travel 1024
 grid --type math --method mvt --travel 256
 grid --type math --method mvt --travel 1024 --unit tokens32
 grid --type math --method mvt --travel 256 --unit tokens32
-# control: last night's Hermes tool data under tonight's settings (did the data make tool cuts spill onto code?)
-grid_data --per-source 250
-grid --type toolh --method mvt --travel 1024
 gridtable
