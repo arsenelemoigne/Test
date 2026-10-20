@@ -19,7 +19,11 @@
    accuracy at x2 on maths and quiz questions; at x4 accuracy drops, at x8 the model breaks.
 7. **...but steering does not transfer.** On the benchmarks, steer x2 saves ~nothing and loses
    4 points (code -11, SVAMP -9, code replies longer). A direction learned on maths and quiz
-   answers is not "concise" in general. Same root cause as finding 3.
+   answers is not "concise" in general. Same root cause as finding 3. At x4: -15 points
+   (MBPP+ 57.5% -> 27.5%). Steering is a dead end for this benchmark mix.
+8. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
+   problems with unit tests, not an evaluation benchmark) with a reward that runs the tests, in
+   MBPP+'s prompt format. Ready to run as experiment E after the ablation.
 
 
 Goal: cut tokens as much as possible while losing **at most 3 accuracy points** on the
@@ -60,7 +64,7 @@ neighbours is that ingredient's marginal effect. The guard only measures (no rol
 | run | ingredients | tokens saved | accuracy change |
 |---|---|---|---|
 | S x2 | steering vector only (no training), strength 2 | ~0% (code and BFCL longer) | -4.0 pp [-8.0, -0.1] |
-| S x4 | steering vector only, strength 4 | | |
+| S x4 | steering vector only, strength 4 | (code shorter, BFCL longer) | -15.1 pp [-19.9, -10.4] |
 | A | RL with the ShorterBetter length reward, lr 2e-5 | | |
 | B | A + TokenProbe-KL (core tokens anchored, filler pushed down over budget) | | |
 | C | B + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step | | |
