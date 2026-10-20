@@ -662,3 +662,17 @@ Same as the earlier runtimes (same seed). Capped: IFEval 3.8%, MBPP+ 7.5%, SVAMP
 `prepare_types.py`: gsm8k_all 8,792 usable, mbpp_train 596, toolace 300 (144 simple, 72 multiple,
 84 irrelevance, from 5,025 / 3,615 / 276), ifeval_like 56,339, multiple choice 11,592; 300 kept per
 source (multiple choice: 300 shared by ARC-Easy and CommonsenseQA). 3,000 replies sampled.
+
+The model's own replies (2 per question, caps 4,096 / 8,192 for code; ~80 min on the L4):
+
+| source | replies | correct | capped | mean tokens |
+|---|---|---|---|---|
+| arc_easy | 120 | 88% | 0% | 492 |
+| commonsense_qa | 480 | 51% | 0% | 506 |
+| gsm8k_all | 600 | 43% | 24% | 2,167 |
+| ifeval_like | 600 | 78% | 1% | 408 |
+| mbpp_train | 600 | 38% | 12% | 2,842 |
+| toolace | 600 | 58% | 0% | 265 |
+
+GSM8K stays much harder than SVAMP (43% vs 82%); only its correct replies of at most 700 tokens
+are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFCL's (185-217).
