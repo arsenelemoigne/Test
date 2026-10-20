@@ -69,7 +69,11 @@ the same questions).
    saves only 6% (A: 20%). The KL anchor to the base model keeps behaviour near the original
    outside the training subjects, so the shortening stays local. Per benchmark B: BFCL +5 to +7%,
    IFEval +14%, MBPP+ -8% (longer), SVAMP +11% / -6 pp.
-10. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
+10. **Stability tricks double the shortening, and overshoot.** C (A + lr 4e-5 cosine with restarts,
+   2 updates per step): +40% tokens saved, the first run that shortens code (+31%), but -6.9 points,
+   concentrated where reasoning matters (MBPP+ -13.8, SVAMP -10). Same direction as loop 3: more
+   pressure buys length at the cost of code and maths.
+11. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
    problems with unit tests, not an evaluation benchmark) with a reward that runs the tests, in
    MBPP+'s prompt format. Ready to run as experiment E after the ablation.
 
@@ -112,10 +116,11 @@ machines. Only compare a candidate against the base measured on the same VM.
 | run | what | why |
 |---|---|---|
 | A (rebuild) | same as ablation A, seed 0 | **done: +22.1% [14.7, 29.0], -1.2 pp [-5.4, +3.1]**. BFCL irr/mult/simple +4.7/+19.3/+11.5% (+1.3/+3.8/0 pp); IFEval +28.5% (+1.3); MBPP+ +0.1% (0); SVAMP +41.4% (-7.5). Guard 49.6% -> 59.0%, 1,073 -> 774 tok. Saved to Drive |
-| C | A + lr 4e-5 cosine to 4e-6, 2 restarts, 2 updates per step | lost overnight |
+| C | A + lr 4e-5 cosine to 4e-6, 2 restarts, 2 updates per step | **done: +40.2% [32.8, 47.1], -6.9 pp [-11.5, -2.6]: over the limit.** BFCL irr/mult/simple +22/+32/+31% (-3.8/-2.5/-5.0 pp); IFEval +38% (0); MBPP+ +31% (-13.8); SVAMP +59% (-10.0). Guard 46.5% -> 58.2%, 1,079 -> 687 tok. Saved to Drive |
 | steer mix | steering vector from 640 questions incl. coding (HumanEval, unit tests) | retry with broader data |
 | P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | shorten maths and quiz, keep code intact |
 | P2 | as P1, maths (GSM8K, Skywork) also protected | shorten quiz only; tests whether protecting maths costs SVAMP savings |
+| C step 10, C/A 50-50 blend | C's halfway checkpoint, and an exact blend of C and A | salvage C's extra shortening inside the limit (queued after P2) |
 
 ## Ablation: what each ingredient adds (running overnight)
 
