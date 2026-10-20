@@ -121,6 +121,7 @@ machines. Only compare a candidate against the base measured on the same VM.
 | P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | shorten maths and quiz, keep code intact |
 | P2 | as P1, maths (GSM8K, Skywork) also protected | shorten quiz only; tests whether protecting maths costs SVAMP savings |
 | C step 10, C/A 50-50 blend | C's halfway checkpoint, and an exact blend of C and A | salvage C's extra shortening inside the limit (queued after P2) |
+| **C long** | C's recipe for 60 steps; HumanEval in the mix, protected (correctness only, KL 0.01); maths length weight 0.25; guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
 
 ## Ablation: what each ingredient adds (running overnight)
 
