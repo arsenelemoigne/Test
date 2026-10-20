@@ -439,3 +439,53 @@ def test_code_reward_runs_the_tests():
     assert not is_code_correct(hangs, answer)
     assert is_correct(right, {"task": "code", "answer": answer})
     assert is_correct("Final answer: 4", {"task": "math", "answer": "4"})
+
+
+def test_dler_advantages_clip_and_pools():
+    import torch
+
+    from dler_train import CyclingPools, dler_advantages, informative, ppo_token_losses
+    assert informative([0, 1, 0]) and not informative([1, 1, 1]) and not informative([0, 0])
+    adv = dler_advantages([[1.0, 0.0], [1.0, 1.0, 0.0, 0.0]])
+    flat = [a for g in adv for a in g]
+    assert abs(sum(flat)) < 1e-6 and abs(sum(a * a for a in flat) / len(flat) - 1) < 1e-4
+    assert adv[0][0] > 0 > adv[0][1] and adv[0][0] == adv[1][0]  # same centred value, same advantage
+    old = torch.zeros(3)
+    new = torch.log(torch.tensor([1.0, 1.5, 0.5]))  # ratios 1, 1.5, 0.5
+    loss, clipped = ppo_token_losses(new, old, 1.0, 0.2, 0.28, 10.0)
+    assert torch.allclose(loss, torch.tensor([-1.0, -1.28, -0.5])) and abs(clipped - 1 / 3) < 1e-6
+    loss, _ = ppo_token_losses(torch.log(torch.tensor([30.0])), torch.zeros(1), -1.0, 0.2, 0.28, 10.0)
+    assert torch.allclose(loss, torch.tensor([10.0]))  # dual clip caps the loss of a negative advantage
+    rows = [{"source": "a", "i": i} for i in range(2)] + [{"source": "b", "i": i} for i in range(5)]
+    pools = CyclingPools(rows, ["a", "b"], random.Random(0))
+    taken = pools.take(10)
+    assert [r["source"] for r in taken] == ["a", "b"] * 5 and pools.cycles["a"] == 3  # a reused
+
+
+def test_dler_train_runs_and_stops_on_alarm(toy):
+    import shutil
+    work, _ = toy
+    model = work / "dler-model"
+    shutil.copytree(work / "model", model, dirs_exist_ok=True)
+    config = json.loads((model / "tokenizer_config.json").read_text())
+    config["chat_template"] = ("{% for m in messages %}<|im_start|>{{ m['role'] }}\n{{ m['content'] }}<|im_end|>\n"
+                               "{% endfor %}<|im_start|>assistant\n")
+    (model / "tokenizer_config.json").write_text(json.dumps(config))
+    rows = [{"prompt": [{"role": "user", "content": toy_question(n)}], "answer": str(n), "task": "math",
+             "source": "toy"} for n in NUMBERS[:6]]
+    (work / "dler-data.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    common = ["--model", str(model), "--data", str(work / "dler-data.jsonl"), "--sources", "toy",
+              "--guard-data", str(work / "dler-data.jsonl"), "--guard-questions", "3", "--group", "4",
+              "--prompts", "2", "--gen-prompts", "3", "--max-rounds", "2", "--minibatch", "1",
+              "--cap-by-source", "toy=40", "--backend", "hf", "--dtype", "float32", "--lr", "1e-4"]
+    out = work / "dler"
+    run(str(ROOT / "dler_train.py"), "--out", str(out), "--steps", "2", "--guard-every", "2",
+        "--save-every", "1", "--mirror", str(work / "dler-mirror"), *common, cwd=ROOT)
+    log = [json.loads(line) for line in (out / "dler_log.jsonl").read_text().splitlines()]
+    assert [e["step"] for e in log] == [1, 2] and "guard" in log[1]
+    assert set(log[0]["by_source"]["toy"]) >= {"accuracy", "capped", "all0", "all1", "entropy", "clip_fraction"}
+    assert (work / "dler-mirror" / "step2" / "adapter_config.json").exists()
+    out = work / "dler-alarm"
+    run(str(ROOT / "dler_train.py"), "--out", str(out), "--steps", "3", "--guard-every", "1",
+        "--guard-drop", "-1", "--stop-on-alarm", *common, cwd=ROOT)
+    assert (out / "ALARM.txt").exists() and len((out / "dler_log.jsonl").read_text().splitlines()) == 1

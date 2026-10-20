@@ -330,11 +330,13 @@ class Sampler:
                               max_model_len=max([args.max_tokens, *source_caps(args).values()]) + 1024,
                               generation_config="vllm", **extra)
 
-    def sample(self, prompts, adapter_dir, step, model=None, no_think=0, group=None, lora_id=None, caps=None):
+    def sample(self, prompts, adapter_dir, step, model=None, no_think=0, group=None, lora_id=None, caps=None,
+               sampling=None):
         """`group` (default --group) replies per prompt; the last `no_think` of each group start
         with an empty thinking block, which is returned as part of the reply. Without
         adapter_dir the raw model answers. `caps` gives each prompt its own reply cap."""
         caps = caps or [self.args.max_tokens] * len(prompts)
+        sampling = sampling or SAMPLING
         eos = self.tokenizer.convert_tokens_to_ids("<|im_end|>")
         prefix = self.tokenizer.encode(NO_THINK, add_special_tokens=False)
         counts = [((group or self.args.group) - no_think, []), (no_think, prefix)]
@@ -348,7 +350,7 @@ class Sampler:
                 if n:
                     requests += [{"prompt_token_ids": p + start} for p in prompts]
                     params += [SamplingParams(n=n, max_tokens=cap - len(start), seed=self.args.seed + step,
-                                              stop_token_ids=[eos], **SAMPLING) for cap in caps]
+                                              stop_token_ids=[eos], **sampling) for cap in caps]
             outputs = self.engine.generate(requests, params, lora_request=lora)
             replies = [[] for _ in prompts]
             for index, out in enumerate(outputs):
@@ -360,11 +362,11 @@ class Sampler:
         raw = model.disable_adapter() if adapter_dir is None and hasattr(model, "disable_adapter") \
             else contextlib.nullcontext()
         with raw:
-            replies = self._hf_sample(model, prompts, counts, eos, caps)
+            replies = self._hf_sample(model, prompts, counts, eos, caps, sampling)
         model.train()
         return replies
 
-    def _hf_sample(self, model, prompts, counts, eos, caps):
+    def _hf_sample(self, model, prompts, counts, eos, caps, sampling):
         import torch
         replies = []
         for prompt, cap in zip(prompts, caps):
@@ -376,7 +378,7 @@ class Sampler:
                 with torch.no_grad():
                     out = model.generate(ids, attention_mask=torch.ones_like(ids), do_sample=True,
                                          num_return_sequences=n, max_new_tokens=cap - len(start),
-                                         eos_token_id=eos, pad_token_id=eos, **SAMPLING)
+                                         eos_token_id=eos, pad_token_id=eos, **sampling)
                 for row in out[:, len(prompt) + len(start):].tolist():
                     group.append(start + (row[:row.index(eos) + 1] if eos in row else row))
             replies.append(group)
