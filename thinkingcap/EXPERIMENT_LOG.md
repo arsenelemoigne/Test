@@ -676,3 +676,12 @@ The model's own replies (2 per question, caps 4,096 / 8,192 for code; ~80 min on
 
 GSM8K stays much harder than SVAMP (43% vs 82%); only its correct replies of at most 700 tokens
 are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFCL's (185-217).
+
+## Grid (each kind trained alone, scored on all four benchmarks, 4 samples vs `s4-base`)
+
+| run | traces (kept / cut) | target tokens | tokens saved | accuracy | per benchmark (saved / pts) |
+|---|---|---|---|---|---|
+| tool-whole | 189 / 0 | 201 -> 183 | +5.2% | +0.3 | BFCL irr +6% / 0.0, mult +5% / +0.6, simple +6% / -3.1; IFEval -4% / -0.6; MBPP+ +6% / +0.6; SVAMP +12% / +1.9 |
+
+Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
+tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
