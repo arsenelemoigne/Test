@@ -527,3 +527,7 @@ forcing on a trace the model did not write, still passes. The MVT cut beats it o
 Marginal by 32-token batches dropped from the plan (paragraph leave-one-out already over-
 deletes; smaller units can only delete more). Fading (paragraphs only, 20% per round, 3 rounds,
 each round continuing the previous adapter) follows, then the combined model.
+| **math-fade-r1** | **+12.6%** | **-1.6** | SVAMP **+24% / +5.0** | MBPP+ -5.6, IFEval -4.4 |
+
+Math fading round 1 (20% of the paragraphs, lowest probe gain first; 79 of 122 traces passed,
+912 -> 769 tokens): the first run that shortens math without losing it.
