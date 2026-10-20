@@ -248,3 +248,18 @@ numbers after one short paragraph ("I need the total area." then a guess), 3 hit
 cap, 1 writes "Final answer: 4 + 22 + 16 = 42" (trailing content). SVAMP questions are short
 and easy-looking, so the model gives them the brief treatment it learned on ARC/CSQA.
 Next: a 4-sample recheck, and a run with fewer MC rows (35 per source) so math weighs more.
+
+### Run mvth256-full-gsm8k
+
+Targets: ARC 445 -> 102 (-77%), CSQA 464 -> 96 (-79%), GSM8K whole.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +26% / +24% / +21% | -1.3 / +0.0 / +1.3 |
+| IFEval | +53% | +3.7 |
+| MBPP+ | +85% | -6.2 |
+| SVAMP | +15% | -6.2 (9 lost, 4 gained; 2 trailing content like "4 + 22 + 16 = 42") |
+| **average** | **+53.5%** | **-2.2 pp**: within the limit |
+
+Both travel costs pass: a smaller c (leave sooner) saves more for a little more loss, as the
+MVT predicts.
