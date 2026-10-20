@@ -22,9 +22,7 @@ import json
 import random
 from pathlib import Path
 
-from probe_curve import read_jsonl
-from rl_train import Sampler, balanced_order
-from utils.train.rewards import is_task_correct
+from rl_train import Sampler, balanced_order, is_correct, read_rows
 
 
 def parse_arguments():
@@ -118,7 +116,7 @@ def main():
     eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
     close_id = tokenizer.convert_tokens_to_ids("</think>")
     keep = set(args.sources.split(","))
-    questions = balanced_order([r for r in read_jsonl(Path(args.data)) if r["source"] in keep],
+    questions = balanced_order([r for r in read_rows(args.data) if r["source"] in keep],
                                random.Random(args.slice_seed))[:args.questions]
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
@@ -130,8 +128,8 @@ def main():
     model.eval()
     replies = Sampler(args, tokenizer).sample(prompts, args.adapter, 0, model)
     model.eval()
-    groups = [(prompt, group, [bool(r) and r[-1] == eos and is_task_correct(
-        tokenizer.decode(r, skip_special_tokens=True), q["answer"], q["task"]) for r in group])
+    groups = [(prompt, group, [bool(r) and r[-1] == eos and is_correct(
+        tokenizer.decode(r, skip_special_tokens=True), q) for r in group])
         for q, prompt, group in zip(questions, prompts, replies)]
     pairs = concise_verbose_pairs(groups, args.ratio)
     if not pairs:

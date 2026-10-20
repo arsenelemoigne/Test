@@ -412,3 +412,19 @@ def test_blended_adapter_is_the_weighted_sum_of_the_two_deltas(tmp_path):
     plain = Qwen3ForCausalLM.from_pretrained(tmp_path / "base").model.layers[0].self_attn.q_proj.weight.detach()
     expected = 0.3 * (delta(tmp_path / "one") - plain) + 0.7 * (delta(tmp_path / "two") - plain)
     assert torch.allclose(delta(tmp_path / "mix") - plain, expected, atol=1e-5)
+
+
+def test_code_reward_runs_the_tests():
+    from code_tasks import is_code_correct
+    from rl_train import is_correct
+    answer = json.dumps({"prompt": "from typing import List\n\ndef total(xs: List[int]) -> int:\n",
+                         "test": "def check(candidate):\n    assert candidate([1, 2, 3]) == 6\n",
+                         "entry_point": "total"})
+    right = "<think>add them</think>\n```python\ndef total(xs: List[int]) -> int:\n    return sum(xs)\n```"
+    wrong = "<think>x</think>\n```python\ndef total(xs):\n    return 0\n```"
+    hangs = "<think>x</think>\n```python\ndef total(xs):\n    while True: pass\n```"
+    assert is_code_correct(right, answer)  # uses List from the prompt's imports
+    assert not is_code_correct(wrong, answer) and not is_code_correct("no code", answer)
+    assert not is_code_correct(hangs, answer)
+    assert is_correct(right, {"task": "code", "answer": answer})
+    assert is_correct("Final answer: 4", {"task": "math", "answer": "4"})

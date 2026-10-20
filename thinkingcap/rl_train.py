@@ -55,6 +55,19 @@ from utils.eval.recipe import SAMPLING
 from utils.train.rewards import is_task_correct
 
 
+def is_correct(text, question):
+    """The training grader for maths and multiple choice; code runs its unit tests (code_tasks.py)."""
+    if question["task"] == "code":
+        from code_tasks import is_code_correct
+        return is_code_correct(text, question["answer"])
+    return is_task_correct(text, question["answer"], question["task"])
+
+
+def read_rows(paths):
+    """Rows of one or several comma-separated jsonl files."""
+    return [row for path in paths.split(",") for row in read_jsonl(Path(path))]
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
@@ -355,7 +368,7 @@ class Sampler:
 def held_out_questions(args, tokenizer, path, count):
     """The first `count` questions of `path`, balanced across --sources, in a fixed order."""
     keep = set(args.sources.split(","))
-    questions = balanced_order([r for r in read_jsonl(Path(path)) if r["source"] in keep],
+    questions = balanced_order([r for r in read_rows(path) if r["source"] in keep],
                                random.Random(0))[:count]
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
@@ -372,8 +385,8 @@ def score_replies(questions, replies, tokenizer):
         entry = stats.setdefault(question["source"], dict.fromkeys(keys, 0))
         for reply in group:
             thinking = reply.index(close_id) if close_id in reply else len(reply)
-            entry["correct"] += bool(reply) and reply[-1] == eos and is_task_correct(
-                tokenizer.decode(reply, skip_special_tokens=True), question["answer"], question["task"])
+            entry["correct"] += bool(reply) and reply[-1] == eos and is_correct(
+                tokenizer.decode(reply, skip_special_tokens=True), question)
             entry["replies"] += 1
             entry["tokens"] += len(reply)
             entry["thinking"] += thinking
@@ -431,7 +444,7 @@ def main():
     eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
 
     keep = set(args.sources.split(","))
-    pool = balanced_order([r for r in read_jsonl(Path(args.data)) if r["source"] in keep], random.Random(args.seed))
+    pool = balanced_order([r for r in read_rows(args.data) if r["source"] in keep], random.Random(args.seed))
     current = out / "current"
     model.save_pretrained(current)
     sampler = Sampler(args, tokenizer)
@@ -462,8 +475,8 @@ def main():
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0}
         for question, prompt, group in zip(questions, prompts, replies):
-            correct = [bool(r) and r[-1] == eos and is_task_correct(
-                tokenizer.decode(r, skip_special_tokens=True), question["answer"], question["task"])
+            correct = [bool(r) and r[-1] == eos and is_correct(
+                tokenizer.decode(r, skip_special_tokens=True), question)
                 for r in group]
             rewards = length_rewards([len(r) for r in group], correct, args.alpha * soften)
             skipped = [i >= len(group) - no_think for i in range(len(group))]
