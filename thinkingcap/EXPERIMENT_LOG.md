@@ -21,7 +21,11 @@
    4 points (code -11, SVAMP -9, code replies longer). A direction learned on maths and quiz
    answers is not "concise" in general. Same root cause as finding 3. At x4: -15 points
    (MBPP+ 57.5% -> 27.5%). Steering is a dead end for this benchmark mix.
-8. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
+8. **Plain RL, run longer on more subjects, is the best so far.** Ablation A (length reward only,
+   20 steps, GSM8K + Skywork + ARC + CSQA, from the raw model): +19.6% tokens saved at +0.3 points.
+   Held-out guard: 45.3% -> 60.2% accuracy, 1,065 -> 769 tokens. SVAMP -30% tokens at equal
+   accuracy, BFCL -15 to -22% with higher accuracy; code still barely shorter (-3%).
+9. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
    problems with unit tests, not an evaluation benchmark) with a reward that runs the tests, in
    MBPP+'s prompt format. Ready to run as experiment E after the ablation.
 
@@ -43,6 +47,7 @@ subset: 40 questions per benchmark (240 total), 2 samples each, L4 GPU, bf16.
 
 | run | method | tokens saved | accuracy change | within the 3-pt limit? |
 |---|---|---|---|---|
+| **Ablation A** | RL from raw, length reward only, 20 steps, 4 sources | **+19.6%** | **+0.3 pp** | **yes (best)** |
 | Round 1 (T4) | SFT on pruned traces | +39.1% | -6.3 pp | no |
 | Round 2 | SFT on pruned traces, margin + balanced | +59.6% | -8.0 pp | no |
 | RL loop 1 | RL, TokenProbe-KL + ShorterBetter, alpha 0.5 | +5.7% | -1.2 pp | yes |
@@ -65,7 +70,7 @@ neighbours is that ingredient's marginal effect. The guard only measures (no rol
 |---|---|---|---|
 | S x2 | steering vector only (no training), strength 2 | ~0% (code and BFCL longer) | -4.0 pp [-8.0, -0.1] |
 | S x4 | steering vector only, strength 4 | (code shorter, BFCL longer) | -15.1 pp [-19.9, -10.4] |
-| A | RL with the ShorterBetter length reward, lr 2e-5 | | |
+| **A** | RL with the ShorterBetter length reward, lr 2e-5 | **+19.6% [8.8, 29.5]** | **+0.3 pp [-3.0, +3.7]** |
 | B | A + TokenProbe-KL (core tokens anchored, filler pushed down over budget) | | |
 | C | B + lr 4e-5 cosine to 4e-6 with 2 restarts, 2 optimizer updates per step | | |
 | D | C + AdaptThink (2 of 8 samples start with an empty thinking block) | | |
@@ -152,6 +157,12 @@ keeps shortening but accuracy falls below the raw model; at x8 the model breaks 
 replies get longer again). x2 is the sweet spot on this check.
 
 ## Evaluation details
+
+**Ablation A** (accuracy / tokens; raw in brackets): BFCL irrelevance 83.8% / 180 (85.0 / 205);
+BFCL multiple 82.5% / 173 (76.3 / 223); BFCL simple 85.0% / 158 (82.5 / 190); IFEval 55.0% / 525
+(52.5 / 710); MBPP+ 53.8% / 1,655 (57.5 / 1,699); SVAMP 81.3% / 545 (81.3 / 778).
+Guard (held-out, 128 x 2): step 5 53.1% / 1,031; step 10 55.9% / 953; step 15 57.0% / 848;
+step 20 60.2% / 769 (raw 45.3% / 1,065). Entropy 0.60 -> 0.81.
 
 **Blend 50/50** (accuracy / mean tokens, raw in brackets): BFCL irrelevance 80.0% / 193 (85.0 / 205);
 BFCL multiple 75.0% / 187 (76.3 / 223); BFCL simple 77.5% / 157 (82.5 / 190);
