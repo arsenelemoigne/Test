@@ -263,3 +263,33 @@ Targets: ARC 445 -> 102 (-77%), CSQA 464 -> 96 (-79%), GSM8K whole.
 
 Both travel costs pass: a smaller c (leave sooner) saves more for a little more loss, as the
 MVT predicts.
+
+### 4-sample recheck of mvth1024-full-gsm8k
+
+`track.py recheck`: base and adapter rescored with `--samples 4` on the same 240 questions
+(the first 2 samples are the same generations as before), compared to a 4-sample base.
+
+| benchmark | tokens saved | accuracy change [95% CI] |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +27% / +12% / +15% | -1.2 / -0.6 / +0.6 |
+| IFEval | +39% | +6.9 [+1.3, +12.5] |
+| MBPP+ | +77% | -10.0 [-19.4, -0.6] |
+| SVAMP | +12% | -5.0 [-13.1, +1.9] (17 lost, 9 gained) |
+| **average** | **+43.8% [36.5, 51.2]** | **-2.1 pp [-5.7, +1.2]**: within the limit |
+
+Confirmed within the limit with twice the samples. The losses sit in MBPP+ (code, never
+trained on) and SVAMP.
+
+### Run mvth1024-full-gsm8k-cap35 (a design mistake)
+
+Meant to make math weigh more by cutting MC rows to 35 per source, but `--max-per-source`
+caps GSM8K too: it only halved the data (105 rows). Result +63.4%, **-11.5 pp**, SVAMP -35.0
+(30 lost: one paragraph restating the question, then a guess). Not evidence about weighting.
+
+### Why SVAMP still fails, and two fixes queued
+
+The lost SVAMP answers restate the question in one paragraph and answer ("Jesse's room is 11
+by 15 feet... Hmm, let me think." then "Final answer: 120"). That is exactly what the MC
+targets look like: the MVT cut keeps only the first paragraph, the restatement. Queued:
+`--min-steps 2` (keep restatement + one reasoning paragraph) and `--repeat gsm8k:2` (whole
+math traces shown twice).
