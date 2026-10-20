@@ -598,3 +598,18 @@ tool-whole               +11% / +3.7     -1% / -9.4    >+7% / -0.0    -12% / -7.
 math cut that keeps SVAMP; whole is the safe default); code -> MVT by 32-token batches (or
 fading round 2: less saving, less loss); tool -> MVT by paragraphs (free); instructions -> any
 (all cost < 1.5 pts, save 5-13%). Leave-one-out over-deletes math and code.
+
+## Combined models (4 samples vs the raw model)
+
+Retrained 1b on this runtime (mvth1024-full-gsm8k, 2 samples): +42.4%, -3.2 (yesterday +47.6%,
+-1.5): retraining plus 2-sample noise moves a run by ~2 points.
+
+| model | rows | tokens saved | accuracy |
+|---|---|---|---|
+| combine-final: MC MVT + math whole x2 + code MVT tokens32 + tool MVT + text MVT | 860 | +49.0% [40.2, 58.9] | **-6.2 [-9.7, -3.1]** |
+
+Per benchmark: BFCL +44/+42/+28% / +8.1/-11.2/-2.5; IFEval +33% / -6.2; MBPP+ +81% / -11.9;
+SVAMP +12% / -5.0. **The cuts add up**: each kind's best cut is safe alone, but pooled they
+push brevity everywhere (code is cut 81%, against 57% when trained alone). Queued: the 1b winner
+retrained (GSM8K x2) and rechecked with 4 samples, and a light mix (MC + tool MVT, math whole x2,
+code and instructions untouched).
