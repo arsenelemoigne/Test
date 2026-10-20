@@ -78,7 +78,14 @@ the same questions).
    shown twice) gives +37.1% at -0.6 pp with 8 samples per question; MBPP+ 65% shorter at -2.2.
    Every run there that shortened maths lost 6-8 points (maths -21 to -24). Long C is changed
    accordingly: maths and code are protected, only ARC/CSQA carry length pressure.
-12. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
+12. **Protecting code and maths as done here does not help.** P1 (code protected) is A again
+   (+18.7%, -0.7 pp) with code no better (MBPP+ longer, -3.8). P2 (code and maths protected) saves
+   less (+12.6%) and SVAMP still loses 7.5 points, so the SVAMP loss is not caused by the GSM8K
+   length pressure; the shortening learned on quiz questions reaches SVAMP anyway. The code
+   protection is weak because the 2,048-token training cap truncates most HumanEval replies
+   (protected accuracy 14-30%, ~1,700 tokens), so the correctness reward rarely fires. Code needs
+   a larger cap (the evaluation allows 8,192 on MBPP+).
+13. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
    problems with unit tests, not an evaluation benchmark) with a reward that runs the tests, in
    MBPP+'s prompt format. Ready to run as experiment E after the ablation.
 
@@ -122,9 +129,9 @@ machines. Only compare a candidate against the base measured on the same VM.
 |---|---|---|
 | A (rebuild) | same as ablation A, seed 0 | **done: +22.1% [14.7, 29.0], -1.2 pp [-5.4, +3.1]**. BFCL irr/mult/simple +4.7/+19.3/+11.5% (+1.3/+3.8/0 pp); IFEval +28.5% (+1.3); MBPP+ +0.1% (0); SVAMP +41.4% (-7.5). Guard 49.6% -> 59.0%, 1,073 -> 774 tok. Saved to Drive |
 | C | A + lr 4e-5 cosine to 4e-6, 2 restarts, 2 updates per step | **done: +40.2% [32.8, 47.1], -6.9 pp [-11.5, -2.6]: over the limit.** BFCL irr/mult/simple +22/+32/+31% (-3.8/-2.5/-5.0 pp); IFEval +38% (0); MBPP+ +31% (-13.8); SVAMP +59% (-10.0). Guard 46.5% -> 58.2%, 1,079 -> 687 tok. Saved to Drive |
-| steer mix | steering vector from 640 questions incl. coding (HumanEval, unit tests) | retry with broader data |
-| P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | shorten maths and quiz, keep code intact |
-| P2 | as P1, maths (GSM8K, Skywork) also protected | shorten quiz only; tests whether protecting maths costs SVAMP savings |
+| steer mix | steering vector from 640 questions incl. coding (HumanEval, unit tests) | **done: 270 pairs (concise 436 / verbose 1,008 tok). Held-out x1/x2/x3: 51.2% / 1,008, 50.0% / 960, 46.1% / 935. Benchmarks x2: +5.9%, -3.1 pp (MBPP+ -18.6% longer, -10 pp). Still no transfer.** |
+| P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | **done: +18.7% [11.3, 26.1], -0.7 pp [-4.8, +3.2]. MBPP+ -9.5% (longer), -3.8 pp; SVAMP +39.6% / -2.5; IFEval +22.9% / +3.8; BFCL +10 to +19%. Protected HumanEval solved only 14% at step 20 (1,807 tok, most replies hit the 2,048 cap)** |
+| P2 | as P1, maths (GSM8K, Skywork) also protected | **done: +12.6% [5.6, 19.2], -2.1 pp [-5.7, +1.5]. SVAMP +24.3% / -7.5; MBPP+ -10.9% / -2.5; IFEval +25.6% / +2.5; BFCL +2 to +10%** |
 | C step 10, C/A 50-50 blend | C's halfway checkpoint, and an exact blend of C and A | salvage C's extra shortening inside the limit (queued after P2) |
 | **C long** | C's recipe for 60 steps; HumanEval in the mix; code **and maths** protected (correctness only, KL 0.01), length pressure on ARC/CSQA only; guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
 
