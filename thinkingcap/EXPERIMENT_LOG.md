@@ -353,3 +353,18 @@ MBPP+ +73% (-10.0), SVAMP +13% (-5.0).
 
 `track.py mix`: ARC/CSQA rows from the MVT cut (mvth1024-full-gsm8k), GSM8K rows from
 experiment 3's faded traces (paragraphs and model-scored words removed, checked), shown twice.
+
+### Run mix-mvt1024-marginal1-x2
+
+ARC/CSQA MVT-cut rows + GSM8K rows from experiment 3 round 1 (984 -> 835 tokens), GSM8K twice.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +24% / +22% / +24% | -3.7 / +7.5 / +0.0 |
+| IFEval | +35% | +3.7 |
+| MBPP+ | +36% | -7.5 |
+| SVAMP | +42% | -10.0 (13 lost: one restating paragraph, then an answer with the sum in it) |
+| **average** | **+34.6%** | **-3.1 pp**: just outside |
+
+Compacting the math traces brings the SVAMP failure back (reasoning on lost rows 827 -> 512
+tokens): math traces have to stay whole. The round-2 mix was dropped from the plan.
