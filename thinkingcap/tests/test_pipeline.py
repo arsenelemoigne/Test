@@ -289,6 +289,13 @@ def test_rl_train_runs_on_the_toy_model(toy):
     log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
     assert all(e["entropy"] > 0 and 0 <= e["no_think_accuracy"] <= 1 for e in log)
     assert [e["lr"] for e in log] == [1e-4, 1e-4]  # two cycles of one step each: every step restarts
+    out = work / "rl-protect"
+    run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+        "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
+        "--max-tokens", "40", "--backend", "hf", "--redundant", "none", "--dtype", "float32",
+        "--protect-sources", "toy", "--protect-kl", "0.01", cwd=ROOT)
+    log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+    assert all(0 <= e["protected_accuracy"] <= 1 and e["protected_tokens"] > 0 for e in log)
     out = work / "rl-guard"
     run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
         "--sources", "toy", "--out", str(out), "--steps", "4", "--questions", "2", "--group", "3",

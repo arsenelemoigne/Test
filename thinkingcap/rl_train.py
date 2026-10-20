@@ -36,6 +36,11 @@ The policy is trained on those prefix tokens too, so it learns when skipping the
 gives a correct answer; that reply is the group's shortest, so the length reward favours it
 whenever it is right. --no-think-bonus adds AdaptThink's delta to correct no-think replies.
 
+Protected sources (--protect-sources, e.g. humaneval): those questions are still sampled and
+trained on, but rewarded for correctness only (1 right, 0 wrong) with no length term and no
+token-level pressure, optionally anchored to the base model by --protect-kl. They keep the model
+practising those tasks while other sources teach brevity, so the length pressure cannot erode them.
+
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
     python rl_train.py --init-adapter adapters/pruned_v2 --out adapters/rl --steps 6
@@ -91,6 +96,10 @@ def parse_arguments():
     parser.add_argument("--rs-alpha", type=float, default=0.05)
     parser.add_argument("--rs-lam", type=float, default=0.08)
     parser.add_argument("--kl-beta", type=float, default=5e-3)
+    parser.add_argument("--protect-sources", default="",
+                        help="comma-separated sources trained for correctness only (no length pressure)")
+    parser.add_argument("--protect-kl", type=float, default=0.0,
+                        help="KL anchor to the base model on protected sources' tokens")
     parser.add_argument("--lam-decay", type=float, default=0.2)
     parser.add_argument("--redundant-quantile", type=float, default=0.2)
     parser.add_argument("--settle-threshold", type=float, default=0.9)
@@ -449,6 +458,7 @@ def main():
     model.save_pretrained(current)
     sampler = Sampler(args, tokenizer)
     log = []
+    protect = set(filter(None, args.protect_sources.split(",")))
     soften = 1.0  # halved each time the guard rolls back
     guard = None
     if args.guard_every:
@@ -473,12 +483,19 @@ def main():
         replies = sampler.sample(prompts, current, step, model, no_think)
 
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
-                           "no_think_correct": 0, "no_think_replies": 0}
+                           "no_think_correct": 0, "no_think_replies": 0, "protected_correct": 0,
+                           "protected_replies": 0, "protected_tokens": 0}
         for question, prompt, group in zip(questions, prompts, replies):
             correct = [bool(r) and r[-1] == eos and is_correct(
                 tokenizer.decode(r, skip_special_tokens=True), question)
                 for r in group]
-            rewards = length_rewards([len(r) for r in group], correct, args.alpha * soften)
+            protected = question["source"] in protect
+            rewards = ([1.0 if ok else 0.0 for ok in correct] if protected
+                       else length_rewards([len(r) for r in group], correct, args.alpha * soften))
+            if protected:
+                stats["protected_correct"] += sum(correct)
+                stats["protected_replies"] += len(group)
+                stats["protected_tokens"] += sum(map(len, group))
             skipped = [i >= len(group) - no_think for i in range(len(group))]
             rewards = [r + (args.no_think_bonus if ok and skip else 0.0)
                        for r, ok, skip in zip(rewards, correct, skipped)]
@@ -509,7 +526,8 @@ def main():
                     entropies = []
                     batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
                 refs = None
-                if args.redundant == "tokenprobe-kl":
+                anchored = args.protect_kl and any(j[5]["source"] in protect for j in batch)
+                if args.redundant == "tokenprobe-kl" or anchored:
                     with torch.no_grad(), model.disable_adapter():
                         with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
                             refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
@@ -518,7 +536,11 @@ def main():
                     logps = batch_lp[index]
                     redundant = set()
                     betas = gammas = None
-                    if args.redundant.startswith("tokenprobe"):
+                    if question["source"] in protect:
+                        advantages_t = [advantage] * len(reply)
+                        if args.protect_kl:
+                            betas, gammas = [args.protect_kl] * len(reply), [0.0] * len(reply)
+                    elif args.redundant.startswith("tokenprobe"):
                         scores = norm_lp(logps.tolist())
                         core = core_positions(scores, args.window, args.windows)
                         budget = len(core) * scale
@@ -565,6 +587,9 @@ def main():
                  "mean_thinking_tokens": stats["thinking"] / stats["replies"],
                  "questions_with_signal": stats["signal"], "loss": loss_sum, "lr": lr,
                  "entropy": entropy_sum / max(1, entropy_count)}
+        if stats["protected_replies"]:
+            entry["protected_accuracy"] = stats["protected_correct"] / stats["protected_replies"]
+            entry["protected_tokens"] = stats["protected_tokens"] / stats["protected_replies"]
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         stop = False
