@@ -548,3 +548,7 @@ Code fading round 2 (875 -> 511 tokens, all 113 passed) ties code MVT by token b
 | code-fade-r3 | +21.0% | -5.9 | MBPP+ +14% / **-13.1** | BFCL -4.4, IFEval -6.9 |
 
 Same as math: fading works up to round 2 (40% of the paragraphs) and breaks at round 3.
+| tool-fade-r1 | -7.1% (longer) | -2.7 | BFCL irrelevance -30% (longer), multiple -10%, simple +11% | IFEval -6.9, MBPP+ -7.5 |
+
+Fading does not suit tool calls: the answers get longer (the model hesitates on "no tool
+fits"); the MVT cut (+42%, -0.7) stays far ahead.
