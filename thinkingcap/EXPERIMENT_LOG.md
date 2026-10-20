@@ -196,3 +196,30 @@ cut (SVAMP -3.7 at round 2 vs -21 to -24 for every one-cut run), but the model t
 only part of the shortening (training traces -38%, its own answers -14%), and accuracy
 drifts down on the benchmarks it never trained on (BFCL, MBPP+). MBPP+ answers get longer
 in both rounds: the telegraphic thinking may not suit code.
+
+## Experiment 3: marginal token analysis (words scored by our own model)
+
+Same fading as experiment 2; only the word scorer changes. `fade_traces.py --word-scorer
+marginal`: for every word of the trace (except those with digits or math symbols), delete
+that one word and score log p(gold) by teacher forcing; its score is the log-probability
+lost. Round k keeps the best (1 - k x 10%) of the words. Scoring took ~85 min for 302
+traces on the L4 (GSM8K traces have ~600 words each); later rounds reuse the cached scores.
+
+### Round 1 (10% of paragraphs, 90% of words kept)
+
+Targets: 278 faded, 11 with fewer words cut, 13 original. Mean completion 518 -> 397 tokens
+(-23%, the same as experiment 2): ARC -30%, CSQA -28%, GSM8K -15%. SFT on 265 rows.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | -12% / +11% / +12% | -3.7 / -1.2 / -1.2 |
+| IFEval | +25% | -2.5 |
+| MBPP+ | -14% (longer) | **-12.5** |
+| SVAMP | +28% | -3.7 (7 lost, 4 gained; the lost ones are wrong numbers, not format) |
+| **average** | **+12.1%** | **-5.2 pp**: outside the limit, so the stop rule ends it |
+
+Against experiment 2 round 1 (same 23% cut of the training traces): the model's own answers
+shrink 2.6x more (+12.1% vs +4.6%), so the model takes up model-chosen deletions better than
+LLMLingua's. The extra accuracy loss is almost all MBPP+ (code, never trained on). With 40
+questions per benchmark the average's interval is about +/-4 pp, so -2.5 vs -5.2 is not a
+reliable difference: see the 4-sample recheck below.

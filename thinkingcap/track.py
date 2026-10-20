@@ -31,7 +31,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "scores"))
+    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -39,6 +39,8 @@ def main():
     parser.add_argument("--word-step", type=float, default=0.1, help="fading: words compacted per round; 0 = paragraphs only")
     parser.add_argument("--tag", default="", help="suffix for the fading run's directories")
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--adapter", help="recheck: the adapter to score; none scores the base")
+    parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--full-sources", default="", help="mvt: datasets whose traces stay whole, e.g. gsm8k")
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
@@ -87,9 +89,9 @@ def setup(args):
         py("subset_questions.py", "--per-dataset", 40, "--out", QUESTIONS)
 
 
-def evaluate(out, adapter=None):
+def evaluate(out, adapter=None, samples=2):
     if not (Path(out) / "results.json").exists():
-        py("evaluate.py", "--questions", QUESTIONS, "--samples", 2, "--out", out,
+        py("evaluate.py", "--questions", QUESTIONS, "--samples", samples, "--out", out,
            *(["--adapter", adapter] if adapter else []))
 
 
@@ -156,15 +158,27 @@ def fade(args):
         previous = (data, adapter)
 
 
-def compare(out):
+def recheck(args):
+    """Score the base or one adapter with more samples per question: a tighter interval on the same subset."""
+    base = ROOT / f"s{args.samples}-base"
+    evaluate(base, samples=args.samples)
+    if args.adapter:
+        name = args.adapter.removeprefix("adapters/").replace("/", "-")
+        out = ROOT / f"s{args.samples}-{name}"
+        evaluate(out, args.adapter, samples=args.samples)
+        print(score_line(f"{name} ({args.samples} samples)", out, base=base))
+        print(diagnose(out, base=base))
+
+
+def compare(out, base=BASE):
     json_path = Path(out) / "compare.json"
     if not json_path.exists():
-        py("compare.py", BASE, out, "--out", json_path)
+        py("compare.py", base, out, "--out", json_path)
     return json.loads(json_path.read_text())
 
 
-def score_line(name, out, with_delta=False):
-    result = compare(out)
+def score_line(name, out, with_delta=False, base=BASE):
+    result = compare(out, base)
     parts = []
     for dataset, r in sorted(result["results"].items()):
         saved = r["token_reduction"]
@@ -177,12 +191,12 @@ def score_line(name, out, with_delta=False):
     return (line, delta) if with_delta else line
 
 
-def diagnose(out, dataset="svamp", examples=2):
+def diagnose(out, dataset="svamp", examples=2, base=BASE):
     """How the candidate fails where the base succeeds on one benchmark: lengths, error kinds, examples."""
     def load(directory):
         rows = [json.loads(l) for l in (Path(directory) / "records.jsonl").read_text().splitlines() if l.strip()]
         return {(r["id"], r["sample_index"]): r for r in rows if r["dataset"] == dataset}
-    base, new = load(BASE), load(out)
+    base, new = load(base), load(out)
     lost = [(base[k], new[k]) for k in base if k in new and base[k].get("correct") and not new[k].get("correct")]
     gained = sum(1 for k in base if k in new and not base[k].get("correct") and new[k].get("correct"))
     kinds = {}
@@ -228,6 +242,10 @@ def scores(args):
         if out != BASE and (out / "results.json").exists():
             print(score_line(out.name.removeprefix("eval-"), out))
             print(diagnose(out, examples=0))
+    for base in sorted(ROOT.glob("s*-base")):
+        for out in sorted(ROOT.glob(base.name.removesuffix("base") + "*")):
+            if out != base and (out / "results.json").exists():
+                print(score_line(out.name, out, base=base))
 
 
 if __name__ == "__main__":
