@@ -652,3 +652,13 @@ irrelevance usable). The mvt-fading session's `bon` data predates this filter.
 | SVAMP | 81.3% | 940 |
 
 Same as the earlier runtimes (same seed). Capped: IFEval 3.8%, MBPP+ 7.5%, SVAMP 3.8%.
+
+4-sample reference (`s4-base`, what every grid cell is scored against): BFCL irrelevance 85.6% /
+213, multiple 79.4% / 217, simple 83.1% / 185; IFEval 51.9% / 705; MBPP+ 57.5% / 2,004; SVAMP
+81.9% / 830 (accuracy / mean tokens).
+
+## Training data (`grid_data --per-source 300`)
+
+`prepare_types.py`: gsm8k_all 8,792 usable, mbpp_train 596, toolace 300 (144 simple, 72 multiple,
+84 irrelevance, from 5,025 / 3,615 / 276), ifeval_like 56,339, multiple choice 11,592; 300 kept per
+source (multiple choice: 300 shared by ARC-Easy and CommonsenseQA). 3,000 replies sampled.
