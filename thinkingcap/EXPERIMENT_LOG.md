@@ -305,3 +305,30 @@ math traces shown twice).
 | **average** | **+4.1%** | **-3.2 pp**: just outside the limit |
 
 The 2-sample -2.5 was optimistic: experiment 2's round 1 sits on the edge and saves almost nothing.
+
+### Run mvth1024-full-gsm8k-min2 (`--min-steps 2`)
+
+MC targets keep 2 paragraphs at least: ARC 445 -> 138 (-69%), CSQA 464 -> 134 (-71%).
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +11% / +10% / +14% | +0.0 / +1.3 / +2.5 |
+| IFEval | +31% | +3.7 |
+| MBPP+ | -9% (longer) | -6.2 |
+| SVAMP | +14% | -10.0 |
+| **average** | **+13.1%** | **-2.8 pp**: within, but saves little |
+
+A second paragraph costs most of the saving and does not help SVAMP: the "restate, then
+answer" habit was not the main cause.
+
+### Run mvth1024-full-gsm8k-xgsm8k2 (`--repeat gsm8k:2`, 270 rows)
+
+Same pruning as mvth1024-full-gsm8k; the 65 whole GSM8K traces appear twice in SFT.
+
+| benchmark | tokens saved | accuracy change |
+|---|---|---|
+| BFCL irrelevance / multiple / simple | +21% / +10% / +17% | +3.7 / +5.0 / -2.5 |
+| IFEval | +58% | +2.5 |
+| MBPP+ | +64% | -2.5 |
+| SVAMP | +3% | -6.2 (8 lost, 3 gained: wrong reasoning on tricky wording, 2 truncated) |
+| **average** | **+40.7%** | **-1.0 pp**: within the limit, the smallest loss so far |

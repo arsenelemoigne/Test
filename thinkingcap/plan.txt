@@ -8,3 +8,5 @@ recheck --adapter adapters/fade-gain-words/r1
 mvt --travel 1024 --full-sources gsm8k --min-steps 2
 mvt --travel 1024 --full-sources gsm8k --repeat gsm8k:2
 recheck --adapter adapters/fade-gain-marginal/r1
+recheck --adapter adapters/mvth1024-full-gsm8k-xgsm8k2
+mvt --travel 256 --full-sources gsm8k --repeat gsm8k:2
