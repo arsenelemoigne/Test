@@ -488,3 +488,15 @@ math alone, the cut still breaks math: the damage is not spill-over from easy mu
 traces, cutting math reasoning is harmful in itself (and spills onto code and tools).
 tool-mvt1024 crashed (vLLM out of memory capturing CUDA graphs next to the scoring model):
 fixed with `torch.cuda.empty_cache()` before the check and `enforce_eager`, requeued.
+| text-mvt1024 | +13.2% | -1.5 | IFEval +11% / -3.1 | small and mixed: all benchmarks 8-20% shorter |
+| **tool-mvt1024** | **+42.0%** | **-0.7** | BFCL +37/+54/+38% / -1.3/+1.9/+5.6 | IFEval +26% / 0, SVAMP +15% / +3.7, MBPP+ +68% / -8.7 |
+| math-mvt1024-tokens32 | +37.0% | **-13.3** | SVAMP +55% / -14.4 | MBPP+ -28.1, BFCL multiple -10.6 |
+
+Text-mvt: 391 checked, 328 passed, targets 362 -> 251 (-31%); the thinking on instructions is
+short already (median 73 tokens kept by settle, 41 by MVT). Tool-mvt (after the memory fix):
+278 checked, 258 passed, targets 291 -> 163 (-44%): **for tool calls the MVT cut is free**.
+Math with 32-token batches is as bad as with paragraphs: what hurts math is how much of the
+reasoning goes, not where exactly the cut falls.
+
+(The Colab page lost its Google sign-in and then its output stream at ~13:50; the runtime kept
+running. Results read from /content/track_log.txt through the Files panel.)
