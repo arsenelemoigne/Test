@@ -45,7 +45,7 @@ def main():
     parser.add_argument("--mc", help="mix: sft.jsonl giving the non-math rows")
     parser.add_argument("--math", help="mix: sft.jsonl giving the GSM8K rows")
     parser.add_argument("--name", help="mix: run name")
-    parser.add_argument("--type", choices=("math", "code", "tool", "text", "choice"), help="grid: the kind of data trained on")
+    parser.add_argument("--type", choices=("math", "code", "tool", "toolh", "text", "choice"), help="grid: the kind of data trained on")
     parser.add_argument("--method", choices=("whole", "mvt", "marginal", "fade"), help="grid: how its traces are shortened")
     parser.add_argument("--unit", default="paragraph", help="grid: paragraph, sentence or tokensN")
     parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
@@ -224,8 +224,10 @@ DATA_SET = os.environ.get("TRACK_SET", "v1")
 if DATA_SET == "matched":
     GRID = Path("runs/grid-matched")
     TYPES = {"math": ("gsm8k_all", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("toolace", "bfcl"),
-             "text": ("ifeval_like", "ifeval"), "choice": ("arc_easy,commonsense_qa", None)}
+             "text": ("ifeval_like", "ifeval"), "choice": ("arc_easy,commonsense_qa", None),
+             "toolh": ("hermes_tools", "bfcl")}  # last night's tool data under tonight's settings (a control)
     TYPE_DATA = Path("data/matched.jsonl")
+    EXTRA_DATA = {"hermes_tools": Path("data/hermes.jsonl")}  # own file: matched.jsonl stays as sampled
     PREPARE = ["--sources", "gsm8k_all,mbpp_train,toolace,ifeval_like,mc", "--per-source", 300]
     EASY = {"math": 700}  # keep GSM8K questions with a correct reply of at most 700 tokens
 else:
@@ -233,6 +235,7 @@ else:
     TYPES = {"math": ("gsm8k", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("hermes_tools", "bfcl"),
              "text": ("ifeval_like", "ifeval")}
     TYPE_DATA = Path("data/types.jsonl")
+    EXTRA_DATA = {}
     PREPARE = ["--per-source", 400]
     EASY = {}
 
@@ -243,17 +246,23 @@ def grid_data(args):
     questions = TYPE_DATA
     have = {json.loads(l)["source"] for l in questions.read_text().splitlines() if l.strip()} \
         if questions.exists() else set()
-    if set(wanted) - have:
+    if set(wanted) - have - set(EXTRA_DATA):
         py("prepare_types.py", *PREPARE, "--out", questions)
+    for source, path in EXTRA_DATA.items():
+        if not path.exists():
+            py("prepare_types.py", "--sources", source, "--per-source", args.per_source, "--out", path)
     probe = GRID / "probe"
     rollouts = probe / "rollouts.jsonl"
     done = {json.loads(l)["source"] for l in rollouts.read_text().splitlines() if l.strip()} \
         if rollouts.exists() else set()
     missing = [source for source in wanted if source not in done]
-    if missing:  # sample only what is missing and append it, so earlier replies stay as they are
+    files = {}
+    for source in missing:
+        files.setdefault(EXTRA_DATA.get(source, questions), []).append(source)
+    for data, sources in files.items():  # sample only what is missing and append it, so earlier replies stay
         extra = GRID / "probe-extra"
         shutil.rmtree(extra, ignore_errors=True)
-        py("probe_curve.py", "--data", questions, "--sources", ",".join(missing), "--per-source", args.per_source,
+        py("probe_curve.py", "--data", data, "--sources", ",".join(sources), "--per-source", args.per_source,
            "--samples", 2, "--out", extra, "--dtype", args.dtype, "--generate-only")
         probe.mkdir(parents=True, exist_ok=True)
         with rollouts.open("a") as handle:
