@@ -12,6 +12,7 @@ grid --type text --method whole
 grid --type math --method mvt --travel 1024
 grid --type tool --method mvt --travel 1024
 grid --type text --method mvt --travel 1024
+grid --type tool --method mvt --travel 1024 --dtype bfloat16
 grid --type math --method mvt --travel 1024 --unit tokens32
 grid --type code --method mvt --travel 1024 --unit tokens32
 grid --type tool --method mvt --travel 1024 --unit tokens32

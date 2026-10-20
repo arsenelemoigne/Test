@@ -480,3 +480,11 @@ cut is at 0 thinking tokens for most code traces (p(own code) barely rises with 
 **Training on one kind of the model's own whole replies already costs 2-3.5 points**, mostly
 IFEval and MBPP+: the SFT itself has a price, apart from any cut. Compare each method to the
 "whole" run of the same kind.
+| text-whole | +3.4% | -0.5 | IFEval +9% / -2.5 | MBPP+ -6.9, SVAMP +7.5 |
+| math-mvt1024 | +49.5% | **-11.5** | SVAMP +80% / **-16.2** | MBPP+ -17.5, BFCL multiple -13.7 |
+
+Math-mvt pruning: 326 traces checked, 284 passed; targets 979 -> 262 tokens (-73%). Trained on
+math alone, the cut still breaks math: the damage is not spill-over from easy multiple-choice
+traces, cutting math reasoning is harmful in itself (and spills onto code and tools).
+tool-mvt1024 crashed (vLLM out of memory capturing CUDA graphs next to the scoring model):
+fixed with `torch.cuda.empty_cache()` before the check and `enforce_eager`, requeued.

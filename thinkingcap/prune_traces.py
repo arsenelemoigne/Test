@@ -231,6 +231,10 @@ class Pruner:
         import subprocess
         import sys
 
+        import torch
+
+        if torch.cuda.is_available():  # hand back the scoring passes' cached blocks before vLLM starts
+            torch.cuda.empty_cache()
         thinking = [self.encode(thinking_text(units)) for _, units, _ in jobs]
         inputs, results = out / "check_inputs.jsonl", out / "check_results.jsonl"
         write_jsonl(inputs, [{"key": i, "prompt_ids": r["prompt_ids"], "thinking_ids": t,

@@ -39,8 +39,10 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     end = tokenizer.convert_tokens_to_ids("<|im_end|>")
     longest = max(len(r["prompt_ids"]) + len(r["thinking_ids"]) + r["max_tokens"] for r in rows)
-    engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.6,
-                 max_model_len=longest + 16, generation_config="vllm",
+    # the parent keeps its scoring model on the GPU: take less memory and skip CUDA graph capture,
+    # which ran out of memory there
+    engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.45,
+                 max_model_len=longest + 16, generation_config="vllm", enforce_eager=True,
                  enable_lora=bool(args.adapter), max_lora_rank=16)
     lora = LoRARequest("adapter", 1, args.adapter) if args.adapter else None
     # one request per distinct cap, so a short multiple-choice answer does not reserve a code-sized budget
