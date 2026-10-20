@@ -35,11 +35,16 @@ def main():
     parser.add_argument("--irrelevant-share", type=float, default=0.25,
                         help="share of the tool questions paired with tools that cannot answer them")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--sources", default="gsm8k,mbpp_train,hermes_tools,ifeval_like")
+    parser.add_argument("--tool-mix", default="0.48,0.24,0.28",
+                        help="toolace: shares of one-function, several-function and no-fit questions (BFCL's)")
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    for source, build in (("gsm8k", gsm8k), ("mbpp_train", mbpp_train), ("hermes_tools", hermes_tools),
-                          ("ifeval_like", ifeval_like)):
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+                "toolace": toolace, "ifeval_like": ifeval_like}
+    for source in args.sources.split(","):
+        build = builders[source]
         built = list(build(args, rng))
         rng.shuffle(built)
         rows += built[:args.per_source]
@@ -54,6 +59,94 @@ def gsm8k(args, rng):
         row = json.loads(line)
         if row["source"] == "gsm8k":
             yield row
+
+
+def gsm8k_all(args, rng):
+    """GSM8K train and test splits (neither is an evaluation benchmark), in prepare_data.py's layout.
+
+    Meant to be filtered afterwards to the questions the raw model solves briefly, which match
+    SVAMP's difficulty; ASDiv and MAWPS, which SVAMP was built from, are deliberately not used.
+    """
+    from datasets import load_dataset
+    from utils.train.prepare_data import MATH_INSTRUCTION, row
+
+    for split in ("train", "test"):
+        for r in load_dataset("openai/gsm8k", "main", split=split):
+            answer = r["answer"].split("####")[-1].strip().replace(",", "")
+            yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_all")
+
+
+def toolace(args, rng):
+    """ToolACE single-turn tool calls, already in BFCL's function format and call syntax.
+
+    The first user turn and the first assistant reply of each conversation; the reply is a
+    Python-style call list, or prose when no function fits (BFCL's irrelevance). Questions are
+    drawn to --tool-mix, BFCL's shares of one-function, several-function and no-fit questions.
+    """
+    from datasets import load_dataset
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+    from utils.eval.graders import decode_calls
+
+    root = paths(args.questions)["bfcl"]
+    pools = {"simple": [], "multiple": [], "irrelevance": []}
+    for r in load_dataset("Team-ACE/ToolACE", split="train"):
+        system, turns = r["system"], r["conversations"]
+        start = system.find("[{")
+        if start < 0 or len(turns) < 2 or turns[0]["from"] != "user" or turns[1]["from"] != "assistant":
+            continue
+        try:
+            functions = json.JSONDecoder().raw_decode(system[start:])[0]
+        except ValueError:
+            continue
+        if not functions or not all(f.get("name") for f in functions):
+            continue
+        # BFCL calls are Python: "Market Trends API" becomes Market_Trends_API, in the functions and the reply
+        names = {f["name"]: identifier(f["name"]) for f in functions}
+        if len(set(names.values())) < len(names):
+            continue
+        reply = turns[1]["value"].strip()
+        for old, new in sorted(names.items(), key=lambda kv: -len(kv[0])):
+            reply = reply.replace(old + "(", new + "(")
+        for f in functions:
+            f["name"] = names[f["name"]]
+            f.setdefault("parameters", {"type": "dict", "properties": {}, "required": []})
+            f["parameters"].setdefault("required", [])
+            f["parameters"]["type"] = "dict"
+        try:
+            calls = decode_calls(reply)
+        except Exception:
+            calls = None
+        if calls is None:
+            kind, reference = "irrelevance", None
+        elif len(calls) == 1:
+            name, arguments = next(iter(calls[0].items()))
+            called = [f for f in functions if f["name"] == name]
+            if not called:
+                continue
+            kind = "simple" if len(functions) == 1 else "multiple"
+            reference = bfcl_reference(called[0], arguments)
+        else:
+            continue  # parallel calls: not in the evaluation
+        def example(category, offered):
+            return {"source": "toolace", "task": "tool", "answer": "", "grader": "bfcl", "category": category,
+                    "function": offered, "reference": reference,
+                    "prompt": [{"role": "system", "content": bfcl_system_prompt(root, offered)},
+                               {"role": "user", "content": turns[0]["value"]}]}
+
+        pools[kind].append(example(kind, functions))
+        if kind == "multiple":  # ToolACE rarely offers one function: the called one alone makes BFCL's simple case
+            pools["simple"].append(example("simple", called))
+    shares = [float(x) for x in args.tool_mix.split(",")]
+    for (kind, pool), share in zip(pools.items(), shares):
+        rng.shuffle(pool)
+        print(f"toolace {kind}: {len(pool)} usable", flush=True)
+        yield from pool[:int(round(share * args.per_source))]
+
+
+def identifier(name):
+    """A function name as a Python identifier: other characters become underscores."""
+    name = re.sub(r"[^\w.]", "_", name.strip())
+    return name if re.match(r"[A-Za-z_]", name) else "f_" + name
 
 
 def mbpp_train(args, rng):
