@@ -509,3 +509,7 @@ batches keep the first useful part of the plan (+57% / -5.6). **For code, cut by
 
 For tool calls paragraphs win (+42.0% / -0.7 vs +3.9% / -1.6): tool thinking is short and
 well paragraphed, and mid-paragraph cuts make the model write more elsewhere.
+| text-mvt1024-tokens32 | +5.2% | +0.6 | IFEval +5% / 0.0 | small, mixed |
+
+MVT part of the grid done. Best unit per kind: tool -> paragraphs (+42%, -0.7); code -> 32-token
+batches (+24%, -1.9); instructions -> paragraphs (+13%, -1.5; batches +5%, +0.6); math -> no cut.
