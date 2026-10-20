@@ -522,3 +522,8 @@ code targets 974 -> 96 tokens, math 979 -> 287. Deleting any single math or code
 barely moves p(gold) because another paragraph carries the same information, so each looks
 free alone, and drop_flat then removes them together while the group test, scored by teacher
 forcing on a trace the model did not write, still passes. The MVT cut beats it on every kind.
+| text-marginal | +7.4% | -1.3 | IFEval +6% / 0.0 | small |
+
+Marginal by 32-token batches dropped from the plan (paragraph leave-one-out already over-
+deletes; smaller units can only delete more). Fading (paragraphs only, 20% per round, 3 rounds,
+each round continuing the previous adapter) follows, then the combined model.
