@@ -502,6 +502,7 @@ def main():
         replies = sampler.sample(prompts, current, step, model, no_think,
                                  caps=[caps.get(q["source"], args.max_tokens) for q in questions])
 
+        by_source = {}
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0, "protected_correct": 0,
                            "protected_replies": 0, "protected_tokens": 0}
@@ -524,6 +525,11 @@ def main():
             stats["no_think_correct"] += sum(ok for ok, skip in zip(correct, skipped) if skip)
             stats["no_think_replies"] += sum(skipped)
             stats["thinking"] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
+            per = by_source.setdefault(question["source"], {"correct": 0, "replies": 0, "tokens": 0,
+                                                            "entropy": 0.0, "entropy_tokens": 0})
+            per["correct"] += sum(correct)
+            per["replies"] += len(group)
+            per["tokens"] += sum(map(len, group))
             stats["correct"] += sum(correct)
             stats["replies"] += len(group)
             stats["tokens"] += sum(map(len, group))
@@ -591,6 +597,8 @@ def main():
                         per_token = per_token - args.entropy_coef * entropies[index]
                     entropy_sum += float(entropies[index].detach().sum())
                     entropy_count += len(reply)
+                    by_source[question["source"]]["entropy"] += float(entropies[index].detach().sum())
+                    by_source[question["source"]]["entropy_tokens"] += len(reply)
                     loss = loss + per_token.sum() / total_tokens
                 scaler.scale(loss).backward()
                 loss_sum += float(loss)
@@ -609,7 +617,11 @@ def main():
                  "mean_tokens": stats["tokens"] / stats["replies"],
                  "mean_thinking_tokens": stats["thinking"] / stats["replies"],
                  "questions_with_signal": stats["signal"], "loss": loss_sum, "lr": lr,
-                 "entropy": entropy_sum / max(1, entropy_count)}
+                 "entropy": entropy_sum / max(1, entropy_count),
+                 "by_source": {source: {"accuracy": round(v["correct"] / v["replies"], 3),
+                                        "mean_tokens": round(v["tokens"] / v["replies"]),
+                                        "entropy": round(v["entropy"] / max(1, v["entropy_tokens"]), 3)}
+                               for source, v in sorted(by_source.items())}}
         if stats["protected_replies"]:
             entry["protected_accuracy"] = stats["protected_correct"] / stats["protected_replies"]
             entry["protected_tokens"] = stats["protected_tokens"] / stats["protected_replies"]

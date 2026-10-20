@@ -299,6 +299,7 @@ def test_rl_train_runs_on_the_toy_model(toy):
     assert (work / "rl-protect-mirror" / "step2" / "adapter_config.json").exists()
     log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
     assert all(0 <= e["protected_accuracy"] <= 1 and e["protected_tokens"] > 0 for e in log)
+    assert all(set(e["by_source"]) == {"toy"} and e["by_source"]["toy"]["mean_tokens"] > 0 for e in log)
     out = work / "rl-guard"
     run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
         "--sources", "toy", "--out", str(out), "--steps", "4", "--questions", "2", "--group", "3",
