@@ -1,5 +1,11 @@
 # Experiment log (Qwen3-0.6B, shorter thinking)
 
+## Latest (20 Oct, evening)
+
+**Best of this track: blend of C and A (50/50), +33.5% tokens saved at -0.5 pp.** Close to the
+MVT track's winner (+37.1%, -0.6 pp at 8 samples). Long C (60 steps, code protected with a 4,096
+cap, maths alpha 0.25, rolling-back guard) is running.
+
 ## Morning summary (20 Oct 2026)
 
 **Best result:** ablation A, plain RL with a "short and correct" reward, 20 steps from the raw
@@ -132,7 +138,8 @@ machines. Only compare a candidate against the base measured on the same VM.
 | steer mix | steering vector from 640 questions incl. coding (HumanEval, unit tests) | **done: 270 pairs (concise 436 / verbose 1,008 tok). Held-out x1/x2/x3: 51.2% / 1,008, 50.0% / 960, 46.1% / 935. Benchmarks x2: +5.9%, -3.1 pp (MBPP+ -18.6% longer, -10 pp). Still no transfer.** |
 | P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | **done: +18.7% [11.3, 26.1], -0.7 pp [-4.8, +3.2]. MBPP+ -9.5% (longer), -3.8 pp; SVAMP +39.6% / -2.5; IFEval +22.9% / +3.8; BFCL +10 to +19%. Protected HumanEval solved only 14% at step 20 (1,807 tok, most replies hit the 2,048 cap)** |
 | P2 | as P1, maths (GSM8K, Skywork) also protected | **done: +12.6% [5.6, 19.2], -2.1 pp [-5.7, +1.5]. SVAMP +24.3% / -7.5; MBPP+ -10.9% / -2.5; IFEval +25.6% / +2.5; BFCL +2 to +10%** |
-| C step 10, C/A 50-50 blend | C's halfway checkpoint, and an exact blend of C and A | salvage C's extra shortening inside the limit (queued after P2) |
+| C step 10 | C's halfway checkpoint | **done: +22.1% [14.9, 28.4], +0.5 pp [-3.3, +4.5]** |
+| **C/A 50-50 blend** | exact blend of C and A (rank 32) | **done: +33.5% [26.4, 40.4], -0.5 pp [-4.2, +3.0]. BFCL irr/mult/simple +22/+24/+18% (-3.8/+6.3/-5.0); IFEval +39.5% (+7.5); MBPP+ +12.2% (-5.0); SVAMP +53.2% (-3.8). Best of this track; saved to Drive as blendCA50** |
 | **C long** | C's recipe for 60 steps; HumanEval in the mix (124 train / 40 held out), code protected (correctness only, KL 0.01) with a **4,096-token cap for code**; maths length weight 0.25 (P2 showed full maths protection does not save SVAMP); guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
 
 ## Ablation: what each ingredient adds (running overnight)
