@@ -73,7 +73,12 @@ the same questions).
    2 updates per step): +40% tokens saved, the first run that shortens code (+31%), but -6.9 points,
    concentrated where reasoning matters (MBPP+ -13.8, SVAMP -10). Same direction as loop 3: more
    pressure buys length at the cost of code and maths.
-11. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
+11. **The other track (branch mvt-fading) agrees: keep maths whole.** Its winner (SFT on traces cut
+   by the Marginal Value Theorem on easy multiple-choice questions only, maths traces untouched and
+   shown twice) gives +37.1% at -0.6 pp with 8 samples per question; MBPP+ 65% shorter at -2.2.
+   Every run there that shortened maths lost 6-8 points (maths -21 to -24). Long C is changed
+   accordingly: maths and code are protected, only ARC/CSQA carry length pressure.
+12. **Next lever: training data that looks like the test.** `code_tasks.py` adds HumanEval (164
    problems with unit tests, not an evaluation benchmark) with a reward that runs the tests, in
    MBPP+'s prompt format. Ready to run as experiment E after the ablation.
 
@@ -121,7 +126,7 @@ machines. Only compare a candidate against the base measured on the same VM.
 | P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | shorten maths and quiz, keep code intact |
 | P2 | as P1, maths (GSM8K, Skywork) also protected | shorten quiz only; tests whether protecting maths costs SVAMP savings |
 | C step 10, C/A 50-50 blend | C's halfway checkpoint, and an exact blend of C and A | salvage C's extra shortening inside the limit (queued after P2) |
-| **C long** | C's recipe for 60 steps; HumanEval in the mix, protected (correctness only, KL 0.01); maths length weight 0.25; guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
+| **C long** | C's recipe for 60 steps; HumanEval in the mix; code **and maths** protected (correctness only, KL 0.01), length pressure on ARC/CSQA only; guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
 
 ## Ablation: what each ingredient adds (running overnight)
 
