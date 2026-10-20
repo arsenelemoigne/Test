@@ -133,7 +133,7 @@ machines. Only compare a candidate against the base measured on the same VM.
 | P1 | A's recipe + HumanEval in the mix as *protected* (correctness only, KL 0.01) | **done: +18.7% [11.3, 26.1], -0.7 pp [-4.8, +3.2]. MBPP+ -9.5% (longer), -3.8 pp; SVAMP +39.6% / -2.5; IFEval +22.9% / +3.8; BFCL +10 to +19%. Protected HumanEval solved only 14% at step 20 (1,807 tok, most replies hit the 2,048 cap)** |
 | P2 | as P1, maths (GSM8K, Skywork) also protected | **done: +12.6% [5.6, 19.2], -2.1 pp [-5.7, +1.5]. SVAMP +24.3% / -7.5; MBPP+ -10.9% / -2.5; IFEval +25.6% / +2.5; BFCL +2 to +10%** |
 | C step 10, C/A 50-50 blend | C's halfway checkpoint, and an exact blend of C and A | salvage C's extra shortening inside the limit (queued after P2) |
-| **C long** | C's recipe for 60 steps; HumanEval in the mix; code **and maths** protected (correctness only, KL 0.01), length pressure on ARC/CSQA only; guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
+| **C long** | C's recipe for 60 steps; HumanEval in the mix (124 train / 40 held out), code protected (correctness only, KL 0.01) with a **4,096-token cap for code**; maths length weight 0.25 (P2 showed full maths protection does not save SVAMP); guard on held-out maths/quiz/code (40 HumanEval held out) that rolls back and softens on a >3 pt drop; benchmark tests at steps 20/40/60 | papers (Art of Efficient Reasoning) see length drop first and accuracy recover with more training; 20 steps may stop in phase 1 |
 
 ## Ablation: what each ingredient adds (running overnight)
 
