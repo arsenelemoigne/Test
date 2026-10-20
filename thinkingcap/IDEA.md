@@ -114,7 +114,7 @@ On a held-out check of the training subjects (128 validation questions), A and B
 45% -> 60% accuracy and 1,065 -> ~780 tokens. TokenProbe's KL anchor to the base model keeps the
 model's behaviour unchanged where it was not trained (code, function calling, instructions), so
 the length gain does not transfer. The plain reward transfers: SVAMP -30% tokens at equal
-accuracy, BFCL -15 to -22% with higher accuracy, IFEval -26%.
+accuracy, BFCL -12 to -22% with higher accuracy, IFEval -26%.
 
 A training-free steering vector (concise-minus-verbose direction from 97 pairs of correct
 replies, stored as a v_proj bias so the model still loads with no custom code) shortens maths

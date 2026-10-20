@@ -59,7 +59,7 @@ were left at 5:20.
 8. **Plain RL, run longer on more subjects, is the best so far.** Ablation A (length reward only,
    20 steps, GSM8K + Skywork + ARC + CSQA, from the raw model): +19.6% tokens saved at +0.3 points.
    Held-out guard: 45.3% -> 60.2% accuracy, 1,065 -> 769 tokens. SVAMP -30% tokens at equal
-   accuracy, BFCL -15 to -22% with higher accuracy; code still barely shorter (-3%).
+   accuracy, BFCL -12 to -22% with higher accuracy; code still barely shorter (-3%).
 9. **TokenProbe hurts transfer.** B = A + TokenProbe-KL, otherwise identical: on the held-out
    maths/quiz check B matches A (60.5% / 796 tokens vs 60.2% / 769), but on the benchmarks it
    saves only 6% (A: 20%). The KL anchor to the base model keeps behaviour near the original
