@@ -685,6 +685,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | tool-mvt1024 | 189 / 178 | 201 -> 142 | +17.6% | +1.7 | BFCL irr +38% / -1.2, mult +55% / -3.1, simple +42% / +1.9; IFEval +6% / +9.4; MBPP+ +2% / -3.1; SVAMP +8% / +1.3 |
 | tool-mvt256 | 189 / 173 | 201 -> 121 | +25.8% | +0.6 | BFCL irr +45% / +3.1, mult +55% / -1.9, simple +36% / +0.6; IFEval +11% / +6.9; MBPP+ +30% / -4.4; SVAMP +10% / -0.6 |
 | tool-mvt1024-tokens32 | 189 / 176 | 201 -> 106 | +18.1% | -2.7 | BFCL irr +54% / **-8.7**, mult +24% / 0.0, simple +39% / -1.3; IFEval +3% / +1.2; MBPP+ 0% / -6.9; SVAMP +24% / -1.9 |
+| tool-mvt256-tokens32 | 189 / 167 | 201 -> 89 | +11.5% | **-4.5** | BFCL irr +54% / **-10.0**, mult +24% / -1.9, simple +47% / -0.6; IFEval -6% / +3.7; MBPP+ -5% / -6.9; SVAMP +7% / **-10.6** |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -698,3 +699,8 @@ noise): +25.8% / +0.6. tool-mvt1024-tokens32: 406 checked, 373 pass; 176 cut, 20
 
 Token batches cut tool thinking harder (-47% vs -30%) for no extra saving at test time and a loss
 on irrelevance (-8.7): as on the old data, **paragraphs win for tool calls**.
+
+**Tool calls: best is MVT by paragraphs.** c=256 +25.8% / +0.6 (more spill-over saving), c=1024
++17.6% / +1.7 (cleaner). Token batches over-cut (-47 to -56% of the targets) and lose irrelevance
+(-8.7, -10.0); c=256 by batches is outside the limit (-4.5, SVAMP -10.6).
+text-whole: 259 of 300 questions have a correct reply; targets 347 -> 312 (shortest correct reply).
