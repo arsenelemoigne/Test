@@ -45,7 +45,7 @@ def main():
     parser.add_argument("--mc", help="mix: sft.jsonl giving the non-math rows")
     parser.add_argument("--math", help="mix: sft.jsonl giving the GSM8K rows")
     parser.add_argument("--name", help="mix: run name")
-    parser.add_argument("--type", choices=("math", "code", "tool", "text"), help="grid: the kind of data trained on")
+    parser.add_argument("--type", choices=("math", "code", "tool", "text", "choice"), help="grid: the kind of data trained on")
     parser.add_argument("--method", choices=("whole", "mvt", "marginal", "fade"), help="grid: how its traces are shortened")
     parser.add_argument("--unit", default="paragraph", help="grid: paragraph, sentence or tokensN")
     parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
@@ -74,7 +74,8 @@ def update(restart=True):
         return
     clone = Path("/content/T")
     shutil.rmtree(clone, ignore_errors=True)
-    if subprocess.run(["git", "clone", "-q", "--depth", "1", "-b", "mvt-fading",
+    branch = os.environ.get("TRACK_BRANCH", "mvt-fading")
+    if subprocess.run(["git", "clone", "-q", "--depth", "1", "-b", branch,
                        "https://github.com/arsenelemoigne/Test", str(clone)]).returncode:
         print("could not update the scripts; running the local copies", flush=True)
         return
@@ -216,20 +217,34 @@ def full(args):
         print(diagnose(out, base=base))
 
 
-GRID = Path("runs/grid")
-# kind of data -> (training source from prepare_types.py, the benchmark that scores that kind)
-TYPES = {"math": ("gsm8k", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("hermes_tools", "bfcl"),
-         "text": ("ifeval_like", "ifeval")}
+# kind of data -> (training source(s) from prepare_types.py, the benchmark that scores that kind)
+# TRACK_SET=matched uses the data matched to the evaluation: GSM8K filtered to SVAMP-like difficulty,
+# ToolACE in BFCL's format and mix, and multiple choice as a fifth kind (no benchmark of its own).
+DATA_SET = os.environ.get("TRACK_SET", "v1")
+if DATA_SET == "matched":
+    GRID = Path("runs/grid-matched")
+    TYPES = {"math": ("gsm8k_all", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("toolace", "bfcl"),
+             "text": ("ifeval_like", "ifeval"), "choice": ("arc_easy,commonsense_qa", None)}
+    TYPE_DATA = Path("data/matched.jsonl")
+    PREPARE = ["--sources", "gsm8k_all,mbpp_train,toolace,ifeval_like,mc", "--per-source", 300]
+    EASY = {"math": 700}  # keep GSM8K questions with a correct reply of at most 700 tokens
+else:
+    GRID = Path("runs/grid")
+    TYPES = {"math": ("gsm8k", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("hermes_tools", "bfcl"),
+             "text": ("ifeval_like", "ifeval")}
+    TYPE_DATA = Path("data/types.jsonl")
+    PREPARE = ["--per-source", 400]
+    EASY = {}
 
 
 def grid_data(args):
     """Training questions of every kind, and the model's own replies to them (2 per question)."""
-    wanted = [source for source, _ in TYPES.values()]
-    questions = Path("data/types.jsonl")
+    wanted = [s for sources, _ in TYPES.values() for s in sources.split(",")]
+    questions = TYPE_DATA
     have = {json.loads(l)["source"] for l in questions.read_text().splitlines() if l.strip()} \
         if questions.exists() else set()
     if set(wanted) - have:
-        py("prepare_types.py", "--per-source", 400)
+        py("prepare_types.py", *PREPARE, "--out", questions)
     probe = GRID / "probe"
     rollouts = probe / "rollouts.jsonl"
     done = {json.loads(l)["source"] for l in rollouts.read_text().splitlines() if l.strip()} \
@@ -258,7 +273,8 @@ def grid(args):
     name = f"{args.type}-{args.method}" + (f"{args.travel:g}" if args.method == "mvt" else "") \
         + (f"-{unit}" if unit != "paragraph" else "")
     common = ["--rollouts", GRID / "probe" / "rollouts.jsonl", "--sources", source, "--unit", unit,
-              "--checker", "vllm", "--dtype", args.dtype]
+              "--checker", "vllm", "--dtype", args.dtype,
+              *(["--easy-tokens", EASY[args.type]] if args.type in EASY else [])]
     if args.method == "fade":
         previous = None
         for k in range(1, args.rounds + 1):
@@ -461,7 +477,7 @@ def gridtable(args):
 
     print(f"{'run':<28}" + "".join(f"{b:>18}" for b in benchmarks) + f"{'average':>18}")
     for row in sorted(rows, key=lambda r: (r["type"], r["name"])):
-        own = TYPES[row["type"]][1]
+        own = TYPES.get(row["type"], (None, None))[1]
         cells = [(">" if b == own else " ") + cell(row, b) for b in benchmarks]
         average = f"{row['average']['saved']:+.0%} / {100 * row['average']['delta']:+.1f}"
         print(f"{row['name']:<28}" + "".join(f"{c:>18}" for c in cells) + f"{average:>18}")

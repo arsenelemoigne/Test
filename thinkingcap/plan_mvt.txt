@@ -1,0 +1,30 @@
+# MVT on every data type, matched data (TRACK_SET=matched). One line = one stage; edit and push to queue more.
+base
+recheck
+grid_data
+grid --type tool --method whole
+grid --type tool --method mvt --travel 1024
+grid --type tool --method mvt --travel 256
+grid --type tool --method mvt --travel 1024 --unit tokens32
+grid --type tool --method mvt --travel 256 --unit tokens32
+grid --type text --method whole
+grid --type text --method mvt --travel 1024
+grid --type text --method mvt --travel 256
+grid --type text --method mvt --travel 1024 --unit tokens32
+grid --type text --method mvt --travel 256 --unit tokens32
+grid --type choice --method whole
+grid --type choice --method mvt --travel 1024
+grid --type choice --method mvt --travel 256
+grid --type choice --method mvt --travel 1024 --unit tokens32
+grid --type choice --method mvt --travel 256 --unit tokens32
+grid --type code --method whole
+grid --type code --method mvt --travel 1024
+grid --type code --method mvt --travel 256
+grid --type code --method mvt --travel 1024 --unit tokens32
+grid --type code --method mvt --travel 256 --unit tokens32
+grid --type math --method whole
+grid --type math --method mvt --travel 1024
+grid --type math --method mvt --travel 256
+grid --type math --method mvt --travel 1024 --unit tokens32
+grid --type math --method mvt --travel 256 --unit tokens32
+gridtable
