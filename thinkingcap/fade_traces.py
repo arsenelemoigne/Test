@@ -54,6 +54,9 @@ def main():
     for rollout in read_jsonl(Path(args.rollouts)):
         if not args.sources or rollout["source"] in args.sources:
             by_question[rollout["id"]].append(rollout)
+    if args.easy_tokens:  # keep the questions the raw model solves briefly: SVAMP-like difficulty
+        by_question = defaultdict(list, {q: g for q, g in by_question.items()
+                                         if any(r["correct"] and r["output_tokens"] <= args.easy_tokens for r in g)})
     chosen = {qid: min(ok, key=lambda r: r["output_tokens"]) for qid, group in by_question.items()
               if (ok := [r for r in group if r["correct"] and r["closed_thinking"] and not r["truncated"]])}
     previous = {row["id"]: row for row in read_jsonl(Path(args.previous))} if args.previous else {}
@@ -151,6 +154,8 @@ def parse_arguments():
     parser.add_argument("--min-steps", type=int, default=1)
     parser.add_argument("--sources", type=lambda text: set(text.split(",")), default=set(),
                         help="only these datasets' questions (default: all)")
+    parser.add_argument("--easy-tokens", type=int, default=0,
+                        help="keep only questions with a correct rollout at most this long (0: all)")
     parser.add_argument("--unit", default="paragraph", help="paragraph, sentence, or tokensN (e.g. tokens32)")
     parser.add_argument("--checker", choices=("hf", "vllm"), default="hf")
     parser.add_argument("--check-samples", type=int, default=2)

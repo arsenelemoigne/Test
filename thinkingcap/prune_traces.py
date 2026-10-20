@@ -71,6 +71,9 @@ def main():
     for rollout in read_jsonl(Path(args.rollouts)):
         if not args.sources or rollout["source"] in args.sources:
             by_question[rollout["id"]].append(rollout)
+    if args.easy_tokens:  # keep the questions the raw model solves briefly: SVAMP-like difficulty
+        by_question = defaultdict(list, {q: g for q, g in by_question.items()
+                                         if any(r["correct"] and r["output_tokens"] <= args.easy_tokens for r in g)})
 
     targets, log, jobs, pending = [], [], [], {}
     for number, (qid, group) in enumerate(by_question.items(), 1):
@@ -124,6 +127,8 @@ def parse_arguments():
     parser.add_argument("--adapter", help="LoRA to merge into --model before scoring and checking")
     parser.add_argument("--sources", type=lambda text: set(text.split(",")), default=set(),
                         help="only these datasets' rollouts (default: all)")
+    parser.add_argument("--easy-tokens", type=int, default=0,
+                        help="keep only questions with a correct rollout at most this long (0: all)")
     parser.add_argument("--unit", default="paragraph", help="paragraph, sentence, or tokensN (e.g. tokens32)")
     parser.add_argument("--checker", choices=("hf", "vllm"), default="hf")
     parser.add_argument("--full-sources", type=lambda text: set(text.split(",")), default=set(),
