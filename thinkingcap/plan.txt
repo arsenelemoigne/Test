@@ -1,2 +1,3 @@
 # Extra stages for the overnight run: track.py reads this from the branch after every stage.
 mvt --travel 1024 --full-sources gsm8k
+mvt --travel 256 --full-sources gsm8k
