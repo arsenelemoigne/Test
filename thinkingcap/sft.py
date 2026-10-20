@@ -38,6 +38,9 @@ def main():
             if seen[row["source"]] <= args.max_per_source:
                 kept.append(row)
         rows = kept
+    for spec in args.repeat:  # "gsm8k:2": show that dataset's rows twice
+        source, times = spec.split(":")
+        rows += [r for r in rows if r["source"] == source] * (int(times) - 1)
     print(f"training on {len(rows)} rows", flush=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -112,6 +115,7 @@ def parse_arguments():
     parser.add_argument("--dtype", default="bfloat16", help="float16 on a T4")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max-per-source", type=int, default=0, help="cap rows per dataset; 0 keeps all")
+    parser.add_argument("--repeat", nargs="*", default=[], help="dataset:times, e.g. gsm8k:2, after the cap")
     parser.add_argument("--init-adapter", help="start from this LoRA instead of a fresh one")
     return parser.parse_args()
 
