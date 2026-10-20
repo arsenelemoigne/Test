@@ -686,6 +686,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | tool-mvt256 | 189 / 173 | 201 -> 121 | +25.8% | +0.6 | BFCL irr +45% / +3.1, mult +55% / -1.9, simple +36% / +0.6; IFEval +11% / +6.9; MBPP+ +30% / -4.4; SVAMP +10% / -0.6 |
 | tool-mvt1024-tokens32 | 189 / 176 | 201 -> 106 | +18.1% | -2.7 | BFCL irr +54% / **-8.7**, mult +24% / 0.0, simple +39% / -1.3; IFEval +3% / +1.2; MBPP+ 0% / -6.9; SVAMP +24% / -1.9 |
 | tool-mvt256-tokens32 | 189 / 167 | 201 -> 89 | +11.5% | **-4.5** | BFCL irr +54% / **-10.0**, mult +24% / -1.9, simple +47% / -0.6; IFEval -6% / +3.7; MBPP+ -5% / -6.9; SVAMP +7% / **-10.6** |
+| text-whole | 259 / 0 | 347 -> 312 | +6.1% | -0.5 | BFCL +5/+6/+5% / -1.2/+0.6/0.0; IFEval +6% / +2.5; MBPP+ -2% / -1.9; SVAMP +14% / -2.5 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -709,3 +710,9 @@ Why the old tool run spread brevity onto code (MBPP+ +68%) and this one does not
 prompt format (Hermes questions were already in BFCL's format). Likely the strength of the lesson:
 old targets 291 -> 163 (44% removed, ~130 tokens per trace, 258 traces), new 201 -> 142 (30%, ~60
 tokens, 189 traces); tool-mvt256 here (40% removed) does spread to code (+30%). Untested guess.
+
+Last night's Hermes tool runs all cost MBPP+ 7.5-10 points, the uncut one included (-9.4); the
+matched ToolACE uncut run costs nothing (+0.6). The Hermes data itself disturbs code; cuts on it
+add the brevity spill-over. Likely cause (untested): easy Hermes questions, a quarter of them
+synthetic "no tool fits" pairs, get cut to almost no thinking, as easy multiple choice did on night 1.
+text-mvt1024: 503 checked, 445 pass; 238 of 259 cut, targets 347 -> 234 (-33%).
