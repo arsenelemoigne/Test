@@ -34,10 +34,10 @@ combine --name final-mathfade --inputs runs/mvtf/prune-mvth1024-full-gsm8k/sft.j
 mvt --travel 1024 --full-sources gsm8k --repeat gsm8k:2
 recheck --adapter adapters/mvth1024-full-gsm8k-xgsm8k2
 combine --name final-light --inputs runs/mvtf/prune-mvth1024-full-gsm8k/sft.jsonl:arc_easy:commonsense_qa runs/grid/math-whole/sft.jsonl:gsm8k runs/grid/tool-mvt1024/sft.jsonl:hermes_tools --repeat gsm8k:2 --max-per-source 150
+stats --inputs mvtf/s4-base grid/probe/rollouts.jsonl mvtf/probe/rollouts.jsonl
 merge --name tool --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/tool-mvt1024:1
 merge --name half --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/tool-mvt1024:0.5 adapters/grid/code-mvt1024-tokens32:0.5 adapters/grid/math-fade/r2:0.5
 merge --name full --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/tool-mvt1024:1 adapters/grid/code-mvt1024-tokens32:1 adapters/grid/math-fade/r2:1
-stats --inputs mvtf/s4-base grid/probe/rollouts.jsonl mvtf/probe/rollouts.jsonl
 # the full evaluation (2,759 questions x 8 samples) of the best candidate within -2.5 pts on the 4-sample subset
 fullbest --inputs mvtf/s4-mvth1024-full-gsm8k-xgsm8k2=adapter:adapters/mvth1024-full-gsm8k-xgsm8k2 grid/eval-combine-final-light=adapter:adapters/combine-final-light grid/eval-merge-tool=model:models/merge-tool grid/eval-merge-half=model:models/merge-half grid/eval-merge-full=model:models/merge-full
 stats --inputs mvtf/full-base
