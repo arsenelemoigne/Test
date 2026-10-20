@@ -31,7 +31,8 @@ LIMIT = -3.0  # accuracy points against the raw model
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full", "scores"))
+    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
+                                          "grid_data", "grid", "gridtable", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -44,6 +45,10 @@ def main():
     parser.add_argument("--mc", help="mix: sft.jsonl giving the non-math rows")
     parser.add_argument("--math", help="mix: sft.jsonl giving the GSM8K rows")
     parser.add_argument("--name", help="mix: run name")
+    parser.add_argument("--type", choices=("math", "code", "tool", "text"), help="grid: the kind of data trained on")
+    parser.add_argument("--method", choices=("whole", "mvt", "marginal", "fade"), help="grid: how its traces are shortened")
+    parser.add_argument("--unit", default="paragraph", help="grid: paragraph, sentence or tokensN")
+    parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
     parser.add_argument("--plan-file", default="plan.txt", help="plan: the queue this runtime works through")
     parser.add_argument("--wait-hours", type=float, default=0,
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
@@ -205,6 +210,102 @@ def full(args):
         evaluate(out, args.adapter, samples=8, questions="questions")
         print(score_line(f"{name} (full evaluation)", out, base=base))
         print(diagnose(out, base=base))
+
+
+GRID = Path("runs/grid")
+# kind of data -> (training source from prepare_types.py, the benchmark that scores that kind)
+TYPES = {"math": ("gsm8k", "svamp"), "code": ("mbpp_train", "mbpp"), "tool": ("hermes_tools", "bfcl"),
+         "text": ("ifeval_like", "ifeval")}
+
+
+def grid_data(args):
+    """Training questions of every kind, and the model's own replies to them (2 per question)."""
+    if not Path("data/types.jsonl").exists():
+        py("prepare_types.py", "--per-source", 400)
+    probe = GRID / "probe"
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", "data/types.jsonl", "--sources", ",".join(s for s, _ in TYPES.values()),
+           "--per-source", args.per_source, "--samples", 2, "--max-tokens", 2048, "--out", probe,
+           "--dtype", args.dtype, "--generate-only")
+    rows = [json.loads(l) for l in (probe / "rollouts.jsonl").read_text().splitlines() if l.strip()]
+    for source in sorted({r["source"] for r in rows}):
+        group = [r for r in rows if r["source"] == source]
+        print(f"   {source:<14} {len(group)} replies, {sum(r['correct'] for r in group) / len(group):.0%} correct, "
+              f"{sum(r['truncated'] for r in group) / len(group):.0%} capped, "
+              f"mean {sum(r['output_tokens'] for r in group) / len(group):.0f} tokens", flush=True)
+
+
+def grid(args):
+    """One cell of the method x kind grid: shorten one kind's traces one way, train on them alone, test on all."""
+    source, _ = TYPES[args.type]
+    unit = args.unit if args.method != "whole" else "paragraph"
+    name = f"{args.type}-{args.method}" + (f"{args.travel:g}" if args.method == "mvt" else "") \
+        + (f"-{unit}" if unit != "paragraph" else "")
+    common = ["--rollouts", GRID / "probe" / "rollouts.jsonl", "--sources", source, "--unit", unit,
+              "--checker", "vllm", "--dtype", args.dtype]
+    if args.method == "fade":
+        previous = None
+        for k in range(1, args.rounds + 1):
+            data, adapter = GRID / name / f"r{k}", Path("adapters") / "grid" / name / f"r{k}"
+            if not (data / "sft.jsonl").exists():
+                extra = ["--adapter", previous[1], "--previous", previous[0] / "sft.jsonl",
+                         "--cache", GRID / name / "r1" / "curves.jsonl"] if previous else []
+                py("fade_traces.py", *common, "--out", data, "--round", k, "--step", 0.2, "--word-step", 0, *extra)
+            print((data / "summary.txt").read_text())
+            if not (adapter / "adapter_config.json").exists():
+                py("sft.py", "--data", data / "sft.jsonl", "--out", adapter, "--epochs", 1, "--max-per-source", 1000,
+                   "--dtype", args.dtype, *(["--init-adapter", previous[1]] if previous else []))
+            grid_evaluate(f"{name}-r{k}", adapter, args)
+            previous = (data, adapter)
+        return
+    data, adapter = GRID / name, Path("adapters") / "grid" / name
+    if not (data / "sft.jsonl").exists():
+        rule = {"whole": ["--full-sources", source], "mvt": ["--rule", "mvt", "--travel", args.travel],
+                "marginal": ["--rule", "marginal"]}[args.method]
+        py("prune_traces.py", *common, "--out", data, *rule)
+    print((data / "summary.txt").read_text())
+    if not (adapter / "adapter_config.json").exists():
+        py("sft.py", "--data", data / "sft.jsonl", "--out", adapter, "--max-per-source", 1000, "--dtype", args.dtype)
+    grid_evaluate(name, adapter, args)
+
+
+def grid_evaluate(name, adapter, args):
+    """Score on all four benchmarks (4 samples): the matching one, and the spill-over onto the others."""
+    base, out = ROOT / "s4-base", GRID / f"eval-{name}"
+    evaluate(base, samples=4)
+    evaluate(out, adapter, samples=4)
+    print(score_line(name, out, base=base), flush=True)
+    result = compare(out, base)
+    row = {"name": name, "type": args.type, "method": args.method, "unit": args.unit,
+           "average": {"saved": result["average"]["token_reduction"], "delta": result["average"]["accuracy_delta"]},
+           "benchmarks": {d: {"saved": r["token_reduction"], "delta": r["accuracy_delta"]}
+                          for d, r in result["results"].items()}}
+    rows = [l for l in (GRID / "grid.jsonl").read_text().splitlines() if json.loads(l)["name"] != name] \
+        if (GRID / "grid.jsonl").exists() else []
+    (GRID / "grid.jsonl").write_text("".join(l + "\n" for l in rows + [json.dumps(row)]))
+
+
+def gridtable(args):
+    """The method x kind table: each run's effect on every benchmark, its own benchmark first."""
+    rows = [json.loads(l) for l in (GRID / "grid.jsonl").read_text().splitlines() if l.strip()]
+    benchmarks = ["svamp", "mbpp", "bfcl", "ifeval"]
+
+    def cell(row, bench):
+        parts = [v for d, v in row["benchmarks"].items() if (d.startswith("bfcl") if bench == "bfcl" else d == bench)]
+        if not parts:
+            return "-"
+        saved = sum(p["saved"] or 0 for p in parts) / len(parts)
+        delta = 100 * sum(p["delta"] for p in parts) / len(parts)
+        return f"{saved:+.0%} / {delta:+.1f}"
+
+    print(f"{'run':<28}" + "".join(f"{b:>18}" for b in benchmarks) + f"{'average':>18}")
+    for row in sorted(rows, key=lambda r: (r["type"], r["name"])):
+        own = TYPES[row["type"]][1]
+        cells = [(">" if b == own else " ") + cell(row, b) for b in benchmarks]
+        average = f"{row['average']['saved']:+.0%} / {100 * row['average']['delta']:+.1f}"
+        print(f"{row['name']:<28}" + "".join(f"{c:>18}" for c in cells) + f"{average:>18}")
+    print("\ncells: tokens saved / accuracy change in points vs the raw model (4 samples); > marks the "
+          "benchmark of the kind trained on, the others show spill-over")
 
 
 def recheck(args):

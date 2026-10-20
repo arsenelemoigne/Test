@@ -39,7 +39,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from probe_curve import candidates, read_jsonl, score, write_jsonl
-from prune_traces import Pruner, avg, mvt_index, original_target, split_steps, step_positions, thinking_text
+from prune_traces import Pruner, avg, mvt_index, original_target, split_units, step_positions, thinking_text
 
 
 def main():
@@ -48,11 +48,12 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     pruner = Pruner(SimpleNamespace(model=args.model, adapter=args.adapter, dtype=args.dtype,
                                     check_samples=args.check_samples, answer_tokens=args.answer_tokens,
-                                    batch_tokens=args.batch_tokens))
+                                    batch_tokens=args.batch_tokens, checker=args.checker))
 
     by_question = defaultdict(list)
     for rollout in read_jsonl(Path(args.rollouts)):
-        by_question[rollout["id"]].append(rollout)
+        if not args.sources or rollout["source"] in args.sources:
+            by_question[rollout["id"]].append(rollout)
     chosen = {qid: min(ok, key=lambda r: r["output_tokens"]) for qid, group in by_question.items()
               if (ok := [r for r in group if r["correct"] and r["closed_thinking"] and not r["truncated"]])}
     previous = {row["id"]: row for row in read_jsonl(Path(args.previous))} if args.previous else {}
@@ -64,9 +65,9 @@ def main():
     keep_rate = max(args.min_keep, 1 - args.round * args.word_step)
     fallback_rate = max(args.min_keep, 1 - (args.round - 1) * args.word_step)
 
-    curves, targets, log = [], [], []
+    curves, log, jobs, plans = [], [], [], []
     for number, (qid, rollout) in enumerate(chosen.items(), 1):
-        steps = split_steps(pruner.decode_thinking(rollout["thinking_ids"]))
+        steps = split_units(pruner.decode_thinking(rollout["thinking_ids"]), args.unit, pruner.tokenizer)
         if qid in cache:
             curve, positions = cache[qid]["curve"], cache[qid]["positions"]
             word_scores = cache[qid].get("word_scores")
@@ -84,7 +85,6 @@ def main():
         floor = positions[mvt_index(curve, positions, args.floor_travel)] \
             if args.floor_travel is not None else 0
         kept = fade(curve, positions, args.round * args.step, args.order, floor, args.min_steps)
-        earlier = previous.get(qid)
         entry = {"id": qid, "source": rollout["source"], "steps": len(steps), "kept_steps": len(kept),
                  "thinking_tokens": positions[-1], "floor": floor}
 
@@ -94,25 +94,34 @@ def main():
             return [compact(steps[i], word_scores[i], rate) for i in kept]
 
         rates = [keep_rate] + ([fallback_rate] if scorer and fallback_rate != keep_rate else [])
-        if len(kept) == len(steps) and (not scorer or keep_rate >= 1):
+        attempts = []
+        if not (len(kept) == len(steps) and (not scorer or keep_rate >= 1)):
+            for rate in rates:  # every attempt is checked in one batch below; the first that passes wins
+                attempts.append((rate, len(jobs)))
+                jobs.append((rollout, shortened(rate), "faded"))
+        plans.append((qid, rollout, entry, attempts))
+        if number % 20 == 0 or number == len(chosen):
+            print(f"faded {number}/{len(chosen)} questions, {len(jobs)} traces to check", flush=True)
+
+    checked = pruner.check_many(jobs, out)
+    targets = []
+    for qid, rollout, entry, attempts in plans:
+        earlier = previous.get(qid)
+        if not attempts:
             target, status = original_target(rollout), "nothing_to_delete"
         else:
             target, status = None, None
-            for attempt, rate in enumerate(rates):
-                target = pruner.checked_target(rollout, shortened(rate), "faded")
-                if target is not None:
-                    target |= {"word_keep": rate}
+            for attempt, (rate, index) in enumerate(attempts):
+                if checked[index] is not None:
+                    target = checked[index] | {"word_keep": rate}
                     status = "faded" if attempt == 0 else "faded_fewer_words"
                     break
             if target is None:
                 target = earlier or original_target(rollout)
                 status = "kept_previous" if earlier else "kept_original"
-        if target is not None:
-            fresh = status in ("faded", "faded_fewer_words")
-            targets.append(target | {"round": args.round if fresh else target.get("round", 0)})
+        fresh = status in ("faded", "faded_fewer_words")
+        targets.append(target | {"round": args.round if fresh else target.get("round", 0)})
         log.append(entry | {"status": status})
-        if number % 20 == 0 or number == len(chosen):
-            print(f"faded {number}/{len(chosen)} questions", flush=True)
 
     write_jsonl(out / "curves.jsonl", curves)
     write_jsonl(out / "sft.jsonl", targets)
@@ -140,6 +149,10 @@ def parse_arguments():
                         help="lingua: LLMLingua-2's filler classifier; marginal: log p(gold) lost without the word")
     parser.add_argument("--word-model", default="microsoft/llmlingua-2-xlm-roberta-large-meetingbank")
     parser.add_argument("--min-steps", type=int, default=1)
+    parser.add_argument("--sources", type=lambda text: set(text.split(",")), default=set(),
+                        help="only these datasets' questions (default: all)")
+    parser.add_argument("--unit", default="paragraph", help="paragraph, sentence, or tokensN (e.g. tokens32)")
+    parser.add_argument("--checker", choices=("hf", "vllm"), default="hf")
     parser.add_argument("--check-samples", type=int, default=2)
     parser.add_argument("--answer-tokens", type=int, default=512)
     parser.add_argument("--batch-tokens", type=int, default=32768)
@@ -149,9 +162,7 @@ def parse_arguments():
 
 def base_curve(pruner, rollout, siblings, steps):
     """p(gold) after each prefix of the steps, scored once (with --adapter merged, if given)."""
-    answers, terminated = candidates(rollout, siblings)
-    suffixes = [pruner.encode(" " + a) + ([pruner.end_of_turn] if terminated else []) for a in answers]
-    curve = pruner.p_gold(rollout, [steps[:n] for n in range(len(steps) + 1)], suffixes)
+    curve = pruner.p_gold(rollout, [steps[:n] for n in range(len(steps) + 1)], pruner.suffixes(rollout, siblings))
     return [round(p, 4) for p in curve]
 
 

@@ -30,8 +30,13 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from typed import full_text, is_correct
 from utils.eval.recipe import SAMPLING, SEED
-from utils.train.rewards import clean_answer, final_answer, is_task_correct, same_number
+from utils.train.rewards import clean_answer, final_answer, same_number
+
+# fields a typed question carries for its grader (prepare_types.py); copied into each rollout
+GRADE_FIELDS = ("grader", "entry_point", "tests", "setup", "category", "function", "reference",
+                "instruction_id_list", "kwargs", "original_prompt")
 
 BRIDGE = "\n</think>\n\nFinal answer:"
 OPTION = re.compile(r"^([A-Z])\. ", re.MULTILINE)
@@ -121,13 +126,14 @@ def generate(questions, args):
             closed = close_id in tokens
             thinking = tokens[:tokens.index(close_id)] if closed else tokens
             text = tokenizer.decode(tokens, skip_special_tokens=True)
-            rollouts.append({
+            truncated = not (tokens and tokens[-1] in eos_ids)
+            rollouts.append({**{f: question[f] for f in GRADE_FIELDS if f in question and f != "id"},
                 "id": question["id"], "source": question["source"], "task": question["task"],
                 "answer": question["answer"], "question": question["prompt"][-1]["content"],
                 "sample": sample, "prompt_ids": prompt, "thinking_ids": thinking, "output_ids": tokens,
                 "output_tokens": len(tokens), "closed_thinking": closed,
                 "truncated": not (tokens and tokens[-1] in eos_ids),
-                "correct": is_task_correct(text, question["answer"], question["task"]),
+                "correct": is_correct(question, full_text(tokenizer, tokens), truncated),
                 "final": extract(text)})
     return rollouts
 

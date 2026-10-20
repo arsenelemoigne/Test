@@ -22,6 +22,20 @@ average rate g(t) / (t + c) at every later point. The travel cost c (--travel) i
 anyway: a larger c means staying longer. Step 3 then keeps a deletion if p(gold) stays at the
 level the cut reached (or the threshold, whichever is lower).
 
+--rule marginal is the marginal token analysis at the level of --unit: delete each unit alone
+and measure the p(gold) it costs; units costing at most --flat are deleted (in groups that
+split on failure, as in step 3) as long as the whole edited trace keeps p(gold) within --flat
+of the full trace. No truncation.
+
+--unit picks what a "step" is: paragraph (default), sentence, or tokensN (fixed batches of N
+thinking tokens, e.g. tokens32).
+
+Code, tool-call and instruction rollouts (typed.OWN_ANSWER) have no short gold answer: their
+"p(gold)" is p(the rollout's own correct answer | thinking), a per-token geometric mean.
+
+--checker vllm runs every natural-answer check of the run in one vLLM batch (check_vllm.py),
+which long code and instruction answers need; hf checks one trace at a time.
+
 Per question it keeps the shortest accepted completion (thinking + answer, as the evaluation
 counts it). Questions whose p(gold) never settles keep their shortest correct original
 rollout, so training does not teach "always stop early" on the hard ones.
@@ -38,10 +52,13 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from probe_curve import candidates, gold_probability, read_jsonl, score, write_jsonl
+from typed import OWN_ANSWER, full_text, is_correct
 from utils.eval.recipe import SAMPLING
-from utils.train.rewards import is_task_correct
 
 STEP_END = re.compile(r"(?<=\n\n)")
+SENTENCE = re.compile(r"[^.!?\n]*(?:[.!?]+[\"')\]]*|\n+|$)[ \t]*")
+GRADE_FIELDS = ("id", "task", "answer", "grader", "entry_point", "tests", "setup", "category", "function",
+                "reference", "instruction_id_list", "kwargs", "original_prompt")
 
 
 def main():
@@ -52,30 +69,42 @@ def main():
 
     by_question = defaultdict(list)
     for rollout in read_jsonl(Path(args.rollouts)):
-        by_question[rollout["id"]].append(rollout)
+        if not args.sources or rollout["source"] in args.sources:
+            by_question[rollout["id"]].append(rollout)
 
-    targets, log = [], []
-    for number, group in enumerate(by_question.values(), 1):
-        accepted = []
+    targets, log, jobs, pending = [], [], [], {}
+    for number, (qid, group) in enumerate(by_question.items(), 1):
         if group[0]["source"] in args.full_sources:  # e.g. math: the reasoning is needed to the end
             full = [original_target(r) for r in group if r["correct"] and not r["truncated"] and r["closed_thinking"]]
             if full:
                 targets.append(min(full, key=lambda t: len(t["completion_ids"])))
             continue
+        pending[qid] = []
         for rollout in group:
             if not (rollout["correct"] and rollout["closed_thinking"]):
                 continue
             outcome = pruner.prune(rollout, group)
-            log.append({"id": rollout["id"], "sample": rollout["sample"], "source": rollout["source"],
-                        "original_tokens": rollout["output_tokens"]} | outcome["log"])
-            accepted += outcome["targets"]
+            entry = {"id": rollout["id"], "sample": rollout["sample"], "source": rollout["source"],
+                     "original_tokens": rollout["output_tokens"]} | outcome["log"]
+            log.append(entry)
+            for kind, units in outcome["candidates"]:
+                pending[qid].append(len(jobs))
+                jobs.append((rollout, units, kind, entry))
+        if number % 10 == 0 or number == len(by_question):
+            print(f"probed {number}/{len(by_question)} questions, {len(jobs)} traces to check", flush=True)
+
+    checked = pruner.check_many([(r, u, k) for r, u, k, _ in jobs], out)
+    for (rollout, units, kind, entry), target in zip(jobs, checked):
+        entry[f"{kind}_check"] = target is not None
+        entry["status"] = "accepted" if target is not None or entry.get("status") == "accepted" else "failed_check"
+    for qid, indices in pending.items():
+        accepted = [checked[i] for i in indices if checked[i] is not None]
+        group = by_question[qid]
         if not accepted and args.keep_unsettled:
             accepted = [original_target(r) for r in group
                         if r["correct"] and not r["truncated"] and r["closed_thinking"]]
         if accepted:
             targets.append(min(accepted, key=lambda t: len(t["completion_ids"])))
-        if number % 10 == 0 or number == len(by_question):
-            print(f"pruned {number}/{len(by_question)} questions, {len(targets)} targets", flush=True)
 
     write_jsonl(out / "sft.jsonl", targets)
     write_jsonl(out / "log.jsonl", log)
@@ -87,12 +116,16 @@ def parse_arguments():
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
     parser.add_argument("--rollouts", required=True, help="rollouts.jsonl from probe_curve.py")
     parser.add_argument("--out", required=True)
-    parser.add_argument("--rule", choices=("settle", "mvt"), default="settle",
+    parser.add_argument("--rule", choices=("settle", "mvt", "marginal"), default="settle",
                         help="settle: cut where p(gold) reaches --threshold and stays; "
                              "mvt: cut where the marginal gain drops to the average rate (Charnov)")
     parser.add_argument("--travel", type=float, default=256,
                         help="mvt travel cost c in tokens: the answer that follows anyway; larger stays longer")
     parser.add_argument("--adapter", help="LoRA to merge into --model before scoring and checking")
+    parser.add_argument("--sources", type=lambda text: set(text.split(",")), default=set(),
+                        help="only these datasets' rollouts (default: all)")
+    parser.add_argument("--unit", default="paragraph", help="paragraph, sentence, or tokensN (e.g. tokens32)")
+    parser.add_argument("--checker", choices=("hf", "vllm"), default="hf")
     parser.add_argument("--full-sources", type=lambda text: set(text.split(",")), default=set(),
                         help="datasets kept whole (shortest correct rollout, no cut), e.g. gsm8k")
     parser.add_argument("--threshold", type=float, default=0.9, help="p(gold) a kept trace must reach")
@@ -128,11 +161,10 @@ class Pruner:
         self.open_id = self.tokenizer.convert_tokens_to_ids("<think>")
 
     def prune(self, rollout, siblings):
-        """{"targets": [...], "log": {...}} for one correct rollout."""
+        """{"candidates": [(kind, units)], "log": {...}} for one correct rollout; checks come later."""
         args = self.args
-        steps = split_steps(self.decode_thinking(rollout["thinking_ids"]))
-        answers, terminated = candidates(rollout, siblings)
-        suffixes = [self.encode(" " + a) + ([self.end_of_turn] if terminated else []) for a in answers]
+        steps = split_units(self.decode_thinking(rollout["thinking_ids"]), args.unit, self.tokenizer)
+        suffixes = self.suffixes(rollout, siblings)
 
         def p_gold(variants):
             return self.p_gold(rollout, [[steps[i] for i in kept] for kept in variants], suffixes)
@@ -143,9 +175,24 @@ class Pruner:
         mvt = mvt_index(curve, positions, args.travel)
         log = {"steps": len(steps), "settle_step": settle, "mvt_step": mvt, "positions": positions,
                "curve": [round(p, 4) for p in curve]}
+        everything = list(range(len(steps)))
+
+        if args.rule == "marginal":
+            full = curve[-1]
+            without = p_gold([[j for j in everything if j != i] for i in everything])
+            costs = {i: full - p for i, p in zip(everything, without)}
+            cheap = sorted((i for i in everything if costs[i] <= args.flat), key=costs.get)
+            pruned = drop_flat(everything, cheap, lambda kept: len(kept) >= args.min_steps
+                               and p_gold([kept])[0] >= full - args.flat)
+            log |= {"costs": [round(costs[i], 4) for i in everything], "pruned_steps": len(pruned),
+                    "flat_steps": len(cheap)}
+            if pruned == everything:
+                return {"candidates": [], "log": log | {"status": "nothing_to_delete"}}
+            return {"candidates": [("pruned", [steps[i] for i in pruned])], "log": log | {"status": "pending"}}
+
         cut = mvt if args.rule == "mvt" else settle
         if cut is None:
-            return {"targets": [], "log": log | {"status": "unsettled"}}
+            return {"candidates": [], "log": log | {"status": "unsettled"}}
 
         truncated = list(range(min(len(steps), max(cut + args.margin, args.min_steps))))
         level = args.threshold if args.rule == "settle" else min(args.threshold, curve[len(truncated)])
@@ -153,16 +200,50 @@ class Pruner:
         pruned = drop_flat(truncated, flat, lambda kept: len(kept) >= args.min_steps
                            and p_gold([kept])[0] >= level)
         log |= {"truncated_steps": len(truncated), "pruned_steps": len(pruned), "flat_steps": len(flat)}
+        variants = [("pruned", pruned)] + ([("truncated", truncated)] if pruned != truncated else [])
+        return {"candidates": [(kind, [steps[i] for i in kept]) for kind, kept in variants],
+                "log": log | {"status": "pending"}}
 
-        targets = []
-        for kind, kept in (("pruned", pruned), ("truncated", truncated)):
-            target = self.checked_target(rollout, [steps[i] for i in kept], kind)
-            log[f"{kind}_check"] = target is not None
-            if target is not None:
-                targets.append(target)
-            if kind == "pruned" and pruned == truncated:
-                break
-        return {"targets": targets, "log": log | {"status": "accepted" if targets else "failed_check"}}
+    def suffixes(self, rollout, siblings):
+        """Teacher-forced answers to score: the candidate answers, or None for an own-answer task."""
+        if rollout["task"] in OWN_ANSWER:
+            return None
+        answers, terminated = candidates(rollout, siblings)
+        return [self.encode(" " + a) + ([self.end_of_turn] if terminated else []) for a in answers]
+
+    def own_answer(self, rollout):
+        """The rollout's reply after its thinking, as token ids ending with the end-of-turn token."""
+        if "_answer_ids" not in rollout:
+            close = self.tokenizer.convert_tokens_to_ids("</think>")
+            ids = rollout["output_ids"]
+            tail = ids[ids.index(close) + 1:] if close in ids else ids
+            text = self.tokenizer.decode(tail, skip_special_tokens=True).lstrip("\n")
+            rollout["_answer_ids"] = self.encode(text) + [self.end_of_turn]
+        return rollout["_answer_ids"]
+
+    def answer_cap(self, rollout):
+        return max(self.args.answer_tokens, 1024) if rollout["task"] in OWN_ANSWER else self.args.answer_tokens
+
+    def check_many(self, jobs, out):
+        """[(rollout, units, kind)] -> the SFT row for each, or None where a natural answer failed."""
+        if self.args.check_samples == 0 or self.args.checker == "hf" or not jobs:
+            return [self.checked_target(r, u, k) for r, u, k in jobs]
+        import subprocess
+        import sys
+
+        thinking = [self.encode(thinking_text(units)) for _, units, _ in jobs]
+        inputs, results = out / "check_inputs.jsonl", out / "check_results.jsonl"
+        write_jsonl(inputs, [{"key": i, "prompt_ids": r["prompt_ids"], "thinking_ids": t,
+                              "max_tokens": self.answer_cap(r), "row": {f: r[f] for f in GRADE_FIELDS if f in r}}
+                             for i, ((r, _, _), t) in enumerate(zip(jobs, thinking))])
+        command = [sys.executable, "check_vllm.py", "--model", self.args.model, "--inputs", str(inputs),
+                   "--out", str(results), "--samples", str(self.args.check_samples), "--dtype", self.args.dtype]
+        if getattr(self.args, "adapter", None):
+            command += ["--adapter", self.args.adapter]
+        subprocess.run(command, check=True)
+        verdicts = {v["key"]: v["answer_ids"] for v in read_jsonl(results)}
+        return [make_target(r, t, verdicts[i], k, len(u)) if verdicts.get(i) else None
+                for i, ((r, u, k), t) in enumerate(zip(jobs, thinking))]
 
     def decode_thinking(self, thinking_ids):
         if thinking_ids and thinking_ids[0] == self.open_id:
@@ -173,8 +254,18 @@ class Pruner:
         return self.tokenizer.encode(text, add_special_tokens=False)
 
     def p_gold(self, rollout, variants, suffixes):
-        """p(gold) after each variant's thinking, as probe_curve.py measures it."""
+        """p(gold) after each variant's thinking, as probe_curve.py measures it.
+
+        suffixes None: an own-answer task, scored as the per-token geometric mean of p(own answer).
+        """
         import math
+
+        if suffixes is None:
+            answer = self.own_answer(rollout)
+            rows = [(v, 0, rollout["prompt_ids"] + self.encode(thinking_text(steps)), answer)
+                    for v, steps in enumerate(variants)]
+            scores = score(self.model, rows, self.args.batch_tokens, self.device)
+            return [math.exp(scores[(v, 0)] / len(answer)) for v in range(len(variants))]
 
         rows = [(v, c, rollout["prompt_ids"] + self.encode(thinking_text(steps) + "Final answer:"), suffix)
                 for v, steps in enumerate(variants) for c, suffix in enumerate(suffixes)]
@@ -192,21 +283,22 @@ class Pruner:
         thinking = self.encode(thinking_text(steps))
         context = rollout["prompt_ids"] + thinking
         if self.args.check_samples == 0:
-            answer = self.encode(f"Final answer: {rollout['answer']}") + [self.end_of_turn]
+            answer = self.own_answer(rollout) if rollout["task"] in OWN_ANSWER \
+                else self.encode(f"Final answer: {rollout['answer']}") + [self.end_of_turn]
             return make_target(rollout, thinking, answer, kind, len(steps))
         inputs = torch.tensor([context], device=self.device)
         with torch.no_grad():
             output = self.model.generate(
                 inputs, attention_mask=torch.ones_like(inputs), do_sample=True,
-                num_return_sequences=self.args.check_samples, max_new_tokens=self.args.answer_tokens,
+                num_return_sequences=self.args.check_samples, max_new_tokens=self.answer_cap(rollout),
                 eos_token_id=self.end_of_turn, pad_token_id=self.end_of_turn, **SAMPLING)
         answers = []
         for row in output[:, len(context):].tolist():
             if self.end_of_turn not in row:
                 return None  # ran out of room: the evaluation would cut it off too
             answer = row[:row.index(self.end_of_turn) + 1]
-            text = self.tokenizer.decode(thinking + answer, skip_special_tokens=True)
-            if not is_task_correct(text, rollout["answer"], rollout["task"]):
+            text = full_text(self.tokenizer, thinking + answer)
+            if not is_correct(rollout, text):
                 return None
             answers.append(answer)
         return make_target(rollout, thinking, min(answers, key=len), kind, len(steps))
@@ -215,6 +307,24 @@ class Pruner:
 def thinking_text(steps):
     """A thinking block in Qwen3's own layout: "<think>\\n...\\n</think>\\n\\n"."""
     return "<think>\n" + "".join(steps).strip() + "\n</think>\n\n"
+
+
+def split_units(text, unit="paragraph", tokenizer=None):
+    """The thinking cut into the pieces the rules work on: paragraphs, sentences or token batches."""
+    if unit == "paragraph":
+        return split_steps(text)
+    if unit == "sentence":
+        parts = []
+        for part in SENTENCE.findall(text):
+            if part.strip() or not parts:
+                parts.append(part)
+            else:
+                parts[-1] += part  # a bare line break belongs to the sentence before it
+        return [part for part in parts if part]
+    if unit.startswith("tokens"):
+        size, ids = int(unit[len("tokens"):]), tokenizer.encode(text, add_special_tokens=False)
+        return [tokenizer.decode(ids[i:i + size]) for i in range(0, len(ids), size)]
+    raise ValueError(f"unknown unit {unit!r}")
 
 
 def split_steps(text):

@@ -1,1 +1,29 @@
-# Runtime B: the per-type method grid (filled in once its code is pushed).
+# Runtime B: the per-type method grid. Each line trains on one kind of data only and scores all
+# four benchmarks with 4 samples (the matching one, plus spill-over onto the others).
+grid_data
+grid --type code --method mvt --travel 1024
+recheck
+grid --type math --method whole
+grid --type code --method whole
+grid --type tool --method whole
+grid --type text --method whole
+grid --type math --method mvt --travel 1024
+grid --type tool --method mvt --travel 1024
+grid --type text --method mvt --travel 1024
+grid --type math --method mvt --travel 1024 --unit tokens32
+grid --type code --method mvt --travel 1024 --unit tokens32
+grid --type tool --method mvt --travel 1024 --unit tokens32
+grid --type text --method mvt --travel 1024 --unit tokens32
+grid --type math --method marginal
+grid --type code --method marginal
+grid --type tool --method marginal
+grid --type text --method marginal
+grid --type math --method marginal --unit tokens32
+grid --type code --method marginal --unit tokens32
+grid --type tool --method marginal --unit tokens32
+grid --type text --method marginal --unit tokens32
+grid --type math --method fade --rounds 3
+grid --type code --method fade --rounds 3
+grid --type tool --method fade --rounds 3
+grid --type text --method fade --rounds 3
+gridtable

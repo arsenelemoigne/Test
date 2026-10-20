@@ -414,3 +414,37 @@ def test_compact_drops_low_scored_words_but_keeps_math_and_layout():
     assert all(w in short for w in ["3", "12", "=", "36"])
     assert len(short.split()) < len(words)
     assert compact(step, scores[:-1], 0.5) == step  # scores that do not match: untouched
+
+
+def test_split_units_by_sentence_and_token_batches():
+    from prune_traces import split_units
+
+    class Chars:  # a tokenizer whose tokens are characters
+        def encode(self, text, add_special_tokens=False):
+            return [ord(c) for c in text]
+
+        def decode(self, ids):
+            return "".join(chr(i) for i in ids)
+
+    text = "First one. Second! Third?\nFourth line\n\nNew paragraph."
+    sentences = split_units(text, "sentence")
+    assert "".join(sentences) == text and len(sentences) >= 5
+    batches = split_units(text, "tokens8", Chars())
+    assert "".join(batches) == text and all(len(b) <= 8 for b in batches)
+    assert split_units(text, "paragraph") == ["First one. Second! Third?\nFourth line\n\n", "New paragraph."]
+
+
+def test_typed_helpers_for_code_and_tool_data():
+    from typed import bfcl_function, bfcl_reference, entry_point, response_of
+
+    assert entry_point("assert sum_list([1, 2]) == 3") == "sum_list"
+    assert entry_point("assert math.isclose(area(2), 12.5)") == "area"
+    assert response_of("<think>\nhmm\n</think>\n\nanswer") == "answer"
+    tool = {"type": "function", "function": {"name": "get_weather", "description": "d", "parameters": {
+        "type": "object", "properties": {"city": {"type": "string"}, "days": {"type": "number"},
+                                         "opts": {"type": "object", "properties": {}}}, "required": ["city"]}}}
+    function = bfcl_function(tool)
+    assert function["parameters"]["type"] == "dict" and function["parameters"]["required"] == ["city"]
+    assert function["parameters"]["properties"]["days"]["type"] == "float"
+    assert function["parameters"]["properties"]["opts"]["type"] == "dict"
+    assert bfcl_reference(function, {"city": "Paris"}) == [{"get_weather": {"city": ["Paris"], "days": [""], "opts": [""]}}]
