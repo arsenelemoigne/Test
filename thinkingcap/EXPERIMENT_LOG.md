@@ -531,3 +531,8 @@ each round continuing the previous adapter) follows, then the combined model.
 
 Math fading round 1 (20% of the paragraphs, lowest probe gain first; 79 of 122 traces passed,
 912 -> 769 tokens): the first run that shortens math without losing it.
+| math-fade-r2 | +15.8% | -4.2 | SVAMP **+35% / +1.9** | IFEval -7.5, MBPP+ -9.4 |
+
+Round 2 (40%; 93 of 122 passed; 912 -> 622 tokens): math itself still shortens without loss;
+the drop is spill-over onto IFEval and MBPP+, the cost of training on one kind (see the whole
+runs). Candidate for the math part of the combined model.
