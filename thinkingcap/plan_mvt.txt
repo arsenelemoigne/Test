@@ -28,3 +28,9 @@ grid --type math --method mvt --travel 256
 grid --type math --method mvt --travel 1024 --unit tokens32
 grid --type math --method mvt --travel 256 --unit tokens32
 gridtable
+# extras (user approved 2026-10-21): type-specific cut, 8-sample rechecks of the winners
+grid --type tool --method mvt --travel 256 --keep-whole irrelevance
+recheck --samples 8 --adapter adapters/grid/tool-mvt256
+recheck --samples 8 --adapter adapters/grid/tool-mvt1024
+recheck --samples 8 --adapter adapters/grid/text-mvt1024
+gridtable

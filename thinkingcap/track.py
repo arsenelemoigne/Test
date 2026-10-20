@@ -48,6 +48,7 @@ def main():
     parser.add_argument("--type", choices=("math", "code", "tool", "toolh", "text", "choice"), help="grid: the kind of data trained on")
     parser.add_argument("--method", choices=("whole", "mvt", "marginal", "fade"), help="grid: how its traces are shortened")
     parser.add_argument("--unit", default="paragraph", help="grid: paragraph, sentence or tokensN")
+    parser.add_argument("--keep-whole", default="", help="grid: categories kept uncut, e.g. irrelevance")
     parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
     parser.add_argument("--inputs", nargs="*", default=[],
                         help="combine: sft.jsonl[:source[:source...]] files whose rows (of those sources) are pooled")
@@ -280,7 +281,7 @@ def grid(args):
     source, _ = TYPES[args.type]
     unit = args.unit if args.method != "whole" else "paragraph"
     name = f"{args.type}-{args.method}" + (f"{args.travel:g}" if args.method == "mvt" else "") \
-        + (f"-{unit}" if unit != "paragraph" else "")
+        + (f"-{unit}" if unit != "paragraph" else "") + (f"-whole-{args.keep_whole}" if args.keep_whole else "")
     common = ["--rollouts", GRID / "probe" / "rollouts.jsonl", "--sources", source, "--unit", unit,
               "--checker", "vllm", "--dtype", args.dtype,
               *(["--easy-tokens", EASY[args.type]] if args.type in EASY else [])]
@@ -303,6 +304,7 @@ def grid(args):
     if not (data / "sft.jsonl").exists():
         rule = {"whole": ["--full-sources", source], "mvt": ["--rule", "mvt", "--travel", args.travel],
                 "marginal": ["--rule", "marginal"]}[args.method]
+        rule += ["--full-sources", args.keep_whole] if args.keep_whole else []
         py("prune_traces.py", *common, "--out", data, *rule)
     print((data / "summary.txt").read_text())
     if not (adapter / "adapter_config.json").exists():

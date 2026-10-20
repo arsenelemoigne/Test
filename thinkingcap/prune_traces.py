@@ -77,7 +77,8 @@ def main():
 
     targets, log, jobs, pending = [], [], [], {}
     for number, (qid, group) in enumerate(by_question.items(), 1):
-        if group[0]["source"] in args.full_sources:  # e.g. math: the reasoning is needed to the end
+        # a source (e.g. math: the reasoning is needed to the end) or a category (e.g. BFCL irrelevance)
+        if args.full_sources & {group[0]["source"], group[0].get("category")}:
             full = [original_target(r) for r in group if r["correct"] and not r["truncated"] and r["closed_thinking"]]
             if full:
                 targets.append(min(full, key=lambda t: len(t["completion_ids"])))
