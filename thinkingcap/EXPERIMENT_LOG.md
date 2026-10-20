@@ -629,3 +629,26 @@ MBPP+ +77% / **-12.5** (code is cut by spill-over although no code trace is in t
 and can be turned down. Candidates: 1b winner + tool MVT (1.0); + tool, code tokens32 and
 math-fade r2 at 0.5; all at 1.0. `fullbest` then sends the candidate saving most within -2.5
 pts (4 samples) to the full evaluation.
+
+# Track 3: MVT per type, matched data (branch `mvt-pertype`)
+
+Own Colab L4 runtime from 2026-10-20 22:08 (the RL session's runtime was stopped, with the user's
+approval, to free the slot). `TRACK_SET=matched`, queue `plan_mvt.txt`.
+
+Data fix before the run: about half of ToolACE's prose first replies ask for a missing argument of
+a function that fits; BFCL's irrelevance means no function fits. `prepare_types.py` now keeps
+only replies saying no function can do it (checked on CPU: 5,025 simple, 3,615 multiple, 276
+irrelevance usable). The mvt-fading session's `bon` data predates this filter.
+
+## Reference: raw Qwen3-0.6B on this runtime (240 questions, 2 samples)
+
+| benchmark | accuracy | mean tokens |
+|---|---|---|
+| BFCL irrelevance | 82.5% | 204 |
+| BFCL multiple | 76.3% | 223 |
+| BFCL simple | 82.5% | 190 |
+| IFEval | 53.8% | 734 |
+| MBPP+ | 57.5% | 1,699 |
+| SVAMP | 81.3% | 940 |
+
+Same as the earlier runtimes (same seed). Capped: IFEval 3.8%, MBPP+ 7.5%, SVAMP 3.8%.
