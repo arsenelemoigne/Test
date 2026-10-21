@@ -57,7 +57,8 @@ def main():
         # one chunk, not the whole run. Chunks mix the sources so long and short replies share a batch.
         partial = out / (ROLLOUTS + ".partial")
         done = {r["id"] for r in read_jsonl(partial)} if partial.exists() else set()
-        todo = [q for q in questions if q["id"] not in done]
+        skip = {r["id"] for r in read_jsonl(Path(args.exclude_rollouts))} if args.exclude_rollouts else set()
+        todo = [q for q in questions if q["id"] not in done and q["id"] not in skip]
         random.Random(SEED).shuffle(todo)
         if args.max_questions:  # a mixed sample of every source, stopped at this many questions in all
             todo = todo[:max(0, args.max_questions - len(done))]
@@ -103,6 +104,7 @@ def parse_arguments():
     parser.add_argument("--chunk", type=int, default=0,
                         help="sample this many questions at a time and append each chunk to rollouts.jsonl.partial, "
                              "resuming from it after a disconnect (0: one batch, saved at the end)")
+    parser.add_argument("--exclude-rollouts", help="chunk mode: skip the questions already in this rollouts file")
     parser.add_argument("--max-questions", type=int, default=0, help="chunk mode: stop after this many questions")
     parser.add_argument("--summarize-only", action="store_true")
     parser.add_argument("--generate-only", action="store_true", help=argparse.SUPPRESS)

@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--fresh-questions", action="store_true", help="bon_dpo round: questions not sampled before")
     parser.add_argument("--rollouts-from", help="bon_dpo: a new round sampled from this adapter, or auto (best checkpoint)")
     parser.add_argument("--save-every", type=int, default=25, help="bon_dpo: DPO checkpoint interval (steps)")
     parser.add_argument("--gen-questions", type=int, default=0, help="bon: stop sampling at this many questions (0: all)")
@@ -543,12 +544,17 @@ def bon_dpo(args):
         if not (probe / "rollouts.jsonl").exists():
             py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", BON_SOURCES, "--per-source", 300,
                "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
-               "--max-questions", args.gen_questions)
+               "--max-questions", args.gen_questions,
+               *(["--exclude-rollouts", BON / "probe" / "rollouts.jsonl"] if args.fresh_questions else []))
         rollouts = probe / "rollouts.jsonl"
+        keep = BON / f"select-{name}"
+        if not (keep / "sft.jsonl").exists():  # the same easy-math filter and contamination check, on these questions
+            py("select_shortest.py", "--rollouts", rollouts, "--out", keep, "--easy-tokens", "gsm8k_all=700")
+            py("contamination.py", "--data", keep / "sft.jsonl", "--rollouts", rollouts)
     pairs = BON / (f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else "")
                    + (f"-drop-{args.drop_sources}" if args.drop_sources else ""))
     if not (pairs / "pairs.jsonl").exists():
-        py("bon_pairs.py", "--rollouts", rollouts, "--keep", BON / "select-r1" / "sft.jsonl",
+        py("bon_pairs.py", "--rollouts", rollouts, "--keep", (keep if args.rollouts_from else BON / "select-r1") / "sft.jsonl",
            "--out", pairs, "--no-shorten", no_shorten, "--drop-sources", args.drop_sources)
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / name

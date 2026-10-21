@@ -12,5 +12,6 @@ bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 2 --save-every 
 bon_dpo --name bon-dpo-nocode --drop-sources mbpp_train --dpo-epochs 2 --save-every 10 --eval-steps 10 20 30 40 60
 # half data: one pass over the pairs is ~32 steps, so these runs take 2 passes
 # every sweep: 2 samples per checkpoint, the best within the limit re-scored with 4
-# push past 50%: round 2, the best checkpoint so far answers the same questions 8 times again, new pairs, DPO on
-bon_dpo --name bon-dpo-r2 --rollouts-from auto --gen-questions 750 --dpo-epochs 2 --save-every 10 --eval-steps 10 20 30 40 60
+# push past 50%: round 2, the best checkpoint so far answers the 750 questions not used yet, 8 times each;
+# new pairs, one pass of DPO from it (more passes undo the brevity)
+bon_dpo --name bon-dpo-r2 --rollouts-from auto --fresh-questions --gen-questions 750 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
