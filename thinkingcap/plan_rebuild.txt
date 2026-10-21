@@ -1,13 +1,15 @@
 # rebuild after the runtime was recycled (2026-10-21 11:07); every result and adapter is saved to Google Drive
 # best-of-8 data: a mixed half (750 of 1,500 questions) x 8, to save ~2 h and the gentle SFT start, no test (already scored: +4.4% / -2.8)
 bon --per-source 300 --max-per-source 300 --skip-eval --gen-questions 750
-# the winner again: DPO from bon-r1 (was step-25 +47.6% / -2.6); constant lr and seed: the same first steps
-bon_dpo --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+# the winner again, pushed to ~130 steps to find where it breaks (was step-25 +47.6% / -2.6); quick 2-sample
+# scores along the way, the best within the limit then with 4 samples
+bon_dpo --dpo-epochs 4 --save-every 10 --eval-steps 10 20 30 50 70 100 130
 # DPO straight from the raw model, no SFT step (same pairs, same settings)
 bon_dpo --name bon-dpo-raw --start raw --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
 # code fix: code gets only right-beats-wrong pairs, with a typical-length correct reply; intermediate scores
 bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 50
 # no code pairs at all (as Lightning McQwen3, who trained on no code): code changes only by spill-over
 bon_dpo --name bon-dpo-nocode --drop-sources mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40
+# every sweep: 2 samples per checkpoint, the best within the limit re-scored with 4
 # push past 50%: round 2, the best checkpoint so far answers the same questions 8 times again, new pairs, DPO on
 bon_dpo --name bon-dpo-r2 --rollouts-from auto --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40

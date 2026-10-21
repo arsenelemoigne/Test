@@ -62,6 +62,7 @@ def main():
                              "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--no-shorten", default="", help="bon_dpo: sources with guard pairs only")
+    parser.add_argument("--eval-samples", type=int, default=2, help="bon_dpo: samples per question in the sweep")
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
@@ -554,14 +555,26 @@ def bon_dpo(args):
         py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
            "--mix", "0.6,0.4,0", "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
         (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten}))
-    base = ROOT / "s4-base"
-    evaluate(base, samples=4)
+    # a quick sweep (--eval-samples, 2 by default), then the sweep's best within the limit with 4 samples
+    n = args.eval_samples
+    base = ROOT / f"s{n}-base"
+    evaluate(base, samples=n)
+    sweep = []
     for checkpoint in sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])):
         if args.eval_steps and int(checkpoint.name.split("-")[1]) not in args.eval_steps:
             continue
+        out = ROOT / f"s{n}-{name}-{checkpoint.name}"
+        evaluate(out, checkpoint, samples=n)
+        line, delta = score_line(f"{name} {checkpoint.name} ({n} samples)", out, with_delta=True, base=base)
+        print(line, flush=True)
+        sweep.append((compare(out, base)["average"]["token_reduction"] or 0, delta, checkpoint))
+    safe = [c for c in sweep if c[1] >= LIMIT]
+    if n != 4 and safe:
+        saved, _, checkpoint = max(safe, key=lambda c: c[0])
+        evaluate(ROOT / "s4-base", samples=4)
         out = ROOT / f"s4-{name}-{checkpoint.name}"
         evaluate(out, checkpoint, samples=4)
-        print(score_line(f"{name} {checkpoint.name} (4 samples)", out, base=base), flush=True)
+        print(score_line(f"{name} {checkpoint.name} (4 samples, the sweep's best)", out, base=ROOT / "s4-base"), flush=True)
 
 
 def best_checkpoint(floor=-2.5):
