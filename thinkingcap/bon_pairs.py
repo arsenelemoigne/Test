@@ -4,6 +4,7 @@ Per question (only those kept by select_shortest.py and the contamination check)
   shorten  shortest correct reply  beats  the longest correct reply (at least --ratio times longer)
   guard    shortest correct reply  beats  the shortest wrong reply (finished, not cut by the cap):
            brevity must not come from giving up
+  --drop-sources sources get no pairs at all (their length changes only by spill-over)
   --no-shorten sources get guard pairs only, with their median-length correct reply as chosen
 
     python bon_pairs.py --rollouts runs/bon/probe/rollouts.jsonl --keep runs/bon/select-r1/sft.jsonl --out runs/bon/pairs
@@ -23,13 +24,14 @@ def main():
     parser.add_argument("--keep", required=True, help="sft.jsonl whose question ids are allowed")
     parser.add_argument("--out", required=True)
     parser.add_argument("--ratio", type=float, default=1.5)
+    parser.add_argument("--drop-sources", default="", help="sources left out entirely (e.g. mbpp_train)")
     parser.add_argument("--no-shorten", default="", help="sources that get guard pairs only (e.g. mbpp_train)")
     args = parser.parse_args()
 
     allowed = {r["id"] for r in read_jsonl(Path(args.keep))}
     by_question = defaultdict(list)
     for r in read_jsonl(Path(args.rollouts)):
-        if r["id"] in allowed:
+        if r["id"] in allowed and r["source"] not in args.drop_sources.split(","):
             by_question[r["id"]].append(r)
     pairs, kinds, lengths = [], Counter(), defaultdict(list)
     for qid, group in by_question.items():

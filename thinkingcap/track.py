@@ -62,6 +62,7 @@ def main():
                              "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--no-shorten", default="", help="bon_dpo: sources with guard pairs only")
+    parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
     parser.add_argument("--rollouts-from", help="bon_dpo: a new round sampled from this adapter, or auto (best checkpoint)")
@@ -531,10 +532,11 @@ def bon_dpo(args):
             py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", BON_SOURCES, "--per-source", 300,
                "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
         rollouts = probe / "rollouts.jsonl"
-    pairs = BON / (f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else ""))
+    pairs = BON / (f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else "")
+                   + (f"-drop-{args.drop_sources}" if args.drop_sources else ""))
     if not (pairs / "pairs.jsonl").exists():
         py("bon_pairs.py", "--rollouts", rollouts, "--keep", BON / "select-r1" / "sft.jsonl",
-           "--out", pairs, "--no-shorten", no_shorten)
+           "--out", pairs, "--no-shorten", no_shorten, "--drop-sources", args.drop_sources)
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / name
     if not (adapter / "adapter_config.json").exists():
