@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--code-data", nargs="*", default=[], help="code_round: data files whose code questions are answered again")
     parser.add_argument("--dataset", default="mbpp", help="diag: the benchmark to look at")
     parser.add_argument("--data-seed", type=int, default=0, help="bon_dpo round: sample a fresh question draw with this seed")
     parser.add_argument("--mix", default="0.6,0.4,0", help="bon_dpo: shares of shorten, guard, hard pairs")
@@ -605,14 +606,27 @@ def code_round(args):
     """Round 3's pairs plus code "stopped too early" pairs (code_pairs.py), DPO from --start, scored as bon_dpo."""
     name = args.name or "code-r3"
     start = args.start or "adapters/bon-dpo-r2g/step-10"
-    code = BON / f"code-{name}"
-    if not (code / "pairs.jsonl").exists():
-        py("code_pairs.py", "--rollouts", BON / "probe-bon-dpo-r3" / "rollouts.jsonl",
-           "--keep", BON / "select-bon-dpo-r3" / "sft.jsonl", "--adapter", start, "--out", code, "--dtype", args.dtype)
-    print((code / "summary.txt").read_text(), flush=True)
+    sources = [(BON / "probe-bon-dpo-r3" / "rollouts.jsonl", BON / "select-bon-dpo-r3" / "sft.jsonl", "r3")]
+    for data in args.code_data:  # more code: the start model answers every code question of these files 4 times
+        stem = Path(data).stem
+        probe, keep = BON / f"code-probe-{name}-{stem}", BON / f"code-select-{name}-{stem}"
+        if not (probe / "rollouts.jsonl").exists():
+            py("probe_curve.py", "--data", data, "--sources", "mbpp_train", "--per-source", 300, "--samples", 4,
+               "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
+        if not (keep / "sft.jsonl").exists():
+            py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", keep)
+            py("contamination.py", "--data", keep / "sft.jsonl", "--rollouts", probe / "rollouts.jsonl")
+        sources.append((probe / "rollouts.jsonl", keep / "sft.jsonl", stem))
+    files = [BON / "pairs-bon-dpo-r3-drop-mbpp_train" / "pairs.jsonl"]
+    for rollouts, keep, stem in sources:
+        code = BON / f"code-{name}-{stem}"
+        if not (code / "pairs.jsonl").exists():
+            py("code_pairs.py", "--rollouts", rollouts, "--keep", keep, "--adapter", start, "--out", code,
+               "--dtype", args.dtype)
+        print((code / "summary.txt").read_text(), flush=True)
+        files.append(code / "pairs.jsonl")
     pairs = BON / f"pairs-{name}"
-    rows = [json.loads(l) for f in (BON / "pairs-bon-dpo-r3-drop-mbpp_train" / "pairs.jsonl", code / "pairs.jsonl")
-            for l in f.read_text().splitlines() if l.strip()]
+    rows = [json.loads(l) for f in files for l in f.read_text().splitlines() if l.strip()]
     pairs.mkdir(parents=True, exist_ok=True)
     (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]

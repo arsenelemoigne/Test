@@ -863,3 +863,10 @@ catch the edge cases.
 code questions with a correct reply, 2 replies each, cut at 25/50/75% of the thinking, 4 re-answers:
 wrong after the cut 24/60 (25%), 15/60 (50%), 10/60 (75%). 30 hard pairs, added to round 3's 420
 (199 shorten, 221 guard): code is 7% of the pairs.
+
+**Code round (round-3 pairs + 30 code too-early pairs, from the gentle round-2 model), 2 samples:**
+step 5 +56.0% / -2.0; step 10 +57.5% / -4.0; step 15 +60.1% / -6.4; step 20 +64.5% / -6.4.
+**Step 5 with 4 samples: +53.2% / -0.1** (svamp +67% / +3.1, ifeval +53% / +3.7, bfcl +37-44% /
+-0.6..+5.6, mbpp +49% / -10.0). Against round 3 step 5 without code pairs (+56.8% / -2.6, mbpp -12.5):
+3.6 points less saving, 2.5 points more accuracy; code itself barely moves (-10.0 vs -12.5, within
+noise). Queued: 8-sample recheck; a bigger code dose (code-r3b: ~600 code questions answered 4x).
