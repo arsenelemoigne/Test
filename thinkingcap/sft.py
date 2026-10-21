@@ -25,6 +25,13 @@ def main():
     from transformers import AutoModelForCausalLM
 
     torch.manual_seed(args.seed)
+    if args.init_only:  # a fresh LoRA (B = 0): exactly the raw model, for DPO straight from it
+        model = get_peft_model(AutoModelForCausalLM.from_pretrained(args.model), LoraConfig(
+            r=args.rank, lora_alpha=2 * args.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
+        model.save_pretrained(args.out)
+        print(f"saved a fresh adapter to {args.out}")
+        return
     rows = [json.loads(line) for line in Path(args.data).read_text().splitlines() if line.strip()]
     rows = [r for r in rows if len(r["prompt_ids"]) + len(r["completion_ids"]) <= args.max_len]
     if not rows:
@@ -103,7 +110,8 @@ def main():
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
-    parser.add_argument("--data", required=True, help="sft.jsonl from prune_traces.py")
+    parser.add_argument("--init-only", action="store_true", help="save a fresh, untrained LoRA and stop")
+    parser.add_argument("--data", default="", help="sft.jsonl from prune_traces.py")
     parser.add_argument("--out", required=True)
     parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--lr", type=float, default=1e-4)

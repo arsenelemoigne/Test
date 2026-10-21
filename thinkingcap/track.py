@@ -528,6 +528,10 @@ def bon_dpo(args):
     """
     name = args.name or "bon-dpo"
     start, no_shorten, rollouts = args.start or "adapters/bon-r1", args.no_shorten, BON / "probe" / "rollouts.jsonl"
+    if start == "raw":  # DPO straight from the raw model: a fresh LoRA is the policy's start and the reference
+        start = "adapters/fresh-lora"
+        if not Path(start, "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--out", start)
     if args.rollouts_from:
         start = best_checkpoint() if args.rollouts_from == "auto" else args.rollouts_from
         settings = Path(start).parent / "stage.json"

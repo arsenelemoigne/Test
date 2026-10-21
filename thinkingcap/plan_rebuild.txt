@@ -3,6 +3,8 @@
 bon --per-source 300 --max-per-source 300 --skip-eval --gen-questions 750
 # the winner again: DPO from bon-r1 (was step-25 +47.6% / -2.6); constant lr and seed: the same first steps
 bon_dpo --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+# DPO straight from the raw model, no SFT step (same pairs, same settings)
+bon_dpo --name bon-dpo-raw --start raw --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
 # code fix: code gets only right-beats-wrong pairs, with a typical-length correct reply; intermediate scores
 bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 50
 # no code pairs at all (as Lightning McQwen3, who trained on no code): code changes only by spill-over
