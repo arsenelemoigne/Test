@@ -1,0 +1,7 @@
+# rebuild after the runtime was recycled (2026-10-21 11:07); every result and adapter is saved to Google Drive
+# best-of-8 data (1,800 questions x 8) and the gentle SFT start, no test (already scored: +4.4% / -2.8)
+bon --per-source 300 --max-per-source 300 --skip-eval
+# the winner again: DPO from bon-r1, checkpoint 25 (was +47.6% / -2.6); constant lr and seed: the same first 25 steps
+bon_dpo --dpo-epochs 1 --eval-steps 25
+# code fix: code gets only right-beats-wrong pairs, with a typical-length correct reply
+bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 1 --eval-steps 25 50

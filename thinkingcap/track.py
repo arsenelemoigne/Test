@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--no-shorten", default="", help="bon_dpo: sources with guard pairs only")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--skip-eval", action="store_true", help="bon: train only, no test")
     parser.add_argument("--sft-lr", type=float, default=5e-5, help="bon: SFT learning rate")
     parser.add_argument("--sft-epochs", type=int, default=1, help="bon: SFT passes")
     parser.add_argument("--min-saved", type=float, default=0.0,
@@ -85,10 +86,19 @@ def update(restart=True):
     clone = Path("/content/T")
     shutil.rmtree(clone, ignore_errors=True)
     branch = os.environ.get("TRACK_BRANCH", "mvt-fading")
-    if subprocess.run(["git", "clone", "-q", "--depth", "1", "-b", branch,
-                       "https://github.com/arsenelemoigne/Test", str(clone)]).returncode:
-        print("could not update the scripts; running the local copies", flush=True)
-        return
+    import time
+    url = "https://github.com/arsenelemoigne/Test"
+    for attempt in range(4):  # once a clone kept serving an old commit for hours: check it against the branch head
+        shutil.rmtree(clone, ignore_errors=True)
+        if subprocess.run(["git", "clone", "-q", "--depth", "1", "-b", branch, url, str(clone)]).returncode:
+            print("could not update the scripts; running the local copies", flush=True)
+            return
+        head = subprocess.run(["git", "ls-remote", url, f"refs/heads/{branch}"], capture_output=True, text=True).stdout.split()
+        got = subprocess.run(["git", "-C", str(clone), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+        if not head or head[0] == got:
+            break
+        print(f"clone at {got[:7]} but the branch is at {head[0][:7]}; retrying", flush=True)
+        time.sleep(30)
     changed = False
     for source in [*(clone / "thinkingcap").glob("*.py"), *(clone / "thinkingcap").glob("plan*.txt")]:
         if not Path(source.name).exists() or not filecmp.cmp(source, source.name, shallow=False):
@@ -98,6 +108,24 @@ def update(restart=True):
                                          capture_output=True, text=True).stdout.strip(), flush=True)
     if changed and restart:
         os.execve(sys.executable, [sys.executable, *sys.argv], os.environ | {"TRACK_UPDATED": "1"})
+
+
+DRIVE = Path("/content/drive/MyDrive/thinkingcap-mvtf")
+
+
+def drive_sync(direction):
+    """Copy runs/, adapters/ and data/ to Google Drive ("save") or back ("restore"), when Drive is mounted.
+
+    Colab wipes the runtime disk when it recycles a runtime; Drive keeps every result, adapter and rollout.
+    """
+    if not Path("/content/drive/MyDrive").exists():
+        return
+    DRIVE.mkdir(parents=True, exist_ok=True)
+    for name in ("runs", "adapters", "data"):
+        source, target = (Path(name), DRIVE / name) if direction == "save" else (DRIVE / name, Path(name))
+        if source.exists():
+            subprocess.run(["rsync", "-a", f"{source}/", f"{target}/"])
+    print(f"drive: {direction} done", flush=True)
 
 
 def run(*command):
@@ -465,6 +493,8 @@ def bon(args):
     if not (adapter / "adapter_config.json").exists():
         py("sft.py", "--data", select / "sft.jsonl", "--out", adapter, "--epochs", args.sft_epochs, "--lr", args.sft_lr,
            "--max-per-source", args.max_per_source, "--dtype", args.dtype)
+    if args.skip_eval:
+        return
     base, out = ROOT / "s4-base", ROOT / f"s4-bon-{name}"
     evaluate(base, samples=4)
     evaluate(out, adapter, samples=4)
@@ -692,7 +722,17 @@ def plan(args):
     plan.txt comes from the branch, so pushing a line queues a new stage without touching the
     notebook. Stages skip finished work, so a line already done costs nothing.
     """
+    import threading
     import time
+    if not Path("/content/drive/MyDrive").exists():
+        print("drive: NOT mounted; results live only on this runtime's disk", flush=True)
+    drive_sync("restore")
+
+    def keep_saving():  # mid-stage saves too: a recycle loses at most 20 minutes
+        while True:
+            time.sleep(1200)
+            drive_sync("save")
+    threading.Thread(target=keep_saving, daemon=True).start()
     done, idle_since = set(), None
     while True:
         plan_file = Path(args.plan_file)
@@ -710,6 +750,7 @@ def plan(args):
         if subprocess.run([sys.executable, "track.py", *todo[0].split()], env=os.environ | {"TRACK_UPDATED": ""}).returncode:
             print(f"plan: '{todo[0]}' failed; moving on", flush=True)
         done.add(todo[0])
+        drive_sync("save")
         update_files()
 
 
