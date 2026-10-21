@@ -45,3 +45,5 @@ merge --name full --inputs adapters/mvth1024-full-gsm8k-xgsm8k2:1 adapters/grid/
 # shortest-of-8 self-distillation on data matched to the evaluation, checked on the real test sample
 bon --per-source 300 --max-per-source 300
 stats --inputs bon/probe/rollouts.jsonl mvtf/s4-bon-r1
+# "be brief" steering: directions A/B/C from the best-of-8 replies, small push tests, fresh held-out replies
+steer

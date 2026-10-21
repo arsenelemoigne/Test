@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -463,6 +463,64 @@ def bon(args):
     evaluate(out, adapter, samples=4)
     print(score_line(f"bon-{name} (4 samples, 240 test questions)", out, base=base), flush=True)
     print(diagnose(out, base=base))
+
+
+def steer(args):
+    """Three "be brief" pushes (A mean difference, B within-question trend, C learned), kept small.
+
+    Directions from the raw model's best-of-8 replies (100 questions per kind), a layer filter on
+    held-out questions, then push tests on the 240-question sample with 2 samples: A at the 2 best
+    layers x 2 strengths, B and C at the best layer x 2 strengths. The best within -3 points gets
+    4 samples. Each kind's best also answers 25 fresh held-out questions per source x 4, compared
+    with the raw model's replies to the same questions (steer_dirs.py compare).
+    """
+    out = Path("runs/steer")
+    if not (out / "directions.json").exists():
+        py("steer_dirs.py", "states", "--out", out)
+        py("steer_dirs.py", "directions", "--out", out)
+    print((out / "directions.txt").read_text(), flush=True)
+    found = json.loads((out / "directions.json").read_text())
+    best_layer = found["filter"]["A"][0]
+    configs = [("A", l, s) for l in found["filter"]["A"] for s in (2, 5)]
+    configs += [("B", found["filter"]["B"][0], s) for s in (2, 5)] + [("C", best_layer, s) for s in (1, 2)]
+    if not (out / f"C-{best_layer}.pt").exists():
+        py("steer_dirs.py", "learn", "--out", out, "--layer", best_layer)
+    results, checked = {}, (out / "checked").exists()
+    for kind, layer, strength in configs:
+        name = f"{kind}-{layer}-{strength:g}"
+        model, run = Path("steered") / name, ROOT / f"s2-steer-{name}"
+        if not (run / "results.json").exists():
+            if not (model / "config.json").exists():
+                py("steer_dirs.py", "build", "--out", out, "--kind", kind, "--layer", layer, "--strength", strength,
+                   "--target", model)
+            if not checked:
+                py("steer_dirs.py", "check", "--model", model)
+                (out / "checked").write_text("ok\n")
+                checked = True
+            evaluate(run, samples=2, model=model)
+        line, delta = score_line(f"steer {name} (2 samples)", run, with_delta=True)
+        print(line, flush=True)
+        results[name] = (compare(run)["average"]["token_reduction"] or 0, delta, kind)
+    winners = {}
+    for name, (saved, delta, kind) in results.items():
+        best = winners.get(kind)
+        key = (delta >= LIMIT, saved if delta >= LIMIT else delta)
+        if best is None or key > best[0]:
+            winners[kind] = (key, name)
+    overall = max(winners.values())[1]
+    evaluate(ROOT / "s4-base", samples=4)
+    evaluate(ROOT / f"s4-steer-{overall}", samples=4, model=Path("steered") / overall)
+    print(score_line(f"steer {overall} (4 samples)", ROOT / f"s4-steer-{overall}", base=ROOT / "s4-base"), flush=True)
+    if not (out / "held.jsonl").exists():
+        py("steer_dirs.py", "held", "--out", out, "--per-source", 25)
+    rolls = []
+    for _, name in sorted(winners.values(), key=lambda w: w[1]):
+        roll = out / f"roll-{name}"
+        if not (roll / "rollouts.jsonl").exists():
+            py("probe_curve.py", "--data", out / "held.jsonl", "--model", Path("steered") / name, "--per-source", 25,
+               "--samples", 4, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
+        rolls.append(roll)
+    py("steer_dirs.py", "compare", "--out", out, "--runs", *rolls)
 
 
 def dpo_round(args):
