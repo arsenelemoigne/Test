@@ -941,3 +941,14 @@ Dropping the irrelevance shorten pairs protected irrelevance only up to step 20 
 Step 20 is the one point of interest: +42.8% / -0.3 (start combine-codecut +48.3% / -1.2 on the same
 test; Lightning McQwen3 43.2% / -0.85). Its -0.3 rests on IFEval +10.6 (partly luck) against
 MBPP+ -11.2: needs the 8-sample check before any claim.
+
+8-sample check of r1b step 20 (240 questions x 8, vs `s8-base` reused from Drive):
+
+| model | tokens saved [95%] | accuracy [95%] | per benchmark (saved / pts) |
+|---|---|---|---|
+| combine-codecut (start) | +44.3% [39.4, 49.6] | -1.6 [-3.9, +0.9] | BFCL +51/+48/+42% / +0.6/-1.6/+0.6; IFEval +20% / +5.0; MBPP+ +73% / -7.2; SVAMP +15% / -4.1 |
+| r1b step 20 | +47.9% [43.6, 53.1] | -2.3 [-5.0, +0.5] | BFCL +59/+41/+44% / **-10.6**/-1.9/+0.3; IFEval +22% / +2.8; MBPP+ +72% / -4.1; SVAMP +36% / -3.7 |
+
+With 8 samples step 20 saves 3.6 points more than its start for 0.7 points more loss: a trade,
+not a gain. SVAMP is shortened 36% (start 15%) at the same cost (-3.7 vs -4.1), MBPP+ loses less
+(-4.1 vs -7.2), but BFCL irrelevance falls (-10.6 vs +0.6). The 4-sample -0.3 was luck (IFEval +10.6).
