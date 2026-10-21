@@ -42,7 +42,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice}
+                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode}
     for source in args.sources.split(","):
         build = builders[source]
         built = list(build(args, rng))
@@ -175,6 +175,46 @@ def mbpp_train(args, rng):
             yield {"source": "mbpp_train", "task": "code", "answer": "", "grader": "code",
                    "entry_point": name, "tests": task["test_list"], "setup": task["test_setup_code"],
                    "prompt": [{"role": "user", "content": content}]}
+
+
+TEST_FUNCTION = re.compile(r"^def (test_\w*)\(\s*\):", re.MULTILINE)
+
+
+def kodcode(args, rng):
+    """Clean code practice in MBPP's format: the MBPP-like slice of KodCode-Light-RL-10K.
+
+    KodCode (synthetic tasks verified by unit tests) is a different dataset from MBPP/MBPP+. Loader from the
+    mvt-pertype session: one-function easy/medium tasks whose tests are plain argument-free test_ functions,
+    turned into asserts run as MBPP's are, the first assert shown as MBPP's example. Kept only where the task
+    is at most 45 tokens and the reference solution at most 90 (Qwen3 tokenizer): measured on CPU, that slice
+    (~900 tasks; median 28 / 63 tokens) is close to MBPP+ (17 / 29), all of KodCode is not (99 / 114).
+    """
+    from datasets import load_dataset
+    from transformers import AutoTokenizer
+    from utils.eval.benchmarks import MBPP_INSTRUCTION, MBPP_NAME_REMINDER
+
+    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+    size = lambda text: len(tokenizer.encode(text or "", add_special_tokens=False))
+    for task in load_dataset("KodCode/KodCode-Light-RL-10K", split="train"):
+        if task["style"] != "instruct" or task["gpt_difficulty"] not in ("easy", "medium"):
+            continue
+        if len(task["test_info"] or []) != 1:
+            continue
+        name, test = task["test_info"][0]["function_name"], task["test"]
+        if not name or "pytest" in test or "@" in test or "solution" not in test.split("\n", 1)[0]:
+            continue
+        body = "\n".join(l for l in test.splitlines() if not re.match(r"\s*(from solution import|import solution)", l))
+        functions = TEST_FUNCTION.findall(body)
+        example = next((l.strip() for l in body.splitlines() if l.strip().startswith("assert") and f"{name}(" in l), None)
+        if not functions or not example or len(functions) != body.count("def test_"):
+            continue
+        if size(task["question"]) > 45 or size(task["solution"]) > 90:
+            continue
+        prompt = f'"""\n{task["question"].strip()}\n{example}\n"""\n'
+        content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"
+        yield {"source": "kodcode", "task": "code", "answer": "", "grader": "code", "entry_point": name,
+               "tests": [body, *[f"{f}()" for f in functions]], "setup": "",
+               "prompt": [{"role": "user", "content": content}]}
 
 
 TOOLS = re.compile(r"<tools>\s*(.*?)\s*</tools>", re.DOTALL)

@@ -6,5 +6,12 @@ bon_dpo --name bon-dpo-r2g-s1 --rollouts-from adapters/bon-dpo-nocode/step-30 --
 bon_dpo --name bon-dpo-r4-s1 --rollouts-from adapters/bon-dpo-r3/step-5 --probe-from bon-dpo-r4 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 15 --dpo-seed 1
 # 2. round 4 and the two retrains on the fresh set (seed 20261022), 8 samples, against session 1's f8-base
 fresh --inputs adapters/bon-dpo-r4/step-15 adapters/bon-dpo-r2g-s1/step-10 adapters/bon-dpo-r4-s1/step-15
+# MBPP-free family A (no code data anywhere): DPO from the raw model on round 1's answers minus code, then a
+# round from its best on not-yet-used questions; both checked with 8 samples, then on the fresh set
+clean --name clean-a1 --start raw --mix 0.6,0.4,0 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+confirm --name clean-a1
+clean --name clean-a2 --start auto:clean-a1 --gen-questions 750 --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
+confirm --name clean-a2
+fresh --inputs auto:clean-a1 auto:clean-a2
 # last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
 end

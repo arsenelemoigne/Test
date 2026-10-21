@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "confirm", "fresh", "peek", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "clean", "confirm", "fresh", "peek", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -66,6 +66,9 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--code-source", default="none", help="clean: none or kodcode")
+    parser.add_argument("--kod-questions", type=int, default=300, help="clean: KodCode tasks answered per round")
+    parser.add_argument("--kod-exclude", default="", help="clean: a run whose KodCode tasks are not reused")
     parser.add_argument("--code-data", nargs="*", default=[], help="code_round: data files whose code questions are answered again")
     parser.add_argument("--dataset", default="mbpp", help="diag: the benchmark to look at")
     parser.add_argument("--data-seed", type=int, default=0, help="bon_dpo round: sample a fresh question draw with this seed")
@@ -610,6 +613,76 @@ def score_checkpoints(name, adapter, args):
         print(score_line(f"{name} {checkpoint.name} (4 samples, the sweep's best)", out, base=ROOT / "s4-base"), flush=True)
 
 
+def resolve(adapter):
+    """'auto:NAME' -> that run's best checkpoint within -2.5 points (4 samples); anything else unchanged."""
+    return str(best_checkpoint(prefix=adapter[5:])) if adapter.startswith("auto:") else adapter
+
+
+CLEAN_SOURCES = "gsm8k_all,toolace,ifeval_like,arc_easy,commonsense_qa"
+
+
+def clean(args):
+    """MBPP-free rounds: no MBPP anywhere in the lineage (the other rounds started from an SFT step with ~74 MBPP rows).
+
+    --start raw: DPO from a fresh LoRA on round 1's answers (the raw model's) without their code questions.
+    --start auto:NAME / adapter: that model answers --gen-questions not-yet-used questions x 8 (no code questions).
+    --code-source kodcode: plus the MBPP-like KodCode slice answered x 8 by the start model, as
+    right-beats-wrong pairs only (no short-beats-long for code: those pairs hurt code before).
+    """
+    name = args.name
+    if args.start == "raw":
+        start = Path("adapters") / f"fresh-{name}"
+        if not (start / "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--out", start)
+        rollouts, keep = BON / "probe" / "rollouts.jsonl", BON / "select-r1" / "sft.jsonl"
+    else:
+        start = resolve(args.start)
+        print(f"{name}: starts from {start}", flush=True)
+        probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
+        if not (probe / "rollouts.jsonl").exists():
+            py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", CLEAN_SOURCES, "--per-source", 300, "--samples", 8,
+               "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", args.gen_questions, "--exclude-rollouts", BON / "probe" / "rollouts.jsonl")
+        if not (keep / "sft.jsonl").exists():
+            py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", keep, "--easy-tokens", "gsm8k_all=700")
+            py("contamination.py", "--data", keep / "sft.jsonl", "--rollouts", probe / "rollouts.jsonl")
+        rollouts, keep = probe / "rollouts.jsonl", keep / "sft.jsonl"
+    files = []
+    base_pairs = BON / f"pairs-{name}-nocode"
+    if not (base_pairs / "pairs.jsonl").exists():
+        py("bon_pairs.py", "--rollouts", rollouts, "--keep", keep, "--out", base_pairs, "--drop-sources", "mbpp_train")
+    files.append(base_pairs / "pairs.jsonl")
+    if args.code_source == "kodcode":
+        if not Path("data/kodcode.jsonl").exists():
+            py("prepare_types.py", "--sources", "kodcode", "--per-source", 2000, "--out", "data/kodcode.jsonl")
+        kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
+        if not (kprobe / "rollouts.jsonl").exists():
+            exclude = ["--exclude-rollouts", BON / f"kprobe-{args.kod_exclude}" / "rollouts.jsonl"] if args.kod_exclude else []
+            adapter = [] if args.start == "raw" else ["--adapter", start]
+            py("probe_curve.py", "--data", "data/kodcode.jsonl", "--sources", "kodcode", "--per-source", 2000, "--samples", 8,
+               *adapter, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", args.kod_questions, *exclude)
+        if not (kkeep / "sft.jsonl").exists():
+            py("select_shortest.py", "--rollouts", kprobe / "rollouts.jsonl", "--out", kkeep)
+            py("contamination.py", "--data", kkeep / "sft.jsonl", "--rollouts", kprobe / "rollouts.jsonl")
+        kpairs = BON / f"pairs-{name}-kod"
+        if not (kpairs / "pairs.jsonl").exists():
+            py("bon_pairs.py", "--rollouts", kprobe / "rollouts.jsonl", "--keep", kkeep / "sft.jsonl", "--out", kpairs,
+               "--no-shorten", "kodcode")
+        files.append(kpairs / "pairs.jsonl")
+    for f in files:
+        print((f.parent / "summary.txt").read_text(), flush=True)
+    pairs = BON / f"pairs-{name}"
+    pairs.mkdir(parents=True, exist_ok=True)
+    (pairs / "pairs.jsonl").write_text("".join(l + "\n" for f in files for l in f.read_text().splitlines() if l.strip()))
+    adapter = Path("adapters") / name
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter, "--mix", args.mix,
+           "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype, "--seed", args.dpo_seed)
+        (adapter / "stage.json").write_text(json.dumps({"start": str(start), "code_source": args.code_source}))
+    score_checkpoints(name, adapter, args)
+
+
 def code_round(args):
     """Round 3's pairs plus code "stopped too early" pairs (code_pairs.py), DPO from --start, scored as bon_dpo."""
     name = args.name or "code-r3"
@@ -675,7 +748,7 @@ def fresh(args):
             print("waiting for session 1's f8-base on Drive", flush=True)
             time.sleep(120)
     evaluate(base, samples=8, questions=questions)
-    for adapter in args.inputs:
+    for adapter in map(resolve, args.inputs):
         name = adapter.removeprefix("adapters/").replace("/", "-")
         out = ROOT / f"f8-{name}"
         evaluate(out, adapter, samples=8, questions=questions)
@@ -720,10 +793,10 @@ def new_questions(seed):
     return out
 
 
-def best_checkpoint(floor=-2.5):
-    """The scored DPO checkpoint saving the most tokens within `floor` points (4 samples)."""
+def best_checkpoint(floor=-2.5, prefix=""):
+    """The scored DPO checkpoint saving the most tokens within `floor` points (4 samples), of one run if prefix."""
     best = None
-    for run in ROOT.glob("s4-*-step-*"):
+    for run in ROOT.glob(f"s4-{prefix}-step-*" if prefix else "s4-*-step-*"):
         if not (run / "results.json").exists():
             continue
         average = compare(run, ROOT / "s4-base")["average"]

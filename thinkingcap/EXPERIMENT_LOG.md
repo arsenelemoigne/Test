@@ -916,3 +916,17 @@ from its Drive folder with `track.py peek`):** round 1 no-code step 30 **+43.6% 
 +53.1% / -2.7; r2nc step 10 +53.4% / -2.8. Savings hold on unseen questions; accuracy is about 1 point
 worse than on questions_40, the selection effect. Per benchmark (r2g): svamp -7.5, ifeval -4.1, mbpp
 -1.6: single-benchmark cells swing +/-10 at 40 questions.
+
+### MBPP-free chains and a clean code source (queued)
+
+Every model of rounds 1-4 descends from the gentle SFT step, whose 466 rows included ~74 MBPP tasks
+(MBPP minus MBPP+, near-copies dropped); "DPO from raw" used MBPP pairs. MBPP+ is built from MBPP, so to
+leave no doubt, two MBPP-free families of two rounds each (`track.py clean`): A, no code data at all;
+B, plus the MBPP-like slice of KodCode-Light-RL-10K as right-beats-wrong pairs only.
+
+KodCode against MBPP+ (CPU, Qwen3 tokenizer; medians): MBPP+ task 17 tokens, reference solution 29,
+3 base asserts (plus EvalPlus's extra inputs); MBPP minus MBPP+ 16 / 48 / 3; all usable KodCode (6,171)
+99 / 114 / 7-8 asserts, harder topics (graphs, matrices, LeetCode); **the MBPP-like slice (task <= 45,
+solution <= 90 tokens): 907 tasks, 28 / 63 / 6-7**, topics close to MBPP+ (lists 53 vs 45%, numbers 59 vs
+46%, strings 29 vs 19%). KodCode reports its own decontamination against standard benchmarks; our 8-gram
+check against all 2,759 test questions runs on top.

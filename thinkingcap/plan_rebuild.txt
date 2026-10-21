@@ -50,5 +50,11 @@ confirm --name bon-dpo-r4
 # round 5 from round 4's best (step 15), a fourth fresh draw (seed 3), same recipe, checked with 8 samples
 bon_dpo --name bon-dpo-r5 --rollouts-from adapters/bon-dpo-r4/step-15 --data-seed 3 --gen-questions 750 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
 confirm --name bon-dpo-r5
+# MBPP-free family B: as A plus clean code data, the MBPP-like slice of KodCode (right-beats-wrong pairs only)
+clean --name clean-b1 --start raw --code-source kodcode --kod-questions 300 --mix 0.6,0.4,0 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+confirm --name clean-b1
+clean --name clean-b2 --start auto:clean-b1 --code-source kodcode --kod-questions 300 --kod-exclude clean-b1 --gen-questions 750 --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
+confirm --name clean-b2
+fresh --inputs auto:clean-b1 auto:clean-b2
 # last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
 end
