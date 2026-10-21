@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "confirm", "fresh", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "confirm", "fresh", "peek", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -666,6 +666,21 @@ def fresh(args):
         out = ROOT / f"f8-{name}"
         evaluate(out, adapter, samples=8, questions=questions)
         print(score_line(f"{name} (fresh 240 questions x 8)", out, base=base), flush=True)
+
+
+def peek(args):
+    """Read-only: copy another folder's fresh-s8-* runs here and print their scores against its fresh-s8-base."""
+    for folder in args.inputs:
+        folder = Path(folder)
+        runs = sorted(p for p in folder.glob("fresh-s8-*") if (p / "results.json").exists())
+        print(f"{folder}: {len(runs)} finished fresh runs: {[p.name for p in runs]}", flush=True)
+        local = ROOT / "peek"
+        for run in runs:
+            shutil.copytree(run, local / run.name, dirs_exist_ok=True)
+        base = local / "fresh-s8-base"
+        for run in runs:
+            if run.name != "fresh-s8-base" and base.exists():
+                print(score_line(f"{run.name} (their fresh questions 41-80 x 8)", local / run.name, base=base), flush=True)
 
 
 def diag(args):
