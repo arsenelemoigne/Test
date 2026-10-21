@@ -1,0 +1,778 @@
+================================================================================================
+THINKINGCAP — TRACK 3 FULL REPORT
+MVT cut per data type, on practice data matched to the evaluation
+Branch: mvt-pertype (github.com/arsenelemoigne/Test, folder thinkingcap/)
+Run: one Colab L4 GPU, from 20 Oct 2026 22:08 to 21 Oct 2026 ~12:40 (about 14.5 hours)
+Detailed log of every run: thinkingcap/EXPERIMENT_LOG.md, section "Track 3"
+================================================================================================
+
+CONTENTS
+  0.  Summary in ten lines
+  1.  The challenge and how it is scored
+  2.  The method (what MVT is, what "uncut" means, how a run works)
+  3.  The setup of this track (data, settings, what changed from night 1)
+  4.  The reference: the untouched model
+  5.  The practice answers (what the model wrote before any training)
+  6.  The 25 per-type runs, one by one
+        6.1 Tool calls (5 runs)
+        6.2 Instructions (5 runs)
+        6.3 Multiple choice (5 runs)
+        6.4 Code (5 runs)
+        6.5 Math (5 runs)
+  7.  The full grid table
+  8.  Extras: a type-specific cut and 8-answer rechecks
+  9.  The three combined models
+  10. The best model checked with 8 answers per question
+  11. What we learned (cross-cutting findings)
+  12. Side investigation: why night 1's tool run shortened code by 68%
+  13. Comparison with the public entry "Lightning McQwen3"
+  14. Limits and caveats of these numbers
+  15. Open problems and possible next steps
+  16. Operational notes (what happened during the night)
+  Appendix A. Glossary
+  Appendix B. Exact commands and settings
+  Appendix C. File locations
+
+
+================================================================================================
+0. SUMMARY IN TEN LINES
+================================================================================================
+- We cut the model's own correct answers with the MVT rule, one task type at a time (tool calls,
+  instructions, multiple choice, code, math), in 4 cut settings each plus an uncut control: 25 runs.
+- With practice data matched to the test, training on uncut answers is free (-1.1 to +0.9 points),
+  where night 1's data cost 2-3.5 points before any cut.
+- Best cut per type: tool calls -> paragraphs; instructions -> paragraphs, patient; code -> 32-token
+  pieces; math -> keep whole; multiple choice -> unsafe alone (breaks math), useful only beside whole math.
+- Every cut, whatever the task trained, costs code (MBPP+) a few points: code is the fragile benchmark.
+- Best combined model ("codecut": tool cut + instruction cut + code cut + math whole x2):
+  4 answers: 48.3% fewer tokens, -1.2 points. 8 answers: 44.3% fewer tokens, -1.6 points (within limit).
+- Night 1 best on the same questions: 37.1% / -0.6. Public entry Lightning McQwen3: 43.2% / -0.85
+  (self-reported, number of questions not stated). We are level on savings, behind on accuracy.
+- Weak spots of the best model: code -7.2 points, math -4.1 points.
+
+
+================================================================================================
+1. THE CHALLENGE AND HOW IT IS SCORED
+================================================================================================
+BottleCapAI ThinkingCap Test (github.com/BottleCapAI/ThinkingCap-Test).
+Goal: make Qwen3-0.6B (a 0.6-billion-parameter model that "thinks out loud" before answering)
+write fewer tokens, thinking included, while keeping its accuracy.
+Our own limit: accuracy change of at least -3 points against the untouched model.
+
+Rules that matter here:
+  - Start from Qwen3-0.6B; LoRA adapters or changed weights are allowed.
+  - The model must load in plain Transformers and vLLM, no custom code.
+  - The model must still think before it answers (thinking may not be switched off).
+  - No training on the evaluation benchmarks.
+  - Evaluation settings stay unchanged: prompt, sampling, token caps (4,096 tokens; 8,192 for code).
+  - Answers cut off by the token cap count as wrong.
+  - The organisers value original ideas ("not how well you can copy others").
+
+The four benchmarks, each worth 25% of the score:
+  SVAMP   math word problems, 1,000 questions
+  MBPP+   writing Python functions, 378 questions
+  BFCL    function calling, 840 questions in 3 parts:
+            simple_python (one function offered, 400), multiple (several offered, 200),
+            irrelevance (no offered function fits; the right answer is to call nothing, 240)
+  IFEval  following formatting instructions ("3 paragraphs, no commas"), 541 questions
+
+Scoring:
+  Tokens saved     = 1 - geometric mean of the per-benchmark token ratios (new tokens / old tokens),
+                     with BFCL's three parts pooled into one benchmark. Each benchmark counts equally,
+                     so the long code answers do not dominate.
+  Accuracy change  = plain average of the four per-benchmark accuracy changes.
+Full evaluation = 2,759 questions x 8 answers each. We use a 240-question subset (the first 40
+questions of each of the 6 parts, in the evaluation's own fixed order), 4 answers each, sometimes 8.
+
+
+================================================================================================
+2. THE METHOD
+================================================================================================
+2.1 What a run does, step by step
+  1. Practice questions (never test questions) are answered by the untouched model, 2 answers each,
+     with the evaluation's own sampling settings and token caps.
+  2. Answers are graded with the evaluation's own graders. Wrong answers are thrown away.
+  3. Each correct answer is (or is not, for the "uncut" control) trimmed by the MVT rule.
+  4. Safety check: the model must reach the right answer twice, answering naturally from the trimmed
+     thinking. If it fails, the original uncut answer is kept for that question instead.
+  5. Per question, the shortest accepted answer becomes a training example.
+  6. A small add-on (LoRA, rank 16, about 10 million numbers, 1.7% of the model) is trained on these
+     examples: 2 passes over the data, learning rate 1e-4, 16 examples per step. The 600 million
+     numbers of the model itself are frozen. The model learns to write like the examples.
+  7. The untouched model plus that add-on takes the test: the 240 questions, 4 answers each, all four
+     benchmarks. Result = tokens saved and accuracy change against the untouched model.
+  Every run starts fresh from the untouched model: 25 separate add-ons, not stacked.
+  Each run trains on ONE task type but is tested on ALL four benchmarks, so we see both the effect
+  on its own task and the side effects (spill-over) on the others.
+
+2.2 What MVT is (the cut rule)
+  For each correct answer, we stop the model after every piece of its thinking and measure, by
+  teacher forcing, how likely it is to write its own correct final answer from that point.
+  That gives a confidence curve, e.g. 20% -> 60% -> 95% -> 96% -> 96%.
+  The Marginal Value Theorem (Charnov 1976, foraging theory: a bird leaves a berry bush when the
+  berries come slower than its average rate, counting the trip to the next bush) says: stop at the
+  first point where no later part of the thinking pays better per token than the average so far,
+  g(t) / (t + c). The "travel cost" c is patience:
+      c = 1024  "patient":   stays longer, cuts less
+      c = 256   "impatient": stops sooner, cuts more
+  A "piece" can be:
+      a paragraph                      (the "paragraphs" runs)
+      a fixed batch of 32 tokens       (the "32-token" runs; can cut in the middle of a sentence)
+  After the cut, pieces before the cut point that added no confidence are also tried for removal,
+  kept out only if the confidence holds.
+  MVT is only used to prepare training examples. At test time the model works alone; it has simply
+  learned, by imitation, to think about as long as the trimmed examples.
+
+2.3 What "uncut" (whole) means
+  The same questions, the same correct answers, no trimming (only the shorter of two correct answers
+  is chosen). It measures what training on that kind of data does by itself, so that each cut run
+  can be compared to it and not only to the untouched model.
+
+2.4 Reading the numbers
+  "X% / Y" = answers X% shorter (negative = longer) / accuracy changed by Y points.
+  Noise: with 40 questions x 4 answers per benchmark part, one benchmark cell moves by about
+  +/-4 points by chance (the confidence intervals on single benchmarks are +/-5 to +/-9 points).
+  Averages and patterns repeated across runs are more reliable than any single cell.
+
+
+================================================================================================
+3. THE SETUP OF THIS TRACK
+================================================================================================
+3.1 Practice data, matched to the evaluation (TRACK_SET=matched)
+  math    gsm8k_all     GSM8K train + test (not an evaluation benchmark); only questions where the
+                        model's correct answer is at most 700 tokens are used, to match SVAMP's ease.
+                        ASDiv, MAWPS, MultiArith, Orca-Math deliberately NOT used (SVAMP was built
+                        from ASDiv/MAWPS).
+  code    mbpp_train    MBPP tasks minus every task that appears in MBPP+.
+  tool    toolace       ToolACE (Team-ACE/ToolACE): already in BFCL's function format and call syntax;
+                        BFCL's mix: 48% one function, 24% several, 28% no function fits;
+                        function names with spaces turned into Python identifiers.
+  text    ifeval_like   argilla/ifeval-like-data (filtered), graded by IFEval's own verifiers.
+  choice  arc_easy + commonsense_qa  (not in the evaluation; used as a brevity signal)
+  300 questions per source, 2 answers each, token caps 4,096 (8,192 for code). Seed 0.
+
+3.2 Fix made before the run: ToolACE "no function fits" examples
+  About half of ToolACE's prose replies (no call) were really "a fitting function exists but a
+  required argument is missing, please provide it". BFCL's irrelevance tests something else: no
+  offered function fits at all. Training on the clarification cases could teach the model not to
+  call when it should. prepare_types.py now keeps a prose reply as "no function fits" only if it says
+  the functions cannot do it ("none of", "do not", "cannot", ...) and does not name a function or
+  ask for a missing/required argument. Checked on CPU before the GPU run:
+      5,025 one-function, 3,615 several-function, 276 genuine "no function fits" examples usable;
+      300 kept: 144 / 72 / 84.
+  (The mvt-fading session's "shortest of 8" data was built before this filter.)
+
+3.3 What changed from night 1 (branch mvt-fading, "Track 2b")
+  - Practice data matched to the test (night 1: all of GSM8K, much harder than SVAMP; Hermes tool
+    data; same IFEval-like data; old MBPP filter).
+  - Token caps as the evaluation (night 1: 2,048 for all practice answers).
+  - Both patience settings and both cut units for every type (night 1: mostly patient, paragraphs).
+  - Multiple choice as its own type.
+  - Same MVT code, same safety check, same training settings, same 240 test questions.
+
+
+================================================================================================
+4. THE REFERENCE: THE UNTOUCHED MODEL
+================================================================================================
+240 questions, 2 answers each (first run on this GPU):
+  benchmark part        accuracy   mean tokens
+  BFCL no-fit           82.5%      204
+  BFCL several          76.3%      223
+  BFCL one              82.5%      190
+  IFEval                53.8%      734
+  MBPP+                 57.5%      1,699
+  SVAMP                 81.3%      940
+  Answers hitting the cap: IFEval 3.8%, MBPP+ 7.5%, SVAMP 3.8%.
+  Identical or near-identical to the earlier GPUs (same seed): the test is reproducible.
+
+240 questions, 4 answers each ("s4-base": what every grid run is compared to):
+  BFCL no-fit 85.6% / 213 · BFCL several 79.4% / 217 · BFCL one 83.1% / 185
+  IFEval 51.9% / 705 · MBPP+ 57.5% / 2,004 · SVAMP 81.9% / 830      (accuracy / mean tokens)
+
+A 240 x 8 reference ("s8-base") was also computed, for the 8-answer rechecks.
+
+
+================================================================================================
+5. THE PRACTICE ANSWERS (untouched model, before any training)
+================================================================================================
+1,500 questions x 2 answers = 3,000 answers, about 80 minutes on the L4.
+  source           answers  correct  hit the cap  mean tokens
+  arc_easy         120      88%      0%           492
+  commonsense_qa   480      51%      0%           506
+  gsm8k_all        600      43%      24%          2,167
+  ifeval_like      600      78%      1%           408
+  mbpp_train       600      38%      12%          2,842
+  toolace          600      58%      0%           265
+Notes:
+  - The multiple-choice pool came out 60 ARC-Easy / 240 CommonsenseQA questions (300 shared).
+  - GSM8K is much harder for the model than SVAMP (43% vs 82% correct). After the "correct answer of
+    at most 700 tokens" filter, only 60 math questions remain: math has the smallest training set.
+  - Tool answers are short (265 tokens), close to BFCL's (185-217).
+Questions with at least one correct answer, i.e. training examples per type:
+  tool 189, instructions 259, multiple choice 203 (55 ARC + 148 CSQA), code 137, math 60.
+
+
+================================================================================================
+6. THE 25 PER-TYPE RUNS
+================================================================================================
+Format for each run:
+  WHAT: what was trained
+  CUT:  how many examples were trimmed, how the training answers changed
+  RESULT: overall tokens saved / accuracy change; then per benchmark (shorter by / accuracy change)
+  READ: what it means
+All results: 240 questions x 4 answers, against s4-base.
+Per benchmark order: BFCL no-fit, BFCL several, BFCL one, IFEval, MBPP+, SVAMP.
+
+------------------------------------------------------------------------------------------------
+6.1 TOOL CALLS (ToolACE, 189 questions with a correct answer)
+------------------------------------------------------------------------------------------------
+RUN tool-whole (uncut control)
+  WHAT: 189 correct tool answers, not trimmed (shortest of two correct answers).
+  CUT:  none; training answers 201 -> 183 tokens on average (only from picking the shorter answer).
+  RESULT: +5.2% / +0.3
+    BFCL no-fit +6% / 0.0 · several +5% / +0.6 · one +6% / -3.1
+    IFEval -4% / -0.6 · MBPP+ +6% / +0.6 · SVAMP +12% / +1.9
+  READ: training on tool calls by itself changes nothing. Night 1's Hermes tool data cost -3.3
+        (IFEval -7.5, MBPP+ -9.4) in the same uncut setting. Matched data makes training free.
+
+RUN tool-mvt1024 (patient, paragraphs)
+  CUT:  356 trimmed answers checked, 332 passed; 178 of 189 questions got a trimmed answer,
+        11 kept their original. Training answers 201 -> 142 tokens (-30%).
+  RESULT: +17.6% / +1.7
+    BFCL no-fit +38% / -1.2 · several +55% / -3.1 · one +42% / +1.9
+    IFEval +6% / +9.4 · MBPP+ +2% / -3.1 · SVAMP +8% / +1.3
+  READ: tool answers 38-55% shorter with no loss (all within noise). Unlike night 1 (code 68%
+        shorter), brevity barely spreads to other tasks, so the average is +17.6% (night 1: +42.0%).
+        On tool calls themselves, the two nights are equal (night 1: 37-54% shorter).
+
+RUN tool-mvt256 (impatient, paragraphs)            <- TOOL WINNER
+  CUT:  351 checked, 314 passed; 173 trimmed; 201 -> 121 tokens (-40%).
+  RESULT: +25.8% / +0.6
+    BFCL no-fit +45% / +3.1 · several +55% / -1.9 · one +36% / +0.6
+    IFEval +11% / +6.9 · MBPP+ +30% / -4.4 · SVAMP +10% / -0.6
+  READ: same tool saving as patient, but the "think less" habit spreads more (code 30% shorter,
+        -4.4, within noise). Higher overall saving.
+
+RUN tool-mvt1024-tokens32 (patient, 32-token pieces)
+  CUT:  406 checked, 373 passed; 176 trimmed; 201 -> 106 tokens (-47%).
+  RESULT: +18.1% / -2.7
+    BFCL no-fit +54% / -8.7 · several +24% / 0.0 · one +39% / -1.3
+    IFEval +3% / +1.2 · MBPP+ 0% / -6.9 · SVAMP +24% / -1.9
+  READ: cuts deeper in training, gives no more saving at test time, and the model calls a function
+        when none fits (no-fit -8.7). Worse than paragraphs.
+
+RUN tool-mvt256-tokens32 (impatient, 32-token pieces)
+  CUT:  368 checked, 322 passed; 167 trimmed; 201 -> 89 tokens (-56%), the deepest tool cut.
+  RESULT: +11.5% / -4.5   (OUTSIDE the limit)
+    BFCL no-fit +54% / -10.0 · several +24% / -1.9 · one +47% / -0.6
+    IFEval -6% / +3.7 · MBPP+ -5% / -6.9 · SVAMP +7% / -10.6
+  READ: too deep: the model gets sloppier rather than shorter.
+
+TOOL CONCLUSION: cut by paragraphs. Both patience levels shorten tool answers 40-55% for free.
+Why 32-token pieces do worse even though they are finer:
+  (1) more cut points -> the cut goes deeper (47-56% removed vs 30-40%);
+  (2) cuts mid-sentence produce choppy examples the model cannot imitate cleanly;
+  (3) the "does any function actually fit?" check often comes late and gets cut -> no-fit errors.
+Night 1 on Hermes data showed the same ranking (paragraphs +42% / -0.7, 32-token +4% / -1.6).
+
+------------------------------------------------------------------------------------------------
+6.2 INSTRUCTIONS (IFEval-like, 259 questions with a correct answer)
+------------------------------------------------------------------------------------------------
+RUN text-whole (uncut control)
+  CUT:  none; 347 -> 312 tokens (shorter of two correct answers).
+  RESULT: +6.1% / -0.5
+    BFCL +5% / -1.2 · +6% / +0.6 · +5% / 0.0 · IFEval +6% / +2.5 · MBPP+ -2% / -1.9 · SVAMP +14% / -2.5
+  READ: free.
+
+RUN text-mvt1024 (patient, paragraphs)             <- INSTRUCTIONS WINNER
+  CUT:  503 checked, 445 passed; 238 of 259 trimmed; 347 -> 234 tokens (-33%).
+  RESULT: +15.1% / -0.9
+    BFCL +11% / -5.6 · +9% / +3.1 · +11% / -1.3 · IFEval +24% / +5.6 · MBPP+ +8% / -6.2 · SVAMP +17% / -1.9
+  READ: instructions a quarter shorter AND more accurate (night 1 old data: +11% / -3.1). Brevity
+        spreads evenly (8-17% everywhere). Code -6.2 again.
+
+RUN text-mvt256 (impatient, paragraphs)
+  CUT:  483 checked, 412 passed; 227 trimmed; 347 -> 190 tokens (-45%).
+  RESULT: +18.2% / -2.1
+    BFCL +23% / -3.7 · +12% / 0.0 · +13% / -1.3 · IFEval +19% / +5.0 · MBPP+ +29% / -7.5 · SVAMP +7% / -4.4
+  READ: cutting harder does not shorten instructions more (19% vs 24%); it only pushes the habit
+        onto code (29% shorter, -7.5) and math (-4.4).
+
+RUN text-mvt1024-tokens32 (patient, 32-token pieces)
+  CUT:  543 checked, 476 passed; 234 trimmed; 347 -> 218 tokens (-37%).
+  RESULT: +17.1% / -1.7
+    BFCL +10% / -0.6 · +13% / +3.1 · +10% / -2.5 · IFEval +25% / +6.2 · MBPP+ +5% / -8.1 · SVAMP +26% / -5.0
+
+RUN text-mvt256-tokens32 (impatient, 32-token pieces)
+  CUT:  493 checked, 403 passed; 219 trimmed; 347 -> 180 tokens (-48%).
+  RESULT: +11.8% / -2.1
+    BFCL +3% / -6.2 · +4% / 0.0 · +4% / -1.9 · IFEval +23% / +4.4 · MBPP+ -1% / -6.2 · SVAMP +20% / -3.7
+
+INSTRUCTIONS CONCLUSION: every cut makes IFEval about a quarter shorter and slightly MORE accurate
+(+4.4 to +6.2): less rambling, fewer forgotten constraints (likely). Every cut costs code 6-8 points.
+Best: patient, paragraphs.
+
+------------------------------------------------------------------------------------------------
+6.3 MULTIPLE CHOICE (ARC-Easy + CommonsenseQA, 203 questions with a correct answer)
+------------------------------------------------------------------------------------------------
+RUN choice-whole (uncut control)
+  CUT:  none; ARC 454 -> 379 tokens, CSQA 456 -> 408.
+  RESULT: +2.5% / +0.9
+    BFCL +5% / 0.0 · +9% / -0.6 · 0% / +1.9 · IFEval -6% / +4.4 · MBPP+ -8% / -5.0 · SVAMP +17% / +3.7
+  READ: free.
+
+RUN choice-mvt1024 (patient, paragraphs)
+  CUT:  470 checked, 464 passed; 201 trimmed; ~455 -> ~97 tokens (-78%).
+        The model knows these answers almost before thinking, so MVT keeps about one paragraph.
+  RESULT: +72.9% / -10.7   (OUTSIDE)
+    BFCL +39% / -1.2 · +53% / -13.1 · +32% / -3.8 · IFEval +60% / +12.5 · MBPP+ +93% / -10.0 · SVAMP +66% / -39.4
+  READ: "barely think" is learned and applied everywhere; math collapses (-39.4). Only instructions
+        gain (+12.5). Exactly night 1's finding.
+
+RUN choice-mvt256 (impatient, paragraphs)
+  CUT:  443 checked, 419 passed; 194 trimmed; ~455 -> ~102 tokens.
+  RESULT: +69.0% / -13.3   (OUTSIDE)
+    BFCL +37% / -3.7 · +51% / -11.2 · +28% / -0.6 · IFEval +45% / +4.4 · MBPP+ +93% / -13.7 · SVAMP +61% / -38.7
+
+RUN choice-mvt1024-tokens32 (patient, 32-token pieces)
+  CUT:  496 checked, 487 passed; 199 trimmed; ARC 454 -> 64, CSQA 456 -> 79 (-84%).
+  RESULT: +8.8% / -4.7   (OUTSIDE)
+    BFCL +18% / -1.2 · +12% / -10.6 · +15% / -5.6 · IFEval +3% / +1.9 · MBPP+ +9% / -1.9 · SVAMP +8% / -13.1
+  READ: the deepest cut in training, almost no shortening at test, still a loss: thinking that stops
+        mid-sentence is not a habit the model picks up cleanly.
+
+RUN choice-mvt256-tokens32 (impatient, 32-token pieces)
+  CUT:  462 checked, 438 passed.
+  RESULT: +18.7% / -4.1   (OUTSIDE)
+    BFCL +32% / +2.5 · +15% / -9.4 · +21% / -10.0 · IFEval +22% / +1.9 · MBPP+ +19% / -3.1 · SVAMP +11% / -9.4
+
+MULTIPLE CHOICE CONCLUSION: no cut is safe when trained alone (-4.1 to -13.3, math always hit).
+These cuts are the strongest "think less" signal available; their only use is beside whole math
+examples (night 1's best model: multiple-choice cuts + GSM8K whole x2 = 37.1% / -0.6).
+
+------------------------------------------------------------------------------------------------
+6.4 CODE (MBPP minus MBPP+, 137 questions with a correct answer)
+------------------------------------------------------------------------------------------------
+RUN code-whole (uncut control)
+  CUT:  none; 1,493 -> 1,308 tokens.
+  RESULT: +2.9% / +0.1
+    BFCL -3% / -1.2 · -1% / -0.6 · +1% / -1.3 · IFEval +2% / +6.2 · MBPP+ +3% / -1.9 · SVAMP +8% / -3.1
+  READ: free (night 1 old data: -3.5, IFEval -8.1).
+
+RUN code-mvt1024 (patient, paragraphs)
+  CUT:  262 checked, only 180 passed; 92 of 137 trimmed; 1,493 -> 790 tokens.
+  RESULT: +69.3% / -6.0   (OUTSIDE)
+    BFCL +42% / +2.5 · +55% / -2.5 · +33% / -1.3 · IFEval +52% / +6.9 · MBPP+ +95% / -13.7 · SVAMP +38% / -16.9
+  READ: code thinking is usually one long paragraph (the plan). A paragraph cut is all-or-nothing:
+        MVT often removed the whole plan. The model learned "don't think before coding": code 95%
+        shorter and much less correct, and the habit spread to math (-16.9). Same as night 1.
+
+RUN code-mvt256 (impatient, paragraphs)
+  CUT:  231 checked, 140 passed; 82 trimmed; 1,493 -> 812 tokens.
+  RESULT: +68.2% / -7.2   (OUTSIDE)
+    BFCL +50% / -1.2 · +63% / -11.2 · +42% / -1.3 · IFEval +36% / +7.5 · MBPP+ +95% / -10.6 · SVAMP +38% / -21.3
+
+RUN code-mvt1024-tokens32 (patient, 32-token pieces)   <- CODE WINNER (used in the combined model)
+  CUT:  280 checked, 189 passed; 90 trimmed; 1,493 -> 824 tokens.
+  RESULT: +39.9% / -1.3
+    BFCL +25% / +0.6 · +19% / +2.5 · +17% / -1.9 · IFEval +12% / +3.7 · MBPP+ +77% / -8.1 · SVAMP +17% / -1.2
+  READ: 32-token pieces keep the start of the plan, so the model still thinks a little. Mild,
+        harmless spill-over; but code itself pays -8.1 for being 77% shorter (night 1: +57% / -5.6).
+
+RUN code-mvt256-tokens32 (impatient, 32-token pieces)
+  CUT:  233 checked, 140 passed; 78 trimmed; 1,493 -> 903 tokens.
+  RESULT: +46.6% / -0.5   (best average of the whole grid)
+    BFCL +43% / +3.8 · +10% / -3.7 · +23% / -2.5 · IFEval +12% / +13.1 · MBPP+ +86% / -10.6 · SVAMP +10% / -3.7
+  READ: the average hides code -10.6, offset by IFEval +13.1 (likely partly luck). The patient
+        version was preferred for the combined model because code itself loses less.
+
+CODE CONCLUSION: cut by 32-token pieces, never by paragraphs. Both 32-token versions shorten code
+77-86% but cost code 8-11 points: the cut must be softened in a combined model. Note the low pass
+rates of the safety check on code (55-68%), a sign the cuts are aggressive.
+
+------------------------------------------------------------------------------------------------
+6.5 MATH (easy GSM8K, 60 questions with a correct answer of at most 700 tokens)
+------------------------------------------------------------------------------------------------
+RUN math-whole (uncut control)                     <- MATH WINNER (keep whole)
+  CUT:  none; 676 -> 509 tokens.
+  RESULT: -0.3% / -1.1
+    BFCL -6% / -3.7 · +6% / -0.6 · -4% / -1.3 · IFEval +4% / +3.7 · MBPP+ -7% / -2.5 · SVAMP +3% / -3.7
+
+RUN math-mvt1024 (patient, paragraphs)
+  CUT:  57 of 60 trimmed; 676 -> 131 tokens (-81%).
+  RESULT: +26.3% / -2.6
+    BFCL +25% / -1.9 · +22% / +1.3 · +15% / -1.9 · IFEval +22% / +8.7 · MBPP+ +14% / -12.5 · SVAMP +45% / -5.6
+  READ: far less harmful than night 1's math cut on all of GSM8K (SVAMP +80% / -16.2): easy,
+        SVAMP-like problems help. But math still loses 5.6 and code 12.5.
+
+RUN math-mvt256 (impatient, paragraphs)
+  CUT:  194 checked, 184 passed; 57 trimmed; 676 -> 123 tokens.
+  RESULT: +32.6% / -3.6   (OUTSIDE)
+    BFCL +25% / -2.5 · +20% / -0.6 · +17% / -3.1 · IFEval +30% / +8.1 · MBPP+ +20% / -13.7 · SVAMP +53% / -6.9
+
+RUN math-mvt1024-tokens32 (patient, 32-token pieces)
+  CUT:  201 checked, 171 passed; 48 trimmed; 676 -> 143 tokens.
+  RESULT: +22.2% / -1.6
+    BFCL +9% / -1.2 · +13% / +0.6 · +10% / -3.1 · IFEval +25% / +3.1 · MBPP+ +14% / -6.9 · SVAMP +36% / -1.2
+  READ: the gentlest math cut on math itself (36% shorter for -1.2), the best math cut of the night.
+
+RUN math-mvt256-tokens32 (impatient, 32-token pieces)
+  CUT:  198 checked, 168 passed; 50 trimmed; 676 -> 132 tokens.
+  RESULT: +13.8% / -4.0   (OUTSIDE)
+    BFCL +14% / -1.9 · +10% / 0.0 · +10% / -5.0 · IFEval +5% / +2.5 · MBPP+ +7% / -9.4 · SVAMP +29% / -6.9
+
+MATH CONCLUSION: keep math whole in a combined model. Cutting easy math is no longer a disaster
+(best: 36% shorter for -1.2 on math), but every math cut costs code 7-14 points. Only 60 examples.
+
+
+================================================================================================
+7. THE FULL GRID TABLE (tokens saved / accuracy change, 4 answers; > = the trained task's benchmark)
+================================================================================================
+run                          SVAMP           MBPP+           BFCL           IFEval          AVERAGE
+choice-mvt1024           +66% / -39.4    +93% / -10.0    +41% / -6.0    +60% / +12.5    +73% / -10.7
+choice-mvt1024-tokens32   +8% / -13.1     +9% / -1.9     +15% / -5.8     +3% / +1.9      +9% / -4.7
+choice-mvt256            +61% / -38.7    +93% / -13.7    +39% / -5.2    +45% / +4.4     +69% / -13.3
+choice-mvt256-tokens32   +11% / -9.4     +19% / -3.1     +22% / -5.6    +22% / +1.9     +19% / -4.1
+choice-whole             +17% / +3.7      -8% / -5.0      +4% / +0.4     -6% / +4.4      +3% / +0.9
+code-mvt1024             +38% / -16.9   >+95% / -13.7    +43% / -0.4    +52% / +6.9     +69% / -6.0
+code-mvt1024-tokens32    +17% / -1.2    >+77% / -8.1     +20% / +0.4    +12% / +3.7     +40% / -1.3
+code-mvt256              +38% / -21.3   >+95% / -10.6    +51% / -4.6    +36% / +7.5     +68% / -7.2
+code-mvt256-tokens32     +10% / -3.7    >+86% / -10.6    +25% / -0.8    +12% / +13.1    +47% / -0.5
+code-whole                +8% / -3.1     >+3% / -1.9     -1% / -1.0     +2% / +6.2      +3% / +0.1
+math-mvt1024            >+45% / -5.6     +14% / -12.5    +21% / -0.8    +22% / +8.7     +26% / -2.6
+math-mvt1024-tokens32   >+36% / -1.2     +14% / -6.9     +11% / -1.2    +25% / +3.1     +22% / -1.6
+math-mvt256             >+53% / -6.9     +20% / -13.7    +21% / -2.1    +30% / +8.1     +33% / -3.6
+math-mvt256-tokens32    >+29% / -6.9      +7% / -9.4     +12% / -2.3     +5% / +2.5     +14% / -4.0
+math-whole               >+3% / -3.7      -7% / -2.5     -1% / -1.9     +4% / +3.7      -0% / -1.1
+text-mvt1024             +17% / -1.9      +8% / -6.2     +10% / -1.2   >+24% / +5.6     +15% / -0.9
+text-mvt1024-tokens32    +26% / -5.0      +5% / -8.1     +11% / +0.0   >+25% / +6.2     +17% / -1.7
+text-mvt256               +7% / -4.4     +29% / -7.5     +16% / -1.7   >+19% / +5.0     +18% / -2.1
+text-mvt256-tokens32     +20% / -3.7      -1% / -6.2      +3% / -2.7   >+23% / +4.4     +12% / -2.1
+text-whole               +14% / -2.5      -2% / -1.9      +5% / -0.2    >+6% / +2.5      +6% / -0.5
+tool-mvt1024              +8% / +1.3      +2% / -3.1    >+45% / -0.8     +6% / +9.4     +18% / +1.7
+tool-mvt1024-tokens32    +24% / -1.9      +0% / -6.9    >+39% / -3.3     +3% / +1.2     +18% / -2.7
+tool-mvt256              +10% / -0.6     +30% / -4.4    >+46% / +0.6    +11% / +6.9     +26% / +0.6
+tool-mvt256-tokens32      +7% / -10.6     -5% / -6.9    >+42% / -4.2    -6% / +3.7      +11% / -4.5
+tool-whole               +12% / +1.9      +6% / +0.6     >+6% / -0.8     -4% / -0.6      +5% / +0.3
+(BFCL column = its three parts averaged; "average" uses the official geometric-mean rule.)
+
+Best setting per type:
+  tool calls      MVT by paragraphs (impatient +26% / +0.6; patient +18% / +1.7)
+  instructions    MVT patient by paragraphs (+15% / -0.9; IFEval +24% / +5.6)
+  multiple choice none safe alone; brevity signal to pair with whole math
+  code            MVT by 32-token pieces (patient +40% / -1.3; impatient +47% / -0.5), code -8 to -11
+  math            keep whole (-0% / -1.1); gentlest cut: patient 32-token, math 36% shorter / -1.2
+
+
+================================================================================================
+8. EXTRAS
+================================================================================================
+8.1 Type-specific cut: tool calls with the "no function fits" examples kept whole
+  WHAT: impatient paragraph cut on tool calls, except the irrelevance examples stay uncut
+        (new option --keep-whole irrelevance). Aim: protect the no-fit check that 32-token cuts broke.
+  CUT:  200 checked, 174 passed; 96 trimmed, 93 kept whole; 201 -> 159 tokens (-21%).
+  RESULT: +12.4% / -1.4
+    BFCL +25% / -4.4 · +30% / +1.9 · +39% / +2.5 · IFEval +5% / +5.0 · MBPP+ -1% / -9.4 · SVAMP +10% / -1.2
+  READ: did not protect no-fit (-4.4) and lost most of the saving. Dropped.
+
+8.2 Rechecks with 8 answers per question (240 questions x 8, against s8-base)
+  run                          4 answers         8 answers
+  tool-mvt256                  +25.8% / +0.6     +29.3% / +0.0
+     8 ans: BFCL +43% / +3.4 · +54% / -4.4 · +33% / +0.9 · IFEval +19% / +1.9 · MBPP+ +42% / -4.1 · SVAMP +5% / +2.2
+  tool-mvt1024                 +17.6% / +1.7     +20.5% / -0.4
+     8 ans: BFCL +42% / -3.4 · +49% / -5.0 · +38% / +1.2 · IFEval +8% / +0.9 · MBPP+ +16% / -0.3 · SVAMP +9% / +0.3
+  text-mvt1024                 +15.1% / -0.9     +14.0% / -0.8
+     8 ans: BFCL +16% / -1.6 · +8% / -2.5 · +11% / -1.3 · IFEval +12% / +2.2 · MBPP+ +3% / -3.7 · SVAMP +28% / 0.0
+  code-mvt1024-tokens32        +39.9% / -1.3     +37.5% / -2.7
+     8 ans: BFCL +25% / -0.9 · +15% / -0.9 · +17% / -3.4 · IFEval +2% / +2.5 · MBPP+ +78% / -7.5 · SVAMP +14% / -4.1
+  READ: 8 answers confirm the 4-answer picture: tool and instruction cuts are free (within 1 point);
+        the code cut costs more than it seemed (-2.7 overall, code -7.5, math -4.1). Some 4-answer
+        gains (IFEval +9.4 for tool-mvt1024) shrink with 8 answers: they were partly luck.
+
+
+================================================================================================
+9. THE THREE COMBINED MODELS
+================================================================================================
+One add-on trained on a pool of the winners' examples (capped at 150 per source; math examples
+shown twice, as in night 1's best model). Lightest first, because cuts add up when stacked
+(night 1: each cut safe alone, -6.2 together). 240 questions x 4 answers.
+
+MODEL light
+  POOL: tool impatient-paragraph cut (toolace) + instructions patient-paragraph cut (ifeval_like)
+        + code WHOLE (mbpp_train, 1,308 tokens) + math whole x2 (gsm8k_all).
+  RESULT: +19.1% / -1.5
+    BFCL +37% / -1.2 · +52% / +1.3 · +41% / +1.2 · IFEval +18% / +3.7 · MBPP+ -6% / -6.9 · SVAMP +13% / -3.1
+  READ: whole code examples do not protect code (-6.9) once other cuts are in the mix; and code is
+        not shortened at all, so the overall saving stays low.
+
+MODEL codecut                                    <- BEST
+  POOL: same as light, but code cut by MVT patient 32-token pieces (824 tokens). 549 training rows.
+  RESULT: +48.3% / -1.2
+    BFCL +50% / -3.7 · +53% / +0.6 · +47% / +1.2 · IFEval +28% / +10.0 · MBPP+ +75% / -9.4 · SVAMP +20% / -5.0
+  READ: biggest saving within the limit. Average helped by IFEval +10.0 (partly luck), dragged down
+        by code -9.4 and math -5.0.
+
+MODEL full
+  POOL: codecut + multiple-choice patient-paragraph cut (55 ARC + 148 CSQA, ~95 tokens). 752 rows.
+  RESULT: +51.9% / -2.7
+    BFCL +43% / -1.9 · +56% / 0.0 · +47% / -0.6 · IFEval +34% / +5.0 · MBPP+ +81% / -11.2 · SVAMP +16% / -3.7
+  READ: the multiple-choice signal adds 3.6 points of saving for 1.5 points of accuracy; code -11.2.
+        Within the limit but close to it.
+
+
+================================================================================================
+10. THE BEST MODEL CHECKED WITH 8 ANSWERS PER QUESTION
+================================================================================================
+The planned full evaluation (2,759 questions x 8) was stopped at the user's request; at the pace
+observed, scoring the untouched model alone would have taken about 16 hours, past the runtime's
+24-hour limit. Instead: the same 240 questions with 8 answers each.
+
+combine-codecut, 240 questions x 8 answers, against s8-base:
+  benchmark part   tokens saved [95% interval]    accuracy change [95% interval]
+  BFCL no-fit      +51.2% [+38.3, +61.6]          +0.62 [-5.62, +6.25]
+  BFCL several     +48.3% [+41.4, +54.9]          -1.56 [-9.38, +7.50]
+  BFCL one         +42.2% [+34.4, +49.7]          +0.62 [-2.81, +5.31]
+  IFEval           +19.6% [+9.6, +30.8]           +5.00 [+0.94, +9.69]
+  MBPP+            +73.3% [+64.9, +80.8]          -7.19 [-13.75, -0.94]
+  SVAMP            +14.8% [+5.9, +25.3]           -4.06 [-8.44, +0.31]
+  OVERALL          +44.3% [+39.4, +49.6]          -1.59 [-3.93, +0.89]
+  Within the -3 limit on the point estimate; the interval reaches -3.9.
+  SVAMP: 28 answers lost, 15 gained vs the untouched model; lost answers mostly wrong numbers (19),
+  some cut off (3), some unreadable (6).
+READ: with more answers per question the result settles a little lower than the 4-answer estimate
+(48.3% / -1.2), as expected when the luck in picking the best of 3 combinations is reduced.
+
+
+================================================================================================
+11. WHAT WE LEARNED
+================================================================================================
+1. Matched practice data makes training itself free. All five uncut runs: -1.1 to +0.9 points.
+   Night 1's data cost 2-3.5 points before any cut. The cost of a cut is now clearly the cut's own.
+2. The right cut unit depends on how the type thinks:
+     tool calls, instructions: short, well-paragraphed thinking -> paragraphs;
+     code: one long plan -> paragraph cuts are all-or-nothing -> 32-token pieces;
+     math: every step carries the calculation -> keep whole.
+3. Patient vs impatient: on the trained task, about the same; impatient spreads brevity (and damage)
+   further to other tasks.
+4. Code is hurt by every cut, whatever task is trained (-2 to -14 points across 20 cut runs). The
+   "think less" habit reaches code even from tool or instruction cuts. Code is the main weakness.
+5. Instructions improve with every cut (+4 to +6, sometimes more): less overthinking helps IFEval.
+6. Easy examples (multiple choice) teach "barely think" and break math everywhere: they need whole
+   math beside them.
+7. The harder the cut in training, the more spill-over, and past a point the model gets sloppier
+   rather than shorter (deep 32-token cuts give little saving and real losses).
+8. Easy, SVAMP-like math makes math cuts much less harmful than on all of GSM8K (-1 to -7 vs -16),
+   but the filter leaves only 60 examples.
+9. Combining adds up: the best combined model saves more than any single run, and its losses on
+   code and math are close to the sum of what each cut does to them.
+10. 8 answers settle results 1-4 points lower in saving than 4 answers for the best runs (selection
+   effect + less luck).
+
+
+================================================================================================
+12. SIDE INVESTIGATION: WHY NIGHT 1's TOOL RUN SHORTENED CODE BY 68% (AND TONIGHT'S BY 2%)
+================================================================================================
+Fact: night 1, training only on tool calls with the same MVT cut made code 68% shorter (-8.7);
+tonight, code 2% shorter (-3.1).
+Checked:
+  - Same test (same 240 questions; the untouched model scores identically).
+  - Same code for cutting, checking and training (git diff of prune_traces.py, sft.py, check_vllm.py
+    between night 1's commit 3546e14 and now: only an added math filter and the token-cap change).
+  - Token cap: 2,048 then vs 4,096 now; irrelevant for tool calls (2% capped then).
+  - Only real difference: the practice data (Hermes then, ToolACE now).
+Night 1 table: every training on Hermes tool data hurt code by 7.5-10 points, including the uncut
+one (-9.4). Tonight the uncut ToolACE run: +0.6.
+  night 1 (Hermes)          code: shorter / accuracy     tonight (ToolACE)    code
+  uncut                     -1% / -9.4                   uncut                +6% / +0.6
+  MVT patient paragraphs    +68% / -8.7                  MVT patient par.     +2% / -3.1
+  MVT patient 32-token      +12% / -7.5                  MVT impatient par.   +30% / -4.4
+  fading round 3            +57% / -10.0
+  word scoring              +34% / -10.0
+  Effect of the cut itself (vs uncut): night 1 code 68% shorter at +0.7; tonight 2% shorter at -3.7.
+Mechanism: the add-on is shared by all tasks; the moment the model decides "done thinking" works the
+same way for every question, so "stop sooner" learned on tool calls applies to code (code has the
+most thinking to lose).
+Best guess for the difference (untested): Hermes questions were easier (25% made-up "no fit" pairs:
+an unrelated question paired with functions from another topic, obvious at a glance) and the model
+thought longer on them (476 vs 265 tokens), so MVT removed about 130 tokens per example (44%) vs 60
+(30%) tonight: a much stronger "think less" lesson that spread everywhere — the same mechanism as
+easy multiple choice. A control run (Hermes data with tonight's settings) was queued, then removed
+at the user's request.
+Consequence: night 1's 42% average for that run was inflated by the code side effect; on tool calls
+themselves both nights are equal.
+
+
+================================================================================================
+13. COMPARISON WITH THE PUBLIC ENTRY "LIGHTNING McQWEN3"
+================================================================================================
+Source: blog.basta.one/blog/thinkingcap (14 Oct 2026) and github.com/basta/lightning-mcqwen3.
+Author: Ondrej Bastar (GitHub "basta"), master's student at CTU Prague (AI and robotics; interests
+interpretability and inverse RL), as presented on his own sites. Compute: RTX 4070 SUPER (12 GB) +
+the Czech national grid (MetaCentrum).
+
+His results (8 answers, self-reported; number of questions not stated):
+  with a "think gate"     47.3% / -0.88   (stitched: gated BFCL run + ungated others;
+                                           a full gated rerun gave 46.6% / -1.33)
+  without the gate        43.2% / -0.85   <- the fair number
+  per benchmark (no gate): SVAMP 66% / -3.8 · MBPP+ 39% / -1.9 · IFEval 32% / +1.4 · BFCL 25% / +0.9
+The gate forces an empty thinking block on ~30% of BFCL prompts from the evaluation script (not the
+weights): very probably against the rules (the model must think before answering; thinking may not be
+turned off; evaluation settings unchanged; shortening must be in the model). He does not discuss it.
+
+His recipe:
+  1. Chain-of-Draft distillation: answers written under "max 5 words per thinking step" with two
+     examples; prompt removed; SFT on 11,247 correct traces (LoRA r16, lr 1e-4, 1 epoch) -> 26.5% / -1.27.
+  2+3. On-policy cut oracle on the distilled model: 9.3k new questions x 4; cuts at the sentence ends
+     nearest 10%..90% of the thinking; 4 re-answers per cut, safe only if 4/4 right (197k cuts);
+     DPO pairs (9,034): 40% "safe short > full", 40% "safe > too early (wrong)", 20% hard;
+     lr 2e-5, beta 0.1, stopped at step 100 of 561 -> 42.5% / -1.45.
+  4. Math correctness DPO with an NLL anchor (732 pairs) -> 43.2% / -0.85.
+  Proof that on-policy matters: the same oracle on the untouched model gave 11.4% (SFT) / 28.1% (DPO).
+  Failures he reports: naive DPO shortest-vs-longest 90% / -27; correctness DPO without anchor
+  -5.2 (validation); more SFT no gain; LoRA merge 51.0% / -3.93 (2 answers); gating math/code;
+  another model's traces (distribution shift).
+  Side effects he reports: more agreement with user errors (Sydney as capital 6/6; 9.11 > 9.9 6/6),
+  more invented details. Training data: GSM8K, Skywork, ARC-Easy, CommonsenseQA (+ ToolACE for the gate).
+  Credits: Chain-of-Draft, ThoughtFold, ThinkSwitcher, RPO.
+
+Side by side:
+                         ours (codecut, 8 ans, 240 q)   his (no gate)      our night-1 best
+  overall                44.3% / -1.6                   43.2% / -0.85      37.1% / -0.6
+  tool calls (BFCL)      42-51% / about 0               25% / +0.9
+  instructions (IFEval)  20% / +5.0                     32% / +1.4
+  code (MBPP+)           73% / -7.2                     39% / -1.9
+  math (SVAMP)           15% / -4.1                     66% / -3.8
+Reading:
+  - Savings level (one point apart, inside our 39-50% interval); he loses about half as much accuracy.
+  - We are far ahead on tool calls; he is ahead on instructions and, clearly, on math.
+  - Code: he took a moderate 39% at small cost; our cut overshoots (73%) and costs 7.2.
+  - Math: he keeps every step but writes each tersely (in the model's own words); MVT removes steps.
+  - His closest experiment to ours (one round of cuts on the untouched model, SFT) gave 11.4% / -0.34;
+    our per-type runs give 15-26% on the trained task: same family, slightly better.
+  - Our selection of the best of 3 combinations on the same 240 questions flatters our number a bit.
+Lessons worth taking (with credit): cut the CURRENT model's answers in rounds; show "too early"
+examples, not only good short ones; verify cuts more strictly (4/4 vs our 2/2); terse rewriting for
+math; stop training early and keep checkpoints; check behaviour outside the benchmarks.
+Our own contribution: MVT picks one cut point per answer (he tries 9, far more compute); per-type
+handling and the spill-over map; keeping math whole.
+
+
+================================================================================================
+14. LIMITS AND CAVEATS
+================================================================================================
+- 240 questions (40 per benchmark part), 4 answers per run (8 for rechecks): a development signal,
+  not the leaderboard. One benchmark cell moves by about +/-4 points by chance; intervals on single
+  benchmarks are +/-5 to +/-9 points.
+- The 8-answer rechecks reuse the first 4 answers' seeds (same generations for the first 4).
+- The best combined model was chosen among 3 on the same questions it is reported on.
+- Each run was trained once: training randomness (night 1: a retrain moved a result by ~2 points
+  and several % of saving) is not measured.
+- Math training used only 60 examples (strict "easy" filter).
+- No full evaluation; no check of behaviour outside the benchmarks (agreement with wrong user
+  statements, invented details).
+- The "+5 to +13" IFEval gains in several runs are probably partly luck (they shrink with 8 answers).
+
+
+================================================================================================
+15. OPEN PROBLEMS AND POSSIBLE NEXT STEPS
+================================================================================================
+Problems, in order of cost to the score:
+  1. Code: -7.2 in the best model; every cut hurts it.
+  2. Math: -4.1 in the best model and only 15% shorter (his: 66%).
+  3. Instructions: 20% shorter vs his 32%.
+Cheap next tests (about 30 minutes each on the L4):
+  - Softer code cut: half cut / half whole code examples, or fewer cut rows.
+  - codecut with the math examples shown 3 times instead of 2.
+  - codecut with the gentlest math cut (patient 32-token) instead of whole math.
+Bigger steps (if the goal is to clearly beat the public entry):
+  - Rounds: the improved model answers fresh questions, MVT cuts verified 4/4, train again; 2-3 rounds.
+  - "Too early" examples (DPO pairs: safe cut > full; safe cut > too-early wrong cut).
+  - Terse rewriting for math (shorten each step instead of removing steps).
+  - Length-penalty RL (the RL session's DLER script) starting from the best model.
+  - Full evaluation of the final candidate, and checks outside the benchmarks.
+
+
+================================================================================================
+16. OPERATIONAL NOTES
+================================================================================================
+- GPU: Colab allowed 2 sessions; both were busy (mvt-fading full evaluation; RL session). With the
+  user's approval, the RL session (thinking_probe_colab.ipynb) was stopped to free a slot.
+- The queue (plan_mvt.txt) is read from the branch after every stage, so stages were added or removed
+  by pushing, without restarting.
+- Practice answers took ~80 min (long code and math answers at full caps).
+- Each per-type run took 20-30 min (code runs ~30 min).
+- The Hermes control run was queued and then removed (user's call).
+- Extras approved by the user: type-specific tool cut, 8-answer rechecks, combined models.
+- The full evaluation started automatically, was stopped at the user's request after ~15 min
+  (scoring the untouched model alone would have taken ~16 h), and replaced by the 8-answer check.
+- The Mac was kept awake (app keep-awake + caffeinate) so the Colab tab stayed connected.
+- 100 extra Colab units were added during the night (L4 ~3.1 units/hour).
+- Models and results are being copied to Google Drive (folder thinkingcap-mvt-pertype) before the
+  runtime is stopped.
+
+
+================================================================================================
+APPENDIX A. GLOSSARY
+================================================================================================
+add-on / LoRA      small trainable layers on top of the frozen model (rank 16, ~10M numbers)
+answer / trace     the model's full reply: thinking (<think>...</think>) + final answer
+patient / c=1024   MVT travel cost 1024: stays longer, cuts less
+impatient / c=256  MVT travel cost 256: stops sooner, cuts more
+paragraphs         cut points at paragraph breaks
+32-token pieces    cut points every 32 tokens (can fall mid-sentence)
+uncut / whole      trained on correct answers without trimming (the control)
+spill-over         effect of training one task on the other tasks
+4 answers / 8 ans  number of sampled answers per test question (more = less luck)
+s4-base / s8-base  the untouched model's scores with 4 / 8 answers
+geometric mean     the challenge's way of averaging token ratios so each benchmark counts equally
+
+
+================================================================================================
+APPENDIX B. EXACT COMMANDS AND SETTINGS
+================================================================================================
+Notebook: thinkingcap/mvt_pertype_colab.ipynb (L4), env TRACK_BRANCH=mvt-pertype, TRACK_SET=matched.
+Queue: thinkingcap/plan_mvt.txt, run by `python track.py plan --plan-file plan_mvt.txt`.
+  base                                              untouched model, 240 q x 2
+  recheck                                           untouched model, 240 q x 4 (s4-base)
+  grid_data --per-source 300                        practice questions + 2 answers each
+  grid --type T --method whole                      uncut control for type T
+  grid --type T --method mvt --travel 1024          patient, paragraphs
+  grid --type T --method mvt --travel 256           impatient, paragraphs
+  grid --type T --method mvt --travel 1024 --unit tokens32
+  grid --type T --method mvt --travel 256 --unit tokens32
+  grid --type tool --method mvt --travel 256 --keep-whole irrelevance
+  recheck --samples 8 --adapter adapters/grid/<run>
+  combine --name light   --inputs tool-mvt256:toolace text-mvt1024:ifeval_like math-whole:gsm8k_all
+                                  code-whole:mbpp_train --repeat gsm8k_all:2 --max-per-source 150
+  combine --name codecut (same, code-mvt1024-tokens32:mbpp_train)
+  combine --name full    (codecut + choice-mvt1024:arc_easy:commonsense_qa)
+  recheck --samples 8 --adapter adapters/combine-codecut
+Cutting (prune_traces.py): --rule mvt --travel C --unit paragraph|tokens32 --checker vllm,
+  check = 2 natural answers must be correct; per question the shortest accepted answer is kept;
+  math: --easy-tokens 700 (only questions with a correct answer of at most 700 tokens).
+Training (sft.py): LoRA r16 on q,k,v,o,gate,up,down; lr 1e-4; 2 epochs; 16 sequences per step;
+  max length 4,096; loss on the completion only; bfloat16; seed 0; --max-per-source 1000 (grid),
+  150 (combined).
+Sampling (probe_curve.py, evaluate.py): the evaluation's settings; caps 4,096 / 8,192 for code.
+Code changes on mvt-pertype during the night:
+  prepare_types.py   ToolACE: keep only genuine "no function fits" replies
+  track.py           grid_data at 300 per source; `toolh` type (Hermes control, separate data file);
+                     --keep-whole CATEGORY for grid runs
+  prune_traces.py    --full-sources also matches a category (e.g. irrelevance)
+
+
+================================================================================================
+APPENDIX C. FILE LOCATIONS
+================================================================================================
+GitHub, branch mvt-pertype, folder thinkingcap/:
+  EXPERIMENT_LOG.md         every run, section "Track 3"
+  REPORT_MVT_PERTYPE.txt    this report
+  plan_mvt.txt              the queue as run
+Google Drive (once the copy completes), folder thinkingcap-mvt-pertype/:
+  adapters/grid/<run>/      the 25 per-type add-ons (+ the keep-whole extra)
+  adapters/combine-light, combine-codecut (BEST), combine-full
+  runs/                     every evaluation (records, results, comparisons), training data (sft.jsonl)
+  track_log.txt             the full Colab log
+To use the best model: load Qwen/Qwen3-0.6B and apply the LoRA adapter adapters/combine-codecut
+(plain Transformers/PEFT or vLLM with --adapter).
+================================================================================================
