@@ -704,6 +704,8 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | math-whole | 60 / 0 | 676 -> 509 | -0.3% | -1.1 | BFCL -6/+6/-4% / -3.7/-0.6/-1.3; IFEval +4% / +3.7; MBPP+ -7% / -2.5; SVAMP +3% / -3.7 |
 | math-mvt1024 | 60 / 57 | 676 -> 131 | +26.3% | -2.6 | BFCL +25/+22/+15% / -1.9/+1.3/-1.9; IFEval +22% / +8.7; MBPP+ +14% / **-12.5**; SVAMP +45% / -5.6 |
 | math-mvt256 | 60 / 57 | 676 -> 123 | +32.6% | **-3.6** | BFCL +25/+20/+17% / -2.5/-0.6/-3.1; IFEval +30% / +8.1; MBPP+ +20% / **-13.7**; SVAMP +53% / -6.9 |
+| math-mvt1024-tokens32 | 60 / ~55 | 676 -> 143 | +22.2% | -1.6 | BFCL +9/+13/+10% / -1.2/+0.6/-3.1; IFEval +25% / +3.1; MBPP+ +14% / -6.9; SVAMP +36% / -1.2 |
+| math-mvt256-tokens32 | 60 / 50 | 676 -> 132 | +13.8% | **-4.0** | BFCL +14/+10/+10% / -1.9/0.0/-5.0; IFEval +5% / +2.5; MBPP+ +7% / -9.4; SVAMP +29% / -6.9 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -792,3 +794,45 @@ but it still costs SVAMP and MBPP+ (-12.5). Small data: 60 rows.
 math-mvt256: 194 checked, 184 pass; 676 -> 123.
 
 math-mvt1024-tokens32: 201 checked, 171 pass; 676 -> 143.
+
+
+### Grid table, matched data (`track.py gridtable`; tokens saved / accuracy change, 4 samples; > = own benchmark)
+
+```
+run                          svamp           mbpp            bfcl           ifeval          average
+choice-mvt1024           +66% / -39.4    +93% / -10.0    +41% / -6.0    +60% / +12.5    +73% / -10.7
+choice-mvt1024-tokens32   +8% / -13.1     +9% / -1.9     +15% / -5.8     +3% / +1.9      +9% / -4.7
+choice-mvt256            +61% / -38.7    +93% / -13.7    +39% / -5.2    +45% / +4.4     +69% / -13.3
+choice-mvt256-tokens32   +11% / -9.4     +19% / -3.1     +22% / -5.6    +22% / +1.9     +19% / -4.1
+choice-whole             +17% / +3.7      -8% / -5.0      +4% / +0.4     -6% / +4.4      +3% / +0.9
+code-mvt1024             +38% / -16.9   >+95% / -13.7    +43% / -0.4    +52% / +6.9     +69% / -6.0
+code-mvt1024-tokens32    +17% / -1.2    >+77% / -8.1     +20% / +0.4    +12% / +3.7     +40% / -1.3
+code-mvt256              +38% / -21.3   >+95% / -10.6    +51% / -4.6    +36% / +7.5     +68% / -7.2
+code-mvt256-tokens32     +10% / -3.7    >+86% / -10.6    +25% / -0.8    +12% / +13.1    +47% / -0.5
+code-whole                +8% / -3.1     >+3% / -1.9     -1% / -1.0     +2% / +6.2      +3% / +0.1
+math-mvt1024            >+45% / -5.6     +14% / -12.5    +21% / -0.8    +22% / +8.7     +26% / -2.6
+math-mvt1024-tokens32   >+36% / -1.2     +14% / -6.9     +11% / -1.2    +25% / +3.1     +22% / -1.6
+math-mvt256             >+53% / -6.9     +20% / -13.7    +21% / -2.1    +30% / +8.1     +33% / -3.6
+math-mvt256-tokens32    >+29% / -6.9      +7% / -9.4     +12% / -2.3     +5% / +2.5     +14% / -4.0
+math-whole               >+3% / -3.7      -7% / -2.5     -1% / -1.9     +4% / +3.7      -0% / -1.1
+text-mvt1024             +17% / -1.9      +8% / -6.2     +10% / -1.2   >+24% / +5.6     +15% / -0.9
+text-mvt1024-tokens32    +26% / -5.0      +5% / -8.1     +11% / +0.0   >+25% / +6.2     +17% / -1.7
+text-mvt256               +7% / -4.4     +29% / -7.5     +16% / -1.7   >+19% / +5.0     +18% / -2.1
+text-mvt256-tokens32     +20% / -3.7      -1% / -6.2      +3% / -2.7   >+23% / +4.4     +12% / -2.1
+text-whole               +14% / -2.5      -2% / -1.9      +5% / -0.2    >+6% / +2.5      +6% / -0.5
+tool-mvt1024              +8% / +1.3      +2% / -3.1    >+45% / -0.8     +6% / +9.4     +18% / +1.7
+tool-mvt1024-tokens32    +24% / -1.9      +0% / -6.9    >+39% / -3.3     +3% / +1.2     +18% / -2.7
+tool-mvt256              +10% / -0.6     +30% / -4.4    >+46% / +0.6    +11% / +6.9     +26% / +0.6
+tool-mvt256-tokens32      +7% / -10.6     -5% / -6.9    >+42% / -4.2    -6% / +3.7      +11% / -4.5
+tool-whole               +12% / +1.9      +6% / +0.6     >+6% / -0.8     -4% / -0.6      +5% / +0.3
+```
+
+**Per kind, the best setting (matched data):**
+- **tool: MVT by paragraphs** (c=256 +26% / +0.6, c=1024 +18% / +1.7); token batches lose irrelevance.
+- **text: MVT c=1024 by paragraphs** (+15% / -0.9; IFEval +24% / +5.6).
+- **choice: no setting is safe alone** (paragraphs -10.7 to -13.3, SVAMP -39); a brevity signal to pair with whole maths.
+- **code: MVT by 32-token batches** (c=1024 +40% / -1.3, c=256 +47% / -0.5), but MBPP+ itself -8 to -11.
+- **math: whole** (-0.0% / -1.1); the easy-GSM8K cut is far less harmful than on night 1 (c=1024 by
+  batches +22% / -1.6, SVAMP +36% / -1.2), but still costs SVAMP and MBPP+ elsewhere.
+- **Whole runs are free on matched data** (-1.1 to +0.9) where the old data cost 2-3.5 points.
+- **Every cut costs MBPP+** (-2 to -14), whatever kind is trained: code is the fragile benchmark.
