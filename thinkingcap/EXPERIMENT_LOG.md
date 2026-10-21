@@ -701,6 +701,8 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | code-mvt256 | 137 / 82 | 1,493 -> 812 | +68.2% | **-7.2** | BFCL +50/+63/+42% / -1.2/**-11.2**/-1.3; IFEval +36% / +7.5; MBPP+ +95% / **-10.6**; SVAMP +38% / **-21.3** |
 | **code-mvt1024-tokens32** | 137 / 90 | 1,493 -> 824 | **+39.9%** | **-1.3** | BFCL +25/+19/+17% / +0.6/+2.5/-1.9; IFEval +12% / +3.7; MBPP+ +77% / **-8.1**; SVAMP +17% / -1.2 |
 | code-mvt256-tokens32 | 137 / 78 | 1,493 -> 903 | +46.6% | -0.5 | BFCL +43/+10/+23% / +3.8/-3.7/-2.5; IFEval +12% / +13.1; MBPP+ +86% / **-10.6**; SVAMP +10% / -3.7 |
+| math-whole | 60 / 0 | 676 -> 509 | -0.3% | -1.1 | BFCL -6/+6/-4% / -3.7/-0.6/-1.3; IFEval +4% / +3.7; MBPP+ -7% / -2.5; SVAMP +3% / -3.7 |
+| math-mvt1024 | 60 / 57 | 676 -> 131 | +26.3% | -2.6 | BFCL +25/+22/+15% / -1.9/+1.3/-1.9; IFEval +22% / +8.7; MBPP+ +14% / **-12.5**; SVAMP +45% / -5.6 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -782,3 +784,8 @@ average hides MBPP+ -10.6 (86% shorter) offset by IFEval +13.1 (likely partly no
 token batches; both settings shorten MBPP+ 77-86% for 8-11 points**: the combined model has to
 soften this (fewer cut rows, or whole code rows beside them).
 math-whole: only 60 GSM8K questions have a correct reply of at most 700 tokens (676 -> 509).
+
+math-mvt1024 on easy GSM8K (60 questions, 676 -> 131 tokens, -81%): SVAMP 45% shorter for -5.6
+(night 1 on all GSM8K: +80% / -16.2). The SVAMP-like filter makes the maths cut far less harmful,
+but it still costs SVAMP and MBPP+ (-12.5). Small data: 60 rows.
+math-mvt256: 194 checked, 184 pass; 676 -> 123.
