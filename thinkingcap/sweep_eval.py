@@ -60,7 +60,7 @@ def main():
 
     work = [(i, job) for job in jobs for i in range(len(runs))]
     records = [[] for _ in runs]
-    step = ev.BATCH * len(runs)
+    step = len(work)  # one call: the slowest answers of a chunk no longer hold up the next chunk
     for start in range(0, len(work), step):
         batch = work[start:start + step]
         settings = [SamplingParams(max_tokens=ev.token_cap(job["row"]["dataset"], args), seed=job["seed"],
