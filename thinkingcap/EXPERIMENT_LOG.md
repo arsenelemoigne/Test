@@ -930,3 +930,12 @@ KodCode against MBPP+ (CPU, Qwen3 tokenizer; medians): MBPP+ task 17 tokens, ref
 solution <= 90 tokens): 907 tasks, 28 / 63 / 6-7**, topics close to MBPP+ (lists 53 vs 45%, numbers 59 vs
 46%, strings 29 vs 19%). KodCode reports its own decontamination against standard benchmarks; our 8-gram
 check against all 2,759 test questions runs on top.
+
+**Runtime 2 (training randomness and fresh set):**
+- Round 2 retrained with DPO seed 1 (same pairs): 2 samples +49.7% / -3.6 (original step 10 at 2 samples:
+  +55.3% / -0.9).
+- Round 4 retrained with DPO seed 1: 2 samples +68.0% / -7.5 (original step 15: +66.1% / -2.4).
+- Fresh set (seed 20261022, 240 x 8): **round 4 step 15: +63.2% / -3.9 (outside)**; round 2 retrain:
+  +50.9% / -3.0 (at the limit).
+Training randomness at this size is large (several points of accuracy between seeds), and round 4 is past
+the limit on unseen questions: the late rounds push too far.
