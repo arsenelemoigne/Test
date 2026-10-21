@@ -54,20 +54,20 @@ def main():
         outputs = engine.generate([{"prompt_token_ids": r["prompt_ids"] + r["thinking_ids"]} for r in batch],
                                   params, lora_request=lora)
         for row, output in zip(batch, outputs):
-            passing = []
+            passing, wrong = [], None
             for completion in output.outputs:
                 tokens = list(completion.token_ids)
-                if not tokens or tokens[-1] != end:
-                    passing = None  # ran out of room: the evaluation would cut it off too
-                    break
-                text = full_text(tokenizer, row["thinking_ids"] + tokens)
-                if not is_correct(row["row"], text):
-                    passing = None
-                    break
-                passing.append(tokens)
-            answers[row["key"]] = min(passing, key=len) if passing else None
-    Path(args.out).write_text("".join(json.dumps({"key": k, "answer_ids": v}) + "\n" for k, v in answers.items()))
-    passed = sum(v is not None for v in answers.values())
+                finished = bool(tokens) and tokens[-1] == end
+                # a reply cut off by its cap is wrong: the evaluation would cut it off too
+                if finished and is_correct(row["row"], full_text(tokenizer, row["thinking_ids"] + tokens)):
+                    passing.append(tokens)
+                elif finished and (wrong is None or len(tokens) < len(wrong)):
+                    wrong = tokens  # a short, complete wrong answer: the losing side of a guard pair
+            ok = len(passing) == len(output.outputs)
+            answers[row["key"]] = {"answer_ids": min(passing, key=len) if ok else None, "wrong_ids": wrong,
+                                   "right": len(passing), "of": len(output.outputs)}
+    Path(args.out).write_text("".join(json.dumps({"key": k} | v) + "\n" for k, v in answers.items()))
+    passed = sum(v["answer_ids"] is not None for v in answers.values())
     print(f"checked {len(rows)} traces: {passed} pass", flush=True)
 
 
