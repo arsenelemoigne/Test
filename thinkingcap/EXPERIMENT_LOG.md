@@ -675,3 +675,12 @@ trend against log length, minus the "gives up" direction (wrong - correct); C on
 v_proj bias (Qwen3 `attention_bias`), checked identical in vLLM and Transformers. Small push tests
 on the 240-question sample (2 samples), best at 4 samples, then fresh replies on 25 held-out
 questions per source x 4 vs the raw model.
+
+**Directions (2,826 replies read, 351 fit pairs; held-out pairwise accuracy, 0.50 = chance, about
++/-0.1 at 30-45 pairs):** the pooled direction predicts which of two correct replies is shorter
+from the first 64 thinking tokens alone: best at layer 9 (A 0.70, B 0.73), the band 7-13 is
+0.66-0.70, early layers ~0.60, late layers ~0.62. By kind (pooled A, layer 9): tool 0.80, text 0.78,
+choice 0.73, math 0.61, code 0.61: math and code decide their length less visibly at the start.
+Per-kind directions are nearly unrelated to each other (cosines -0.10 to 0.36; math is closest to
+tool, 0.36) and, fitted on ~55-80 pairs each, are noisier than the pooled one: on most kinds the
+pooled direction scores as well as or better than the kind's own. Candidate layers: A 9, 12; B 9, 10.
