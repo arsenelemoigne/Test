@@ -815,3 +815,9 @@ Round 2 deepens the saving (42% -> 55-64%) at about -4 points, mostly math and c
 dpo.py never stepped on the last partial batch, so a pass of 317 pairs ended at step 19 without a
 final checkpoint (fixed). Queued: 4-sample checks of r2nc step 10 and r2 step 20; a gentler round 2
 (guard pairs 60%, checkpoints every 5 steps).
+
+**4-sample checks of round 2:**
+- **r2 without code pairs, step 10: +55.5% / -1.7** (within the limit): svamp +64% / 0.0, ifeval +61% /
+  +1.9, bfcl +36-42% / -1.3..+5.0, mbpp +54% / **-10.6**. New best: 13 points more saving than
+  round 1 for 1 point of accuracy; code carries the whole loss.
+- r2 with code pairs, step 20: +62.6% / -3.6 (outside): svamp +75% / -5.0, mbpp +65% / -14.4.
