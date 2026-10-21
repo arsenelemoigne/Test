@@ -836,3 +836,28 @@ tool-whole               +12% / +1.9      +6% / +0.6     >+6% / -0.8     -4% / -
   batches +22% / -1.6, SVAMP +36% / -1.2), but still costs SVAMP and MBPP+ elsewhere.
 - **Whole runs are free on matched data** (-1.1 to +0.9) where the old data cost 2-3.5 points.
 - **Every cut costs MBPP+** (-2 to -14), whatever kind is trained: code is the fragile benchmark.
+
+## Extras
+
+| run | tokens saved | accuracy | per benchmark (saved / pts) |
+|---|---|---|---|
+| tool-mvt256, irrelevance kept whole | +12.4% | -1.4 | BFCL +25/+30/+39% / -4.4/+1.9/+2.5; IFEval +5% / +5.0; MBPP+ -1% / -9.4; SVAMP +10% / -1.2 |
+| tool-mvt256, 8 samples | +29.3% | +0.0 | BFCL +43/+54/+33% / +3.4/-4.4/+0.9; IFEval +19% / +1.9; MBPP+ +42% / -4.1; SVAMP +5% / +2.2 |
+| tool-mvt1024, 8 samples | +20.5% | -0.4 | BFCL +42/+49/+38% / -3.4/-5.0/+1.2; IFEval +8% / +0.9; MBPP+ +16% / -0.3; SVAMP +9% / +0.3 |
+| text-mvt1024, 8 samples | +14.0% | -0.8 | BFCL +16/+8/+11% / -1.6/-2.5/-1.3; IFEval +12% / +2.2; MBPP+ +3% / -3.7; SVAMP +28% / 0.0 |
+| code-mvt1024-tokens32, 8 samples | +37.5% | -2.7 | BFCL +25/+15/+17% / -0.9/-0.9/-3.4; IFEval +2% / +2.5; MBPP+ +78% / -7.5; SVAMP +14% / -4.1 |
+
+Keeping irrelevance whole did not protect it (-4.4) and removed most of the saving: dropped.
+8-sample rechecks confirm the 4-sample picture (tool and text within 1 point, free; code -2.7, MBPP+ -7.5).
+
+## Combined models (4 samples vs `s4-base`; maths whole x2, `--max-per-source 150`)
+
+| model | rows | tokens saved | accuracy | per benchmark (saved / pts) |
+|---|---|---|---|---|
+| light: tool MVT256 + text MVT1024 + code whole + maths whole x2 | ~500 | +19.1% | -1.5 | BFCL +37/+52/+41% / -1.2/+1.3/+1.2; IFEval +18% / +3.7; MBPP+ -6% / -6.9; SVAMP +13% / -3.1 |
+| **codecut: same, code MVT1024 by 32-token batches** | 549 | **+48.3%** | **-1.2** | BFCL +50/+53/+47% / -3.7/+0.6/+1.2; IFEval +28% / +10.0; MBPP+ +75% / **-9.4**; SVAMP +20% / -5.0 |
+| full: codecut + multiple choice MVT1024 | 752 | +51.9% | -2.7 | BFCL +43/+56/+47% / -1.9/0.0/-0.6; IFEval +34% / +5.0; MBPP+ +81% / **-11.2**; SVAMP +16% / -3.7 |
+
+codecut is the best: +48.3% / -1.2 on the 240-question subset (night-1 winner +37.1% / -0.6 at 8
+samples; Lightning McQwen3 43.2% / -0.85, self-reported). Its average hides MBPP+ -9.4 offset by
+IFEval +10.0 (partly noise). `fullbest` sent it to the full evaluation (2,759 questions x 8).
