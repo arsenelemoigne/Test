@@ -906,3 +906,19 @@ needs even less thinking than its MVT point.
 
 DPO on 722 pairs (46 steps; checkpoints at 20 and 40). The maths cuts are very deep (-88%) although
 verified 4/4 on easy GSM8K: the main risk of this round for SVAMP.
+
+Round 1 DPO: 46 steps; chosen ahead of rejected 75% (step 20) -> 94% (step 40); margins +11 -> +20.
+Scored on the 240-question subset, 4 samples, vs `s4-base` (start combine-codecut: +48.3% / -1.2):
+
+| checkpoint | tokens saved | accuracy | per benchmark (saved / pts) |
+|---|---|---|---|
+| step 20 | +44.1% | -2.5 | BFCL +43/+36/+40% / -6.2/-3.1/-1.9; IFEval +28% / +6.2; MBPP+ +68% / -9.4; SVAMP +31% / -3.1 |
+| step 40 | +50.2% | -3.5 | BFCL +54/+32/+41% / **-23.1**/-1.2/-3.1; IFEval +42% / +6.2; MBPP+ +67% / -8.7; SVAMP +44% / -2.5 |
+| final (46) | +51.2% | **-6.1** | BFCL +49/+32/+37% / **-39.4**/-2.5/-3.1; IFEval +46% / +6.9; MBPP+ +65% / -11.2; SVAMP +51% / -5.0 |
+
+**Round 1 does not beat its start.** Step 20 is below combine-codecut on both counts; later steps
+shorten more (SVAMP 31% -> 51%, IFEval 28% -> 46%) but break BFCL irrelevance (-23, then -39): the
+model calls a function when none fits. DPO pushes "think less" everywhere, and on no-fit questions
+the check "does any function fit?" is what gets dropped (as with the deep 32-token tool cuts of the
+grid). Only 37 guard and 7 hard tool pairs held it back. Maths held better than feared (SVAMP -2.5
+to -5.0 with 31-51% shorter).
