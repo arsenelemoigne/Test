@@ -66,6 +66,8 @@ def main():
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
                              "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
+    parser.add_argument("--fresh", action="store_true",
+                        help="recheck: score on questions 41-80 of every benchmark (never used to pick a model)")
     parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
     parser.add_argument("--min-steps", type=int, default=1, help="mvt: never cut below this many paragraphs")
     parser.add_argument("--repeat", default="", help="mvt: dataset:times for SFT, e.g. gsm8k:2")
@@ -631,15 +633,21 @@ def gridtable(args):
 
 def recheck(args):
     """Score the base or one adapter with more samples per question: a tighter interval on the same subset."""
-    base = ROOT / f"s{args.samples}-base"
-    evaluate(base, samples=args.samples)
+    prefix, questions = f"s{args.samples}", QUESTIONS
+    if args.fresh:
+        prefix, questions = f"fresh-s{args.samples}", "questions_40b"
+        if not Path(questions, "questions.jsonl").exists():
+            py("subset_questions.py", "--per-dataset", 40, "--skip", 40, "--out", questions)
+    base = ROOT / f"{prefix}-base"
+    evaluate(base, samples=args.samples, questions=questions)
     if args.adapter:
-        name = args.adapter.removeprefix("adapters/").replace("/", "-")
-        out = ROOT / f"s{args.samples}-{name}"
-        evaluate(out, args.adapter, samples=args.samples)
+        name = args.adapter.split("adapters/")[-1].replace("/", "-")
+        out = ROOT / f"{prefix}-{name}"
+        evaluate(out, args.adapter, samples=args.samples, questions=questions)
         print(score_line(f"{name} ({args.samples} samples)", out, base=base))
         print(diagnose(out, base=base))
         to_drive(out)
+    to_drive(base)
 
 
 def compare(out, base=BASE):

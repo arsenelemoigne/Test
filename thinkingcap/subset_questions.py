@@ -24,14 +24,17 @@ def main():
     parser.add_argument("--questions", default="questions", help="directory from benchmarks.py")
     parser.add_argument("--out", required=True)
     parser.add_argument("--per-dataset", type=int, required=True)
+    parser.add_argument("--skip", type=int, default=0,
+                        help="leave out the first SKIP questions of every benchmark: a fresh held-out subset")
     args = parser.parse_args()
 
     source, out = Path(args.questions), Path(args.out)
     shutil.copytree(source, out, dirs_exist_ok=True)  # graders' data files come along
     rows = [json.loads(line) for line in (source / "questions.jsonl").read_text().splitlines() if line]
-    taken, kept = Counter(), []
+    seen, taken, kept = Counter(), Counter(), []
     for row in rows:
-        if taken[row["dataset"]] < args.per_dataset:
+        seen[row["dataset"]] += 1
+        if seen[row["dataset"]] > args.skip and taken[row["dataset"]] < args.per_dataset:
             taken[row["dataset"]] += 1
             kept.append(row)
     (out / "questions.jsonl").write_text("".join(json.dumps(row) + "\n" for row in kept))
@@ -39,7 +42,7 @@ def main():
     manifest = json.loads((out / "manifest.json").read_text())
     manifest |= {"counts": dict(taken), "total": len(kept),
                  "cohort_sha256": hashlib.sha256((out / "questions.jsonl").read_bytes()).hexdigest(),
-                 "subset_of": manifest["cohort_sha256"], "per_dataset": args.per_dataset}
+                 "subset_of": manifest["cohort_sha256"], "per_dataset": args.per_dataset, "skip": args.skip}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"{len(kept)} questions: {dict(taken)}")
 
