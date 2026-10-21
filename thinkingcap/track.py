@@ -135,7 +135,10 @@ def drive_sync(direction):
     if not Path("/content/drive/MyDrive").exists():
         return
     DRIVE.mkdir(parents=True, exist_ok=True)
-    for name in ("runs", "adapters", "data"):
+    names = ["runs", "adapters", "data", "models", *[p.name for p in Path(".").glob("questions_*") if p.is_dir()]]
+    if direction == "restore":
+        names = ["runs", "adapters", "data", "models", *[p.name for p in DRIVE.glob("questions_*") if p.is_dir()]]
+    for name in names:
         source, target = (Path(name), DRIVE / name) if direction == "save" else (DRIVE / name, Path(name))
         if source.exists():
             # --update: never replace a newer file (a restore once overwrote a fresher local rollout file)
@@ -942,6 +945,9 @@ def plan(args):
         plan_file = Path(args.plan_file)
         lines = [l.split("#")[0].strip() for l in plan_file.read_text().splitlines()] if plan_file.exists() else []
         todo = [l for l in lines if l and l not in done]
+        if todo and todo[0] == "end":  # the queue's last line: save everything, let Drive upload it, stop
+            finish()
+            return
         if not todo:
             idle_since = idle_since or time.time()
             if time.time() - idle_since > args.wait_hours * 3600:
@@ -956,6 +962,21 @@ def plan(args):
         done.add(todo[0])
         drive_sync("save")
         update_files()
+
+
+def finish():
+    """Final save: everything to Drive, flushed to the cloud, so the runtime can be released safely."""
+    import time
+    drive_sync("save")
+    subprocess.run(["sync"])
+    try:
+        from google.colab import drive
+        drive.flush_and_unmount()
+        print("drive: flushed and unmounted", flush=True)
+    except Exception as error:  # outside the notebook kernel: give Drive's uploader time instead
+        print(f"drive: flush not available here ({error}); waiting 5 minutes for the upload", flush=True)
+        time.sleep(300)
+    print("plan: end of queue; everything is on Drive", flush=True)
 
 
 def update_files():

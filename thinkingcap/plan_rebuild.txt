@@ -50,3 +50,5 @@ confirm --name bon-dpo-r4
 # round 5 from round 4's best (step 15), a fourth fresh draw (seed 3), same recipe, checked with 8 samples
 bon_dpo --name bon-dpo-r5 --rollouts-from adapters/bon-dpo-r4/step-15 --data-seed 3 --gen-questions 750 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
 confirm --name bon-dpo-r5
+# last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
+end

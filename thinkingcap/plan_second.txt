@@ -6,3 +6,5 @@ bon_dpo --name bon-dpo-r2g-s1 --rollouts-from adapters/bon-dpo-nocode/step-30 --
 bon_dpo --name bon-dpo-r4-s1 --rollouts-from adapters/bon-dpo-r3/step-5 --probe-from bon-dpo-r4 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 15 --dpo-seed 1
 # 2. round 4 and the two retrains on the fresh set (seed 20261022), 8 samples, against session 1's f8-base
 fresh --inputs adapters/bon-dpo-r4/step-15 adapters/bon-dpo-r2g-s1/step-10 adapters/bon-dpo-r4-s1/step-15
+# last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
+end
