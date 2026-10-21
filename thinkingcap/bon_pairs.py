@@ -4,6 +4,7 @@ Per question (only those kept by select_shortest.py and the contamination check)
   shorten  shortest correct reply  beats  the longest correct reply (at least --ratio times longer)
   guard    shortest correct reply  beats  the shortest wrong reply (finished, not cut by the cap):
            brevity must not come from giving up
+  --no-shorten sources get guard pairs only, with their median-length correct reply as chosen
 
     python bon_pairs.py --rollouts runs/bon/probe/rollouts.jsonl --keep runs/bon/select-r1/sft.jsonl --out runs/bon/pairs
     python dpo.py --pairs runs/bon/pairs/pairs.jsonl --init-adapter adapters/bon-r1 --out adapters/bon-dpo --mix 0.6,0.4,0
@@ -37,9 +38,12 @@ def main():
         wrong = sorted((r for r in done if not r["correct"]), key=lambda r: r["output_tokens"])
         if not right:
             continue
-        base = {"id": qid, "source": group[0]["source"], "prompt_ids": right[0]["prompt_ids"],
-                "chosen_ids": right[0]["output_ids"]}
-        if base["source"] not in args.no_shorten.split(",") and len(right) >= 2 \
+        guarded = group[0]["source"] in args.no_shorten.split(",")
+        # guard-only sources: a typical-length correct reply, so no push toward their riskiest short ones
+        chosen = right[len(right) // 2] if guarded else right[0]
+        base = {"id": qid, "source": group[0]["source"], "prompt_ids": chosen["prompt_ids"],
+                "chosen_ids": chosen["output_ids"]}
+        if not guarded and len(right) >= 2 \
                 and right[-1]["output_tokens"] >= args.ratio * right[0]["output_tokens"]:
             pairs.append(base | {"kind": "shorten", "rejected_ids": right[-1]["output_ids"]})
             kinds["shorten", base["source"]] += 1
