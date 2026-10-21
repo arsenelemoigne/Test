@@ -685,8 +685,9 @@ def thinkcheck(args):
         shutil.copy(out, DRIVE / out)
 
 
-COD_INSTRUCTION = ("\n\nWhile thinking, write only a minimal draft: plan every step and check your code against "
-                   "the example, but use at most five words per step.")
+COD_INSTRUCTION = ("\n\nWhile thinking, be terse: short phrases, not full sentences. But skip no step: write the "
+                   "plan, list the edge cases (empty input, one element, input already in the answer's form, "
+                   "negatives, duplicates), and trace each one, and the example, through your code before answering.")
 
 
 def cod(args):
@@ -709,7 +710,10 @@ def cod(args):
             part = Path(f"data/cod-{name}-{source}.jsonl")
             py("prepare_types.py", "--sources", source, "--per-source", count, "--seed", 2, "--out", part)
             parts.append(part.read_text())
-        code.write_text("".join(parts))
+        rows = [json.loads(l) for l in "".join(parts).splitlines() if l.strip()]
+        for row in rows:  # grade on the strictest tests available: MBPP's hidden challenge asserts too
+            row["tests"] = row["tests"] + row.pop("challenge_tests", [])
+        code.write_text("".join(json.dumps(r) + "\n" for r in rows))
     if not prompted.exists():
         rows = [json.loads(l) for l in code.read_text().splitlines() if l.strip()]
         for row in rows:

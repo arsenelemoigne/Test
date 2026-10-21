@@ -184,6 +184,7 @@ def mbpp_train(args, rng):
             content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"
             yield {"source": "mbpp_train", "task": "code", "answer": "", "grader": "code",
                    "entry_point": name, "tests": task["test_list"], "setup": task["test_setup_code"],
+                   "challenge_tests": task.get("challenge_test_list") or [],
                    "prompt": [{"role": "user", "content": content}]}
 
 
