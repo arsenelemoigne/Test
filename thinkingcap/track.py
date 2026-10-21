@@ -64,6 +64,8 @@ def main():
     parser.add_argument("--no-shorten", default="", help="bon_dpo: sources with guard pairs only")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--rollouts-from", help="bon_dpo: a new round sampled from this adapter, or auto (best checkpoint)")
+    parser.add_argument("--save-every", type=int, default=25, help="bon_dpo: DPO checkpoint interval (steps)")
     parser.add_argument("--skip-eval", action="store_true", help="bon: train only, no test")
     parser.add_argument("--sft-lr", type=float, default=5e-5, help="bon: SFT learning rate")
     parser.add_argument("--sft-epochs", type=int, default=1, help="bon: SFT passes")
@@ -505,21 +507,37 @@ def bon(args):
 def bon_dpo(args):
     """Best-of-8 then DPO on the same replies: shortest correct over longest correct, and over a wrong one.
 
-    No new generation: pairs come from the best-of-8 rollouts (bon_pairs.py), restricted to the
-    questions select-r1 kept after the contamination check. Starts from --start (default the
-    best-of-8 SFT adapter), which is also the reference. Checkpoints every 25 steps, each scored
-    on the 240-question test sample with 4 samples.
+    Round 1 (no --rollouts-from): pairs come from the raw model's best-of-8 rollouts (bon_pairs.py),
+    restricted to the questions select-r1 kept after the contamination check, starting from --start
+    (default the best-of-8 SFT adapter), which is also the reference.
+    Round 2+ (--rollouts-from ADAPTER, or "auto" for the best scored checkpoint within -2.5 points):
+    that model answers the same questions 8 times again (its replies are already shorter), new pairs,
+    DPO continues from it. Checkpoints every --save-every steps; --eval-steps are scored on the
+    240-question test sample with 4 samples.
     """
     name = args.name or "bon-dpo"
-    pairs = BON / ("pairs" + (f"-noshort-{args.no_shorten}" if args.no_shorten else ""))
+    start, no_shorten, rollouts = args.start or "adapters/bon-r1", args.no_shorten, BON / "probe" / "rollouts.jsonl"
+    if args.rollouts_from:
+        start = best_checkpoint() if args.rollouts_from == "auto" else args.rollouts_from
+        settings = Path(start).parent / "stage.json"
+        if not no_shorten and settings.exists():
+            no_shorten = json.loads(settings.read_text()).get("no_shorten", "")
+        print(f"round from {start} (code guard-only: {bool(no_shorten)})", flush=True)
+        probe = BON / f"probe-{name}"
+        if not (probe / "rollouts.jsonl").exists():
+            py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", BON_SOURCES, "--per-source", 300,
+               "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
+        rollouts = probe / "rollouts.jsonl"
+    pairs = BON / (f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else ""))
     if not (pairs / "pairs.jsonl").exists():
-        py("bon_pairs.py", "--rollouts", BON / "probe" / "rollouts.jsonl", "--keep", BON / "select-r1" / "sft.jsonl",
-           "--out", pairs, "--no-shorten", args.no_shorten)
+        py("bon_pairs.py", "--rollouts", rollouts, "--keep", BON / "select-r1" / "sft.jsonl",
+           "--out", pairs, "--no-shorten", no_shorten)
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / name
     if not (adapter / "adapter_config.json").exists():
-        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", args.start or "adapters/bon-r1", "--out", adapter,
-           "--mix", "0.6,0.4,0", "--save-every", 25, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
+        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+           "--mix", "0.6,0.4,0", "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
+        (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten}))
     base = ROOT / "s4-base"
     evaluate(base, samples=4)
     for checkpoint in sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])):
@@ -528,6 +546,23 @@ def bon_dpo(args):
         out = ROOT / f"s4-{name}-{checkpoint.name}"
         evaluate(out, checkpoint, samples=4)
         print(score_line(f"{name} {checkpoint.name} (4 samples)", out, base=base), flush=True)
+
+
+def best_checkpoint(floor=-2.5):
+    """The scored DPO checkpoint saving the most tokens within `floor` points (4 samples)."""
+    best = None
+    for run in ROOT.glob("s4-*-step-*"):
+        if not (run / "results.json").exists():
+            continue
+        average = compare(run, ROOT / "s4-base")["average"]
+        saved, delta = average["token_reduction"] or 0, 100 * average["accuracy_delta"]
+        name, step = run.name.removeprefix("s4-").rsplit("-step-", 1)
+        if delta >= floor and (best is None or saved > best[0]):
+            best = (saved, Path("adapters") / name / f"step-{step}")
+    if best is None:
+        raise SystemExit(f"no scored checkpoint within {floor} points")
+    print(f"best checkpoint: {best[1]} ({best[0]:+.1%})", flush=True)
+    return best[1]
 
 
 def steer_read(args):
