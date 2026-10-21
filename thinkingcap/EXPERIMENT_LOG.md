@@ -779,3 +779,9 @@ The gentle SFT step mostly buys a head start, not a better end point.
 No-SFT step 30 with 4 samples: **+36.6% / +0.8** (svamp +39% / +0.6, mbpp +35% / -5.0, ifeval +43% /
 +6.9, bfcl +26-30% / -0.6 to +1.9). Less saving than the SFT start's step 30 (+44.9% / -2.7) but no
 accuracy cost at all: the first model of the project that is shorter by a third and not less accurate.
+
+**Code fix (MBPP gets guard pairs only, median-length correct reply; from the SFT start), 2 samples:**
+step 10 +37.4% / -3.3 (mbpp +24% / -8.7); step 20 +44.2% / -3.3 (mbpp -6.2); step 30 +40.4% / -5.2
+(mbpp -10.0); step 40 +35.9% / -5.0 (mbpp -15.0). No checkpoint within the limit. Code still gets
+22-26% shorter by spill-over and loses as much as before: removing code's shorten pairs does not
+protect code (as the per-type session found with uncut code examples).
