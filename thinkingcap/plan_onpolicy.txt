@@ -10,3 +10,10 @@ recheck --fresh --samples 8 --adapter /content/drive/MyDrive/thinkingcap-mvtf/ad
 recheck --fresh --samples 8 --adapter /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-nocode/step-30
 # "does it still think?": share of near-empty thinking, raw vs trained, on the fresh test and the usual subset (no GPU)
 thinkcheck --inputs fresh-s8-base fresh-s8-bon-dpo-r2g-step-10 fresh-s8-bon-dpo-nocode-step-30 s8-base /content/drive/MyDrive/thinkingcap-mvtf/runs/mvtf/s8-bon-dpo-r2g-step-10
+# Chain-of-Draft code repair (user idea), from the model under test (gentle round 2, step 10): 150 MBPP-train + 300
+# KodCode tasks, terse-but-complete code thinking learned without the instruction, replay rows hold the other tasks.
+# Checkpoints scored on the 240-question subset (4 answers, all benchmarks: spill-over), then code alone on all 378
+# MBPP+ tasks x 4 for the raw model, the start and the repaired model (the marginal effect of the repair on code).
+cod --name cod1 --start /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-r2g/step-10
+codeeval --samples 4 --adapter /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-r2g/step-10
+codeeval --samples 4 --adapter adapters/cod-cod1

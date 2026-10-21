@@ -44,7 +44,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice}
+                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode}
     used = {json.dumps(json.loads(l)["prompt"]) for path in args.exclude
             for l in Path(path).read_text().splitlines() if l.strip()}
     for source in args.sources.split(","):
@@ -185,6 +185,39 @@ def mbpp_train(args, rng):
             yield {"source": "mbpp_train", "task": "code", "answer": "", "grader": "code",
                    "entry_point": name, "tests": task["test_list"], "setup": task["test_setup_code"],
                    "prompt": [{"role": "user", "content": content}]}
+
+
+TEST_FUNCTION = re.compile(r"^def (test_\w*)\(\s*\):", re.MULTILINE)
+
+
+def kodcode(args, rng):
+    """More code practice, in MBPP's format: KodCode-Light-RL-10K (synthetic tasks verified by unit tests).
+
+    Only one-function tasks of easy or medium difficulty whose tests are plain argument-free test_
+    functions (no pytest fixtures, no imports from pytest): the tests become asserts run as MBPP's
+    are, and the first assert that calls the function is shown in the prompt as MBPP's example.
+    """
+    from datasets import load_dataset
+    from utils.eval.benchmarks import MBPP_INSTRUCTION, MBPP_NAME_REMINDER
+
+    for task in load_dataset("KodCode/KodCode-Light-RL-10K", split="train"):
+        if task["style"] != "instruct" or task["gpt_difficulty"] not in ("easy", "medium"):
+            continue
+        if len(task["test_info"] or []) != 1:
+            continue
+        name, test = task["test_info"][0]["function_name"], task["test"]
+        if not name or "pytest" in test or "@" in test or "solution" not in test.split("\n", 1)[0]:
+            continue
+        body = "\n".join(l for l in test.splitlines() if not re.match(r"\s*(from solution import|import solution)", l))
+        functions = TEST_FUNCTION.findall(body)
+        example = next((l.strip() for l in body.splitlines() if l.strip().startswith("assert") and f"{name}(" in l), None)
+        if not functions or not example or len(functions) != body.count("def test_"):
+            continue
+        prompt = f'"""\n{task["question"].strip()}\n{example}\n"""\n'
+        content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"
+        yield {"source": "kodcode", "task": "code", "answer": "", "grader": "code", "entry_point": name,
+               "tests": [body, *[f"{f}()" for f in functions]], "setup": "",
+               "prompt": [{"role": "user", "content": content}]}
 
 
 TOOLS = re.compile(r"<tools>\s*(.*?)\s*</tools>", re.DOTALL)

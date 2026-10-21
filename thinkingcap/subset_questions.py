@@ -26,12 +26,15 @@ def main():
     parser.add_argument("--per-dataset", type=int, required=True)
     parser.add_argument("--skip", type=int, default=0,
                         help="leave out the first SKIP questions of every benchmark: a fresh held-out subset")
+    parser.add_argument("--datasets", default="", help="comma-separated datasets to keep (default: all), e.g. mbpp")
     args = parser.parse_args()
 
     source, out = Path(args.questions), Path(args.out)
     shutil.copytree(source, out, dirs_exist_ok=True)  # graders' data files come along
     rows = [json.loads(line) for line in (source / "questions.jsonl").read_text().splitlines() if line]
     seen, taken, kept = Counter(), Counter(), []
+    only = set(filter(None, args.datasets.split(",")))
+    rows = [row for row in rows if not only or row["dataset"] in only]
     for row in rows:
         seen[row["dataset"]] += 1
         if seen[row["dataset"]] > args.skip and taken[row["dataset"]] < args.per_dataset:

@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
                                           "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon",
-                                          "onpolicy", "redpo", "scores", "thinkcheck"))
+                                          "onpolicy", "redpo", "scores", "thinkcheck", "cod", "codeeval"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -66,6 +66,10 @@ def main():
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
                              "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
+    parser.add_argument("--code-tasks", default="mbpp_train:150,kodcode:300",
+                        help="cod: code sources and tasks per source")
+    parser.add_argument("--lr", type=float, default=5e-5, help="cod: SFT learning rate")
+    parser.add_argument("--epochs", type=int, default=2, help="cod: SFT passes")
     parser.add_argument("--fresh", action="store_true",
                         help="recheck: score on questions 41-80 of every benchmark (never used to pick a model)")
     parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
@@ -679,6 +683,77 @@ def thinkcheck(args):
     if DRIVE.exists():
         (DRIVE / out).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(out, DRIVE / out)
+
+
+COD_INSTRUCTION = ("\n\nWhile thinking, write only a minimal draft: plan every step and check your code against "
+                   "the example, but use at most five words per step.")
+
+
+def cod(args):
+    """Chain-of-Draft code repair: terse but complete code thinking, then light SFT from --start.
+
+    The start model answers code tasks (MBPP minus MBPP+, and KodCode) 8 times under a Chain-of-Draft
+    instruction and twice normally; the shortest passing draft reply that still thinks becomes an SFT
+    row under the original prompt (cod_select.py). Replay rows, the start model's own unchanged correct
+    replies to math, tool and instruction questions, keep the change on code. Checkpoints are scored
+    on the 240-question subset (4 samples, every benchmark: spill-over) and on code alone (codeeval).
+    """
+    fetch(args.start)
+    name = args.name or "cod1"
+    work = GRID / f"cod-{name}"
+    code, prompted, replay = (Path(f"data/cod-{name}-{kind}.jsonl") for kind in ("code", "prompted", "replay"))
+    if not code.exists():
+        parts = []
+        for spec in args.code_tasks.split(","):
+            source, count = spec.split(":")
+            part = Path(f"data/cod-{name}-{source}.jsonl")
+            py("prepare_types.py", "--sources", source, "--per-source", count, "--seed", 2, "--out", part)
+            parts.append(part.read_text())
+        code.write_text("".join(parts))
+    if not prompted.exists():
+        rows = [json.loads(l) for l in code.read_text().splitlines() if l.strip()]
+        for row in rows:
+            row["prompt"] = [*row["prompt"][:-1], {**row["prompt"][-1],
+                                                   "content": row["prompt"][-1]["content"] + COD_INSTRUCTION}]
+        prompted.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    if not replay.exists():
+        py("prepare_types.py", "--sources", "gsm8k_all,toolace,ifeval_like", "--per-source", 150, "--seed", 2,
+           "--out", replay)
+    sources = ",".join(spec.split(":")[0] for spec in args.code_tasks.split(","))
+    for kind, data, srcs, samples in (("cod", prompted, sources, 8), ("normal", code, sources, 2),
+                                      ("replay", replay, "gsm8k_all,toolace,ifeval_like", 1)):
+        rollouts = work / f"probe-{kind}" / "rollouts.jsonl"
+        if not rollouts.exists():
+            py("probe_curve.py", "--data", data, "--sources", srcs, "--per-source", 1000, "--samples", samples,
+               "--out", rollouts.parent, "--adapter", args.start, "--dtype", args.dtype, "--generate-only")
+    if not (work / "sft.jsonl").exists():
+        py("cod_select.py", "--cod", work / "probe-cod" / "rollouts.jsonl", "--normal",
+           work / "probe-normal" / "rollouts.jsonl", "--replay", work / "probe-replay" / "rollouts.jsonl", "--out", work)
+        py("contamination.py", "--data", work / "sft.jsonl", "--rollouts", work / "questions.jsonl")
+    print((work / "summary.txt").read_text(), flush=True)
+    to_drive(work)
+    adapter = Path("adapters") / f"cod-{name}"
+    if not (adapter / "adapter_config.json").exists():
+        py("sft.py", "--data", work / "sft.jsonl", "--init-adapter", args.start, "--out", adapter, "--dtype", args.dtype,
+           "--lr", args.lr, "--epochs", args.epochs, "--save-every", 20)
+    to_drive(adapter)
+    score_checkpoints(f"cod-{name}", adapter)
+
+
+def codeeval(args):
+    """Code alone, at scale: every MBPP+ task (378) x --samples, for the raw model and --adapter."""
+    questions = "questions_mbpp"
+    if not Path(questions, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 1000, "--datasets", "mbpp", "--out", questions)
+    base = ROOT / f"mbpp-s{args.samples}-base"
+    evaluate(base, samples=args.samples, questions=questions)
+    to_drive(base)
+    if args.adapter:
+        name = args.adapter.split("adapters/")[-1].replace("/", "-")
+        out = ROOT / f"mbpp-s{args.samples}-{name}"
+        evaluate(out, args.adapter, samples=args.samples, questions=questions)
+        print(score_line(f"{name}, all MBPP+ tasks ({args.samples} samples)", out, base=base), flush=True)
+        to_drive(out)
 
 
 def compare(out, base=BASE):
