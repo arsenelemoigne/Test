@@ -15,3 +15,6 @@ bon_dpo --name bon-dpo-nocode --drop-sources mbpp_train --dpo-epochs 2 --save-ev
 # push past 50%: round 2, the best checkpoint so far answers the 750 questions not used yet, 8 times each;
 # new pairs, one pass of DPO from it (more passes undo the brevity)
 bon_dpo --name bon-dpo-r2 --rollouts-from auto --fresh-questions --gen-questions 750 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+# round 2 again on the same new answers, with the winning recipe (no code pairs): the running round 2 was
+# queued before no-code won and keeps code pairs; the two compare code in vs out in round 2
+bon_dpo --name bon-dpo-r2nc --rollouts-from adapters/bon-dpo-nocode/step-30 --probe-from bon-dpo-r2 --drop-sources mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30

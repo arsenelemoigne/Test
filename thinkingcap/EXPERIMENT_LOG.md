@@ -792,3 +792,8 @@ step 20 +50.6% / -4.4 (mbpp +36% / -8.7); step 30 +44.1% / -2.8 (mbpp +41% / -6.
 the same steps, code loses a little less at steps 10 and 20 and more at step 30: within the noise of
 40 tasks x 2 samples (about +/-10 on one benchmark). Code data is not the main cause of the code
 loss; the shared "think less" habit is.
+
+**No-code step 30 with 4 samples: +42.4% / -0.7** (svamp +53% / +1.2, mbpp +38% / -3.7, ifeval +44% /
+-1.2, bfcl +29-35% / 0.0 to +2.5). Best model of the project so far: level with Lightning McQwen3's
++43.2% / -0.85 (his: full evaluation x 8; ours: 240 questions x 4, to be confirmed with 8). Round 2
+starts from it (750 unused questions x 8).

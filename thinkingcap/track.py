@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--probe-from", help="bon_dpo round: reuse the answers sampled by this round name")
     parser.add_argument("--fresh-questions", action="store_true", help="bon_dpo round: questions not sampled before")
     parser.add_argument("--rollouts-from", help="bon_dpo: a new round sampled from this adapter, or auto (best checkpoint)")
     parser.add_argument("--save-every", type=int, default=25, help="bon_dpo: DPO checkpoint interval (steps)")
@@ -537,21 +538,23 @@ def bon_dpo(args):
     if args.rollouts_from:
         start = best_checkpoint() if args.rollouts_from == "auto" else args.rollouts_from
         settings = Path(start).parent / "stage.json"
-        if not no_shorten and settings.exists():
-            no_shorten = json.loads(settings.read_text()).get("no_shorten", "")
+        if settings.exists():  # a round keeps the recipe of the checkpoint it starts from
+            recipe = json.loads(settings.read_text())
+            no_shorten = no_shorten or recipe.get("no_shorten", "")
+            args.drop_sources = args.drop_sources or recipe.get("drop_sources", "")
         print(f"round from {start} (code guard-only: {bool(no_shorten)})", flush=True)
-        probe = BON / f"probe-{name}"
+        probe = BON / f"probe-{args.probe_from or name}"  # --probe-from: reuse another round's answers
         if not (probe / "rollouts.jsonl").exists():
             py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", BON_SOURCES, "--per-source", 300,
                "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
                "--max-questions", args.gen_questions,
                *(["--exclude-rollouts", BON / "probe" / "rollouts.jsonl"] if args.fresh_questions else []))
         rollouts = probe / "rollouts.jsonl"
-        keep = BON / f"select-{name}"
+        keep = BON / f"select-{args.probe_from or name}"
         if not (keep / "sft.jsonl").exists():  # the same easy-math filter and contamination check, on these questions
             py("select_shortest.py", "--rollouts", rollouts, "--out", keep, "--easy-tokens", "gsm8k_all=700")
             py("contamination.py", "--data", keep / "sft.jsonl", "--rollouts", rollouts)
-    pairs = BON / (f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else "")
+    pairs = BON / ((f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else ""))
                    + (f"-drop-{args.drop_sources}" if args.drop_sources else ""))
     if not (pairs / "pairs.jsonl").exists():
         py("bon_pairs.py", "--rollouts", rollouts, "--keep", (keep if args.rollouts_from else BON / "select-r1") / "sft.jsonl",
@@ -561,7 +564,8 @@ def bon_dpo(args):
     if not (adapter / "adapter_config.json").exists():
         py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
            "--mix", "0.6,0.4,0", "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
-        (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten}))
+        (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten,
+                                                        "drop_sources": args.drop_sources}))
     # a quick sweep (--eval-samples, 2 by default), then the sweep's best within the limit with 4 samples
     n = args.eval_samples
     base = ROOT / f"s{n}-base"
