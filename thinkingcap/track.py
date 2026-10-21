@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
                                           "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon",
-                                          "onpolicy", "scores"))
+                                          "onpolicy", "redpo", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -58,6 +58,9 @@ def main():
     parser.add_argument("--start", help="onpolicy: the current model's adapter (fetched from Drive if missing)")
     parser.add_argument("--round-seed", type=int, default=1, help="onpolicy: seed for the round's fresh questions")
     parser.add_argument("--nll", type=float, default=0.0, help="onpolicy: NLL anchor weight in DPO")
+    parser.add_argument("--from-round", help="redpo: the round whose pairs are reused")
+    parser.add_argument("--no-shorten", default="", help="redpo: categories whose shorten pairs are dropped")
+    parser.add_argument("--save-every", type=int, default=20, help="onpolicy/redpo: DPO checkpoint interval")
     parser.add_argument("--plan-file", default="plan.txt", help="plan: the queue this runtime works through")
     parser.add_argument("--wait-hours", type=float, default=0,
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
@@ -556,16 +559,46 @@ def onpolicy(args):
     adapter = Path("adapters") / f"onpolicy-{args.name}"
     if not (adapter / "adapter_config.json").exists():
         py("dpo.py", "--data", pairs, "--init-adapter", args.start, "--out", adapter, "--dtype", args.dtype,
-           *(["--nll", args.nll] if args.nll else []))
+           "--save-every", args.save_every, *(["--nll", args.nll] if args.nll else []))
     to_drive(adapter)
+    score_checkpoints(args.name, adapter)
+
+
+def redpo(args):
+    """DPO again on an earlier round's pairs, with some shorten pairs dropped and an NLL anchor."""
+    fetch(args.start)
+    source = GRID / f"onpolicy-{args.from_round}"
+    work = GRID / f"onpolicy-{args.name}"
+    work.mkdir(parents=True, exist_ok=True)
+    pairs = work / "pairs.jsonl"
+    if not pairs.exists():
+        category = {json.loads(l)["id"]: json.loads(l).get("category")
+                    for l in (source / "probe" / "rollouts.jsonl").read_text().splitlines() if l.strip()}
+        dropped = set(filter(None, args.no_shorten.split(",")))
+        rows = [l for l in (source / "pairs.jsonl").read_text().splitlines() if l.strip()]
+        kept = [l for l in rows if not (json.loads(l)["kind"] == "shorten"
+                                        and category.get(json.loads(l)["id"]) in dropped)]
+        print(f"redpo {args.name}: {len(kept)} of {len(rows)} pairs from {args.from_round} "
+              f"(shorten pairs dropped for {sorted(dropped) or 'none'})", flush=True)
+        pairs.write_text("".join(l + "\n" for l in kept))
+    adapter = Path("adapters") / f"onpolicy-{args.name}"
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--data", pairs, "--init-adapter", args.start, "--out", adapter, "--dtype", args.dtype,
+           "--save-every", args.save_every, *(["--nll", args.nll] if args.nll else []))
+    to_drive(adapter, work)
+    score_checkpoints(args.name, adapter)
+
+
+def score_checkpoints(name, adapter):
+    """Every checkpoint of a round on the 240-question subset, 4 samples, against the raw model."""
     base = ROOT / "s4-base"
     evaluate(base, samples=4)
     checkpoints = sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])) + [adapter]
     for checkpoint in checkpoints:
         label = checkpoint.name if checkpoint != adapter else "final"
-        out = GRID / f"eval-onpolicy-{args.name}-{label}"
+        out = GRID / f"eval-onpolicy-{name}-{label}"
         evaluate(out, checkpoint, samples=4)
-        print(score_line(f"onpolicy-{args.name} {label}", out, base=base), flush=True)
+        print(score_line(f"onpolicy-{name} {label}", out, base=base), flush=True)
         to_drive(out)
 
 

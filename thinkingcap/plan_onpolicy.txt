@@ -1,3 +1,5 @@
 # On-policy rounds from the best MVT model (combine-codecut, kept untouched in Drive). One line = one stage.
 # Round 1: fresh questions (seed 1), the current model answers 4 times, MVT cuts verified 4/4, DPO pairs, checkpoints scored.
 onpolicy --name r1 --start adapters/combine-codecut --round-seed 1 --per-source 300 --samples 4
+# Round 1 fix (user approved): same pairs, no shorten pairs on BFCL-style "no function fits", NLL anchor 1, checkpoints every 10 steps
+redpo --name r1b --from-round r1 --start adapters/combine-codecut --no-shorten irrelevance --nll 1 --save-every 10
