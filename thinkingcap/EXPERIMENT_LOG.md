@@ -694,6 +694,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | choice-whole | 203 / 0 | ~455 -> ~400 | +2.5% | +0.9 | BFCL +5/+9/0% / 0.0/-0.6/+1.9; IFEval -6% / +4.4; MBPP+ -8% / -5.0; SVAMP +17% / +3.7 |
 | choice-mvt1024 | 203 / 201 | ~455 -> ~97 | +72.9% | **-10.7** | BFCL +39/+53/+32% / -1.2/**-13.1**/-3.8; IFEval +60% / +12.5; MBPP+ +93% / **-10.0**; SVAMP +66% / **-39.4** |
 | choice-mvt256 | 203 / 194 | ~455 -> ~102 | +69.0% | **-13.3** | BFCL +37/+51/+28% / -3.7/**-11.2**/-0.6; IFEval +45% / +4.4; MBPP+ +93% / **-13.7**; SVAMP +61% / **-38.7** |
+| choice-mvt1024-tokens32 | 203 / 199 | ~455 -> ~76 | +8.8% | **-4.7** | BFCL +18/+12/+15% / -1.2/**-10.6**/-5.6; IFEval +3% / +1.9; MBPP+ +9% / -1.9; SVAMP +8% / **-13.1** |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -749,3 +750,7 @@ shown whole beside them (night-1 winner: MC cuts + GSM8K whole x2, +37.1% / -0.6
 choice-mvt256: 443 checked, 419 pass; same ~78% cut.
 
 choice-mvt1024-tokens32: 496 checked, 487 pass; ARC 454 -> 64, CSQA 456 -> 79 (-84%).
+
+Token batches cut multiple choice even harder (-84%) yet the model barely shortens (+8.8%) and
+still loses (SVAMP -13.1): thinking that stops mid-sentence is not a habit it picks up cleanly,
+as with tool calls. For multiple choice, paragraphs (strong brevity signal, to pair with maths whole).
