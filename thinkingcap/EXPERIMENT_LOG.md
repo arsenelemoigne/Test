@@ -876,3 +876,28 @@ McQwen3 (43.2% / -0.85, self-reported, question count not stated). Weak spots: M
 Saved to Google Drive (Colab account), folder `thinkingcap-mvt-pertype/` (1.3 GB): adapters
 (grid/*, combine-light, combine-codecut, combine-full), runs/, track_log.txt. Runtime then deleted
 (21 Oct ~13:15). Full report: REPORT_MVT_PERTYPE.txt.
+
+# Track 3b: on-policy rounds (MVT cuts of the current model verified 4/4, DPO with too-early pairs)
+
+Start: combine-codecut (44.3% / -1.6, 8 samples), kept untouched in Drive; code state tagged
+`mvt-pertype-v1`. Round = fresh questions (`prepare_types --seed R --exclude` the grid's), the
+current model answers 4 times, MVT cut per kind (tool c=256 paragraphs, text c=1024 paragraphs, code
+and math c=1024 32-token batches), plus earlier cuts at half the MVT cut; every cut checked with 4
+natural answers (all must be right). Pairs: shorten (safe cut > full), guard (safe cut > earlier
+cut that failed), hard (full > failed cut, when no cut is safe). DPO from the current adapter
+(reference = itself, beta 0.1, lr 2e-5, 16 pairs per step, checkpoints every 20 steps).
+
+## Round 1 (seed 1)
+
+Fresh questions: toolace 267, ifeval_like 300, mbpp_train 295, gsm8k_all 300 (1,162).
+The current model's answers (4 each; untouched model on the grid's questions in brackets):
+gsm8k_all 62% correct / 1,812 tokens; ifeval_like 72% / 331 (78% / 408); mbpp_train 29% / 744
+(38% / 2,842); toolace 60% / 128 (58% / 265).
+
+| kind | cuts checked / passed | targets (pruned / early / original) | tokens before -> after | pairs (shorten / guard / hard) |
+|---|---|---|---|---|
+| tool | 1,284 / 1,107 | 180 (39 / 134 / 7) | 117 -> 49 (-58%) | 183 (139 / 37 / 7) |
+| text | 1,742 / 1,309 | 252 (38 / 181 / 33) | 251 -> 125 (-50%) | 276 (207 / 36 / 33) |
+
+Half-way "early" cuts pass 4/4 most of the time on tool calls and instructions: the current model
+needs even less thinking than its MVT point.
