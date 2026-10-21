@@ -709,3 +709,37 @@ shorten pairs chosen vs rejected mean tokens: gsm8k 493 vs 2,033, mbpp 747 vs 2,
 
 The contrast is the lever: the same replies that gave +4.4% as SFT give +40-48% as DPO pairs, within
 the limit, after 25 steps. MBPP+ carries the loss (-5 to -9 on 40 tasks, about +/-8 noise there).
+
+Later checkpoints of the same run (4 samples): step-75 +37.3% / -2.1 (mbpp -10.0, svamp +5.0);
+step-100 +36.5% / -2.6 (mbpp -9.4, ifeval -6.2); step-125 +31.1% / -3.2 (outside). Saving falls
+and IFEval worsens with more steps (the second pass memorises pairs, 99% ordered right): the
+first 25-50 steps are the useful part. MBPP+ loses 5-10 points at every checkpoint.
+
+**Steering push tests (240 test questions x 2 samples; check: the push's effect per token is the
+same in vLLM and Transformers, ratio 1.08, correlation 0.99):**
+
+| push | tokens saved | accuracy |
+|---|---|---|
+| A layer 9, x5 | +17.6% | -0.1 |
+| A layer 9, x15 | +22.3% | -5.5 |
+| A layer 12, x5 | +2.5% | -2.7 |
+| A layer 12, x15 | +28.6% | -7.5 |
+| B layer 9, x5 | +10.5% | -0.5 |
+| B layer 9, x15 | +23.5% | -2.9 (4 samples: +15.7% / -5.0) |
+| C layer 9, x8 | +3.3% | +3.2 |
+| C layer 9, x24 | +17.6% | -8.2 |
+
+Steering alone gives up to ~18% at no accuracy cost (A layer 9 x5, not confirmed at 4 samples);
+stronger pushes break accuracy. Fresh replies on 141 held-out training questions x 4: mean tokens
+raw 1,156 -> A 981 / C 970 at equal accuracy (56-57%), B 964 at -4.9 points; but the shortest
+correct of 4 barely moves (raw 450, A 459, B 407, C 427): steering shortens the average reply,
+it does not make much shorter best-of-N training data. Math under C: accuracy 36% -> 47% and
+mean 2,375 -> 1,745 tokens (25 questions, noisy).
+
+**Stronger SFT on clear-gap questions (bon r2: shortest correct >= 25% under the question's mean,
+lr 1e-4, 3 epochs), 4 samples: +12.5% / -0.7** (svamp +16% / +0.6, mbpp +7% / -2.5, ifeval +11% /
+-2.5, bfcl +10-22%, -1.9 to +4.4). Three times the saving of r1 at a quarter of its cost.
+
+**Runtime lost:** Colab recycled runtime A at about 11:07 Paris (2026-10-21); the disk, every
+adapter (bon-dpo checkpoints, bon-r2) and the 14,400 best-of-8 rollouts are gone. The worker had
+also stopped receiving branch updates after 5d3f8ce, so the MBPP guard-only DPO variant never ran.
