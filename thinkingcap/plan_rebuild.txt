@@ -36,3 +36,4 @@ code_round --name code-r3 --start adapters/bon-dpo-r2g/step-10 --dpo-epochs 1 --
 # of both draws answered 4x by the start model, all their too-early pairs)
 recheck --samples 8 --adapter adapters/code-r3/step-5
 code_round --name code-r3b --start adapters/bon-dpo-r2g/step-10 --code-data data/bon.jsonl data/bon-seed1.jsonl --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15 20
+confirm --name code-r3b

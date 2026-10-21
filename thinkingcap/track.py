@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "confirm", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -637,6 +637,16 @@ def code_round(args):
            "--mix", ",".join(f"{c / sum(counts):.4f}" for c in counts), "--save-every", args.save_every,
            "--epochs", args.dpo_epochs, "--dtype", args.dtype)
     score_checkpoints(name, adapter, args)
+
+
+def confirm(args):
+    """The run's 4-sample-checked checkpoint(s), scored again with 8 samples (finalists are compared at 8)."""
+    evaluate(ROOT / "s8-base", samples=8)
+    for run in sorted(ROOT.glob(f"s4-{args.name}-step-*")):
+        step = run.name.rsplit("-step-", 1)[1]
+        out = ROOT / f"s8-{args.name}-step-{step}"
+        evaluate(out, Path("adapters") / args.name / f"step-{step}", samples=8)
+        print(score_line(f"{args.name} step-{step} (8 samples)", out, base=ROOT / "s8-base"), flush=True)
 
 
 def diag(args):
