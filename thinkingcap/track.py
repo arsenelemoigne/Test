@@ -658,14 +658,15 @@ def diag(args):
 
 
 def new_questions(seed):
-    """A fresh draw of training questions (prepare_types.py --seed), minus any already in data/bon.jsonl."""
+    """A fresh draw of training questions (prepare_types.py --seed), minus any in an earlier draw (data/bon*.jsonl)."""
     out = Path(f"data/bon-seed{seed}.jsonl")
     if not out.exists():
         raw = Path(f"data/bon-seed{seed}-raw.jsonl")
         py("prepare_types.py", "--sources", "gsm8k_all,mbpp_train,toolace,ifeval_like,mc", "--per-source", 300,
            "--seed", seed, "--out", raw)
         text = lambda r: r["prompt"][-1]["content"]
-        seen = {text(json.loads(l)) for l in Path("data/bon.jsonl").read_text().splitlines() if l.strip()}
+        used = [p for p in Path("data").glob("bon*.jsonl") if "raw" not in p.name and p != out]
+        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip()}
         rows = [json.loads(l) for l in raw.read_text().splitlines() if l.strip()]
         fresh = [r for r in rows if text(r) not in seen]
         out.write_text("".join(json.dumps(r) + "\n" for r in fresh))
