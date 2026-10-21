@@ -99,7 +99,7 @@ def main():
         loss = -torch.nn.functional.logsigmoid(margin) + args.nll * (-pc / len(r["chosen_ids"]))
         (loss / args.batch).backward()
         stats.append((float(loss), float(margin) > 0))
-        if position % args.batch == 0:
+        if position % args.batch == 0 or position == len(order):  # the last, partial batch too
             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)

@@ -797,3 +797,21 @@ loss; the shared "think less" habit is.
 -1.2, bfcl +29-35% / 0.0 to +2.5). Best model of the project so far: level with Lightning McQwen3's
 +43.2% / -0.85 (his: full evaluation x 8; ours: 240 questions x 4, to be confirmed with 8). Round 2
 starts from it (750 unused questions x 8).
+
+### Round 2 (on-policy): no-code step 30 answers the 750 unused questions x 8
+
+The round-1 model's replies are about half as long (math mean 661 tokens vs 2,221 for the raw
+model; capped 1% vs 26%), so sampling took ~40 min. Its shortest correct vs its own mean: math 33%,
+code 39%, CSQA 24%, instructions 19%, ARC 18%, tools 16% shorter. 7 contamination drops, 506 pairs
+(424 without code). One DPO pass, 2 samples:
+
+| run | step | tokens saved | accuracy | svamp | mbpp | ifeval | bfcl |
+|---|---|---|---|---|---|---|---|
+| r2, code pairs in | 10 | +55.4% | -4.4 | +68% / -5.0 | +41% / -6.2 | +66% / -7.5 | +37-44% / 0..+3.8 |
+| r2, code pairs in | 20 | +63.7% | -4.0 | +76% / -6.2 | +68% / -8.7 | +60% / -2.5 | +42-47% / -2.5..+7.5 |
+| r2, no code pairs | 10 | +57.6% | -4.5 | +67% / -7.5 | +50% / -11.2 | +68% / -1.2 | +37-43% / -2.5..+6.2 |
+
+Round 2 deepens the saving (42% -> 55-64%) at about -4 points, mostly math and code. Bug found:
+dpo.py never stepped on the last partial batch, so a pass of 317 pairs ended at step 19 without a
+final checkpoint (fixed). Queued: 4-sample checks of r2nc step 10 and r2 step 20; a gentler round 2
+(guard pairs 60%, checkpoints every 5 steps).

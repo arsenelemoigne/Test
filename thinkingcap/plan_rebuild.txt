@@ -18,3 +18,8 @@ bon_dpo --name bon-dpo-r2 --rollouts-from auto --fresh-questions --gen-questions
 # round 2 again on the same new answers, with the winning recipe (no code pairs): the running round 2 was
 # queued before no-code won and keeps code pairs; the two compare code in vs out in round 2
 bon_dpo --name bon-dpo-r2nc --rollouts-from adapters/bon-dpo-nocode/step-30 --probe-from bon-dpo-r2 --drop-sources mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+# round 2 is shorter (55-64%) but -4 points at 2 samples: check the two best with 4 samples
+recheck --samples 4 --adapter adapters/bon-dpo-r2nc/step-10
+recheck --samples 4 --adapter adapters/bon-dpo-r2/step-20
+# a gentler round 2: more right-beats-wrong pairs (60%), checkpoints every 5 steps
+bon_dpo --name bon-dpo-r2g --rollouts-from adapters/bon-dpo-nocode/step-30 --probe-from bon-dpo-r2 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15 20

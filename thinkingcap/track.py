@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--mix", default="0.6,0.4,0", help="bon_dpo: shares of shorten, guard, hard pairs")
     parser.add_argument("--probe-from", help="bon_dpo round: reuse the answers sampled by this round name")
     parser.add_argument("--fresh-questions", action="store_true", help="bon_dpo round: questions not sampled before")
     parser.add_argument("--rollouts-from", help="bon_dpo: a new round sampled from this adapter, or auto (best checkpoint)")
@@ -563,7 +564,7 @@ def bon_dpo(args):
     adapter = Path("adapters") / name
     if not (adapter / "adapter_config.json").exists():
         py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
-           "--mix", "0.6,0.4,0", "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
+           "--mix", args.mix, "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
         (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten,
                                                         "drop_sources": args.drop_sources}))
     # a quick sweep (--eval-samples, 2 by default), then the sweep's best within the limit with 4 samples
