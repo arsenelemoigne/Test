@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -61,6 +61,10 @@ def main():
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
                              "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
+    parser.add_argument("--sft-lr", type=float, default=5e-5, help="bon: SFT learning rate")
+    parser.add_argument("--sft-epochs", type=int, default=1, help="bon: SFT passes")
+    parser.add_argument("--min-saved", type=float, default=0.0,
+                        help="bon: keep questions whose shortest correct reply is this share under their mean")
     parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
     parser.add_argument("--min-steps", type=int, default=1, help="mvt: never cut below this many paragraphs")
     parser.add_argument("--repeat", default="", help="mvt: dataset:times for SFT, e.g. gsm8k:2")
@@ -451,18 +455,44 @@ def bon(args):
            "--samples", 8, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
     if not (select / "sft.jsonl").exists():
         py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", select,
-           "--easy-tokens", "gsm8k_all=700")
+           "--easy-tokens", "gsm8k_all=700", "--min-saved", args.min_saved)
         py("contamination.py", "--data", select / "sft.jsonl", "--rollouts", probe / "rollouts.jsonl")
     print((select / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / f"bon-{name}"
     if not (adapter / "adapter_config.json").exists():
-        py("sft.py", "--data", select / "sft.jsonl", "--out", adapter, "--epochs", 1, "--lr", 5e-5,
+        py("sft.py", "--data", select / "sft.jsonl", "--out", adapter, "--epochs", args.sft_epochs, "--lr", args.sft_lr,
            "--max-per-source", args.max_per_source, "--dtype", args.dtype)
     base, out = ROOT / "s4-base", ROOT / f"s4-bon-{name}"
     evaluate(base, samples=4)
     evaluate(out, adapter, samples=4)
     print(score_line(f"bon-{name} (4 samples, 240 test questions)", out, base=base), flush=True)
     print(diagnose(out, base=base))
+
+
+def bon_dpo(args):
+    """Best-of-8 then DPO on the same replies: shortest correct over longest correct, and over a wrong one.
+
+    No new generation: pairs come from the best-of-8 rollouts (bon_pairs.py), restricted to the
+    questions select-r1 kept after the contamination check. Starts from --start (default the
+    best-of-8 SFT adapter), which is also the reference. Checkpoints every 25 steps, each scored
+    on the 240-question test sample with 4 samples.
+    """
+    name = args.name or "bon-dpo"
+    pairs = BON / "pairs"
+    if not (pairs / "pairs.jsonl").exists():
+        py("bon_pairs.py", "--rollouts", BON / "probe" / "rollouts.jsonl", "--keep", BON / "select-r1" / "sft.jsonl",
+           "--out", pairs)
+    print((pairs / "summary.txt").read_text(), flush=True)
+    adapter = Path("adapters") / name
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", args.start or "adapters/bon-r1", "--out", adapter,
+           "--mix", "0.6,0.4,0", "--save-every", 25, "--epochs", 2, "--dtype", args.dtype)
+    base = ROOT / "s4-base"
+    evaluate(base, samples=4)
+    for checkpoint in sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])):
+        out = ROOT / f"s4-{name}-{checkpoint.name}"
+        evaluate(out, checkpoint, samples=4)
+        print(score_line(f"{name} {checkpoint.name} (4 samples)", out, base=base), flush=True)
 
 
 def steer(args):

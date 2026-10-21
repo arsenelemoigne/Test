@@ -25,6 +25,9 @@ def main():
     parser.add_argument("--easy-tokens", nargs="*", default=[],
                         help="source=N: keep that source's question only if its shortest correct reply is at most N "
                              "tokens (e.g. GSM8K down to SVAMP's difficulty)")
+    parser.add_argument("--min-saved", type=float, default=0.0,
+                        help="keep a question only if its shortest correct reply is at least this share "
+                             "shorter than its mean reply (a clear brevity signal)")
     args = parser.parse_args()
     limits = {s: int(n) for s, n in (spec.split("=") for spec in args.easy_tokens)}
 
@@ -48,6 +51,8 @@ def main():
         s["correct"] += [r["output_tokens"] for r in correct]
         best = min(correct, key=lambda r: r["output_tokens"])
         if source in limits and best["output_tokens"] > limits[source]:
+            continue
+        if best["output_tokens"] > (1 - args.min_saved) * sum(r["output_tokens"] for r in group) / len(group):
             continue
         s["kept"].append(best["output_tokens"])
         s["kept_mean_of_question"].append(sum(r["output_tokens"] for r in group) / len(group))
