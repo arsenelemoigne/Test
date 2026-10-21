@@ -5,7 +5,6 @@ onpolicy --name r1 --start adapters/combine-codecut --round-seed 1 --per-source 
 redpo --name r1b --from-round r1 --start adapters/combine-codecut --no-shorten irrelevance --nll 1 --save-every 10
 recheck --samples 8 --adapter adapters/onpolicy-r1b/step-20
 # user: test the best models on 240 NEW questions (41-80 of every benchmark), never used to pick a model, 8 answers.
-# The raw model is scored on them first. Order: the overall best, the MVT best, the safest strong one.
+# The raw model is scored on them first. Order: the overall best, then the safe fallback (user dropped the MVT best).
 recheck --fresh --samples 8 --adapter /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-r2nc/step-10
-recheck --fresh --samples 8 --adapter adapters/combine-codecut
 recheck --fresh --samples 8 --adapter /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-nocode/step-30
