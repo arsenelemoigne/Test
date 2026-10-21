@@ -696,6 +696,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | choice-mvt256 | 203 / 194 | ~455 -> ~102 | +69.0% | **-13.3** | BFCL +37/+51/+28% / -3.7/**-11.2**/-0.6; IFEval +45% / +4.4; MBPP+ +93% / **-13.7**; SVAMP +61% / **-38.7** |
 | choice-mvt1024-tokens32 | 203 / 199 | ~455 -> ~76 | +8.8% | **-4.7** | BFCL +18/+12/+15% / -1.2/**-10.6**/-5.6; IFEval +3% / +1.9; MBPP+ +9% / -1.9; SVAMP +8% / **-13.1** |
 | choice-mvt256-tokens32 | 203 / ~190 | | +18.7% | **-4.1** | BFCL +32/+15/+21% / +2.5/**-9.4**/**-10.0**; IFEval +22% / +1.9; MBPP+ +19% / -3.1; SVAMP +11% / **-9.4** |
+| code-whole | 137 / 0 | 1,493 -> 1,308 | +2.9% | +0.1 | BFCL -3/-1/+1% / -1.2/-0.6/-1.3; IFEval +2% / +6.2; MBPP+ +3% / -1.9; SVAMP +8% / -3.1 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -759,3 +760,5 @@ as with tool calls. For multiple choice, paragraphs (strong brevity signal, to p
 **Multiple choice: every cut is outside the limit when trained alone** (-4.1 to -13.3, maths
 always hit). Its use is as a brevity signal beside whole maths traces, as in the night-1 winner.
 code-whole: 137 of 300 questions have a correct reply; targets 1,493 -> 1,308 tokens.
+
+Matched code data (MBPP minus MBPP+, 8,192 cap) trains for free (old data: -3.5, IFEval -8.1).
