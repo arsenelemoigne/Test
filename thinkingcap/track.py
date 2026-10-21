@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -493,6 +493,15 @@ def bon_dpo(args):
         out = ROOT / f"s4-{name}-{checkpoint.name}"
         evaluate(out, checkpoint, samples=4)
         print(score_line(f"{name} {checkpoint.name} (4 samples)", out, base=base), flush=True)
+
+
+def steer_read(args):
+    """Directions only (no pushing): every question and every finished reply of the best-of-8 rollouts."""
+    out = Path("runs/steer-big")
+    if not (out / "directions.json").exists():
+        py("steer_dirs.py", "states", "--out", out, "--per-kind", 600, "--all-replies")
+        py("steer_dirs.py", "directions", "--out", out)
+    print((out / "directions.txt").read_text(), flush=True)
 
 
 def steer(args):

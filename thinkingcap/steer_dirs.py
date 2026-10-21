@@ -83,6 +83,8 @@ def states(args):
             wrong = [r for r in group if not r["correct"]]
             # the shortest and longest correct, one middle correct (for the trend) and one wrong
             chosen = right[:1] + right[len(right) // 2:len(right) // 2 + 1] + right[-1:] + wrong[:1]
+            if args.all_replies:
+                chosen = right + wrong
             seen = set()
             for r in chosen:
                 if r["sample"] not in seen:
@@ -209,6 +211,14 @@ def directions(args):
                      for b in kinds]
             result["cosine"][f"{method}:{a}"] = cells
             lines.append(f"{a:>8}" + "".join(f"{c:>8.2f}" for c in cells))
+    lines += ["", "each kind's own direction: its best layer (held-out pairwise accuracy on its own kind)"]
+    for k in kinds:
+        for method in ("A", "B"):
+            own = pairwise(found[k][method], {k})[0]
+            shared = pairwise(found["all"][method], {k})[0]
+            best = int(own.argmax())
+            lines.append(f"   {k:<7} {method}: own best layer {best} ({float(own[best]):.2f}); shared direction "
+                         f"there {float(shared[best]):.2f}, shared best {int(shared.argmax())} ({float(shared.max()):.2f})")
     held_pairs = {k: pairwise(found["all"]["A"], {k})[1] for k in TYPES}
     lines += ["", f"held-out pairs per kind: {held_pairs} (about +/-0.1 noise at 25 pairs)"]
     torch.save({"A": found["all"]["A"], "B": found["all"]["B"],
@@ -418,6 +428,7 @@ def main():
     parser.add_argument("--data", default="data/bon.jsonl")
     parser.add_argument("--out", default="runs/steer")
     parser.add_argument("--per-kind", type=int, default=200, help="states: questions per kind of task")
+    parser.add_argument("--all-replies", action="store_true", help="states: every finished reply, not 4 per question")
     parser.add_argument("--window", type=int, default=64, help="states: first thinking tokens averaged")
     parser.add_argument("--ratio", type=float, default=1.5, help="longest correct at least this much longer")
     parser.add_argument("--top", type=int, default=2, help="directions: candidate layers kept")

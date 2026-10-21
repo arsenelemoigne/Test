@@ -48,5 +48,7 @@ stats --inputs bon/probe/rollouts.jsonl mvtf/s4-bon-r1
 # "be brief" steering: directions A/B/C from the best-of-8 replies, small push tests, fresh held-out replies
 steer
 # best-of-8 fixes, same replies (no new sampling): DPO on short-vs-long and right-vs-wrong pairs, then stronger SFT on clear-gap questions
+# bigger per-kind direction reading (every reply, no generation)
+steer_read
 bon_dpo
 bon --name r2 --sft-lr 1e-4 --sft-epochs 3 --min-saved 0.25 --per-source 300 --max-per-source 300
