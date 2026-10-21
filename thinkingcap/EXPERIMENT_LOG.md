@@ -698,6 +698,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | choice-mvt256-tokens32 | 203 / ~190 | | +18.7% | **-4.1** | BFCL +32/+15/+21% / +2.5/**-9.4**/**-10.0**; IFEval +22% / +1.9; MBPP+ +19% / -3.1; SVAMP +11% / **-9.4** |
 | code-whole | 137 / 0 | 1,493 -> 1,308 | +2.9% | +0.1 | BFCL -3/-1/+1% / -1.2/-0.6/-1.3; IFEval +2% / +6.2; MBPP+ +3% / -1.9; SVAMP +8% / -3.1 |
 | code-mvt1024 | 137 / 92 | 1,493 -> 790 | +69.3% | **-6.0** | BFCL +42/+55/+33% / +2.5/-2.5/-1.3; IFEval +52% / +6.9; MBPP+ +95% / **-13.7**; SVAMP +38% / **-16.9** |
+| code-mvt256 | 137 / 82 | 1,493 -> 812 | +68.2% | **-7.2** | BFCL +50/+63/+42% / -1.2/**-11.2**/-1.3; IFEval +36% / +7.5; MBPP+ +95% / **-10.6**; SVAMP +38% / **-21.3** |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -767,3 +768,5 @@ Matched code data (MBPP minus MBPP+, 8,192 cap) trains for free (old data: -3.5,
 code-mvt1024 by paragraphs: 262 checked, only 180 pass; 92 of 137 cut, 1,493 -> 790. Same as
 night 1 (MBPP+ +93% / -13.7): code thinking is one long plan, the paragraph cut often keeps no
 thinking at all, and the model stops thinking on code (95% shorter) and on maths (SVAMP -16.9).
+
+code-mvt256: 231 checked, 140 pass; same all-or-nothing failure as c=1024.
