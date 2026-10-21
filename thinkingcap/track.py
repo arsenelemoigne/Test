@@ -520,8 +520,10 @@ def steer(args):
     print((out / "directions.txt").read_text(), flush=True)
     found = json.loads((out / "directions.json").read_text())
     best_layer = found["filter"]["A"][0]
-    configs = [("A", l, s) for l in found["filter"]["A"] for s in (2, 5)]
-    configs += [("B", found["filter"]["B"][0], s) for s in (2, 5)] + [("C", best_layer, s) for s in (1, 2)]
+    # strengths in units of |A| at the layer (about 1% of the residual norm there): 5 and 15 push by
+    # about 6% and 18% of it. C's learned vector is about 0.6 |A|: 8 and 24 match those sizes.
+    configs = [("A", l, s) for l in found["filter"]["A"] for s in (5, 15)]
+    configs += [("B", found["filter"]["B"][0], s) for s in (5, 15)] + [("C", best_layer, s) for s in (8, 24)]
     if not (out / f"C-{best_layer}.pt").exists():
         py("steer_dirs.py", "learn", "--out", out, "--layer", best_layer)
     results, checked = {}, (out / "checked").exists()
@@ -532,8 +534,12 @@ def steer(args):
             if not (model / "config.json").exists():
                 py("steer_dirs.py", "build", "--out", out, "--kind", kind, "--layer", layer, "--strength", strength,
                    "--target", model)
-            if not checked:
-                py("steer_dirs.py", "check", "--model", model)
+            if not checked:  # a strong push, well above the engines' rounding noise
+                probe = Path("steered") / "check-A"
+                py("steer_dirs.py", "build", "--out", out, "--kind", "A", "--layer", best_layer, "--strength", 40,
+                   "--target", probe)
+                py("steer_dirs.py", "check", "--model", probe)
+                shutil.rmtree(probe)
                 (out / "checked").write_text("ok\n")
                 checked = True
             evaluate(run, samples=2, model=model)

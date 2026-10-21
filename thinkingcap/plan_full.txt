@@ -51,4 +51,6 @@ steer
 # bigger per-kind direction reading (every reply, no generation)
 steer_read
 bon_dpo
+# steering push tests again: a check that compares the push's effect in both engines, stronger pushes
+steer --tag v2
 bon --name r2 --sft-lr 1e-4 --sft-epochs 3 --min-saved 0.25 --per-source 300 --max-per-source 300

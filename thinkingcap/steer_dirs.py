@@ -326,33 +326,45 @@ def build(args):
 
 
 def check(args):
-    """The steered model must give the same log-probabilities in vLLM as in Transformers (and differ from raw)."""
+    """vLLM must apply the steering bias as Transformers does: same per-token effect (steered - raw) in both.
+
+    Use a strongly pushed model, so the effect is well above the bf16 kernel noise between the engines.
+    """
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     text = tokenizer.apply_chat_template([{"role": "user", "content": "What is 17 times 23? Explain."}],
                                          tokenize=False, add_generation_prompt=True, enable_thinking=True)
-    ids = tokenizer(text + "Okay, let me compute 17 times 23 step by step. First, 17 times 20 is 340.")["input_ids"]
+    ids = tokenizer(text + "Okay, let me compute 17 times 23 step by step. First, 17 times 20 is 340. "
+                           "Then 17 times 3 is 51. Adding them gives 391. Let me double-check that.")["input_ids"]
     probe = Path(args.model) / "check_ids.json"
     probe.write_text(json.dumps(ids))
-    subprocess.run([sys.executable, __file__, "vllm_logprobs", "--model", args.model, "--ids", str(probe)], check=True)
-    vllm = json.loads((Path(args.model) / "check_vllm.json").read_text())
+
+    def engine(name):
+        target = Path(args.model) / "check_vllm.json"
+        subprocess.run([sys.executable, __file__, "vllm_logprobs", "--model", name, "--ids", str(probe),
+                        "--target", str(target)], check=True)
+        return json.loads(target.read_text())
 
     def hf(name):
         model = AutoModelForCausalLM.from_pretrained(name, dtype=torch.bfloat16).to("cuda").eval()
         with torch.no_grad():
             lp = torch.log_softmax(model(input_ids=torch.tensor([ids], device="cuda")).logits[0].float(), -1)
-        values = [float(lp[i - 1, ids[i]]) for i in range(1, len(ids))]
         del model
         torch.cuda.empty_cache()
-        return values
-    steered, raw = hf(args.model), hf(args.raw)
-    gap = sum(abs(a - b) for a, b in zip(vllm, steered)) / len(steered)
-    effect = sum(abs(a - b) for a, b in zip(raw, steered)) / len(steered)
-    ok = gap < max(0.03, 0.25 * effect)
-    print(f"check {args.model}: vLLM vs Transformers {gap:.4f} per token; steered vs raw {effect:.4f} -> "
-          f"{'OK' if ok else 'MISMATCH'}", flush=True)
+        return [float(lp[i - 1, ids[i]]) for i in range(1, len(ids))]
+    v_s, v_r = engine(args.model), engine(args.raw)
+    h_s, h_r = hf(args.model), hf(args.raw)
+    dv = torch.tensor(v_s) - torch.tensor(v_r)
+    dh = torch.tensor(h_s) - torch.tensor(h_r)
+    corr = float(torch.corrcoef(torch.stack([dv, dh]))[0, 1])
+    ratio = float(dv.abs().mean() / dh.abs().mean())
+    noise = float((torch.tensor(v_r) - torch.tensor(h_r)).abs().mean())
+    ok = corr > 0.8 and 0.7 < ratio < 1.4
+    print(f"check {args.model}: effect of the push per token, Transformers {float(dh.abs().mean()):.3f}, "
+          f"vLLM {float(dv.abs().mean()):.3f} (ratio {ratio:.2f}), correlation {corr:.2f}; engine noise on the raw "
+          f"model {noise:.3f} -> {'OK' if ok else 'MISMATCH'}", flush=True)
     if not ok:
         raise SystemExit("vLLM does not apply the steering bias like Transformers")
 
@@ -364,7 +376,7 @@ def vllm_logprobs(args):
     llm = LLM(model=args.model, gpu_memory_utilization=0.3, enforce_eager=True, dtype="bfloat16")
     result = llm.generate(TokensPrompt(prompt_token_ids=ids), SamplingParams(max_tokens=1, prompt_logprobs=0))[0]
     values = [float(d[t].logprob) for d, t in zip(result.prompt_logprobs[1:], ids[1:])]
-    (Path(args.model) / "check_vllm.json").write_text(json.dumps(values))
+    Path(args.target).write_text(json.dumps(values))
 
 
 # ---------------------------------------------------------------- fresh replies on held-out questions
