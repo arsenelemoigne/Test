@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
     parser.add_argument("--rollouts-from", help="bon_dpo: a new round sampled from this adapter, or auto (best checkpoint)")
     parser.add_argument("--save-every", type=int, default=25, help="bon_dpo: DPO checkpoint interval (steps)")
+    parser.add_argument("--gen-questions", type=int, default=0, help="bon: stop sampling at this many questions (0: all)")
     parser.add_argument("--skip-eval", action="store_true", help="bon: train only, no test")
     parser.add_argument("--sft-lr", type=float, default=5e-5, help="bon: SFT learning rate")
     parser.add_argument("--sft-epochs", type=int, default=1, help="bon: SFT passes")
@@ -485,7 +486,8 @@ def bon(args):
            args.per_source, "--out", data)
     if not (probe / "rollouts.jsonl").exists():
         py("probe_curve.py", "--data", data, "--sources", BON_SOURCES, "--per-source", args.per_source,
-           "--samples", 8, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
+           "--samples", 8, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", args.gen_questions)
     if not (select / "sft.jsonl").exists():
         py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", select,
            "--easy-tokens", "gsm8k_all=700", "--min-saved", args.min_saved)

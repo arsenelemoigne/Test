@@ -1,6 +1,6 @@
 # rebuild after the runtime was recycled (2026-10-21 11:07); every result and adapter is saved to Google Drive
-# best-of-8 data (1,800 questions x 8) and the gentle SFT start, no test (already scored: +4.4% / -2.8)
-bon --per-source 300 --max-per-source 300 --skip-eval
+# best-of-8 data: a mixed half (750 of 1,500 questions) x 8, to save ~2 h and the gentle SFT start, no test (already scored: +4.4% / -2.8)
+bon --per-source 300 --max-per-source 300 --skip-eval --gen-questions 750
 # the winner again: DPO from bon-r1 (was step-25 +47.6% / -2.6); constant lr and seed: the same first steps
 bon_dpo --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
 # code fix: code gets only right-beats-wrong pairs, with a typical-length correct reply; intermediate scores
