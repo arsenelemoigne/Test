@@ -898,6 +898,11 @@ gsm8k_all 62% correct / 1,812 tokens; ifeval_like 72% / 331 (78% / 408); mbpp_tr
 |---|---|---|---|---|
 | tool | 1,284 / 1,107 | 180 (39 / 134 / 7) | 117 -> 49 (-58%) | 183 (139 / 37 / 7) |
 | text | 1,742 / 1,309 | 252 (38 / 181 / 33) | 251 -> 125 (-50%) | 276 (207 / 36 / 33) |
+| code | 684 / 461 | 119 (27 / 57 / 35) | 515 -> 326 (-37%) | 131 (76 / 20 / 35) |
+| math (easy, <= 700 tokens) | 876 / 726 | 119 (109 / 2 / 0) + 8 truncated | 790 -> 93 (-88%) | 135 (119 / 16 / 0) |
 
 Half-way "early" cuts pass 4/4 most of the time on tool calls and instructions: the current model
 needs even less thinking than its MVT point.
+
+DPO on 722 pairs (46 steps; checkpoints at 20 and 40). The maths cuts are very deep (-88%) although
+verified 4/4 on easy GSM8K: the main risk of this round for SVAMP.
