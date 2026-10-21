@@ -81,6 +81,8 @@ def main():
     args = parser.parse_args()
     update()
     globals()[args.stage](args)
+    if args.stage != "plan":  # every finished stage is on Drive at once, even under an older plan worker
+        drive_sync("save")
 
 
 def update(restart=True):
@@ -130,6 +132,11 @@ def drive_sync(direction):
         if source.exists():
             # --update: never replace a newer file (a restore once overwrote a fresher local rollout file)
             subprocess.run(["rsync", "-a", "--update", f"{source}/", f"{target}/"])
+    if direction == "save":  # the log, the scripts, plans, notebooks and reports as they ran here
+        files = [str(p) for p in Path(".").glob("*") if p.suffix in (".py", ".txt", ".md", ".ipynb") and p.is_file()]
+        files += [str(p) for p in Path("/content/T/thinkingcap").glob("*.md")] + ["/content/track_log.txt"]
+        (DRIVE / "code").mkdir(exist_ok=True)
+        subprocess.run(["rsync", "-a", *[f for f in files if Path(f).exists()], str(DRIVE / "code")])
     print(f"drive: {direction} done", flush=True)
 
 
