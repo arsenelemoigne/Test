@@ -92,6 +92,8 @@ def main():
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
     update()
+    if args.stage != "plan":
+        keep_saving(300)  # inside every stage too: a long stage is on Drive at most ~5 minutes behind
     globals()[args.stage](args)
     if args.stage != "plan":  # every finished stage is on Drive at once, even under an older plan worker
         drive_sync("save")
@@ -1036,11 +1038,7 @@ def plan(args):
         print("drive: NOT mounted; results live only on this runtime's disk", flush=True)
     drive_sync("restore")
 
-    def keep_saving():  # mid-stage saves too: a recycle loses at most 20 minutes
-        while True:
-            time.sleep(1200)
-            drive_sync("save")
-    threading.Thread(target=keep_saving, daemon=True).start()
+    keep_saving(300)
     done, idle_since = set(), None
     while True:
         plan_file = Path(args.plan_file)
@@ -1063,6 +1061,18 @@ def plan(args):
         done.add(todo[0])
         drive_sync("save")
         update_files()
+
+
+def keep_saving(seconds):
+    """Copy everything to Drive every `seconds` in a background thread (results, models, data, logs)."""
+    import threading
+    import time
+
+    def loop():
+        while True:
+            time.sleep(seconds)
+            drive_sync("save")
+    threading.Thread(target=loop, daemon=True).start()
 
 
 def finish():
