@@ -629,3 +629,31 @@ MBPP+ +77% / **-12.5** (code is cut by spill-over although no code trace is in t
 and can be turned down. Candidates: 1b winner + tool MVT (1.0); + tool, code tokens32 and
 math-fade r2 at 0.5; all at 1.0. `fullbest` then sends the candidate saving most within -2.5
 pts (4 samples) to the full evaluation.
+
+---
+
+# Track 2c: shortest-of-8 self-distillation, then on-policy verified MVT + DPO, then RL
+
+## Shortest-of-8 data (matched to the evaluation)
+
+1,500 questions (GSM8K train+test, MBPP minus MBPP+, ToolACE in BFCL's mix, IFEval-like, ARC/CSQA),
+8 replies each at the evaluation's caps (4,096; 8,192 for code): 12,000 replies, ~4.3 h on the L4.
+Per question the shortest correct reply is kept, nothing edited (`select_shortest.py`); GSM8K only
+where that reply is <= 700 tokens (SVAMP-like).
+
+| source | questions | solved | kept | capped | mean reply | kept len | same-question mean | saved |
+|---|---|---|---|---|---|---|---|---|
+| arc_easy | 48 | 48 | 48 | 1% | 532 | 334 | 532 | 37% |
+| commonsense_qa | 252 | 211 | 211 | 0% | 512 | 339 | 494 | 32% |
+| gsm8k_all | 300 | 240 | 106 | 22% | 2,163 | 496 | 1,282 | 61% |
+| ifeval_like | 300 | 272 | 272 | 2% | 418 | 285 | 409 | 30% |
+| mbpp_train | 300 | 168 | 168 | 13% | 2,835 | 1,098 | 1,834 | 40% |
+| toolace | 300 | 206 | 206 | 0% | 299 | 190 | 272 | 30% |
+
+**Contamination check** (`contamination.py`, share of a training question's 8-grams found in one
+evaluation question >= 50%): 16 of 1,011 rows dropped, all MBPP training tasks that are near copies
+of MBPP+ tasks under other ids (51-81% overlap, e.g. mbpp_train-466 ~ Mbpp/758). The per-type grid
+(Track 2b) used the same MBPP tasks without this check, so its code results may be slightly
+flattered. Every training set now goes through the check.
+
+SFT: 990 rows, LoRA r16, lr 5e-5, 1 epoch.
