@@ -922,3 +922,22 @@ model calls a function when none fits. DPO pushes "think less" everywhere, and o
 the check "does any function fit?" is what gets dropped (as with the deep 32-token tool cuts of the
 grid). Only 37 guard and 7 hard tool pairs held it back. Maths held better than feared (SVAMP -2.5
 to -5.0 with 31-51% shorter).
+
+## Round 1 fix (r1b): same pairs minus 52 shorten pairs on irrelevance, NLL anchor 1, checkpoints every 10
+
+670 pairs, 42 steps. 4 samples, 240 questions, vs `s4-base`:
+
+| checkpoint | tokens saved | accuracy | per benchmark (saved / pts) |
+|---|---|---|---|
+| step 10 | +44.9% | -3.2 | BFCL +54/+53/+47% / -1.9/-1.9/+1.2; IFEval +29% / +0.6; MBPP+ +65% / -7.5; SVAMP +23% / -5.0 |
+| **step 20** | **+42.8%** | **-0.3** | BFCL +53/+42/+48% / -5.0/-1.2/-2.5; IFEval +29% / +10.6; MBPP+ +60% / -11.2; SVAMP +29% / +2.5 |
+| step 30 | +64.4% | -11.4 | BFCL +49/+47/+52% / -11.2/-2.5/-1.3; IFEval +44% / +10.6; MBPP+ +66% / -16.2; SVAMP +83% / **-35.0** |
+| step 40 | +88.8% | -19.3 | BFCL +76/+77/+76% / -25.0/+4.4/+2.5; IFEval +57% / -1.9; MBPP+ +94% / -19.4; SVAMP +98% / **-50.0** |
+| final (42) | +92.0% | -19.5 | BFCL +78/+81/+78% / -29.4/+3.1/+1.9; IFEval +68% / +1.9; MBPP+ +97% / -20.0; SVAMP +98% / **-51.9** |
+
+The anchor does not prevent the collapse: it is an NLL on the chosen side, which is itself the short
+cut, so it pulls the same way; past step 20 the model stops thinking (92% shorter) and maths breaks.
+Dropping the irrelevance shorten pairs protected irrelevance only up to step 20 (-5.0 vs -6.2).
+Step 20 is the one point of interest: +42.8% / -0.3 (start combine-codecut +48.3% / -1.2 on the same
+test; Lightning McQwen3 43.2% / -0.85). Its -0.3 rests on IFEval +10.6 (partly luck) against
+MBPP+ -11.2: needs the 8-sample check before any claim.
