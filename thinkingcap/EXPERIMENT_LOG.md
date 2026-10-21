@@ -700,6 +700,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | code-mvt1024 | 137 / 92 | 1,493 -> 790 | +69.3% | **-6.0** | BFCL +42/+55/+33% / +2.5/-2.5/-1.3; IFEval +52% / +6.9; MBPP+ +95% / **-13.7**; SVAMP +38% / **-16.9** |
 | code-mvt256 | 137 / 82 | 1,493 -> 812 | +68.2% | **-7.2** | BFCL +50/+63/+42% / -1.2/**-11.2**/-1.3; IFEval +36% / +7.5; MBPP+ +95% / **-10.6**; SVAMP +38% / **-21.3** |
 | **code-mvt1024-tokens32** | 137 / 90 | 1,493 -> 824 | **+39.9%** | **-1.3** | BFCL +25/+19/+17% / +0.6/+2.5/-1.9; IFEval +12% / +3.7; MBPP+ +77% / **-8.1**; SVAMP +17% / -1.2 |
+| code-mvt256-tokens32 | 137 / 78 | 1,493 -> 903 | +46.6% | -0.5 | BFCL +43/+10/+23% / +3.8/-3.7/-2.5; IFEval +12% / +13.1; MBPP+ +86% / **-10.6**; SVAMP +10% / -3.7 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -775,3 +776,9 @@ code-mvt256: 231 checked, 140 pass; same all-or-nothing failure as c=1024.
 code-mvt1024-tokens32 (280 checked, 189 pass): the best single run so far on average, +39.9% /
 -1.3, and spill-over is mild and harmless; but MBPP+ itself pays -8.1 for being 77% shorter
 (night 1: +57% / -5.6). Token batches again beat paragraphs for code.
+
+code-mvt256-tokens32 (233 checked, 140 pass): best average of the grid, +46.6% / -0.5, but the
+average hides MBPP+ -10.6 (86% shorter) offset by IFEval +13.1 (likely partly noise). **Code: cut by
+token batches; both settings shorten MBPP+ 77-86% for 8-11 points**: the combined model has to
+soften this (fewer cut rows, or whole code rows beside them).
+math-whole: only 60 GSM8K questions have a correct reply of at most 700 tokens (676 -> 509).
