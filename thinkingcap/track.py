@@ -127,7 +127,8 @@ def drive_sync(direction):
     for name in ("runs", "adapters", "data"):
         source, target = (Path(name), DRIVE / name) if direction == "save" else (DRIVE / name, Path(name))
         if source.exists():
-            subprocess.run(["rsync", "-a", f"{source}/", f"{target}/"])
+            # --update: never replace a newer file (a restore once overwrote a fresher local rollout file)
+            subprocess.run(["rsync", "-a", "--update", f"{source}/", f"{target}/"])
     print(f"drive: {direction} done", flush=True)
 
 
