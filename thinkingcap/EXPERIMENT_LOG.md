@@ -872,3 +872,7 @@ observed pace, past the runtime's 24 h limit). Instead, the 240-question subset 
 With 8 samples codecut settles at +44.3% / -1.6 (4 samples: +48.3% / -1.2): within the limit,
 above the night-1 winner (+37.1% / -0.6, 8 samples, same subset) and about level with Lightning
 McQwen3 (43.2% / -0.85, self-reported, question count not stated). Weak spots: MBPP+ -7.2, SVAMP -4.1.
+
+Saved to Google Drive (Colab account), folder `thinkingcap-mvt-pertype/` (1.3 GB): adapters
+(grid/*, combine-light, combine-codecut, combine-full), runs/, track_log.txt. Runtime then deleted
+(21 Oct ~13:15). Full report: REPORT_MVT_PERTYPE.txt.
