@@ -870,3 +870,8 @@ step 5 +56.0% / -2.0; step 10 +57.5% / -4.0; step 15 +60.1% / -6.4; step 20 +64.
 -0.6..+5.6, mbpp +49% / -10.0). Against round 3 step 5 without code pairs (+56.8% / -2.6, mbpp -12.5):
 3.6 points less saving, 2.5 points more accuracy; code itself barely moves (-10.0 vs -12.5, within
 noise). Queued: 8-sample recheck; a bigger code dose (code-r3b: ~600 code questions answered 4x).
+
+**8-sample recheck of the code round, step 5: +53.6% / -2.9** (4 samples said +53.2% / -0.1). svamp +66% /
+-1.9, ifeval +51% / -3.4, mbpp +54% / -8.1, bfcl +35-43% / -0.3..+5.0. The 4-sample -0.1 was luck plus
+picking the sweep's best on the same questions. Best confirmed with 8 samples stays the gentle round 2
+(step 10): +54.2% / -1.6. Rule from now on: compare finalists at 8 samples only.
