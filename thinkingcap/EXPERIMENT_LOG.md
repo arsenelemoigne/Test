@@ -833,3 +833,21 @@ limit; 4 samples said +54.3% / -1.1: stable). svamp +64% / 0.0 (23 lost, 23 gain
 bfcl +34-42% / -0.6..+5.3, mbpp +60% / -7.5. Mean tokens: svamp 291, mbpp 876, ifeval 337, bfcl 119-128.
 Against Lightning McQwen3 (+43.2% / -0.85, full eval x 8): 11 points more saving for 0.75 point more loss.
 Round 3 started: 1,302 of 1,500 fresh questions (seed 1) not used before; 750 sampled.
+
+### Round 3 (fresh questions, seed 1): the gentle round-2 model answers 750 new questions x 8
+
+Its replies: math mean 528 tokens (0% capped), code 995, instructions 219, tools 143. Shortest correct vs
+its own mean: math 36%, code 34%, ARC 23%, CSQA 22%, instructions 21%, tools 14%. 3 contamination drops,
+420 pairs (no code), guard-heavy mix (0.4 / 0.6), one pass, 2 samples:
+
+| step | tokens saved | accuracy | svamp | mbpp | ifeval |
+|---|---|---|---|---|---|
+| 5 | +59.8% | -0.1 | +72% / -1.2 | +47% / 0.0 | +71% / -2.5 |
+| 10 | +61.6% | -3.4 | +77% / -10.0 | +52% / -6.2 | +65% / 0.0 |
+| 15 | +66.6% | -6.4 | +80% / -7.5 | +57% / -16.2 | +74% / -5.0 |
+| 20 | +69.4% | -4.2 | +82% / -7.5 | +73% / -8.7 | +67% / -3.7 |
+
+**Step 5 with 4 samples: +56.8% / -2.6** (svamp +69% / -0.6, ifeval +59% / +1.3, bfcl +38-45% / -1.3..+3.1,
+mbpp +53% / **-12.5**). Rounds compound on saving (42 -> 54 -> 57-69%) while code erodes round after
+round (-3.7 -> -7.5 -> -12.5 at 4-8 samples); the other benchmarks hold. Code is the bottleneck.
+Queued: diagnosis of the code losses; a round with code "stopped too early" pairs (`code_pairs.py`).

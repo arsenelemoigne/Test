@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--dataset", default="mbpp", help="diag: the benchmark to look at")
     parser.add_argument("--data-seed", type=int, default=0, help="bon_dpo round: sample a fresh question draw with this seed")
     parser.add_argument("--mix", default="0.6,0.4,0", help="bon_dpo: shares of shorten, guard, hard pairs")
     parser.add_argument("--probe-from", help="bon_dpo round: reuse the answers sampled by this round name")
@@ -569,7 +570,11 @@ def bon_dpo(args):
            "--mix", args.mix, "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
         (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten,
                                                         "drop_sources": args.drop_sources}))
-    # a quick sweep (--eval-samples, 2 by default), then the sweep's best within the limit with 4 samples
+    score_checkpoints(name, adapter, args)
+
+
+def score_checkpoints(name, adapter, args):
+    """A quick sweep (--eval-samples, 2 by default), then the sweep's best within the limit with 4 samples."""
     n = args.eval_samples
     base = ROOT / f"s{n}-base"
     evaluate(base, samples=n)
@@ -594,6 +599,36 @@ def bon_dpo(args):
         out = ROOT / f"s4-{name}-{checkpoint.name}"
         evaluate(out, checkpoint, samples=4)
         print(score_line(f"{name} {checkpoint.name} (4 samples, the sweep's best)", out, base=ROOT / "s4-base"), flush=True)
+
+
+def code_round(args):
+    """Round 3's pairs plus code "stopped too early" pairs (code_pairs.py), DPO from --start, scored as bon_dpo."""
+    name = args.name or "code-r3"
+    start = args.start or "adapters/bon-dpo-r2g/step-10"
+    code = BON / f"code-{name}"
+    if not (code / "pairs.jsonl").exists():
+        py("code_pairs.py", "--rollouts", BON / "probe-bon-dpo-r3" / "rollouts.jsonl",
+           "--keep", BON / "select-bon-dpo-r3" / "sft.jsonl", "--adapter", start, "--out", code, "--dtype", args.dtype)
+    print((code / "summary.txt").read_text(), flush=True)
+    pairs = BON / f"pairs-{name}"
+    rows = [json.loads(l) for f in (BON / "pairs-bon-dpo-r3-drop-mbpp_train" / "pairs.jsonl", code / "pairs.jsonl")
+            for l in f.read_text().splitlines() if l.strip()]
+    pairs.mkdir(parents=True, exist_ok=True)
+    (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    print(f"pairs: shorten {counts[0]}, guard {counts[1]}, code hard {counts[2]}", flush=True)
+    adapter = Path("adapters") / name
+    if not (adapter / "adapter_config.json").exists():  # every pair kept: shares = their counts
+        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+           "--mix", ",".join(f"{c / sum(counts):.4f}" for c in counts), "--save-every", args.save_every,
+           "--epochs", args.dpo_epochs, "--dtype", args.dtype)
+    score_checkpoints(name, adapter, args)
+
+
+def diag(args):
+    """How a scored run fails on one benchmark against its base: lost rows by kind, with examples."""
+    out, base = ROOT / args.name, ROOT / (args.name.split("-", 1)[0] + "-base")
+    print(diagnose(out, dataset=args.dataset, examples=3, base=base), flush=True)
 
 
 def new_questions(seed):
