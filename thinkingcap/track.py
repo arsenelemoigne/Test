@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--data-seed", type=int, default=0, help="bon_dpo round: sample a fresh question draw with this seed")
     parser.add_argument("--mix", default="0.6,0.4,0", help="bon_dpo: shares of shorten, guard, hard pairs")
     parser.add_argument("--probe-from", help="bon_dpo round: reuse the answers sampled by this round name")
     parser.add_argument("--fresh-questions", action="store_true", help="bon_dpo round: questions not sampled before")
@@ -546,7 +547,8 @@ def bon_dpo(args):
         print(f"round from {start} (code guard-only: {bool(no_shorten)})", flush=True)
         probe = BON / f"probe-{args.probe_from or name}"  # --probe-from: reuse another round's answers
         if not (probe / "rollouts.jsonl").exists():
-            py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", BON_SOURCES, "--per-source", 300,
+            data = new_questions(args.data_seed) if args.data_seed else "data/bon.jsonl"
+            py("probe_curve.py", "--data", data, "--sources", BON_SOURCES, "--per-source", 300,
                "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
                "--max-questions", args.gen_questions,
                *(["--exclude-rollouts", BON / "probe" / "rollouts.jsonl"] if args.fresh_questions else []))
@@ -592,6 +594,22 @@ def bon_dpo(args):
         out = ROOT / f"s4-{name}-{checkpoint.name}"
         evaluate(out, checkpoint, samples=4)
         print(score_line(f"{name} {checkpoint.name} (4 samples, the sweep's best)", out, base=ROOT / "s4-base"), flush=True)
+
+
+def new_questions(seed):
+    """A fresh draw of training questions (prepare_types.py --seed), minus any already in data/bon.jsonl."""
+    out = Path(f"data/bon-seed{seed}.jsonl")
+    if not out.exists():
+        raw = Path(f"data/bon-seed{seed}-raw.jsonl")
+        py("prepare_types.py", "--sources", "gsm8k_all,mbpp_train,toolace,ifeval_like,mc", "--per-source", 300,
+           "--seed", seed, "--out", raw)
+        text = lambda r: r["prompt"][-1]["content"]
+        seen = {text(json.loads(l)) for l in Path("data/bon.jsonl").read_text().splitlines() if l.strip()}
+        rows = [json.loads(l) for l in raw.read_text().splitlines() if l.strip()]
+        fresh = [r for r in rows if text(r) not in seen]
+        out.write_text("".join(json.dumps(r) + "\n" for r in fresh))
+        print(f"new questions (seed {seed}): {len(fresh)} of {len(rows)} not used before", flush=True)
+    return out
 
 
 def best_checkpoint(floor=-2.5):
