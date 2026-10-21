@@ -770,3 +770,9 @@ deepen it. Best within the limit at 2 samples: step 30, re-scored with 4 samples
 **Step 30, 4 samples: +44.9% / -2.7** (svamp +53% / -4.4, mbpp +41% / -8.7, ifeval +50% / +3.1,
 bfcl +30-37% / -1.9 to 0.0). Within the limit; reproduces last night's step 25 (+47.6% / -2.6) on half
 the data. MBPP+ and SVAMP carry the loss.
+
+**DPO straight from the raw model (fresh LoRA, no SFT), same pairs, 2 passes, 2 samples:**
+step 10 +11.7% / -1.1; step 20 +33.1% / -2.6; **step 30 +42.0% / -2.3**; step 40 +37.9% / -4.7;
+step 60 +37.3% / -5.0. Slower start than from the SFT adapter (step 10: 12% vs 36%), same level at
+the end of the first pass (step 30: 42.0 / -2.3 vs 42.5 / -2.9); the second pass costs accuracy here.
+The gentle SFT step mostly buys a head start, not a better end point.
