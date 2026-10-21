@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -49,6 +49,9 @@ def main():
     parser.add_argument("--method", choices=("whole", "mvt", "marginal", "fade"), help="grid: how its traces are shortened")
     parser.add_argument("--unit", default="paragraph", help="grid: paragraph, sentence or tokensN")
     parser.add_argument("--per-source", type=int, default=250, help="grid_data: questions per kind")
+    parser.add_argument("--start", help="dpo_round: the adapter the round starts from (policy and reference)")
+    parser.add_argument("--seed", type=int, default=1, help="dpo_round: question draw (bon used seed 0)")
+    parser.add_argument("--steps", type=int, default=150, help="dpo_round: DPO steps; checkpoints every 25")
     parser.add_argument("--inputs", nargs="*", default=[],
                         help="combine: sft.jsonl[:source[:source...]] files whose rows (of those sources) are pooled")
     parser.add_argument("--margin", type=float, default=-2.5,
@@ -459,6 +462,43 @@ def bon(args):
     evaluate(base, samples=4)
     evaluate(out, adapter, samples=4)
     print(score_line(f"bon-{name} (4 samples, 240 test questions)", out, base=base), flush=True)
+    print(diagnose(out, base=base))
+
+
+def dpo_round(args):
+    """One on-policy, verified MVT round: the current model's own replies -> verified cuts -> DPO -> test.
+
+    Fresh questions (another --seed than earlier rounds), 4 replies each from --start, MVT cut plus an
+    earlier and a later candidate verified by 4 re-answers (mvt_pairs.py), anchored DPO from --start
+    (dpo.py), then every saved checkpoint scored on the 240-question test sample with 4 samples.
+    """
+    name = args.name or "dpo1"
+    root = Path("runs") / name
+    questions, probe, pairs = root / "questions.jsonl", root / "probe", root / "pairs"
+    adapter = Path("adapters") / name
+    if not questions.exists():
+        root.mkdir(parents=True, exist_ok=True)
+        py("prepare_types.py", "--sources", "gsm8k_all,mbpp_train,toolace,ifeval_like,mc", "--per-source",
+           args.per_source, "--seed", args.seed, "--out", questions)
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", questions, "--sources", BON_SOURCES, "--per-source", args.per_source,
+           "--samples", 4, "--adapter", args.start, "--out", probe, "--dtype", args.dtype, "--generate-only",
+           "--chunk", 150)
+    if not (pairs / "pairs.jsonl").exists():
+        py("mvt_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--adapter", args.start, "--out", pairs,
+           "--dtype", args.dtype)
+        py("contamination.py", "--data", pairs / "pairs.jsonl", "--rollouts", probe / "rollouts.jsonl")
+    print((pairs / "summary.txt").read_text(), flush=True)
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", args.start, "--out", adapter,
+           "--max-steps", args.steps, "--dtype", args.dtype)
+    base = ROOT / "s4-base"
+    evaluate(base, samples=4)
+    checkpoints = sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1]))
+    for checkpoint in [c for c in checkpoints if int(c.name.split("-")[1]) % 50 == 0] or checkpoints[-1:]:
+        out = ROOT / f"s4-{name}-{checkpoint.name}"
+        evaluate(out, checkpoint, samples=4)
+        print(score_line(f"{name} {checkpoint.name} (4 samples)", out, base=base), flush=True)
     print(diagnose(out, base=base))
 
 
