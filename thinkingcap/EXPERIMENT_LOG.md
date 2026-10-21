@@ -766,3 +766,7 @@ It does not break: past the first pass (~33 steps) the saving drains away (47% -
 accuracy returns to the raw model's. Peak around steps 20-30, as last night (step 25 best). With
 the pairs memorised (100% ordered right from step ~60), more passes undo the brevity rather than
 deepen it. Best within the limit at 2 samples: step 30, re-scored with 4 samples next.
+
+**Step 30, 4 samples: +44.9% / -2.7** (svamp +53% / -4.4, mbpp +41% / -8.7, ifeval +50% / +3.1,
+bfcl +30-37% / -1.9 to 0.0). Within the limit; reproduces last night's step 25 (+47.6% / -2.6) on half
+the data. MBPP+ and SVAMP carry the loss.
