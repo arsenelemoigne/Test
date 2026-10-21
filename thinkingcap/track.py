@@ -542,7 +542,8 @@ def bon_dpo(args):
         probe = BON / f"probe-{name}"
         if not (probe / "rollouts.jsonl").exists():
             py("probe_curve.py", "--data", "data/bon.jsonl", "--sources", BON_SOURCES, "--per-source", 300,
-               "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
+               "--samples", 8, "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", args.gen_questions)
         rollouts = probe / "rollouts.jsonl"
     pairs = BON / (f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else "")
                    + (f"-drop-{args.drop_sources}" if args.drop_sources else ""))
