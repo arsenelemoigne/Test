@@ -905,3 +905,14 @@ the results are reported on. `questions_fresh20261022`: 40 questions per benchma
 with seed **20261022** (`subset_questions.py --per-dataset 40 --seed 20261022 --exclude questions_40`),
 none of them in `questions_40`, rebuilt identically from the seed. Finalists are scored there with 8
 samples against the raw model on the same set (`track.py fresh`), runs `runs/mvtf/f8-*`.
+
+**Round 4 (seed-2 draw, from round 3 step 5):** 1,202 of 1,500 fresh; replies math 432 tokens, code 1,207,
+instructions 230, tools 142. 424 pairs. 2 samples: step 5 +59.9 / -4.0; step 10 +62.1 / -4.7; step 15
++66.1 / -2.4. Step 15: 4 samples +66.6% / -1.1; **8 samples +65.4% / -2.4** (svamp +80% / -2.8, mbpp +68%
+/ -10.0, ifeval +58% / -0.3, bfcl +41-48% / -0.3..+9.4).
+
+**The mvt-pertype session's held-out test of our models (questions 41-80 of every part, 8 samples; read
+from its Drive folder with `track.py peek`):** round 1 no-code step 30 **+43.6% / -0.9**; r2g step 10
++53.1% / -2.7; r2nc step 10 +53.4% / -2.8. Savings hold on unseen questions; accuracy is about 1 point
+worse than on questions_40, the selection effect. Per benchmark (r2g): svamp -7.5, ifeval -4.1, mbpp
+-1.6: single-benchmark cells swing +/-10 at 40 questions.

@@ -663,6 +663,14 @@ def fresh(args):
     if not Path(questions, "questions.jsonl").exists():
         py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", questions)
     base = ROOT / "f8-base"
+    if os.environ.get("TRACK_SESSION") and not (base / "results.json").exists():
+        import time  # a second runtime waits for session 1's raw-model score on this set instead of redoing it
+        for _ in range(90):
+            drive_sync("restore")
+            if (base / "results.json").exists():
+                break
+            print("waiting for session 1's f8-base on Drive", flush=True)
+            time.sleep(120)
     evaluate(base, samples=8, questions=questions)
     for adapter in args.inputs:
         name = adapter.removeprefix("adapters/").replace("/", "-")
