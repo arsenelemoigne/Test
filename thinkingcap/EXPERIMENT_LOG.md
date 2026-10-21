@@ -684,3 +684,18 @@ choice 0.73, math 0.61, code 0.61: math and code decide their length less visibl
 Per-kind directions are nearly unrelated to each other (cosines -0.10 to 0.36; math is closest to
 tool, 0.36) and, fitted on ~55-80 pairs each, are noisier than the pooled one: on most kinds the
 pooled direction scores as well as or better than the kind's own. Candidate layers: A 9, 12; B 9, 10.
+
+**Bigger reading (every finished reply of 1,500 questions; 537 fit pairs, 250 held-out pairs):**
+the first reading was partly lucky. Shared direction: 0.64-0.68 over layers 8-17 (no sharp peak;
+best A layer 14 at 0.66, B layer 8 at 0.68). By kind (shared): text 0.73-0.79, tool 0.68-0.73,
+choice 0.63-0.68, math ~0.60-0.65, code ~0.60-0.65. Each kind's own direction, with 1.5x more
+data, still does not beat the shared one except where it reads surface words at the first layers
+(code B layer 0: 0.70; tool A layer 2: 0.77). Kinds' directions stay nearly unrelated (cosines
+-0.18 to 0.39; text~choice 0.35-0.39, math~code 0.37, math~tool 0.31-0.34). Reading: the start
+of the thinking gives a real but moderate hint of its length (~65% vs 50%), clearest for
+instructions and tools, weakest for math and code; there is no separate strong dial per kind.
+
+**DPO pairs from the best-of-8 replies (`bon_pairs.py`):** 1,267 pairs (704 shorten, 563 guard);
+shorten pairs chosen vs rejected mean tokens: gsm8k 493 vs 2,033, mbpp 747 vs 2,224, toolace
+182 vs 514, ifeval 261 vs 493, csqa 276 vs 723, arc 355 vs 874. DPO from adapters/bon-r1:
+1,125 pairs, 2 epochs, 141 steps, checkpoints every 25.
