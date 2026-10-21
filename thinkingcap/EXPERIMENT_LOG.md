@@ -883,3 +883,17 @@ Step 15: 4 samples +60.4% / -2.7 (mbpp -13.7); **8 samples +60.9% / -3.0** (svam
 / -7.8, ifeval +57% / +0.6, bfcl +36-44% / -0.6..+5.3): at the limit. Code pairs, even 167 of them, do
 not move code (-7.8 vs -7.5 without); this time math pays. Frontier at 8 samples:
 +54.2/-1.6 (r2g step 10), +53.6/-2.9 (code-r3 step 5), +60.9/-3.0 (code-r3b step 15).
+
+**8-sample checks (continued):** round 3 step 5 (no code pairs): **+56.9% / -1.9** (svamp +69% / -3.1,
+mbpp +57% / -7.5, ifeval +55% / +0.6, bfcl +36-44% / -0.9..+6.2). Weight-space midpoint of r2g step 10
+and code-r3b step 15 (`merge.py`, 0.5 + 0.5): +56.7% / -2.4: it lands between its two ends, unlike the
+night-1 merges of unrelated adapters.
+
+| model (240 q x 8) | tokens saved | accuracy |
+|---|---|---|
+| r2g step 10 (round 2, gentle) | +54.2% | -1.6 |
+| **bon-dpo-r3 step 5 (round 3)** | **+56.9%** | **-1.9** |
+| soup r2g + code-r3b | +56.7% | -2.4 |
+| code-r3 step 5 | +53.6% | -2.9 |
+| code-r3b step 15 | +60.9% | -3.0 |
+| night-1 best (MVT on MC + math whole x2) | +37.1% | -0.6 |
