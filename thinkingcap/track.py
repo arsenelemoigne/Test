@@ -69,6 +69,7 @@ def main():
     parser.add_argument("--code-data", nargs="*", default=[], help="code_round: data files whose code questions are answered again")
     parser.add_argument("--dataset", default="mbpp", help="diag: the benchmark to look at")
     parser.add_argument("--data-seed", type=int, default=0, help="bon_dpo round: sample a fresh question draw with this seed")
+    parser.add_argument("--dpo-seed", type=int, default=0, help="bon_dpo: DPO's seed (pair order, held-out split)")
     parser.add_argument("--mix", default="0.6,0.4,0", help="bon_dpo: shares of shorten, guard, hard pairs")
     parser.add_argument("--probe-from", help="bon_dpo round: reuse the answers sampled by this round name")
     parser.add_argument("--fresh-questions", action="store_true", help="bon_dpo round: questions not sampled before")
@@ -142,8 +143,9 @@ def drive_sync(direction):
     if direction == "save":  # the log, the scripts, plans, notebooks and reports as they ran here
         files = [str(p) for p in Path(".").glob("*") if p.suffix in (".py", ".txt", ".md", ".ipynb") and p.is_file()]
         files += [str(p) for p in Path("/content/T/thinkingcap").glob("*.md")] + ["/content/track_log.txt"]
-        (DRIVE / "code").mkdir(exist_ok=True)
-        subprocess.run(["rsync", "-a", *[f for f in files if Path(f).exists()], str(DRIVE / "code")])
+        code = DRIVE / ("code-" + os.environ["TRACK_SESSION"] if os.environ.get("TRACK_SESSION") else "code")
+        code.mkdir(exist_ok=True)  # a second runtime keeps its own log and scripts copy
+        subprocess.run(["rsync", "-a", *[f for f in files if Path(f).exists()], str(code)])
     print(f"drive: {direction} done", flush=True)
 
 
@@ -570,7 +572,8 @@ def bon_dpo(args):
     adapter = Path("adapters") / name
     if not (adapter / "adapter_config.json").exists():
         py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
-           "--mix", args.mix, "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
+           "--mix", args.mix, "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype,
+           "--seed", args.dpo_seed)
         (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten,
                                                         "drop_sources": args.drop_sources}))
     score_checkpoints(name, adapter, args)

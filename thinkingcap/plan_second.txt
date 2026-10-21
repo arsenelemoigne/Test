@@ -1,0 +1,12 @@
+# SECOND runtime (second_colab.ipynb, TRACK_SESSION=second). Read-only on everything session 1 made:
+# it only adds new run directories (f8-*, peek/) and new adapter names (*-s1). Session 1 keeps plan_rebuild.txt.
+# 1. did the mvt-pertype session's held-out test of our models (questions 41-80) finish on Drive?
+peek --inputs /content/drive/MyDrive/thinkingcap-mvt-pertype/runs/mvtf
+# 2. the finalists on the FRESH test set (40 random questions per benchmark part, seed 20261022, none of the
+#    240 used for choices), 8 samples: rounds 1, 2, 3 and 4
+fresh --inputs adapters/bon-dpo-nocode/step-30 adapters/bon-dpo-r2g/step-10 adapters/bon-dpo-r3/step-5 adapters/bon-dpo-r4/step-15
+# 3. training randomness: rounds 2 and 4 retrained with another DPO seed (same answers, same pairs, new names),
+#    scored at the same step and on the fresh set
+bon_dpo --name bon-dpo-r2g-s1 --rollouts-from adapters/bon-dpo-nocode/step-30 --probe-from bon-dpo-r2 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 10 --dpo-seed 1
+bon_dpo --name bon-dpo-r4-s1 --rollouts-from adapters/bon-dpo-r3/step-5 --probe-from bon-dpo-r4 --drop-sources mbpp_train --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 15 --dpo-seed 1
+fresh --inputs adapters/bon-dpo-r2g-s1/step-10 adapters/bon-dpo-r4-s1/step-15
