@@ -3,3 +3,4 @@
 onpolicy --name r1 --start adapters/combine-codecut --round-seed 1 --per-source 300 --samples 4
 # Round 1 fix (user approved): same pairs, no shorten pairs on BFCL-style "no function fits", NLL anchor 1, checkpoints every 10 steps
 redpo --name r1b --from-round r1 --start adapters/combine-codecut --no-shorten irrelevance --nll 1 --save-every 10
+recheck --samples 8 --adapter adapters/onpolicy-r1b/step-20

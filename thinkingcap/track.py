@@ -117,6 +117,10 @@ def setup(args):
 
 
 def evaluate(out, adapter=None, samples=2, questions=QUESTIONS, model=None):
+    saved = Path("/content/drive/MyDrive/thinkingcap-mvt-pertype") / out
+    if not (Path(out) / "results.json").exists() and (saved / "results.json").exists():
+        shutil.copytree(saved, out, dirs_exist_ok=True)  # scored on an earlier runtime, kept in Drive
+        print(f"reused {out} from Drive", flush=True)
     if not (Path(out) / "results.json").exists():
         py("evaluate.py", "--questions", questions, "--samples", samples, "--out", out,
            *(["--adapter", adapter] if adapter else []), *(["--model", model] if model else []))
@@ -635,6 +639,7 @@ def recheck(args):
         evaluate(out, args.adapter, samples=args.samples)
         print(score_line(f"{name} ({args.samples} samples)", out, base=base))
         print(diagnose(out, base=base))
+        to_drive(out)
 
 
 def compare(out, base=BASE):
