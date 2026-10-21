@@ -785,3 +785,10 @@ step 10 +37.4% / -3.3 (mbpp +24% / -8.7); step 20 +44.2% / -3.3 (mbpp -6.2); ste
 (mbpp -10.0); step 40 +35.9% / -5.0 (mbpp -15.0). No checkpoint within the limit. Code still gets
 22-26% shorter by spill-over and loses as much as before: removing code's shorten pairs does not
 protect code (as the per-type session found with uncut code examples).
+
+**No code pairs at all (from the SFT start), 2 samples:** step 10 +35.6% / +1.1 (mbpp +25% / +1.3);
+step 20 +50.6% / -4.4 (mbpp +36% / -8.7); step 30 +44.1% / -2.8 (mbpp +41% / -6.2); step 40 +35.3% /
+-1.0 (mbpp +27% / -1.2). Code still gets 25-41% shorter by spill-over alone. Against the original at
+the same steps, code loses a little less at steps 10 and 20 and more at step 30: within the noise of
+40 tasks x 2 samples (about +/-10 on one benchmark). Code data is not the main cause of the code
+loss; the shared "think less" habit is.
