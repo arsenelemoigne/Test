@@ -56,7 +56,6 @@ confirm --name clean-b1
 clean --name clean-b2 --start auto:clean-b1 --code-source kodcode --kod-questions 300 --kod-exclude clean-b1 --gen-questions 750 --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
 confirm --name clean-b2
 fresh --inputs auto:clean-b1 auto:clean-b2
-# the finalists on ALL 2,759 evaluation questions x 2, in one engine, against session 2's raw-model run
-full2 --inputs auto:clean-a2 auto:clean-b2 adapters/bon-dpo-r4/step-15 adapters/bon-dpo-r3/step-5
+# (dropped by the user: the full-benchmark run comes only at the very end) full2 --inputs auto:clean-a2 auto:clean-b2 adapters/bon-dpo-r4/step-15 adapters/bon-dpo-r3/step-5
 # last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
 end

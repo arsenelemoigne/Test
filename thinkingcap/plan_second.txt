@@ -13,7 +13,6 @@ confirm --name clean-a1
 clean --name clean-a2 --start auto:clean-a1 --gen-questions 750 --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
 confirm --name clean-a2
 fresh --inputs auto:clean-a1 auto:clean-a2
-# the raw model on ALL 2,759 evaluation questions x 2 (the reference for the full-set scores)
-full2 --base-only
+# (dropped by the user: the full-benchmark run comes only at the very end) full2 --base-only
 # last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
 end
