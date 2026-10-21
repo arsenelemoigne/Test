@@ -51,6 +51,8 @@ steer
 # bigger per-kind direction reading (every reply, no generation)
 steer_read
 bon_dpo
+# code fix: no code shorten pairs (code keeps right-beats-wrong pairs), one pass, checkpoints 25 and 50
+bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 1 --eval-steps 25 50
 # steering push tests again: a check that compares the push's effect in both engines, stronger pushes
 steer --tag v2
-bon --name r2 --sft-lr 1e-4 --sft-epochs 3 --min-saved 0.25 --per-source 300 --max-per-source 300
+# (dropped: DPO on the same replies already works) bon --name r2 --sft-lr 1e-4 --sft-epochs 3 --min-saved 0.25 --per-source 300 --max-per-source 300

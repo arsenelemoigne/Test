@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--keep", required=True, help="sft.jsonl whose question ids are allowed")
     parser.add_argument("--out", required=True)
     parser.add_argument("--ratio", type=float, default=1.5)
+    parser.add_argument("--no-shorten", default="", help="sources that get guard pairs only (e.g. mbpp_train)")
     args = parser.parse_args()
 
     allowed = {r["id"] for r in read_jsonl(Path(args.keep))}
@@ -38,7 +39,8 @@ def main():
             continue
         base = {"id": qid, "source": group[0]["source"], "prompt_ids": right[0]["prompt_ids"],
                 "chosen_ids": right[0]["output_ids"]}
-        if len(right) >= 2 and right[-1]["output_tokens"] >= args.ratio * right[0]["output_tokens"]:
+        if base["source"] not in args.no_shorten.split(",") and len(right) >= 2 \
+                and right[-1]["output_tokens"] >= args.ratio * right[0]["output_tokens"]:
             pairs.append(base | {"kind": "shorten", "rejected_ids": right[-1]["output_ids"]})
             kinds["shorten", base["source"]] += 1
             lengths[base["source"]].append((right[0]["output_tokens"], right[-1]["output_tokens"]))

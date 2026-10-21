@@ -61,6 +61,9 @@ def main():
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
                              "also keeps Colab from disconnecting an idle runtime and wiping its disk")
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
+    parser.add_argument("--no-shorten", default="", help="bon_dpo: sources with guard pairs only")
+    parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
+    parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
     parser.add_argument("--sft-lr", type=float, default=5e-5, help="bon: SFT learning rate")
     parser.add_argument("--sft-epochs", type=int, default=1, help="bon: SFT passes")
     parser.add_argument("--min-saved", type=float, default=0.0,
@@ -478,18 +481,20 @@ def bon_dpo(args):
     on the 240-question test sample with 4 samples.
     """
     name = args.name or "bon-dpo"
-    pairs = BON / "pairs"
+    pairs = BON / ("pairs" + (f"-noshort-{args.no_shorten}" if args.no_shorten else ""))
     if not (pairs / "pairs.jsonl").exists():
         py("bon_pairs.py", "--rollouts", BON / "probe" / "rollouts.jsonl", "--keep", BON / "select-r1" / "sft.jsonl",
-           "--out", pairs)
+           "--out", pairs, "--no-shorten", args.no_shorten)
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / name
     if not (adapter / "adapter_config.json").exists():
         py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", args.start or "adapters/bon-r1", "--out", adapter,
-           "--mix", "0.6,0.4,0", "--save-every", 25, "--epochs", 2, "--dtype", args.dtype)
+           "--mix", "0.6,0.4,0", "--save-every", 25, "--epochs", args.dpo_epochs, "--dtype", args.dtype)
     base = ROOT / "s4-base"
     evaluate(base, samples=4)
     for checkpoint in sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])):
+        if args.eval_steps and int(checkpoint.name.split("-")[1]) not in args.eval_steps:
+            continue
         out = ROOT / f"s4-{name}-{checkpoint.name}"
         evaluate(out, checkpoint, samples=4)
         print(score_line(f"{name} {checkpoint.name} (4 samples)", out, base=base), flush=True)
