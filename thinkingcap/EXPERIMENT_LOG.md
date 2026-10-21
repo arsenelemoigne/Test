@@ -691,6 +691,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | text-mvt256 | 259 / 227 | 347 -> 190 | +18.2% | -2.1 | BFCL +23/+12/+13% / -3.7/0.0/-1.3; IFEval +19% / +5.0; MBPP+ +29% / **-7.5**; SVAMP +7% / -4.4 |
 | text-mvt1024-tokens32 | 259 / 234 | 347 -> 218 | +17.1% | -1.7 | BFCL +10/+13/+10% / -0.6/+3.1/-2.5; IFEval +25% / +6.2; MBPP+ +5% / -8.1; SVAMP +26% / -5.0 |
 | text-mvt256-tokens32 | 259 / 219 | 347 -> 180 | +11.8% | -2.1 | BFCL +3/+4/+4% / -6.2/0.0/-1.9; IFEval +23% / +4.4; MBPP+ -1% / -6.2; SVAMP +20% / -3.7 |
+| choice-whole | 203 / 0 | ~455 -> ~400 | +2.5% | +0.9 | BFCL +5/+9/0% / 0.0/-0.6/+1.9; IFEval -6% / +4.4; MBPP+ -8% / -5.0; SVAMP +17% / +3.7 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -734,3 +735,7 @@ Night-1 rival checked (Lightning McQwen3, blog.basta.one/blog/thinkingcap, 14 Oc
 without its BFCL think gate; one round of verified cuts on the raw model gave them only 11.4% (SFT),
 28.1% (DPO), 42.5% on their distilled model: on-policy rounds and "too early loses" pairs matter.
 choice-whole: arc_easy 55 rows (454 -> 379), commonsense_qa 148 (456 -> 408).
+
+choice-mvt1024: 470 checked, 464 pass; ARC 454 -> 93, CSQA 456 -> 100 (-78%): as on night 1, the
+model knows multiple-choice answers almost before thinking, so MVT keeps about one paragraph.
+(The multiple-choice pool came out 60 ARC-Easy / 240 CommonsenseQA questions.)
