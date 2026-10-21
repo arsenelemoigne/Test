@@ -5,11 +5,12 @@ bon --per-source 300 --max-per-source 300 --skip-eval --gen-questions 750
 # scores along the way, the best within the limit then with 4 samples
 bon_dpo --dpo-epochs 4 --save-every 10 --eval-steps 10 20 30 50 70 100 130
 # DPO straight from the raw model, no SFT step (same pairs, same settings)
-bon_dpo --name bon-dpo-raw --start raw --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
+bon_dpo --name bon-dpo-raw --start raw --dpo-epochs 2 --save-every 10 --eval-steps 10 20 30 40 60
 # code fix: code gets only right-beats-wrong pairs, with a typical-length correct reply; intermediate scores
-bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 50
+bon_dpo --name bon-dpo-code --no-shorten mbpp_train --dpo-epochs 2 --save-every 10 --eval-steps 10 20 30 40 60
 # no code pairs at all (as Lightning McQwen3, who trained on no code): code changes only by spill-over
-bon_dpo --name bon-dpo-nocode --drop-sources mbpp_train --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40
+bon_dpo --name bon-dpo-nocode --drop-sources mbpp_train --dpo-epochs 2 --save-every 10 --eval-steps 10 20 30 40 60
+# half data: one pass over the pairs is ~32 steps, so these runs take 2 passes
 # every sweep: 2 samples per checkpoint, the best within the limit re-scored with 4
 # push past 50%: round 2, the best checkpoint so far answers the same questions 8 times again, new pairs, DPO on
-bon_dpo --name bon-dpo-r2 --rollouts-from auto --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40
+bon_dpo --name bon-dpo-r2 --rollouts-from auto --dpo-epochs 2 --save-every 10 --eval-steps 10 20 30 40 60
