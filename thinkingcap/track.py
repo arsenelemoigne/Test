@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "confirm", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "confirm", "fresh", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -649,6 +649,23 @@ def confirm(args):
         out = ROOT / f"s8-{args.name}-step-{step}"
         evaluate(out, Path("adapters") / args.name / f"step-{step}", samples=8)
         print(score_line(f"{args.name} step-{step} (8 samples)", out, base=ROOT / "s8-base"), flush=True)
+
+
+FRESH_SEED = 20261022  # the fresh test set: 40 random questions per benchmark part, none from questions_40
+
+
+def fresh(args):
+    """Finalists on a fresh 240-question set never used for any choice, 8 samples, against the raw model."""
+    questions = f"questions_fresh{FRESH_SEED}"
+    if not Path(questions, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", questions)
+    base = ROOT / "f8-base"
+    evaluate(base, samples=8, questions=questions)
+    for adapter in args.inputs:
+        name = adapter.removeprefix("adapters/").replace("/", "-")
+        out = ROOT / f"f8-{name}"
+        evaluate(out, adapter, samples=8, questions=questions)
+        print(score_line(f"{name} (fresh 240 questions x 8)", out, base=base), flush=True)
 
 
 def diag(args):

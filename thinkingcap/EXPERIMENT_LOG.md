@@ -897,3 +897,11 @@ night-1 merges of unrelated adapters.
 | code-r3 step 5 | +53.6% | -2.9 |
 | code-r3b step 15 | +60.9% | -3.0 |
 | night-1 best (MVT on MC + math whole x2) | +37.1% | -0.6 |
+
+### Fresh test set (to remove the selection bias)
+
+All choices so far (which checkpoint, which variant) were made on `questions_40`, the same 240 questions
+the results are reported on. `questions_fresh20261022`: 40 questions per benchmark part drawn at random
+with seed **20261022** (`subset_questions.py --per-dataset 40 --seed 20261022 --exclude questions_40`),
+none of them in `questions_40`, rebuilt identically from the seed. Finalists are scored there with 8
+samples against the raw model on the same set (`track.py fresh`), runs `runs/mvtf/f8-*`.
