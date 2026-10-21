@@ -699,3 +699,13 @@ instructions and tools, weakest for math and code; there is no separate strong d
 shorten pairs chosen vs rejected mean tokens: gsm8k 493 vs 2,033, mbpp 747 vs 2,224, toolace
 182 vs 514, ifeval 261 vs 493, csqa 276 vs 723, arc 355 vs 874. DPO from adapters/bon-r1:
 1,125 pairs, 2 epochs, 141 steps, checkpoints every 25.
+
+**Best-of-8 SFT then DPO on the same replies (240 test questions x 4 samples vs the raw model):**
+
+| checkpoint | tokens saved | accuracy | svamp | mbpp | ifeval | bfcl simple | bfcl multiple | bfcl irrelevance |
+|---|---|---|---|---|---|---|---|---|
+| step-25 | **+47.6%** | **-2.6** | +62% / +0.6 | +43% / -9.4 | +48% / -1.2 | +29% / +0.6 | +34% / +0.6 | +39% / -2.5 |
+| step-50 | +40.3% | -2.8 | +47% / -2.5 | +42% / -5.0 | +40% / -3.7 | +27% / +0.6 | +32% / -0.6 | +34% / +0.0 |
+
+The contrast is the lever: the same replies that gave +4.4% as SFT give +40-48% as DPO pairs, within
+the limit, after 25 steps. MBPP+ carries the loss (-5 to -9 on 40 tasks, about +/-8 noise there).
