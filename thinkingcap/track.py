@@ -561,11 +561,16 @@ def bon_dpo(args):
     base = ROOT / f"s{n}-base"
     evaluate(base, samples=n)
     sweep = []
-    for checkpoint in sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])):
-        if args.eval_steps and int(checkpoint.name.split("-")[1]) not in args.eval_steps:
-            continue
+    chosen = [c for c in sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1]))
+              if not args.eval_steps or int(c.name.split("-")[1]) in args.eval_steps]
+    todo = [c for c in chosen if not (ROOT / f"s{n}-{name}-{c.name}" / "results.json").exists()]
+    if todo:  # every checkpoint in one engine (sweep_eval.py): about the cost of one evaluation
+        for c in todo:
+            shutil.rmtree(ROOT / f"s{n}-{name}-{c.name}", ignore_errors=True)
+        py("sweep_eval.py", "--questions", QUESTIONS, "--samples", n,
+           "--runs", *[f"{ROOT / f's{n}-{name}-{c.name}'}={c}" for c in todo])
+    for checkpoint in chosen:
         out = ROOT / f"s{n}-{name}-{checkpoint.name}"
-        evaluate(out, checkpoint, samples=n)
         line, delta = score_line(f"{name} {checkpoint.name} ({n} samples)", out, with_delta=True, base=base)
         print(line, flush=True)
         sweep.append((compare(out, base)["average"]["token_reduction"] or 0, delta, checkpoint))
