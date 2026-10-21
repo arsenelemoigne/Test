@@ -851,3 +851,15 @@ its own mean: math 36%, code 34%, ARC 23%, CSQA 22%, instructions 21%, tools 14%
 mbpp +53% / **-12.5**). Rounds compound on saving (42 -> 54 -> 57-69%) while code erodes round after
 round (-3.7 -> -7.5 -> -12.5 at 4-8 samples); the other benchmarks hold. Code is the bottleneck.
 Queued: diagnosis of the code losses; a round with code "stopped too early" pairs (`code_pairs.py`).
+
+**Code diagnosis (gentle round-2 model, 240 x 8 vs the raw model):** MBPP+ lost 40 answers and gained
+16; every loss is a wrong program (none cut by the cap, none unreadable). Thinking on the lost rows:
+1,420 -> 530 tokens. Typical loss: `next_smallest_palindrome` returns n when n is already a palindrome;
+the thinking "checks" that very case and accepts it ("what if n is already a palindrome? ... return
+it. That's correct."). Shorter thinking keeps a check but makes it shallow: the stricter MBPP+ tests
+catch the edge cases.
+
+**Code "stopped too early" pairs (`code_pairs.py`, round-3 answers of the gentle round-2 model):** 32
+code questions with a correct reply, 2 replies each, cut at 25/50/75% of the thinking, 4 re-answers:
+wrong after the cut 24/60 (25%), 15/60 (50%), 10/60 (75%). 30 hard pairs, added to round 3's 420
+(199 shorten, 221 guard): code is 7% of the pairs.
