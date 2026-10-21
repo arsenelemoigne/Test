@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "clean", "confirm", "fresh", "peek", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "full2", "clean", "confirm", "fresh", "peek", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--base-only", action="store_true", help="full2: score the raw model only")
     parser.add_argument("--code-source", default="none", help="clean: none or kodcode")
     parser.add_argument("--kod-questions", type=int, default=300, help="clean: KodCode tasks answered per round")
     parser.add_argument("--kod-exclude", default="", help="clean: a run whose KodCode tasks are not reused")
@@ -681,6 +682,32 @@ def clean(args):
            "--save-every", args.save_every, "--epochs", args.dpo_epochs, "--dtype", args.dtype, "--seed", args.dpo_seed)
         (adapter / "stage.json").write_text(json.dumps({"start": str(start), "code_source": args.code_source}))
     score_checkpoints(name, adapter, args)
+
+
+def full2(args):
+    """All 2,759 evaluation questions with 2 samples: --base-only scores the raw model; otherwise the --inputs
+    (adapters or auto:NAME) in one engine (sweep_eval.py), against the raw model's run (waited for on Drive)."""
+    base = ROOT / "full2-base"
+    if args.base_only:
+        evaluate(base, samples=2, questions="questions")
+        return
+    adapters = [resolve(a) for a in args.inputs]
+    names = [a.removeprefix("adapters/").replace("/", "-") for a in adapters]
+    todo = [(ROOT / f"full2-{n}", a) for n, a in zip(names, adapters) if not (ROOT / f"full2-{n}" / "results.json").exists()]
+    if todo:
+        for out, _ in todo:
+            shutil.rmtree(out, ignore_errors=True)
+        py("sweep_eval.py", "--questions", "questions", "--samples", 2, "--runs", *[f"{out}={a}" for out, a in todo])
+    import time
+    for _ in range(240):  # the raw model's full run comes from the other runtime
+        if (base / "results.json").exists():
+            break
+        drive_sync("restore")
+        if not (base / "results.json").exists():
+            print("waiting for full2-base on Drive", flush=True)
+            time.sleep(120)
+    for n in names:
+        print(score_line(f"{n} (all 2,759 questions x 2)", ROOT / f"full2-{n}", base=base), flush=True)
 
 
 def code_round(args):
