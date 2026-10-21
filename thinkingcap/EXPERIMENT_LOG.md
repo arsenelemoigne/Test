@@ -689,6 +689,8 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | text-whole | 259 / 0 | 347 -> 312 | +6.1% | -0.5 | BFCL +5/+6/+5% / -1.2/+0.6/0.0; IFEval +6% / +2.5; MBPP+ -2% / -1.9; SVAMP +14% / -2.5 |
 | text-mvt1024 | 259 / 238 | 347 -> 234 | +15.1% | -0.9 | BFCL +11/+9/+11% / -5.6/+3.1/-1.3; IFEval +24% / +5.6; MBPP+ +8% / -6.2; SVAMP +17% / -1.9 |
 | text-mvt256 | 259 / 227 | 347 -> 190 | +18.2% | -2.1 | BFCL +23/+12/+13% / -3.7/0.0/-1.3; IFEval +19% / +5.0; MBPP+ +29% / **-7.5**; SVAMP +7% / -4.4 |
+| text-mvt1024-tokens32 | 259 / 234 | 347 -> 218 | +17.1% | -1.7 | BFCL +10/+13/+10% / -0.6/+3.1/-2.5; IFEval +25% / +6.2; MBPP+ +5% / -8.1; SVAMP +26% / -5.0 |
+| text-mvt256-tokens32 | 259 / 219 | 347 -> 180 | +11.8% | -2.1 | BFCL +3/+4/+4% / -6.2/0.0/-1.9; IFEval +23% / +4.4; MBPP+ -1% / -6.2; SVAMP +20% / -3.7 |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -724,3 +726,11 @@ text-mvt256: 483 checked, 412 pass; 227 cut, 347 -> 190 (-45%).
 
 text-mvt256 saves a little more than c=1024 but costs more elsewhere (MBPP+ -7.5, SVAMP -4.4);
 IFEval itself gains nothing more (+19% vs +24%). text-mvt1024-tokens32: 543 checked, 476 pass; 347 -> 218 (-37%).
+
+**Instructions: best is MVT c=1024 by paragraphs** (+15.1% / -0.9; IFEval +24% / +5.6). Every cut
+setting shortens IFEval by about a quarter and raises it (+4.4 to +6.2), and every one costs MBPP+
+6-8 points: code is hurt by any cut training, whatever the kind.
+Night-1 rival checked (Lightning McQwen3, blog.basta.one/blog/thinkingcap, 14 Oct): 43.2% / -0.85
+without its BFCL think gate; one round of verified cuts on the raw model gave them only 11.4% (SFT),
+28.1% (DPO), 42.5% on their distilled model: on-policy rounds and "too early loses" pairs matter.
+choice-whole: arc_easy 55 rows (454 -> 379), commonsense_qa 148 (456 -> 408).
