@@ -875,3 +875,11 @@ noise). Queued: 8-sample recheck; a bigger code dose (code-r3b: ~600 code questi
 -1.9, ifeval +51% / -3.4, mbpp +54% / -8.1, bfcl +35-43% / -0.3..+5.0. The 4-sample -0.1 was luck plus
 picking the sweep's best on the same questions. Best confirmed with 8 samples stays the gentle round 2
 (step 10): +54.2% / -1.6. Rule from now on: compare finalists at 8 samples only.
+
+**Bigger code dose (code-r3b):** all code questions of both draws answered 4x by the gentle round-2 model
+(300 + 133; 18 contamination drops): 167 code too-early pairs (28 + 102 + 37) with round 3's 420.
+2 samples: step 5 +55.2% / -3.6; step 10 +55.5% / -3.4; step 15 +60.3% / -2.2; step 20 +65.3% / -4.7.
+Step 15: 4 samples +60.4% / -2.7 (mbpp -13.7); **8 samples +60.9% / -3.0** (svamp +76% / -6.2, mbpp +61%
+/ -7.8, ifeval +57% / +0.6, bfcl +36-44% / -0.6..+5.3): at the limit. Code pairs, even 167 of them, do
+not move code (-7.8 vs -7.5 without); this time math pays. Frontier at 8 samples:
++54.2/-1.6 (r2g step 10), +53.6/-2.9 (code-r3 step 5), +60.9/-3.0 (code-r3b step 15).

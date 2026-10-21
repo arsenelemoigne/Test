@@ -37,3 +37,8 @@ code_round --name code-r3 --start adapters/bon-dpo-r2g/step-10 --dpo-epochs 1 --
 recheck --samples 8 --adapter adapters/code-r3/step-5
 code_round --name code-r3b --start adapters/bon-dpo-r2g/step-10 --code-data data/bon.jsonl data/bon-seed1.jsonl --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15 20
 confirm --name code-r3b
+# the frontier at 8 samples: r2g step 10 +54.2/-1.6, code-r3 step 5 +53.6/-2.9, code-r3b step 15 +60.9/-3.0.
+# Round 3 without code pairs at 8 samples, then the midpoint of r2g and code-r3b (weight-space average of two
+# checkpoints of one training line), at 8 samples
+confirm --name bon-dpo-r3
+merge --name soup-r2g-r3b --inputs adapters/bon-dpo-r2g/step-10:0.5 adapters/code-r3b/step-15:0.5 --samples 8

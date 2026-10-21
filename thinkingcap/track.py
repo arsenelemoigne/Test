@@ -406,9 +406,11 @@ def merge(args):
     model = Path("models") / f"merge-{args.name}"
     if not (model / "config.json").exists():
         py("merge.py", "--out", model, "--adapters", *args.inputs)
-    base, out = ROOT / "s4-base", GRID / f"eval-merge-{args.name}"
-    evaluate(base, samples=4)
-    evaluate(out, samples=4, model=model)
+    n = args.samples  # --samples (4 by default; 8 for finalists)
+    base = ROOT / f"s{n}-base"
+    out = GRID / f"eval-merge-{args.name}" if n == 4 else ROOT / f"s{n}-merge-{args.name}"
+    evaluate(base, samples=n)
+    evaluate(out, samples=n, model=model)
     print(score_line(f"merge-{args.name}", out, base=base), flush=True)
     print(diagnose(out, base=base))
 
