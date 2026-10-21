@@ -861,3 +861,14 @@ Keeping irrelevance whole did not protect it (-4.4) and removed most of the savi
 codecut is the best: +48.3% / -1.2 on the 240-question subset (night-1 winner +37.1% / -0.6 at 8
 samples; Lightning McQwen3 43.2% / -0.85, self-reported). Its average hides MBPP+ -9.4 offset by
 IFEval +10.0 (partly noise). `fullbest` sent it to the full evaluation (2,759 questions x 8).
+
+Full evaluation stopped at the user's request (the base alone would have taken ~16 h at the
+observed pace, past the runtime's 24 h limit). Instead, the 240-question subset with 8 samples:
+
+| model | tokens saved | accuracy | per benchmark (saved / pts) |
+|---|---|---|---|
+| **combine-codecut, 8 samples** | **+44.3%** | **-1.6** | BFCL +51/+48/+42% / +0.6/-1.6/+0.6; IFEval +20% / +5.0; MBPP+ +73% / **-7.2**; SVAMP +15% / -4.1 |
+
+With 8 samples codecut settles at +44.3% / -1.6 (4 samples: +48.3% / -1.2): within the limit,
+above the night-1 winner (+37.1% / -0.6, 8 samples, same subset) and about level with Lightning
+McQwen3 (43.2% / -0.85, self-reported, question count not stated). Weak spots: MBPP+ -7.2, SVAMP -4.1.
