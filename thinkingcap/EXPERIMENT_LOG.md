@@ -692,6 +692,7 @@ are used (`--easy-tokens 700`). ToolACE replies are short (265 tokens), like BFC
 | text-mvt1024-tokens32 | 259 / 234 | 347 -> 218 | +17.1% | -1.7 | BFCL +10/+13/+10% / -0.6/+3.1/-2.5; IFEval +25% / +6.2; MBPP+ +5% / -8.1; SVAMP +26% / -5.0 |
 | text-mvt256-tokens32 | 259 / 219 | 347 -> 180 | +11.8% | -2.1 | BFCL +3/+4/+4% / -6.2/0.0/-1.9; IFEval +23% / +4.4; MBPP+ -1% / -6.2; SVAMP +20% / -3.7 |
 | choice-whole | 203 / 0 | ~455 -> ~400 | +2.5% | +0.9 | BFCL +5/+9/0% / 0.0/-0.6/+1.9; IFEval -6% / +4.4; MBPP+ -8% / -5.0; SVAMP +17% / +3.7 |
+| choice-mvt1024 | 203 / 201 | ~455 -> ~97 | +72.9% | **-10.7** | BFCL +39/+53/+32% / -1.2/**-13.1**/-3.8; IFEval +60% / +12.5; MBPP+ +93% / **-10.0**; SVAMP +66% / **-39.4** |
 
 Matched tool data trains for free (old Hermes data: -3.3, IFEval -7.5, MBPP+ -9.4).
 tool-mvt1024: 356 cut traces checked, 332 pass; 178 of 189 cut, targets 201 -> 142 (-30%).
@@ -739,3 +740,9 @@ choice-whole: arc_easy 55 rows (454 -> 379), commonsense_qa 148 (456 -> 408).
 choice-mvt1024: 470 checked, 464 pass; ARC 454 -> 93, CSQA 456 -> 100 (-78%): as on night 1, the
 model knows multiple-choice answers almost before thinking, so MVT keeps about one paragraph.
 (The multiple-choice pool came out 60 ARC-Easy / 240 CommonsenseQA questions.)
+
+choice-mvt1024 alone: the "barely think" lesson spreads to everything (MBPP+ 93% shorter, SVAMP
+66%) and breaks maths (-39.4), code (-10) and BFCL multiple (-13.1); IFEval gains (+12.5). This is
+night 1's finding again: multiple-choice cuts are the strongest brevity signal and need maths
+shown whole beside them (night-1 winner: MC cuts + GSM8K whole x2, +37.1% / -0.6 at 8 samples).
+choice-mvt256: 443 checked, 419 pass; same ~78% cut.
