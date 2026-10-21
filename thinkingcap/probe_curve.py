@@ -141,6 +141,7 @@ def generate(questions, args):
                 "answer": question["answer"], "question": question["prompt"][-1]["content"],
                 "sample": sample, "prompt_ids": prompt, "thinking_ids": thinking, "output_ids": tokens,
                 "output_tokens": len(tokens), "closed_thinking": closed,
+                "thinking": tokenizer.decode(thinking, skip_special_tokens=True),
                 "truncated": not (tokens and tokens[-1] in eos_ids),
                 "correct": is_correct(question, full_text(tokenizer, tokens), truncated),
                 "final": extract(text)})

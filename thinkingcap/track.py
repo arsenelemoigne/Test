@@ -68,8 +68,8 @@ def main():
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--code-tasks", default="mbpp_train:150,kodcode:300",
                         help="cod: code sources and tasks per source")
-    parser.add_argument("--lr", type=float, default=5e-5, help="cod: SFT learning rate")
-    parser.add_argument("--epochs", type=int, default=2, help="cod: SFT passes")
+    parser.add_argument("--lr", type=float, default=1e-4, help="cod: SFT learning rate (Lightning McQwen3's)")
+    parser.add_argument("--epochs", type=int, default=1, help="cod: SFT passes (one, as the literature)")
     parser.add_argument("--fresh", action="store_true",
                         help="recheck: score on questions 41-80 of every benchmark (never used to pick a model)")
     parser.add_argument("--max-per-source", type=int, default=70, help="mvt: SFT rows per dataset")
@@ -685,16 +685,63 @@ def thinkcheck(args):
         shutil.copy(out, DRIVE / out)
 
 
-COD_INSTRUCTION = ("\n\nWhile thinking, be terse: short phrases, not full sentences. But skip no step: write the "
-                   "plan, list the edge cases (empty input, one element, input already in the answer's form, "
-                   "negatives, duplicates), and trace each one, and the example, through your code before answering.")
+# Chain-of-Draft, as the literature does it for small models: few-shot exemplars matter more than the instruction
+# (Xu et al. 2025, Munkhbat et al. 2025), no hard word cap, and for code an explicit test step that writes the
+# actual result (Yang 2025: code-specific / iterative drafts keep the most correctness). One exemplar shows a
+# check FAILING and the fix: the shallow self-check is the failure being repaired. Exemplar tasks are invented,
+# not from MBPP or MBPP+; replies that copy them are dropped (cod_select.py).
+COD_EXEMPLARS = """Think step by step, but keep only a minimal draft of each step: short phrases, no full sentences. \
+Never skip the checks: before answering, trace the given assert and the edge cases through your code and write \
+the actual result of each. If a check fails, fix the code and check again. Three examples of the drafting style:
+
+Task: count the vowels in a string. assert count_vowels("Hello") == 2
+Draft:
+- in: str; out: int
+- approach: lowercase, count chars in "aeiou"
+- edges: "" -> 0; "AEI" -> 3; "xyz" -> 0
+- trace "Hello": e, o -> 2 OK
+Code:
+```python
+def count_vowels(s):
+    return sum(c in "aeiou" for c in s.lower())
+```
+
+Task: second largest distinct number of a list, None if there is none. assert second_largest([4, 1, 4, 3]) == 3
+Draft:
+- in: list[int]; out: int or None
+- approach: sort descending, take [1]
+- trace [4, 1, 4, 3]: [4, 4, 3, 1][1] = 4 -> WRONG, want 3
+- fix: dedupe first: sorted(set) desc [4, 3, 1][1] = 3 OK
+- edges: [] -> None OK; [5, 5] -> [5] -> None OK; negatives fine
+Code:
+```python
+def second_largest(nums):
+    distinct = sorted(set(nums), reverse=True)
+    return distinct[1] if len(distinct) > 1 else None
+```
+
+Task: split a list into chunks of size n. assert chunk([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]
+Draft:
+- in: list, n > 0; out: list of lists
+- approach: slices lst[i:i + n], i in steps of n
+- trace: i = 0, 2, 4 -> [1, 2], [3, 4], [5] OK
+- edges: [] -> [] OK; n > len -> [lst] OK; exact multiple -> no empty tail OK
+Code:
+```python
+def chunk(lst, n):
+    return [lst[i:i + n] for i in range(0, len(lst), n)]
+```
+
+Now the real task, drafted the same way in your thinking:
+
+"""
 
 
 def cod(args):
     """Chain-of-Draft code repair: terse but complete code thinking, then light SFT from --start.
 
-    The start model answers code tasks (MBPP minus MBPP+, and KodCode) 8 times under a Chain-of-Draft
-    instruction and twice normally; the shortest passing draft reply that still thinks becomes an SFT
+    The start model answers code tasks (MBPP minus MBPP+, and KodCode) 8 times under a few-shot Chain-of-Draft
+    prompt and 4 times normally; the shortest passing draft reply that still thinks becomes an SFT
     row under the original prompt (cod_select.py). Replay rows, the start model's own unchanged correct
     replies to math, tool and instruction questions, keep the change on code. Checkpoints are scored
     on the 240-question subset (4 samples, every benchmark: spill-over) and on code alone (codeeval).
@@ -718,13 +765,13 @@ def cod(args):
         rows = [json.loads(l) for l in code.read_text().splitlines() if l.strip()]
         for row in rows:
             row["prompt"] = [*row["prompt"][:-1], {**row["prompt"][-1],
-                                                   "content": row["prompt"][-1]["content"] + COD_INSTRUCTION}]
+                                                   "content": COD_EXEMPLARS + row["prompt"][-1]["content"]}]
         prompted.write_text("".join(json.dumps(r) + "\n" for r in rows))
     if not replay.exists():
         py("prepare_types.py", "--sources", "gsm8k_all,toolace,ifeval_like", "--per-source", 150, "--seed", 2,
            "--out", replay)
     sources = ",".join(spec.split(":")[0] for spec in args.code_tasks.split(","))
-    for kind, data, srcs, samples in (("cod", prompted, sources, 8), ("normal", code, sources, 2),
+    for kind, data, srcs, samples in (("cod", prompted, sources, 8), ("normal", code, sources, 4),
                                       ("replay", replay, "gsm8k_all,toolace,ifeval_like", 1)):
         rollouts = work / f"probe-{kind}" / "rollouts.jsonl"
         if not rollouts.exists():
@@ -739,7 +786,7 @@ def cod(args):
     adapter = Path("adapters") / f"cod-{name}"
     if not (adapter / "adapter_config.json").exists():
         py("sft.py", "--data", work / "sft.jsonl", "--init-adapter", args.start, "--out", adapter, "--dtype", args.dtype,
-           "--lr", args.lr, "--epochs", args.epochs, "--save-every", 20)
+           "--lr", args.lr, "--epochs", args.epochs, "--save-every", 10)
     to_drive(adapter)
     score_checkpoints(f"cod-{name}", adapter)
 
