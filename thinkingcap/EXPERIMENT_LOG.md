@@ -657,3 +657,21 @@ of MBPP+ tasks under other ids (51-81% overlap, e.g. mbpp_train-466 ~ Mbpp/758).
 flattered. Every training set now goes through the check.
 
 SFT: 990 rows, LoRA r16, lr 5e-5, 1 epoch.
+
+**Result, 240 test questions x 4 samples vs the raw model: tokens saved +4.4%, accuracy -2.8 pts.**
+Per benchmark (saved / points): bfcl_irrelevance +10% / +1.2, bfcl_multiple +7% / -3.1,
+bfcl_simple_python +9% / -3.8, ifeval +9% / -5.0, mbpp -3% / -8.1, svamp +3% / +3.7.
+Reading: one gentle pass (lr 5e-5, 1 epoch, 990 rows) barely moves the length (targets were
+30-61% shorter than the mean reply, the model took about a tenth of that) and still costs MBPP+
+8 points (within the +/-4-point noise per benchmark only partly). Shortest-of-8 SFT alone, at this
+strength, is not the lever; it stays a candidate start for DPO only if nothing better appears.
+
+### Track 2d: steering for brevity (`steer_dirs.py`, `track.py steer`)
+
+Directions in the residual stream read from the raw model's best-of-8 replies (200 questions per
+kind, first 64 thinking tokens): A mean difference shortest - longest correct; B within-question
+trend against log length, minus the "gives up" direction (wrong - correct); C one learned vector
+(DPO, everything else frozen). Per-kind directions and a cross-kind transfer table. Stored as a
+v_proj bias (Qwen3 `attention_bias`), checked identical in vLLM and Transformers. Small push tests
+on the 240-question sample (2 samples), best at 4 samples, then fresh replies on 25 held-out
+questions per source x 4 vs the raw model.
