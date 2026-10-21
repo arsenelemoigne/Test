@@ -691,6 +691,7 @@ def full2(args):
     if args.base_only:
         evaluate(base, samples=2, questions="questions")
         return
+    drive_sync("restore")  # the other runtime's models and scores (e.g. family A) come from Drive
     adapters = [resolve(a) for a in args.inputs]
     names = [a.removeprefix("adapters/").replace("/", "-") for a in adapters]
     todo = [(ROOT / f"full2-{n}", a) for n, a in zip(names, adapters) if not (ROOT / f"full2-{n}" / "results.json").exists()]
