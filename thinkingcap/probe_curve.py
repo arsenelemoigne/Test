@@ -63,6 +63,7 @@ def main():
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
+    parser.add_argument("--adapter", help="LoRA applied when sampling (the current model of an on-policy round)")
     parser.add_argument("--data", default="data/val.jsonl")
     parser.add_argument("--out", required=True)
     parser.add_argument("--per-source", type=int, default=50, help="questions per dataset")
@@ -115,12 +116,17 @@ def generate(questions, args):
     extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
     engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.85,
                  max_model_len=max(args.max_tokens, args.code_max_tokens) + max(len(p) for p in prompts) + 16,
-                 generation_config="vllm", **extra)
+                 generation_config="vllm", **extra,
+                 **({"enable_lora": True, "max_lora_rank": 16} if args.adapter else {}))
+    lora = None
+    if args.adapter:
+        from vllm.lora.request import LoRARequest
+        lora = LoRARequest("adapter", 1, args.adapter)
     # one cap per question, as the evaluation does: 8,192 for code, 4,096 for everything else
     params = [SamplingParams(n=args.samples, seed=SEED, stop_token_ids=eos_ids, **SAMPLING,
                              max_tokens=args.code_max_tokens if q["task"] == "code" else args.max_tokens)
               for q in questions]
-    outputs = engine.generate([{"prompt_token_ids": p} for p in prompts], params)
+    outputs = engine.generate([{"prompt_token_ids": p} for p in prompts], params, lora_request=lora)
 
     rollouts = []
     for question, prompt, output in zip(questions, prompts, outputs):

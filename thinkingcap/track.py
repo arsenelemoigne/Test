@@ -32,7 +32,8 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon",
+                                          "onpolicy", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -54,6 +55,9 @@ def main():
                         help="combine: sft.jsonl[:source[:source...]] files whose rows (of those sources) are pooled")
     parser.add_argument("--margin", type=float, default=-2.5,
                         help="fullbest: lowest 4-sample accuracy change (points) a candidate may have")
+    parser.add_argument("--start", help="onpolicy: the current model's adapter (fetched from Drive if missing)")
+    parser.add_argument("--round-seed", type=int, default=1, help="onpolicy: seed for the round's fresh questions")
+    parser.add_argument("--nll", type=float, default=0.0, help="onpolicy: NLL anchor weight in DPO")
     parser.add_argument("--plan-file", default="plan.txt", help="plan: the queue this runtime works through")
     parser.add_argument("--wait-hours", type=float, default=0,
                         help="plan: when the queue is empty, keep polling the branch this long; a running cell "
@@ -471,6 +475,98 @@ def bon(args):
     evaluate(out, adapter, samples=4)
     print(score_line(f"bon-{name} (4 samples, 240 test questions)", out, base=base), flush=True)
     print(diagnose(out, base=base))
+
+
+DRIVE = Path("/content/drive/MyDrive/thinkingcap-mvt-pertype")
+# kind -> (source, MVT travel, unit): each kind's best cut from the per-type grid
+ROUND_TYPES = {"tool": ("toolace", 256, "paragraph"), "text": ("ifeval_like", 1024, "paragraph"),
+               "code": ("mbpp_train", 1024, "tokens32"), "math": ("gsm8k_all", 1024, "tokens32")}
+
+
+def fetch(adapter):
+    """The adapter on this runtime's disk, copied from Drive if missing.
+
+    Drive cannot be mounted from the app's built-in browser: mount it in this runtime from a normal
+    browser tab (drive.mount('/content/drive')); this waits for it, up to 3 hours.
+    """
+    import time
+    if (Path(adapter) / "adapter_config.json").exists():
+        return
+    for minute in range(180):
+        if (DRIVE / adapter / "adapter_config.json").exists():
+            shutil.copytree(DRIVE / adapter, adapter, dirs_exist_ok=True)
+            print(f"fetched {adapter} from Drive", flush=True)
+            return
+        if minute % 10 == 0:
+            print(f"waiting for {DRIVE / adapter}: mount Google Drive in this runtime from a browser", flush=True)
+        time.sleep(60)
+    raise SystemExit(f"{adapter} not found on this runtime nor on Drive")
+
+
+def to_drive(*paths):
+    """Copy results to Drive when it is mounted: the runtime's disk is wiped on disconnect."""
+    if not DRIVE.exists():
+        print("Drive not mounted: these results stay on this runtime only", flush=True)
+        return
+    for path in map(Path, paths):
+        if path.exists():
+            shutil.copytree(path, DRIVE / path, dirs_exist_ok=True)
+
+
+def onpolicy(args):
+    """One on-policy round: the current model answers fresh questions, MVT cuts verified 4 of 4, DPO.
+
+    Pairs (prune_traces.py --pairs): safe cut > full trace, safe cut > a too-early cut that failed,
+    full trace > a failed cut when no cut is safe. Every checkpoint is scored on the 240-question
+    subset with 4 samples, so the round's best point can be kept and the start reverted to.
+    """
+    fetch(args.start)
+    work, data = GRID / f"onpolicy-{args.name}", Path(f"data/onpolicy-{args.name}.jsonl")
+    sources = ",".join(source for source, _, _ in ROUND_TYPES.values())
+    if not TYPE_DATA.exists():  # the questions the grid used, to leave out
+        py("prepare_types.py", *PREPARE, "--out", TYPE_DATA)
+    if not data.exists():
+        earlier = [p for p in sorted(Path("data").glob("onpolicy-*.jsonl")) if p != data]
+        py("prepare_types.py", "--sources", sources, "--per-source", args.per_source, "--seed", args.round_seed,
+           "--exclude", TYPE_DATA, *earlier, "--out", data)
+    rollouts = work / "probe" / "rollouts.jsonl"
+    if not rollouts.exists():
+        py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", args.per_source,
+           "--samples", args.samples, "--out", work / "probe", "--adapter", args.start, "--dtype", args.dtype,
+           "--generate-only")
+    rows = [json.loads(l) for l in rollouts.read_text().splitlines() if l.strip()]
+    for source in sorted({r["source"] for r in rows}):
+        group = [r for r in rows if r["source"] == source]
+        print(f"   {source:<14} {len(group)} replies, {sum(r['correct'] for r in group) / len(group):.0%} correct, "
+              f"mean {sum(r['output_tokens'] for r in group) / len(group):.0f} tokens", flush=True)
+    pool = []
+    for kind, (source, travel, unit) in ROUND_TYPES.items():
+        out = work / kind
+        if not (out / "pairs.jsonl").exists():
+            py("prune_traces.py", "--rollouts", rollouts, "--sources", source, "--out", out, "--rule", "mvt",
+               "--travel", travel, "--unit", unit, "--checker", "vllm", "--check-samples", 4, "--pairs",
+               "--adapter", args.start, "--dtype", args.dtype,
+               *(["--easy-tokens", EASY[kind]] if kind in EASY else []))
+        print((out / "pairs_summary.txt").read_text(), flush=True)
+        pool += [l for l in (out / "pairs.jsonl").read_text().splitlines() if l.strip()]
+    pairs = work / "pairs.jsonl"
+    if not pairs.exists():
+        pairs.write_text("".join(l + "\n" for l in pool))
+    to_drive(work)
+    adapter = Path("adapters") / f"onpolicy-{args.name}"
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--data", pairs, "--init-adapter", args.start, "--out", adapter, "--dtype", args.dtype,
+           *(["--nll", args.nll] if args.nll else []))
+    to_drive(adapter)
+    base = ROOT / "s4-base"
+    evaluate(base, samples=4)
+    checkpoints = sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])) + [adapter]
+    for checkpoint in checkpoints:
+        label = checkpoint.name if checkpoint != adapter else "final"
+        out = GRID / f"eval-onpolicy-{args.name}-{label}"
+        evaluate(out, checkpoint, samples=4)
+        print(score_line(f"onpolicy-{args.name} {label}", out, base=base), flush=True)
+        to_drive(out)
 
 
 def gridtable(args):

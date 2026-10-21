@@ -1,0 +1,3 @@
+# On-policy rounds from the best MVT model (combine-codecut, kept untouched in Drive). One line = one stage.
+# Round 1: fresh questions (seed 1), the current model answers 4 times, MVT cuts verified 4/4, DPO pairs, checkpoints scored.
+onpolicy --name r1 --start adapters/combine-codecut --round-seed 1 --per-source 300 --samples 4

@@ -47,7 +47,7 @@ def main():
     lora = LoRARequest("adapter", 1, args.adapter) if args.adapter else None
     # one request per distinct cap, so a short multiple-choice answer does not reserve a code-sized budget
     caps = sorted({r["max_tokens"] for r in rows})
-    answers = {}
+    answers, failures = {}, {}
     for cap in caps:
         batch = [r for r in rows if r["max_tokens"] == cap]
         params = SamplingParams(n=args.samples, max_tokens=cap, seed=SEED, stop_token_ids=[end], **SAMPLING)
@@ -59,14 +59,17 @@ def main():
                 tokens = list(completion.token_ids)
                 if not tokens or tokens[-1] != end:
                     passing = None  # ran out of room: the evaluation would cut it off too
+                    failures[row["key"]] = tokens
                     break
                 text = full_text(tokenizer, row["thinking_ids"] + tokens)
                 if not is_correct(row["row"], text):
                     passing = None
+                    failures[row["key"]] = tokens  # a wrong answer from this thinking: a "too early" example
                     break
                 passing.append(tokens)
             answers[row["key"]] = min(passing, key=len) if passing else None
-    Path(args.out).write_text("".join(json.dumps({"key": k, "answer_ids": v}) + "\n" for k, v in answers.items()))
+    Path(args.out).write_text("".join(json.dumps({"key": k, "answer_ids": v, "failed_ids": failures.get(k)}) + "\n"
+                                      for k, v in answers.items()))
     passed = sum(v is not None for v in answers.values())
     print(f"checked {len(rows)} traces: {passed} pass", flush=True)
 

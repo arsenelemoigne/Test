@@ -36,6 +36,8 @@ def main():
                         help="share of the tool questions paired with tools that cannot answer them")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--sources", default="gsm8k,mbpp_train,hermes_tools,ifeval_like")
+    parser.add_argument("--exclude", nargs="*", default=[],
+                        help="jsonl files whose questions (same prompt) are left out: fresh questions per round")
     parser.add_argument("--tool-mix", default="0.48,0.24,0.28",
                         help="toolace: shares of one-function, several-function and no-fit questions (BFCL's)")
     args = parser.parse_args()
@@ -43,9 +45,11 @@ def main():
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice}
+    used = {json.dumps(json.loads(l)["prompt"]) for path in args.exclude
+            for l in Path(path).read_text().splitlines() if l.strip()}
     for source in args.sources.split(","):
         build = builders[source]
-        built = list(build(args, rng))
+        built = [r for r in build(args, rng) if json.dumps(r["prompt"]) not in used]
         rng.shuffle(built)
         rows += built[:args.per_source]
         print(f"{source}: {len(built)} usable, kept {min(len(built), args.per_source)}", flush=True)

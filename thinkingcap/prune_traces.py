@@ -112,7 +112,49 @@ def main():
 
     write_jsonl(out / "sft.jsonl", targets)
     write_jsonl(out / "log.jsonl", log)
+    if args.pairs:
+        write_jsonl(out / "pairs.jsonl", build_pairs(pending, jobs, checked, pruner.failed, by_question, out))
     report(targets, log, by_question, out)
+
+
+def build_pairs(pending, jobs, checked, failed, by_question, out):
+    """DPO pairs per question (chosen > rejected), all on the current model's own text.
+
+    shorten: the shortest safe cut over the full trace it came from (if at least 10% shorter);
+    guard:   that cut over the longest earlier cut of the same trace whose answer was wrong;
+    hard:    no cut is safe: the shortest full correct trace over the longest failed cut.
+    """
+    def pair(kind, chosen, rejected):
+        return {"id": chosen["id"], "source": chosen["source"], "task": chosen["task"], "kind": kind,
+                "prompt_ids": chosen["prompt_ids"], "chosen_ids": chosen["completion_ids"],
+                "rejected_ids": rejected["completion_ids"], "chosen_thinking": chosen["thinking_tokens"],
+                "rejected_thinking": rejected["thinking_tokens"]}
+
+    pairs = []
+    for qid, indices in pending.items():
+        passed = [i for i in indices if checked[i] is not None]
+        failures = [i for i in indices if failed[i] is not None]
+        if passed:
+            best = min(passed, key=lambda i: len(checked[i]["completion_ids"]))
+            chosen, rollout = checked[best], jobs[best][0]
+            full = original_target(rollout)
+            if len(chosen["completion_ids"]) <= 0.9 * len(full["completion_ids"]):
+                pairs.append(pair("shorten", chosen, full))
+            early = [failed[i] for i in failures if jobs[i][0] is rollout
+                     and failed[i]["thinking_tokens"] < chosen["thinking_tokens"]]
+            if early:
+                pairs.append(pair("guard", chosen, max(early, key=lambda t: t["thinking_tokens"])))
+        elif failures:
+            full = [original_target(r) for r in by_question[qid]
+                    if r["correct"] and not r["truncated"] and r["closed_thinking"]]
+            if full:
+                pairs.append(pair("hard", min(full, key=lambda t: len(t["completion_ids"])),
+                                  max((failed[i] for i in failures), key=lambda t: t["thinking_tokens"])))
+    counts = Counter((p["source"], p["kind"]) for p in pairs)
+    lines = [f"pairs: {len(pairs)}"] + [f"   {source:<16}{kind:<9}{n}" for (source, kind), n in sorted(counts.items())]
+    print("\n".join(lines), flush=True)
+    (out / "pairs_summary.txt").write_text("\n".join(lines) + "\n")
+    return pairs
 
 
 def parse_arguments():
@@ -146,6 +188,11 @@ def parse_arguments():
     parser.add_argument("--answer-tokens", type=int, default=512, help="cap on a natural answer")
     parser.add_argument("--batch-tokens", type=int, default=32768)
     parser.add_argument("--no-keep-unsettled", dest="keep_unsettled", action="store_false")
+    parser.add_argument("--pairs", action="store_true",
+                        help="also write pairs.jsonl for DPO: safe cut > full trace (shorten), safe cut > an earlier "
+                             "cut that failed (guard), full trace > a failed cut when no cut is safe (hard)")
+    parser.add_argument("--early", default="0.5",
+                        help="--pairs: earlier cuts tried, as fractions of the units the rule keeps")
     parser.add_argument("--dtype", default="bfloat16")
     return parser.parse_args()
 
@@ -198,6 +245,8 @@ class Pruner:
 
         cut = mvt if args.rule == "mvt" else settle
         if cut is None:
+            if args.pairs:  # no cut point: try half the thinking, a "hard" rejected side if it fails
+                return {"candidates": [("early", steps[:len(steps) // 2])], "log": log | {"status": "pending"}}
             return {"candidates": [], "log": log | {"status": "unsettled"}}
 
         truncated = list(range(min(len(steps), max(cut + args.margin, args.min_steps))))
@@ -207,6 +256,9 @@ class Pruner:
                            and p_gold([kept])[0] >= level)
         log |= {"truncated_steps": len(truncated), "pruned_steps": len(pruned), "flat_steps": len(flat)}
         variants = [("pruned", pruned)] + ([("truncated", truncated)] if pruned != truncated else [])
+        if args.pairs:  # earlier cuts: safe ones are shorter targets, failed ones become "too early" examples
+            sizes = sorted({int(len(truncated) * float(f)) for f in args.early.split(",")}, reverse=True)
+            variants += [("early", truncated[:k]) for k in sizes if k < len(pruned)]
         return {"candidates": [(kind, [steps[i] for i in kept]) for kind, kept in variants],
                 "log": log | {"status": "pending"}}
 
@@ -231,7 +283,11 @@ class Pruner:
         return max(self.args.answer_tokens, 1024) if rollout["task"] in OWN_ANSWER else self.args.answer_tokens
 
     def check_many(self, jobs, out):
-        """[(rollout, units, kind)] -> the SFT row for each, or None where a natural answer failed."""
+        """[(rollout, units, kind)] -> the SFT row for each, or None where a natural answer failed.
+
+        With the vLLM checker, self.failed holds, per job, the trace with one of its failing answers.
+        """
+        self.failed = [None] * len(jobs)
         if self.args.check_samples == 0 or self.args.checker == "hf" or not jobs:
             return [self.checked_target(r, u, k) for r, u, k in jobs]
         import subprocess
@@ -251,8 +307,11 @@ class Pruner:
         if getattr(self.args, "adapter", None):
             command += ["--adapter", self.args.adapter]
         subprocess.run(command, check=True)
-        verdicts = {v["key"]: v["answer_ids"] for v in read_jsonl(results)}
-        return [make_target(r, t, verdicts[i], k, len(u)) if verdicts.get(i) else None
+        results = {v["key"]: v for v in read_jsonl(results)}
+        self.failed = [make_target(r, t, results[i]["failed_ids"], "failed-" + k, len(u))
+                       if not results[i]["answer_ids"] and results[i].get("failed_ids") else None
+                       for i, ((r, u, k), t) in enumerate(zip(jobs, thinking))]
+        return [make_target(r, t, results[i]["answer_ids"], k, len(u)) if results[i]["answer_ids"] else None
                 for i, ((r, u, k), t) in enumerate(zip(jobs, thinking))]
 
     def decode_thinking(self, thinking_ids):
