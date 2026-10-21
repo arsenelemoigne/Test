@@ -743,3 +743,26 @@ lr 1e-4, 3 epochs), 4 samples: +12.5% / -0.7** (svamp +16% / +0.6, mbpp +7% / -2
 **Runtime lost:** Colab recycled runtime A at about 11:07 Paris (2026-10-21); the disk, every
 adapter (bon-dpo checkpoints, bon-r2) and the 14,400 best-of-8 rollouts are gone. The worker had
 also stopped receiving branch updates after 5d3f8ce, so the MBPP guard-only DPO variant never ran.
+
+### Track 2e: rebuild after the lost runtime (half the best-of-8 data, Drive persistence)
+
+750 of the 1,500 questions x 8 (a mixed half), 466 SFT rows after 8 contamination drops, 591 DPO
+pairs. Kept vs same-question mean: math 59%, code 48%, CSQA 38%, ARC 34%, IFEval 34%, ToolACE 32%.
+Original recipe (gentle SFT then DPO), pushed to 134 steps (4 passes over 533 pairs; one pass is
+~33 steps), every checkpoint scored in one engine (`sweep_eval.py`), 240 questions x 2 samples
+(about +/-4 points of noise):
+
+| step | tokens saved | accuracy | svamp | mbpp | ifeval |
+|---|---|---|---|---|---|
+| 10 | +36.2% | -1.5 | +38% / -2.5 | +29% / -7.5 | +49% / +2.5 |
+| 20 | +47.4% | -6.4 | +55% / -7.5 | +37% / -16.2 | +61% / -3.7 |
+| 30 | +42.5% | -2.9 | +52% / -7.5 | +25% / -1.2 | +56% / -2.5 |
+| 50 | +32.6% | -2.2 | +31% / 0.0 | +11% / -7.5 | +52% / -2.5 |
+| 70 | +37.6% | -1.0 | +46% / -1.2 | +21% / -1.2 | +51% / -3.7 |
+| 100 | +27.9% | -1.2 | +31% / -3.7 | +11% / -3.7 | +40% / 0.0 |
+| 130 | +22.4% | -0.1 | +24% / -1.2 | +0% / -1.2 | +37% / 0.0 |
+
+It does not break: past the first pass (~33 steps) the saving drains away (47% -> 22%) and the
+accuracy returns to the raw model's. Peak around steps 20-30, as last night (step 25 best). With
+the pairs memorised (100% ordered right from step ~60), more passes undo the brevity rather than
+deepen it. Best within the limit at 2 samples: step 30, re-scored with 4 samples next.
