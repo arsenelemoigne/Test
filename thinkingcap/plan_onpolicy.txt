@@ -8,3 +8,5 @@ recheck --samples 8 --adapter adapters/onpolicy-r1b/step-20
 # The raw model is scored on them first. Order: the best confirmed model (gentle round 2, step 10: +54.2% / -1.6 at 8 answers), then the safe fallback (user dropped the MVT best).
 recheck --fresh --samples 8 --adapter /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-r2g/step-10
 recheck --fresh --samples 8 --adapter /content/drive/MyDrive/thinkingcap-mvtf/adapters/bon-dpo-nocode/step-30
+# "does it still think?": share of near-empty thinking, raw vs trained, on the fresh test and the usual subset (no GPU)
+thinkcheck --inputs fresh-s8-base fresh-s8-bon-dpo-r2g-step-10 fresh-s8-bon-dpo-nocode-step-30 s8-base /content/drive/MyDrive/thinkingcap-mvtf/runs/mvtf/s8-bon-dpo-r2g-step-10

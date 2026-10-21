@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
                                           "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon",
-                                          "onpolicy", "redpo", "scores"))
+                                          "onpolicy", "redpo", "scores", "thinkcheck"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -648,6 +648,37 @@ def recheck(args):
         print(diagnose(out, base=base))
         to_drive(out)
     to_drive(base)
+
+
+def thinkcheck(args):
+    """Does the model still think? Per benchmark, the share of answers whose thinking is (nearly) empty.
+
+    Reads the records.jsonl of scored runs (--inputs, relative to runs/mvtf); no generation, no GPU.
+    The rules require the model to think before it answers, so a trained model should not skip it
+    much more often than the raw model does.
+    """
+    lines = ["thinkcheck: share of answers with thinking under 10 / under 30 tokens, median thinking tokens"]
+    for name in args.inputs:
+        file = ROOT / name / "records.jsonl"
+        if not file.exists():
+            saved = Path("/content/drive/MyDrive/thinkingcap-mvt-pertype") / file
+            file = saved if saved.exists() else file
+        if not file.exists():
+            lines.append(f"  {name}: no records.jsonl")
+            continue
+        rows = [json.loads(l) for l in file.read_text().splitlines() if l.strip()]
+        lines.append(f"  {name} ({len(rows)} answers)")
+        for dataset in sorted({r["dataset"] for r in rows}) + ["ALL"]:
+            think = sorted(r["reasoning_tokens"] for r in rows if dataset in ("ALL", r["dataset"]))
+            share = lambda limit: sum(t < limit for t in think) / len(think)
+            lines.append(f"    {dataset:<22} <10: {share(10):6.1%}   <30: {share(30):6.1%}   median {think[len(think) // 2]}")
+    report = "\n".join(lines)
+    print(report, flush=True)
+    out = ROOT / "thinkcheck.txt"
+    out.write_text(report + "\n")
+    if DRIVE.exists():
+        (DRIVE / out).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(out, DRIVE / out)
 
 
 def compare(out, base=BASE):
