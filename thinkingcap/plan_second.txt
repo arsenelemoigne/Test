@@ -10,6 +10,9 @@ fresh --inputs adapters/bon-dpo-r4/step-15 adapters/bon-dpo-r2g-s1/step-10 adapt
 # round from its best on not-yet-used questions; both checked with 8 samples, then on the fresh set
 clean --name clean-a1 --start raw --mix 0.6,0.4,0 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30
 confirm --name clean-a1
+# clean-a1's pass ended at step 28 and the 2-sample filter kept only step 10 (+17.8%): score 20 and 28 with 4
+recheck --samples 4 --adapter adapters/clean-a1/step-20
+recheck --samples 4 --adapter adapters/clean-a1/step-28
 clean --name clean-a2 --start auto:clean-a1 --gen-questions 750 --mix 0.4,0.6,0 --dpo-epochs 1 --save-every 5 --eval-steps 5 10 15
 confirm --name clean-a2
 fresh --inputs auto:clean-a1 auto:clean-a2

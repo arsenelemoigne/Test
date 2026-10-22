@@ -955,3 +955,7 @@ pairs per math source, right-beats-wrong with a median-length correct reply), ma
 traps: GSM-Plus (Li et al. 2024; distraction insertion, problem understanding, reversed/added operations,
 numerical substitution; GSM8K-based) and GSM-IC (Shi et al. 2023; in-topic irrelevant sentences). 1,500
 fresh questions x 8; DPO with 3 seeds averaged per checkpoint step (merge.py); best soup x8 usual + fresh.
+
+**Family A, A1 (DPO from raw, round-1 answers without code, 438 pairs, 28 steps), 2 samples:** step 10
++15.8% / 0.0; step 20 +41.9% / -3.6. Step 10 with 4 samples: +17.8% / +1.7. Steps 20 and 28 rechecked
+with 4 samples before A2 picks its start.
