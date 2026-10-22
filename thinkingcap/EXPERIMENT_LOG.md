@@ -1030,3 +1030,8 @@ which therefore cannot be certified clean. IFEval-like: 0-2 of 300 at >= 50%, ~1
 IFEval: its fixed constraint wording ("answer with one of the following options: My answer is yes..."), not its
 questions; the chain rounds' strict check (30% or any 13-word run) drops them all the same. KodCode: 0 at >= 50%, 64
 with a 13-word run, dropped likewise. The submission should come from a clean line (A, B, v2).
+
+**Clean line A, round 3 (ca1, from A2; full recipe; 3-seed soups), questions_40 x 4:** step 10 +52.5% / -1.0 (chosen,
+floor -1.5); step 20 +54.6% / -3.0; step 30 +49.2% / -3.0; step 40 +54.2% / -2.9 (svamp +60% / -2.5, ifeval +60% /
++1.9, bfcl +39-47%, mbpp +51% / -10.6). Its x8 tests were cut by the lost runtime (a half-written folder that evaluate.py
+refuses; track.evaluate now clears it) and are requeued; ca2 started from the step-10 soup.

@@ -184,6 +184,7 @@ def setup(args):
 
 def evaluate(out, adapter=None, samples=2, questions=QUESTIONS, model=None):
     if not (Path(out) / "results.json").exists():
+        shutil.rmtree(out, ignore_errors=True)  # a run cut short (lost runtime) leaves a folder evaluate.py refuses
         py("evaluate.py", "--questions", questions, "--samples", samples, "--out", out,
            *(["--adapter", adapter] if adapter else []), *(["--model", model] if model else []))
 

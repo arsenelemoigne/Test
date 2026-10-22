@@ -2,6 +2,8 @@
 # recipe without code data, 2 rounds.
 chain --name ca1 --start adapters/clean-a2/step-5 --data-seed 8 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
 chain --name ca2 --start soup:ca1 --data-seed 9 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# ca1's x8 and fresh tests were cut by the lost runtime: rerun (all other parts are skipped as done)
+chain --name ca1 --start adapters/clean-a2/step-5 --data-seed 8 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2 --floor -1.5
 # then: win back accuracy on the 60%+ rounds without shortening them further (blends with round 2, length-matched
 # right-beats-wrong on trap math, self-correction SFT); every candidate x4 usual and x8 fresh
 repair --name rep4 --start adapters/bon-dpo-r4/step-15 --data-seed 11
