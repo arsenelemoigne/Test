@@ -3,7 +3,7 @@
 Confidence vs outcome: at every cut we also read the model's own confidence, the probability it gives (per token,
 geometric mean) to the answer it finally wrote, right after "</think>" is closed at the cut (teacher forcing; works
 for every type, no gold string needed). The summary compares that confidence with the real outcome (the share of
-the 4 re-answers that are right), bin by bin (calibration table, ECE), and picks, per source, the confidence
+the --samples re-answers that are right), bin by bin (calibration table, ECE), and picks, per source, the confidence
 threshold c: each reply stops at its earliest cut where confidence >= c; the lowest c whose real accuracy stays
 within the allowance is kept. Pairs are built at the confidence-chosen cut (the model's own signal), validated by
 the real re-answers; the outcome-only rule (tau) is reported beside it for comparison.
@@ -123,7 +123,7 @@ def main():
     parser.add_argument("--taus", default="1.0,0.75,0.5")
     parser.add_argument("--allow", default="gsm_plus=0.5,gsm_ic=0.5,kodcode=1,default=2",
                         help="source=points of expected accuracy loss allowed by the calibration")
-    parser.add_argument("--samples", type=int, default=4)
+    parser.add_argument("--samples", type=int, default=10, help="re-answers per cut: the real outcome in 10% steps")
     parser.add_argument("--per-question", type=int, default=1, help="correct replies cut per question (longest first)")
     parser.add_argument("--min-save", type=float, default=0.25)
     parser.add_argument("--answer-tokens", type=int, default=2048)
