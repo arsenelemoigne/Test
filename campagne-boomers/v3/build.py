@@ -53,7 +53,7 @@ def headline(variant, old):
     return f'<h1 class="top">Métro, {old_html}<br>worker<sup>*</sup>, dodo.</h1>'
 
 
-def page(key, variant, headline_html=None, bg=None, msgs=None, layout=None):
+def page(key, variant, headline_html=None, bg=None, msgs=None, layout=None, tag=None, foot=None, voice='0:32'):
     w = WORKERS[key]
     L = {**LAYOUT[(key, variant)], **(layout or {})}
     layer = H / f'layers/{key}.png'
@@ -109,7 +109,7 @@ h1 sup {{ font-size:.45em; font-weight:500; vertical-align:.42em; margin-left:2p
 {headline_html or headline(variant, w['old'])}
 <div class="chat">
   <div class="row"><div class="av"></div><div class="bub">{m1}</div></div>
-  <div class="row out"><div class="voice">{play('#fff')}<span style="width:10px;height:10px;border-radius:50%;background:#fff"></span>{wave('rgba(255,255,255,.9)', 24)}<span class="t">0:32</span></div></div>
+  <div class="row out"><div class="voice">{play('#fff')}<span style="width:10px;height:10px;border-radius:50%;background:#fff"></span>{wave('rgba(255,255,255,.9)', 24)}<span class="t">{voice}</span></div></div>
   <div class="row"><div class="av"></div><div class="bub">{m2}</div></div>
   <div class="qr">{QR_SVG}</div>
 </div>
@@ -117,9 +117,9 @@ h1 sup {{ font-size:.45em; font-weight:500; vertical-align:.42em; margin-left:2p
 <svg id="arrow" style="position:absolute;z-index:4" width="170" height="130" viewBox="0 0 170 130"><path d="M12 120 C 24 60 70 34 148 40" fill="none" stroke="#151515" stroke-width="7" stroke-linecap="round"/>
 <path d="M114 10 L152 40 L112 70" fill="none" stroke="#151515" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
 <img class="logo" src="{LOGO}" alt="Delos">
-<div class="foot{' right' if L.get('foot_right') else ''}">*worker = employé<br><small>**boomer = un état d'esprit, pas une date de naissance</small></div>
+<div class="foot{' right' if L.get('foot_right') else ''}">{foot or "*worker = employé<br><small>**boomer = un état d'esprit, pas une date de naissance</small>"}</div>
 <div class="url">www.delos.so</div>
-<div class="tag">Vos employés IA autonomes sur mesure.</div>
+<div class="tag">{tag or 'Vos employés IA autonomes sur mesure.'}</div>
 </div><script>
 const q=document.querySelector('.qr').getBoundingClientRect(), sc=document.getElementById('scan'), ar=document.getElementById('arrow');
 sc.style.left=(q.left-sc.offsetWidth-30)+'px'; sc.style.top=(q.bottom-sc.offsetHeight-10)+'px';
