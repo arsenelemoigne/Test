@@ -1,0 +1,6 @@
+# MBPP-free line A (runtime 2, second_colab.ipynb): from clean-a2 step 5 (+44.6% / +0.3 at 4 samples), the same
+# recipe without code data, 2 rounds.
+chain --name ca1 --start adapters/clean-a2/step-5 --data-seed 8 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+chain --name ca2 --start soup:ca1 --data-seed 9 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# last line: save everything, stop the worker; the notebook's last cell flushes Drive and releases the runtime
+end

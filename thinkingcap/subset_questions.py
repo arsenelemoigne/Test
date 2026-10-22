@@ -31,7 +31,7 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--per-dataset", type=int, required=True)
     parser.add_argument("--seed", type=int, help="draw at random with this seed instead of taking the first N")
-    parser.add_argument("--exclude", help="a selection directory whose questions are never drawn")
+    parser.add_argument("--exclude", nargs="*", default=[], help="selection directories whose questions are never drawn")
     args = parser.parse_args()
 
     source, out = Path(args.questions), Path(args.out)
@@ -40,8 +40,8 @@ def main():
     taken, kept = Counter(), []
     if args.seed is not None:
         excluded = set()
-        if args.exclude:
-            excluded = {json.loads(l)["id"] for l in (Path(args.exclude) / "questions.jsonl").read_text().splitlines() if l}
+        for selection in args.exclude:
+            excluded |= {json.loads(l)["id"] for l in (Path(selection) / "questions.jsonl").read_text().splitlines() if l}
         pool = [row for row in rows if row["id"] not in excluded]
         picked = set()
         for dataset in sorted({row["dataset"] for row in pool}):

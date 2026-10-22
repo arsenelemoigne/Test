@@ -1,0 +1,9 @@
+# MBPP-free line B (runtime 1, full_eval_colab.ipynb): from clean-b2 (fresh questions +32.7% / -0.1), the full recipe
+# (GSM-Plus/GSM-IC math, rebalanced pairs at >= 6/8, math protected, KodCode right-beats-wrong, 3-seed soups), 2 rounds.
+# Target: > 60% tokens saved with an accuracy change better than -2 on the fresh questions.
+# 1. audit: every training question ever prepared against all 2,759 evaluation questions (report in runs/audit)
+audit
+chain --name cb1 --start adapters/clean-b2/step-10 --code-source kodcode --kod-questions 300 --data-seed 5 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+chain --name cb2 --start soup:cb1 --code-source kodcode --kod-questions 300 --data-seed 6 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# last line: save everything, stop the worker; the notebook's last cell flushes Drive and releases the runtime
+end

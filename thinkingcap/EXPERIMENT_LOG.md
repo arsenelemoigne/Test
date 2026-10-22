@@ -999,3 +999,15 @@ stops its worker (runtime 1 reaches it later).
   +31% / +0.6, bfcl +24-25% / -2.5..-0.3).
 - **Round 5 step 5: +65.5% / -5.4** (svamp +79% / -10.0, ifeval +55% / -5.0, mbpp +73% / -2.8, bfcl +43-47%):
   outside, as rounds 3-4.
+
+## Track 2f: MBPP-free line, full recipe, toward > 60% saved at better than -2 (queued 22 Oct 2026)
+
+Goal set by the user: > 60% tokens saved with an accuracy change better than -2 points, from a model that never saw
+any evaluation data (so only the MBPP-free families A and B as starts). `track.py chain`: each round draws new
+questions (ToolACE, IFEval-like, ARC/CSQA, GSM-Plus, GSM-IC; minus every earlier draw), plus new KodCode tasks on line
+B; contamination check now at 30% of 8-grams OR any exact 13-word run, boilerplate lines shared by >= 50 evaluation
+questions ignored; pairs as the balanced round; DPO with 3 seeds; the soup with the most saving at a 4-sample change
+>= -1.5 is chosen and becomes the next round's base model (fresh LoRA on top). Every chosen soup is scored x8 on the
+usual and the fresh questions. `track.py audit` writes runs/audit/contamination_report.txt for every training
+question ever prepared. Line B (runtime 1): cb1 from clean-b2 step 10, cb2. Line A (runtime 2): ca1 from clean-a2
+step 5, ca2. The full 2,759 x 8 evaluation stays for the very end (user's call).

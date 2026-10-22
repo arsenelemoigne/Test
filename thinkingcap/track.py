@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -66,6 +66,7 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--floor", type=float, default=-1.5, help="chain: lowest 4-sample accuracy change for the chosen soup")
     parser.add_argument("--seeds", type=int, nargs="*", default=[0, 1, 2], help="balanced: DPO seeds averaged")
     parser.add_argument("--base-only", action="store_true", help="full2: score the raw model only")
     parser.add_argument("--code-source", default="none", help="clean: none or kodcode")
@@ -794,6 +795,124 @@ def balanced(args):
     print(score_line(f"{name} soup step {step} (fresh 240 x 8)", out, base=ROOT / "f8-base"), flush=True)
 
 
+def chain(args):
+    """One round of the MBPP-free line with the full recipe; rounds chain through averaged (soup) models.
+
+    --start: an adapter (first round, e.g. adapters/clean-b2/step-10) or soup:NAME (the chosen soup of an earlier
+    round, a full model: this round trains a fresh LoRA on top of it). Data: a new draw (--data-seed) of ToolACE,
+    IFEval-like, ARC/CSQA, GSM-Plus and GSM-IC, minus every question drawn before; with --code-source kodcode,
+    also KodCode tasks never sampled before. Contamination check at 30% (stricter than the 50% elsewhere).
+    Pairs: short-beats-long only at >= 6/8 correct, math capped and protected, KodCode right-beats-wrong only.
+    DPO with 3 seeds, soups per checkpoint step, the soup saving most with a 4-sample accuracy change >= --floor
+    is chosen (written to runs/mvtf/chain-NAME.json), then scored x8 on the usual and the fresh questions.
+    """
+    name = args.name
+    if args.start.startswith("soup:"):
+        base = json.loads((ROOT / f"chain-{args.start[5:]}.json").read_text())["model"]
+        start = Path("adapters") / f"fresh-{name}"
+        if not (start / "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--model", base, "--out", start)
+        on = ["--model", base]
+        sample_from = ["--model", base]
+    else:
+        base, start = "Qwen/Qwen3-0.6B", resolve(args.start)
+        on = []
+        sample_from = ["--adapter", start]
+        if args.start == "raw":
+            start = Path("adapters") / f"fresh-{name}"
+            if not (start / "adapter_config.json").exists():
+                py("sft.py", "--init-only", "--out", start)
+            sample_from = []
+    print(f"{name}: base {base}, start adapter {start}", flush=True)
+    data = Path(f"data/chain-seed{args.data_seed}.jsonl")
+    if not data.exists():
+        raw = Path(f"data/chain-seed{args.data_seed}-raw.jsonl")
+        py("prepare_types.py", "--sources", "toolace,ifeval_like,mc,gsm_plus,gsm_ic", "--per-source", 300,
+           "--seed", args.data_seed, "--out", raw)
+        text = lambda r: r["prompt"][-1]["content"]
+        used = [p for p in Path("data").glob("*.jsonl")  # earlier draws (not train.jsonl, the mc pool itself)
+                if p.name.startswith(("bon", "bal", "chain")) and "raw" not in p.name and p != data]
+        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
+        rows = [json.loads(l) for l in raw.read_text().splitlines() if l.strip()]
+        data.write_text("".join(json.dumps(r) + "\n" for r in rows if text(r) not in seen))
+    probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", BAL_SOURCES, "--per-source", 300, "--samples", 8,
+           *sample_from, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", args.gen_questions)
+    if not (keep / "sft.jsonl").exists():
+        py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", keep)
+        py("contamination.py", "--data", keep / "sft.jsonl", "--rollouts", probe / "rollouts.jsonl", "--share", 0.3)
+    pairs = BON / f"pairs-{name}"
+    files = [pairs / "base" / "pairs.jsonl"]
+    if not files[0].exists():
+        py("bon_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--keep", keep / "sft.jsonl", "--out", pairs / "base",
+           "--min-correct", 6, "--guard-median", "gsm_plus,gsm_ic", "--shorten-cap", "gsm_plus=40", "gsm_ic=40")
+    if args.code_source == "kodcode":
+        if not Path("data/kodcode.jsonl").exists():
+            py("prepare_types.py", "--sources", "kodcode", "--per-source", 2000, "--out", "data/kodcode.jsonl")
+        kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
+        if not (kprobe / "rollouts.jsonl").exists():
+            earlier = [p / "rollouts.jsonl" for p in BON.glob("kprobe-*") if p != kprobe]
+            py("probe_curve.py", "--data", "data/kodcode.jsonl", "--sources", "kodcode", "--per-source", 2000, "--samples", 8,
+               *sample_from, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", args.kod_questions, "--exclude-rollouts", *earlier)
+        if not (kkeep / "sft.jsonl").exists():
+            py("select_shortest.py", "--rollouts", kprobe / "rollouts.jsonl", "--out", kkeep)
+            py("contamination.py", "--data", kkeep / "sft.jsonl", "--rollouts", kprobe / "rollouts.jsonl", "--share", 0.3)
+        if not (pairs / "kod" / "pairs.jsonl").exists():
+            py("bon_pairs.py", "--rollouts", kprobe / "rollouts.jsonl", "--keep", kkeep / "sft.jsonl", "--out", pairs / "kod",
+               "--no-shorten", "kodcode")
+        files.append(pairs / "kod" / "pairs.jsonl")
+    for f in files:
+        print((f.parent / "summary.txt").read_text(), flush=True)
+    rows = [json.loads(l) for f in files for l in f.read_text().splitlines() if l.strip()]
+    (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    for seed in args.seeds:
+        adapter = Path("adapters") / f"{name}-s{seed}"
+        if not (adapter / "adapter_config.json").exists():
+            py("dpo.py", *on, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+               "--mix", ",".join(f"{c / sum(counts):.4f}" for c in counts), "--save-every", args.save_every,
+               "--epochs", args.dpo_epochs, "--dtype", args.dtype, "--seed", seed)
+    evaluate(ROOT / "s4-base", samples=4)
+    scored = []
+    for step in args.eval_steps:
+        parts = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+        parts = [p for p in parts if (p / "adapter_config.json").exists()]
+        if not parts:
+            continue
+        model = Path("models") / f"{name}-soup-{step}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", *[f"{p}:{1 / len(parts):.6f}" for p in parts])
+        out = ROOT / f"s4-{name}-soup-{step}"
+        evaluate(out, samples=4, model=model)
+        line, delta = score_line(f"{name} soup step {step} (4 samples)", out, with_delta=True, base=ROOT / "s4-base")
+        print(line, flush=True)
+        scored.append((compare(out, ROOT / "s4-base")["average"]["token_reduction"] or 0, delta, step, str(model)))
+    ok = [c for c in scored if c[1] >= args.floor] or sorted(scored, key=lambda c: -c[1])[:1]
+    saved, delta, step, model = max(ok)
+    (ROOT / f"chain-{name}.json").write_text(json.dumps({"model": model, "step": step, "s4": [saved, delta]}))
+    print(f"{name}: chosen soup step {step} ({saved:+.1%} / {delta:+.1f} at 4 samples)", flush=True)
+    evaluate(ROOT / "s8-base", samples=8)
+    out = ROOT / f"s8-{name}-soup-{step}"
+    evaluate(out, samples=8, model=model)
+    print(score_line(f"{name} soup step {step} (usual 240 x 8)", out, base=ROOT / "s8-base"), flush=True)
+    questions = f"questions_fresh{FRESH_SEED}"
+    if not Path(questions, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", questions)
+    evaluate(ROOT / "f8-base", samples=8, questions=questions)
+    out = ROOT / f"f8-{name}-soup-{step}"
+    evaluate(out, samples=8, questions=questions, model=model)
+    print(score_line(f"{name} soup step {step} (fresh 240 x 8)", out, base=ROOT / "f8-base"), flush=True)
+
+
+def audit(args):
+    """Every training question ever prepared (data/*.jsonl) against all 2,759 evaluation questions."""
+    files = sorted(str(p) for p in Path("data").glob("*.jsonl") if p.name not in ("val.jsonl",))
+    py("audit_contamination.py", "--data", *files, "--out", "runs/audit")
+
+
 def code_round(args):
     """Round 3's pairs plus code "stopped too early" pairs (code_pairs.py), DPO from --start, scored as bon_dpo."""
     name = args.name or "code-r3"
@@ -1189,13 +1308,9 @@ def finish():
     import time
     drive_sync("save")
     subprocess.run(["sync"])
-    try:
-        from google.colab import drive
-        drive.flush_and_unmount()
-        print("drive: flushed and unmounted", flush=True)
-    except Exception as error:  # outside the notebook kernel: give Drive's uploader time instead
-        print(f"drive: flush not available here ({error}); waiting 5 minutes for the upload", flush=True)
-        time.sleep(300)
+    # drive.flush_and_unmount() hangs outside the notebook kernel: give Drive's uploader time here, and let the
+    # notebook's last cell flush and release the runtime
+    time.sleep(180)
     print("plan: end of queue; everything is on Drive", flush=True)
 
 

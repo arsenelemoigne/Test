@@ -29,14 +29,20 @@ def main():
     args = parser.parse_args()
 
     index = defaultdict(set)
+    long_runs = set()  # every 13-word run of the evaluation questions: sharing one exactly also counts
     tests = {}
-    for line in Path(args.questions).read_text().splitlines():
-        if line.strip():
-            q = json.loads(line)
-            text = [m["content"] for m in q["messages"] if m["role"] == "user"][-1]
-            tests[q["id"]] = (q["dataset"], text)
-            for g in grams(text):
-                index[g].add(q["id"])
+    rows_q = [json.loads(l) for l in Path(args.questions).read_text().splitlines() if l.strip()]
+    texts = {q["id"]: [m["content"] for m in q["messages"] if m["role"] == "user"][-1] for q in rows_q}
+    # boilerplate shared by many evaluation questions (MBPP+'s instruction, also in our code prompts) is not overlap
+    line_count = Counter(l.strip() for t in texts.values() for l in set(t.splitlines()) if l.strip())
+    boiler = {l for l, n in line_count.items() if n >= 50}
+    strip = lambda t: "\n".join(l for l in t.splitlines() if l.strip() not in boiler)
+    for q in rows_q:
+        text = strip(texts[q["id"]])
+        tests[q["id"]] = (q["dataset"], text)
+        for g in grams(text):
+            index[g].add(q["id"])
+        long_runs.update(grams(text, 13))
     question_of = {}
     for line in Path(args.rollouts).read_text().splitlines():
         if line.strip():
@@ -46,11 +52,11 @@ def main():
     rows = [json.loads(l) for l in Path(args.data).read_text().splitlines() if l.strip()]
     kept, flagged = [], []
     for row in rows:
-        mine = grams(question_of.get(row["id"], ""))
+        mine = grams(strip(question_of.get(row["id"], "")))
         hits = Counter(t for g in mine for t in index.get(g, ()))
         best = hits.most_common(1)
         share = best[0][1] / len(mine) if best and mine else 0.0
-        if share >= args.share:
+        if share >= args.share or grams(strip(question_of.get(row["id"], "")), 13) & long_runs:
             flagged.append((row["id"], row["source"], best[0][0], round(share, 2)))
         else:
             kept.append(row)
