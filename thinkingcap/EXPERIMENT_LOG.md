@@ -974,3 +974,10 @@ ifeval +64% / +1.3, bfcl +43-49%). Not tested on fresh questions; round 4 lost 1
 **Family A, A2 (from A1 step 28; 750 unused questions without code, 345 pairs), 2 samples:** step 5
 +45.9 / -3.1; step 10 +47.0 / -5.9; step 15 +53.3 / -4.6 (none within; svamp -3.7 to -11.2). **A1 step 28
 on the fresh set: +35.4% / -1.9.** A2's step 5 is rechecked with 4 samples after the balanced round.
+
+**Balanced round data (round 2 answering 1,437 fresh questions x 8):** shortest correct vs its own mean:
+gsm_plus 41%, gsm_ic 32%, ARC 27%, instructions 24%, CSQA 19%, tools 14%; 0 contamination drops. 736 pairs:
+shorten 218 (CSQA 59, gsm_plus 40 and gsm_ic 40 capped, instructions 35, ARC 24, tools 20), guard 518
+(math guards use a median-length correct reply). Mix 30 / 70. Three DPO seeds of 43 steps each; at step 10-15
+pairs are ordered right 46-64% only (harder pairs than before). Tools and instructions give few shorten
+pairs even at 6/8: round 2's answers there are already near their shortest.
