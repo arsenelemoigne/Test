@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1164,6 +1164,17 @@ def keep_saving(seconds):
             time.sleep(seconds)
             drive_sync("save")
     threading.Thread(target=loop, daemon=True).start()
+
+
+def end(args):
+    """The queue's last line as a stage (a worker started before `end` existed runs it like any other line):
+    save everything, flush Drive, then stop the worker that launched this stage, so the notebook moves on
+    to releasing the runtime instead of polling an empty queue for hours."""
+    import signal
+    finish()
+    parent = os.getppid()
+    print(f"plan: stopping the worker (pid {parent})", flush=True)
+    os.kill(parent, signal.SIGTERM)
 
 
 def finish():

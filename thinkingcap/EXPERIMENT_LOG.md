@@ -983,3 +983,12 @@ pairs are ordered right 46-64% only (harder pairs than before). Tools and instru
 pairs even at 6/8: round 2's answers there are already near their shortest.
 **Balanced soups (3 seeds averaged), questions_40 x 4:** step 10 +55.9% / -2.0; **step 20 +58.9% / -0.5**
 (svamp +67% / +1.9, ifeval +65% / +4.4, bfcl +38-47% / -0.6..+3.1, mbpp +57% / -10.0); step 30 +57.5% / -0.5.
+
+**Balanced round, step-20 soup (3 seeds averaged):** step 40 at 4 samples +55.6% / -0.9.
+- questions_40 x 8: **+58.8% / -2.1** (svamp +68% / -1.6, mbpp +60% / -8.4, ifeval +61% / -0.3, bfcl +36-44%)
+- **fresh set x 8: +53.8% / -2.5** (svamp +64% / -4.7, mbpp +58% / -1.6, ifeval +50% / -2.8, bfcl +36-41%)
+Against round 2 on the same fresh set (+51.4% / -1.8): 2.4 points more saving, 0.7 more loss; math loses
+-4.7 on fresh questions (rounds 3-4: -7.5 to -10.6). Protecting math works; the gain is modest.
+**A2 step 5 with 4 samples: +44.6% / +0.3** (the 2-sample -3.1 was noise).
+Runtime 2's worker predates the `end` line and failed on it; `end` is now also a stage that saves, flushes and
+stops its worker (runtime 1 reaches it later).
