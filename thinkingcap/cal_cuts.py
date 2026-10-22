@@ -123,7 +123,7 @@ def main():
     parser.add_argument("--taus", default="1.0,0.75,0.5")
     parser.add_argument("--allow", default="gsm_plus=0.5,gsm_ic=0.5,kodcode=1,default=2",
                         help="source=points of expected accuracy loss allowed by the calibration")
-    parser.add_argument("--samples", type=int, default=10, help="re-answers per cut: the real outcome in 10% steps")
+    parser.add_argument("--samples", type=int, default=20, help="re-answers per cut: the real outcome in 5% steps")
     parser.add_argument("--per-question", type=int, default=1, help="correct replies cut per question (longest first)")
     parser.add_argument("--min-save", type=float, default=0.25)
     parser.add_argument("--answer-tokens", type=int, default=2048)
