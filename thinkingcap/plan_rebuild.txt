@@ -60,5 +60,7 @@ clean --name clean-b2 --start auto:clean-b1 --code-source kodcode --kod-question
 confirm --name clean-b2
 fresh --inputs auto:clean-b1 auto:clean-b2
 # (dropped by the user: the full-benchmark run comes only at the very end) full2 --inputs auto:clean-a2 auto:clean-b2 adapters/bon-dpo-r4/step-15 adapters/bon-dpo-r3/step-5
+# round 5 on the fresh questions too (rounds 3 and 4 lost 1.5-2 points there)
+fresh --inputs adapters/bon-dpo-r5/step-5
 # last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
 end
