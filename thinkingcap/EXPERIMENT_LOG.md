@@ -1056,3 +1056,9 @@ bfcl +35-40%). Line A's 4th round is weaker on unseen questions than line B's 3r
 **Repair of round 4 (rep4), 1. blend 75% round 4 + 25% round 2:** usual x4 +66.5% / -2.5; **fresh x8 +61.5% / -4.0**
 (svamp +74% / -8.8, mbpp +67% / -4.4, ifeval +55% / -1.9, bfcl +39-43%). Blending in a quarter of round 2 recovers
 little: math still -8.8 on unseen questions.
+
+**Repair of round 4 (rep4), all candidates (usual x4 / fresh x8):** blend 75% r4 + 25% r2 +66.5 / -2.5 | **+61.5 / -4.0**;
+blend 50/50 +57.8 / -2.2 | **+57.3 / -2.4**; length-matched right-beats-wrong DPO step 10 +64.2 / -1.5 | **+61.3 / -4.2**;
+RFT (SFT on its own right replies <= median length) +67.5 / -2.1 | **+63.4 / -5.1**. None keeps 60%+ within -2 on unseen
+questions: the 60%+ candidates all lose 4-5 points there (math); the 50/50 blend is the best trade-off of the repairs
+(+57.3 / -2.4 fresh, ~ the balanced soup's +53.8 / -2.5 with 3.5 points more saving). rep5 started: blend75 usual x4 +67.1 / -2.3.
