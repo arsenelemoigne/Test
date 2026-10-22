@@ -49,6 +49,10 @@ CHAR = {
     'metro-6-stations-kate': dict(key='kate', fs=124, voice='0:19',
         head='Encore 6 stations&#8239;?<br><b>Le temps de déléguer 3 tâches.</b>',
         msgs=('On a 6 stations 🚇<br>Dis-moi 3 trucs que tu détestes faire.', 'Noté ✅ Quand tu sors du métro,<br>c’est fait.')),
+    'dej-equipe-kate': dict(key='kate', fs=124, voice='0:09',
+        head='On mange où ce midi&#8239;?<br><b>Demandez à votre worker<sup>*</sup>.</b>'
+             '<span style="position:absolute;left:820px;top:282px;font-family:Gochi;font-size:54px;font-weight:400;letter-spacing:0;color:#E8412F;transform:rotate(-5deg);white-space:nowrap">(il fait aussi la note de frais)</span>',
+        msgs=('Ramen, salade ou pizza&#8239;? 🍜🥗🍕<br>Je lance le vote pour ton équipe.', 'Ramen gagne 4–2 🍜<br>Et ta note de frais est prête ✅')),
     'dsi-james': dict(key='james', fs=124, voice='0:11',
         head='Montrez ce QR code à votre DSI.<br><b>Il va adorer.</b> <span style="font-weight:400">(Ou paniquer.)</span>',
         msgs=('Salut le DSI 👋<br>On parle sécurité&#8239;?', 'Je t’envoie de quoi te rassurer 📎<br>Et une démo de 15 min.')),
@@ -58,6 +62,7 @@ if __name__ == '__main__':
     for f in H.glob('*.html'):
         f.unlink()
     (H / 'pain-quotidien.html').write_text(pain_quotidien())
+
     for name, c in CHAR.items():
         (H / f'{name}.html').write_text(v3.page(c['key'], 'haut', headline_html=f'<h1 class="mix" style="--fs:{c["fs"]}px">{c["head"]}</h1>',
                                                 msgs=c['msgs'], tag=TAG, foot=FOOT, voice=c['voice']))
