@@ -1067,3 +1067,12 @@ questions: the 60%+ candidates all lose 4-5 points there (math); the 50/50 blend
 chosen step 30: **usual x8 +51.0 / -0.3; fresh x8 +46.9 / -2.6**. The 4th round adds ~6 points of saving over cb1 (+41.0 / -1.1
 fresh) but loses 1.5 points on unseen questions. Line B finished; v2 from scratch (v2r1) started on runtime 1. Runtime 2 was
 lost overnight and relaunched (rep5 resumes from Drive).
+
+**Repair of round 5 (rep5), all candidates (usual x4 / fresh x8; fresh per type):**
+blend 75% r5 + 25% r2 +67.1 / -2.3 | **+63.5 / -3.9** (svamp +75% / -9.4, mbpp +69% / -4.1, ifeval +59% / -1.2, bfcl +39-44%);
+blend 50/50 +62.7 / -3.0 | **+58.8 / -3.4** (svamp +72% / -5.9, mbpp +65% / -3.1, ifeval +50% / -4.1, bfcl +38-42%);
+length-matched right-beats-wrong step 10 +65.0 / -1.5 | **+61.9 / -4.5** (svamp -7.8, ifeval -6.2);
+RFT +69.4 / -0.2 | **+67.1 / -5.5** (svamp +78% / -10.0, ifeval -5.6, bfcl_multiple -5.3).
+Conclusion of both repairs: no technique keeps 60%+ within -2 on unseen questions; the usual-set score is optimistic by
+2-5 points for every 60%+ candidate (RFT: -0.2 usual vs -5.5 fresh). Math (SVAMP) is always the main loss. Runtime 2's
+queue is done (end).
