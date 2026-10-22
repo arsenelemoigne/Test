@@ -53,20 +53,20 @@ def headline(variant, old):
     return f'<h1 class="top">Métro, {old_html}<br>worker<sup>*</sup>, dodo.</h1>'
 
 
-def page(key, variant):
+def page(key, variant, headline_html=None, bg=None, msgs=None, layout=None):
     w = WORKERS[key]
-    L = LAYOUT[(key, variant)]
+    L = {**LAYOUT[(key, variant)], **(layout or {})}
     layer = H / f'layers/{key}.png'
     lw, lh = Image.open(layer).size
     s = L['s']
     top = L['top'] if L['top'] is not None else 1500 - lh * s
     av = b64(H / f'layers/{key}_avatar.png')
-    m1, m2 = w['msgs']
+    m1, m2 = msgs or w['msgs']
     return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Métro worker dodo</title><style>
 @font-face {{ font-family: Gochi; src: url(data:font/woff2;base64,{GOCHI}); }}
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 body {{ width:2000px; height:1500px; overflow:hidden; font-family:'Inter Display'; -webkit-font-smoothing:antialiased; }}
-.p {{ position:relative; width:2000px; height:1500px; background:{w['bg']}; overflow:hidden; }}
+.p {{ position:relative; width:2000px; height:1500px; background:{bg or w['bg']}; overflow:hidden; }}
 .who {{ position:absolute; left:{L['left']}px; top:{top}px; width:{lw*s}px; height:{lh*s}px; }}
 .who img {{ width:100%; height:100%; display:block; }}
 .who svg {{ position:absolute; inset:0; width:100%; height:100%; }}
@@ -74,6 +74,7 @@ h1 {{ position:absolute; left:86px; top:56px; color:#000; z-index:3; }}
 h1.stack {{ font-size:160px; font-weight:500; letter-spacing:-4.5px; line-height:.98; }}
 h1.top {{ font-size:146px; font-weight:800; letter-spacing:-4.5px; line-height:1.0; }}
 h1 b {{ font-weight:800; }}
+h1.mix {{ top:84px; font-size:var(--fs,112px); font-weight:500; letter-spacing:-3px; line-height:1.06; width:1840px; }}
 h1 sup {{ font-size:.45em; font-weight:500; vertical-align:.42em; margin-left:2px; }}
 .old {{ position:relative; display:inline-block; }}
 .old svg {{ position:absolute; left:-12px; top:0; width:calc(100% + 24px); height:100%; overflow:visible; }}
@@ -105,7 +106,7 @@ h1 sup {{ font-size:.45em; font-weight:500; vertical-align:.42em; margin-left:2p
 </style></head><body><div class="p">
 {w['fx']}
 <div class="who"><img src="data:image/png;base64,{b64(layer)}"><svg viewBox="0 0 {lw} {lh}">{w['header']}</svg></div>
-{headline(variant, w['old'])}
+{headline_html or headline(variant, w['old'])}
 <div class="chat">
   <div class="row"><div class="av"></div><div class="bub">{m1}</div></div>
   <div class="row out"><div class="voice">{play('#fff')}<span style="width:10px;height:10px;border-radius:50%;background:#fff"></span>{wave('rgba(255,255,255,.9)', 24)}<span class="t">0:32</span></div></div>
@@ -126,9 +127,10 @@ ar.style.left=(q.left-175)+'px'; ar.style.top=(q.bottom-sc.offsetHeight-150)+'px
 </script></body></html>"""
 
 
-for f in H.glob('*.html'):
-    f.unlink()
-for key in WORKERS:
-    for v in ('gauche', 'haut'):
-        (H / f'{key}-{v}.html').write_text(page(key, v))
-print('ok')
+if __name__ == '__main__':
+    for f in H.glob('*.html'):
+        f.unlink()
+    for key in WORKERS:
+        for v in ('gauche', 'haut'):
+            (H / f'{key}-{v}.html').write_text(page(key, v))
+    print('ok')
