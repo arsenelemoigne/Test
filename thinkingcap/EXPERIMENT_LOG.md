@@ -959,3 +959,5 @@ fresh questions x 8; DPO with 3 seeds averaged per checkpoint step (merge.py); b
 **Family A, A1 (DPO from raw, round-1 answers without code, 438 pairs, 28 steps), 2 samples:** step 10
 +15.8% / 0.0; step 20 +41.9% / -3.6. Step 10 with 4 samples: +17.8% / +1.7. Steps 20 and 28 rechecked
 with 4 samples before A2 picks its start.
+A1 step 10 with 8 samples: +17.7% / +1.1. **A1 step 20 with 4 samples: +37.8% / +0.1** (the 2-sample -3.6 was
+noise): svamp +41% / +2.5, ifeval +52% / +4.4, mbpp +27% / -7.5, bfcl +26-29% / -0.6..+1.9.
