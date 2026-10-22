@@ -30,7 +30,28 @@ ROLLOUTS = ROOT / "probe" / "rollouts.jsonl"
 LIMIT = -3.0  # accuracy points against the raw model
 
 
+def claim_shared():
+    """`track.py shared STAGE ...`: a line both runtimes' queues hold. The first runtime to reach it claims it on
+    Drive (claims/), restores what the other runtime saved, and runs it; the other skips it. Handled before the
+    argument parser, so a worker started before this existed still runs it (each line is a fresh track.py)."""
+    if len(sys.argv) < 2 or sys.argv[1] != "shared":
+        return
+    del sys.argv[1]
+    me = os.environ.get("TRACK_SESSION") or "runtime1"
+    if Path("/content/drive/MyDrive").exists():
+        claims = DRIVE / "claims"
+        claims.mkdir(parents=True, exist_ok=True)
+        key = claims / ("_".join(sys.argv[1:4]).replace("/", "-") + ".txt")
+        if key.exists() and key.read_text().strip() != me:
+            print(f"shared: '{' '.join(sys.argv[1:])}' already taken by {key.read_text().strip()}; skipped", flush=True)
+            sys.exit(0)
+        key.write_text(me)
+        print(f"shared: '{' '.join(sys.argv[1:])}' claimed by {me}", flush=True)
+        drive_sync("restore")  # the other runtime's models and runs, if this line needs them
+
+
 def main():
+    claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
                                           "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
