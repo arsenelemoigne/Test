@@ -1062,3 +1062,8 @@ blend 50/50 +57.8 / -2.2 | **+57.3 / -2.4**; length-matched right-beats-wrong DP
 RFT (SFT on its own right replies <= median length) +67.5 / -2.1 | **+63.4 / -5.1**. None keeps 60%+ within -2 on unseen
 questions: the 60%+ candidates all lose 4-5 points there (math); the 50/50 blend is the best trade-off of the repairs
 (+57.3 / -2.4 fresh, ~ the balanced soup's +53.8 / -2.5 with 3.5 points more saving). rep5 started: blend75 usual x4 +67.1 / -2.3.
+
+**Clean line B, round 4 (cb2, from cb1's soup; KodCode right-beats-wrong; 3-seed soups):** step 40 at 4 samples +47.1 / +1.4;
+chosen step 30: **usual x8 +51.0 / -0.3; fresh x8 +46.9 / -2.6**. The 4th round adds ~6 points of saving over cb1 (+41.0 / -1.1
+fresh) but loses 1.5 points on unseen questions. Line B finished; v2 from scratch (v2r1) started on runtime 1. Runtime 2 was
+lost overnight and relaunched (rep5 resumes from Drive).
