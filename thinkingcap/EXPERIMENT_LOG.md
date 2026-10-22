@@ -992,3 +992,10 @@ Against round 2 on the same fresh set (+51.4% / -1.8): 2.4 points more saving, 0
 **A2 step 5 with 4 samples: +44.6% / +0.3** (the 2-sample -3.1 was noise).
 Runtime 2's worker predates the `end` line and failed on it; `end` is now also a stage that saves, flushes and
 stops its worker (runtime 1 reaches it later).
+
+**Fresh set (240 x 8), last results (read from Drive compare.json):**
+- Family B (MBPP-free, KodCode right-beats-wrong): **B1 step 20 +24.8% / -1.5** (svamp +36% / -0.3, mbpp +24% / +0.6,
+  ifeval +19% / -4.4, bfcl +17-21%); **B2 step 10 +32.7% / -0.1** (svamp +43% / -1.9, mbpp +31% / +1.9, ifeval
+  +31% / +0.6, bfcl +24-25% / -2.5..-0.3).
+- **Round 5 step 5: +65.5% / -5.4** (svamp +79% / -10.0, ifeval +55% / -5.0, mbpp +73% / -2.8, bfcl +43-47%):
+  outside, as rounds 3-4.
