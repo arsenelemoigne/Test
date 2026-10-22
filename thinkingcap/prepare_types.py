@@ -42,7 +42,8 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode}
+                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
+                "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
         build = builders[source]
         built = list(build(args, rng))
@@ -82,6 +83,41 @@ def gsm8k_all(args, rng):
         for r in load_dataset("openai/gsm8k", "main", split=split):
             answer = r["answer"].split("####")[-1].strip().replace(",", "")
             yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_all")
+
+
+GSM_PLUS_KINDS = ("distraction insertion", "problem understanding", "reversing operation", "adding operation",
+                  "numerical substitution")
+
+
+def gsm_plus(args, rng):
+    """GSM-Plus (Li et al. 2024): GSM8K test problems perturbed, a check against shortcut solving.
+
+    The SVAMP-like kinds only (irrelevant information, rephrased questions, reversed or added operations,
+    changed numbers); "critical thinking" has no numeric answer, digit expansion and fraction conversion
+    test arithmetic size rather than careful reading. Neither GSM8K nor GSM-Plus is an evaluation
+    benchmark, and neither comes from ASDiv/MAWPS (SVAMP's sources).
+    """
+    from datasets import load_dataset
+    from utils.train.prepare_data import MATH_INSTRUCTION, row
+
+    for r in load_dataset("qintongli/GSM-Plus", split="test"):
+        answer = str(r["answer"]).strip().replace(",", "")
+        if r["perturbation_type"] not in GSM_PLUS_KINDS or not re.fullmatch(r"-?\d+(\.\d+)?", answer):
+            continue
+        yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm_plus")
+
+
+def gsm_ic(args, rng):
+    """GSM-IC (Shi et al. 2023): GSM8K problems with one irrelevant sentence inserted; in-topic ones (harder)."""
+    import urllib.request
+    from utils.train.prepare_data import MATH_INSTRUCTION, row
+
+    url = "https://raw.githubusercontent.com/google-research-datasets/GSM-IC/main/GSM-IC_2step.json"
+    for r in json.loads(urllib.request.urlopen(url, timeout=60).read()):
+        answer = str(r["answer"]).strip().replace(",", "")
+        if r.get("sentence_label") != "in_topic" or not re.fullmatch(r"-?\d+(\.\d+)?", answer):
+            continue
+        yield row(r["new_question"], MATH_INSTRUCTION, answer, "math", "gsm_ic")
 
 
 def toolace(args, rng):

@@ -25,6 +25,10 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--ratio", type=float, default=1.5)
     parser.add_argument("--drop-sources", default="", help="sources left out entirely (e.g. mbpp_train)")
+    parser.add_argument("--min-correct", type=int, default=0,
+                        help="shorten pairs only for questions answered correctly at least this often (no lucky shortcuts)")
+    parser.add_argument("--guard-median", default="", help="sources whose guard pairs use a median-length correct reply")
+    parser.add_argument("--shorten-cap", nargs="*", default=[], help="source=N: at most N shorten pairs for that source")
     parser.add_argument("--no-shorten", default="", help="sources that get guard pairs only (e.g. mbpp_train)")
     args = parser.parse_args()
 
@@ -41,17 +45,22 @@ def main():
         if not right:
             continue
         guarded = group[0]["source"] in args.no_shorten.split(",")
+        lucky = len(right) < args.min_correct  # a short right answer here may be a shortcut that got lucky
         # guard-only sources: a typical-length correct reply, so no push toward their riskiest short ones
         chosen = right[len(right) // 2] if guarded else right[0]
+        guard_chosen = right[len(right) // 2] if group[0]["source"] in args.guard_median.split(",") else chosen
         base = {"id": qid, "source": group[0]["source"], "prompt_ids": chosen["prompt_ids"],
                 "chosen_ids": chosen["output_ids"]}
-        if not guarded and len(right) >= 2 \
+        cap = dict(spec.split("=") for spec in args.shorten_cap).get(group[0]["source"])
+        capped = cap is not None and kinds["shorten", group[0]["source"]] >= int(cap)
+        if not guarded and not lucky and not capped and len(right) >= 2 \
                 and right[-1]["output_tokens"] >= args.ratio * right[0]["output_tokens"]:
             pairs.append(base | {"kind": "shorten", "rejected_ids": right[-1]["output_ids"]})
             kinds["shorten", base["source"]] += 1
             lengths[base["source"]].append((right[0]["output_tokens"], right[-1]["output_tokens"]))
         if wrong:
-            pairs.append(base | {"kind": "guard", "rejected_ids": wrong[0]["output_ids"]})
+            pairs.append(base | {"kind": "guard", "chosen_ids": guard_chosen["output_ids"],
+                                 "rejected_ids": wrong[0]["output_ids"]})
             kinds["guard", base["source"]] += 1
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

@@ -939,3 +939,19 @@ check against all 2,759 test questions runs on top.
   +50.9% / -3.0 (at the limit).
 Training randomness at this size is large (several points of accuracy between seeds), and round 4 is past
 the limit on unseen questions: the late rounds push too far.
+
+### Where the accuracy goes at 60%+ (fresh questions), and the balanced round (queued)
+
+On the fresh set (240 x 8) the loss is math, not code: SVAMP -9.1 (round 4), -10.6 (round 4 retrain),
+-9.7 (round 2 retrain), -7.5 (round 2 on questions 41-80), while MBPP+ is -2.5 to +0.6. On questions_40
+math looked fine and code bad: picking checkpoints on those 40 SVAMP questions selected for them. Math
+is shortened most (SVAMP 76% at round 4) and SVAMP is built with traps (irrelevant numbers, rephrased
+questions). Late rounds mostly push math: round 4 had 96 math shorten pairs against 10 for tools and 15
+for instructions (their answers were already short), and a numeric answer can be right by a shortcut.
+
+Balanced round (`track.py balanced`, from round 2): savings from tools, instructions and multiple choice
+(short-beats-long only where the question is answered right >= 6/8), math protected (at most 40 shorten
+pairs per math source, right-beats-wrong with a median-length correct reply), math data with SVAMP-style
+traps: GSM-Plus (Li et al. 2024; distraction insertion, problem understanding, reversed/added operations,
+numerical substitution; GSM8K-based) and GSM-IC (Shi et al. 2023; in-topic irrelevant sentences). 1,500
+fresh questions x 8; DPO with 3 seeds averaged per checkpoint step (merge.py); best soup x8 usual + fresh.
