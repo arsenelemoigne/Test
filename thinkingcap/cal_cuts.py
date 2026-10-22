@@ -118,7 +118,8 @@ def main():
     parser.add_argument("--rollouts", nargs="+", required=True)
     parser.add_argument("--keep", nargs="+", required=True, help="sft.jsonl files whose ids passed the contamination check")
     parser.add_argument("--out", required=True)
-    parser.add_argument("--fractions", default="0.2,0.35,0.5,0.65,0.8")
+    parser.add_argument("--fractions", default="0.01,0.05,0.1,0.2,0.35,0.5,0.65,0.8",
+                        help="cut points, as shares of the reply's thinking (0.01: almost no thinking)")
     parser.add_argument("--taus", default="1.0,0.75,0.5")
     parser.add_argument("--allow", default="gsm_plus=0.5,gsm_ic=0.5,kodcode=1,default=2",
                         help="source=points of expected accuracy loss allowed by the calibration")
