@@ -1,12 +1,8 @@
-# MBPP-free line A (runtime 2, second_colab.ipynb): from clean-a2 step 5 (+44.6% / +0.3 at 4 samples), the same
-# recipe without code data, 2 rounds.
-chain --name ca1 --start adapters/clean-a2/step-5 --data-seed 8 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
-chain --name ca2 --start soup:ca1 --data-seed 9 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
-# ca1's x8 and fresh tests were cut by the lost runtime: rerun (all other parts are skipped as done)
-chain --name ca1 --start adapters/clean-a2/step-5 --data-seed 8 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2 --floor -1.5
-# then: win back accuracy on the 60%+ rounds without shortening them further (blends with round 2, length-matched
-# right-beats-wrong on trap math, self-correction SFT); every candidate x4 usual and x8 fresh
-repair --name rep4 --start adapters/bon-dpo-r4/step-15 --data-seed 11
-repair --name rep5 --start adapters/bon-dpo-r5/step-5 --data-seed 12
-# last line: save everything, stop the worker; the notebook's last cell flushes Drive and releases the runtime
+# Runtime 2 (second_colab.ipynb): calibrated cuts + RL on top of ca1 (clean line A, unseen +48.6% / -1.8).
+# Earlier lines of this queue (ca1, ca2, rep4, rep5) are done; their results are on Drive and in EXPERIMENT_LOG.md.
+# 1. smoke test: tiny sizes, no scoring, checks that every step runs (cuts, DPO, soup, RL, merge)
+rlcal --name rcs --start soup:ca1 --data-seed 31 --smoke
+# 2. the real run: 1,000 new questions + 300 KodCode tasks x8; calibrated cuts (math 0.5 pt, code 1, others 2);
+#    DPO 3 seeds, soup chosen on the choosing set (seed 20261023); RL 120 steps from it; report x8 usual + unseen
+rlcal --name rc1 --start soup:ca1 --data-seed 31 --gen-questions 1000 --kod-questions 300 --floor -1.5
 end

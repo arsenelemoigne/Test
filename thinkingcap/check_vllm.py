@@ -65,6 +65,7 @@ def main():
                     wrong = tokens  # a short, complete wrong answer: the losing side of a guard pair
             ok = len(passing) == len(output.outputs)
             answers[row["key"]] = {"answer_ids": min(passing, key=len) if ok else None, "wrong_ids": wrong,
+                                   "right_ids": min(passing, key=len) if passing else None,
                                    "right": len(passing), "of": len(output.outputs)}
     Path(args.out).write_text("".join(json.dumps({"key": k} | v) + "\n" for k, v in answers.items()))
     passed = sum(v["answer_ids"] is not None for v in answers.values())

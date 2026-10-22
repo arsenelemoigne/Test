@@ -33,7 +33,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -95,6 +95,11 @@ def main():
     parser.add_argument("--min-steps", type=int, default=1, help="mvt: never cut below this many paragraphs")
     parser.add_argument("--repeat", default="", help="mvt: dataset:times for SFT, e.g. gsm8k:2")
     parser.add_argument("--full-sources", default="", help="mvt: datasets whose traces stay whole, e.g. gsm8k")
+    parser.add_argument("--rl-steps", type=int, default=120, help="rlcal: RL steps (32 questions x 8 replies each)")
+    parser.add_argument("--rl-alpha", type=float, default=0.15, help="rlcal: length penalty weight (Arora & Zanette)")
+    parser.add_argument("--rl-lr", type=float, default=1e-5, help="rlcal: RL learning rate (LoRA)")
+    parser.add_argument("--rl-kl", type=float, default=1e-3, help="rlcal: KL to the round's start model")
+    parser.add_argument("--smoke", action="store_true", help="rlcal: tiny sizes, no scoring: does every step run?")
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
     update()
@@ -1011,6 +1016,172 @@ def repair(args):
         py("sft.py", "--data", rft / "sft.jsonl", "--init-adapter", start, "--out", adapter, "--epochs", 1, "--lr", 2e-5,
            "--dtype", args.dtype)
     judge("rft", adapter=adapter)
+
+
+VAL_SEED = 20261023  # the choosing set: 40 random questions per part, in neither questions_40 nor the fresh set
+
+
+def rlcal(args):
+    """Calibrated cuts, then RL, on top of a chosen soup (--start soup:NAME), every choice made on a separate set.
+
+    1. The start model answers a new draw (--data-seed: ToolACE, IFEval-like, ARC/CSQA, GSM-Plus, GSM-IC, and
+       KodCode) 8 times; contamination check at 30%.
+    2. Calibrated cuts (cal_cuts.py): its right replies are cut at 20-80% of the thinking, "</think>" closed there,
+       re-answered 4x; per source, the earliest cut that keeps the asked accuracy (math 0.5 point, code 1, others 2)
+       becomes the "good" example: cut beats full ("shorten") and cut beats an earlier failing cut ("hard"); plus
+       the recipe's right-beats-wrong pairs (KodCode right-beats-wrong only). DPO, 3 seeds, soups; the soup saving
+       most within --floor on the CHOOSING set (seed 20261023, x4) is kept.
+    3. RL from that soup (rl_train.py): reward = right x (1 - alpha_q * sigmoid(z)), z = thinking length among the
+       group's right replies, alpha_q = alpha x solve rate (hard questions keep their thinking), wrong = 0, thinking
+       tokens only, batch-normalized advantages, KL to the soup; questions the start model solved >= 4/8.
+       Checkpoints every 20 steps, chosen on the choosing set.
+    Finalists are reported x8 on the usual and the fresh (unseen) questions.
+    """
+    name = args.name
+    base = json.loads((ROOT / f"chain-{args.start[5:]}.json").read_text())["model"] if args.start.startswith("soup:") \
+        else args.start
+    small = args.smoke
+    data = Path(f"data/rlcal-seed{args.data_seed}.jsonl")
+    if not data.exists():
+        raw = Path(f"data/rlcal-seed{args.data_seed}-raw.jsonl")
+        py("prepare_types.py", "--sources", "toolace,ifeval_like,mc,gsm_plus,gsm_ic", "--per-source", 300,
+           "--seed", args.data_seed, "--out", raw)
+        text = lambda r: r["prompt"][-1]["content"]
+        used = [p for p in Path("data").glob("*.jsonl")
+                if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal")) and "raw" not in p.name and p != data]
+        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
+        data.write_text("".join(l + "\n" for l in raw.read_text().splitlines() if l.strip() and text(json.loads(l)) not in seen))
+    kod_file = Path(args.kod_file)
+    if not kod_file.exists():
+        py("prepare_types.py", "--sources", "kodcode", "--per-source", 5000, "--out", kod_file,
+           "--kod-max-task", 70, "--kod-max-solution", 130)
+    probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
+    kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", BAL_SOURCES, "--per-source", 300, "--samples", 8,
+           "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", 24 if small else args.gen_questions)
+    if not (kprobe / "rollouts.jsonl").exists():
+        earlier = [p for p in BON.glob("kprobe-*/rollouts.jsonl") if p.parent != kprobe]
+        py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
+           "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", 8 if small else args.kod_questions, "--exclude-rollouts", *earlier)
+    for p, k in ((probe, keep), (kprobe, kkeep)):
+        if not (k / "sft.jsonl").exists():
+            py("select_shortest.py", "--rollouts", p / "rollouts.jsonl", "--out", k)
+            py("contamination.py", "--data", k / "sft.jsonl", "--rollouts", p / "rollouts.jsonl", "--share", 0.3)
+    pairs = BON / f"pairs-{name}"
+    parts = {"cal": pairs / "cal" / "pairs.jsonl", "base": pairs / "base" / "pairs.jsonl", "kod": pairs / "kod" / "pairs.jsonl"}
+    if not parts["cal"].exists():
+        py("cal_cuts.py", "--model", base, "--rollouts", probe / "rollouts.jsonl", kprobe / "rollouts.jsonl",
+           "--keep", keep / "sft.jsonl", kkeep / "sft.jsonl", "--out", pairs / "cal", "--dtype", args.dtype,
+           *(["--limit", 20] if small else []))
+    if not parts["base"].exists():  # the recipe's pairs, guard-heavy (shorten pairs come from the calibrated cuts)
+        py("bon_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--keep", keep / "sft.jsonl", "--out", pairs / "base",
+           "--min-correct", 6, "--guard-median", "gsm_plus,gsm_ic", "--shorten-cap", "gsm_plus=0", "gsm_ic=0")
+    if not parts["kod"].exists():
+        py("bon_pairs.py", "--rollouts", kprobe / "rollouts.jsonl", "--keep", kkeep / "sft.jsonl", "--out", pairs / "kod",
+           "--no-shorten", "kodcode")
+    for f in parts.values():
+        print((f.parent / "summary.txt").read_text(), flush=True)
+    rows = [json.loads(l) for f in parts.values() for l in f.read_text().splitlines() if l.strip()]
+    (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    print(f"{name}: pairs shorten {counts[0]}, guard {counts[1]}, hard {counts[2]}", flush=True)
+    start = Path("adapters") / f"fresh-{name}"
+    if not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", base, "--out", start)
+    seeds = args.seeds[:1] if small else args.seeds
+    for seed in seeds:
+        adapter = Path("adapters") / f"{name}-s{seed}"
+        if not (adapter / "adapter_config.json").exists():
+            py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+               "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 2 if small else 10,
+               "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
+    val = f"questions_val{VAL_SEED}"
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    if not Path(fresh_q, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
+    if not Path(val, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", VAL_SEED, "--exclude", QUESTIONS, fresh_q, "--out", val)
+
+    def choose(label, candidates):
+        """candidates: [(tag, model path)] -> the one saving most within --floor on the choosing set (x4)."""
+        evaluate(ROOT / "v4-base", samples=4, questions=val)
+        scored = []
+        for tag, model in candidates:
+            out = ROOT / f"v4-{tag}"
+            evaluate(out, samples=4, questions=val, model=model)
+            line, delta = score_line(f"{tag} (choosing set x4)", out, with_delta=True, base=ROOT / "v4-base")
+            print(line, flush=True)
+            scored.append((compare(out, ROOT / "v4-base")["average"]["token_reduction"] or 0, delta, tag, str(model)))
+        ok = [c for c in scored if c[1] >= args.floor] or sorted(scored, key=lambda c: -c[1])[:1]
+        saved, delta, tag, model = max(ok)
+        print(f"{label}: chosen {tag} ({saved:+.1%} / {delta:+.1f} on the choosing set x4)", flush=True)
+        return tag, model
+
+    def report(tag, model):
+        evaluate(ROOT / "s8-base", samples=8)
+        evaluate(ROOT / f"s8-{tag}", samples=8, model=model)
+        print(score_line(f"{tag} (usual 240 x 8)", ROOT / f"s8-{tag}", base=ROOT / "s8-base"), flush=True)
+        evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+        evaluate(ROOT / f"f8-{tag}", samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{tag} (fresh 240 x 8)", ROOT / f"f8-{tag}", base=ROOT / "f8-base"), flush=True)
+
+    soups = []
+    for step in ([2] if small else (10, 20, 30)):
+        members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in seeds]
+        members = [m for m in members if (m / "adapter_config.json").exists()]
+        if not members:
+            continue
+        model = Path("models") / f"{name}-soup-{step}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", *[f"{m}:{1 / len(members):.6f}" for m in members])
+        soups.append((f"{name}-soup-{step}", model))
+    if small:
+        print(f"{name}: smoke: cal-cut DPO and soup ran", flush=True)
+        cal_tag, cal_model = soups[0]
+    else:
+        cal_tag, cal_model = choose(f"{name} cal-cut DPO", soups)
+        (ROOT / f"chain-{name}-cal.json").write_text(json.dumps({"model": cal_model, "tag": cal_tag}))
+        report(cal_tag, cal_model)
+    # 3. RL from the chosen soup, on questions the start model solved at least 4 of 8 times
+    solved = defaultdict(list)
+    for p in (probe, kprobe):
+        for l in (p / "rollouts.jsonl").read_text().splitlines():
+            if l.strip():
+                r = json.loads(l)
+                solved[r["id"]].append(r["correct"])
+    allowed = {json.loads(l)["id"] for k in (keep, kkeep) for l in (k / "sft.jsonl").read_text().splitlines() if l.strip()}
+    pool = Path(f"data/rl-{name}.jsonl")
+    if not pool.exists():
+        rows = [l for f in (data, kod_file) for l in f.read_text().splitlines() if l.strip()]
+        rows = [l for l in rows if json.loads(l)["id"] in allowed and sum(solved[json.loads(l)["id"]]) >= 4]
+        pool.write_text("\n".join(rows) + "\n")
+        print(f"{name}: RL pool {len(rows)} questions (solved >= 4/8 by the start model)", flush=True)
+    rl = Path("adapters") / f"{name}-rl"
+    steps = 2 if small else args.rl_steps
+    if not (rl / "adapter_config.json").exists():
+        py("rl_train.py", "--model", cal_model, "--data", pool, "--sources", "all", "--out", rl, "--steps", steps,
+           "--questions", 4 if small else 32, "--group", 8, "--max-tokens", 3072, "--reward", "arora", "--adaptive",
+           "--alpha", args.rl_alpha, "--advantage", "batch", "--kl-coef", args.rl_kl, "--grader", "typed",
+           "--redundant", "none", "--lr", args.rl_lr, "--save-every", 1 if small else 20, "--dtype", args.dtype)
+    print((rl / "rl_log.jsonl").read_text(), flush=True)
+    candidates = []
+    for step in range(1 if small else 20, steps + 1, 1 if small else 20):
+        ckpt = rl / f"step-{step}"
+        if (ckpt / "adapter_config.json").exists():
+            model = Path("models") / f"{name}-rl-{step}"
+            if not (model / "config.json").exists():
+                py("merge.py", "--model", cal_model, "--out", model, "--adapters", f"{ckpt}:1")
+            candidates.append((f"{name}-rl-{step}", model))
+    if small:
+        print(f"{name}: smoke OK: every step ran ({len(candidates)} RL checkpoints merged)", flush=True)
+        return
+    tag, model = choose(f"{name} RL", [(cal_tag, cal_model)] + candidates)
+    (ROOT / f"chain-{name}-rl.json").write_text(json.dumps({"model": model, "tag": tag}))
+    if tag != cal_tag:
+        report(tag, model)
 
 
 def audit(args):

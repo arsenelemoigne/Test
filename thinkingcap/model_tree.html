@@ -1,0 +1,401 @@
+<title>ThinkingCap Model Tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: lab-notebook lineage map. Summary first (unseen-question chart + flattery check), then the full tree in lanes, details in a side drawer. */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#16202b; --muted:#5b6876; --line:#c9d1da; --band:#e3e8ee;
+  --accent:#1f5f8b;
+  --ok:#1f7a4d; --okbg:#e2f3ea; --over:#b4372d; --overbg:#f8e4e1; --warn:#9a6a08; --warnbg:#f7eed6;
+  --dead:#8a95a1; --deadbg:#e7eaee; --run:#5a3fa8; --runbg:#ebe5f7; --ext:#6b4f2a; --target:#1f7a4d22;
+  --f-disp:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --panel:#18202a; --ink:#e4e9ef; --muted:#97a3b0; --line:#2e3946; --band:#1b232d;
+  --accent:#6fb2e0;
+  --ok:#5cc890; --okbg:#173326; --over:#ef7b6f; --overbg:#3a1f1d; --warn:#e2b54b; --warnbg:#3a3019;
+  --dead:#7d8895; --deadbg:#232b35; --run:#b19af0; --runbg:#2a2342; --ext:#d2a86c; --target:#5cc89026; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --panel:#18202a; --ink:#e4e9ef; --muted:#97a3b0; --line:#2e3946; --band:#1b232d;
+  --accent:#6fb2e0;
+  --ok:#5cc890; --okbg:#173326; --over:#ef7b6f; --overbg:#3a1f1d; --warn:#e2b54b; --warnbg:#3a3019;
+  --dead:#7d8895; --deadbg:#232b35; --run:#b19af0; --runbg:#2a2342; --ext:#d2a86c; --target:#5cc89026; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:flex;flex-direction:column;gap:34px}
+h1{font-family:var(--f-disp);font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--f-disp);font-weight:700;font-size:21px;margin:0;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:8px 0 0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec p{margin:0;max-width:72ch}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;border:2px solid;display:inline-block}
+.sw.ok{border-color:var(--ok);background:var(--okbg)} .sw.over{border-color:var(--over);background:var(--overbg)}
+.sw.untested{border-color:var(--warn);background:var(--warnbg)} .sw.dead{border-color:var(--dead);background:var(--deadbg)}
+.sw.run{border-color:var(--run);background:var(--runbg)}
+.keypoints{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.kp{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.kp b{display:block;font-family:var(--f-disp);font-size:16px;margin-bottom:4px}
+.kp p{color:var(--muted);font-size:14px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card h3{margin:0 0 4px;font-family:var(--f-disp);font-size:16px}
+.card .sub{color:var(--muted);font-size:13px;margin:0 0 8px}
+svg text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.pt{cursor:pointer}
+.pt:focus{outline:none}
+.pt:focus circle,.pt:hover circle{stroke-width:3}
+/* tree */
+.treebox{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.tree{position:relative}
+.band{position:absolute;left:0;right:0;background:var(--band);border-top:1px solid var(--line)}
+.band .bl{position:sticky;left:0;display:inline-block;padding:6px 12px;font-family:var(--f-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.edges{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.edges path{fill:none;stroke:var(--line);stroke-width:1.6}
+.edges path.second{stroke-dasharray:4 4}
+.edges path.hot{stroke:var(--accent);stroke-width:2.4}
+.node{position:absolute;width:184px;min-height:70px;padding:7px 9px 7px 11px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel);text-align:left;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;gap:2px}
+.node:hover,.node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.node.sel{outline:3px solid var(--accent);outline-offset:2px}
+.node .nm{font-weight:600;font-size:13px;line-height:1.25}
+.node .sh{font-size:11.5px;color:var(--muted);line-height:1.25}
+.node .sc{font-family:var(--f-mono);font-size:11.5px;margin-top:auto;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.node.ok{border-color:var(--ok);background:var(--okbg)}
+.node.over{border-color:var(--over);background:var(--overbg)}
+.node.untested{border-color:var(--warn);background:var(--warnbg);border-style:dashed}
+.node.dead{border-color:var(--dead);background:var(--deadbg);color:var(--muted)}
+.node.running{border-color:var(--run);background:var(--runbg)}
+.node.queued{border-color:var(--run);background:transparent;border-style:dashed;color:var(--muted)}
+.node.ref,.node.ext{border-color:var(--ink);border-width:2px}
+.tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;padding:0 5px;border-radius:4px;border:1px solid currentColor;opacity:.85;white-space:nowrap}
+.tag.clean{color:var(--ok)} .tag.grey{color:var(--warn)}
+.ok-t{color:var(--ok)} .over-t{color:var(--over)} .warn-t{color:var(--warn)}
+/* table */
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--band)}
+/* drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:-12px 0 32px #0003;padding:calc(18px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));overflow-y:auto;transform:translateX(102%);transition:transform .22s ease;z-index:20;display:flex;flex-direction:column;gap:14px}
+.drawer.open{transform:none}
+@media (max-width:640px){.drawer{top:auto;left:0;width:100%;max-height:78vh;border-left:0;border-top:1px solid var(--line);border-radius:14px 14px 0 0;transform:translateY(102%)}.drawer.open{transform:none}}
+@media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+.dh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.dh h2{font-size:20px}
+.x{background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);font:inherit;padding:2px 10px;cursor:pointer}
+.verdict{padding:10px 12px;border-radius:8px;font-size:14px}
+.verdict.ok{background:var(--okbg);color:var(--ok)} .verdict.over{background:var(--overbg);color:var(--over)}
+.verdict.untested{background:var(--warnbg);color:var(--warn)} .verdict.dead,.verdict.queued,.verdict.ref,.verdict.ext{background:var(--deadbg);color:var(--muted)}
+.verdict.running{background:var(--runbg);color:var(--run)}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:0}
+.dl dt{color:var(--muted)} .dl dd{margin:0;min-width:0}
+.drawer h4{margin:0;font-family:var(--f-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.drawer p{margin:0}
+.meas td,.meas th{padding:5px 6px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline}
+.trust{font-size:12px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ThinkingCap · Qwen3-0.6B · every model since night 1</div>
+    <h1>ThinkingCap model tree</h1>
+    <p class="lede">Every model we trained, where it came from, what we changed, and how it scores. Click any model for details. Scores are <span class="mono">tokens saved % / accuracy change in points</span> against the untouched model. The goal is more than 55% saved at better than −2 points on questions the model never saw (BottleCap’s own releases sit at 37–46% / −0.7 to −1.0).</p>
+  </header>
+
+  <section class="keypoints" aria-label="Key points">
+    <div class="kp"><b>Only unseen-question scores are reliable</b><p>“Unseen ×8” = 240 random test questions never used for any choice, 8 answers each. The “usual” questions were also used to pick checkpoints, so they flatter by 0.5–5 points.</p></div>
+    <div class="kp"><b>Nothing is in the target zone yet</b><p>Closest: <button class="linkbtn" data-open="rep4b50">rep4 50/50</button> 57.3 / −2.4 and the <button class="linkbtn" data-open="bal">balanced round</button> 53.8 / −2.5, both about half a point short, within luck. Every model above 60% loses 3.9–5.5 points.</p></div>
+    <div class="kp"><b>Best reliable picks today</b><p>Clean: <button class="linkbtn" data-open="ca1">ca1</button> 48.6 / −1.8. With the MBPP grey zone: <button class="linkbtn" data-open="r2g">round 2</button> 51.4 / −1.8, <button class="linkbtn" data-open="rep4b50">rep4 50/50</button> 57.3 / −2.4.</p></div>
+  </section>
+
+  <section class="sec">
+    <div>
+      <div class="eyebrow">Reliable view</div>
+      <h2>Unseen questions only</h2>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Tokens saved vs accuracy change, unseen ×8</h3>
+        <p class="sub">Green box = the goal. Whiskers ≈ ±1.5 points of luck at 40 questions per test. Filled = clean (never saw MBPP), hollow = MBPP grey zone.</p>
+        <div id="scatter"></div>
+      </div>
+      <div class="card">
+        <h3>How much the usual questions flattered</h3>
+        <p class="sub">Accuracy on the usual questions (○) vs unseen questions (●). A long line means we were fooled when picking it.</p>
+        <div id="flatter"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div>
+      <div class="eyebrow">Lineage</div>
+      <h2>The family tree</h2>
+    </div>
+    <p>Left to right is the order of training: each arrow goes from the model a run started from to the model it produced. A dashed arrow is the second parent of a blend. The card shows the most reliable score we have, and a warning when it was only measured on the usual questions.</p>
+    <div class="legend">
+      <span><i class="sw ok"></i>unseen: within −2</span>
+      <span><i class="sw over"></i>unseen: worse than −2</span>
+      <span><i class="sw untested"></i>never tested on unseen questions</span>
+      <span><i class="sw dead"></i>abandoned method</span>
+      <span><i class="sw run"></i>running / queued</span>
+      <span><span class="tag clean">CLEAN</span> never saw MBPP</span>
+      <span><span class="tag grey">MBPP</span> grey zone</span>
+    </div>
+    <div class="treebox"><div class="tree" id="tree"><svg class="edges" id="edges"></svg></div></div>
+  </section>
+
+  <section class="sec">
+    <div>
+      <div class="eyebrow">Ranking</div>
+      <h2>Every model tested on unseen questions</h2>
+    </div>
+    <p>Sorted by accuracy on unseen questions. Remember the ±1.5 point luck: rows within about 1.5 points of each other cannot be told apart.</p>
+    <div class="card tbl"><table id="rank"><thead><tr><th>Model</th><th>Family</th><th>Saved %</th><th>Accuracy</th><th>Measured on</th><th>Data</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</div>
+
+<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="dTitle">
+  <div class="dh"><div><div class="eyebrow" id="dFam"></div><h2 id="dTitle"></h2></div><button class="x" id="dClose" aria-label="Close details">Close</button></div>
+  <div class="verdict" id="dVerdict"></div>
+  <div><h4>What we did</h4><p id="dMethod"></p></div>
+  <dl class="dl" id="dFacts"></dl>
+  <div><h4>All measurements</h4><table class="meas" id="dMeas"></table><p class="trust">Unseen ×8 and questions 41–80 ×8 are trusted. Usual ×8 flatters by ~0.5–5 points; ×4 and ×2 are also noisier (±2–4 points).</p></div>
+  <div id="dTypeBox"><h4 id="dTypeH">Per test</h4><table class="meas" id="dType"></table></div>
+  <div id="dNoteBox"><h4>Notes</h4><p id="dNote"></p></div>
+</aside>
+
+<script>
+const FAM={ref:"Reference",n1:"Night 1 · cut & copy",side:"Side experiments",main:"Main line · best-of-8 DPO",A:"Clean line A · no code data",B:"Clean line B · clean code (KodCode)",v2:"v2 · from scratch, one clean recipe"};
+// s: unseen x8 (fresh), q: questions 41-80 x8, u8/u4/u2: usual questions. clean: true | 'grey'
+const N=[
+{id:"raw",f:"ref",col:0,row:8,name:"Qwen3-0.6B, untouched",sh:"the starting point",st:"ref",clean:true,
+ m:"The original model. Every score on this page is measured against it on the same questions with the same number of answers.",
+ facts:{Accuracy:"SVAMP 81–83% · MBPP+ 57.5% · IFEval 52–56% · BFCL 76–86%","Thinking length":"SVAMP ~800–940 tokens, MBPP+ ~1,700–2,000, IFEval ~700–830, BFCL ~185–223"},v:"Reference."},
+{id:"comp",f:"ref",col:0,row:11,name:"Lightning McQwen3",sh:"competitor (public)",st:"ext",clean:true,full:[43.2,-0.85],
+ m:"Chain-of-Draft distillation, then on-policy “where can I stop” DPO, then a math correctness DPO. No code data.",
+ types:{SVAMP:"66% / −3.8",MBPP:"39% / −1.9",IFEval:"32% / +1.4",BFCL:"25% / +0.9"},typesH:"Per test (his full evaluation)",
+ v:"His own full evaluation (2,759 questions × 8). The bar to beat on saving at near-zero loss."},
+
+{id:"mvt",f:"n1",col:1,row:0,name:"MVT / fading cuts",sh:"cut own thinking → copy (SFT)",st:"dead",clean:"grey",u2:[61.6,-6.5],
+ m:"Cut the model’s own correct answers where more thinking stops paying (Marginal Value Theorem), or drop paragraphs/words (fading, word scoring), then train the model to copy the cut answers (SFT).",
+ note:"MVT on math: SVAMP −21 to −24. Fading and word scoring save only 2–14%. Several variants; the best usual score is shown.",v:"Abandoned: cutting math reasoning breaks it."},
+{id:"n1best",f:"n1",col:2,row:0,name:"Night-1 best",sh:"cuts on multiple choice, math whole ×2",st:"untested",clean:"grey",u8:[37.1,-0.6],
+ m:"MVT cuts only on multiple-choice answers; math examples kept whole and shown twice; SFT.",
+ types:{SVAMP:"13.5% / −5.0",MBPP:"65% / −2.2",IFEval:"37% / +4.7",BFCL:"17–21%"},typesH:"Per test (usual ×8)",v:"Safe but saves less than the competitor. Superseded by DPO."},
+{id:"lightmix",f:"n1",col:3,row:0,name:"Light mix",sh:"MC cut + tool cut + whole math",st:"untested",clean:"grey",u4:[48.6,-2.3],
+ m:"Pooled the safest night-1 cuts: multiple-choice cut, tool cut, whole math ×2. SFT.",v:"Never tested on unseen questions. Superseded."},
+{id:"merge",f:"n1",col:2,row:1,name:"Per-type adapter merges",sh:"average of separate adapters",st:"dead",clean:"grey",
+ m:"Trained one adapter per data type, then averaged their weights.",note:"Accuracy −13.7 to −29.9 points.",v:"Catastrophic: averaging unrelated adapters breaks the model."},
+
+{id:"steer",f:"side",col:1,row:2,name:"Steering dial",sh:"push a “be brief” direction",st:"dead",clean:true,u2:[17.6,-0.1],
+ m:"Read a “short vs long answer” direction inside the model (layer 9) and add it as a fixed push (stored as a v_proj bias, loads in plain vLLM).",v:"Free but small (≤18%). Never stacked on DPO."},
+{id:"codecut",f:"side",col:1,row:3,name:"Other session: codecut",sh:"MVT cuts per type",st:"untested",clean:"grey",u8:[44.3,-1.6],
+ m:"Branch mvt-pertype: MVT cuts trained per data type on matched data, code cut, combined.",
+ types:{SVAMP:"15% / −4.1",MBPP:"73% / −7.2",IFEval:"20% / +5.0",BFCL:"42–51% / ~0"},typesH:"Per test (usual ×8)",v:"Never tested on our unseen set."},
+
+{id:"sft",f:"main",col:1,row:5,name:"Best-of-8 SFT",sh:"copy its shortest right answer",st:"dead",clean:"grey",u4:[4.4,-2.8],
+ m:"The model answers 1,500 training questions 8 times; train it (gently, 1 pass) to copy its own shortest correct answer.",
+ note:"Its data included ~74 MBPP tasks (MBPP minus MBPP+). MBPP+ is built from MBPP, so every model descending from it is in the MBPP grey zone.",v:"Barely learns length by itself, but it is the start of the whole main line."},
+{id:"dponight",f:"main",col:2,row:4,name:"First DPO (night run)",sh:"DPO, step 25",st:"untested",clean:"grey",u4:[47.6,-2.6],parents:["sft"],
+ m:"DPO pairs from the same 8 answers: shortest right beats longest right (“shorten”), shortest right beats wrong (“guard”). 1,267 pairs.",
+ types:{SVAMP:"62% / +0.6",MBPP:"43% / −9.4",IFEval:"48% / −1.2",BFCL:"29–39%"},typesH:"Per test (usual ×4)",note:"The runtime was lost afterwards; rebuilt from half the data.",v:"The big jump: same data gives 4% as SFT and 47% as DPO."},
+{id:"dporeb",f:"main",col:2,row:5,name:"DPO rebuild",sh:"same recipe, half the data",st:"untested",clean:"grey",u4:[44.9,-2.7],
+ m:"Same recipe as the night run on half the best-of-8 data (591 pairs), step 30.",types:{SVAMP:"53% / −4.4",MBPP:"41% / −8.7",IFEval:"50% / +3.1"},typesH:"Per test (usual ×4)",v:"Code pairs hurt code: led to the no-code variant."},
+{id:"r1",f:"main",col:2,row:6,name:"Round 1 (no code pairs)",sh:"DPO without code pairs, step 30",st:"auto",clean:"grey",u4:[42.4,-0.7],s:[40.4,-0.9],q:[43.6,-0.9],
+ m:"Same DPO pairs but no code pairs at all, from the SFT start, step 30.",types:{SVAMP:"53% / +1.2",MBPP:"38% / −3.7",IFEval:"44% / −1.2",BFCL:"29–35% / 0..+2.5"},typesH:"Per test (usual ×4)",
+ path:"adapters/bon-dpo-nocode/step-30",v:"Matches the competitor, confirmed on two unseen sets."},
+{id:"dporaw",f:"main",col:1,row:7,name:"DPO from raw",sh:"same pairs, no SFT start",st:"untested",clean:"grey",u4:[36.6,0.8],
+ m:"The same pairs, DPO straight from the untouched model (no SFT step), step 30. Used MBPP pairs.",types:{SVAMP:"39% / +0.6",MBPP:"35% / −5.0",IFEval:"43% / +6.9"},typesH:"Per test (usual ×4)",v:"Showed the SFT step is optional."},
+{id:"r2nc",f:"main",col:3,row:4,name:"Round 2, no code",sh:"new questions, step 10",st:"auto",clean:"grey",u4:[55.5,-1.7],q:[53.4,-2.8],parents:["r1"],
+ m:"Round 1 answers 750 unused questions ×8; new pairs; DPO without code pairs, step 10.",v:"Code loses −10.6 on the usual questions."},
+{id:"r2c",f:"main",col:3,row:5,name:"Round 2, code pairs",sh:"with code pairs, step 20",st:"untested",clean:"grey",u4:[62.6,-3.6],parents:["r1"],
+ m:"Same as round 2 but with code pairs, step 20.",types:{SVAMP:"75% / −5.0",MBPP:"65% / −14.4"},typesH:"Per test (usual ×4)",v:"Already outside on the usual questions."},
+{id:"r2g",f:"main",col:3,row:6,name:"Round 2 gentle",sh:"60% guard pairs, step 10",st:"auto",clean:"grey",u8:[54.2,-1.6],s:[51.4,-1.8],q:[53.1,-2.7],parents:["r1"],
+ m:"Round 2 with more “right beats wrong” pairs (60%) and no code pairs, step 10.",
+ types:{SVAMP:"64% / 0.0",MBPP:"60% / −7.5",IFEval:"50% / −0.6",BFCL:"34–42%"},typesH:"Per test (usual ×8)",
+ note:"On questions 41–80: SVAMP −7.5, IFEval −4.1, MBPP −1.6. Retrained with another seed: unseen 50.9 / −3.0, so training luck moves it 1–2 points.",
+ path:"adapters/bon-dpo-r2g/step-10",v:"Within −2 on our unseen set, −2.7 on questions 41–80: on the edge."},
+{id:"cr3",f:"main",col:4,row:4,name:"Code round",sh:"+30 “stopped too early” code pairs",st:"untested",clean:"grey",u8:[53.6,-2.9],parents:["r2g"],
+ m:"Round-3 pairs plus 30 code pairs where the model stopped thinking too early and got it wrong.",v:"Code pairs do not fix code."},
+{id:"cr3b",f:"main",col:4,row:5,name:"Code round, big dose",sh:"+167 code pairs, step 15",st:"untested",clean:"grey",u8:[60.9,-3.0],parents:["r2g"],
+ m:"Same with 167 code “stopped too early” pairs.",types:{SVAMP:"76% / −6.2",MBPP:"61% / −7.8",IFEval:"57% / +0.6"},typesH:"Per test (usual ×8)",v:"Code still −7.8; math pays this time."},
+{id:"r3",f:"main",col:4,row:6,name:"Round 3",sh:"new questions, step 5",st:"auto",clean:"grey",u8:[56.9,-1.9],s:[56.0,-3.6],parents:["r2g"],
+ m:"Round 2 gentle answers 750 new questions ×8; new pairs (no code), step 5.",types:{SVAMP:"69% / −3.1",MBPP:"57% / −7.5",IFEval:"55% / +0.6",BFCL:"36–44%"},typesH:"Per test (usual ×8)",
+ note:"On unseen questions SVAMP −7.5.",v:"Looked within −2 on the usual questions, is −3.6 on unseen ones."},
+{id:"bal",f:"main",col:4,row:7,name:"Balanced round",sh:"math protected, 3-seed soup",st:"auto",clean:"grey",u8:[58.8,-2.1],s:[53.8,-2.5],parents:["r2g"],
+ m:"From round 2: 1,437 new questions ×8 including trap math (GSM-Plus, GSM-IC); “shorter” pairs only where it is right ≥6/8; math shorter-pairs capped; 3 DPO seeds averaged (soup), step 20.",
+ types:{SVAMP:"64% / −4.7",MBPP:"58% / −1.6",IFEval:"50% / −2.8",BFCL:"36–41%"},typesH:"Per test (unseen ×8)",path:"models/bal-r2-soup-20",v:"Was our recommendation from the usual questions; −2.5 on unseen ones."},
+{id:"soup",f:"main",col:4,row:8,name:"Blend: round 2 + code round",sh:"50/50 weight average",st:"untested",clean:"grey",u8:[56.7,-2.4],parents:["r2g","cr3b"],
+ m:"Weight-space midpoint of round 2 gentle and the big code round.",v:"Lands between its two parents."},
+{id:"r4",f:"main",col:5,row:6,name:"Round 4",sh:"new questions, step 15",st:"auto",clean:"grey",u8:[65.4,-2.4],s:[63.2,-3.9],parents:["r3"],
+ m:"Round 3 answers new questions (seed 2); 424 pairs; step 15.",types:{SVAMP:"80% / −2.8",MBPP:"68% / −10.0",IFEval:"58% / −0.3",BFCL:"41–48%"},typesH:"Per test (usual ×8)",
+ note:"On unseen questions SVAMP −9.1. Retrained with another seed: −7.5 at 2 answers.",path:"adapters/bon-dpo-r4/step-15",v:"Past 60%, math breaks on unseen questions."},
+{id:"r5",f:"main",col:6,row:6,name:"Round 5",sh:"new questions, step 5",st:"auto",clean:"grey",u8:[68.6,-2.4],s:[65.5,-5.4],parents:["r4"],
+ m:"Round 4 answers new questions (seed 3), step 5.",types:{SVAMP:"79% / −10.0",MBPP:"73% / −2.8",IFEval:"55% / −5.0",BFCL:"43–47%"},typesH:"Per test (unseen ×8)",
+ path:"adapters/bon-dpo-r5/step-5",v:"The most saving, and the worst unseen accuracy of the rounds."},
+
+{id:"rep4b75",f:"main",col:6,row:8,name:"Round 4 repair: 75/25 blend",sh:"75% round 4 + 25% round 2",st:"auto",clean:"grey",u4:[66.5,-2.5],s:[61.5,-4.0],parents:["r4","r2g"],
+ m:"Weight blend: 75% round 4, 25% round 2 gentle.",types:{SVAMP:"74% / −8.8",MBPP:"67% / −4.4",IFEval:"55% / −1.9",BFCL:"39–43%"},typesH:"Per test (unseen ×8)",v:"Recovers little: math still −8.8."},
+{id:"rep4b50",f:"main",col:6,row:9,name:"Round 4 repair: 50/50 blend",sh:"50% round 4 + 50% round 2",st:"auto",clean:"grey",u4:[57.8,-2.2],s:[57.3,-2.4],parents:["r4","r2g"],
+ m:"Weight blend: half round 4, half round 2 gentle.",v:"Best repair: 3.5 points more saving than the balanced round at about the same loss."},
+{id:"rep4m",f:"main",col:6,row:10,name:"Round 4 repair: equal-length pairs",sh:"right beats wrong, same length",st:"auto",clean:"grey",u4:[64.2,-1.5],s:[61.3,-4.2],parents:["r4"],
+ m:"DPO on “right beats wrong” pairs of nearly equal length (within 1.25×) on trap math: correctness without any length push. Step 10.",v:"Looked good on usual questions, −4.2 on unseen ones."},
+{id:"rep4rft",f:"main",col:6,row:11,name:"Round 4 repair: own short right answers",sh:"SFT on its right answers ≤ median length",st:"auto",clean:"grey",u4:[67.5,-2.1],s:[63.4,-5.1],parents:["r4"],
+ m:"Rejection-sampling fine-tuning: train on its own correct answers no longer than its median length.",v:"Makes unseen accuracy worse."},
+{id:"rep5b75",f:"main",col:7,row:4,name:"Round 5 repair: 75/25 blend",sh:"75% round 5 + 25% round 2",st:"auto",clean:"grey",u4:[67.1,-2.3],s:[63.5,-3.9],parents:["r5","r2g"],
+ m:"Weight blend: 75% round 5, 25% round 2 gentle.",types:{SVAMP:"75% / −9.4",MBPP:"69% / −4.1",IFEval:"59% / −1.2","BFCL (3 parts)":"39–44% / −2.2, −1.9, +1.3"},typesH:"Per test (unseen ×8)",v:"Math −9.4."},
+{id:"rep5b50",f:"main",col:7,row:5,name:"Round 5 repair: 50/50 blend",sh:"50% round 5 + 50% round 2",st:"auto",clean:"grey",u4:[62.7,-3.0],s:[58.8,-3.4],parents:["r5","r2g"],
+ m:"Weight blend: half round 5, half round 2 gentle.",types:{SVAMP:"72% / −5.9",MBPP:"65% / −3.1",IFEval:"50% / −4.1","BFCL (3 parts)":"38–42% / −0.9, −1.6, +0.6"},typesH:"Per test (unseen ×8)",v:"Worse than the round 4 50/50 blend."},
+{id:"rep5m",f:"main",col:7,row:6,name:"Round 5 repair: equal-length pairs",sh:"right beats wrong, same length",st:"auto",clean:"grey",u4:[65.0,-1.5],s:[61.9,-4.5],parents:["r5"],
+ m:"Same equal-length “right beats wrong” DPO, on round 5.",types:{SVAMP:"75% / −7.8",MBPP:"67% / −2.2",IFEval:"55% / −6.2","BFCL (3 parts)":"41–45% / −0.6, −3.7, −0.9"},typesH:"Per test (unseen ×8)",v:"Instructions break too (−6.2)."},
+{id:"rep5rft",f:"main",col:7,row:7,name:"Round 5 repair: own short right answers",sh:"SFT on its right answers ≤ median",st:"auto",clean:"grey",u4:[69.4,-0.2],s:[67.1,-5.5],parents:["r5"],
+ m:"Rejection-sampling fine-tuning on round 5.",types:{SVAMP:"78% / −10.0",MBPP:"75% / −3.4",IFEval:"61% / −5.6","BFCL (3 parts)":"42–47% / −2.5, −5.3, −0.6"},typesH:"Per test (unseen ×8)",v:"The clearest trap: −0.2 on usual questions, −5.5 on unseen ones."},
+
+{id:"a1",f:"A",col:1,row:12,name:"A1",sh:"DPO from raw, no code, no MBPP",st:"auto",clean:true,u4:[40.5,-1.2],s:[35.4,-1.9],parents:["raw"],
+ m:"DPO straight from the untouched model on round-1 answers without any code data. 438 pairs, step 28.",v:"Clean start of line A."},
+{id:"a2",f:"A",col:2,row:12,name:"A2",sh:"second round, step 5",st:"untested",clean:true,u4:[44.6,0.3],parents:["a1"],
+ m:"A1 answers 750 unused questions (no code); 345 pairs; step 5.",v:"Never tested on unseen questions; ca1 starts here."},
+{id:"ca1",f:"A",col:3,row:12,name:"ca1",sh:"full recipe, 3-seed soup, step 10",st:"auto",clean:true,u8:[49.7,-2.3],s:[48.6,-1.8],parents:["a2"],
+ m:"From A2, the full balanced recipe: new questions incl. trap math (GSM-Plus, GSM-IC), “shorter” pairs only where right ≥6/8, math protected, 3 DPO seeds averaged. No code data.",
+ types:{SVAMP:"58% / −4.1",MBPP:"53% / −2.8",IFEval:"46% / +0.3",BFCL:"33–36%"},typesH:"Per test (unseen ×8)",v:"Best clean model: more saving than the competitor, within −2 on unseen questions."},
+{id:"ca2",f:"A",col:4,row:12,name:"ca2",sh:"one more round, step 20",st:"auto",clean:true,u8:[53.5,-2.4],s:[46.4,-2.7],parents:["ca1"],
+ m:"Same recipe one round further.",types:{SVAMP:"56% / −5.3",MBPP:"51% / −1.9",IFEval:"39% / −3.1",BFCL:"35–40%"},typesH:"Per test (unseen ×8)",v:"Worse than ca1 on unseen questions: less saving and more loss."},
+
+{id:"b1",f:"B",col:1,row:13,name:"B1",sh:"DPO from raw + clean code",st:"auto",clean:true,s:[24.8,-1.5],parents:["raw"],
+ m:"DPO from the untouched model, no MBPP; code comes from KodCode (an MBPP-like slice) as “right beats wrong” pairs only.",types:{SVAMP:"36% / −0.3",MBPP:"24% / +0.6",IFEval:"19% / −4.4",BFCL:"17–21%"},typesH:"Per test (unseen ×8)",v:"Clean, modest saving."},
+{id:"b2",f:"B",col:2,row:13,name:"B2",sh:"second round, step 10",st:"auto",clean:true,s:[32.7,-0.1],parents:["b1"],
+ m:"Second round of line B.",types:{SVAMP:"43% / −1.9",MBPP:"31% / +1.9",IFEval:"31% / +0.6",BFCL:"24–25%"},typesH:"Per test (unseen ×8)",v:"Nearly free in accuracy; code even improves."},
+{id:"cb1",f:"B",col:3,row:13,name:"cb1",sh:"full recipe + KodCode, step 40",st:"auto",clean:true,u8:[42.0,-0.6],s:[41.0,-1.1],parents:["b2"],
+ m:"From B2, the full balanced recipe plus KodCode “right beats wrong” pairs; 787 pairs; 3-seed soup.",types:{SVAMP:"54% / −1.6",MBPP:"34% / +0.3",IFEval:"41% / −2.5",BFCL:"28–33%"},typesH:"Per test (unseen ×8)",v:"Safest clean model; saves a bit less than the competitor."},
+{id:"cb2",f:"B",col:4,row:13,name:"cb2",sh:"one more round, step 30",st:"auto",clean:true,u8:[51.0,-0.3],s:[46.9,-2.6],parents:["cb1"],
+ m:"Same recipe one round further.",v:"+6 points of saving over cb1, but −2.6 on unseen questions."},
+
+{id:"v2r1",f:"v2",col:1,row:14,name:"v2 round 1",sh:"from raw, one clean recipe",st:"running",clean:true,parents:["raw"],
+ m:"From the untouched model: new questions ×8 (tools, instructions, multiple choice, trap math, KodCode); “shorter” pairs where right ≥6/8, math capped, KodCode “right beats wrong” only, checked MVT cuts for tools and instructions; 3-seed soup.",v:"Running now on GPU 1."},
+{id:"v2r2",f:"v2",col:2,row:14,name:"v2 round 2",sh:"queued",st:"queued",clean:true,parents:["v2r1"],m:"Same recipe on new questions, starting from round 1’s soup.",v:"Queued."},
+{id:"v2r3",f:"v2",col:3,row:14,name:"v2 round 3",sh:"queued",st:"queued",clean:true,parents:["v2r2"],m:"Same recipe, next round.",v:"Queued."},
+{id:"v2r4",f:"v2",col:4,row:14,name:"v2 round 4",sh:"queued",st:"queued",clean:true,parents:["v2r3"],m:"Same recipe, last round.",v:"Queued."}
+];
+const P={sft:["raw"],mvt:["raw"],n1best:["mvt"],lightmix:["n1best"],merge:["mvt"],steer:["raw"],codecut:["raw"],dporeb:["sft"],r1:["sft"],dporaw:["raw"]};
+N.forEach(n=>{if(!n.parents)n.parents=P[n.id]||[];});
+const byId=Object.fromEntries(N.map(n=>[n.id,n]));
+const unseen=n=>n.s?{v:n.s,lab:"unseen ×8"}:n.q?{v:n.q,lab:"q41–80 ×8"}:null;
+N.forEach(n=>{if(n.st==="auto"){const u=unseen(n);n.st=u?(u.v[1]>=-2?"ok":"over"):"untested";}});
+const fmt=x=>(x>0?"+":x<0?"−":"")+Math.abs(x).toFixed(Math.abs(x)%1&&Math.abs(x)*10%1?2:1);
+const acc=x=>(x>=0?"+":"−")+Math.abs(x).toFixed(x*10%1?2:1).replace(/\.?0+$/,m=>m.includes(".")&&!/\.\d*[1-9]/.test(m)?"":m);
+function accS(x){return (x>=0?"+":"−")+(Math.round(Math.abs(x)*100)/100).toString();}
+function best(n){const u=unseen(n);if(u)return{...u,trusted:true};for(const k of["u8","u4","u2"])if(n[k])return{v:n[k],lab:"usual ×"+k.slice(1),trusted:false};if(n.full)return{v:n.full,lab:"full ×8",trusted:true};return null;}
+const cls=v=>v>=-2?"ok-t":"over-t";
+
+/* ---------- tree ---------- */
+const W=212,H=86,PADX=14,PADY=30;
+const rows=Math.max(...N.map(n=>n.row))+1, cols=Math.max(...N.map(n=>n.col))+1;
+const tree=document.getElementById("tree"),edges=document.getElementById("edges");
+tree.style.width=(cols*W+PADX*2)+"px";tree.style.height=(rows*H+PADY+10)+"px";
+const bands=[["n1",0,1],["side",2,3],["main",4,11],["A",12,12],["B",13,13],["v2",14,14]];
+bands.forEach(([f,a,b])=>{const d=document.createElement("div");d.className="band";d.style.top=(PADY+a*H-22)+"px";d.style.height=((b-a+1)*H+4)+"px";
+ d.innerHTML='<span class="bl">'+FAM[f]+'</span>';d.style.opacity=f==="main"||f==="A"||f==="v2"?"1":".75";if(["side","A","v2"].includes(f))d.style.background="transparent";tree.insertBefore(d,edges);});
+const els={};
+N.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="node "+n.st;b.id="n-"+n.id;
+ b.style.left=(PADX+n.col*W)+"px";b.style.top=(PADY+n.row*H)+"px";
+ const bs=best(n);let sc="";
+ if(bs){sc='<span class="'+(bs.trusted?cls(bs.v[1]):"warn-t")+'">'+bs.v[0].toFixed(1)+'% · '+accS(bs.v[1])+'</span><span style="color:var(--muted)">'+bs.lab+(bs.trusted?"":" ⚠")+'</span>';}
+ else if(n.st==="running")sc='<span style="color:var(--run)">● running</span>';
+ else if(n.st==="queued")sc='<span>queued</span>';
+ else if(n.id==="merge")sc='<span class="over-t">accuracy −14 to −30</span>';
+ const tag=n.f==="ref"?"":(n.clean===true?'<span class="tag clean">CLEAN</span>':'<span class="tag grey">MBPP</span>');
+ b.innerHTML='<span class="nm">'+n.name+'</span><span class="sh">'+n.sh+'</span><span class="sc">'+sc+tag+'</span>';
+ b.addEventListener("click",()=>openD(n.id));tree.appendChild(b);els[n.id]=b;});
+const paths=[];
+function drawEdges(){edges.innerHTML="";paths.length=0;
+ N.forEach(n=>n.parents.forEach((p,i)=>{const a=els[p],c=els[n.id];if(!a||!c)return;
+  const x1=a.offsetLeft+a.offsetWidth,y1=a.offsetTop+a.offsetHeight/2,x2=c.offsetLeft,y2=c.offsetTop+c.offsetHeight/2;
+  const mx=(x1+x2)/2;const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("d",`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);if(i>0)path.classList.add("second");
+  path.dataset.from=p;path.dataset.to=n.id;edges.appendChild(path);paths.push(path);}));}
+edges.setAttribute("width",tree.style.width);edges.setAttribute("height",tree.style.height);
+drawEdges();if(document.fonts)document.fonts.ready.then(drawEdges);
+
+/* ---------- scatter ---------- */
+(function(){const pts=N.filter(n=>n.s||n.q||n.full).map(n=>({n,v:(n.s||n.q||n.full),ext:!!n.full}));
+ const w=560,h=380,l=46,r=14,t=14,b=40;const X=v=>l+(v-20)/(70-20)*(w-l-r),Y=v=>t+(1.5-v)/(1.5+6.5)*(h-t-b);
+ let s=`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Tokens saved against accuracy change on unseen questions">`;
+ s+=`<rect x="${X(55)}" y="${Y(1.5)}" width="${X(70)-X(55)}" height="${Y(-2)-Y(1.5)}" fill="var(--target)" stroke="var(--ok)" stroke-dasharray="4 3"/>`;
+ s+=`<text x="${X(55)+6}" y="${Y(1.5)+14}" style="fill:var(--ok)">goal: &gt;55% and ≥ −2</text>`;
+ for(let x=20;x<=70;x+=10){s+=`<line x1="${X(x)}" x2="${X(x)}" y1="${t}" y2="${h-b}" stroke="var(--line)" stroke-width=".6"/><text x="${X(x)}" y="${h-b+16}" text-anchor="middle">${x}%</text>`;}
+ for(let y=1;y>=-6;y--){s+=`<line x1="${l}" x2="${w-r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--line)" stroke-width="${y===0?1.2:.6}"/><text x="${l-6}" y="${Y(y)+4}" text-anchor="end">${y>0?"+"+y:y===0?"0":"−"+(-y)}</text>`;}
+ s+=`<line x1="${l}" x2="${w-r}" y1="${Y(-2)}" y2="${Y(-2)}" stroke="var(--ok)" stroke-width="1"/>`;
+ s+=`<text x="${(l+w-r)/2}" y="${h-6}" text-anchor="middle">tokens saved on unseen questions</text>`;
+ s+=`<text transform="translate(12 ${(t+h-b)/2}) rotate(-90)" text-anchor="middle">accuracy change (points)</text>`;
+ const lab={r1:"R1",r2g:"R2",r3:"R3",r4:"R4",r5:"R5",bal:"balanced",ca1:"ca1",ca2:"ca2",cb1:"cb1",cb2:"cb2",a1:"A1",b1:"B1",b2:"B2",rep4b50:"rep4 50/50",rep5rft:"rep5 RFT",comp:"competitor",r2nc:"R2nc",rep4b75:"rep4 75/25",rep5b50:"rep5 50/50"};
+ const off={ca2:[-6,-10,"end"],cb2:[8,14,"start"],ca1:[8,-8,"start"],rep4b50:[-8,-8,"end"],r2nc:[8,14,"start"],comp:[8,-8,"start"],r2g:[8,-8,"start"],bal:[8,4,"start"],rep4b75:[-8,14,"end"],rep5b50:[8,4,"start"]};
+ pts.forEach(({n,v,ext})=>{const c=n.st==="ok"?"var(--ok)":ext?"var(--ink)":"var(--over)";const x=X(v[0]),y=Y(v[1]);
+  s+=`<g class="pt" tabindex="0" role="button" aria-label="${n.name}: ${v[0]}% saved, ${accS(v[1])} points" data-id="${n.id}">`;
+  if(!ext)s+=`<line x1="${x}" x2="${x}" y1="${Y(v[1]+1.5)}" y2="${Y(v[1]-1.5)}" stroke="${c}" stroke-opacity=".35" stroke-width="2"/>`;
+  s+=ext?`<rect x="${x-6}" y="${y-6}" width="12" height="12" transform="rotate(45 ${x} ${y})" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>`
+        :`<circle cx="${x}" cy="${y}" r="6" fill="${n.clean===true?c:"var(--panel)"}" stroke="${c}" stroke-width="2"/>`;
+  if(lab[n.id]){const o=off[n.id]||[8,4,"start"];s+=`<text x="${x+o[0]}" y="${y+o[1]}" text-anchor="${o[2]}" style="fill:var(--ink)">${lab[n.id]}</text>`;}
+  s+=`<title>${n.name}: ${v[0]}% / ${accS(v[1])}</title></g>`;});
+ s+="</svg>";const el=document.getElementById("scatter");el.innerHTML=s;
+ el.querySelectorAll(".pt").forEach(g=>{g.addEventListener("click",()=>openD(g.dataset.id));g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openD(g.dataset.id);}});});})();
+
+/* ---------- flattery dumbbell ---------- */
+(function(){const list=N.filter(n=>n.s&&(n.u8||n.u4)).map(n=>({n,u:(n.u8||n.u4)[1],uk:n.u8?"×8":"×4",f:n.s[1]})).sort((a,b)=>(a.u-a.f)-(b.u-b.f)).reverse();
+ const w=440,rh=21,l=150,r=40,t=22;const h=t+list.length*rh+26;const X=v=>l+(v+6)/(1+6)*(w-l-r);
+ let s=`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Usual vs unseen accuracy per model">`;
+ for(let x=0;x>=-6;x--)s+=`<line x1="${X(x)}" x2="${X(x)}" y1="${t-6}" y2="${h-22}" stroke="var(--line)" stroke-width="${x===-2?1.4:.6}" ${x===-2?'stroke-dasharray="3 3"':''}/><text x="${X(x)}" y="${h-8}" text-anchor="middle">${x===0?"0":"−"+(-x)}</text>`;
+ s+=`<text x="${X(-2)+4}" y="${t-8}" style="fill:var(--ok)">−2 limit</text>`;
+ list.forEach((d,i)=>{const y=t+i*rh+8;const c=d.f>=-2?"var(--ok)":"var(--over)";
+  s+=`<g class="pt" tabindex="0" role="button" data-id="${d.n.id}" aria-label="${d.n.name}: usual ${accS(d.u)}, unseen ${accS(d.f)}">`;
+  s+=`<text x="${l-8}" y="${y+4}" text-anchor="end" style="fill:var(--ink)">${d.n.name.replace("Round 4 repair: ","rep4 ").replace("Round 5 repair: ","rep5 ").replace("own short right answers","RFT").replace("equal-length pairs","equal-len").replace(" (no code pairs)","")}</text>`;
+  s+=`<line x1="${X(d.u)}" x2="${X(d.f)}" y1="${y}" y2="${y}" stroke="${c}" stroke-width="2.5" stroke-opacity=".6"/>`;
+  s+=`<circle cx="${X(d.u)}" cy="${y}" r="4.5" fill="var(--panel)" stroke="var(--muted)" stroke-width="1.6"/><circle cx="${X(d.f)}" cy="${y}" r="5" fill="${c}"/>`;
+  s+=`<text x="${w-r+6}" y="${y+4}">${(d.f-d.u)>0?"+":"−"}${Math.abs(d.f-d.u).toFixed(1)}</text></g>`;});
+ s+="</svg>";const el=document.getElementById("flatter");el.innerHTML=s;
+ el.querySelectorAll(".pt").forEach(g=>{g.addEventListener("click",()=>openD(g.dataset.id));g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openD(g.dataset.id);}});});})();
+
+/* ---------- ranking ---------- */
+(function(){const tb=document.querySelector("#rank tbody");
+ N.filter(n=>n.s||n.q||n.full).map(n=>({n,u:n.full?{v:n.full,lab:"his full eval ×8"}:unseen(n)})).sort((a,b)=>b.u.v[1]-a.u.v[1]).forEach(({n,u})=>{
+  const tr=document.createElement("tr");tr.tabIndex=0;
+  tr.innerHTML=`<td><b>${n.name}</b></td><td>${FAM[n.f].split(" · ")[0]}</td><td class="n">${u.v[0].toFixed(1)}</td><td class="n ${cls(u.v[1])}">${accS(u.v[1])}</td><td>${u.lab}</td><td>${n.f==="ref"?"external":n.clean===true?'<span class="tag clean">CLEAN</span>':'<span class="tag grey">MBPP</span>'}</td>`;
+  tr.addEventListener("click",()=>openD(n.id));tr.addEventListener("keydown",e=>{if(e.key==="Enter")openD(n.id);});tb.appendChild(tr);});})();
+
+/* ---------- drawer ---------- */
+const D=document.getElementById("drawer");let lastFocus=null;
+const VT={ok:"Within −2 on unseen questions",over:"Worse than −2 on unseen questions",untested:"Never tested on unseen questions: its score may be flattering",dead:"Abandoned method",running:"Running now",queued:"Queued",ref:"Reference",ext:"External model"};
+function openD(id){const n=byId[id];if(!n)return;lastFocus=document.activeElement;
+ document.querySelectorAll(".node.sel").forEach(e=>e.classList.remove("sel"));els[id]&&els[id].classList.add("sel");
+ paths.forEach(p=>p.classList.toggle("hot",p.dataset.to===id||p.dataset.from===id));
+ document.getElementById("dFam").textContent=FAM[n.f];document.getElementById("dTitle").textContent=n.name;
+ const v=document.getElementById("dVerdict");v.className="verdict "+n.st;v.innerHTML="<b>"+VT[n.st]+".</b> "+(n.v||"");
+ document.getElementById("dMethod").textContent=n.m||"";
+ const facts=Object.assign({},n.facts||{});
+ if(n.parents.length)facts["Started from"]=n.parents.map(p=>`<button class="linkbtn" data-open="${p}">${byId[p].name}</button>`).join(" + ");
+ const kids=N.filter(k=>k.parents.includes(id));if(kids.length)facts["Led to"]=kids.map(k=>`<button class="linkbtn" data-open="${k.id}">${k.name}</button>`).join(", ");
+ if(n.f!=="ref")facts["MBPP status"]=n.clean===true?"Clean: never saw any MBPP data":"Grey zone: descends from a step that saw ~74 MBPP tasks";
+ if(n.path)facts["Saved as"]=`<span class="mono">${n.path}</span>`;
+ document.getElementById("dFacts").innerHTML=Object.entries(facts).map(([k,x])=>`<dt>${k}</dt><dd>${x}</dd>`).join("");
+ const rowsM=[["s","Unseen questions ×8","trusted"],["q","Questions 41–80 ×8","trusted"],["full","His full evaluation ×8","trusted"],["u8","Usual questions ×8","flatters"],["u4","Usual questions ×4","noisy"],["u2","Usual questions ×2","very noisy"]].filter(r=>n[r[0]]);
+ document.getElementById("dMeas").innerHTML=rowsM.length?`<tr><th>Measured on</th><th>Saved</th><th>Accuracy</th><th></th></tr>`+rowsM.map(r=>`<tr><td>${r[1]}</td><td class="mono">${n[r[0]][0].toFixed(1)}%</td><td class="mono ${r[2]==="trusted"?cls(n[r[0]][1]):""}">${accS(n[r[0]][1])}</td><td class="trust">${r[2]}</td></tr>`).join(""):`<tr><td>No scores yet.</td></tr>`;
+ const tb=document.getElementById("dTypeBox");if(n.types){tb.hidden=false;document.getElementById("dTypeH").textContent=n.typesH||"Per test";
+  document.getElementById("dType").innerHTML=`<tr><th>Test</th><th>Saved / accuracy</th></tr>`+Object.entries(n.types).map(([k,x])=>`<tr><td>${k}</td><td class="mono">${x}</td></tr>`).join("");}else tb.hidden=true;
+ const nb=document.getElementById("dNoteBox");if(n.note){nb.hidden=false;document.getElementById("dNote").textContent=n.note;}else nb.hidden=true;
+ D.classList.add("open");D.setAttribute("aria-hidden","false");document.getElementById("dClose").focus();}
+function closeD(){D.classList.remove("open");D.setAttribute("aria-hidden","true");document.querySelectorAll(".node.sel").forEach(e=>e.classList.remove("sel"));paths.forEach(p=>p.classList.remove("hot"));if(lastFocus&&lastFocus.focus)lastFocus.focus();}
+document.getElementById("dClose").addEventListener("click",closeD);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&D.classList.contains("open"))closeD();});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b){e.preventDefault();openD(b.dataset.open);}});
+</script>

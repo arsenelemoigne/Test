@@ -97,6 +97,17 @@ def parse_arguments():
     parser.add_argument("--gpu-memory", type=float, default=0.35, help="vLLM share of the GPU")
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--reward", choices=["shorter", "arora"], default="shorter",
+                        help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
+                             "standardized among the group's correct replies; wrong or cut off = 0")
+    parser.add_argument("--adaptive", action="store_true",
+                        help="arora: alpha_q = alpha x the group's solve rate (ALP): hard questions keep their thinking")
+    parser.add_argument("--advantage", choices=["group", "batch"], default="group",
+                        help="batch: reward minus the group mean, over the whole batch's spread (DLER), not each group's")
+    parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
+    parser.add_argument("--grader", choices=["task", "typed"], default="task",
+                        help="typed: typed.is_correct (math, multiple choice, code tests, tools, instructions)")
+    parser.add_argument("--save-every", type=int, default=0, help="also keep the LoRA every N steps (out/step-N)")
     parser.add_argument("--eval-only", action="store_true",
                         help="no training: score --init-adapter (or the base model) on the first --questions of --data")
     return parser.parse_args()
@@ -117,6 +128,19 @@ def length_rewards(lengths, correct, alpha):
     target = max(target, 1)
     return [max(0.0, 1 - alpha * abs(n - target) / target) if ok else -alpha * abs(n - target) / target
             for n, ok in zip(lengths, correct)]
+
+
+def arora_rewards(thinking, correct, alpha):
+    """Arora & Zanette (2502.04463): a correct reply gets 1 - alpha * sigmoid(z), z its thinking length
+    standardized among the group's correct replies (shorter than its siblings: more than 1 - alpha/2); a wrong
+    or cut-off reply gets 0, so being right always beats being short."""
+    lengths = [n for n, ok in zip(thinking, correct) if ok]
+    if not lengths:
+        return [0.0] * len(thinking)
+    mean = sum(lengths) / len(lengths)
+    spread = statistics.pstdev(lengths) if len(lengths) > 1 else 0.0
+    sigmoid = lambda z: 1 / (1 + math.exp(-z))
+    return [1 - alpha * sigmoid((n - mean) / (spread + 1e-6)) if ok else 0.0 for n, ok in zip(thinking, correct)]
 
 
 def learning_rate(step, steps, lr, lr_end, restarts):
@@ -268,6 +292,30 @@ def token_advantages(advantage, length, redundant, lam):
     return [advantage - (lam if i in redundant else 0.0) for i in range(length)]
 
 
+def grade_all(questions, replies, tokenizer, eos, grader):
+    """Correct or not, per reply (an unfinished reply is wrong); typed grading runs code tests in parallel."""
+    from concurrent.futures import ThreadPoolExecutor
+    if grader == "typed":
+        import typed  # noqa: F401  (imported once here, not raced by the grading threads)
+    jobs = [(q, r) for q, group in zip(questions, replies) for r in group]
+
+    def grade(job):
+        question, reply = job
+        if not reply or reply[-1] != eos:
+            return False
+        if grader == "typed":
+            from typed import full_text, is_correct
+            return bool(is_correct(question, full_text(tokenizer, reply)))
+        return is_task_correct(tokenizer.decode(reply, skip_special_tokens=True), question["answer"], question["task"])
+    with ThreadPoolExecutor(8) as pool:
+        flat = list(pool.map(grade, jobs))
+    out, i = [], 0
+    for group in replies:
+        out.append(flat[i:i + len(group)])
+        i += len(group)
+    return out
+
+
 # ---------------------------------------------------------------- sampling
 
 NO_THINK = "<think>\n\n</think>\n\n"  # what Qwen3's chat template inserts with enable_thinking=False
@@ -398,7 +446,8 @@ def main():
     eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
 
     keep = set(args.sources.split(","))
-    pool = balanced_order([r for r in read_jsonl(Path(args.data)) if r["source"] in keep], random.Random(args.seed))
+    pool = balanced_order([r for r in read_jsonl(Path(args.data)) if args.sources == "all" or r["source"] in keep],
+                          random.Random(args.seed))
     current = out / "current"
     model.save_pretrained(current)
     sampler = Sampler(args, tokenizer)
@@ -415,26 +464,40 @@ def main():
 
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0}
-        for question, prompt, group in zip(questions, prompts, replies):
-            correct = [bool(r) and r[-1] == eos and is_task_correct(
-                tokenizer.decode(r, skip_special_tokens=True), question["answer"], question["task"])
-                for r in group]
-            rewards = length_rewards([len(r) for r in group], correct, args.alpha)
+        grades = grade_all(questions, replies, tokenizer, eos, args.grader)
+        groups = []
+        for question, prompt, group, correct in zip(questions, prompts, replies, grades):
+            if args.reward == "arora":
+                thinking = [r.index(close_id) if close_id in r else len(r) for r in group]
+                alpha = args.alpha * (sum(correct) / len(correct) if args.adaptive else 1.0)
+                rewards = arora_rewards(thinking, correct, alpha)
+            else:
+                rewards = length_rewards([len(r) for r in group], correct, args.alpha)
             skipped = [i >= len(group) - no_think for i in range(len(group))]
             rewards = [r + (args.no_think_bonus if ok and skip else 0.0)
                        for r, ok, skip in zip(rewards, correct, skipped)]
-            advantages = group_advantages(rewards)
+            advantages = group_advantages(rewards) if args.advantage == "group" else None
+            groups.append(rewards)
             stats["no_think_correct"] += sum(ok for ok, skip in zip(correct, skipped) if skip)
             stats["no_think_replies"] += sum(skipped)
             stats["thinking"] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
             stats["correct"] += sum(correct)
             stats["replies"] += len(group)
             stats["tokens"] += sum(map(len, group))
-            if any(a != 0 for a in advantages):
+            if advantages and any(a != 0 for a in advantages):
                 stats["signal"] += 1
-            for reply, ok, advantage in zip(group, correct, advantages):
+            for index, (reply, ok) in enumerate(zip(group, correct)):
                 thinking_len = reply.index(close_id) if close_id in reply else len(reply)
-                jobs.append((prompt, reply, ok, advantage, thinking_len, question))
+                jobs.append([prompt, reply, ok, advantages[index] if advantages else (len(groups) - 1, index),
+                             thinking_len, question])
+        if args.advantage == "batch":  # DLER: center per group, scale by the whole batch's spread
+            centered = [[r - sum(g) / len(g) for r in g] for g in groups]
+            spread = statistics.pstdev([c for g in centered for c in g]) or 1.0
+            for job in jobs:
+                g, i = job[3]
+                job[3] = centered[g][i] / spread
+            stats["signal"] = sum(any(abs(c) > 1e-8 for c in g) for g in centered)
+        jobs = [tuple(j) for j in jobs]
 
         # on-policy update(s): loss = -sum_t A_t log pi(token_t), averaged over the chunk's tokens
         lr = learning_rate(step, args.steps, args.lr, args.lr_end, args.restarts)
@@ -450,7 +513,7 @@ def main():
                     entropies = []
                     batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
                 refs = None
-                if args.redundant == "tokenprobe-kl":
+                if args.redundant == "tokenprobe-kl" or args.kl_coef:
                     with torch.no_grad(), model.disable_adapter():
                         with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
                             refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
@@ -479,6 +542,9 @@ def main():
                                 thinking_len, args.settle_threshold)
                         advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
                     per_token = -torch.tensor(advantages_t, device=device) * logps
+                    if betas is None and args.kl_coef:
+                        betas = [args.kl_coef] * len(reply)
+                        gammas = [0.0] * len(reply)
                     if betas is not None:
                         gap = refs[index] - logps  # k3 estimator of KL(pi || ref), per token
                         kl = torch.exp(gap) - gap - 1
@@ -497,6 +563,8 @@ def main():
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
         model.save_pretrained(current)
+        if args.save_every and (step + 1) % args.save_every == 0:
+            model.save_pretrained(out / f"step-{step + 1}")
 
         entry = {"step": step + 1, "accuracy": stats["correct"] / stats["replies"],
                  "mean_tokens": stats["tokens"] / stats["replies"],
