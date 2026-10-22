@@ -1171,6 +1171,13 @@ def end(args):
     save everything, flush Drive, then stop the worker that launched this stage, so the notebook moves on
     to releasing the runtime instead of polling an empty queue for hours."""
     import signal
+    log = Path("/content/track_log.txt")
+    if log.exists() and Path("/content/drive/MyDrive").exists():  # every score line, easy to read from Drive
+        lines = [l for l in log.read_text(errors="replace").splitlines() if l.startswith(("plan:", "== ", "   bfcl"))]
+        name = "SUMMARY_" + (os.environ.get("TRACK_SESSION") or "runtime1") + ".txt"
+        DRIVE.mkdir(parents=True, exist_ok=True)
+        (DRIVE / name).write_text("\n".join(lines) + "\n")
+        print(f"drive: wrote {name}", flush=True)
     finish()
     parent = os.getppid()
     print(f"plan: stopping the worker (pid {parent})", flush=True)
