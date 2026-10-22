@@ -1014,6 +1014,9 @@ def repair(args):
 
 def audit(args):
     """Every training question ever prepared (data/*.jsonl) against all 2,759 evaluation questions."""
+    if Path("runs/audit/contamination_report.txt").exists():  # done before (restored from Drive)
+        print(Path("runs/audit/contamination_report.txt").read_text(), flush=True)
+        return
     files = sorted(str(p) for p in Path("data").glob("*.jsonl") if p.name not in ("val.jsonl",))
     py("audit_contamination.py", "--data", *files, "--out", "runs/audit")
 
