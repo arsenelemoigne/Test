@@ -107,6 +107,8 @@ def parse_arguments():
     parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
     parser.add_argument("--grader", choices=["task", "typed"], default="task",
                         help="typed: typed.is_correct (math, multiple choice, code tests, tools, instructions)")
+    parser.add_argument("--offset", type=int, default=0,
+                        help="steps already done in earlier blocks: question slice and seed continue from there")
     parser.add_argument("--save-every", type=int, default=0, help="also keep the LoRA every N steps (out/step-N)")
     parser.add_argument("--eval-only", action="store_true",
                         help="no training: score --init-adapter (or the base model) on the first --questions of --data")
@@ -456,11 +458,11 @@ def main():
 
     for step in range(args.steps):
         scale = args.scale_start + (args.scale_end - args.scale_start) * step / max(1, args.steps - 1)
-        questions = [pool[(step * args.questions + i) % len(pool)] for i in range(args.questions)]
+        questions = [pool[((args.offset + step) * args.questions + i) % len(pool)] for i in range(args.questions)]
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
         no_think = round(args.group * args.no_think_share)
-        replies = sampler.sample(prompts, current, step, model, no_think)
+        replies = sampler.sample(prompts, current, args.offset + step, model, no_think)
 
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0}

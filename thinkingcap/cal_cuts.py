@@ -1,5 +1,13 @@
 """Calibrated cuts: where can the model's own correct replies stop thinking and still be right, per data type?
 
+Confidence vs outcome: at every cut we also read the model's own confidence, the probability it gives (per token,
+geometric mean) to the answer it finally wrote, right after "</think>" is closed at the cut (teacher forcing; works
+for every type, no gold string needed). The summary compares that confidence with the real outcome (the share of
+the 4 re-answers that are right), bin by bin (calibration table, ECE), and picks, per source, the confidence
+threshold c: each reply stops at its earliest cut where confidence >= c; the lowest c whose real accuracy stays
+within the allowance is kept. Pairs are built at the confidence-chosen cut (the model's own signal), validated by
+the real re-answers; the outcome-only rule (tau) is reported beside it for comparison.
+
 For each correct, finished reply (the model's own best-of-8 rollouts), the thinking is cut at --fractions of its
 tokens (snapped back to the last paragraph break), "</think>" is closed there, and the model answers --samples
 times from the cut (check_vllm.py, the model that wrote the rollouts). Each cut's success rate (right / samples) is
@@ -37,6 +45,54 @@ def cut_text(text, fraction):
     head = text[:point]
     brk = head.rfind("\n\n")
     return head[:brk] if brk > len(text) * fraction * 0.5 else head
+
+
+def confidences(model_path, adapter, items, dtype, batch_tokens=12000):
+    """exp(mean log p(answer token | prompt + cut thinking)) for each (prompt, cut, answer) item."""
+    import torch
+    from transformers import AutoModelForCausalLM
+    from probe_curve import score
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = AutoModelForCausalLM.from_pretrained(model_path, dtype=getattr(torch, dtype) if device == "cuda" else torch.float32).to(device)
+    if adapter:
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, adapter)
+    model.eval()
+    rows = [(k, 0, prompt + cut, answer[:256]) for k, (prompt, cut, answer) in enumerate(items)]
+    scores = score(model, rows, batch_tokens, device)
+    del model
+    torch.cuda.empty_cache()
+    import math
+    return [math.exp(scores[(k, 0)] / max(1, len(items[k][2][:256]))) for k in range(len(items))]
+
+
+def calibration_table(points, bins=(0, 0.2, 0.4, 0.6, 0.8, 0.9, 1.01)):
+    """points: [(confidence, real success rate)] -> (rows of (lo, hi, n, mean confidence, real rate), ECE)."""
+    rows, ece = [], 0.0
+    for lo, hi in zip(bins, bins[1:]):
+        inside = [(c, r) for c, r in points if lo <= c < hi]
+        if inside:
+            conf = sum(c for c, _ in inside) / len(inside)
+            real = sum(r for _, r in inside) / len(inside)
+            rows.append((lo, min(hi, 1.0), len(inside), conf, real))
+            ece += len(inside) / len(points) * abs(conf - real)
+    return rows, ece
+
+
+def by_confidence(entries, thresholds, allow):
+    """entries: [(full_len, [(cut_len, rate, confidence), ...])]. The lowest confidence threshold whose real
+    accuracy loss stays within `allow` points: (c, saved, loss), or (None, 0, 0)."""
+    best = (None, 0.0, 0.0)
+    for c in sorted(thresholds, reverse=True):
+        kept, rates = [], []
+        for full, cuts in entries:
+            hit = next(((n, r) for n, r, conf in cuts if conf >= c), None)
+            kept.append(1 - hit[0] / full if hit else 0.0)
+            rates.append(hit[1] if hit else 1.0)
+        loss = 100 * (1 - sum(rates) / len(rates))
+        if loss <= allow:
+            best = (c, sum(kept) / len(kept), loss)
+    return best
 
 
 def calibrate(entries, taus, allow):
@@ -109,27 +165,54 @@ def main():
             command += ["--adapter", args.adapter]
         subprocess.run(command, check=True)
     verdicts = {v["key"]: v for v in read_jsonl(verdict_path)}
+    conf_path = out / "confidence.jsonl"
+    if not conf_path.exists():
+        close_id = tokenizer.convert_tokens_to_ids("</think>")
+        items = []
+        for i, f, t in jobs:
+            r = replies[i]
+            ids = r["output_ids"]
+            answer_text = tokenizer.decode(ids[ids.index(close_id) + 1:], skip_special_tokens=True).lstrip("\n")
+            items.append((r["prompt_ids"], t, tokenizer.encode(answer_text, add_special_tokens=False) or [close_id]))
+        values = confidences(args.model, args.adapter, items, args.dtype)
+        write_jsonl(conf_path, [{"key": k, "confidence": c} for k, c in enumerate(values)])
+    conf = {c["key"]: c["confidence"] for c in read_jsonl(conf_path)}
 
     per_reply = defaultdict(list)  # reply index -> [(fraction, cut ids, verdict)] in fraction order
     for k, (i, f, t) in enumerate(jobs):
-        per_reply[i].append((f, t, verdicts[k]))
+        per_reply[i].append((f, t, verdicts[k] | {"confidence": conf[k]}))
     allow = dict(spec.split("=") for spec in args.allow.split(","))
     taus = [float(t) for t in args.taus.split(",")]
     by_source = defaultdict(list)
     for i, cuts in per_reply.items():
         by_source[replies[i]["source"]].append(i)
 
-    pairs, lines = [], [f"{'source':<16}{'replies':>8}{'tau':>6}{'saved':>8}{'exp. loss':>11}{'shorten':>9}{'hard':>6}"]
+    thresholds = [x / 100 for x in range(5, 100, 5)]
+    calib_lines = ["", "Confidence vs real outcome (bins of the model's confidence at a cut -> how often its re-answers "
+                   "were really right):"]
+    pairs, lines = [], [f"{'source':<16}{'replies':>8}{'conf c':>8}{'saved':>8}{'loss':>7}{'| tau':>7}{'saved':>8}"
+                        f"{'loss':>7}{'shorten':>9}{'hard':>6}{'ECE':>7}"]
     for source, indices in sorted(by_source.items()):
-        entries = [(replies[i]["output_tokens"],
-                    [(len(t) + (len(v["right_ids"] or v["wrong_ids"] or [])), v["right"] / max(1, v["of"]))
-                     for _, t, v in per_reply[i]]) for i in indices]
-        tau, saved, loss = calibrate(entries, taus, float(allow.get(source, allow["default"])))
+        size = lambda t, v: len(t) + len(v["right_ids"] or v["wrong_ids"] or [])
+        entries = [(replies[i]["output_tokens"], [(size(t, v), v["right"] / max(1, v["of"])) for _, t, v in per_reply[i]])
+                   for i in indices]
+        centries = [(replies[i]["output_tokens"],
+                     [(size(t, v), v["right"] / max(1, v["of"]), v["confidence"]) for _, t, v in per_reply[i]])
+                    for i in indices]
+        budget = float(allow.get(source, allow["default"]))
+        tau, saved, loss = calibrate(entries, taus, budget)
+        c, csaved, closs = by_confidence(centries, thresholds, budget)
+        table, ece = calibration_table([(v["confidence"], v["right"] / max(1, v["of"])) for i in indices
+                                        for _, _, v in per_reply[i]])
+        calib_lines.append(f"  {source}: " + "; ".join(f"{lo:.1f}-{hi:.1f}: n {n}, conf {cf:.2f} -> real {rl:.2f}"
+                                                      for lo, hi, n, cf, rl in table) + f" (ECE {ece:.2f})")
         n_short = n_hard = 0
-        if tau is not None:
+        if c is not None:
             for i in indices:
                 r, cuts = replies[i], per_reply[i]
-                hit = next((j for j, (_, _, v) in enumerate(cuts) if v["right"] / max(1, v["of"]) >= tau and v["right_ids"]), None)
+                hit = next((j for j, (_, _, v) in enumerate(cuts) if v["confidence"] >= c), None)
+                if hit is None or not cuts[hit][2]["right_ids"]:
+                    continue
                 if hit is None:
                     continue
                 _, thinking, verdict = cuts[hit]
@@ -143,12 +226,13 @@ def main():
                     t, v = early[-1]  # the latest cut that still fails: the most tempting place to stop too early
                     pairs.append(base | {"kind": "hard", "rejected_ids": t + v["wrong_ids"]})
                     n_hard += 1
-        lines.append(f"{source:<16}{len(indices):>8}{tau if tau is not None else '-':>6}{saved:>8.0%}{loss:>11.1f}"
-                     f"{n_short:>9}{n_hard:>6}")
+        lines.append(f"{source:<16}{len(indices):>8}{c if c is not None else '-':>8}{csaved:>8.0%}{closs:>7.1f}"
+                     f"{tau if tau is not None else '-':>7}{saved:>8.0%}{loss:>7.1f}{n_short:>9}{n_hard:>6}{ece:>7.2f}")
     write_jsonl(out / "pairs.jsonl", pairs)
-    lines.append(f"total {len(pairs)} pairs; saved = mean share of the reply cut away at tau; exp. loss = points, "
-                 "if the model learned to stop at every calibrated cut")
-    text = "\n".join(lines)
+    lines.append(f"total {len(pairs)} pairs at the confidence threshold c; saved = mean share of the reply cut away; "
+                 "loss = real accuracy points lost if the model learned to stop at every chosen cut; tau = the "
+                 "outcome-only rule, for comparison; ECE = gap between confidence and real accuracy (0 = calibrated)")
+    text = "\n".join(lines + calib_lines)
     (out / "summary.txt").write_text(text + "\n")
     print(text, flush=True)
 

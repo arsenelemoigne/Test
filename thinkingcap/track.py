@@ -99,6 +99,9 @@ def main():
     parser.add_argument("--rl-alpha", type=float, default=0.15, help="rlcal: length penalty weight (Arora & Zanette)")
     parser.add_argument("--rl-lr", type=float, default=1e-5, help="rlcal: RL learning rate (LoRA)")
     parser.add_argument("--rl-kl", type=float, default=1e-3, help="rlcal: KL to the round's start model")
+    parser.add_argument("--rl-only", action="store_true", help="rlcal: no calibrated-cut DPO; RL straight from --start")
+    parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
+    parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
     parser.add_argument("--smoke", action="store_true", help="rlcal: tiny sizes, no scoring: does every step run?")
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
@@ -1038,8 +1041,10 @@ def rlcal(args):
     Finalists are reported x8 on the usual and the fresh (unseen) questions.
     """
     name = args.name
-    base = json.loads((ROOT / f"chain-{args.start[5:]}.json").read_text())["model"] if args.start.startswith("soup:") \
-        else args.start
+    if args.start.startswith("soup:"):
+        base = json.loads((ROOT / f"chain-{args.start[5:]}.json").read_text())["model"]
+    else:  # "raw" (from scratch) or a full model directory, e.g. models/rep4-blend50
+        base = "Qwen/Qwen3-0.6B" if args.start == "raw" else args.start
     small = args.smoke
     data = Path(f"data/rlcal-seed{args.data_seed}.jsonl")
     if not data.exists():
@@ -1070,6 +1075,40 @@ def rlcal(args):
         if not (k / "sft.jsonl").exists():
             py("select_shortest.py", "--rollouts", p / "rollouts.jsonl", "--out", k)
             py("contamination.py", "--data", k / "sft.jsonl", "--rollouts", p / "rollouts.jsonl", "--share", 0.3)
+    val = f"questions_val{VAL_SEED}"
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    if not Path(fresh_q, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
+    if not Path(val, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", VAL_SEED, "--exclude", QUESTIONS, fresh_q, "--out", val)
+
+    def choose(label, candidates, samples=4):
+        """candidates: [(tag, model path)] -> the one saving most within --floor on the choosing set."""
+        evaluate(ROOT / f"v{samples}-base", samples=samples, questions=val)
+        scored = []
+        for tag, model in candidates:
+            out = ROOT / f"v{samples}-{tag}"
+            evaluate(out, samples=samples, questions=val, model=model)
+            line, delta = score_line(f"{tag} (choosing set x{samples})", out, with_delta=True, base=ROOT / f"v{samples}-base")
+            print(line, flush=True)
+            scored.append((compare(out, ROOT / f"v{samples}-base")["average"]["token_reduction"] or 0, delta, tag, str(model)))
+        ok = [c for c in scored if c[1] >= args.floor] or sorted(scored, key=lambda c: -c[1])[:1]
+        saved, delta, tag, model = max(ok)
+        print(f"{label}: chosen {tag} ({saved:+.1%} / {delta:+.1f} on the choosing set x{samples})", flush=True)
+        return tag, model
+
+    def report(tag, model):
+        evaluate(ROOT / "s8-base", samples=8)
+        evaluate(ROOT / f"s8-{tag}", samples=8, model=model)
+        print(score_line(f"{tag} (usual 240 x 8)", ROOT / f"s8-{tag}", base=ROOT / "s8-base"), flush=True)
+        evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+        evaluate(ROOT / f"f8-{tag}", samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{tag} (fresh 240 x 8)", ROOT / f"f8-{tag}", base=ROOT / "f8-base"), flush=True)
+
+    if args.rl_only:
+        cal_tag, cal_model = f"{name}-start", base
+        return rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, (probe, kprobe), (keep, kkeep),
+                         choose, report)
     pairs = BON / f"pairs-{name}"
     parts = {"cal": pairs / "cal" / "pairs.jsonl", "base": pairs / "base" / "pairs.jsonl", "kod": pairs / "kod" / "pairs.jsonl"}
     if not parts["cal"].exists():
@@ -1098,40 +1137,12 @@ def rlcal(args):
             py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
                "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 2 if small else 10,
                "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
-    val = f"questions_val{VAL_SEED}"
-    fresh_q = f"questions_fresh{FRESH_SEED}"
-    if not Path(fresh_q, "questions.jsonl").exists():
-        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
-    if not Path(val, "questions.jsonl").exists():
-        py("subset_questions.py", "--per-dataset", 40, "--seed", VAL_SEED, "--exclude", QUESTIONS, fresh_q, "--out", val)
-
-    def choose(label, candidates):
-        """candidates: [(tag, model path)] -> the one saving most within --floor on the choosing set (x4)."""
-        evaluate(ROOT / "v4-base", samples=4, questions=val)
-        scored = []
-        for tag, model in candidates:
-            out = ROOT / f"v4-{tag}"
-            evaluate(out, samples=4, questions=val, model=model)
-            line, delta = score_line(f"{tag} (choosing set x4)", out, with_delta=True, base=ROOT / "v4-base")
-            print(line, flush=True)
-            scored.append((compare(out, ROOT / "v4-base")["average"]["token_reduction"] or 0, delta, tag, str(model)))
-        ok = [c for c in scored if c[1] >= args.floor] or sorted(scored, key=lambda c: -c[1])[:1]
-        saved, delta, tag, model = max(ok)
-        print(f"{label}: chosen {tag} ({saved:+.1%} / {delta:+.1f} on the choosing set x4)", flush=True)
-        return tag, model
-
-    def report(tag, model):
-        evaluate(ROOT / "s8-base", samples=8)
-        evaluate(ROOT / f"s8-{tag}", samples=8, model=model)
-        print(score_line(f"{tag} (usual 240 x 8)", ROOT / f"s8-{tag}", base=ROOT / "s8-base"), flush=True)
-        evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
-        evaluate(ROOT / f"f8-{tag}", samples=8, questions=fresh_q, model=model)
-        print(score_line(f"{tag} (fresh 240 x 8)", ROOT / f"f8-{tag}", base=ROOT / "f8-base"), flush=True)
-
     soups = []
     for step in ([2] if small else (10, 20, 30)):
         members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in seeds]
         members = [m for m in members if (m / "adapter_config.json").exists()]
+        if not members and small:  # a smoke run may end before its first checkpoint: its final adapter
+            members = [Path("adapters") / f"{name}-s{seed}" for seed in seeds]
         if not members:
             continue
         model = Path("models") / f"{name}-soup-{step}"
@@ -1145,43 +1156,63 @@ def rlcal(args):
         cal_tag, cal_model = choose(f"{name} cal-cut DPO", soups)
         (ROOT / f"chain-{name}-cal.json").write_text(json.dumps({"model": cal_model, "tag": cal_tag}))
         report(cal_tag, cal_model)
-    # 3. RL from the chosen soup, on questions the start model solved at least 4 of 8 times
+    rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, (probe, kprobe), (keep, kkeep), choose, report)
+
+
+def rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, probes, keeps, choose, report):
+    """RL from cal_model in blocks of --rl-block steps; after each block the LoRA is kept, merged and scored on the
+    choosing set with 2 answers (a log line), so any block can be gone back to; a block more than 2 points below
+    --floor stops the run. The best block (choosing set x4, within --floor) is reported x8 on usual and unseen."""
+    small = args.smoke
     solved = defaultdict(list)
-    for p in (probe, kprobe):
+    for p in probes:
         for l in (p / "rollouts.jsonl").read_text().splitlines():
             if l.strip():
                 r = json.loads(l)
                 solved[r["id"]].append(r["correct"])
-    allowed = {json.loads(l)["id"] for k in (keep, kkeep) for l in (k / "sft.jsonl").read_text().splitlines() if l.strip()}
+    allowed = {json.loads(l)["id"] for k in keeps for l in (k / "sft.jsonl").read_text().splitlines() if l.strip()}
     pool = Path(f"data/rl-{name}.jsonl")
     if not pool.exists():
         rows = [l for f in (data, kod_file) for l in f.read_text().splitlines() if l.strip()]
         rows = [l for l in rows if json.loads(l)["id"] in allowed and sum(solved[json.loads(l)["id"]]) >= 4]
         pool.write_text("\n".join(rows) + "\n")
         print(f"{name}: RL pool {len(rows)} questions (solved >= 4/8 by the start model)", flush=True)
+    block = 1 if small else args.rl_block
+    blocks = 2 if small else max(1, args.rl_steps // block)
     rl = Path("adapters") / f"{name}-rl"
-    steps = 2 if small else args.rl_steps
-    if not (rl / "adapter_config.json").exists():
-        py("rl_train.py", "--model", cal_model, "--data", pool, "--sources", "all", "--out", rl, "--steps", steps,
-           "--questions", 4 if small else 32, "--group", 8, "--max-tokens", 3072, "--reward", "arora", "--adaptive",
-           "--alpha", args.rl_alpha, "--advantage", "batch", "--kl-coef", args.rl_kl, "--grader", "typed",
-           "--redundant", "none", "--lr", args.rl_lr, "--save-every", 1 if small else 20, "--dtype", args.dtype)
-    print((rl / "rl_log.jsonl").read_text(), flush=True)
-    candidates = []
-    for step in range(1 if small else 20, steps + 1, 1 if small else 20):
-        ckpt = rl / f"step-{step}"
-        if (ckpt / "adapter_config.json").exists():
-            model = Path("models") / f"{name}-rl-{step}"
-            if not (model / "config.json").exists():
-                py("merge.py", "--model", cal_model, "--out", model, "--adapters", f"{ckpt}:1")
-            candidates.append((f"{name}-rl-{step}", model))
+    candidates, previous = [], None
+    for b in range(1, blocks + 1):
+        done = b * block
+        ckpt = rl / f"step-{done}"
+        if not (ckpt / "adapter_config.json").exists():
+            py("rl_train.py", "--model", cal_model, "--data", pool, "--sources", "all", "--out", ckpt,
+               "--steps", block, "--offset", done - block, *(["--init-adapter", previous] if previous else []),
+               "--questions", 4 if small else 32, "--group", 8, "--max-tokens", args.rl_max_tokens, "--reward", "arora",
+               "--adaptive", "--alpha", args.rl_alpha, "--advantage", "batch", "--kl-coef", args.rl_kl,
+               "--grader", "typed", "--redundant", "none", "--lr", args.rl_lr, "--dtype", args.dtype)
+        print((ckpt / "rl_log.jsonl").read_text(), flush=True)
+        previous = ckpt
+        model = Path("models") / f"{name}-rl-{done}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", cal_model, "--out", model, "--adapters", f"{ckpt}:1")
+        candidates.append((f"{name}-rl-{done}", model))
+        if small:
+            continue
+        tag = f"{name}-rl-{done}"
+        out = ROOT / f"v2-{tag}"
+        evaluate(ROOT / "v2-base", samples=2, questions=f"questions_val{VAL_SEED}")
+        evaluate(out, samples=2, questions=f"questions_val{VAL_SEED}", model=model)
+        line, delta = score_line(f"{tag} (choosing set x2, quick check)", out, with_delta=True, base=ROOT / "v2-base")
+        print(line, flush=True)
+        if delta < args.floor - 2:
+            print(f"{name}: RL stopped after step {done}: accuracy {delta:+.1f} on the quick check", flush=True)
+            break
     if small:
-        print(f"{name}: smoke OK: every step ran ({len(candidates)} RL checkpoints merged)", flush=True)
+        print(f"{name}: smoke OK: every step ran ({len(candidates)} RL blocks merged)", flush=True)
         return
     tag, model = choose(f"{name} RL", [(cal_tag, cal_model)] + candidates)
     (ROOT / f"chain-{name}-rl.json").write_text(json.dumps({"model": model, "tag": tag}))
-    if tag != cal_tag:
-        report(tag, model)
+    report(tag, model)
 
 
 def audit(args):
