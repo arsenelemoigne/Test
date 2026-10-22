@@ -32,7 +32,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "balanced", "full2", "clean", "confirm", "fresh", "peek", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -879,6 +879,16 @@ def peek(args):
         for run in runs:
             if run.name != "fresh-s8-base" and base.exists():
                 print(score_line(f"{run.name} (their fresh questions 41-80 x 8)", local / run.name, base=base), flush=True)
+
+
+def s1log(args):
+    """Read-only: the score lines of the other runtime's log on Drive (its page may not show its output)."""
+    log = DRIVE / "code" / "track_log.txt"
+    if not log.exists():
+        print(f"no log at {log}", flush=True)
+        return
+    lines = [l for l in log.read_text(errors="replace").splitlines() if l.startswith(("plan:", "== ", "   bfcl"))]
+    print("\n".join(["session 1 log, latest lines:", *lines[-40:]]), flush=True)
 
 
 def diag(args):
