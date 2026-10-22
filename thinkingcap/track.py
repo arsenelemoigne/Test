@@ -14,6 +14,7 @@ Run from the ThinkingCap-Test root, with this repo's scripts copied next to eval
 """
 
 import argparse
+from collections import defaultdict
 import filecmp
 import json
 import os
@@ -32,7 +33,7 @@ LIMIT = -3.0  # accuracy points against the raw model
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -66,6 +67,9 @@ def main():
     parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
+    parser.add_argument("--kod-file", default="data/kodcode2.jsonl", help="chain: KodCode task file")
+    parser.add_argument("--kod-exclude-runs", nargs="*", default=[], help="chain: runs whose KodCode tasks are skipped")
+    parser.add_argument("--mvt-sources", default="", help="chain: sources that also get verified MVT short-beats-long pairs")
     parser.add_argument("--floor", type=float, default=-1.5, help="chain: lowest 4-sample accuracy change for the chosen soup")
     parser.add_argument("--seeds", type=int, nargs="*", default=[0, 1, 2], help="balanced: DPO seeds averaged")
     parser.add_argument("--base-only", action="store_true", help="full2: score the raw model only")
@@ -849,12 +853,15 @@ def chain(args):
         py("bon_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--keep", keep / "sft.jsonl", "--out", pairs / "base",
            "--min-correct", 6, "--guard-median", "gsm_plus,gsm_ic", "--shorten-cap", "gsm_plus=40", "gsm_ic=40")
     if args.code_source == "kodcode":
-        if not Path("data/kodcode.jsonl").exists():
-            py("prepare_types.py", "--sources", "kodcode", "--per-source", 2000, "--out", "data/kodcode.jsonl")
+        kod_file = Path(args.kod_file)
+        if not kod_file.exists():  # kodcode2: a wider MBPP-like slice (the 45/90-token one, 907 tasks, runs out)
+            py("prepare_types.py", "--sources", "kodcode", "--per-source", 5000, "--out", kod_file,
+               "--kod-max-task", 70, "--kod-max-solution", 130)
         kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
         if not (kprobe / "rollouts.jsonl").exists():
-            earlier = [p / "rollouts.jsonl" for p in BON.glob("kprobe-*") if p != kprobe]
-            py("probe_curve.py", "--data", "data/kodcode.jsonl", "--sources", "kodcode", "--per-source", 2000, "--samples", 8,
+            # tasks this line already answered are skipped (by question text, across files)
+            earlier = [BON / f"kprobe-{n}" / "rollouts.jsonl" for n in args.kod_exclude_runs]
+            py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
                *sample_from, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
                "--max-questions", args.kod_questions, "--exclude-rollouts", *earlier)
         if not (kkeep / "sft.jsonl").exists():
@@ -864,6 +871,23 @@ def chain(args):
             py("bon_pairs.py", "--rollouts", kprobe / "rollouts.jsonl", "--keep", kkeep / "sft.jsonl", "--out", pairs / "kod",
                "--no-shorten", "kodcode")
         files.append(pairs / "kod" / "pairs.jsonl")
+    if args.mvt_sources:  # verified MVT cuts (4/4 re-answers right) as extra short-beats-long pairs
+        mvt = pairs / "mvt"
+        if not (mvt / "pairs.jsonl").exists():
+            allowed = {json.loads(l)["id"] for l in (keep / "sft.jsonl").read_text().splitlines() if l.strip()}
+            wanted = set(args.mvt_sources.split(","))
+            mvt.mkdir(parents=True, exist_ok=True)
+            subset = [l for l in (probe / "rollouts.jsonl").read_text().splitlines()
+                      if l.strip() and json.loads(l)["source"] in wanted and json.loads(l)["id"] in allowed]
+            (mvt / "rollouts.jsonl").write_text("\n".join(subset) + "\n")
+            who = ["--model", base] if base != "Qwen/Qwen3-0.6B" else []
+            if sample_from[:1] == ["--adapter"]:
+                who += sample_from
+            py("mvt_pairs.py", *who, "--rollouts", mvt / "rollouts.jsonl", "--out", mvt, "--travel", 1024,
+               "--check-samples", 4, "--per-question", 1, "--strict-sources", "", "--dtype", args.dtype)
+            kept = [l for l in (mvt / "pairs.jsonl").read_text().splitlines() if l.strip() and json.loads(l)["kind"] != "hard"]
+            (mvt / "pairs.jsonl").write_text("\n".join(kept) + "\n")
+        files.append(mvt / "pairs.jsonl")
     for f in files:
         print((f.parent / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for f in files for l in f.read_text().splitlines() if l.strip()]
@@ -905,6 +929,87 @@ def chain(args):
     out = ROOT / f"f8-{name}-soup-{step}"
     evaluate(out, samples=8, questions=questions, model=model)
     print(score_line(f"{name} soup step {step} (fresh 240 x 8)", out, base=ROOT / "f8-base"), flush=True)
+
+
+def repair(args):
+    """Win back accuracy on a 60%+ model (rounds 4 and 5) without shortening it further.
+
+    1. Blends (no training): --start mixed with round 2 (adapters/bon-dpo-r2g/step-10) at 75/25 and 50/50 in weight
+       space; each blend scored x8 on the fresh questions.
+    2. Length-matched right-beats-wrong: --start answers trap math (GSM-Plus, GSM-IC; a new draw) 8 times; pairs of a
+       right and a wrong reply of about the same length (within 25%), so DPO learns correctness and nothing about
+       length; one pass, checkpoints 10 and 20.
+    4. Self-correction (RFT): SFT of --start on its own right replies to the same questions that are no longer than
+       its typical reply; gentle (lr 2e-5, one pass).
+    Every candidate is scored with 4 samples on the usual questions and x8 on the fresh ones.
+    """
+    name, start = args.name, resolve(args.start)
+    questions = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=questions)
+    evaluate(ROOT / "s4-base", samples=4)
+
+    def judge(label, adapter=None, model=None):
+        tag = f"{name}-{label}"
+        evaluate(ROOT / f"s4-{tag}", adapter, samples=4, model=model)
+        print(score_line(f"{tag} (usual x4)", ROOT / f"s4-{tag}", base=ROOT / "s4-base"), flush=True)
+        evaluate(ROOT / f"f8-{tag}", adapter, samples=8, questions=questions, model=model)
+        print(score_line(f"{tag} (fresh x8)", ROOT / f"f8-{tag}", base=ROOT / "f8-base"), flush=True)
+
+    for weight in (0.75, 0.5):  # 1. blends
+        model = Path("models") / f"{name}-blend{int(weight * 100)}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--out", model, "--adapters", f"{start}:{weight}", f"adapters/bon-dpo-r2g/step-10:{1 - weight}")
+        judge(f"blend{int(weight * 100)}", model=model)
+    data = Path(f"data/trapmath-seed{args.data_seed}.jsonl")  # trap math, not drawn before
+    if not data.exists():
+        raw = Path(f"data/trapmath-seed{args.data_seed}-raw.jsonl")
+        py("prepare_types.py", "--sources", "gsm_plus,gsm_ic", "--per-source", 300, "--seed", args.data_seed, "--out", raw)
+        text = lambda r: r["prompt"][-1]["content"]
+        used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bal", "chain", "trapmath")) and "raw" not in p.name and p != data]
+        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip()}
+        data.write_text("".join(l + "\n" for l in raw.read_text().splitlines() if l.strip() and text(json.loads(l)) not in seen))
+    probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", "gsm_plus,gsm_ic", "--per-source", 300, "--samples", 8,
+           "--adapter", start, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150)
+    if not (keep / "sft.jsonl").exists():
+        py("select_shortest.py", "--rollouts", probe / "rollouts.jsonl", "--out", keep)
+        py("contamination.py", "--data", keep / "sft.jsonl", "--rollouts", probe / "rollouts.jsonl", "--share", 0.3)
+    pairs = BON / f"pairs-{name}-matched"  # 2. length-matched right-beats-wrong
+    if not (pairs / "pairs.jsonl").exists():
+        py("bon_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--keep", keep / "sft.jsonl", "--out", pairs,
+           "--length-match", 1.25)
+    print((pairs / "summary.txt").read_text(), flush=True)
+    adapter = Path("adapters") / f"{name}-matched"
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter, "--mix", "0,1,0",
+           "--save-every", 10, "--epochs", 1, "--dtype", args.dtype)
+    for step in (10, 20):
+        if (adapter / f"step-{step}" / "adapter_config.json").exists():
+            judge(f"matched-step-{step}", adapter=adapter / f"step-{step}")
+    rft = BON / f"rft-{name}"  # 4. self-correction: its own right replies, no longer than its typical one
+    if not (rft / "sft.jsonl").exists():
+        by_question = defaultdict(list)
+        for l in (probe / "rollouts.jsonl").read_text().splitlines():
+            if l.strip():
+                r = json.loads(l)
+                by_question[r["id"]].append(r)
+        allowed = {json.loads(l)["id"] for l in (keep / "sft.jsonl").read_text().splitlines() if l.strip()}
+        rows = []
+        for qid, group in by_question.items():
+            median = sorted(r["output_tokens"] for r in group)[len(group) // 2]
+            right = [r for r in group if r["correct"] and not r["truncated"] and r["output_tokens"] <= median]
+            if qid in allowed and right:
+                r = min(right, key=lambda r: abs(r["output_tokens"] - median))
+                rows.append({"id": qid, "source": r["source"], "prompt_ids": r["prompt_ids"], "completion_ids": r["output_ids"]})
+        rft.mkdir(parents=True, exist_ok=True)
+        (rft / "sft.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+        print(f"rft: {len(rows)} rows", flush=True)
+    adapter = Path("adapters") / f"{name}-rft"
+    if not (adapter / "adapter_config.json").exists():
+        py("sft.py", "--data", rft / "sft.jsonl", "--init-adapter", start, "--out", adapter, "--epochs", 1, "--lr", 2e-5,
+           "--dtype", args.dtype)
+    judge("rft", adapter=adapter)
 
 
 def audit(args):

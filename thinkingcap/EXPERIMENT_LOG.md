@@ -1011,3 +1011,12 @@ questions ignored; pairs as the balanced round; DPO with 3 seeds; the soup with 
 usual and the fresh questions. `track.py audit` writes runs/audit/contamination_report.txt for every training
 question ever prepared. Line B (runtime 1): cb1 from clean-b2 step 10, cb2. Line A (runtime 2): ca1 from clean-a2
 step 5, ca2. The full 2,759 x 8 evaluation stays for the very end (user's call).
+
+Queued after the two clean lines (22 Oct 2026):
+- Runtime 2, `repair` on round 4 (rep4) and round 5 (rep5): blends with round 2 (75/25, 50/50), length-matched
+  right-beats-wrong DPO on new trap math (pairs of a right and a wrong reply within 25% in length: correctness
+  without a length signal), self-correction SFT on own right replies no longer than the typical one.
+- Runtime 1, **v2 from scratch** (`chain --start raw`, rounds v2r1-v2r4): one recipe in order, no MBPP anywhere;
+  adds verified MVT cuts (4/4 re-answers) as short-beats-long pairs for tools and instructions; KodCode from a
+  wider MBPP-like slice (task <= 70, solution <= 130 tokens; the 907-task slice runs out), tasks never repeated
+  within a line (checked by question text).

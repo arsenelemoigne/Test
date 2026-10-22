@@ -36,6 +36,8 @@ def main():
                         help="share of the tool questions paired with tools that cannot answer them")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--sources", default="gsm8k,mbpp_train,hermes_tools,ifeval_like")
+    parser.add_argument("--kod-max-task", type=int, default=45, help="kodcode: longest task, Qwen3 tokens")
+    parser.add_argument("--kod-max-solution", type=int, default=90, help="kodcode: longest reference solution")
     parser.add_argument("--tool-mix", default="0.48,0.24,0.28",
                         help="toolace: shares of one-function, several-function and no-fit questions (BFCL's)")
     args = parser.parse_args()
@@ -244,7 +246,7 @@ def kodcode(args, rng):
         example = next((l.strip() for l in body.splitlines() if l.strip().startswith("assert") and f"{name}(" in l), None)
         if not functions or not example or len(functions) != body.count("def test_"):
             continue
-        if size(task["question"]) > 45 or size(task["solution"]) > 90:
+        if size(task["question"]) > args.kod_max_task or size(task["solution"]) > args.kod_max_solution:
             continue
         prompt = f'"""\n{task["question"].strip()}\n{example}\n"""\n'
         content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"

@@ -29,6 +29,9 @@ def main():
                         help="shorten pairs only for questions answered correctly at least this often (no lucky shortcuts)")
     parser.add_argument("--guard-median", default="", help="sources whose guard pairs use a median-length correct reply")
     parser.add_argument("--shorten-cap", nargs="*", default=[], help="source=N: at most N shorten pairs for that source")
+    parser.add_argument("--length-match", type=float, default=0,
+                        help="right-beats-wrong only, between a right and a wrong reply at most this ratio apart in "
+                             "length (e.g. 1.25): correctness without any length signal; no short-beats-long pairs")
     parser.add_argument("--no-shorten", default="", help="sources that get guard pairs only (e.g. mbpp_train)")
     args = parser.parse_args()
 
@@ -43,6 +46,19 @@ def main():
         right = sorted((r for r in done if r["correct"]), key=lambda r: r["output_tokens"])
         wrong = sorted((r for r in done if not r["correct"]), key=lambda r: r["output_tokens"])
         if not right:
+            continue
+        if args.length_match:
+            best = None
+            for r in right:
+                for w in wrong:
+                    ratio = max(r["output_tokens"], w["output_tokens"]) / max(1, min(r["output_tokens"], w["output_tokens"]))
+                    if ratio <= args.length_match and (best is None or ratio < best[0]):
+                        best = (ratio, r, w)
+            if best:
+                _, r, w = best
+                pairs.append({"id": qid, "source": group[0]["source"], "kind": "guard", "prompt_ids": r["prompt_ids"],
+                              "chosen_ids": r["output_ids"], "rejected_ids": w["output_ids"]})
+                kinds["guard", group[0]["source"]] += 1
             continue
         guarded = group[0]["source"] in args.no_shorten.split(",")
         lucky = len(right) < args.min_correct  # a short right answer here may be a shortcut that got lucky

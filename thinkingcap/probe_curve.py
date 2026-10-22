@@ -57,8 +57,9 @@ def main():
         # one chunk, not the whole run. Chunks mix the sources so long and short replies share a batch.
         partial = out / (ROLLOUTS + ".partial")
         done = {r["id"] for r in read_jsonl(partial)} if partial.exists() else set()
-        skip = {r["id"] for f in args.exclude_rollouts for r in read_jsonl(Path(f)) if Path(f).exists()}
-        todo = [q for q in questions if q["id"] not in done and q["id"] not in skip]
+        earlier = [r for f in args.exclude_rollouts if Path(f).exists() for r in read_jsonl(Path(f))]
+        skip, seen = {r["id"] for r in earlier}, {r["question"] for r in earlier}
+        todo = [q for q in questions if q["id"] not in done and q["id"] not in skip and q["prompt"][-1]["content"] not in seen]
         random.Random(SEED).shuffle(todo)
         if args.max_questions:  # a mixed sample of every source, stopped at this many questions in all
             todo = todo[:max(0, args.max_questions - len(done))]
