@@ -1128,6 +1128,11 @@ def rlcal(args):
 
     if args.rl_only:
         cal_tag, cal_model = f"{name}-start", base
+        if not small:  # the start model on the choosing set: the reference for every RL block
+            evaluate(ROOT / "v2-base", samples=2, questions=val)
+            evaluate(ROOT / f"v2-{name}-start", samples=2, questions=val, model=base)
+            print(score_line(f"{name}-start = {args.start} (choosing set x2, reference)", ROOT / f"v2-{name}-start",
+                             base=ROOT / "v2-base"), flush=True)
         return rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, (probe, kprobe), (keep, kkeep),
                          choose, report)
     pairs = BON / f"pairs-{name}"
@@ -1174,6 +1179,11 @@ def rlcal(args):
         print(f"{name}: smoke: cal-cut DPO and soup ran", flush=True)
         cal_tag, cal_model = soups[0]
     else:
+        # the start model on the same choosing set: the reference every later step is compared with
+        evaluate(ROOT / "v4-base", samples=4, questions=val)
+        evaluate(ROOT / f"v4-{name}-start", samples=4, questions=val, model=base)
+        print(score_line(f"{name}-start = {args.start} (choosing set x4, reference)", ROOT / f"v4-{name}-start",
+                         base=ROOT / "v4-base"), flush=True)
         cal_tag, cal_model = choose(f"{name} cal-cut DPO", soups)
         (ROOT / f"chain-{name}-cal.json").write_text(json.dumps({"model": cal_model, "tag": cal_tag}))
         report(cal_tag, cal_model)
