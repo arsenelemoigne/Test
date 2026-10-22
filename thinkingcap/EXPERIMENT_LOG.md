@@ -1020,3 +1020,13 @@ Queued after the two clean lines (22 Oct 2026):
   adds verified MVT cuts (4/4 re-answers) as short-beats-long pairs for tools and instructions; KodCode from a
   wider MBPP-like slice (task <= 70, solution <= 130 tokens; the 907-task slice runs out), tasks never repeated
   within a line (checked by question text).
+
+**Contamination audit (runs/audit/contamination_report.txt), every training question ever prepared vs the 2,759
+evaluation questions:** math (GSM8K, GSM-Plus, GSM-IC), ToolACE, ARC, CSQA, Skywork: 0 at >= 30%, 0 exact 13-word
+runs (1 in Skywork, unused). **MBPP (old lineage only): ~9 of 300 per draw at >= 50% and ~39 with an exact 13-word
+run: MBPP holds MBPP+ problems under other ids** (e.g. change_date_format ~ Mbpp/427, max_product ~ Mbpp/415). The 50%
+check dropped the worst; weaker near copies may have reached the gentle SFT of rounds 1-5 and the balanced model,
+which therefore cannot be certified clean. IFEval-like: 0-2 of 300 at >= 50%, ~190 share an exact 13-word run with
+IFEval: its fixed constraint wording ("answer with one of the following options: My answer is yes..."), not its
+questions; the chain rounds' strict check (30% or any 13-word run) drops them all the same. KodCode: 0 at >= 50%, 64
+with a 13-word run, dropped likewise. The submission should come from a clean line (A, B, v2).
