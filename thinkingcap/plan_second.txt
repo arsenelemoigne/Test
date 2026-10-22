@@ -22,5 +22,7 @@ fresh --inputs auto:clean-a1 auto:clean-a2
 # GSM-IC; no code); short-beats-long only where answered right >= 6/8, math capped and protected (median
 # chosen in right-beats-wrong); DPO with 3 seeds, averaged per step; best soup checked x8 on usual + fresh
 balanced --name bal-r2 --start adapters/bon-dpo-r2g/step-10 --data-seed 4 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# A2's quick scores were all outside at 2 samples (noisy): its step 5 with 4 samples
+recheck --samples 4 --adapter adapters/clean-a2/step-5
 # last line: save everything to Drive, flush it, and stop (the notebook then releases the runtime)
 end
