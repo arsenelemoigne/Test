@@ -53,13 +53,28 @@ def main():
         params = SamplingParams(n=args.samples, max_tokens=cap, seed=SEED, stop_token_ids=[end], **SAMPLING)
         outputs = engine.generate([{"prompt_token_ids": r["prompt_ids"] + r["thinking_ids"]} for r in batch],
                                   params, lora_request=lora)
+        # grade every answer in parallel (code answers run their tests in a subprocess: I/O-bound, threads suffice)
+        from concurrent.futures import ThreadPoolExecutor
+        jobs = [(row, list(c.token_ids)) for row, output in zip(batch, outputs) for c in output.outputs]
+
+        def grade(job):
+            row, tokens = job
+            finished = bool(tokens) and tokens[-1] == end
+            # a reply cut off by its cap is wrong: the evaluation would cut it off too
+            return finished, finished and is_correct(row["row"], full_text(tokenizer, row["thinking_ids"] + tokens))
+        for sample in {r["row"]["task"]: r["row"] for r in batch}.values():  # load each grader once, before the threads
+            try:
+                is_correct(sample, "")
+            except Exception:
+                pass
+        with ThreadPoolExecutor(16) as pool:
+            grades = iter(list(pool.map(grade, jobs)))
         for row, output in zip(batch, outputs):
             passing, wrong = [], None
             for completion in output.outputs:
                 tokens = list(completion.token_ids)
-                finished = bool(tokens) and tokens[-1] == end
-                # a reply cut off by its cap is wrong: the evaluation would cut it off too
-                if finished and is_correct(row["row"], full_text(tokenizer, row["thinking_ids"] + tokens)):
+                finished, right = next(grades)
+                if right:
                     passing.append(tokens)
                 elif finished and (wrong is None or len(tokens) < len(wrong)):
                     wrong = tokens  # a short, complete wrong answer: the losing side of a guard pair
