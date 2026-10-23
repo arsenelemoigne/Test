@@ -1157,3 +1157,17 @@ Reading: RL with alpha 0.15 on repeated questions does not move rc1 off its fron
 spread over -2.1 to -3.7 at 50-56% saved, within about two noise widths (+/-1.5 pts each at x8 on 240 questions), and the
 choosing set (x4) was 1.2-3.5 points more optimistic than the fresh set for every version. Best on fresh: RL 40 steps,
 +53.9 / -2.1 (clean). Still to score: DPO soups 10 and 20.
+
+**MBPP audit of the 74 MBPP rows the gentle best-of-8 SFT trained on (runs/bon/select-r1/sft.jsonl; the only MBPP exposure of
+the rounds-1-5 / balanced / repair lineage: every DPO round used --drop-sources mbpp_train), mbpp_audit.py vs the 378 MBPP+
+tasks (runs/audit/mbpp74.txt):** 8-gram share >= 30%: 0; exact 13-word run: 2; same function name: 1; wording similarity
+(difflib on words) >= 0.8: 18. Read by hand, the closest pairs are sibling tasks built on the same template with a
+different operation, not the same problem: add vs multiply nested tuples (13-word run), n cheapest vs n most expensive
+items (13-word run), recursive gcd vs number of divisors (same-name flag), sum of even vs sum of odd numbers in a range
+(0.88), rhombus vs rectangle area, first even vs first odd number. No training row found to be an MBPP+ task under
+another id (the near copies, e.g. change_date_format ~ Mbpp/427, had been dropped by the 50% check before training).
+The lineage saw MBPP-style training tasks, some of them siblings of MBPP+ tasks; it did not see MBPP+ tasks.
+
+**v2 round 2 (v2r2, from v2r1's soup; seed 22), soups x4:** step 10 +20.9 / +0.2; 20 +23.6 / -0.6; 30 +27.3 / +0.6; 40 +28.6 /
+-0.6 (chosen). **Step 40 usual x8: +31.2 / -0.9; fresh x8: +28.6 / -0.8** (bfcl irrelevance +25% / -2.2, multiple +25% /
+-3.7, simple +22% / +0.6; ifeval +33% / +0.6; mbpp +21% / -0.3; svamp +35% / -1.6). v2r3 started.
