@@ -177,7 +177,7 @@ tbody tr:hover{background:var(--band)}
 </aside>
 
 <script>
-const FAM={ref:"Reference",n1:"Night 1 · cut & copy",side:"Side experiments",main:"Main line · best-of-8 DPO",A:"Clean line A · no code data",B:"Clean line B · clean code (KodCode)",v2:"v2 · from scratch, one clean recipe"};
+const FAM={ref:"Reference",n1:"Night 1 · cut & copy",side:"Side experiments",main:"Main line · best-of-8 DPO",A:"Clean line A · no code data",B:"Clean line B · clean code (KodCode)",v2:"v2 · from scratch, one clean recipe",rc:"rc1 · calibrated cuts on ca1, then RL"};
 // s: unseen x8 (fresh), q: questions 41-80 x8, u8/u4/u2: usual questions. clean: true | 'grey'
 const N=[
 {id:"raw",f:"ref",col:0,row:8,name:"Qwen3-0.6B, untouched",sh:"the starting point",st:"ref",clean:true,
@@ -282,11 +282,31 @@ const N=[
 {id:"cb2",f:"B",col:4,row:13,name:"cb2",sh:"one more round, step 30",st:"auto",clean:true,u8:[51.0,-0.3],s:[46.9,-2.6],parents:["cb1"],
  m:"Same recipe one round further.",v:"+6 points of saving over cb1, but −2.6 on unseen questions."},
 
-{id:"v2r1",f:"v2",col:1,row:14,name:"v2 round 1",sh:"from raw, one clean recipe",st:"running",clean:true,parents:["raw"],
- m:"From the untouched model: new questions ×8 (tools, instructions, multiple choice, trap math, KodCode); “shorter” pairs where right ≥6/8, math capped, KodCode “right beats wrong” only, checked MVT cuts for tools and instructions; 3-seed soup.",v:"Running now on GPU 1."},
-{id:"v2r2",f:"v2",col:2,row:14,name:"v2 round 2",sh:"queued",st:"queued",clean:true,parents:["v2r1"],m:"Same recipe on new questions, starting from round 1’s soup.",v:"Queued."},
-{id:"v2r3",f:"v2",col:3,row:14,name:"v2 round 3",sh:"queued",st:"queued",clean:true,parents:["v2r2"],m:"Same recipe, next round.",v:"Queued."},
-{id:"v2r4",f:"v2",col:4,row:14,name:"v2 round 4",sh:"queued",st:"queued",clean:true,parents:["v2r3"],m:"Same recipe, last round.",v:"Queued."}
+{id:"v2r1",f:"v2",col:1,row:14,name:"v2 round 1",sh:"from raw, one clean recipe, step 30",st:"auto",clean:true,u8:[16.3,0.8],s:[14.8,-0.2],parents:["raw"],
+ m:"From the untouched model: new questions ×8 (tools, instructions, multiple choice, trap math, KodCode); “shorter” pairs where right ≥6/8, math capped, KodCode “right beats wrong” only, checked MVT cuts for tools and instructions; 3-seed soup.",
+ types:{SVAMP:"23% / −1.2",MBPP:"6% / +1.6",IFEval:"15% / +1.6",BFCL:"14–16% / −3.1..−1.9"},typesH:"Per test (unseen ×8)",v:"Almost free in accuracy, little saving: a gentle first round."},
+{id:"v2r2",f:"v2",col:2,row:14,name:"v2 round 2",sh:"new questions, step 40",st:"auto",clean:true,u8:[31.2,-0.9],s:[28.6,-0.8],parents:["v2r1"],
+ m:"Same recipe on new questions (seed 22), starting from round 1’s soup.",
+ types:{SVAMP:"35% / −1.6",MBPP:"21% / −0.3",IFEval:"33% / +0.6",BFCL:"22–25% / −3.7..+0.6"},typesH:"Per test (unseen ×8)",v:"Doubles round 1’s saving, still within −1. About +14 points of saving per round so far."},
+{id:"v2r3",f:"v2",col:3,row:14,name:"v2 round 3",sh:"running on GPU 1",st:"running",clean:true,parents:["v2r2"],m:"Same recipe, next round.",v:"Running now on GPU 1."},
+{id:"v2r4",f:"v2",col:4,row:14,name:"v2 round 4",sh:"queued",st:"queued",clean:true,parents:["v2r3"],m:"Same recipe, last round.",v:"Queued on GPU 1."},
+
+{id:"rc1s10",f:"rc",col:4,row:15,name:"rc1 · pairs, step 10",sh:"calibrated cut pairs on ca1",st:"auto",clean:true,s:[48.6,-3.0],parents:["ca1"],
+ m:"From ca1: each right reply cut at 1–80% of its thinking, 20 re-answers per cut; the earliest cut that stays right (confidence or outcome rule per type) becomes the “shorter” side. 1,489 pairs (shorten 691, guard 451, hard 397), 3-seed soup.",
+ types:{SVAMP:"62% / −6.2",MBPP:"55% / −2.2",IFEval:"35% / −1.9",BFCL:"34–38% / −3.4..+0.3"},typesH:"Per test (unseen ×8)",v:"Saves exactly what ca1 saves but loses 1.2 points more: the cut pairs cost accuracy from the first checkpoint."},
+{id:"rc1s20",f:"rc",col:4,row:16,name:"rc1 · pairs, step 20",sh:"same run, step 20",st:"auto",clean:true,s:[54.8,-4.0],parents:["ca1"],
+ m:"Same training, soup at step 20.",types:{SVAMP:"65% / −5.6",MBPP:"63% / −4.7",IFEval:"46% / −3.1",BFCL:"37–43% / −4.7..+0.6"},typesH:"Per test (unseen ×8)",v:"More saving, more loss."},
+{id:"rc1s30",f:"rc",col:4,row:17,name:"rc1 · pairs, step 30",sh:"same run, step 30",st:"auto",clean:true,u8:[58.0,-3.1],s:[55.6,-2.9],parents:["ca1"],
+ m:"Same training, soup at step 30. Start of the RL runs.",types:{SVAMP:"66% / −5.0",MBPP:"64% / −1.6",IFEval:"45% / −1.9",BFCL:"39–46% / −5.0..+0.3"},typesH:"Per test (unseen ×8)",v:"Reaches the saving goal (55.6%) but at −2.9: math and tools pay."},
+{id:"rc1rl20",f:"rc",col:5,row:15,name:"rc1 · + RL 20 steps",sh:"length-penalised RL, α 0.15",st:"auto",clean:true,s:[54.8,-3.7],parents:["rc1s30"],
+ m:"RL from pairs step 30: reward = right × (1 − α·solve-rate·sigmoid(z of thinking length)), α 0.15, batch advantages, 32 questions × 8 per step, pool of 782 round questions (repeated).",
+ types:{SVAMP:"65% / −6.6",MBPP:"63% / −1.3",IFEval:"45% / −4.4",BFCL:"38–45% / −3.7..0"},typesH:"Per test (unseen ×8)",v:"No gain over the pairs."},
+{id:"rc1rl40",f:"rc",col:5,row:16,name:"rc1 · + RL 40 steps",sh:"same RL, step 40",st:"auto",clean:true,s:[53.9,-2.1],parents:["rc1s30"],
+ m:"Same RL, 40 steps.",types:{SVAMP:"65% / −4.1",MBPP:"59% / −1.9",IFEval:"46% / −0.6",BFCL:"39–45% / −4.1..−0.3"},typesH:"Per test (unseen ×8)",v:"Best clean model so far on unseen questions: 53.9% / −2.1, just short of the goal on both sides."},
+{id:"rc1rl60",f:"rc",col:5,row:17,name:"rc1 · + RL 60 steps",sh:"same RL, step 60",st:"auto",clean:true,s:[49.6,-3.4],parents:["rc1s30"],
+ m:"Same RL, 60 steps. Thinking grew on the repeated training questions.",types:{SVAMP:"58% / −3.7",MBPP:"58% / −4.7",IFEval:"38% / −2.8",BFCL:"39–44% / −4.4..−0.3"},typesH:"Per test (unseen ×8)",v:"RL bought accuracy back with length on repeated questions; stopped."},
+{id:"rr1",f:"rc",col:6,row:15,name:"rr1 · RL done right",sh:"queued on GPU 2",st:"queued",clean:true,parents:["rc1s30"],m:"RL from pairs step 30 on fresh, contamination-checked questions, each seen about once; length penalty α 0.3; every block scored on the unseen set ×8.",v:"Queued on GPU 2, after the calibration re-checks."},
+{id:"rc2",f:"rc",col:6,row:16,name:"rc2 · second cut round",sh:"queued on GPU 2",st:"queued",clean:true,parents:["rc1rl40"],m:"A second round of calibrated cut pairs, starting from RL 40; soups at steps 10–90 scored on the unseen set ×8.",v:"Queued on GPU 2."}
 ];
 const P={sft:["raw"],mvt:["raw"],n1best:["mvt"],lightmix:["n1best"],merge:["mvt"],steer:["raw"],codecut:["raw"],dporeb:["sft"],r1:["sft"],dporaw:["raw"]};
 N.forEach(n=>{if(!n.parents)n.parents=P[n.id]||[];});
@@ -304,7 +324,7 @@ const W=212,H=86,PADX=14,PADY=30;
 const rows=Math.max(...N.map(n=>n.row))+1, cols=Math.max(...N.map(n=>n.col))+1;
 const tree=document.getElementById("tree"),edges=document.getElementById("edges");
 tree.style.width=(cols*W+PADX*2)+"px";tree.style.height=(rows*H+PADY+10)+"px";
-const bands=[["n1",0,1],["side",2,3],["main",4,11],["A",12,12],["B",13,13],["v2",14,14]];
+const bands=[["n1",0,1],["side",2,3],["main",4,11],["A",12,12],["B",13,13],["v2",14,14],["rc",15,17]];
 bands.forEach(([f,a,b])=>{const d=document.createElement("div");d.className="band";d.style.top=(PADY+a*H-22)+"px";d.style.height=((b-a+1)*H+4)+"px";
  d.innerHTML='<span class="bl">'+FAM[f]+'</span>';d.style.opacity=f==="main"||f==="A"||f==="v2"?"1":".75";if(["side","A","v2"].includes(f))d.style.background="transparent";tree.insertBefore(d,edges);});
 const els={};
@@ -330,17 +350,17 @@ drawEdges();if(document.fonts)document.fonts.ready.then(drawEdges);
 
 /* ---------- scatter ---------- */
 (function(){const pts=N.filter(n=>n.s||n.q||n.full).map(n=>({n,v:(n.s||n.q||n.full),ext:!!n.full}));
- const w=560,h=380,l=46,r=14,t=14,b=40;const X=v=>l+(v-20)/(70-20)*(w-l-r),Y=v=>t+(1.5-v)/(1.5+6.5)*(h-t-b);
+ const w=560,h=380,l=46,r=14,t=14,b=40;const X=v=>l+(v-10)/(70-10)*(w-l-r),Y=v=>t+(1.5-v)/(1.5+6.5)*(h-t-b);
  let s=`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Tokens saved against accuracy change on unseen questions">`;
  s+=`<rect x="${X(55)}" y="${Y(1.5)}" width="${X(70)-X(55)}" height="${Y(-2)-Y(1.5)}" fill="var(--target)" stroke="var(--ok)" stroke-dasharray="4 3"/>`;
  s+=`<text x="${X(55)+6}" y="${Y(1.5)+14}" style="fill:var(--ok)">goal: &gt;55% and ≥ −2</text>`;
- for(let x=20;x<=70;x+=10){s+=`<line x1="${X(x)}" x2="${X(x)}" y1="${t}" y2="${h-b}" stroke="var(--line)" stroke-width=".6"/><text x="${X(x)}" y="${h-b+16}" text-anchor="middle">${x}%</text>`;}
+ for(let x=10;x<=70;x+=10){s+=`<line x1="${X(x)}" x2="${X(x)}" y1="${t}" y2="${h-b}" stroke="var(--line)" stroke-width=".6"/><text x="${X(x)}" y="${h-b+16}" text-anchor="middle">${x}%</text>`;}
  for(let y=1;y>=-6;y--){s+=`<line x1="${l}" x2="${w-r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--line)" stroke-width="${y===0?1.2:.6}"/><text x="${l-6}" y="${Y(y)+4}" text-anchor="end">${y>0?"+"+y:y===0?"0":"−"+(-y)}</text>`;}
  s+=`<line x1="${l}" x2="${w-r}" y1="${Y(-2)}" y2="${Y(-2)}" stroke="var(--ok)" stroke-width="1"/>`;
  s+=`<text x="${(l+w-r)/2}" y="${h-6}" text-anchor="middle">tokens saved on unseen questions</text>`;
  s+=`<text transform="translate(12 ${(t+h-b)/2}) rotate(-90)" text-anchor="middle">accuracy change (points)</text>`;
- const lab={r1:"R1",r2g:"R2",r3:"R3",r4:"R4",r5:"R5",bal:"balanced",ca1:"ca1",ca2:"ca2",cb1:"cb1",cb2:"cb2",a1:"A1",b1:"B1",b2:"B2",rep4b50:"rep4 50/50",rep5rft:"rep5 RFT",comp:"competitor",r2nc:"R2nc",rep4b75:"rep4 75/25",rep5b50:"rep5 50/50"};
- const off={ca2:[-6,-10,"end"],cb2:[8,14,"start"],ca1:[8,-8,"start"],rep4b50:[-8,-8,"end"],r2nc:[8,14,"start"],comp:[8,-8,"start"],r2g:[8,-8,"start"],bal:[8,4,"start"],rep4b75:[-8,14,"end"],rep5b50:[8,4,"start"]};
+ const lab={r1:"R1",r2g:"R2",r3:"R3",r4:"R4",r5:"R5",bal:"balanced",ca1:"ca1",ca2:"ca2",cb1:"cb1",cb2:"cb2",a1:"A1",b1:"B1",b2:"B2",rep4b50:"rep4 50/50",rep5rft:"rep5 RFT",comp:"competitor",r2nc:"R2nc",rep4b75:"rep4 75/25",rep5b50:"rep5 50/50",rc1s30:"rc1 pairs 30",rc1rl40:"rc1 RL 40",v2r1:"v2 r1",v2r2:"v2 r2"};
+ const off={ca2:[-6,-10,"end"],cb2:[8,14,"start"],ca1:[8,-8,"start"],rep4b50:[-8,-8,"end"],r2nc:[8,14,"start"],comp:[8,-8,"start"],r2g:[8,-8,"start"],bal:[8,4,"start"],rep4b75:[-8,14,"end"],rep5b50:[8,4,"start"],rc1s30:[8,-8,"start"],rc1rl40:[8,14,"start"]};
  pts.forEach(({n,v,ext})=>{const c=n.st==="ok"?"var(--ok)":ext?"var(--ink)":"var(--over)";const x=X(v[0]),y=Y(v[1]);
   s+=`<g class="pt" tabindex="0" role="button" aria-label="${n.name}: ${v[0]}% saved, ${accS(v[1])} points" data-id="${n.id}">`;
   if(!ext)s+=`<line x1="${x}" x2="${x}" y1="${Y(v[1]+1.5)}" y2="${Y(v[1]-1.5)}" stroke="${c}" stroke-opacity=".35" stroke-width="2"/>`;
