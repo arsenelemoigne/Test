@@ -109,6 +109,8 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
         f"the replies and cuts rebuilt here are not the ones of {cal}"
     verdict = {v["key"]: v for v in read_jsonl(cal / "verdicts.jsonl")}
     conf = {c["key"]: c["confidence"] for c in read_jsonl(cal / "confidence.jsonl")}
+    own_path = cal / "own_confidence.jsonl"  # own_conf.py: the probability of the model's OWN answer at the cut
+    own = {c["key"]: c["own_confidence"] for c in read_jsonl(own_path)} if own_path.exists() else {}
     sequences, positions, meta = [], [], []
     for k, (i, f, t) in enumerate(jobs):
         r, v = replies[i], verdict[k]
@@ -116,7 +118,7 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
         sequences.append(r["prompt_ids"] + t)
         positions.append([len(r["prompt_ids"]) + close - 1, len(r["prompt_ids"]) + len(t) - 1])
         meta.append({"question": f"{cal.parent.name}/{r['id']}", "source": r["source"], "fraction": f, "right": v["right"], "of": v["of"],
-                     "success": v["right"] / max(1, v["of"]), "confidence": conf[k],
+                     "success": v["right"] / max(1, v["of"]), "confidence": conf[k], "own": own.get(k, float("nan")),
                      "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
     path = Path(args.out) / cache_name
     if path.exists():
@@ -182,6 +184,8 @@ class Data:
         onehot = np.array([[s == x for x in sources] for s in self.source], dtype=np.float32)
         self.position = np.concatenate([frac[:, None], np.log(frac)[:, None], onehot, onehot * frac[:, None]], axis=1)
         self.confidence = np.array([m["confidence"] for m in meta])
+        self.own = np.array([m["own"] for m in meta])
+        self.success = np.array([m["success"] for m in meta])
 
     def view(self, config):
         if config == "position":
@@ -196,14 +200,15 @@ def folds_by_question(questions, k, seed):
     return np.array([fold_of[q] for q in questions])
 
 
-def oof(data, config, mask, folds, k):
-    """Out-of-fold P(safe) for the cuts in `mask` (each fold predicted by a probe fit on the other folds' labelled cuts)."""
+def oof(data, config, mask, folds, k, soft=False):
+    """Out-of-fold P(safe) for the cuts in `mask` (each fold predicted by a probe fit on the other folds' labelled cuts);
+    soft: fit to the real success rate (right/20) of every cut instead, so the output reads as a calibrated success rate."""
     p = np.full(data.n, np.nan)
     x = data.view(config)
     for f in range(k):
-        train, test = mask & data.labelled & (folds != f), mask & (folds == f)
+        train, test = mask & (folds != f) & (True if soft else data.labelled), mask & (folds == f)
         if test.any() and train.any():
-            p[test] = fit(x[train], data.label[train])(x[test])
+            p[test] = fit(x[train], (data.success if soft else data.label)[train])(x[test])
     return p
 
 
@@ -321,29 +326,35 @@ def main():
     explore = {c: oof(dev, c, everything, folds, args.folds) for c in configs}
     lines.append("Exploration (each configuration's out-of-fold AUC; NOT the result: picking the best one is optimistic):")
     lines += [f"  {name(c):<28} {auc(p[dev.labelled], dev.label[dev.labelled]):.3f}" for c, p in explore.items()]
-    probe, probe_t, chosen = np.full(dev.n, np.nan), np.full(dev.n, np.nan), []
+    probe, probe_t, probe_s, chosen = np.full(dev.n, np.nan), np.full(dev.n, np.nan), np.full(dev.n, np.nan), []
     for f in range(args.folds):
         train, test = folds != f, folds == f
         c = choose_config(dev, configs, train, args.folds - 1, args.seed + 1 + f)
         chosen.append(name(c))
         x = dev.view(c)
         probe[test] = fit(x[train & dev.labelled], dev.label[train & dev.labelled])(x[test])
+        probe_s[test] = fit(x[train], dev.success[train])(x[test])  # trained on the real success rate of every cut
         for s in sources:  # one probe per data type (the pooled one transfers poorly between types)
             src = dev.source == s
             probe_t[test & src] = fit(x[train & dev.labelled & src], dev.label[train & dev.labelled & src])(x[test & src])
     dev_scores = {"position": oof(dev, "position", everything, folds, args.folds), "confidence": dev.confidence,
-                  "probe": probe, "probe/type": probe_t}
+                  "probe": probe, "probe/type": probe_t, "probe/soft": probe_s}
+    has_own = bool(np.isfinite(dev.own).all())
+    if has_own:
+        dev_scores["own confidence"] = dev.own
+    keys += ["probe/soft"] + (["own confidence"] if has_own else [])
     lines += ["", f"Nested choice of configuration, per outer fold: {'; '.join(chosen)}", ""]
 
     def auc_table(data, scores, title):
-        out = [title, f"{'data type':<16}{'cuts':>6}{'safe':>6}" + "".join(f"{k:>22}" for k in keys)]
+        ks = [k for k in keys if k in scores]
+        out = [title, f"{'data type':<16}{'cuts':>6}{'safe':>6}" + "".join(f"{k:>22}" for k in ks)]
         for s in sources + ["ALL"]:
             m = data.labelled & ((data.source == s) if s != "ALL" else np.ones(data.n, bool))
             by_q = defaultdict(list)
             for k in np.flatnonzero(m):
                 by_q[data.question[k]].append(k)
             cells = []
-            for key in keys:
+            for key in ks:
                 sc = scores[key]
                 pick = lambda sample: [k for q in sample for k in by_q[q]]
                 lo, hi = bootstrap(lambda sample: auc(sc[pick(sample)], data.label[pick(sample)]), by_q.keys(),
@@ -354,11 +365,12 @@ def main():
 
     def stopper_table(data, scores, threshold_for, title, allow):
         """threshold_for(key, source, budget, question) -> the threshold fixed for that question's reply (no peeking)."""
-        out = ["", title, f"{'data type':<16}{'allow':>6}" + "".join(f"{k:>28}" for k in [ORACLE] + keys)]
+        ks = [k for k in keys if k in scores]
+        out = ["", title, f"{'data type':<16}{'allow':>6}" + "".join(f"{k:>28}" for k in [ORACLE] + ks)]
         for s in sources:
             budget = float(allow.get(s, allow["default"]))
             cells = []
-            for key in [ORACLE] + keys:
+            for key in [ORACLE] + ks:
                 sc = data.oracle if key == ORACLE else (data.fraction if key == "position" else scores[key])
                 groups = reply_groups(data, sc, data.source == s)
                 items = {q: (g, 1.0 if key == ORACLE else threshold_for(key, s, budget, q)) for q, g in groups.items()}
@@ -369,8 +381,25 @@ def main():
             out.append(f"{s:<16}{budget:>6}" + "".join(f"{c:>28}" for c in cells))
         return out
 
+    def tranche_table(data, scores, title):
+        """Per data type and cut point: real success vs the soft probe's and the model's own predicted success (mean),
+        and the AUC of each AT THAT CUT POINT (questions ranked against each other at the same depth: no position effect)."""
+        cols = [k for k in ("probe/soft", "own confidence") if k in scores and np.isfinite(scores[k]).all()]
+        out = ["", title, "  cell = real success / " + " / ".join(f"{c} mean" for c in cols) + "  |  AUC " +
+               " / ".join(cols) + " among the cuts at that depth (n/a: one label only)"]
+        for s in sources:
+            out.append(f"  {s}")
+            for f in args.fractions:
+                m = (data.source == s) & (data.fraction == f)
+                ml = m & data.labelled
+                means = " / ".join(f"{np.nanmean(scores[c][m]):.2f}" for c in cols)
+                aucs = " / ".join((lambda a: "n/a" if a != a else f"{a:.2f}")(auc(scores[c][ml], data.label[ml])) for c in cols)
+                out.append(f"    {f:>4.0%}: n {int(m.sum()):>4}  real {data.success[m].mean():.2f} / {means}  |  AUC {aucs}")
+        return out
+
     lines += auc_table(dev, dev_scores, "AUC on held-out questions (development set, nested CV; 95% bootstrap over "
                                         "questions):")
+    lines += tranche_table(dev, dev_scores, "Cut point by cut point (development set, out-of-fold):")
 
     best_c = max(configs, key=lambda c: auc(explore[c][dev.labelled], dev.label[dev.labelled]))
     # would more questions help? held-out AUC when the probe is fit on a share of the training questions only
@@ -428,9 +457,11 @@ def main():
         x = dev.view(final_c)
         lab = dev.labelled
         test_scores = {"position": fit(dev.position[lab], dev.label[lab])(test.position), "confidence": test.confidence,
-                       "probe": fit(x[lab], dev.label[lab])(test.view(final_c)), "probe/type": np.full(test.n, np.nan)}
+                       "probe": fit(x[lab], dev.label[lab])(test.view(final_c)), "probe/type": np.full(test.n, np.nan),
+                       "probe/soft": fit(x, dev.success)(test.view(final_c)), "own confidence": test.own}
         dev_oof = {"position": dev.fraction, "confidence": dev.confidence,
-                   "probe": oof(dev, final_c, everything, folds, args.folds), "probe/type": np.full(dev.n, np.nan)}
+                   "probe": oof(dev, final_c, everything, folds, args.folds), "probe/type": np.full(dev.n, np.nan),
+                   "probe/soft": oof(dev, final_c, everything, folds, args.folds, soft=True), "own confidence": dev.own}
         tx = test.view(final_c)
         for s in sources:
             src, tsrc = dev.source == s, test.source == s
@@ -449,7 +480,10 @@ def main():
                   f"HELD-OUT TEST SET {args.test_cal}: {len(set(test.question))} new questions, {test.n} cuts; probe = "
                   f"{name(final_c)}, chosen and fit on the development set only; thresholds from the development set's "
                   "out-of-fold scores. Scored once.", ""]
+        if not np.isfinite(test.own).all():
+            test_scores.pop("own confidence")
         lines += auc_table(test, test_scores, "AUC on the test set (95% bootstrap over questions):")
+        lines += tranche_table(test, test_scores, "Cut point by cut point (test set):")
         for title, allow in allows:
             lines += stopper_table(test, test_scores, test_threshold, f"Stopper on the test set ({title}): saved / real "
                                    "loss [95% CI of the loss] c coverage", allow)

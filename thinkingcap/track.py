@@ -1318,6 +1318,12 @@ def probeknow(args):
             time.sleep(300)
             drive_sync("restore")
     if not (out / "summary.txt").exists():
+        # the model's own confidence (probability of ITS answer at each cut), for every set the probe reads
+        sets = [BON / args.probe_cal] + [BON / f"pairs-{r}" / "cal" for r in (args.probe_extra_from or [])]
+        sets += [BON / f"pairs-{args.probe_test_from}" / "cal"] if args.probe_test_from else []
+        for cal in sets:
+            if not (cal / "own_confidence.jsonl").exists():
+                py("own_conf.py", "--model", args.probe_model, "--cal", cal, "--dtype", args.dtype)
         py("probe_knows.py", "--model", args.probe_model, "--cal", BON / args.probe_cal,
            "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
            "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl", "--out", out,
