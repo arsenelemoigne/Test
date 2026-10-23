@@ -1144,3 +1144,16 @@ buys accuracy back with length. Block 2 hit CUDA out of memory on a long reply (
 fixed: chunked, recomputed log-probs). RL stopped after block 3 (saving falling, accuracy flat); the DPO soup and blocks 1-3
 go to the x4 choice on the choosing set and the winner to x8 usual + fresh. Next RL (rr4, on the round-4 50/50 blend):
 fresh contamination-checked questions (seed 41, ~900 per source + unused KodCode, each seen about once), alpha 0.3.
+
+**rc1, every version scored on the fresh set x8 (user's call: no choosing set; so the fresh set now also chooses):**
+- DPO soup 30: +55.6 / -2.9 (svamp +66% / -5.0, mbpp +64% / -1.6, ifeval +45% / -1.9, bfcl +39-46% / -5.0..+0.3)
+- + RL 20 steps: **+54.8 / -3.7** (svamp +65% / -6.6, mbpp +63% / -1.3, ifeval +45% / -4.4, bfcl irr +45% / -3.7, mult +41% /
+  -3.7, simple +38% / 0.0). Choosing set x4 had said +57.3 / -0.2.
+- + RL 40 steps: **+53.9 / -2.1** (svamp +65% / -4.1, mbpp +59% / -1.9, ifeval +46% / -0.6, bfcl irr +45% / -1.2, mult +41% /
+  -4.1, simple +39% / -0.3). Choosing set x4: +54.8 / -0.9.
+- + RL 60 steps: **+49.6 / -3.4** (svamp +58% / -3.7, mbpp +58% / -4.7, ifeval +38% / -2.8, bfcl irr +44% / -2.2, mult +42% /
+  -4.4, simple +39% / -0.3).
+Reading: RL with alpha 0.15 on repeated questions does not move rc1 off its frontier on unseen questions: the four versions
+spread over -2.1 to -3.7 at 50-56% saved, within about two noise widths (+/-1.5 pts each at x8 on 240 questions), and the
+choosing set (x4) was 1.2-3.5 points more optimistic than the fresh set for every version. Best on fresh: RL 40 steps,
++53.9 / -2.1 (clean). Still to score: DPO soups 10 and 20.
