@@ -1179,3 +1179,12 @@ saved at -2.1..-4.0 (soup 10 -3.0, soup 20 -4.0, soup 30 -2.9, RL 20 -3.7, RL 40
 ca1 (+48.6) but loses 1.2 points more: the cut pairs' accuracy cost shows from the first checkpoint; the spread between neighbouring
 checkpoints (1-2 points) is noise-sized. rr4 (grey zone) started by mistake before the queue change and was stopped at its first
 RL block; runtime 2 now runs the calibration re-checks, then rr1 and rc2.
+
+**Calibration re-check, rc1-soup-30 on rc1's own cuts (calcheck rc1s30; the same 7,232 cut points ca1 was measured on, 20
+re-answers each, 2,954 pass with 20/20 right):** confidence vs real outcome is unchanged by the cut-pair training. ECE per source,
+ca1 -> rc1-soup-30: arc_easy 0.09 -> 0.07, commonsense_qa 0.16 -> 0.17, gsm_ic 0.34 -> 0.36, gsm_plus 0.34 -> 0.37, ifeval_like
+0.31 -> 0.31, kodcode 0.13 -> 0.13, toolace 0.11 -> 0.14. Same shape: multiple choice is calibrated at >= 0.9 (0.99 right);
+trap math is over-confident (conf 0.98 -> 0.78 right on gsm_ic); instructions are under-confident (conf 0.3-0.5 -> ~0.8 right);
+code and tools middling. The selection rule picks the same thing for both models (confidence for multiple choice and IFEval, the
+outcome rule for math, code and tools). Reading: training on "stop here" pairs taught the model to stop earlier, not to know
+better when it may stop; its sense of "I already have the answer" did not move. Next: the same check on rc1-rl-40 (running).
