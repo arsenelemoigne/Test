@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1243,6 +1243,17 @@ def calcheck(args):
     print((out / "summary.txt").read_text(), flush=True)
     print(f"for comparison, {args.calcheck_from}'s start model on the same cuts:", flush=True)
     print((src / "summary.txt").read_text(), flush=True)
+
+
+def caltable(args):
+    """Confidence vs real outcome per data type and cut point, for every calibration run done so far (cal_table.py)."""
+    dirs = [d for d in [BON / "pairs-rc1" / "cal", BON / "calcheck-rc1s30", BON / "calcheck-rc1rl40", BON / "pairs-rc2" / "cal"]
+            if (d / "confidence.jsonl").exists()]
+    out = ROOT.parent / "viz" / "cal_table.txt"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    text = subprocess.run([sys.executable, "cal_table.py", *map(str, dirs)], capture_output=True, text=True).stdout
+    out.write_text(text)
+    print(text, flush=True)
 
 
 def probeknow(args):

@@ -35,6 +35,7 @@ calcheck --name rc1rl40 --calcheck-model models/rc1-rl-40 --calcheck-from rc1
 rlcal --name rr1 --start models/rc1-soup-30 --data-seed 44 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 42 --rl-alpha 0.3 --judge fresh
 # 3. second calibrated-cut round on rc1 RL 40 (pairs only, no RL); soups 10-90 scored on the fresh set x8
 rlcal --name rc2 --start models/rc1-rl-40 --data-seed 43 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-steps 0 --judge fresh --dpo-steps 10 20 30 60 90
+caltable --name ct1
 shared probeknow --name pkca1 --probe-cal pairs-rc1/cal --probe-model models/ca1-soup-10 --calcheck-from rc1
 probeknow --name pkrl40 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-test-from rc2
 # only if time is left: RL on the grey-zone round-4 blend
