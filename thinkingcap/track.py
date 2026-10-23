@@ -185,7 +185,7 @@ def update(restart=True):
 DRIVE = Path("/content/drive/MyDrive/thinkingcap-mvtf")
 
 
-def drive_sync(direction, models=None):
+def drive_sync(direction, models=None, only=None):
     """Copy runs/, adapters/ and data/ to Google Drive ("save") or back ("restore"), when Drive is mounted.
 
     Colab wipes the runtime disk when it recycles a runtime; Drive keeps every result, adapter and rollout.
@@ -196,6 +196,17 @@ def drive_sync(direction, models=None):
     names = ["runs", "adapters", "data", "models", *[p.name for p in Path(".").glob("questions_*") if p.is_dir()]]
     if direction == "restore":
         names = ["runs", "adapters", "data", "models", *[p.name for p in DRIVE.glob("questions_*") if p.is_dir()]]
+    if direction == "restore" and only is not None:  # a light restore: just these paths (globs under the Drive copy)
+        for pattern in only:
+            for source in DRIVE.glob(pattern):
+                target = Path(source.relative_to(DRIVE))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if source.is_dir():
+                    subprocess.run(["rsync", "-a", "--update", f"{source}/", f"{target}/"])
+                else:
+                    subprocess.run(["rsync", "-a", "--update", str(source), str(target)])
+        print(f"drive: light restore done ({', '.join(only)})", flush=True)
+        return
     for name in names:
         source, target = (Path(name), DRIVE / name) if direction == "save" else (DRIVE / name, Path(name))
         if direction == "restore" and name == "models" and models is not None:
@@ -1863,7 +1874,13 @@ def plan(args):
     plan_text = Path(args.plan_file).read_text() if Path(args.plan_file).exists() else ""
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
-    drive_sync("restore", models=wanted)
+    stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
+    if stages and stages <= {"callot", "probezoo"}:  # label lots + zoo need only their own files, the draws and the model
+        drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
+                                    "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
+                                    *[f"models/{m}" for m in wanted]])
+    else:
+        drive_sync("restore", models=wanted)
 
     keep_saving(300)
     done, idle_since = set(), None
