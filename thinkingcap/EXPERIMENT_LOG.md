@@ -1228,3 +1228,20 @@ rc1-soup-30 and rc1-rl-40 within 0.01-0.05:**
 Reading: for instructions, tools and code, roughly half the questions are already right with almost no thinking and the rest
 need it; a stopper is worth what it can tell the two apart per question. For math almost nothing is safe before 65%.
 Probes running: pkca1 on runtime 1 (v2r3 finished), pkrl40 (test set = rc2's cuts) on runtime 2.
+
+**Stopping probe, first run (pkrl40: rc1-rl-40's hidden states; development = the 904 rc1 replies' 7,232 cuts re-answered by
+rc1-rl-40, 9% left out as 16-19/20; held-out test = rc2's 675 new questions, 5,400 cuts; configuration chosen by nested CV =
+layer 21, AFTER "</think>").** Out-of-fold AUC of the 8 configurations 0.79-0.85. AUC, test set (dev in brackets):
+- ALL: probe 0.864 (0.842) vs cut position 0.823 (0.801).
+- math traps: gsm_ic 0.938 (0.951) vs position 0.859; gsm_plus 0.916 (0.881) vs 0.862.
+- instructions 0.736 (0.753) vs position 0.546; tools 0.795 (0.742) vs 0.585; code 0.752 (0.729) vs 0.617.
+- multiple choice: chance (0.53-0.61); the pooled probe also transfers poorly between types (leave-one-type-out: math
+  0.89-0.90, instructions 0.52, tools 0.48, MC 0.54-0.58).
+- 'confidence' scores 0.99-1.00 within math and MC, but it is the probability of the RIGHT answer (teacher-forced on the
+  full right reply's answer): it uses the reference and is not available to a real stopper. Flagged in the report from now on.
+Stopper (earliest cut with probe >= t, t per type from development data): ~0% saved on every type at the type allowance on
+the test set, 5% (math, 2-pt allowance): the signal is real (clearly above the cut position on math, instructions, tools,
+code) but not sharp enough at the top for a single threshold to stop safely. Oracle on the same test cuts: 19-22% math, 49%
+instructions, 56% code, 61% tools.
+Next in the queue: lot1 (rebalanced, ~1,500 new questions), probe on both lots with a learning curve and one probe per
+data type (added now); then lot2 and the probe on all three.

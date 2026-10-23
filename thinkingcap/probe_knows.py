@@ -306,7 +306,7 @@ def main():
     everything = np.ones(dev.n, bool)
     of = max(m["of"] for m in meta)
     n_mid = int((~dev.labelled).sum())
-    keys = ["position", "confidence", "probe"]
+    keys = ["position", "confidence", "probe", "probe/type"]
 
     lines = [f"Probe on {args.model}: is 'stopping here keeps the answer right' predictable from the hidden state at a cut?",
              f"Development set {args.cal}{''.join(' + ' + r for r in args.extra_runs)}: {len(set(dev.question))} questions (one correct reply each), {dev.n} cuts; "
@@ -321,15 +321,18 @@ def main():
     explore = {c: oof(dev, c, everything, folds, args.folds) for c in configs}
     lines.append("Exploration (each configuration's out-of-fold AUC; NOT the result: picking the best one is optimistic):")
     lines += [f"  {name(c):<28} {auc(p[dev.labelled], dev.label[dev.labelled]):.3f}" for c, p in explore.items()]
-    probe, chosen = np.full(dev.n, np.nan), []
+    probe, probe_t, chosen = np.full(dev.n, np.nan), np.full(dev.n, np.nan), []
     for f in range(args.folds):
         train, test = folds != f, folds == f
         c = choose_config(dev, configs, train, args.folds - 1, args.seed + 1 + f)
         chosen.append(name(c))
         x = dev.view(c)
         probe[test] = fit(x[train & dev.labelled], dev.label[train & dev.labelled])(x[test])
+        for s in sources:  # one probe per data type (the pooled one transfers poorly between types)
+            src = dev.source == s
+            probe_t[test & src] = fit(x[train & dev.labelled & src], dev.label[train & dev.labelled & src])(x[test & src])
     dev_scores = {"position": oof(dev, "position", everything, folds, args.folds), "confidence": dev.confidence,
-                  "probe": probe}
+                  "probe": probe, "probe/type": probe_t}
     lines += ["", f"Nested choice of configuration, per outer fold: {'; '.join(chosen)}", ""]
 
     def auc_table(data, scores, title):
@@ -425,9 +428,15 @@ def main():
         x = dev.view(final_c)
         lab = dev.labelled
         test_scores = {"position": fit(dev.position[lab], dev.label[lab])(test.position), "confidence": test.confidence,
-                       "probe": fit(x[lab], dev.label[lab])(test.view(final_c))}
+                       "probe": fit(x[lab], dev.label[lab])(test.view(final_c)), "probe/type": np.full(test.n, np.nan)}
         dev_oof = {"position": dev.fraction, "confidence": dev.confidence,
-                   "probe": oof(dev, final_c, everything, folds, args.folds)}
+                   "probe": oof(dev, final_c, everything, folds, args.folds), "probe/type": np.full(dev.n, np.nan)}
+        tx = test.view(final_c)
+        for s in sources:
+            src, tsrc = dev.source == s, test.source == s
+            if tsrc.any():
+                test_scores["probe/type"][tsrc] = fit(x[lab & src], dev.label[lab & src])(tx[tsrc])
+            dev_oof["probe/type"][src] = oof(dev, final_c, src, folds, args.folds)[src]
         fixed = {}
 
         def test_threshold(key, s, budget, q):
@@ -445,6 +454,8 @@ def main():
             lines += stopper_table(test, test_scores, test_threshold, f"Stopper on the test set ({title}): saved / real "
                                    "loss [95% CI of the loss] c coverage", allow)
 
+    lines += ["", "Caveat on 'confidence': it is the teacher-forced probability of the answer the full (right) reply wrote, i.e. "
+              "of the RIGHT answer: it uses the reference, so it is an optimistic baseline a deployed stopper could not compute."]
     lines += ["", "Reading: the probe adds information only if it beats the position baseline (later cuts are simply "
               "safer) and the confidence on held-out questions, in the stopper table (tokens saved at bounded real loss), "
               "not only in AUC. A failure shows that THIS linear probe finds no usable signal, not that none exists."]
