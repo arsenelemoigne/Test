@@ -1167,8 +1167,9 @@ def rlcal(args):
     for step in ([2] if small else (10, 20, 30)):
         members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in seeds]
         members = [m for m in members if (m / "adapter_config.json").exists()]
-        if not members and small:  # a smoke run may end before its first checkpoint: its final adapter
-            members = [Path("adapters") / f"{name}-s{seed}" for seed in seeds]
+        if not members and small:  # a smoke run may end before its first checkpoint: its final adapter, or the
+            members = [Path("adapters") / f"{name}-s{seed}" for seed in seeds]  # untrained start when it had no pairs
+            members = [m for m in members if (m / "adapter_config.json").exists()] or [start]
         if not members:
             continue
         model = Path("models") / f"{name}-soup-{step}"
@@ -1204,8 +1205,15 @@ def rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, probes, keep
     allowed = {json.loads(l)["id"] for k in keeps for l in (k / "sft.jsonl").read_text().splitlines() if l.strip()}
     pool = Path(f"data/rl-{name}.jsonl")
     if not pool.exists():
-        rows = [l for f in (data, kod_file) for l in f.read_text().splitlines() if l.strip()]
-        rows = [l for l in rows if json.loads(l)["id"] in allowed and sum(solved[json.loads(l)["id"]]) >= 4]
+        rows = []
+        for f in (data, kod_file):  # ids as probe_curve.py gives them: "<source>-<line index in the file>"
+            for index, line in enumerate(f.read_text().splitlines()):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                row["id"] = f"{row['source']}-{index}"
+                if row["id"] in allowed and sum(solved[row["id"]]) >= 4:
+                    rows.append(json.dumps(row))
         pool.write_text("\n".join(rows) + "\n")
         print(f"{name}: RL pool {len(rows)} questions (solved >= 4/8 by the start model)", flush=True)
     block = 1 if small else args.rl_block
