@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -130,6 +130,8 @@ def main():
     parser.add_argument("--dpo-steps", type=int, nargs="*", default=[10, 20, 30], help="rlcal: soup steps scored")
     parser.add_argument("--calcheck-model", help="calcheck: the model whose calibration is re-measured")
     parser.add_argument("--calcheck-from", default="rc1", help="calcheck: the run whose replies and cuts are reused")
+    parser.add_argument("--probe-cal", help="probeknow: the cal_cuts folder under runs/bon whose labelled cuts are probed")
+    parser.add_argument("--probe-model", help="probeknow: the model whose hidden states are read")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
     parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
     parser.add_argument("--smoke", action="store_true", help="rlcal: tiny sizes, no scoring: does every step run?")
@@ -1240,6 +1242,19 @@ def calcheck(args):
     print((out / "summary.txt").read_text(), flush=True)
     print(f"for comparison, {args.calcheck_from}'s start model on the same cuts:", flush=True)
     print((src / "summary.txt").read_text(), flush=True)
+
+
+def probeknow(args):
+    """Does the model know when it already has the answer? A linear probe on its hidden state at each labelled cut of
+    a calibration run (probe_knows.py), against the cut position, its confidence, and the 20/20 oracle."""
+    frm = args.calcheck_from
+    out = BON / f"probeknow-{args.name}"
+    if not (out / "summary.txt").exists():
+        py("probe_knows.py", "--model", args.probe_model, "--cal", BON / args.probe_cal,
+           "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
+           "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl", "--out", out,
+           "--dtype", args.dtype)
+    print((out / "summary.txt").read_text(), flush=True)
 
 
 def fresh_rl_pool(name, seed, per_source, kod_file):

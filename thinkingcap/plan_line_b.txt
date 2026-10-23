@@ -13,6 +13,8 @@ chain --name cb2 --start soup:cb1 --code-source kodcode --kod-questions 300 --ko
 chain --name v2r1 --start raw --code-source kodcode --kod-questions 300 --mvt-sources toolace,ifeval_like --data-seed 21 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
 chain --name v2r2 --start soup:v2r1 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 --mvt-sources toolace,ifeval_like --data-seed 22 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
 chain --name v2r3 --start soup:v2r2 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 v2r2 --mvt-sources toolace,ifeval_like --data-seed 23 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+shared probeknow --name pkca1 --probe-cal pairs-rc1/cal --probe-model models/ca1-soup-10 --calcheck-from rc1
+shared probeknow --name pkrl40 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1
 chain --name v2r4 --start soup:v2r3 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 v2r2 v2r3 --mvt-sources toolace,ifeval_like --data-seed 24 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
 # shared with runtime 2 (whichever runtime gets here first runs it; the other skips it): RL only on the round 4
 # 50/50 blend (unseen +57.3% / -2.4)
