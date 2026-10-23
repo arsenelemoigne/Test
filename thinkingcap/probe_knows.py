@@ -115,7 +115,7 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
         close = t.index(close_id)
         sequences.append(r["prompt_ids"] + t)
         positions.append([len(r["prompt_ids"]) + close - 1, len(r["prompt_ids"]) + len(t) - 1])
-        meta.append({"question": r["id"], "source": r["source"], "fraction": f, "right": v["right"], "of": v["of"],
+        meta.append({"question": f"{cal.parent.name}/{r['id']}", "source": r["source"], "fraction": f, "right": v["right"], "of": v["of"],
                      "success": v["right"] / max(1, v["of"]), "confidence": conf[k],
                      "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
     path = Path(args.out) / cache_name
@@ -265,6 +265,9 @@ def main():
     parser.add_argument("--cal", required=True, help="development set: a cal_cuts.py output folder")
     parser.add_argument("--rollouts", nargs="+", required=True)
     parser.add_argument("--keep", nargs="+", required=True)
+    parser.add_argument("--extra-cal", help="a second development set (same model): its cuts are added to --cal's")
+    parser.add_argument("--extra-rollouts", nargs="+")
+    parser.add_argument("--extra-keep", nargs="+")
     parser.add_argument("--test-cal", help="held-out set (new questions, same model): scored once, everything fixed")
     parser.add_argument("--test-rollouts", nargs="+")
     parser.add_argument("--test-keep", nargs="+")
@@ -286,6 +289,9 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
 
     meta, feats = load_set(args.cal, args.rollouts, args.keep, args, tokenizer, "features.npy")
+    if args.extra_cal:
+        emeta, efeats = load_set(args.extra_cal, args.extra_rollouts, args.extra_keep, args, tokenizer, "extra_features.npy")
+        meta, feats = meta + emeta, np.concatenate([feats, efeats])
     sources = sorted({m["source"] for m in meta})
     dev = Data(meta, feats, sources, args.unsafe)
     configs = [(li, pi) for li in range(len(args.layers)) for pi in range(2)]
@@ -299,7 +305,7 @@ def main():
     keys = ["position", "confidence", "probe"]
 
     lines = [f"Probe on {args.model}: is 'stopping here keeps the answer right' predictable from the hidden state at a cut?",
-             f"Development set {args.cal}: {len(set(dev.question))} questions (one correct reply each), {dev.n} cuts; "
+             f"Development set {args.cal}{' + ' + args.extra_cal if args.extra_cal else ''}: {len(set(dev.question))} questions (one correct reply each), {dev.n} cuts; "
              f"safe = {of}/{of}: {int(dev.label.sum())}; unsafe <= {args.unsafe}/{of}: "
              f"{int((dev.labelled & (dev.label == 0)).sum())}; left out ({args.unsafe + 1}-{of - 1}/{of}): {n_mid} "
              f"({n_mid / dev.n:.0%})",

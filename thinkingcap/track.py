@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -132,6 +132,9 @@ def main():
     parser.add_argument("--calcheck-from", default="rc1", help="calcheck: the run whose replies and cuts are reused")
     parser.add_argument("--probe-cal", help="probeknow: the cal_cuts folder under runs/bon whose labelled cuts are probed")
     parser.add_argument("--probe-model", help="probeknow: the model whose hidden states are read")
+    parser.add_argument("--lot", default="ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250",
+                        help="callot: questions drawn per type (before the right-answer and contamination filters)")
+    parser.add_argument("--probe-extra-from", help="probeknow: a callot run whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
     parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
@@ -1245,6 +1248,51 @@ def calcheck(args):
     print((src / "summary.txt").read_text(), flush=True)
 
 
+def callot(args):
+    """A labelled-cut lot for the stopping probe: --start answers a new draw with --lot questions per type x8; its
+    right replies (contamination-checked) are cut at 1-80% of the thinking and re-answered 20x (cal_cuts.py). No
+    training. Outputs as rlcal names them (probe-, kprobe-, select-, kselect-, pairs-NAME/cal)."""
+    name, base = args.name, args.start
+    counts = dict((k, int(v)) for k, v in (x.split("=") for x in args.lot.split(",")))
+    data = Path(f"data/lot-{name}.jsonl")
+    text = lambda r: r["prompt"][-1]["content"]
+    if not data.exists():
+        rows = []
+        for i, (source, n) in enumerate(c for c in counts.items() if c[0] != "kodcode"):
+            raw = Path(f"data/lot-{name}-{source}-raw.jsonl")
+            py("prepare_types.py", "--sources", source, "--per-source", n, "--seed", args.data_seed * 10 + i, "--out", raw)
+            rows += [l for l in raw.read_text().splitlines() if l.strip()]
+        used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal", "rl-", "lot-"))
+                and "raw" not in p.name and p != data]
+        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
+        kept = [l for l in rows if text(json.loads(l)) not in seen]
+        data.write_text("".join(l + "\n" for l in kept))
+        print(f"{name}: {len(kept)} new questions of {len(rows)} drawn (earlier draws removed)", flush=True)
+    kod_file = Path(args.kod_file)
+    probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
+    kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
+    n_data = sum(1 for l in data.read_text().splitlines() if l.strip())
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", BAL_SOURCES, "--per-source", 2000, "--samples", 8,
+           "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", n_data)
+    if counts.get("kodcode") and not (kprobe / "rollouts.jsonl").exists():
+        earlier = [p for p in BON.glob("kprobe-*/rollouts.jsonl") if p.parent != kprobe]
+        py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
+           "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", counts["kodcode"], "--exclude-rollouts", *earlier)
+    pairs = [(probe, keep)] + ([(kprobe, kkeep)] if counts.get("kodcode") else [])
+    for p, k in pairs:
+        if not (k / "sft.jsonl").exists():
+            py("select_shortest.py", "--rollouts", p / "rollouts.jsonl", "--out", k)
+            py("contamination.py", "--data", k / "sft.jsonl", "--rollouts", p / "rollouts.jsonl", "--share", 0.3)
+    cal = BON / f"pairs-{name}" / "cal"
+    if not (cal / "summary.txt").exists():
+        py("cal_cuts.py", "--model", base, "--rollouts", *[p / "rollouts.jsonl" for p, _ in pairs],
+           "--keep", *[k / "sft.jsonl" for _, k in pairs], "--out", cal, "--dtype", args.dtype)
+    print((cal / "summary.txt").read_text(), flush=True)
+
+
 def caltable(args):
     """Confidence vs real outcome per data type and cut point, for every calibration run done so far (cal_table.py)."""
     dirs = [d for d in [BON / "pairs-rc1" / "cal", BON / "calcheck-rc1s30", BON / "calcheck-rc1rl40", BON / "pairs-rc2" / "cal"]
@@ -1266,6 +1314,12 @@ def probeknow(args):
            "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
            "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl", "--out", out,
            "--dtype", args.dtype,
+           *([] if not args.probe_extra_from else
+             ["--extra-cal", BON / f"pairs-{args.probe_extra_from}" / "cal",
+              "--extra-rollouts", BON / f"probe-{args.probe_extra_from}" / "rollouts.jsonl",
+              BON / f"kprobe-{args.probe_extra_from}" / "rollouts.jsonl",
+              "--extra-keep", BON / f"select-{args.probe_extra_from}" / "sft.jsonl",
+              BON / f"kselect-{args.probe_extra_from}" / "sft.jsonl"]),
            *([] if not args.probe_test_from else
              ["--test-cal", BON / f"pairs-{args.probe_test_from}" / "cal",
               "--test-rollouts", BON / f"probe-{args.probe_test_from}" / "rollouts.jsonl",
