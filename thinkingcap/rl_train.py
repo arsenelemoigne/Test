@@ -225,13 +225,28 @@ def batch_logps(model, rows, device, entropies=None):
         ids[i, :len(prompt) + len(reply)] = torch.tensor(prompt + reply)
         mask[i, :len(prompt) + len(reply)] = 1
     hidden = body(input_ids=ids.to(device), attention_mask=mask.to(device)).last_hidden_state
+    from torch.utils.checkpoint import checkpoint
+
+    def piece(h, target):
+        # vocabulary-wide logits for a few hundred positions only, recomputed in the backward pass: a 3,000-token
+        # reply would otherwise keep 3,000 x 152k fp32 values alive (~1.8 GB) and run the GPU out of memory
+        logp = torch.log_softmax(head(h).float(), dim=-1)
+        return logp.gather(1, target[:, None])[:, 0], -(logp.exp() * logp).sum(-1)
+
     out = []
     for i, (prompt, reply) in enumerate(rows):
         positions = torch.arange(len(prompt) - 1, len(prompt) + len(reply) - 1, device=device)
-        logp = torch.log_softmax(head(hidden[i, positions]).float(), dim=-1)
-        out.append(logp.gather(1, torch.tensor(reply, device=device)[:, None])[:, 0])
+        target = torch.tensor(reply, device=device)
+        tokens, ents = [], []
+        for start in range(0, len(reply), 256):
+            h = hidden[i, positions[start:start + 256]]
+            t, e = checkpoint(piece, h, target[start:start + 256], use_reentrant=False) if h.requires_grad \
+                else piece(h, target[start:start + 256])
+            tokens.append(t)
+            ents.append(e)
+        out.append(torch.cat(tokens))
         if entropies is not None:
-            entropies.append(-(logp.exp() * logp).sum(-1))
+            entropies.append(torch.cat(ents))
     return out
 
 
