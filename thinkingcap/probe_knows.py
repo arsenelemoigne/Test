@@ -101,9 +101,22 @@ def hidden_features(model_path, sequences, positions, layers, dtype, batch_token
 
 def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
     """Cuts of one cal_cuts.py run: per-cut metadata and hidden-state features (cached in --out)."""
+    meta, sequences, positions = load_meta(cal, rollouts, keep, args.fractions, tokenizer)
+    path = Path(args.out) / cache_name
+    if path.exists():
+        feats = np.load(path)
+    else:
+        print(f"{cal}: {len(set(m['question'] for m in meta))} replies, {len(meta)} cuts; reading hidden states of {args.model}", flush=True)
+        feats = hidden_features(args.model, sequences, positions, args.layers, args.dtype, args.batch_tokens)
+        np.save(path, feats)
+    return meta, feats
+
+
+def load_meta(cal, rollouts, keep, fractions, tokenizer):
+    """Per-cut metadata of one cal_cuts.py run (labels, confidences, sizes), plus the token sequences and positions."""
     cal = Path(cal)
     close_id = tokenizer.convert_tokens_to_ids("</think>")
-    replies, jobs = replies_and_jobs(rollouts, keep, args.fractions, tokenizer)
+    replies, jobs = replies_and_jobs(rollouts, keep, fractions, tokenizer)
     cuts_file = [json.loads(l) for l in (cal / "cuts.jsonl").read_text().splitlines() if l.strip()]
     assert len(cuts_file) == len(jobs) and all(c["thinking_ids"] == j[2] for c, j in zip(cuts_file, jobs)), \
         f"the replies and cuts rebuilt here are not the ones of {cal}"
@@ -122,14 +135,7 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
                      "success": v["right"] / max(1, v["of"]), "confidence": conf[k], "own": own.get(k, float("nan")),
                      "answer": own_rows[k].get("answer") if k in own_rows else None,
                      "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
-    path = Path(args.out) / cache_name
-    if path.exists():
-        feats = np.load(path)
-    else:
-        print(f"{cal}: {len(replies)} replies, {len(jobs)} cuts; reading hidden states of {args.model}", flush=True)
-        feats = hidden_features(args.model, sequences, positions, args.layers, args.dtype, args.batch_tokens)
-        np.save(path, feats)
-    return meta, feats
+    return meta, sequences, positions
 
 
 def auc(scores, labels):

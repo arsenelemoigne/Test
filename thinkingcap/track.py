@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1297,6 +1297,32 @@ def cutexamples(args):
     """Readable examples of cuts, one question per data type, from rc2's cuts (the model's own replies)."""
     out = ROOT.parent / "viz" / "cut_examples.txt"
     py("cut_examples.py", BON / "pairs-rc2" / "cal", "--out", out, "--per-type", 1)
+
+
+def probezoo(args):
+    """Every stopping classifier (layer sweep, linear, MLP, attention over the last 64 thinking tokens, baselines) on
+    the same labelled cuts, compared on the same untouched test set (probe_zoo.py). Hidden states are read once per set
+    (extract_feats.py) into /content/feats, not synced to Drive (several GB)."""
+    frm, test_from = args.calcheck_from, args.probe_test_from
+    sets = [BON / args.probe_cal] + [BON / f"pairs-{r}" / "cal" for r in (args.probe_extra_from or [])] \
+        + [BON / f"pairs-{test_from}" / "cal"]
+    for cal in sets:
+        if not (cal / "own_confidence.jsonl").exists():
+            py("own_conf.py", "--model", args.probe_model, "--cal", cal, "--dtype", args.dtype)
+        name = cal.name if cal.name != "cal" else cal.parent.name
+        py("extract_feats.py", "--model", args.probe_model, "--cal", cal, "--out", Path("/content/feats") / name,
+           "--dtype", args.dtype)
+    out = BON / f"zoo-{args.name}"
+    if not (out / "summary.txt").exists():
+        py("probe_zoo.py", "--cal", BON / args.probe_cal,
+           "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
+           "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl",
+           *(["--extra-runs", *args.probe_extra_from] if args.probe_extra_from else []),
+           "--test-cal", BON / f"pairs-{test_from}" / "cal",
+           "--test-rollouts", BON / f"probe-{test_from}" / "rollouts.jsonl", BON / f"kprobe-{test_from}" / "rollouts.jsonl",
+           "--test-keep", BON / f"select-{test_from}" / "sft.jsonl", BON / f"kselect-{test_from}" / "sft.jsonl",
+           "--feats-root", "/content/feats", "--out", out)
+    print((out / "summary.txt").read_text(), flush=True)
 
 
 def caltable(args):
