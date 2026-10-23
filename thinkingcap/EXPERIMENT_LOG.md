@@ -1076,3 +1076,36 @@ RFT +69.4 / -0.2 | **+67.1 / -5.5** (svamp +78% / -10.0, ifeval -5.6, bfcl_multi
 Conclusion of both repairs: no technique keeps 60%+ within -2 on unseen questions; the usual-set score is optimistic by
 2-5 points for every 60%+ candidate (RFT: -0.2 usual vs -5.5 fresh). Math (SVAMP) is always the main loss. Runtime 2's
 queue is done (end).
+
+## Track 2g: calibrated cuts (confidence vs real outcome) + RL (rlcal), 23 Oct 2026
+
+**rc1 cut calibration (ca1 = models/ca1-soup-10 answering a new draw, seed 31: 1,000 questions + 300 KodCode x8; 904
+right replies kept, the longest right one per question; each cut at 1/5/10/20/35/50/65/80% of its thinking, "</think>"
+closed there, 20 re-answers per cut = 144,640 answers; 2,901 of 7,232 cuts right 20/20). Confidence = per-token
+geometric-mean probability of the answer the full reply wrote, teacher-forced right after the cut.**
+
+Confidence bins -> real share of right re-answers (n = cuts):
+- arc_easy: 0.6-0.8 -> 0.18 (32); 0.8-0.9 -> 0.57 (16); 0.9-1.0 -> 0.99 (225). ECE 0.09
+- commonsense_qa: 0.0-0.2 -> 0.41 (36); 0.2-0.6 -> 0.00-0.01 (169); 0.6-0.8 -> 0.25 (90); 0.8-0.9 -> 0.61 (102); 0.9-1.0 -> 0.99 (483). ECE 0.16
+- gsm_ic: 0.0-0.6 -> 0.00 (975); 0.6-0.8 -> 0.05 (149); 0.8-0.9 -> 0.22 (87); 0.9-1.0 -> 0.80 (453). ECE 0.34
+- gsm_plus: 0.0-0.6 -> 0.00 (807); 0.6-0.8 -> 0.13 (134); 0.8-0.9 -> 0.32 (27); 0.9-1.0 -> 0.86 (216). ECE 0.34
+- ifeval_like: 0.2-0.4 -> 0.84 (132); 0.4-0.6 -> 0.78 (330); 0.6-0.8 -> 0.87 (48); 0.8-0.9 -> 0.84 (21); 0.9-1.0 -> 0.94 (21). ECE 0.31
+- kodcode: 0.4-0.6 -> 0.58 (35); 0.6-0.8 -> 0.63 (287); 0.8-0.9 -> 0.64 (496); 0.9-1.0 -> 0.87 (926). ECE 0.13
+- toolace: 0.0-0.2 -> 0.17 (69); 0.2-0.4 -> 0.57 (77); 0.4-0.6 -> 0.53 (71); 0.6-0.8 -> 0.61 (81); 0.8-0.9 -> 0.54 (120); 0.9-1.0 -> 0.92 (510). ECE 0.11
+
+Per source (allowance: math 0.5 pt, code 1, others 2): confidence threshold c / saved / real loss | outcome rule
+(earliest cut right 20/20) saved / loss:
+arc_easy c 0.9: 83% / 1.3 | 80% / 0.0; commonsense_qa c 0.95: 54% / 0.2 | 56% / 0.0; gsm_ic no c | 30% / 0.0;
+gsm_plus no c | 26% / 0.0; ifeval_like c 0.7: 7% / 1.7 | 48% / 0.0; kodcode no c | 62% / 0.0; toolace no c | 58% / 0.0.
+
+Reading: the model's confidence in its own answer is informative only at the top and only for multiple choice; for
+math it is overconfident (0.98 -> 0.80-0.86 right), for instructions flat (0.3-0.9 all ~0.8 right: the probability of
+one wording, not of being right), for code and tools weak. No confidence threshold keeps math, code or tools within
+their allowance. The real outcome, however, shows large safe cuts: code 62%, tools 58%, instructions 48%, math 26-30%
+of the reply cut with every re-answer still right. First rc1 pairs (confidence only: 142 cut pairs, mostly multiple
+choice) were dropped before training finished; rc1 reruns with the stopping rule per type: confidence where a
+threshold keeps the allowance (arc, csqa, ifeval-like), else the real outcome (gsm_ic, gsm_plus, kodcode, toolace).
+Cut pairs: gsm_ic 110 shorten / 140 hard, gsm_plus 74 / 92, kodcode 169 / 100, toolace 89 / 33, arc 32 / 3, csqa 71 / 26,
+ifeval-like 7 / 3; plus guard pairs (bon_pairs, math shorten 0) and 133 KodCode right-beats-wrong.
+Process notes: grading 144,640 answers serially took > 1 h (code tests; GPU idle) -> check_vllm grades with 16 threads
+(~15 min); a killed check_vllm left an orphan vLLM engine holding 10.5 GB (RL smoke test went out of memory).
