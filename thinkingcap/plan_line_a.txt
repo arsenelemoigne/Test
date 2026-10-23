@@ -39,12 +39,18 @@
 # done: shared probeknow --name pkca1 --probe-cal pairs-rc1/cal --probe-model models/ca1-soup-10 --calcheck-from rc1
 # done: probeknow --name pkrl40 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-test-from rc2
 # second, rebalanced lot of labelled cuts (more instructions, trap math, tools), then the probe on both lots, test = rc2
-callot --name lot1 --start models/rc1-rl-40 --data-seed 45
-cutexamples --name ex1
-probeknow --name pkrl40b --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 --probe-test-from rc2
+# done/dropped (runtimes stopped 23 Oct evening): callot --name lot1 --start models/rc1-rl-40 --data-seed 45
+# done/dropped (runtimes stopped 23 Oct evening): cutexamples --name ex1
+# done/dropped (runtimes stopped 23 Oct evening): probeknow --name pkrl40b --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 --probe-test-from rc2
 # paragraph-level labelled cuts, right AND wrong replies (user, 23 Oct): A = rc1 + RL 40, B = the original Qwen3-0.6B
-callot --name plotA --start models/rc1-rl-40 --data-seed 47 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
-callot --name plotB --start Qwen/Qwen3-0.6B --data-seed 48 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+# done/dropped (runtimes stopped 23 Oct evening): callot --name plotA --start models/rc1-rl-40 --data-seed 47 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+# done/dropped (runtimes stopped 23 Oct evening): callot --name plotB --start Qwen/Qwen3-0.6B --data-seed 48 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
 # only if time is left: RL on the grey-zone round-4 blend
 # removed (user, 23 Oct): rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 41 --rl-alpha 0.3
+# done/dropped (runtimes stopped 23 Oct evening): end
+
+# 24 Oct: restart. Paragraph-level labelled cuts of right AND wrong replies, then the probe zoo on them
+# (development = 70% of the questions, test = the other 30%, held out before any fit).
+callot --name plotA --start models/rc1-rl-40 --data-seed 47 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
 end

@@ -2,29 +2,35 @@
 # (GSM-Plus/GSM-IC math, rebalanced pairs at >= 6/8, math protected, KodCode right-beats-wrong, 3-seed soups), 2 rounds.
 # Target: > 60% tokens saved with an accuracy change better than -2 on the fresh questions.
 # 1. audit: every training question ever prepared against all 2,759 evaluation questions (report in runs/audit)
-audit
-chain --name cb1 --start adapters/clean-b2/step-10 --code-source kodcode --kod-questions 300 --data-seed 5 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
-chain --name cb2 --start soup:cb1 --code-source kodcode --kod-questions 300 --kod-exclude-runs clean-b1 clean-b2 cb1 --data-seed 6 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# done/dropped (runtimes stopped 23 Oct evening): audit
+# done/dropped (runtimes stopped 23 Oct evening): chain --name cb1 --start adapters/clean-b2/step-10 --code-source kodcode --kod-questions 300 --data-seed 5 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# done/dropped (runtimes stopped 23 Oct evening): chain --name cb2 --start soup:cb1 --code-source kodcode --kod-questions 300 --kod-exclude-runs clean-b1 clean-b2 cb1 --data-seed 6 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
 # then: v2 FROM SCRATCH, one clean recipe in order (no MBPP anywhere): raw model -> every round: new questions x8
 # (ToolACE, IFEval-like, ARC/CSQA, GSM-Plus, GSM-IC) + new KodCode tasks x8; pairs short-beats-long at >= 6/8 (math
 # capped and protected) + verified MVT cuts for tools and instructions + right-beats-wrong everywhere (KodCode only
 # right-beats-wrong); DPO 3 seeds, soup; the soup is the next round's base. Chosen on the usual questions at x4
 # (floor -1.5), reported x8 on the usual and the fresh questions.
-chain --name v2r1 --start raw --code-source kodcode --kod-questions 300 --mvt-sources toolace,ifeval_like --data-seed 21 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
-chain --name v2r2 --start soup:v2r1 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 --mvt-sources toolace,ifeval_like --data-seed 22 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
-chain --name v2r3 --start soup:v2r2 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 v2r2 --mvt-sources toolace,ifeval_like --data-seed 23 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
-shared probeknow --name pkca1 --probe-cal pairs-rc1/cal --probe-model models/ca1-soup-10 --calcheck-from rc1
+# done/dropped (runtimes stopped 23 Oct evening): chain --name v2r1 --start raw --code-source kodcode --kod-questions 300 --mvt-sources toolace,ifeval_like --data-seed 21 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# done/dropped (runtimes stopped 23 Oct evening): chain --name v2r2 --start soup:v2r1 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 --mvt-sources toolace,ifeval_like --data-seed 22 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# done/dropped (runtimes stopped 23 Oct evening): chain --name v2r3 --start soup:v2r2 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 v2r2 --mvt-sources toolace,ifeval_like --data-seed 23 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
+# done/dropped (runtimes stopped 23 Oct evening): shared probeknow --name pkca1 --probe-cal pairs-rc1/cal --probe-model models/ca1-soup-10 --calcheck-from rc1
 # v2 stopped after round 3 (user, 23 Oct). This runtime makes the third lot, then the probe on all lots
-shared callot --name lot2 --start models/rc1-rl-40 --data-seed 46
+# done/dropped (runtimes stopped 23 Oct evening): shared callot --name lot2 --start models/rc1-rl-40 --data-seed 46
 # 23 Oct evening: lot1 (runtime 2) and lot2 stopped at the KodCode step (no unused task left); callot now skips it.
 # This runtime finishes both lots (lot1's answers are on Drive); runtime 2's probe on lot1 waits for them.
-shared callot --name lot1 --start models/rc1-rl-40 --data-seed 45 --lot ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250
-shared callot --name lot2 --start models/rc1-rl-40 --data-seed 46 --lot ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250
-shared probeknow --name pkrl40c --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2
+# done/dropped (runtimes stopped 23 Oct evening): shared callot --name lot1 --start models/rc1-rl-40 --data-seed 45 --lot ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250
+# done/dropped (runtimes stopped 23 Oct evening): shared callot --name lot2 --start models/rc1-rl-40 --data-seed 46 --lot ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250
+# done/dropped (runtimes stopped 23 Oct evening): shared probeknow --name pkrl40c --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2
 # probe zoo: every classifier (28-layer sweep, linear, MLP, attention over the last 64 tokens, baselines), same untouched test
-probezoo --name z1 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2
+# done/dropped (runtimes stopped 23 Oct evening): probezoo --name z1 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2
 # shared with runtime 2 (whichever runtime gets here first runs it; the other skips it): RL only on the round 4
 # 50/50 blend (unseen +57.3% / -2.4)
 # removed (user, 23 Oct): rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 41 --rl-alpha 0.3
 # last line: save everything, stop the worker; the notebook's last cell flushes Drive and releases the runtime
+# done/dropped (runtimes stopped 23 Oct evening): end
+
+# 24 Oct: restart. Paragraph-level labelled cuts of right AND wrong replies, then the probe zoo on them
+# (development = 70% of the questions, test = the other 30%, held out before any fit).
+callot --name plotB --start Qwen/Qwen3-0.6B --data-seed 48 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+probezoo --name zB --probe-cal pairs-plotB/cal --probe-model Qwen/Qwen3-0.6B
 end

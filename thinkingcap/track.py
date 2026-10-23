@@ -1335,7 +1335,7 @@ def probezoo(args):
     (extract_feats.py) into /content/feats, not synced to Drive (several GB)."""
     frm, test_from = args.calcheck_from, args.probe_test_from
     sets = [BON / args.probe_cal] + [BON / f"pairs-{r}" / "cal" for r in (args.probe_extra_from or [])] \
-        + [BON / f"pairs-{test_from}" / "cal"]
+        + ([BON / f"pairs-{test_from}" / "cal"] if test_from else [])
     for cal in sets:
         if not (cal / "own_confidence.jsonl").exists():
             py("own_conf.py", "--model", args.probe_model, "--cal", cal, "--dtype", args.dtype)
@@ -1348,9 +1348,10 @@ def probezoo(args):
            "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
            "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl",
            *(["--extra-runs", *args.probe_extra_from] if args.probe_extra_from else []),
-           "--test-cal", BON / f"pairs-{test_from}" / "cal",
-           "--test-rollouts", BON / f"probe-{test_from}" / "rollouts.jsonl", BON / f"kprobe-{test_from}" / "rollouts.jsonl",
-           "--test-keep", BON / f"select-{test_from}" / "sft.jsonl", BON / f"kselect-{test_from}" / "sft.jsonl",
+           *(["--test-cal", BON / f"pairs-{test_from}" / "cal",
+              "--test-rollouts", BON / f"probe-{test_from}" / "rollouts.jsonl", BON / f"kprobe-{test_from}" / "rollouts.jsonl",
+              "--test-keep", BON / f"select-{test_from}" / "sft.jsonl", BON / f"kselect-{test_from}" / "sft.jsonl"]
+             if test_from else []),
            "--feats-root", "/content/feats", "--out", out)
     print((out / "summary.txt").read_text(), flush=True)
 

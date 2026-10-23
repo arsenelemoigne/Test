@@ -105,9 +105,10 @@ def main():
     parser.add_argument("--keep", nargs="+", required=True)
     parser.add_argument("--extra-runs", nargs="*", default=[])
     parser.add_argument("--bon", default="runs/bon")
-    parser.add_argument("--test-cal", required=True)
-    parser.add_argument("--test-rollouts", nargs="+", required=True)
-    parser.add_argument("--test-keep", nargs="+", required=True)
+    parser.add_argument("--test-cal", help="held-out set; without it, --test-share of the development QUESTIONS are held out")
+    parser.add_argument("--test-rollouts", nargs="*", default=[])
+    parser.add_argument("--test-keep", nargs="*", default=[])
+    parser.add_argument("--test-share", type=float, default=0.3)
     parser.add_argument("--feats-root", default="/content/feats")
     parser.add_argument("--out", required=True)
     parser.add_argument("--fractions", default="0.01,0.05,0.1,0.2,0.35,0.5,0.65,0.8")
@@ -138,8 +139,18 @@ def main():
     meta = sum((p[0] for p in parts), [])
     points = np.concatenate([np.asarray(p[1]) for p in parts])
     window = np.concatenate([np.asarray(p[2]) for p in parts])  # float16, a few GB in RAM
-    tmeta, tpoints, twindow = load(Path(args.test_cal), args.test_rollouts, args.test_keep)
-    tpoints, twindow = np.asarray(tpoints), np.asarray(twindow)
+    if args.test_cal:
+        tmeta, tpoints, twindow = load(Path(args.test_cal), args.test_rollouts, args.test_keep)
+        tpoints, twindow = np.asarray(tpoints), np.asarray(twindow)
+    else:  # hold out a share of the questions (both replies of a question on the same side), fixed before any fit
+        import hashlib
+        qid = lambda m: m["question"].rsplit("/", 1)[0] if m["question"].endswith(("/r", "/w")) else m["question"]
+        is_test = np.array([int(hashlib.md5(qid(m).encode()).hexdigest(), 16) % 1000 < 1000 * args.test_share for m in meta])
+        tmeta = [m for m, x in zip(meta, is_test) if x]
+        meta = [m for m, x in zip(meta, is_test) if not x]
+        tpoints, twindow = points[is_test], window[is_test]
+        points, window = points[~is_test], window[~is_test]
+        args.test_cal = f"{args.test_share:.0%} of the development questions, held out"
     sources = sorted({m["source"] for m in meta})
     dev, test = Data(meta, points, sources, args.unsafe), Data(tmeta, tpoints, sources, args.unsafe)
     folds = folds_by_question(dev.question, args.folds, args.seed)
