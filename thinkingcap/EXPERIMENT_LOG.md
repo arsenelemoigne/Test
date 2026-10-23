@@ -1188,3 +1188,12 @@ trap math is over-confident (conf 0.98 -> 0.78 right on gsm_ic); instructions ar
 code and tools middling. The selection rule picks the same thing for both models (confidence for multiple choice and IFEval, the
 outcome rule for math, code and tools). Reading: training on "stop here" pairs taught the model to stop earlier, not to know
 better when it may stop; its sense of "I already have the answer" did not move. Next: the same check on rc1-rl-40 (running).
+
+**Calibration re-check, rc1-rl-40 (calcheck rc1rl40, same 7,232 cuts x 20; 2,860 pass 20/20 vs 2,954 for rc1-soup-30 and
+2,901 for ca1):** ECE arc 0.07, csqa 0.17, gsm_ic 0.36, gsm_plus 0.37, ifeval_like 0.33, kodcode 0.12, toolace 0.15; outcome-rule
+safe cuts arc 80%, csqa 57%, gsm_ic 32%, gsm_plus 26%, ifeval 47%, kodcode 58%, toolace 60% (ca1: 80/56/30/26/48/62/58). Same as
+ca1 and the DPO soup: 40 RL steps did not change how well the model knows when it may stop either (math still 0.97 confident ->
+0.78 right on gsm_ic).
+**rr1 (RL done right) started:** fresh pool seed 42, 2,846 drawn, 553 dropped by the contamination check -> 2,293 questions
+(120 steps x 32 = 3,840 draws: each question seen ~1.7 times, not once); alpha 0.3; first steps: 54-65% right on its training
+answers (fresh questions, not filtered by solve rate), thinking 190 -> 336 tokens over steps 1-3.
