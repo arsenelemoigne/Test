@@ -185,7 +185,7 @@ def update(restart=True):
 DRIVE = Path("/content/drive/MyDrive/thinkingcap-mvtf")
 
 
-def drive_sync(direction):
+def drive_sync(direction, models=None):
     """Copy runs/, adapters/ and data/ to Google Drive ("save") or back ("restore"), when Drive is mounted.
 
     Colab wipes the runtime disk when it recycles a runtime; Drive keeps every result, adapter and rollout.
@@ -198,6 +198,11 @@ def drive_sync(direction):
         names = ["runs", "adapters", "data", "models", *[p.name for p in DRIVE.glob("questions_*") if p.is_dir()]]
     for name in names:
         source, target = (Path(name), DRIVE / name) if direction == "save" else (DRIVE / name, Path(name))
+        if direction == "restore" and name == "models" and models is not None:
+            for m in models:  # only the merged models the queue names (all of them is ~50 min of copying)
+                if (source / m).exists():
+                    subprocess.run(["rsync", "-a", "--update", f"{source / m}/", f"{target / m}/"])
+            continue
         if source.exists():
             # --update: never replace a newer file (a restore once overwrote a fresher local rollout file)
             subprocess.run(["rsync", "-a", "--update", f"{source}/", f"{target}/"])
@@ -1854,7 +1859,11 @@ def plan(args):
     import time
     if not Path("/content/drive/MyDrive").exists():
         print("drive: NOT mounted; results live only on this runtime's disk", flush=True)
-    drive_sync("restore")
+    import re
+    plan_text = Path(args.plan_file).read_text() if Path(args.plan_file).exists() else ""
+    wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
+              for m in re.findall(r"models/([\w.\-]+)", l)}
+    drive_sync("restore", models=wanted)
 
     keep_saving(300)
     done, idle_since = set(), None
