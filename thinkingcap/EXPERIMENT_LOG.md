@@ -1207,3 +1207,24 @@ run-to-run noise of about 1 point at x8 (vLLM sampling is not bit-reproducible),
 not real. (2) RL at alpha 0.3 on fresh questions buys +1 point of saving for -1.3 points, mostly math (-10 on SVAMP): on a
 model already this short, the length penalty pushes the wrong place (math), as the length-band analysis predicted.
 Runtime 2 moved on to rc2 (second calibrated-cut round from rc1-rl-40).
+
+**rc2 (second calibrated-cut round, from rc1-rl-40; seed 43, 869 q + KodCode x8, 675 replies, 5,400 cuts x 20, 2,019 right
+20/20; math safe cuts down to 19-22% (from 26-34% for ca1); 1,020 pairs: shorten 472, guard 319, hard 229; 61 steps), fresh x8:**
+soup 10 **+57.5 / -4.5** (svamp +66% / -7.8, mbpp +67% / -5.0, ifeval +48% / -1.6, bfcl irr +47% / -3.4, mult +44% / -5.0,
+simple +40% / -1.9); soup 20 +63.4 / -4.9 (svamp +71% / -9.1, mbpp +73% / -2.8, ifeval +57% / -4.1, bfcl +43-51% / -5.6..-0.6);
+soup 30 +63.6 / -4.9 (svamp +70% / -10.9, mbpp +76% / -2.8, ifeval +54% / -2.2, bfcl +45-52% / -6.2..-0.3); soup 60 +67.0 / -6.2
+(svamp +71% / -9.4, mbpp +80% / -9.7, ifeval +56% / -2.5, bfcl +49-58% / -5.0..-0.3). A second cut round buys 4-13 points of saving
+at 2.4-4 more points of loss, mostly math: the model was already at its safe math length, as its own cut table showed.
+
+**Confidence vs real outcome per cut point (cal_table.py; conf / real share right / share of cuts 20/20), the same for ca1,
+rc1-soup-30 and rc1-rl-40 within 0.01-0.05:**
+- math traps (gsm_ic, gsm_plus): real success ~0 up to 10% of the thinking, 0.04-0.13 at 20%, 0.2-0.33 at 50%, 0.43-0.52 at 65%,
+  0.64-0.76 at 80%; confidence 0.4-0.5 at the start (honest there), then 0.73-0.88 at 65-80% while real is 0.47-0.76: the
+  over-confidence is in the second half of the reasoning.
+- instructions (ifeval_like): real 0.76-0.84 already at 1% of the thinking (about half the cuts right 20/20) and flat to 80%;
+  confidence flat ~0.45-0.59: the thinking adds almost nothing on average; which questions need it is the open question.
+- tools: real 0.65-0.72 at 1%, 0.84-0.85 at 80% (53-75% of cuts 20/20); code 0.66-0.69 at 1% -> 0.87-0.91 at 80%.
+- multiple choice: real 0.86-0.89 at 1% (arc), 0.59-0.69 (csqa) -> 0.75-0.93 at 80%.
+Reading: for instructions, tools and code, roughly half the questions are already right with almost no thinking and the rest
+need it; a stopper is worth what it can tell the two apart per question. For math almost nothing is safe before 65%.
+Probes running: pkca1 on runtime 1 (v2r3 finished), pkrl40 (test set = rc2's cuts) on runtime 2.
