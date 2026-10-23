@@ -1197,3 +1197,13 @@ ca1 and the DPO soup: 40 RL steps did not change how well the model knows when i
 **rr1 (RL done right) started:** fresh pool seed 42, 2,846 drawn, 553 dropped by the contamination check -> 2,293 questions
 (120 steps x 32 = 3,840 draws: each question seen ~1.7 times, not once); alpha 0.3; first steps: 54-65% right on its training
 answers (fresh questions, not filtered by solve rate), thinking 190 -> 336 tokens over steps 1-3.
+
+**rr1 (RL done right on rc1-soup-30: fresh pool seed 42, 2,293 questions, alpha 0.3), fresh x8:** start model re-scored
+(rr1-start = rc1-soup-30) **+56.4 / -3.8** (bfcl irr +46% / -4.7, mult +41% / -4.4, simple +39% / +0.6; ifeval +48% / -5.9;
+mbpp +64% / -0.9; svamp +67% / -5.6); after RL block 1 (20 steps) **+57.5 / -5.1** (bfcl irr +47% / -3.7, mult +43% / -5.9,
+simple +39% / +0.3; ifeval +47% / -3.1; mbpp +65% / -4.1; svamp +68% / -10.0). Below floor - 2 -> RL stopped by its rule after
+one block. Readings: (1) the SAME model (rc1-soup-30) scored -2.9 this morning and -3.8 now on the same 240 x 8 questions:
+run-to-run noise of about 1 point at x8 (vLLM sampling is not bit-reproducible), so single x8 differences under ~1.5 pts are
+not real. (2) RL at alpha 0.3 on fresh questions buys +1 point of saving for -1.3 points, mostly math (-10 on SVAMP): on a
+model already this short, the length penalty pushes the wrong place (math), as the length-band analysis predicted.
+Runtime 2 moved on to rc2 (second calibrated-cut round from rc1-rl-40).
