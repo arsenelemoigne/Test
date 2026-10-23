@@ -1245,3 +1245,7 @@ code) but not sharp enough at the top for a single threshold to stop safely. Ora
 instructions, 56% code, 61% tools.
 Next in the queue: lot1 (rebalanced, ~1,500 new questions), probe on both lots with a learning curve and one probe per
 data type (added now); then lot2 and the probe on all three.
+
+**v2 round 3 (v2r3, from v2r2's soup; seed 23), soup step 40 chosen (usual x4 +35.6 / -0.1); fresh x8 +28.3 / -1.9**
+(CI on accuracy -3.6..0.0, saving 24-32%). Against round 2 (fresh +28.6 / -0.8): no more saving, 1.1 points more loss (within
+noise, but no progress). The v2 recipe stalls at ~28% on unseen questions after 3 rounds (~4-5 h per round).
