@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 
 from probe_knows import (Data, auc, fit, fit_mlp, folds_by_question, load_meta, pick_threshold, reply_groups,
-                         summarize)
+                         summarize, tradeoff_lines)
 
 
 def attention_fit(get, train_idx, train_y, dim=256, heads=4, epochs=30, seed=0):
@@ -240,6 +240,7 @@ def main():
                 cells.append(auc(scores[n][m], data.label[m]))
             lines.append(f"{n:<{width}}" + "".join(f"{c:>13.3f}" for c in cells[:-1]) + f"{cells[-1]:>8.3f}")
         lines.append("")
+    lines += tradeoff_lines(dev, dev_s, test, test_s, names, sources) + [""]
     for title, allow in (("each type's allowance", dict(s.split("=") for s in args.allow.split(","))),
                          ("2 points for every type", {"default": "2"})):
         lines += [f"Stopping simulation on the TEST set ({title}): tokens saved / real loss in points / coverage; "
@@ -266,7 +267,8 @@ def main():
     for s in sources:
         lines.append(f"  {s}")
         for f in fractions:
-            m = (test.source == s) & (test.fraction == f)
+            lo = -1 if f == fractions[0] else fractions[fractions.index(f) - 1]
+            m = (test.source == s) & (test.fraction > lo) & (test.fraction <= f)
             if not m.any():
                 continue
             own = f"{np.nanmean(test.own[m]):.2f}" if np.isfinite(test.own[m]).all() else "-"

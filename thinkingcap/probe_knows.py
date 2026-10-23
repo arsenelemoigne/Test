@@ -112,10 +112,36 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
     return meta, feats
 
 
+def load_paragraph_meta(cal, close_id):
+    """Per-cut metadata of a label_cuts.py run (cuts at paragraph ends, right and wrong replies)."""
+    cuts = read_jsonl(cal / "cuts.jsonl")
+    replies = {r["reply"]: r for r in read_jsonl(cal / "replies.jsonl")}
+    verdict = {v["key"]: v for v in read_jsonl(cal / "verdicts.jsonl")}
+    conf = {c["key"]: c["confidence"] for c in read_jsonl(cal / "confidence.jsonl")}
+    own_path = cal / "own_confidence.jsonl"
+    own_rows = {c["key"]: c for c in read_jsonl(own_path)} if own_path.exists() else {}
+    tag = cal.parent.name if cal.name == "cal" else cal.name
+    meta, sequences, positions = [], [], []
+    for c in cuts:
+        k, r, v = c["key"], replies[c["reply"]], verdict[c["key"]]
+        t = c["thinking_ids"]
+        sequences.append(c["prompt_ids"] + t)
+        positions.append([len(c["prompt_ids"]) + t.index(close_id) - 1, len(c["prompt_ids"]) + len(t) - 1])
+        # one reply per (question, right/wrong): the reply is the unit of folds and stopping
+        meta.append({"question": f"{tag}/{r['id']}/{'r' if r['correct'] else 'w'}", "source": r["source"],
+                     "fraction": c["frac"], "right": v["right"], "of": v["of"], "success": v["right"] / max(1, v["of"]),
+                     "confidence": conf[k], "own": own_rows[k]["own_confidence"] if k in own_rows else float("nan"),
+                     "answer": own_rows[k].get("answer") if k in own_rows else None, "full_ok": float(r["correct"]),
+                     "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
+    return meta, sequences, positions
+
+
 def load_meta(cal, rollouts, keep, fractions, tokenizer):
     """Per-cut metadata of one cal_cuts.py run (labels, confidences, sizes), plus the token sequences and positions."""
     cal = Path(cal)
     close_id = tokenizer.convert_tokens_to_ids("</think>")
+    if (cal / "replies.jsonl").exists():  # label_cuts.py: paragraph-end cuts of right and wrong replies
+        return load_paragraph_meta(cal, close_id)
     replies, jobs = replies_and_jobs(rollouts, keep, fractions, tokenizer)
     cuts_file = [json.loads(l) for l in (cal / "cuts.jsonl").read_text().splitlines() if l.strip()]
     assert len(cuts_file) == len(jobs) and all(c["thinking_ids"] == j[2] for c, j in zip(cuts_file, jobs)), \
@@ -305,7 +331,8 @@ def stop_one(group, threshold):
     """One reply stopped at its earliest cut with score >= threshold: (saved share, success, stopped early)."""
     total, cuts = group
     hit = None if threshold is None else next((c for c in cuts if c["score"] >= threshold), None)
-    return (0.0, 1.0, 0) if hit is None else (1 - hit["size"] / total, hit["success"], 1)
+    # no early stop: the natural reply, right (1) or wrong (0)
+    return (0.0, cuts[-1].get("full_ok", 1.0), 0) if hit is None else (1 - hit["size"] / total, hit["success"], 1)
 
 
 def summarize(items):
@@ -314,6 +341,39 @@ def summarize(items):
         return 0.0, 0.0, 0.0
     r = np.array([stop_one(g, t) for g, t in items])
     return float(r[:, 0].mean()), 100 * (1 - float(r[:, 1].mean())), float(r[:, 2].mean())
+
+
+def pooled(data, score, threshold, sources):
+    """One threshold for every data type: (mean saved share over types, mean real loss in points over types), each type
+    weighted equally as in the benchmark average."""
+    per = [summarize([(g, threshold) for g in reply_groups(data, score, data.source == s).values()]) for s in sources]
+    return float(np.mean([p[0] for p in per])), float(np.mean([p[1] for p in per]))
+
+
+def tradeoff_lines(dev, dev_scores, test, test_scores, names, sources, budgets=(0.5, 1, 2, 3, 5), title=""):
+    """The savings / accuracy trade-off with ONE threshold per classifier for all data types together (chosen on the
+    development out-of-fold scores as the most saving whose pooled loss stays within the budget), scored on the test set.
+    Pooling uses every question at once, so a budget is not eaten by one or two mistakes in a small type."""
+    grid = [x / 100 for x in range(2, 100, 2)] + [0.97, 0.98, 0.99, 0.995]
+    width = max(len(n) for n in names) + 2
+    out = ["", f"Trade-off, one threshold for all types{title}: TEST tokens saved / real loss (points, mean over types) "
+           "at a pooled loss budget chosen on development", f"{'classifier':<{width}}" + "".join(f"{f'<= {b} pt':>16}" for b in budgets)]
+    for n in names:
+        dsc, tsc = dev_scores[n], test_scores[n]
+        if n == "position":
+            dsc, tsc = dev.fraction, test.fraction
+        curve = [(t, *pooled(dev, dsc, t, sources)) for t in grid]
+        cells = []
+        for b in budgets:
+            ok = [c for c in curve if c[2] <= b]
+            if not ok:
+                cells.append("-")
+                continue
+            t = max(ok, key=lambda c: c[1])[0]
+            s, l = pooled(test, tsc, t, sources)
+            cells.append(f"{s:.0%} / {l:.1f}")
+        out.append(f"{n:<{width}}" + "".join(f"{c:>16}" for c in cells))
+    return out
 
 
 def pick_threshold(groups, grid, allow):
@@ -479,7 +539,8 @@ def main():
         for s in sources:
             out.append(f"  {s}")
             for f in args.fractions:
-                m = (data.source == s) & (data.fraction == f)
+                lo = ([0.0] + list(args.fractions))[list(args.fractions).index(f)]
+                m = (data.source == s) & (data.fraction > (lo if f != args.fractions[0] else -1)) & (data.fraction <= f)
                 ml = m & data.labelled
                 means = " / ".join(f"{np.nanmean(scores[c][m]):.2f}" for c in cols)
                 aucs = " / ".join((lambda a: "n/a" if a != a else f"{a:.2f}")(auc(scores[c][ml], data.label[ml])) for c in cols)
@@ -587,6 +648,8 @@ def main():
             test_scores.pop("answer stability")
         lines += auc_table(test, test_scores, "AUC on the test set (95% bootstrap over questions):")
         lines += tranche_table(test, test_scores, "Cut point by cut point (test set):")
+        names_t = [k for k in keys if k in test_scores and k in dev_oof]
+        lines += tradeoff_lines(dev, dev_oof, test, test_scores, names_t, sources)
         for title, allow in allows:
             lines += stopper_table(test, test_scores, test_threshold, f"Stopper on the test set ({title}): saved / real "
                                    "loss [95% CI of the loss] c coverage", allow)

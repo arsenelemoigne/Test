@@ -134,6 +134,8 @@ def main():
     parser.add_argument("--probe-model", help="probeknow: the model whose hidden states are read")
     parser.add_argument("--lot", default="ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250",
                         help="callot: questions drawn per type (before the right-answer and contamination filters)")
+    parser.add_argument("--paragraphs", action="store_true",
+                        help="callot: cut at every paragraph end, right AND wrong replies (label_cuts.py), instead of cal_cuts")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
@@ -1283,9 +1285,33 @@ def callot(args):
                "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
                "--max-questions", counts["kodcode"], "--exclude-rollouts", *earlier)
         except subprocess.CalledProcessError:  # every KodCode task of the file was answered by an earlier run
-            print(f"{name}: no unused KodCode task left; this lot has no code questions", flush=True)
+            if args.paragraphs:  # label lots may reuse training tasks; only the probes' test set (rc2) stays out
+                print(f"{name}: no unused KodCode task left; reusing earlier ones except rc2's", flush=True)
+                py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
+                   "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+                   "--max-questions", counts["kodcode"], "--exclude-rollouts", BON / "kprobe-rc2" / "rollouts.jsonl")
+            else:
+                print(f"{name}: no unused KodCode task left; this lot has no code questions", flush=True)
     has_kod = (kprobe / "rollouts.jsonl").exists() and (kprobe / "rollouts.jsonl").stat().st_size > 0
     pairs = [(probe, keep)] + ([(kprobe, kkeep)] if counts.get("kodcode") and has_kod else [])
+    if args.paragraphs:  # every question, solved or not: the clean-question list is checked directly
+        cal = BON / f"pairs-{name}" / "cal"
+        if not (cal / "summary.txt").exists():
+            clean = BON / f"{name}-clean.jsonl"
+            if not clean.exists():
+                rows = {}
+                for p, _ in pairs:
+                    for l in (p / "rollouts.jsonl").read_text().splitlines():
+                        if l.strip():
+                            r = json.loads(l)
+                            rows.setdefault(r["id"], {"id": r["id"], "source": r["source"]})
+                clean.write_text("".join(json.dumps(r) + "\n" for r in rows.values()))
+                for p, _ in pairs:
+                    py("contamination.py", "--data", clean, "--rollouts", p / "rollouts.jsonl", "--share", 0.3)
+            py("label_cuts.py", "--model", base, "--rollouts", *[p / "rollouts.jsonl" for p, _ in pairs],
+               "--keep", clean, "--out", cal, "--include-wrong", "--dtype", args.dtype)
+        print((cal / "summary.txt").read_text(), flush=True)
+        return
     for p, k in pairs:
         if not (k / "sft.jsonl").exists():
             py("select_shortest.py", "--rollouts", p / "rollouts.jsonl", "--out", k)
