@@ -125,6 +125,8 @@ def main():
                         help="source=points of expected accuracy loss allowed by the calibration")
     parser.add_argument("--samples", type=int, default=20, help="re-answers per cut: the real outcome in 5% steps")
     parser.add_argument("--per-question", type=int, default=1, help="correct replies cut per question (longest first)")
+    parser.add_argument("--select", choices=["auto", "confidence", "outcome"], default="auto",
+                        help="auto: confidence threshold where one keeps the asked accuracy, else the real outcome")
     parser.add_argument("--min-save", type=float, default=0.25)
     parser.add_argument("--answer-tokens", type=int, default=2048)
     parser.add_argument("--limit", type=int, default=0, help="smoke test: at most this many replies")
@@ -192,7 +194,7 @@ def main():
     calib_lines = ["", "Confidence vs real outcome (bins of the model's confidence at a cut -> how often its re-answers "
                    "were really right):"]
     pairs, lines = [], [f"{'source':<16}{'replies':>8}{'conf c':>8}{'saved':>8}{'loss':>7}{'| tau':>7}{'saved':>8}"
-                        f"{'loss':>7}{'shorten':>9}{'hard':>6}{'ECE':>7}"]
+                        f"{'loss':>7}{'shorten':>9}{'hard':>6}{'ECE':>7}  rule"]
     for source, indices in sorted(by_source.items()):
         size = lambda t, v: len(t) + len(v["right_ids"] or v["wrong_ids"] or [])
         entries = [(replies[i]["output_tokens"], [(size(t, v), v["right"] / max(1, v["of"])) for _, t, v in per_reply[i]])
@@ -208,13 +210,19 @@ def main():
         calib_lines.append(f"  {source}: " + "; ".join(f"{lo:.1f}-{hi:.1f}: n {n}, conf {cf:.2f} -> real {rl:.2f}"
                                                       for lo, hi, n, cf, rl in table) + f" (ECE {ece:.2f})")
         n_short = n_hard = 0
-        if c is not None:
+        # the stopping rule per source: the model's own confidence where a threshold keeps the asked accuracy;
+        # where its confidence is too poorly calibrated for that, the real outcome (re-answers right >= tau)
+        rule = "conf" if c is not None and args.select != "outcome" else ("outcome" if tau is not None else None)
+        if args.select == "confidence" and c is None:
+            rule = None
+        if rule:
             for i in indices:
                 r, cuts = replies[i], per_reply[i]
-                hit = next((j for j, (_, _, v) in enumerate(cuts) if v["confidence"] >= c), None)
+                if rule == "conf":
+                    hit = next((j for j, (_, _, v) in enumerate(cuts) if v["confidence"] >= c), None)
+                else:
+                    hit = next((j for j, (_, _, v) in enumerate(cuts) if v["right"] / max(1, v["of"]) >= tau), None)
                 if hit is None or not cuts[hit][2]["right_ids"]:
-                    continue
-                if hit is None:
                     continue
                 _, thinking, verdict = cuts[hit]
                 chosen = thinking + verdict["right_ids"]
@@ -228,7 +236,8 @@ def main():
                     pairs.append(base | {"kind": "hard", "rejected_ids": t + v["wrong_ids"]})
                     n_hard += 1
         lines.append(f"{source:<16}{len(indices):>8}{c if c is not None else '-':>8}{csaved:>8.0%}{closs:>7.1f}"
-                     f"{tau if tau is not None else '-':>7}{saved:>8.0%}{loss:>7.1f}{n_short:>9}{n_hard:>6}{ece:>7.2f}")
+                     f"{tau if tau is not None else '-':>7}{saved:>8.0%}{loss:>7.1f}{n_short:>9}{n_hard:>6}{ece:>7.2f}"
+                     f"  {rule or 'none'}")
     write_jsonl(out / "pairs.jsonl", pairs)
     lines.append(f"total {len(pairs)} pairs at the confidence threshold c; saved = mean share of the reply cut away; "
                  "loss = real accuracy points lost if the model learned to stop at every chosen cut; tau = the "
