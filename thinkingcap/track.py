@@ -121,6 +121,9 @@ def main():
     parser.add_argument("--rl-lr", type=float, default=1e-5, help="rlcal: RL learning rate (LoRA)")
     parser.add_argument("--rl-kl", type=float, default=1e-3, help="rlcal: KL to the round's start model")
     parser.add_argument("--rl-only", action="store_true", help="rlcal: no calibrated-cut DPO; RL straight from --start")
+    parser.add_argument("--rl-fresh-seed", type=int, default=0,
+                        help="rlcal: RL on a fresh, contamination-checked draw (this seed) instead of the round's questions")
+    parser.add_argument("--rl-fresh-per-source", type=int, default=900, help="rlcal: questions per source in that draw")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
     parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
     parser.add_argument("--smoke", action="store_true", help="rlcal: tiny sizes, no scoring: does every step run?")
@@ -1083,17 +1086,18 @@ def rlcal(args):
            "--kod-max-task", 70, "--kod-max-solution", 130)
     probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
     kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
-    if not (probe / "rollouts.jsonl").exists():
+    skip_probe = args.rl_only and args.rl_fresh_seed  # RL on a fresh draw needs no answers of the round's own draw
+    if not skip_probe and not (probe / "rollouts.jsonl").exists():
         py("probe_curve.py", "--data", data, "--sources", BAL_SOURCES, "--per-source", 300, "--samples", 8,
            "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
            "--max-questions", 24 if small else args.gen_questions)
-    if not (kprobe / "rollouts.jsonl").exists():
+    if not skip_probe and not (kprobe / "rollouts.jsonl").exists():
         earlier = [p for p in BON.glob("kprobe-*/rollouts.jsonl") if p.parent != kprobe]
         py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
            "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
            "--max-questions", 8 if small else args.kod_questions, "--exclude-rollouts", *earlier)
     for p, k in ((probe, keep), (kprobe, kkeep)):
-        if not (k / "sft.jsonl").exists():
+        if not skip_probe and not (k / "sft.jsonl").exists():
             py("select_shortest.py", "--rollouts", p / "rollouts.jsonl", "--out", k)
             py("contamination.py", "--data", k / "sft.jsonl", "--rollouts", p / "rollouts.jsonl", "--share", 0.3)
     val = f"questions_val{VAL_SEED}"
@@ -1191,19 +1195,55 @@ def rlcal(args):
     rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, (probe, kprobe), (keep, kkeep), choose, report)
 
 
+def fresh_rl_pool(name, seed, per_source, kod_file):
+    """A new draw for RL: ToolACE, IFEval-like, ARC/CSQA, GSM-Plus, GSM-IC (--per-source each) plus KodCode tasks no
+    run has answered, minus every question of an earlier draw, minus anything the contamination check flags (30% of
+    8-grams or an exact 13-word run against the 2,759 evaluation questions). Ids as probe_curve gives them."""
+    import random
+    pool = Path(f"data/rl-{name}-fresh{seed}.jsonl")
+    if pool.exists():
+        return pool
+    raw = Path(f"data/rlfresh-seed{seed}-raw.jsonl")
+    py("prepare_types.py", "--sources", "toolace,ifeval_like,mc,gsm_plus,gsm_ic", "--per-source", per_source,
+       "--seed", seed, "--out", raw)
+    text = lambda r: r["prompt"][-1]["content"]
+    used = [p for p in Path("data").glob("*.jsonl")
+            if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal", "rl-")) and "raw" not in p.name]
+    seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
+    answered = {json.loads(l).get("question") for p in BON.glob("kprobe-*/rollouts.jsonl")
+                for l in p.read_text().splitlines() if l.strip()}
+    rows = [json.loads(l) for l in raw.read_text().splitlines() if l.strip()]
+    kod = [json.loads(l) for l in kod_file.read_text().splitlines() if l.strip()]
+    kod = [r for r in kod if text(r) not in answered]
+    random.Random(seed).shuffle(kod)
+    rows = [r for r in rows + kod[:per_source // 2] if text(r) not in seen]
+    for index, row in enumerate(rows):
+        row["id"] = f"{row['source']}-fresh{seed}-{index}"
+    pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    questions = Path(f"data/rlfresh-seed{seed}-text.jsonl")  # contamination.py reads each id's question text
+    questions.write_text("".join(json.dumps({"id": r["id"], "question": text(r)}) + "\n" for r in rows))
+    py("contamination.py", "--data", pool, "--rollouts", questions, "--share", 0.3)
+    print(f"{name}: fresh RL pool (seed {seed}): {sum(1 for l in pool.read_text().splitlines() if l.strip())} questions",
+          flush=True)
+    return pool
+
+
 def rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, probes, keeps, choose, report):
     """RL from cal_model in blocks of --rl-block steps; after each block the LoRA is kept, merged and scored on the
     choosing set with 2 answers (a log line), so any block can be gone back to; a block more than 2 points below
     --floor stops the run. The best block (choosing set x4, within --floor) is reported x8 on usual and unseen."""
     small = args.smoke
     solved = defaultdict(list)
-    for p in probes:
+    for p in ([] if args.rl_fresh_seed else probes):
         for l in (p / "rollouts.jsonl").read_text().splitlines():
             if l.strip():
                 r = json.loads(l)
                 solved[r["id"]].append(r["correct"])
-    allowed = {json.loads(l)["id"] for k in keeps for l in (k / "sft.jsonl").read_text().splitlines() if l.strip()}
+    allowed = set() if args.rl_fresh_seed else \
+        {json.loads(l)["id"] for k in keeps for l in (k / "sft.jsonl").read_text().splitlines() if l.strip()}
     pool = Path(f"data/rl-{name}.jsonl")
+    if args.rl_fresh_seed:  # new questions, each seen about once over the run, instead of repeating the round's
+        pool = fresh_rl_pool(name, args.rl_fresh_seed, args.rl_fresh_per_source, kod_file)
     if not pool.exists():
         rows = []
         for f in (data, kod_file):  # ids as probe_curve.py gives them: "<source>-<line index in the file>"

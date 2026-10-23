@@ -16,6 +16,6 @@ chain --name v2r3 --start soup:v2r2 --code-source kodcode --kod-questions 300 --
 chain --name v2r4 --start soup:v2r3 --code-source kodcode --kod-questions 300 --kod-exclude-runs v2r1 v2r2 v2r3 --mvt-sources toolace,ifeval_like --data-seed 24 --gen-questions 1500 --dpo-epochs 1 --save-every 10 --eval-steps 10 20 30 40 --seeds 0 1 2
 # shared with runtime 2 (whichever runtime gets here first runs it; the other skips it): RL only on the round 4
 # 50/50 blend (unseen +57.3% / -2.4)
-shared rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only
+shared rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 41
 # last line: save everything, stop the worker; the notebook's last cell flushes Drive and releases the runtime
 end
