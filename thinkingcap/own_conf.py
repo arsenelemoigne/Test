@@ -39,7 +39,8 @@ def main():
         for (k, _), o in zip(batch, outputs):
             c = o.outputs[0]
             n = max(1, len(c.token_ids))
-            result[k] = {"key": k, "own_confidence": math.exp(c.cumulative_logprob / n), "tokens": len(c.token_ids)}
+            result[k] = {"key": k, "own_confidence": math.exp(c.cumulative_logprob / n), "tokens": len(c.token_ids),
+                         "answer": c.text[-300:]}  # its own answer (tail), for the answer-stability baseline
     out.write_text("".join(json.dumps(result[k]) + "\n" for k in sorted(result)))
     print(f"own confidence for {len(result)} cuts -> {out}", flush=True)
 

@@ -110,7 +110,8 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
     verdict = {v["key"]: v for v in read_jsonl(cal / "verdicts.jsonl")}
     conf = {c["key"]: c["confidence"] for c in read_jsonl(cal / "confidence.jsonl")}
     own_path = cal / "own_confidence.jsonl"  # own_conf.py: the probability of the model's OWN answer at the cut
-    own = {c["key"]: c["own_confidence"] for c in read_jsonl(own_path)} if own_path.exists() else {}
+    own_rows = {c["key"]: c for c in read_jsonl(own_path)} if own_path.exists() else {}
+    own = {k: c["own_confidence"] for k, c in own_rows.items()}
     sequences, positions, meta = [], [], []
     for k, (i, f, t) in enumerate(jobs):
         r, v = replies[i], verdict[k]
@@ -119,6 +120,7 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
         positions.append([len(r["prompt_ids"]) + close - 1, len(r["prompt_ids"]) + len(t) - 1])
         meta.append({"question": f"{cal.parent.name}/{r['id']}", "source": r["source"], "fraction": f, "right": v["right"], "of": v["of"],
                      "success": v["right"] / max(1, v["of"]), "confidence": conf[k], "own": own.get(k, float("nan")),
+                     "answer": own_rows[k].get("answer") if k in own_rows else None,
                      "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
     path = Path(args.out) / cache_name
     if path.exists():
@@ -166,6 +168,70 @@ def fit(train_x, train_y, l2=1.0, steps=300):
     return predict
 
 
+def fit_mlp(train_x, train_y, hidden=(256, 64), dropout=0.2, wd=1e-3, epochs=60, seed=0):
+    """A small MLP probe (as Zhang et al. 2025): standardized input -> 256 -> 64 -> 1, ReLU, dropout, AdamW, early
+    stopping on 15% of the training rows; returns a predict function. Targets may be soft (success rates)."""
+    import torch
+    torch.manual_seed(seed)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    mu, sd = train_x.mean(0), train_x.std(0) + 1e-4
+    x = torch.tensor((train_x - mu) / sd, dtype=torch.float32, device=device)
+    y = torch.tensor(train_y, dtype=torch.float32, device=device)
+    perm = torch.randperm(len(y), generator=torch.Generator().manual_seed(seed)).to(device)
+    n_val = max(1, int(0.15 * len(y)))
+    val, tr = perm[:n_val], perm[n_val:]
+    layers, d = [], x.shape[1]
+    for h in hidden:
+        layers += [torch.nn.Linear(d, h), torch.nn.ReLU(), torch.nn.Dropout(dropout)]
+        d = h
+    net = torch.nn.Sequential(*layers, torch.nn.Linear(d, 1)).to(device)
+    opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=wd)
+    loss_fn = torch.nn.BCEWithLogitsLoss()
+    best, best_state, bad = float("inf"), None, 0
+    for _ in range(epochs):
+        net.train()
+        for idx in tr[torch.randperm(len(tr), device=device)].split(256):
+            opt.zero_grad()
+            loss_fn(net(x[idx]).squeeze(-1), y[idx]).backward()
+            opt.step()
+        net.eval()
+        with torch.no_grad():
+            v = loss_fn(net(x[val]).squeeze(-1), y[val]).item()
+        if v < best - 1e-4:
+            best, best_state, bad = v, {k: t.clone() for k, t in net.state_dict().items()}, 0
+        else:
+            bad += 1
+            if bad >= 6:
+                break
+    net.load_state_dict(best_state)
+    net.eval()
+
+    def predict(test_x):
+        tx = torch.tensor((test_x - mu) / sd, dtype=torch.float32, device=device)
+        with torch.no_grad():
+            return torch.sigmoid(net(tx).squeeze(-1)).cpu().numpy()
+    return predict
+
+
+def stability_scores(meta):
+    """Answer stability (answer-convergence baseline): at each cut, how many consecutive earlier cuts of the same reply gave
+    the same own answer (normalized), scaled to 0-1; NaN when own answers are missing."""
+    norm = lambda s: " ".join(str(s).lower().split())[-120:]
+    out = np.full(len(meta), np.nan)
+    by_q = defaultdict(list)
+    for k, m in enumerate(meta):
+        by_q[m["question"]].append(k)
+    for ks in by_q.values():
+        ks.sort(key=lambda k: meta[k]["fraction"])
+        run = 0
+        for i, k in enumerate(ks):
+            if meta[k].get("answer") is None:
+                break
+            run = run + 1 if i and norm(meta[k]["answer"]) == norm(meta[ks[i - 1]]["answer"]) else 0
+            out[k] = run / max(1, len(ks) - 1)
+    return out
+
+
 class Data:
     """One set of cuts with its labels and feature views."""
 
@@ -185,6 +251,7 @@ class Data:
         self.position = np.concatenate([frac[:, None], np.log(frac)[:, None], onehot, onehot * frac[:, None]], axis=1)
         self.confidence = np.array([m["confidence"] for m in meta])
         self.own = np.array([m["own"] for m in meta])
+        self.stability = stability_scores(meta)
         self.success = np.array([m["success"] for m in meta])
 
     def view(self, config):
@@ -327,18 +394,34 @@ def main():
     lines.append("Exploration (each configuration's out-of-fold AUC; NOT the result: picking the best one is optimistic):")
     lines += [f"  {name(c):<28} {auc(p[dev.labelled], dev.label[dev.labelled]):.3f}" for c, p in explore.items()]
     probe, probe_t, probe_s, chosen = np.full(dev.n, np.nan), np.full(dev.n, np.nan), np.full(dev.n, np.nan), []
+    chosen_cfgs = []
     for f in range(args.folds):
         train, test = folds != f, folds == f
         c = choose_config(dev, configs, train, args.folds - 1, args.seed + 1 + f)
         chosen.append(name(c))
+        chosen_cfgs.append(c)
         x = dev.view(c)
         probe[test] = fit(x[train & dev.labelled], dev.label[train & dev.labelled])(x[test])
         probe_s[test] = fit(x[train], dev.success[train])(x[test])  # trained on the real success rate of every cut
         for s in sources:  # one probe per data type (the pooled one transfers poorly between types)
             src = dev.source == s
             probe_t[test & src] = fit(x[train & dev.labelled & src], dev.label[train & dev.labelled & src])(x[test & src])
+    best_cfg = max(set(chosen_cfgs), key=chosen_cfgs.count)  # the configuration the nested choice picked most often
     dev_scores = {"position": oof(dev, "position", everything, folds, args.folds), "confidence": dev.confidence,
                   "probe": probe, "probe/type": probe_t, "probe/soft": probe_s}
+    allx = feats.reshape(dev.n, -1).astype(np.float32)
+    mlp, mlp_all = np.full(dev.n, np.nan), np.full(dev.n, np.nan)
+    for f in range(args.folds):
+        train, test = folds != f, folds == f
+        lab_tr = train & dev.labelled
+        x = dev.view(best_cfg)
+        mlp[test] = fit_mlp(x[lab_tr], dev.label[lab_tr], seed=f)(x[test])
+        mlp_all[test] = fit_mlp(allx[lab_tr], dev.label[lab_tr], hidden=(512, 128), seed=f)(allx[test])
+    dev_scores["mlp"], dev_scores["mlp/all layers"] = mlp, mlp_all
+    keys += ["mlp", "mlp/all layers"]
+    if np.isfinite(dev.stability).all():
+        dev_scores["answer stability"] = dev.stability
+        keys.append("answer stability")
     has_own = bool(np.isfinite(dev.own).all())
     if has_own:
         dev_scores["own confidence"] = dev.own
@@ -458,10 +541,22 @@ def main():
         lab = dev.labelled
         test_scores = {"position": fit(dev.position[lab], dev.label[lab])(test.position), "confidence": test.confidence,
                        "probe": fit(x[lab], dev.label[lab])(test.view(final_c)), "probe/type": np.full(test.n, np.nan),
-                       "probe/soft": fit(x, dev.success)(test.view(final_c)), "own confidence": test.own}
+                       "probe/soft": fit(x, dev.success)(test.view(final_c)), "own confidence": test.own,
+                       "mlp": fit_mlp(x[lab], dev.label[lab])(test.view(final_c)),
+                       "mlp/all layers": fit_mlp(feats.reshape(dev.n, -1).astype(np.float32)[lab], dev.label[lab],
+                                                 hidden=(512, 128))(tfeats.reshape(test.n, -1).astype(np.float32)),
+                       "answer stability": test.stability}
         dev_oof = {"position": dev.fraction, "confidence": dev.confidence,
                    "probe": oof(dev, final_c, everything, folds, args.folds), "probe/type": np.full(dev.n, np.nan),
-                   "probe/soft": oof(dev, final_c, everything, folds, args.folds, soft=True), "own confidence": dev.own}
+                   "probe/soft": oof(dev, final_c, everything, folds, args.folds, soft=True), "own confidence": dev.own,
+                   "answer stability": dev.stability}
+        # the MLPs' out-of-fold scores on the development set (for their thresholds), with the final configuration
+        dev_oof["mlp"], dev_oof["mlp/all layers"] = np.full(dev.n, np.nan), np.full(dev.n, np.nan)
+        xf, allx = dev.view(final_c), feats.reshape(dev.n, -1).astype(np.float32)
+        for f in range(args.folds):
+            tr, te = (folds != f) & lab, folds == f
+            dev_oof["mlp"][te] = fit_mlp(xf[tr], dev.label[tr], seed=f)(xf[te])
+            dev_oof["mlp/all layers"][te] = fit_mlp(allx[tr], dev.label[tr], hidden=(512, 128), seed=f)(allx[te])
         tx = test.view(final_c)
         for s in sources:
             src, tsrc = dev.source == s, test.source == s
@@ -482,6 +577,8 @@ def main():
                   "out-of-fold scores. Scored once.", ""]
         if not np.isfinite(test.own).all():
             test_scores.pop("own confidence")
+        if not np.isfinite(test.stability).all():
+            test_scores.pop("answer stability")
         lines += auc_table(test, test_scores, "AUC on the test set (95% bootstrap over questions):")
         lines += tranche_table(test, test_scores, "Cut point by cut point (test set):")
         for title, allow in allows:
