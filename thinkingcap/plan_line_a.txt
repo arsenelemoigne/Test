@@ -42,5 +42,5 @@
 callot --name lot1 --start models/rc1-rl-40 --data-seed 45
 probeknow --name pkrl40b --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 --probe-test-from rc2
 # only if time is left: RL on the grey-zone round-4 blend
-shared rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 41 --rl-alpha 0.3
+# removed (user, 23 Oct): rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 41 --rl-alpha 0.3
 end
