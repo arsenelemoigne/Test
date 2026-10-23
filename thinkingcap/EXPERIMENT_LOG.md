@@ -1171,3 +1171,11 @@ The lineage saw MBPP-style training tasks, some of them siblings of MBPP+ tasks;
 **v2 round 2 (v2r2, from v2r1's soup; seed 22), soups x4:** step 10 +20.9 / +0.2; 20 +23.6 / -0.6; 30 +27.3 / +0.6; 40 +28.6 /
 -0.6 (chosen). **Step 40 usual x8: +31.2 / -0.9; fresh x8: +28.6 / -0.8** (bfcl irrelevance +25% / -2.2, multiple +25% /
 -3.7, simple +22% / +0.6; ifeval +33% / +0.6; mbpp +21% / -0.3; svamp +35% / -1.6). v2r3 started.
+
+**rc1 DPO soups 10 and 20 on the fresh set x8:** soup 10 **+48.6 / -3.0** (svamp +62% / -6.2, mbpp +55% / -2.2, ifeval +35% / -1.9,
+bfcl irr +38% / -3.4, mult +38% / -2.2, simple +34% / +0.3); soup 20 **+54.8 / -4.0** (svamp +65% / -5.6, mbpp +63% / -4.7, ifeval
++46% / -3.1, bfcl irr +43% / -4.7, mult +40% / -3.7, simple +37% / +0.6). All seven rc1 versions on the fresh set: +48.6..+55.6%
+saved at -2.1..-4.0 (soup 10 -3.0, soup 20 -4.0, soup 30 -2.9, RL 20 -3.7, RL 40 -2.1, RL 60 -3.4). Soup 10 saves exactly as much as
+ca1 (+48.6) but loses 1.2 points more: the cut pairs' accuracy cost shows from the first checkpoint; the spread between neighbouring
+checkpoints (1-2 points) is noise-sized. rr4 (grey zone) started by mistake before the queue change and was stopped at its first
+RL block; runtime 2 now runs the calibration re-checks, then rr1 and rc2.
