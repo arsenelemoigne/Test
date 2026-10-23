@@ -146,6 +146,63 @@ the current files. If you read only one section, read this one.
    (CLEAN) | balanced  53.8 / -2.5 (grey).  Safest clean:  ca1 48.6 / -1.8 | cb1 41.0 / -1.1 | v2 round 2  28.6 / -0.8.
    Competitor: 43.2 / -0.85.  No model is yet over 55% at better than -2 on unseen questions.
 
+10. THE RULES AND GUARDRAILS, ALL IN ONE PLACE (who uses what)
+   Important: v2 does NOT use RL. v2 is DPO only (best-of-8 pairs, round after round). RL is used only in the rc1
+   line (rc1 + RL 20/40/60, done) and in rr1 / rr4 (queued).
+
+   a) Guardrails of the DPO recipe (v2, ca1/ca2, cb1/cb2, and the DPO step of rc1/rc2):
+      - Only the model's OWN answers are used (best of 8 per question); nothing written by another model.
+      - "Shorter" pairs only where the question is answered right >= 6/8 (a question the model barely solves keeps
+        its thinking), and only when the long right answer is >= 1.5x the short right one.
+      - Guard pairs: a right answer always beats a wrong one (the model never learns "short beats right"); mix 30%
+        shorter / 70% guard (guard-heavy).
+      - Math protected: at most 40 "shorter" pairs per math source; math guard pairs use a median-length right
+        answer, not the shortest; trap math (GSM-Plus, GSM-IC) included so the model meets distractors.
+      - Code: no "shorter" code pairs (they hurt code); code only as KodCode "right beats wrong".
+      - Tools and instructions (v2 only): extra cut pairs only when the cut answer was re-checked right 4/4 times.
+      - One pass over the pairs (more passes memorize them and undo the effect); NLL anchor on the chosen answer
+        (RPO) so the model keeps writing fluent answers; LoRA r16; lr 2e-5; beta 0.1.
+      - 3 DPO seeds averaged (soup) to remove one-seed luck.
+      - Checkpoint chosen only within an accuracy floor: -1.5 points (x4); the most-saving soup within the floor wins.
+      - Clean data: no MBPP and none of the 4 test benchmarks; every training question checked against the 2,759
+        test questions (dropped if >= 30-50% of its 8-grams or any exact 13-word run match); each round draws NEW
+        questions never used before.
+      - A "collapse" tripwire (probability of ending right after </think>) watches for the model dropping its
+        thinking altogether; it never fired.
+
+   b) Guardrails added for the calibrated cuts (rc1, rc2):
+      - A cut is accepted only if the model, restarting from it, is right 20 times out of 20 (real outcome), or, for
+        multiple choice and instructions, if its confidence clears a threshold chosen so the real loss stays within
+        the type's allowance: math 0.5 point, code 1, others 2.
+      - "Hard" pairs: the accepted cut beats an EARLIER cut that led to a wrong answer, so the model learns where
+        stopping becomes unsafe, not just "stop early".
+
+   c) The RL rules (rl_train.py, used by rc1's RL and by rr1 / rr4):
+      - Reward = 0 for a wrong answer or an answer cut off by the 3,072-token cap. A right answer gets
+        1 - alpha_q x sigmoid(z), z = its thinking length compared with the OTHER right answers to the same question
+        (standardized). So: right always beats wrong (the best wrong answer gets 0, the worst right one still gets
+        at least 1 - alpha_q); among right answers, shorter than its siblings is better. Only the thinking is
+        counted, never the final answer.
+      - alpha_q = alpha x the question's solve rate in this step: a question solved 8/8 gets the full length
+        penalty, one solved 2/8 almost none (hard questions keep their thinking). alpha 0.15 in rc1, 0.3 in rr1/rr4.
+      - Advantages centered per question and scaled by the spread of the whole batch (DLER), so easy questions with
+        tiny reward differences do not get blown up.
+      - KL leash: k3 KL 1e-3 to the starting model (the model cannot drift far from where it began).
+      - lr 1e-5, LoRA r16, 32 questions x 8 answers per step, graded with the same graders as the evaluation.
+      - Blocks of 20 steps; every block saved and merged, so any block can be gone back to.
+      - Stop rule: a block scoring more than 2 points below the floor (i.e. worse than -3.5) stops the run.
+      - Question pool: rc1 used the 782 round questions the start model solved >= 4/8, REPEATED about every 24
+        steps (that is what lengthened its thinking). rr1 / rr4 use a FRESH draw instead (900 per source: tools,
+        instructions, multiple choice, two trap-math sets, plus unused KodCode), minus every question of any earlier
+        draw, minus anything the contamination check flags, each question seen about once over 120 steps.
+      - Judging: every block scored directly on the unseen (fresh) set x8 (user decision); no choosing set.
+
+   d) Guardrails of the measurement itself:
+      - Same questions, same number of answers (x8), same graders and sampling settings as the official evaluation.
+      - The fresh set (seed 20261022) is never used to train; it is only used to score.
+      - Noise: about +/-1.5 points at x8 on 240 questions; differences smaller than that are not claimed.
+      - The full official evaluation (2,759 x 8) is run only once, at the end, on the single chosen model.
+
 ================================================================================================================
 A1. THE TASK (BottleCapAI ThinkingCap Test; full README in PART B)
 ================================================================================================================
@@ -335,10 +392,11 @@ M16. Clean lines (no MBPP in the lineage). Family A: DPO from raw on round-1 ans
     a second round (A2), then the full chain recipe (ca1, ca2). Family B: same plus KodCode as right-beats-wrong
     pairs only (B1, B2), then chain (cb1, cb2). Chain = balanced recipe + new question draw per round + stricter
     contamination check + soup chosen within -1.5 on usual x4 + fresh LoRA on top of the previous soup.
-M17. v2 from scratch (running, 23 Oct): chain recipe from the raw model, rounds v2r1-v2r4, KodCode
+M17. v2 from scratch (rounds 1-2 done, round 3 running; DPO only, no RL; rules in A0.10): chain recipe from the raw model, rounds v2r1-v2r4, KodCode
     right-beats-wrong, plus verified MVT cuts (4/4 re-answers right) as extra short-beats-long pairs for tools
     and instructions (mvt_pairs.py, travel 1024).
-M18. rlcal (implemented 23 Oct, queued on runtime 2): (1) calibrated cuts with confidence vs real outcome
+M18. rlcal (implemented 23 Oct; as RUN in the update: 20 re-answers per cut, not 4; cut at 1% too; per-type
+    stopping rule; every candidate judged on the fresh set x8, not the choosing set; rules in A0.10). Original design: (1) calibrated cuts with confidence vs real outcome
     (cal_cuts.py): each right reply (the longest right one per question) is cut at 1, 5, 10, 20, 35, 50, 65, 80%
     of its thinking (snapped to a paragraph break), </think> inserted, the model re-answers 4x from the cut
     (real outcome = right/4); the model's confidence at the cut = per-token geometric-mean probability of the
