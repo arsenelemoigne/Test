@@ -1369,9 +1369,14 @@ def fresh(args):
             time.sleep(120)
     evaluate(base, samples=8, questions=questions)
     for adapter in map(resolve, args.inputs):
-        name = adapter.removeprefix("adapters/").replace("/", "-")
-        out = ROOT / f"f8-{name}"
-        evaluate(out, adapter, samples=8, questions=questions)
+        if adapter.startswith("models/"):  # a merged model (soup, RL block), not a LoRA on the raw model
+            name = adapter.removeprefix("models/").replace("/", "-")
+            out = ROOT / f"f8-{name}"
+            evaluate(out, samples=8, questions=questions, model=adapter)
+        else:
+            name = adapter.removeprefix("adapters/").replace("/", "-")
+            out = ROOT / f"f8-{name}"
+            evaluate(out, adapter, samples=8, questions=questions)
         print(score_line(f"{name} (fresh 240 questions x 8)", out, base=base), flush=True)
 
 
