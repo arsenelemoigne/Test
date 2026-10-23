@@ -1249,3 +1249,11 @@ data type (added now); then lot2 and the probe on all three.
 **v2 round 3 (v2r3, from v2r2's soup; seed 23), soup step 40 chosen (usual x4 +35.6 / -0.1); fresh x8 +28.3 / -1.9**
 (CI on accuracy -3.6..0.0, saving 24-32%). Against round 2 (fresh +28.6 / -0.8): no more saving, 1.1 points more loss (within
 noise, but no progress). The v2 recipe stalls at ~28% on unseen questions after 3 rounds (~4-5 h per round).
+
+**Stopping probe on ca1 (pkca1: ca1's own cuts and hidden states, CV only):** same picture as rc1-rl-40's. Layer 21 after
+"</think>" chosen in 5/5 folds; out-of-fold AUC ALL 0.844 (position 0.801); math 0.937 / 0.888 (position 0.844 / 0.883),
+instructions 0.729 (0.481), tools 0.764 (0.553), code 0.736 (0.646), multiple choice 0.51-0.62. Stopper ~0-17% saved, mostly
+over the allowance. The internal signal was there before the cut-pair training and RL, at the same strength: training moved
+where the model stops, not what it knows about having the answer.
+v2 stopped after round 3 and rr4 removed from both queues (user). Runtime 2 had reached the end of its queue before lot1 was
+added and released itself; restarted with lot1 + the probe on lot1 only (Drive mount retried once after a consent timeout).
