@@ -16,6 +16,10 @@ chain --name v2r3 --start soup:v2r2 --code-source kodcode --kod-questions 300 --
 shared probeknow --name pkca1 --probe-cal pairs-rc1/cal --probe-model models/ca1-soup-10 --calcheck-from rc1
 # v2 stopped after round 3 (user, 23 Oct). This runtime makes the third lot, then the probe on all lots
 shared callot --name lot2 --start models/rc1-rl-40 --data-seed 46
+# 23 Oct evening: lot1 (runtime 2) and lot2 stopped at the KodCode step (no unused task left); callot now skips it.
+# This runtime finishes both lots (lot1's answers are on Drive); runtime 2's probe on lot1 waits for them.
+shared callot --name lot1 --start models/rc1-rl-40 --data-seed 45 --lot ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250
+shared callot --name lot2 --start models/rc1-rl-40 --data-seed 46 --lot ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250
 shared probeknow --name pkrl40c --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2
 # probe zoo: every classifier (28-layer sweep, linear, MLP, attention over the last 64 tokens, baselines), same untouched test
 probezoo --name z1 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2

@@ -1278,10 +1278,14 @@ def callot(args):
            "--max-questions", n_data)
     if counts.get("kodcode") and not (kprobe / "rollouts.jsonl").exists():
         earlier = [p for p in BON.glob("kprobe-*/rollouts.jsonl") if p.parent != kprobe]
-        py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
-           "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
-           "--max-questions", counts["kodcode"], "--exclude-rollouts", *earlier)
-    pairs = [(probe, keep)] + ([(kprobe, kkeep)] if counts.get("kodcode") else [])
+        try:
+            py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
+               "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", counts["kodcode"], "--exclude-rollouts", *earlier)
+        except subprocess.CalledProcessError:  # every KodCode task of the file was answered by an earlier run
+            print(f"{name}: no unused KodCode task left; this lot has no code questions", flush=True)
+    has_kod = (kprobe / "rollouts.jsonl").exists() and (kprobe / "rollouts.jsonl").stat().st_size > 0
+    pairs = [(probe, keep)] + ([(kprobe, kkeep)] if counts.get("kodcode") and has_kod else [])
     for p, k in pairs:
         if not (k / "sft.jsonl").exists():
             py("select_shortest.py", "--rollouts", p / "rollouts.jsonl", "--out", k)
