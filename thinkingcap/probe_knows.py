@@ -1,23 +1,34 @@
-"""Does the model know when it already has the answer? A linear probe on its hidden state at each cut (P(IK)-style).
+"""Is it predictable, from the model's hidden state at a cut, that its answer will stay right if it stops thinking there?
 
-Reuses a cal_cuts.py run: the same correct replies, each cut at 1-80% of its thinking, every cut labelled by the real
-outcome (right re-answers out of 20 from that cut). For every cut the model reads the prompt and the cut thinking once,
-and its hidden state is kept at two places: the last thinking token before "</think>" (where it would decide to stop)
-and the last token after "</think>\\n\\n" (where it starts answering), at a few layers.
+A linear probe (P(IK)-style) on cal_cuts.py runs: correct replies of the model (the longest right one per question),
+each cut at 1-80% of its thinking, every cut labelled by its empirical outcome (right re-answers out of 20). Scope: the
+replies are all right in full, so this measures when a reply that succeeds can be shortened; questions the model gets
+wrong are outside it (stopping those early costs no accuracy).
 
-Labels: safe = 20/20 right from the cut; unsafe = right <= --unsafe (15/20); cuts in between are left out.
-A logistic regression per (layer, place) is trained with 5-fold cross-validation grouped by question (a question's cuts
-never sit on both sides), and compared with three baselines that need no hidden state: the cut position alone
-(fraction + data type), the model's teacher-forced answer confidence (cal_cuts.py), and the position + the probe.
+Features: one forward pass over prompt + cut thinking + "</think>\\n\\n" (no generation); the hidden state at the last
+thinking token before "</think>" (where a stop would be decided) and at the last token after it (where the answer
+starts), at --layers. Labels: safe = 20/20 right, unsafe <= --unsafe (15/20), 16-19 left out (counted in the report);
+label-threshold sensitivity is reported (20 vs <= 10, >= 19 vs <= 15).
 
-The practical test, on held-out folds only: a stopper that ends each reply at its earliest cut where the probe says
-"safe" with p >= t, t chosen per data type on the training folds as the most saving within the type's allowance
-(math 0.5 pt, code 1, others 2, as cal_cuts.py). Its saving and real loss are set beside the same stopper driven by the
-confidence, by the position alone (one fixed cut fraction per type), and by the oracle (earliest cut right 20/20).
+Protocol (fixed before looking at results):
+  - folds by question: every cut of a question sits in one fold;
+  - the (layer, place) used is chosen by nested cross-validation inside the training folds only; the AUC of each of
+    the 8 configurations is also printed, as exploration, not as the result;
+  - baselines: cut position (fraction + data type) and the model's teacher-forced answer confidence;
+  - the primary metric is practical: a stopper ending each reply at its earliest cut whose score >= t, t chosen per
+    data type on training data only (most saving within the type's allowance: math 0.5 pt, code 1, others 2; and 2 pts
+    for all), scored on held-out data as tokens saved / real loss (mean re-answer success at the chosen cuts) and
+    coverage (replies stopped early); the position stopper is one fixed cut fraction per type; against the empirical
+    20/20 oracle (earliest cut seen 20/20, replies with none kept whole; 20 trials are a sample, not a true maximum);
+  - 95% intervals by bootstrap over questions (not cuts);
+  - transfer: leave-one-data-type-out AUC (trained on the other types);
+  - with --test-cal: probe, configuration and thresholds are fixed on --cal, then scored ONCE on the test set (new
+    questions, e.g. rc2's cuts of the same model).
 
-    python probe_knows.py --model models/ca1-soup-10 --cal runs/bon/pairs-rc1/cal \\
+    python probe_knows.py --model models/rc1-rl-40 --cal runs/bon/calcheck-rc1rl40 \\
         --rollouts runs/bon/probe-rc1/rollouts.jsonl runs/bon/kprobe-rc1/rollouts.jsonl \\
-        --keep runs/bon/select-rc1/sft.jsonl runs/bon/kselect-rc1/sft.jsonl --out runs/bon/probeknow-ca1
+        --keep runs/bon/select-rc1/sft.jsonl runs/bon/kselect-rc1/sft.jsonl \\
+        --test-cal runs/bon/pairs-rc2/cal --test-rollouts ... --test-keep ... --out runs/bon/probeknow-rl40
 """
 
 import argparse
@@ -31,13 +42,16 @@ from cal_cuts import cut_text
 from probe_curve import read_jsonl
 from prune_traces import thinking_text
 
+PLACES = ["before </think>", "after </think>"]
+ORACLE = "oracle 20/20"
 
-def replies_and_jobs(args, tokenizer):
+
+def replies_and_jobs(rollouts, keep, fractions, tokenizer):
     """The same replies and cuts, in the same order, as cal_cuts.py built them (checked against its cuts.jsonl)."""
     open_id = tokenizer.convert_tokens_to_ids("<think>")
-    allowed = {r["id"] for k in args.keep for r in read_jsonl(Path(k))}
+    allowed = {r["id"] for k in keep for r in read_jsonl(Path(k))}
     by_question = defaultdict(list)
-    for path in args.rollouts:
+    for path in rollouts:
         for r in read_jsonl(Path(path)):
             if r["id"] in allowed and r["correct"] and r["closed_thinking"] and not r["truncated"]:
                 by_question[r["id"]].append(r)
@@ -45,19 +59,20 @@ def replies_and_jobs(args, tokenizer):
     jobs = []
     for i, r in enumerate(replies):
         text = tokenizer.decode([t for t in r["thinking_ids"] if t != open_id]).strip()
-        for f in args.fractions:
+        for f in fractions:
             jobs.append((i, f, tokenizer.encode(thinking_text([cut_text(text, f)]), add_special_tokens=False)))
     return replies, jobs
 
 
 def hidden_features(model_path, sequences, positions, layers, dtype, batch_tokens):
-    """[n, len(layers), len(positions[0]), hidden] float16: the hidden state at each asked position and layer."""
+    """[n, len(layers), 2, hidden] float16: the hidden state at each asked position and layer."""
     import torch
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(model_path, dtype=getattr(torch, dtype)).to("cuda").eval()
     order = sorted(range(len(sequences)), key=lambda k: len(sequences[k]))
-    out = np.zeros((len(sequences), len(layers), len(positions[0]), model.config.hidden_size), dtype=np.float16)
+    out = np.zeros((len(sequences), len(layers), 2, model.config.hidden_size), dtype=np.float16)
     batch = []
+
     def flush():
         width = max(len(sequences[k]) for k in batch)
         ids = torch.zeros(len(batch), width, dtype=torch.long)
@@ -84,23 +99,48 @@ def hidden_features(model_path, sequences, positions, layers, dtype, batch_token
     return out
 
 
+def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
+    """Cuts of one cal_cuts.py run: per-cut metadata and hidden-state features (cached in --out)."""
+    cal = Path(cal)
+    close_id = tokenizer.convert_tokens_to_ids("</think>")
+    replies, jobs = replies_and_jobs(rollouts, keep, args.fractions, tokenizer)
+    cuts_file = [json.loads(l) for l in (cal / "cuts.jsonl").read_text().splitlines() if l.strip()]
+    assert len(cuts_file) == len(jobs) and all(c["thinking_ids"] == j[2] for c, j in zip(cuts_file, jobs)), \
+        f"the replies and cuts rebuilt here are not the ones of {cal}"
+    verdict = {v["key"]: v for v in read_jsonl(cal / "verdicts.jsonl")}
+    conf = {c["key"]: c["confidence"] for c in read_jsonl(cal / "confidence.jsonl")}
+    sequences, positions, meta = [], [], []
+    for k, (i, f, t) in enumerate(jobs):
+        r, v = replies[i], verdict[k]
+        close = t.index(close_id)
+        sequences.append(r["prompt_ids"] + t)
+        positions.append([len(r["prompt_ids"]) + close - 1, len(r["prompt_ids"]) + len(t) - 1])
+        meta.append({"question": r["id"], "source": r["source"], "fraction": f, "right": v["right"], "of": v["of"],
+                     "success": v["right"] / max(1, v["of"]), "confidence": conf[k],
+                     "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
+    path = Path(args.out) / cache_name
+    if path.exists():
+        feats = np.load(path)
+    else:
+        print(f"{cal}: {len(replies)} replies, {len(jobs)} cuts; reading hidden states of {args.model}", flush=True)
+        feats = hidden_features(args.model, sequences, positions, args.layers, args.dtype, args.batch_tokens)
+        np.save(path, feats)
+    return meta, feats
+
+
 def auc(scores, labels):
-    """Area under the ROC curve (ties counted half), without sklearn."""
+    """Area under the ROC curve, ties counted half."""
     scores, labels = np.asarray(scores, float), np.asarray(labels, bool)
-    pos, neg = scores[labels], scores[~labels]
-    if not len(pos) or not len(neg):
+    npos, nneg = int(labels.sum()), int((~labels).sum())
+    if not npos or not nneg:
         return float("nan")
-    ranks = np.argsort(np.argsort(np.concatenate([pos, neg]), kind="mergesort"), kind="mergesort").astype(float)
-    allv = np.concatenate([pos, neg])
-    for v in np.unique(allv):  # average ranks of ties
-        hit = allv == v
-        if hit.sum() > 1:
-            ranks[hit] = ranks[hit].mean()
-    return float((ranks[:len(pos)].sum() - len(pos) * (len(pos) - 1) / 2) / (len(pos) * len(neg)))
+    _, inverse, counts = np.unique(scores, return_inverse=True, return_counts=True)
+    ranks = (np.cumsum(counts) - (counts - 1) / 2)[inverse]
+    return float((ranks[labels].sum() - npos * (npos + 1) / 2) / (npos * nneg))
 
 
-def fit_predict(train_x, train_y, test_x, l2=1.0, steps=300):
-    """Standardized L2 logistic regression (full-batch LBFGS in torch, on the GPU when there is one)."""
+def fit(train_x, train_y, l2=1.0, steps=300):
+    """Standardized L2 logistic regression (full-batch LBFGS in torch); returns a predict function."""
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     mu, sd = train_x.mean(0), train_x.std(0) + 1e-4
@@ -109,174 +149,283 @@ def fit_predict(train_x, train_y, test_x, l2=1.0, steps=300):
     w = torch.zeros(x.shape[1], device=device, requires_grad=True)
     b = torch.zeros(1, device=device, requires_grad=True)
     opt = torch.optim.LBFGS([w, b], max_iter=steps, line_search_fn="strong_wolfe")
+
     def closure():
         opt.zero_grad()
         loss = torch.nn.functional.binary_cross_entropy_with_logits(x @ w + b, y) + l2 * (w * w).sum() / len(y)
         loss.backward()
         return loss
     opt.step(closure)
-    tx = torch.tensor((test_x - mu) / sd, dtype=torch.float32, device=device)
-    with torch.no_grad():
-        return torch.sigmoid(tx @ w + b).cpu().numpy()
+
+    def predict(test_x):
+        tx = torch.tensor((test_x - mu) / sd, dtype=torch.float32, device=device)
+        with torch.no_grad():
+            return torch.sigmoid(tx @ w + b).cpu().numpy()
+    return predict
 
 
-def stopper(replies_cuts, key, threshold):
-    """Stop each reply at its earliest cut whose `key` >= threshold (else keep it whole): (saved share, loss points)."""
-    saved, success = [], []
-    for total, cuts in replies_cuts:
-        hit = next((c for c in cuts if c[key] >= threshold), None)
-        saved.append(0.0 if hit is None else 1 - hit["size"] / total)
-        success.append(1.0 if hit is None else hit["success"])
-    return float(np.mean(saved)), 100 * (1 - float(np.mean(success)))
+class Data:
+    """One set of cuts with its labels and feature views."""
+
+    def __init__(self, meta, feats, sources, unsafe, safe=None):
+        self.meta, self.feats, self.n = meta, feats, len(meta)
+        of = max(m["of"] for m in meta)
+        right = np.array([m["right"] for m in meta])
+        safe = of if safe is None else safe
+        self.label = (right >= safe).astype(float)
+        self.labelled = (right >= safe) | (right <= unsafe)
+        self.source = np.array([m["source"] for m in meta])
+        self.question = np.array([m["question"] for m in meta])
+        self.fraction = np.array([m["fraction"] for m in meta])
+        self.oracle = np.array([1.0 if m["right"] == m["of"] else 0.0 for m in meta])
+        frac = self.fraction.astype(np.float32)
+        onehot = np.array([[s == x for x in sources] for s in self.source], dtype=np.float32)
+        self.position = np.concatenate([frac[:, None], np.log(frac)[:, None], onehot, onehot * frac[:, None]], axis=1)
+        self.confidence = np.array([m["confidence"] for m in meta])
+
+    def view(self, config):
+        if config == "position":
+            return self.position
+        li, pi = config
+        return self.feats[:, li, pi].astype(np.float32)
 
 
-def pick(replies_cuts, key, grid, allow):
-    """The threshold saving most within the allowance (on these replies), or None."""
+def folds_by_question(questions, k, seed):
+    uniq = sorted(set(questions))
+    fold_of = {q: f for q, f in zip(uniq, np.random.default_rng(seed).permutation(len(uniq)) % k)}
+    return np.array([fold_of[q] for q in questions])
+
+
+def oof(data, config, mask, folds, k):
+    """Out-of-fold P(safe) for the cuts in `mask` (each fold predicted by a probe fit on the other folds' labelled cuts)."""
+    p = np.full(data.n, np.nan)
+    x = data.view(config)
+    for f in range(k):
+        train, test = mask & data.labelled & (folds != f), mask & (folds == f)
+        if test.any() and train.any():
+            p[test] = fit(x[train], data.label[train])(x[test])
+    return p
+
+
+def choose_config(data, configs, mask, k, seed):
+    """The configuration with the best cross-validated AUC using only the cuts in `mask` (the training side)."""
+    folds = np.full(data.n, -1)
+    folds[mask] = folds_by_question(data.question[mask], k, seed)
+    m = mask & data.labelled
+    return max(configs, key=lambda c: auc(oof(data, c, mask, folds, k)[m], data.label[m]))
+
+
+def reply_groups(data, score, mask):
+    """{question: (reply total tokens, [cut dicts in fraction order, each with its stopping score])}."""
+    groups = defaultdict(list)
+    for k in np.flatnonzero(mask):
+        groups[data.question[k]].append(dict(data.meta[k], score=score[k]))
+    return {q: (cs[0]["total"], sorted(cs, key=lambda c: c["fraction"])) for q, cs in groups.items()}
+
+
+def stop_one(group, threshold):
+    """One reply stopped at its earliest cut with score >= threshold: (saved share, success, stopped early)."""
+    total, cuts = group
+    hit = None if threshold is None else next((c for c in cuts if c["score"] >= threshold), None)
+    return (0.0, 1.0, 0) if hit is None else (1 - hit["size"] / total, hit["success"], 1)
+
+
+def summarize(items):
+    """items: [(group, threshold)] -> saved share, real loss in points, coverage."""
+    if not items:
+        return 0.0, 0.0, 0.0
+    r = np.array([stop_one(g, t) for g, t in items])
+    return float(r[:, 0].mean()), 100 * (1 - float(r[:, 1].mean())), float(r[:, 2].mean())
+
+
+def pick_threshold(groups, grid, allow):
+    """The threshold saving most within the allowance on these replies (None: never stop early)."""
     best = None
     for t in grid:
-        s, loss = stopper(replies_cuts, key, t)
-        if loss <= allow and (best is None or s > best[1]):
-            best = (t, s)
+        saved, loss, _ = summarize([(g, t) for g in groups])
+        if loss <= allow and (best is None or saved > best[1]):
+            best = (t, saved)
     return None if best is None else best[0]
+
+
+def bootstrap(fn, keys, reps, seed):
+    """95% interval of fn(resampled keys) over `reps` resamples of whole questions."""
+    rng = np.random.default_rng(seed)
+    keys = list(keys)
+    if not keys:
+        return float("nan"), float("nan")
+    vals = [fn([keys[i] for i in rng.integers(0, len(keys), len(keys))]) for _ in range(reps)]
+    vals = [v for v in vals if v == v]
+    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5))) if vals else (float("nan"), float("nan"))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--model", required=True, help="the model whose hidden states are read (merged weights)")
-    parser.add_argument("--cal", required=True, help="a cal_cuts.py output folder: cuts, verdicts, confidence")
+    parser.add_argument("--cal", required=True, help="development set: a cal_cuts.py output folder")
     parser.add_argument("--rollouts", nargs="+", required=True)
     parser.add_argument("--keep", nargs="+", required=True)
+    parser.add_argument("--test-cal", help="held-out set (new questions, same model): scored once, everything fixed")
+    parser.add_argument("--test-rollouts", nargs="+")
+    parser.add_argument("--test-keep", nargs="+")
     parser.add_argument("--out", required=True)
     parser.add_argument("--fractions", default="0.01,0.05,0.1,0.2,0.35,0.5,0.65,0.8")
     parser.add_argument("--layers", default="7,14,21,28", help="hidden-state layers read (0 = embeddings)")
     parser.add_argument("--unsafe", type=int, default=15, help="right re-answers (of 20) at or below which a cut is unsafe")
     parser.add_argument("--allow", default="gsm_plus=0.5,gsm_ic=0.5,kodcode=1,default=2")
     parser.add_argument("--folds", type=int, default=5)
+    parser.add_argument("--bootstrap", type=int, default=300)
     parser.add_argument("--batch-tokens", type=int, default=16000)
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     args.fractions = [float(f) for f in args.fractions.split(",")]
+    args.layers = [int(x) for x in args.layers.split(",")]
     from transformers import AutoTokenizer
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    cal = Path(args.cal)
+    Path(args.out).mkdir(parents=True, exist_ok=True)
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
-    close_id = tokenizer.convert_tokens_to_ids("</think>")
 
-    replies, jobs = replies_and_jobs(args, tokenizer)
-    cuts_file = [json.loads(l) for l in (cal / "cuts.jsonl").read_text().splitlines() if l.strip()]
-    assert len(cuts_file) == len(jobs) and all(c["thinking_ids"] == j[2] for c, j in zip(cuts_file, jobs)), \
-        "these replies and cuts are not the ones of --cal"
-    verdict = {v["key"]: v for v in read_jsonl(cal / "verdicts.jsonl")}
-    conf = {c["key"]: c["confidence"] for c in read_jsonl(cal / "confidence.jsonl")}
-    of = max(v["of"] for v in verdict.values())
-
-    sequences, positions, meta = [], [], []
-    for k, (i, f, t) in enumerate(jobs):
-        r, v = replies[i], verdict[k]
-        close = t.index(close_id)
-        sequences.append(r["prompt_ids"] + t)
-        positions.append([len(r["prompt_ids"]) + close - 1, len(r["prompt_ids"]) + len(t) - 1])
-        size = len(t) + len(v["right_ids"] or v["wrong_ids"] or [])
-        meta.append({"reply": i, "question": r["id"], "source": r["source"], "fraction": f, "right": v["right"],
-                     "success": v["right"] / max(1, v["of"]), "confidence": conf[k], "size": size,
-                     "total": r["output_tokens"]})
-    print(f"{len(replies)} replies, {len(jobs)} cuts; reading hidden states of {args.model}", flush=True)
-    feats_path = out / "features.npy"
-    layers = [int(x) for x in args.layers.split(",")]
-    if feats_path.exists():
-        feats = np.load(feats_path)
-    else:
-        feats = hidden_features(args.model, sequences, positions, layers, args.dtype, args.batch_tokens)
-        np.save(feats_path, feats)
-
+    meta, feats = load_set(args.cal, args.rollouts, args.keep, args, tokenizer, "features.npy")
     sources = sorted({m["source"] for m in meta})
-    labelled = [k for k, m in enumerate(meta) if m["right"] == of or m["right"] <= args.unsafe]
-    y_all = np.array([1.0 if meta[k]["right"] == of else 0.0 for k in range(len(meta))])
-    onehot = np.array([[m["source"] == s for s in sources] for m in meta], dtype=np.float32)
-    position = np.concatenate([np.array([[m["fraction"], np.log(m["fraction"])] for m in meta], dtype=np.float32), onehot,
-                               onehot * np.array([[m["fraction"]] for m in meta], dtype=np.float32)], axis=1)
-    questions = sorted({m["question"] for m in meta})
-    rng = np.random.default_rng(0)
-    fold_of_q = {q: f for q, f in zip(questions, rng.permutation(len(questions)) % args.folds)}
-    fold = np.array([fold_of_q[m["question"]] for m in meta])
-    lab = np.zeros(len(meta), bool)
-    lab[labelled] = True
+    dev = Data(meta, feats, sources, args.unsafe)
+    configs = [(li, pi) for li in range(len(args.layers)) for pi in range(2)]
+    name = lambda c: f"layer {args.layers[c[0]]}, {PLACES[c[1]]}"
+    allows = [("each type's allowance", dict(s.split("=") for s in args.allow.split(","))),
+              ("2 points for every type", {"default": "2"})]
+    grid = [x / 100 for x in range(5, 100, 5)] + [0.97, 0.99]
+    everything = np.ones(dev.n, bool)
+    of = max(m["of"] for m in meta)
+    n_mid = int((~dev.labelled).sum())
+    keys = ["position", "confidence", "probe"]
 
-    def cv(x):
-        """Out-of-fold P(safe) for every cut (trained on the labelled cuts of the other folds)."""
-        p = np.zeros(len(meta))
-        for f in range(args.folds):
-            train = lab & (fold != f)
-            p[fold == f] = fit_predict(x[train], y_all[train], x[fold == f])
-        return p
+    lines = [f"Probe on {args.model}: is 'stopping here keeps the answer right' predictable from the hidden state at a cut?",
+             f"Development set {args.cal}: {len(set(dev.question))} questions (one correct reply each), {dev.n} cuts; "
+             f"safe = {of}/{of}: {int(dev.label.sum())}; unsafe <= {args.unsafe}/{of}: "
+             f"{int((dev.labelled & (dev.label == 0)).sum())}; left out ({args.unsafe + 1}-{of - 1}/{of}): {n_mid} "
+             f"({n_mid / dev.n:.0%})",
+             "Scope: replies that are right in full; the question is when they can be shortened. A good probe shows "
+             "that predictive information is linearly readable, not that the model 'represents knowing'.", ""]
 
-    lines = [f"Probe: does {args.model} know, at a cut, that it already has the answer? ({len(replies)} replies, "
-             f"{len(jobs)} cuts; safe = {of}/{of} right, unsafe <= {args.unsafe}/{of}; {lab.sum()} labelled, "
-             f"{int(y_all[lab].sum())} safe; {args.folds}-fold CV grouped by question)", ""]
-    scores = {"position": cv(position), "confidence": np.array([m["confidence"] for m in meta])}
-    grid = {}
-    for li, layer in enumerate(layers):
-        for pi, place in enumerate(["before </think>", "after </think>"]):
-            name = f"layer {layer}, {place}"
-            scores[name] = cv(feats[:, li, pi].astype(np.float32))
-            grid[name] = auc(scores[name][lab], y_all[lab])
-            print(f"{name}: AUC {grid[name]:.3f}", flush=True)
-    best = max(grid, key=grid.get)
-    li, pi = layers.index(int(best.split()[1].rstrip(","))), 0 if "before" in best else 1
-    scores["probe + position"] = cv(np.concatenate([feats[:, li, pi].astype(np.float32), position], axis=1))
-    scores["probe"] = scores[best]
+    # ---- development set: nested cross-validation ----
+    folds = folds_by_question(dev.question, args.folds, args.seed)
+    explore = {c: oof(dev, c, everything, folds, args.folds) for c in configs}
+    lines.append("Exploration (each configuration's out-of-fold AUC; NOT the result: picking the best one is optimistic):")
+    lines += [f"  {name(c):<28} {auc(p[dev.labelled], dev.label[dev.labelled]):.3f}" for c, p in explore.items()]
+    probe, chosen = np.full(dev.n, np.nan), []
+    for f in range(args.folds):
+        train, test = folds != f, folds == f
+        c = choose_config(dev, configs, train, args.folds - 1, args.seed + 1 + f)
+        chosen.append(name(c))
+        x = dev.view(c)
+        probe[test] = fit(x[train & dev.labelled], dev.label[train & dev.labelled])(x[test])
+    dev_scores = {"position": oof(dev, "position", everything, folds, args.folds), "confidence": dev.confidence,
+                  "probe": probe}
+    lines += ["", f"Nested choice of configuration, per outer fold: {'; '.join(chosen)}", ""]
 
-    lines.append("AUC of P(safe) on held-out questions, every (layer, place):")
-    lines += [f"  {n:<28} {a:.3f}" for n, a in grid.items()]
-    lines += ["", f"best probe = {best}", "",
-              f"{'AUC by data type':<18}{'cuts':>6}{'safe':>6}{'position':>10}{'confid.':>9}{'probe':>8}{'probe+pos':>11}"]
-    for s in sources + ["ALL"]:
-        m = lab & (np.array([x["source"] == s for x in meta]) if s != "ALL" else True)
-        row = [auc(scores[n][m], y_all[m]) for n in ("position", "confidence", "probe", "probe + position")]
-        lines.append(f"{s:<18}{int(m.sum()):>6}{int(y_all[m].sum()):>6}" + "".join(f"{v:>{w}.3f}" for v, w in zip(row, (10, 9, 8, 11))))
+    def auc_table(data, scores, title):
+        out = [title, f"{'data type':<16}{'cuts':>6}{'safe':>6}" + "".join(f"{k:>22}" for k in keys)]
+        for s in sources + ["ALL"]:
+            m = data.labelled & ((data.source == s) if s != "ALL" else np.ones(data.n, bool))
+            by_q = defaultdict(list)
+            for k in np.flatnonzero(m):
+                by_q[data.question[k]].append(k)
+            cells = []
+            for key in keys:
+                sc = scores[key]
+                pick = lambda sample: [k for q in sample for k in by_q[q]]
+                lo, hi = bootstrap(lambda sample: auc(sc[pick(sample)], data.label[pick(sample)]), by_q.keys(),
+                                   args.bootstrap, args.seed)
+                cells.append(f"{auc(sc[m], data.label[m]):.3f} [{lo:.2f},{hi:.2f}]")
+            out.append(f"{s:<16}{int(m.sum()):>6}{int(data.label[m].sum()):>6}" + "".join(f"{c:>22}" for c in cells))
+        return out
 
-    # the practical test: stoppers chosen on the training folds, scored on the held-out ones
-    grid_t = [x / 100 for x in range(5, 100, 5)] + [0.97, 0.99]
-    for title, allow in (("each type's allowance", dict(spec.split("=") for spec in args.allow.split(","))),
-                         ("2 points for every type", {"default": "2"})):
-      lines += ["", f"Stopping at the earliest cut the signal calls safe ({title}; threshold per type chosen on the training",
-                "folds; saved / real loss in points on held-out folds; oracle = earliest cut right 20/20):",
-                f"{'data type':<18}{'allow':>6}{'oracle':>14}{'position':>14}{'confidence':>14}{'probe':>14}{'probe+pos':>14}"]
-      for s in sources:
-          budget = float(allow.get(s, allow["default"]))
-          cells = []
-          for key in ("oracle", "position", "confidence", "probe", "probe + position"):
-              saved_all, success_all = [], []
-              for f in range(args.folds):
-                  def build(test):
-                      groups = defaultdict(list)
-                      for k, m in enumerate(meta):
-                          if m["source"] == s and ((fold[k] == f) == test):
-                              c = dict(m, oracle=1.0 if m["right"] == of else 0.0)
-                              if key not in ("oracle",):
-                                  c[key] = scores[key][k] if key != "position" else m["fraction"]
-                              groups[m["reply"]].append(c)
-                      return [(cs[0]["total"], sorted(cs, key=lambda c: c["fraction"])) for cs in groups.values()]
-                  train, test = build(False), build(True)
-                  if key == "oracle":
-                      t = 1.0
-                  elif key == "position":  # one fixed cut fraction for the whole type
-                      t = pick(train, key, args.fractions, budget)
-                  else:
-                      t = pick(train, key, grid_t, budget)
-                  for total, cuts in test:
-                      hit = None if t is None else next((c for c in cuts if c[key] >= t), None)
-                      saved_all.append(0.0 if hit is None else 1 - hit["size"] / total)
-                      success_all.append(1.0 if hit is None else hit["success"])
-              cells.append(f"{np.mean(saved_all):.0%} / {100 * (1 - np.mean(success_all)):.1f}")
-          lines.append(f"{s:<18}{budget:>6}" + "".join(f"{c:>14}" for c in cells))
-    lines += ["", "Reading: the probe carries real knowledge only if it beats the position baseline (later cuts are simply "
-              "safer) and the confidence; the stopper table says how much of the oracle's saving it would recover."]
+    def stopper_table(data, scores, threshold_for, title, allow):
+        """threshold_for(key, source, budget, question) -> the threshold fixed for that question's reply (no peeking)."""
+        out = ["", title, f"{'data type':<16}{'allow':>6}" + "".join(f"{k:>28}" for k in [ORACLE] + keys)]
+        for s in sources:
+            budget = float(allow.get(s, allow["default"]))
+            cells = []
+            for key in [ORACLE] + keys:
+                sc = data.oracle if key == ORACLE else (data.fraction if key == "position" else scores[key])
+                groups = reply_groups(data, sc, data.source == s)
+                items = {q: (g, 1.0 if key == ORACLE else threshold_for(key, s, budget, q)) for q, g in groups.items()}
+                saved, loss, cover = summarize(list(items.values()))
+                lo, hi = bootstrap(lambda sample: summarize([items[q] for q in sample])[1], items.keys(),
+                                   args.bootstrap, args.seed)
+                cells.append(f"{saved:.0%}/{loss:.1f} [{lo:.1f},{hi:.1f}] c{cover:.0%}")
+            out.append(f"{s:<16}{budget:>6}" + "".join(f"{c:>28}" for c in cells))
+        return out
+
+    lines += auc_table(dev, dev_scores, "AUC on held-out questions (development set, nested CV; 95% bootstrap over "
+                                        "questions):")
+
+    best_c = max(configs, key=lambda c: auc(explore[c][dev.labelled], dev.label[dev.labelled]))
+    lines += ["", f"Label sensitivity (exploration, {name(best_c)}; out-of-fold AUC, probe | position):"]
+    for safe, unsafe in ((of, 10), (of - 1, args.unsafe), (of, args.unsafe)):
+        alt = Data(meta, feats, sources, unsafe, safe)
+        p = oof(alt, best_c, everything, folds, args.folds)
+        q = oof(alt, "position", everything, folds, args.folds)
+        lines.append(f"  safe >= {safe}/{of}, unsafe <= {unsafe}/{of} ({int(alt.labelled.sum())} cuts): "
+                     f"{auc(p[alt.labelled], alt.label[alt.labelled]):.3f} | {auc(q[alt.labelled], alt.label[alt.labelled]):.3f}")
+
+    lines += ["", f"Transfer (exploration, {name(best_c)}): AUC on one data type, probe trained on the other types only:"]
+    x = dev.view(best_c)
+    for s in sources:
+        test = dev.source == s
+        train = ~test & dev.labelled
+        p = fit(x[train], dev.label[train])(x[test])
+        lines.append(f"  {s:<16} {auc(p[dev.labelled[test]], dev.label[test][dev.labelled[test]]):.3f}")
+
+    # the practical test on the development set: for each held-out fold, thresholds from the other folds
+    fold_of_q = dict(zip(dev.question, folds))
+    cache = {}
+
+    def dev_threshold(key, s, budget, q):
+        f = fold_of_q[q]
+        if (key, s, budget, f) not in cache:
+            sc = dev.fraction if key == "position" else dev_scores[key]
+            g = reply_groups(dev, sc, (dev.source == s) & (folds != f))
+            cache[(key, s, budget, f)] = pick_threshold(list(g.values()), args.fractions if key == "position" else grid,
+                                                        budget)
+        return cache[(key, s, budget, f)]
+    for title, allow in allows:
+        lines += stopper_table(dev, dev_scores, dev_threshold, f"Stopper, development set ({title}): saved / real loss "
+                               "[95% CI of the loss] c coverage; thresholds from the training folds only", allow)
+
+    # ---- held-out test set: everything fixed on the development set, scored once ----
+    if args.test_cal:
+        tmeta, tfeats = load_set(args.test_cal, args.test_rollouts, args.test_keep, args, tokenizer, "test_features.npy")
+        test = Data(tmeta, tfeats, sources, args.unsafe)
+        final_c = choose_config(dev, configs, everything, args.folds, args.seed + 99)
+        x = dev.view(final_c)
+        lab = dev.labelled
+        test_scores = {"position": fit(dev.position[lab], dev.label[lab])(test.position), "confidence": test.confidence,
+                       "probe": fit(x[lab], dev.label[lab])(test.view(final_c))}
+        dev_oof = {"position": dev.fraction, "confidence": dev.confidence,
+                   "probe": oof(dev, final_c, everything, folds, args.folds)}
+        fixed = {}
+
+        def test_threshold(key, s, budget, q):
+            if (key, s, budget) not in fixed:
+                g = reply_groups(dev, dev_oof[key], dev.source == s)
+                fixed[(key, s, budget)] = pick_threshold(list(g.values()),
+                                                         args.fractions if key == "position" else grid, budget)
+            return fixed[(key, s, budget)]
+        lines += ["", "=" * 110,
+                  f"HELD-OUT TEST SET {args.test_cal}: {len(set(test.question))} new questions, {test.n} cuts; probe = "
+                  f"{name(final_c)}, chosen and fit on the development set only; thresholds from the development set's "
+                  "out-of-fold scores. Scored once.", ""]
+        lines += auc_table(test, test_scores, "AUC on the test set (95% bootstrap over questions):")
+        for title, allow in allows:
+            lines += stopper_table(test, test_scores, test_threshold, f"Stopper on the test set ({title}): saved / real "
+                                   "loss [95% CI of the loss] c coverage", allow)
+
+    lines += ["", "Reading: the probe adds information only if it beats the position baseline (later cuts are simply "
+              "safer) and the confidence on held-out questions, in the stopper table (tokens saved at bounded real loss), "
+              "not only in AUC. A failure shows that THIS linear probe finds no usable signal, not that none exists."]
     text = "\n".join(lines)
     print(text, flush=True)
-    (out / "summary.txt").write_text(text + "\n")
-    np.save(out / "scores.npy", np.stack([scores[k] for k in ("position", "confidence", "probe", "probe + position")]))
+    (Path(args.out) / "summary.txt").write_text(text + "\n")
 
 
 if __name__ == "__main__":

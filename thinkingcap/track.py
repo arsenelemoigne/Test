@@ -132,6 +132,7 @@ def main():
     parser.add_argument("--calcheck-from", default="rc1", help="calcheck: the run whose replies and cuts are reused")
     parser.add_argument("--probe-cal", help="probeknow: the cal_cuts folder under runs/bon whose labelled cuts are probed")
     parser.add_argument("--probe-model", help="probeknow: the model whose hidden states are read")
+    parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
     parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
     parser.add_argument("--smoke", action="store_true", help="rlcal: tiny sizes, no scoring: does every step run?")
@@ -1253,7 +1254,13 @@ def probeknow(args):
         py("probe_knows.py", "--model", args.probe_model, "--cal", BON / args.probe_cal,
            "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
            "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl", "--out", out,
-           "--dtype", args.dtype)
+           "--dtype", args.dtype,
+           *([] if not args.probe_test_from else
+             ["--test-cal", BON / f"pairs-{args.probe_test_from}" / "cal",
+              "--test-rollouts", BON / f"probe-{args.probe_test_from}" / "rollouts.jsonl",
+              BON / f"kprobe-{args.probe_test_from}" / "rollouts.jsonl",
+              "--test-keep", BON / f"select-{args.probe_test_from}" / "sft.jsonl",
+              BON / f"kselect-{args.probe_test_from}" / "sft.jsonl"]))
     print((out / "summary.txt").read_text(), flush=True)
 
 
