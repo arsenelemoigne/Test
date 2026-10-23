@@ -1309,6 +1309,14 @@ def probeknow(args):
     a calibration run (probe_knows.py), against the cut position, its confidence, and the 20/20 oracle."""
     frm = args.calcheck_from
     out = BON / f"probeknow-{args.name}"
+    import time
+    for run in (args.probe_extra_from or []):  # a lot made by the other runtime: wait for it on Drive (up to 4 h)
+        for _ in range(48):
+            if (BON / f"pairs-{run}" / "cal" / "summary.txt").exists():
+                break
+            print(f"probeknow: waiting for {run}'s labelled cuts", flush=True)
+            time.sleep(300)
+            drive_sync("restore")
     if not (out / "summary.txt").exists():
         py("probe_knows.py", "--model", args.probe_model, "--cal", BON / args.probe_cal,
            "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",

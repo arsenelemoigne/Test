@@ -41,9 +41,6 @@ probeknow --name pkrl40 --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl
 # second, rebalanced lot of labelled cuts (more instructions, trap math, tools), then the probe on both lots, test = rc2
 callot --name lot1 --start models/rc1-rl-40 --data-seed 45
 probeknow --name pkrl40b --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 --probe-test-from rc2
-# a third lot (same mix, new questions) and the probe on all three: does more data still help?
-callot --name lot2 --start models/rc1-rl-40 --data-seed 46
-probeknow --name pkrl40c --probe-cal calcheck-rc1rl40 --probe-model models/rc1-rl-40 --calcheck-from rc1 --probe-extra-from lot1 lot2 --probe-test-from rc2
 # only if time is left: RL on the grey-zone round-4 blend
 shared rlcal --name rr4 --start models/rep4-blend50 --data-seed 32 --gen-questions 1000 --kod-questions 300 --floor -1.5 --rl-only --rl-steps 120 --rl-fresh-seed 41 --rl-alpha 0.3
 end
