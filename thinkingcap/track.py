@@ -134,7 +134,7 @@ def main():
     parser.add_argument("--probe-model", help="probeknow: the model whose hidden states are read")
     parser.add_argument("--lot", default="ifeval_like=700,gsm_ic=300,gsm_plus=300,toolace=400,mc=100,kodcode=250",
                         help="callot: questions drawn per type (before the right-answer and contamination filters)")
-    parser.add_argument("--probe-extra-from", help="probeknow: a callot run whose cuts are added to the development set")
+    parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
     parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
@@ -1314,12 +1314,7 @@ def probeknow(args):
            "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl", BON / f"kprobe-{frm}" / "rollouts.jsonl",
            "--keep", BON / f"select-{frm}" / "sft.jsonl", BON / f"kselect-{frm}" / "sft.jsonl", "--out", out,
            "--dtype", args.dtype,
-           *([] if not args.probe_extra_from else
-             ["--extra-cal", BON / f"pairs-{args.probe_extra_from}" / "cal",
-              "--extra-rollouts", BON / f"probe-{args.probe_extra_from}" / "rollouts.jsonl",
-              BON / f"kprobe-{args.probe_extra_from}" / "rollouts.jsonl",
-              "--extra-keep", BON / f"select-{args.probe_extra_from}" / "sft.jsonl",
-              BON / f"kselect-{args.probe_extra_from}" / "sft.jsonl"]),
+           *(["--extra-runs", *args.probe_extra_from] if args.probe_extra_from else []),
            *([] if not args.probe_test_from else
              ["--test-cal", BON / f"pairs-{args.probe_test_from}" / "cal",
               "--test-rollouts", BON / f"probe-{args.probe_test_from}" / "rollouts.jsonl",

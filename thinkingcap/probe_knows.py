@@ -265,9 +265,10 @@ def main():
     parser.add_argument("--cal", required=True, help="development set: a cal_cuts.py output folder")
     parser.add_argument("--rollouts", nargs="+", required=True)
     parser.add_argument("--keep", nargs="+", required=True)
-    parser.add_argument("--extra-cal", help="a second development set (same model): its cuts are added to --cal's")
-    parser.add_argument("--extra-rollouts", nargs="+")
-    parser.add_argument("--extra-keep", nargs="+")
+    parser.add_argument("--extra-runs", nargs="*", default=[],
+                        help="more development sets (same model), by run name under --bon: pairs-NAME/cal, probe-/kprobe-NAME "
+                             "rollouts, select-/kselect-NAME keep files")
+    parser.add_argument("--bon", default="runs/bon")
     parser.add_argument("--test-cal", help="held-out set (new questions, same model): scored once, everything fixed")
     parser.add_argument("--test-rollouts", nargs="+")
     parser.add_argument("--test-keep", nargs="+")
@@ -289,8 +290,11 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
 
     meta, feats = load_set(args.cal, args.rollouts, args.keep, args, tokenizer, "features.npy")
-    if args.extra_cal:
-        emeta, efeats = load_set(args.extra_cal, args.extra_rollouts, args.extra_keep, args, tokenizer, "extra_features.npy")
+    for run in args.extra_runs:
+        bon = Path(args.bon)
+        rollouts = [p for p in (bon / f"probe-{run}" / "rollouts.jsonl", bon / f"kprobe-{run}" / "rollouts.jsonl") if p.exists()]
+        keep = [p for p in (bon / f"select-{run}" / "sft.jsonl", bon / f"kselect-{run}" / "sft.jsonl") if p.exists()]
+        emeta, efeats = load_set(bon / f"pairs-{run}" / "cal", rollouts, keep, args, tokenizer, f"features-{run}.npy")
         meta, feats = meta + emeta, np.concatenate([feats, efeats])
     sources = sorted({m["source"] for m in meta})
     dev = Data(meta, feats, sources, args.unsafe)
@@ -305,7 +309,7 @@ def main():
     keys = ["position", "confidence", "probe"]
 
     lines = [f"Probe on {args.model}: is 'stopping here keeps the answer right' predictable from the hidden state at a cut?",
-             f"Development set {args.cal}{' + ' + args.extra_cal if args.extra_cal else ''}: {len(set(dev.question))} questions (one correct reply each), {dev.n} cuts; "
+             f"Development set {args.cal}{''.join(' + ' + r for r in args.extra_runs)}: {len(set(dev.question))} questions (one correct reply each), {dev.n} cuts; "
              f"safe = {of}/{of}: {int(dev.label.sum())}; unsafe <= {args.unsafe}/{of}: "
              f"{int((dev.labelled & (dev.label == 0)).sum())}; left out ({args.unsafe + 1}-{of - 1}/{of}): {n_mid} "
              f"({n_mid / dev.n:.0%})",
@@ -366,6 +370,21 @@ def main():
                                         "questions):")
 
     best_c = max(configs, key=lambda c: auc(explore[c][dev.labelled], dev.label[dev.labelled]))
+    # would more questions help? held-out AUC when the probe is fit on a share of the training questions only
+    lines += ["", f"Learning curve ({name(best_c)}; out-of-fold AUC, probe fit on a share of each training side's questions; "
+              "still rising at 100% = more questions would help):"]
+    x = dev.view(best_c)
+    rng = np.random.default_rng(args.seed)
+    for share in (0.25, 0.5, 0.75, 1.0):
+        p = np.full(dev.n, np.nan)
+        for f in range(args.folds):
+            qs = sorted(set(dev.question[folds != f]))
+            sub = set(rng.permutation(qs)[:max(2, int(share * len(qs)))])
+            train = dev.labelled & (folds != f) & np.array([q in sub for q in dev.question])
+            p[folds == f] = fit(x[train], dev.label[train])(x[folds == f])
+        per = "; ".join(f"{s} {auc(p[dev.labelled & (dev.source == s)], dev.label[dev.labelled & (dev.source == s)]):.3f}"
+                        for s in sources)
+        lines.append(f"  {share:>4.0%} of the questions: ALL {auc(p[dev.labelled], dev.label[dev.labelled]):.3f} | {per}")
     lines += ["", f"Label sensitivity (exploration, {name(best_c)}; out-of-fold AUC, probe | position):"]
     for safe, unsafe in ((of, 10), (of - 1, args.unsafe), (of, args.unsafe)):
         alt = Data(meta, feats, sources, unsafe, safe)
