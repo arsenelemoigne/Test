@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -124,6 +124,12 @@ def main():
     parser.add_argument("--rl-fresh-seed", type=int, default=0,
                         help="rlcal: RL on a fresh, contamination-checked draw (this seed) instead of the round's questions")
     parser.add_argument("--rl-fresh-per-source", type=int, default=900, help="rlcal: questions per source in that draw")
+    parser.add_argument("--judge", choices=["choose", "fresh"], default="choose",
+                        help="rlcal: choose = pick on the choosing set x4, report the pick x8; fresh = score every soup and "
+                             "every RL block straight on the fresh set x8 (no choosing set), keep the best fresh one")
+    parser.add_argument("--dpo-steps", type=int, nargs="*", default=[10, 20, 30], help="rlcal: soup steps scored")
+    parser.add_argument("--calcheck-model", help="calcheck: the model whose calibration is re-measured")
+    parser.add_argument("--calcheck-from", default="rc1", help="calcheck: the run whose replies and cuts are reused")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
     parser.add_argument("--rl-max-tokens", type=int, default=3072, help="rlcal: reply cap during RL")
     parser.add_argument("--smoke", action="store_true", help="rlcal: tiny sizes, no scoring: does every step run?")
@@ -1077,7 +1083,7 @@ def rlcal(args):
            "--seed", args.data_seed, "--out", raw)
         text = lambda r: r["prompt"][-1]["content"]
         used = [p for p in Path("data").glob("*.jsonl")
-                if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal")) and "raw" not in p.name and p != data]
+                if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal", "rl-")) and "raw" not in p.name and p != data]
         seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
         data.write_text("".join(l + "\n" for l in raw.read_text().splitlines() if l.strip() and text(json.loads(l)) not in seen))
     kod_file = Path(args.kod_file)
@@ -1130,9 +1136,28 @@ def rlcal(args):
         evaluate(ROOT / f"f8-{tag}", samples=8, questions=fresh_q, model=model)
         print(score_line(f"{tag} (fresh 240 x 8)", ROOT / f"f8-{tag}", base=ROOT / "f8-base"), flush=True)
 
+    def judge_fresh(label, candidates):
+        """Every candidate straight on the fresh set x8; the most saving within --floor (else the most accurate)."""
+        evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+        scored = []
+        for tag, model in candidates:
+            out = ROOT / f"f8-{tag}"
+            evaluate(out, samples=8, questions=fresh_q, model=model)
+            line, delta = score_line(f"{tag} (fresh 240 x 8)", out, with_delta=True, base=ROOT / "f8-base")
+            print(line, flush=True)
+            scored.append((compare(out, ROOT / "f8-base")["average"]["token_reduction"] or 0, delta, tag, str(model)))
+        ok = [c for c in scored if c[1] >= args.floor] or sorted(scored, key=lambda c: -c[1])[:1]
+        saved, delta, tag, model = max(ok)
+        print(f"{label}: best on the fresh set {tag} ({saved:+.1%} / {delta:+.1f})", flush=True)
+        return tag, model
+
+    if args.judge == "fresh":
+        choose = lambda label, candidates, samples=4: judge_fresh(label, candidates)
+        report = lambda tag, model: None
+
     if args.rl_only:
         cal_tag, cal_model = f"{name}-start", base
-        if not small:  # the start model on the choosing set: the reference for every RL block
+        if not small and args.judge != "fresh":  # the start model on the choosing set: the reference for every block
             evaluate(ROOT / "v2-base", samples=2, questions=val)
             evaluate(ROOT / f"v2-{name}-start", samples=2, questions=val, model=base)
             print(score_line(f"{name}-start = {args.start} (choosing set x2, reference)", ROOT / f"v2-{name}-start",
@@ -1168,7 +1193,7 @@ def rlcal(args):
                "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 2 if small else 10,
                "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
     soups = []
-    for step in ([2] if small else (10, 20, 30)):
+    for step in ([2] if small else args.dpo_steps):
         members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in seeds]
         members = [m for m in members if (m / "adapter_config.json").exists()]
         if not members and small:  # a smoke run may end before its first checkpoint: its final adapter, or the
@@ -1183,6 +1208,9 @@ def rlcal(args):
     if small:
         print(f"{name}: smoke: cal-cut DPO and soup ran", flush=True)
         cal_tag, cal_model = soups[0]
+    elif args.judge == "fresh":
+        cal_tag, cal_model = choose(f"{name} cal-cut DPO", soups)
+        (ROOT / f"chain-{name}-cal.json").write_text(json.dumps({"model": cal_model, "tag": cal_tag}))
     else:
         # the start model on the same choosing set: the reference every later step is compared with
         evaluate(ROOT / "v4-base", samples=4, questions=val)
@@ -1192,7 +1220,26 @@ def rlcal(args):
         cal_tag, cal_model = choose(f"{name} cal-cut DPO", soups)
         (ROOT / f"chain-{name}-cal.json").write_text(json.dumps({"model": cal_model, "tag": cal_tag}))
         report(cal_tag, cal_model)
+    if args.rl_steps == 0:  # pairs only, no RL
+        return
     rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, (probe, kprobe), (keep, kkeep), choose, report)
+
+
+def calcheck(args):
+    """Calibration re-check: --calcheck-model re-answers (20x) from the very same cuts of the same replies as
+    --calcheck-from's calibration (ca1's replies), and its own confidence is read at each cut: the confidence-vs-real
+    tables of the two models compare like for like."""
+    src = BON / f"pairs-{args.calcheck_from}" / "cal"
+    out = BON / f"calcheck-{args.name}"
+    if not (out / "summary.txt").exists():
+        frm = args.calcheck_from
+        py("cal_cuts.py", "--model", args.calcheck_model, "--rollouts", BON / f"probe-{frm}" / "rollouts.jsonl",
+           BON / f"kprobe-{frm}" / "rollouts.jsonl", "--keep", BON / f"select-{frm}" / "sft.jsonl",
+           BON / f"kselect-{frm}" / "sft.jsonl", "--out", out, "--dtype", args.dtype)
+    print(f"calibration of {args.calcheck_model} on {args.calcheck_from}'s cuts:", flush=True)
+    print((out / "summary.txt").read_text(), flush=True)
+    print(f"for comparison, {args.calcheck_from}'s start model on the same cuts:", flush=True)
+    print((src / "summary.txt").read_text(), flush=True)
 
 
 def fresh_rl_pool(name, seed, per_source, kod_file):
@@ -1278,10 +1325,17 @@ def rl_blocks(args, name, base, cal_tag, cal_model, data, kod_file, probes, keep
         if small:
             continue
         tag = f"{name}-rl-{done}"
-        out = ROOT / f"v2-{tag}"
-        evaluate(ROOT / "v2-base", samples=2, questions=f"questions_val{VAL_SEED}")
-        evaluate(out, samples=2, questions=f"questions_val{VAL_SEED}", model=model)
-        line, delta = score_line(f"{tag} (choosing set x2, quick check)", out, with_delta=True, base=ROOT / "v2-base")
+        if args.judge == "fresh":  # every block straight on the fresh set x8
+            fq = f"questions_fresh{FRESH_SEED}"
+            out, basedir = ROOT / f"f8-{tag}", ROOT / "f8-base"
+            evaluate(basedir, samples=8, questions=fq)
+            evaluate(out, samples=8, questions=fq, model=model)
+            line, delta = score_line(f"{tag} (fresh 240 x 8)", out, with_delta=True, base=basedir)
+        else:
+            out = ROOT / f"v2-{tag}"
+            evaluate(ROOT / "v2-base", samples=2, questions=f"questions_val{VAL_SEED}")
+            evaluate(out, samples=2, questions=f"questions_val{VAL_SEED}", model=model)
+            line, delta = score_line(f"{tag} (choosing set x2, quick check)", out, with_delta=True, base=ROOT / "v2-base")
         print(line, flush=True)
         if delta < args.floor - 2:
             print(f"{name}: RL stopped after step {done}: accuracy {delta:+.1f} on the quick check", flush=True)
