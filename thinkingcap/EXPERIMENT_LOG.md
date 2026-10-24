@@ -1359,3 +1359,11 @@ layers 0.864, attention 0.81-0.83 (zoo B: MLP 0.826-0.828; +0.04 from more data,
 46% / 1.1, position 51% / 2.9; <= 0.5 pt: MLP 67% / 0.5. On the original Qwen (which thinks much longer than rc1-rl-40) a
 learned stop at paragraph ends would save ~2/3 of thinking on these practice types at ~0.5-1.5 pts (simulation, not the
 benchmark). Runtime 1 moves on to stopB3. Runtime 2: Drive mount timed out (no click); waiting for the user.
+
+**24 Oct, planned for later (user): stop-token training.** Once the judges are more accurate (zoo B4+), train the model's
+own `</think>` decision at every paragraph end ("\n\n") like the judge: safe cut -> next token `</think>`, unsafe -> keep
+thinking (push `</think>` down), one decision per paragraph end, small LoRA, nothing else trained; must be clear-cut since
+the evaluation samples. Rationale: DPO compares whole replies and teaches "shorter" more than "stop here"; the judge shows
+the information is in layer ~20, and the `</think>` probability is the model's built-in stop judge. Also queued: benchlot
+(the 240 choosing benchmark questions labelled with the original Qwen, measure only) + zbench (judge on lots B+B2+B3 tested
+on them), runtime 2 after lot B3.
