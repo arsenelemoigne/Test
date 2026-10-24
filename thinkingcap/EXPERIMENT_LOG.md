@@ -1257,3 +1257,20 @@ over the allowance. The internal signal was there before the cut-pair training a
 where the model stops, not what it knows about having the answer.
 v2 stopped after round 3 and rr4 removed from both queues (user). Runtime 2 had reached the end of its queue before lot1 was
 added and released itself; restarted with lot1 + the probe on lot1 only (Drive mount retried once after a consent timeout).
+
+**24 Oct, lot A (label_cuts.py: rc1-rl-40, paragraph-end cuts of right AND wrong replies, <= 10 cuts + the full thinking,
+20 re-answers each; seed 47, 664 clean questions, 922 replies of which 563 right, 4,838 cuts).** Success by share of thinking
+kept (0-20 / 20-40 / 40-60 / 60-80 / 80-<100% / full) and the "perfect stop" (earliest cut at least as good as the natural
+stop: saved; best cut minus natural stop: accuracy gained; an optimistic bound, the max over ~5-10 noisy cuts):
+- arc_easy (10 replies): .59/.43/.50/.50/.50/.77; 70% / +3.5
+- commonsense_qa (64): .49/.58/.33/.63/.50/.57; 54% / +18.0
+- gsm_ic (186): .04/.14/.29/.46/.62/.71; 33% / +3.8
+- gsm_plus (113): .01/.04/.12/.31/.50/.62; 44% / +5.0
+- ifeval_like (180): .81/.68/.73/.69/.86/.68; 17% / +2.7
+- kodcode (247): .57/.59/.61/.61/.58/.63; 74% / +18.3
+- toolace (122): .04/.37/.29/.02/.14/.41; 20% / +1.5
+Readings: with wrong replies included, success at the natural stop is 0.41-0.77 (not 1); math climbs steadily with thinking;
+code and instructions are flat (the thinking barely changes the outcome on average); tools are erratic. The "accuracy gained"
+column is inflated by picking the best of several noisy cuts (code +18 with a flat curve is mostly that). Runtime 2's zoo on
+lot A crashed (log(0) in the cut-position feature; fixed) and the runtime released itself; zoo A queued on runtime 1 after
+lot B and zoo B.
