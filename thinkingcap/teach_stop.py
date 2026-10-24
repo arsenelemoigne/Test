@@ -53,6 +53,7 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--layer", type=int, default=20)
     parser.add_argument("--unsafe", type=int, default=15)
+    parser.add_argument("--drop-sources", default="mbpp_train", help="never learn from these (MBPP+ is built on MBPP)")
     parser.add_argument("--max-cuts", type=int, default=16)
     parser.add_argument("--thresholds", type=float, nargs="+", default=[0.8, 0.9])
     parser.add_argument("--temperature", type=float, default=0.03)
@@ -111,7 +112,10 @@ def main():
             feats = np.asarray(np.load(cached, mmap_mode="r")[:, args.layer - 1, 1], dtype=np.float32)
         else:
             feats = last_states([c["prompt_ids"] + c["thinking_ids"] for c in cuts])
+        dropped = set(args.drop_sources.split(",")) if args.drop_sources else set()
         for c, f in zip(cuts, feats):
+            if replies[c["reply"]]["source"] in dropped:
+                continue
             v = verdict[c["key"]]
             if v["right"] == v["of"] or v["right"] <= args.unsafe:
                 xs.append(f)
@@ -125,7 +129,7 @@ def main():
     print(f"judge: {len(y)} labelled cuts ({int(y.sum())} safe), layer {args.layer}; held-out AUC {held_auc:.3f}", flush=True)
 
     # 2. teacher labels on the model's own answers
-    rows = [r for r in read(args.rollouts) if r["closed_thinking"] and not r["truncated"]]
+    rows = [r for r in read(args.rollouts) if r["closed_thinking"] and not r["truncated"] and r["source"] not in dropped]
     decode = lambda ids: tok.decode(ids, skip_special_tokens=False)
     items, seqs = [], []
     for r in rows:
