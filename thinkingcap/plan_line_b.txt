@@ -44,8 +44,6 @@
 callot --name plotA2 --start models/rc1-rl-40 --data-seed 49 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
 probezoo --name zA2 --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --probe-model models/rc1-rl-40
 callot --name plotB2 --start Qwen/Qwen3-0.6B --data-seed 50 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
-# round 2 moved here (runtime 2 never got its Drive click and was disconnected for inactivity)
-targeted --name stopB2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB --tg-shorten ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 20 25 30 --seeds 0 1 2
 probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --probe-model Qwen/Qwen3-0.6B
 # loop, round 3: the stop trained on lots B + B2 (twice the pairs), code included but judged per checkpoint
 targeted --name stopB3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 --tg-shorten kodcode,ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 15 20 25 30 40 --seeds 0 1 2
