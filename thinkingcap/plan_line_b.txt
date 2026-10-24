@@ -37,4 +37,7 @@ probezoo --name zB --probe-cal pairs-plotB/cal --probe-model Qwen/Qwen3-0.6B
 probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
 # user's rule (24 Oct): runtime 2 ended before picking it up, so this runtime decides
 decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
+# 24 Oct (user): more fresh questions for the original Qwen's judge, then retrain + retest
+callot --name plotB2 --start Qwen/Qwen3-0.6B --data-seed 50 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --probe-model Qwen/Qwen3-0.6B
 end
