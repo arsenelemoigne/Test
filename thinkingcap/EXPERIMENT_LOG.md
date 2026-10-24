@@ -1423,7 +1423,7 @@ and on wrong answers most (except svamp never-solved: stopB3 soup 25 only +3%).
 **24 Oct ~17:35, both runtimes alive (Colab session list: both GPU, last execution 0 min ago; logs read from Drive).**
 Runtime 1: lot B4 drawing found only 362 new questions of 850 (mbpp_train/toolace/hermes_tools; earlier draws removed) +
 KodCode from the wider slice (3,063 tasks); 20 answers each, first batch 79% at 17:34. Then zoo B4, stopB4.
-Runtime 2: lot B3 = 743 new questions of 1,200 drawn x 20 answers (5 batches of 150), 4th batch 95% at ~17:35; then
+Runtime 2: lot B3 = 743 new questions of 1,200 drawn x 20 answers (5 batches of 150), 3rd batch 95% at ~17:35 (4th 63% at 18:14, ~50 min per batch); then
 labelled cuts, benchlot, zbench.
 
 **24 Oct, DRPO implemented (user agreed; not run yet).** Full paper read (ICLR 2026). Our rc1 RL reward was exactly DRPO's
