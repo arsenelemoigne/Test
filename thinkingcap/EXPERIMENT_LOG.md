@@ -1289,3 +1289,14 @@ Reading: the untouched model's MATH is as good after 20-40% of its thinking as a
 the second half of its math reasoning adds nothing on average, whereas rc1-rl-40's math keeps climbing to the end (the
 training already removed that slack). Instructions and code are flat for both. The untouched model has much more to save;
 supports training the learned stop on the original model (option B).
+
+**24 Oct, probe zoo A (lot A, rc1-rl-40; 643 questions, 70% development / 30% held out = 279 test questions).** Layer sweep:
+signal grows with depth, best layer 20 after "</think>" (dev AUC 0.787; early layers ~0.70). AUC on the held-out TEST (ALL):
+position 0.718, answer stability 0.672, the model's OWN confidence (probability of its own greedy answer, fair) 0.790,
+reference-based confidence 0.805; probes: linear 0.803, linear per type 0.794, linear on the real success rate 0.782,
+**MLP 0.852**, MLP on all 28 layers x 2 places 0.843, attention over the last 64 tokens 0.806-0.815. Per type, MLP: math
+0.91/0.91 (own confidence 0.92/0.93: as good), instructions 0.87 (own 0.74), tools 0.88 (own 0.63), code 0.80 (own 0.72).
+Reading: a small non-linear probe on one layer beats every simple signal, mostly on instructions, tools and code; in math
+the model's own confidence in its answer already carries the same information. The trade-off/stopper tables of this first
+report counted loss against "always right" (wrong replies included) and showed nothing; fixed (loss vs the natural stop) and
+redone from the saved scores by the `decide` stage, which then applies the user's rule.
