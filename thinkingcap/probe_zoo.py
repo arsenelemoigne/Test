@@ -117,6 +117,8 @@ def main():
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--window-layers", default="14,21,28")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--report-only", action="store_true",
+                        help="redo the report from --out/scores.npz (no features, no fitting)")
     args = parser.parse_args()
     fractions = [float(f) for f in args.fractions.split(",")]
     from transformers import AutoTokenizer
@@ -128,6 +130,8 @@ def main():
 
     def load(cal, rollouts, keep):
         meta = load_meta(cal, rollouts, keep, fractions, tok)[0]
+        if args.report_only:
+            return meta, np.zeros((len(meta), 1, 2, 1), np.float16), np.zeros((len(meta), 1, 1, 1), np.float16)
         d = root / feat_name(Path(cal))
         return meta, np.load(d / "points.npy", mmap_mode="r"), np.load(d / "window.npy", mmap_mode="r")
 
@@ -161,6 +165,11 @@ def main():
           f"({len(set(test.question))} questions); {n_layers} layers", flush=True)
 
     dev_s, test_s = {}, {}
+    sweep = {}
+    if args.report_only:
+        saved = np.load(out / "scores.npz")
+        for k in saved.files:
+            (dev_s if k.startswith("dev::") else test_s)[k.split("::", 1)[1]] = saved[k]
 
     def run(name, make_x_dev, make_x_test, fitter, soft=False):
         """Out-of-fold development scores and test scores for one classifier."""
@@ -175,72 +184,79 @@ def main():
         print(f"zoo: {name}: dev AUC {auc(p[lab], dev.label[lab]):.3f}, test AUC "
               f"{auc(test_s[name][test.labelled], test.label[test.labelled]):.3f}", flush=True)
 
-    linear = lambda x, y, s: fit(x, y)
-    # baselines
-    run("position", lambda: dev.position, lambda: test.position, linear)
-    for name, d, t in (("own confidence", dev.own, test.own), ("answer stability", dev.stability, test.stability),
-                       ("confidence (uses the right answer)", dev.confidence, test.confidence)):
-        if np.isfinite(d).all() and np.isfinite(t).all():
-            dev_s[name], test_s[name] = d, t
-    # layer sweep (development out-of-fold AUC only; the best one is carried forward)
-    sweep = {}
-    for layer in range(n_layers):
-        for place in range(2):
-            x = points[:, layer, place].astype(np.float32)
+    def fit_all(run, linear):
+        run("position", lambda: dev.position, lambda: test.position, linear)
+
+        for name, d, t in (("own confidence", dev.own, test.own), ("answer stability", dev.stability, test.stability),
+                           ("confidence (uses the right answer)", dev.confidence, test.confidence)):
+            if np.isfinite(d).all() and np.isfinite(t).all():
+                dev_s[name], test_s[name] = d, t
+        # layer sweep (development out-of-fold AUC only; the best one is carried forward)
+        for layer in range(n_layers):
+            for place in range(2):
+                x = points[:, layer, place].astype(np.float32)
+                p = np.full(dev.n, np.nan)
+                for f in range(args.folds):
+                    tr = (folds != f) & lab
+                    p[folds == f] = fit(x[tr], dev.label[tr])(x[folds == f])
+                sweep[(layer, place)] = auc(p[lab], dev.label[lab])
+        best = max(sweep, key=sweep.get)
+        bl, bp = best
+        xbest = lambda data, pts: pts[:, bl, bp].astype(np.float32)
+        run("linear", lambda: xbest(dev, points), lambda: xbest(test, tpoints), linear)
+        run("linear, real success rate", lambda: xbest(dev, points), lambda: xbest(test, tpoints), linear, soft=True)
+        # one linear probe per data type
+        p, t = np.full(dev.n, np.nan), np.full(test.n, np.nan)
+        xd, xt = xbest(dev, points), xbest(test, tpoints)
+        for s in sources:
+            src, tsrc = dev.source == s, test.source == s
+            for f in range(args.folds):
+                tr = (folds != f) & lab & src
+                p[(folds == f) & src] = fit(xd[tr], dev.label[tr])(xd[(folds == f) & src])
+            if tsrc.any():
+                t[tsrc] = fit(xd[lab & src], dev.label[lab & src])(xt[tsrc])
+        dev_s["linear, one per type"], test_s["linear, one per type"] = p, t
+        mlp = lambda hidden: (lambda x, y, s: fit_mlp(x, y, hidden=hidden, seed=s))
+        run("mlp", lambda: xbest(dev, points), lambda: xbest(test, tpoints), mlp((256, 64)))
+        run(f"mlp, all {n_layers} layers x 2 places", lambda: points.reshape(dev.n, -1).astype(np.float32),
+            lambda: tpoints.reshape(test.n, -1).astype(np.float32), mlp((512, 128)))
+        def run_attention(name, js):
+            """Attention probe over the window at layers js (concatenated along the feature axis)."""
+            def getter(arr):
+                return lambda idx: np.concatenate([arr[idx, j] for j in js], -1) if len(js) > 1 else arr[idx, js[0]]
+            gd, gt = getter(window), getter(twindow)
             p = np.full(dev.n, np.nan)
             for f in range(args.folds):
-                tr = (folds != f) & lab
-                p[folds == f] = fit(x[tr], dev.label[tr])(x[folds == f])
-            sweep[(layer, place)] = auc(p[lab], dev.label[lab])
-    best = max(sweep, key=sweep.get)
-    bl, bp = best
-    xbest = lambda data, pts: pts[:, bl, bp].astype(np.float32)
-    run("linear", lambda: xbest(dev, points), lambda: xbest(test, tpoints), linear)
-    run("linear, real success rate", lambda: xbest(dev, points), lambda: xbest(test, tpoints), linear, soft=True)
-    # one linear probe per data type
-    p, t = np.full(dev.n, np.nan), np.full(test.n, np.nan)
-    xd, xt = xbest(dev, points), xbest(test, tpoints)
-    for s in sources:
-        src, tsrc = dev.source == s, test.source == s
-        for f in range(args.folds):
-            tr = (folds != f) & lab & src
-            p[(folds == f) & src] = fit(xd[tr], dev.label[tr])(xd[(folds == f) & src])
-        if tsrc.any():
-            t[tsrc] = fit(xd[lab & src], dev.label[lab & src])(xt[tsrc])
-    dev_s["linear, one per type"], test_s["linear, one per type"] = p, t
-    mlp = lambda hidden: (lambda x, y, s: fit_mlp(x, y, hidden=hidden, seed=s))
-    run("mlp", lambda: xbest(dev, points), lambda: xbest(test, tpoints), mlp((256, 64)))
-    run(f"mlp, all {n_layers} layers x 2 places", lambda: points.reshape(dev.n, -1).astype(np.float32),
-        lambda: tpoints.reshape(test.n, -1).astype(np.float32), mlp((512, 128)))
-    def run_attention(name, js):
-        """Attention probe over the window at layers js (concatenated along the feature axis)."""
-        def getter(arr):
-            return lambda idx: np.concatenate([arr[idx, j] for j in js], -1) if len(js) > 1 else arr[idx, js[0]]
-        gd, gt = getter(window), getter(twindow)
-        p = np.full(dev.n, np.nan)
-        for f in range(args.folds):
-            tr = np.flatnonzero((folds != f) & lab)
-            te = np.flatnonzero(folds == f)
-            p[te] = attention_fit(gd, tr, dev.label[tr], seed=f)(gd, te)
-        tr = np.flatnonzero(lab)
-        dev_s[name] = p
-        test_s[name] = attention_fit(gd, tr, dev.label[tr], seed=99)(gt, np.arange(test.n))
-        print(f"zoo: {name}: dev AUC {auc(p[lab], dev.label[lab]):.3f}, test AUC "
-              f"{auc(test_s[name][test.labelled], test.label[test.labelled]):.3f}", flush=True)
-    for j, layer in enumerate(wl):
-        run_attention(f"attention, last {window.shape[2]} tokens, layer {layer}", [j])
-    run_attention(f"attention, last {window.shape[2]} tokens, layers {'+'.join(map(str, wl))}", list(range(len(wl))))
+                tr = np.flatnonzero((folds != f) & lab)
+                te = np.flatnonzero(folds == f)
+                p[te] = attention_fit(gd, tr, dev.label[tr], seed=f)(gd, te)
+            tr = np.flatnonzero(lab)
+            dev_s[name] = p
+            test_s[name] = attention_fit(gd, tr, dev.label[tr], seed=99)(gt, np.arange(test.n))
+            print(f"zoo: {name}: dev AUC {auc(p[lab], dev.label[lab]):.3f}, test AUC "
+                  f"{auc(test_s[name][test.labelled], test.label[test.labelled]):.3f}", flush=True)
+        for j, layer in enumerate(wl):
+            run_attention(f"attention, last {window.shape[2]} tokens, layer {layer}", [j])
+        run_attention(f"attention, last {window.shape[2]} tokens, layers {'+'.join(map(str, wl))}", list(range(len(wl))))
+        return best
+
+    linear = lambda x, y, s: fit(x, y)
+    best = None if args.report_only else fit_all(run, linear)
 
     # ---- report ----
+
     names = list(dev_s)
     places = ["before </think>", "after </think>"]
     lines = [f"PROBE ZOO. Development: {args.cal} + {', '.join(args.extra_runs) or '-'} ({dev.n} cuts, "
              f"{len(set(dev.question))} questions); TEST (untouched): {args.test_cal} ({test.n} cuts, "
              f"{len(set(test.question))} questions). safe = 20/20, unsafe <= {args.unsafe}/20.", "",
              "Layer sweep (linear probe, development out-of-fold AUC; place 'before' | 'after' </think>):"]
-    for layer in range(n_layers):
-        lines.append(f"  layer {layer + 1:>2}: {sweep[(layer, 0)]:.3f} | {sweep[(layer, 1)]:.3f}")
-    lines += [f"best: layer {bl + 1}, {places[bp]}", ""]
+    if sweep:
+        for layer in range(n_layers):
+            lines.append(f"  layer {layer + 1:>2}: {sweep[(layer, 0)]:.3f} | {sweep[(layer, 1)]:.3f}")
+        lines += [f"best: layer {best[0] + 1}, {places[best[1]]}", ""]
+    else:
+        lines += ["  (report redone from saved scores: see summary.txt for the sweep)", ""]
     width = max(len(n) for n in names) + 2
     for title, scores, data in (("AUC, development (out-of-fold)", dev_s, dev), ("AUC, TEST", test_s, test)):
         lines += [title, f"{'classifier':<{width}}" + "".join(f"{s[:12]:>13}" for s in sources) + f"{'ALL':>8}"]
@@ -288,7 +304,9 @@ def main():
     lines += ["", "Caveat: 'confidence (uses the right answer)' is teacher-forced on the right answer; shown for reference only."]
     text = "\n".join(lines)
     print(text, flush=True)
-    (out / "summary.txt").write_text(text + "\n")
+    (out / ("summary_v2.txt" if args.report_only else "summary.txt")).write_text(text + "\n")
+    if args.report_only:
+        return
     np.savez_compressed(out / "scores.npz", **{f"dev::{k}": v for k, v in dev_s.items()},
                         **{f"test::{k}": v for k, v in test_s.items()})
 

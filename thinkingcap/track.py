@@ -1456,7 +1456,7 @@ def decide(args):
     for _ in range(36):  # the other runtime's zoo: wait for it on Drive (up to 3 h)
         if all(z.exists() for z in zoos):
             break
-        drive_sync("restore", only=[f"runs/bon/{z.parent.name}" for z in zoos])
+        drive_sync("restore", only=[f"runs/bon/{z.parent.name}" for z in zoos] + ["runs/bon/pairs-plotA", "runs/bon/pairs-plotB"])
         if all(z.exists() for z in zoos):
             break
         print("decide: waiting for both zoo summaries", flush=True)
@@ -1464,7 +1464,15 @@ def decide(args):
     margins = {}
     for z in zoos:
         if z.exists():
-            m, bp, bb = zoo_margin(z.read_text())
+            # the first zoo reports counted loss against "always right"; redo them against the natural stop (24 Oct fix)
+            lot = "plotA" if z.parent.name == "zoo-zA" else "plotB"
+            v2 = z.parent / "summary_v2.txt"
+            if not v2.exists() and (z.parent / "scores.npz").exists():
+                py("probe_zoo.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts", "none", "--keep", "none",
+                   "--out", z.parent, "--report-only")
+            text = (v2 if v2.exists() else z).read_text()
+            print(text[text.index("Trade-off"):text.index("Stopping simulation")], flush=True)
+            m, bp, bb = zoo_margin(text)
             margins[z.parent.name] = m
             print(f"decide: {z.parent.name}: best classifier {bp[0]} {bp[1]}% vs best simple signal {bb[0]} {bb[1]}% "
                   f"at <= 2 pts -> margin {m:+d} pts", flush=True)

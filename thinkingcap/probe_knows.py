@@ -352,7 +352,9 @@ def summarize(items):
     if not items:
         return 0.0, 0.0, 0.0
     r = np.array([stop_one(g, t) for g, t in items])
-    return float(r[:, 0].mean()), 100 * (1 - float(r[:, 1].mean())), float(r[:, 2].mean())
+    # loss against the NATURAL stop (the full reply: right = 1, wrong = 0), so wrong replies do not count as a loss
+    natural = np.array([g[1][-1].get("full_ok", 1.0) for g, _ in items])
+    return float(r[:, 0].mean()), 100 * (float(natural.mean()) - float(r[:, 1].mean())), float(r[:, 2].mean())
 
 
 def pooled(data, score, threshold, sources):
