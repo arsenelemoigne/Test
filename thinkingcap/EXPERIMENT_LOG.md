@@ -1350,3 +1350,12 @@ data like the evaluation, for the original Qwen. Lots A3/A4 replaced by plotB3 (
 drawn; runtime 2) and plotB4 (KodCode 300 from a wider slice, MBPP train minus MBPP+ 200, ToolACE 400, Hermes tools 250;
 runtime 1 after stopB3), then zoo B4 on B + B2 + B3 + B4. callot now samples every drawn source (it used a fixed list).
 User idea, not implemented yet: safe cut = as right as the question's own rate (not >= 95%); needs a split-sample check.
+
+**24 Oct, zoo B2: the ORIGINAL Qwen's judge retrained on lots B + B2 (development 1,279 questions / 11,314 cuts; TEST =
+545 held-out questions / 4,907 cuts).** TEST AUC (ALL): position 0.699, own confidence 0.740, linear 0.843, MLP 0.864, MLP all
+layers 0.864, attention 0.81-0.83 (zoo B: MLP 0.826-0.828; +0.04 from more data, as zoo A -> A2). Per type (MLP): math
+0.93-0.94, instructions 0.85, code 0.78, tools 0.69, multiple choice weak (0.48-0.63). Pooled one-threshold trade-off on TEST
+(tokens saved / real loss vs the natural stop): <= 2 pt budget: MLP 69% / 1.5, linear one per type 65% / -0.7, own confidence
+46% / 1.1, position 51% / 2.9; <= 0.5 pt: MLP 67% / 0.5. On the original Qwen (which thinks much longer than rc1-rl-40) a
+learned stop at paragraph ends would save ~2/3 of thinking on these practice types at ~0.5-1.5 pts (simulation, not the
+benchmark). Runtime 1 moves on to stopB3. Runtime 2: Drive mount timed out (no click); waiting for the user.
