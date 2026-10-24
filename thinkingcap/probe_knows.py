@@ -179,6 +179,7 @@ def fit(train_x, train_y, l2=1.0, steps=300):
     """Standardized L2 logistic regression (full-batch LBFGS in torch); returns a predict function."""
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    train_x = np.nan_to_num(np.asarray(train_x, dtype=np.float32), posinf=0.0, neginf=0.0)
     mu, sd = train_x.mean(0), train_x.std(0) + 1e-4
     x = torch.tensor((train_x - mu) / sd, dtype=torch.float32, device=device)
     y = torch.tensor(train_y, dtype=torch.float32, device=device)
@@ -191,9 +192,19 @@ def fit(train_x, train_y, l2=1.0, steps=300):
         loss = torch.nn.functional.binary_cross_entropy_with_logits(x @ w + b, y) + l2 * (w * w).sum() / len(y)
         loss.backward()
         return loss
-    opt.step(closure)
+    try:
+        opt.step(closure)
+    except RuntimeError:  # LBFGS line search blew up (near-separable data): plain Adam from zero instead
+        with torch.no_grad():
+            w.zero_(); b.zero_()
+        adam = torch.optim.Adam([w, b], lr=0.01)
+        for _ in range(500):
+            adam.zero_grad()
+            closure()
+            adam.step()
 
     def predict(test_x):
+        test_x = np.nan_to_num(np.asarray(test_x, dtype=np.float32), posinf=0.0, neginf=0.0)
         tx = torch.tensor((test_x - mu) / sd, dtype=torch.float32, device=device)
         with torch.no_grad():
             return torch.sigmoid(tx @ w + b).cpu().numpy()
@@ -280,7 +291,8 @@ class Data:
         self.oracle = np.array([1.0 if m["right"] == m["of"] else 0.0 for m in meta])
         frac = self.fraction.astype(np.float32)
         onehot = np.array([[s == x for x in sources] for s in self.source], dtype=np.float32)
-        self.position = np.concatenate([frac[:, None], np.log(frac)[:, None], onehot, onehot * frac[:, None]], axis=1)
+        self.position = np.concatenate([frac[:, None], np.log(np.maximum(frac, 1e-3))[:, None], onehot,
+                                        onehot * frac[:, None]], axis=1)
         self.confidence = np.array([m["confidence"] for m in meta])
         self.own = np.array([m["own"] for m in meta])
         self.stability = stability_scores(meta)

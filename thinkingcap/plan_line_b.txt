@@ -33,4 +33,6 @@
 # (development = 70% of the questions, test = the other 30%, held out before any fit).
 callot --name plotB --start Qwen/Qwen3-0.6B --data-seed 48 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
 probezoo --name zB --probe-cal pairs-plotB/cal --probe-model Qwen/Qwen3-0.6B
+# lot A was made on runtime 2, whose zoo crashed (log(0) in the position feature, fixed) before it released itself
+probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
 end
