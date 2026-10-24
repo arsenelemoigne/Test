@@ -137,6 +137,7 @@ def main():
     parser.add_argument("--paragraphs", action="store_true",
                         help="callot: cut at every paragraph end, right AND wrong replies (label_cuts.py), instead of cal_cuts")
     parser.add_argument("--decide-margin", type=int, default=10, help="decide: points of extra saving that count as 'helps'")
+    parser.add_argument("--tg-save-every", type=int, default=10, help="targeted: DPO checkpoint interval")
     parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
     parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
@@ -1390,12 +1391,21 @@ def targeted(args):
     """Targeted DPO from a label lot (targeted_pairs.py): shorten code and instructions where the lot's cuts show the
     answer already holds; make math think longer (full right beats an early cut that fails, long right beats short wrong);
     other types untouched. Fresh LoRA on --start, 3 seeds, soups at --dpo-steps, every soup scored on the fresh set x8."""
-    name, base, lot = args.name, args.start, args.probe_extra_from[0]
+    name, base = args.name, args.start
     pairs = BON / f"pairs-{name}"
     if not (pairs / "pairs.jsonl").exists():
-        py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts", BON / f"probe-{lot}" / "rollouts.jsonl",
-           BON / f"kprobe-{lot}" / "rollouts.jsonl", "--keep", BON / f"{lot}-clean.jsonl", "--out", pairs,
-           "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long)
+        rows = []
+        for lot in args.probe_extra_from:  # one or more label lots of the same model
+            part = pairs / lot
+            if not (part / "pairs.jsonl").exists():
+                py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts",
+                   BON / f"probe-{lot}" / "rollouts.jsonl", BON / f"kprobe-{lot}" / "rollouts.jsonl",
+                   "--keep", BON / f"{lot}-clean.jsonl", "--out", part,
+                   "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long)
+            print((part / "summary.txt").read_text(), flush=True)
+            rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]
+        (pairs / "pairs.jsonl").write_text("".join(l + "\n" for l in rows))
+        (pairs / "summary.txt").write_text(f"{len(rows)} pairs from {', '.join(args.probe_extra_from)}\n")
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
@@ -1406,7 +1416,7 @@ def targeted(args):
         adapter = Path("adapters") / f"{name}-s{seed}"
         if not (adapter / "adapter_config.json").exists():
             py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
-               "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 10,
+               "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.tg_save_every,
                "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
     fresh_q = f"questions_fresh{FRESH_SEED}"
     if not Path(fresh_q, "questions.jsonl").exists():
@@ -2009,6 +2019,7 @@ def plan(args):
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
+                                    "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
                                     *[f"models/{m}" for m in wanted]])
     else:

@@ -1312,3 +1312,17 @@ the pooled table); the stop training it launched is judged on the fresh set x8 a
 Running: `targeted --name stopB` = the original Qwen trained to stop at every type's real safe cut (lot B, 554 pairs:
 code 179, instructions 84, math 202, MC 58, tools 31; shorten pairs only), 3 seeds, soups 10-40 on fresh x8 (runtime 2).
 Runtime 1: lot A2 (rc1-rl-40) and lot B2 (original Qwen), then the judges retrained on twice the questions.
+
+**24 Oct, stopB: the ORIGINAL Qwen trained to stop at its real safe cuts (lot B: 554 shorten pairs, every type; chosen =
+the earliest paragraph cut whose 20 re-answers are right >= max(0.95, the full thinking's rate) + a right answer; rejected =
+the full reply), fresh LoRA, 3 seeds, 32 steps, soups on the fresh set x8:**
+- soup 10: +11.9 / +0.9 (svamp +21% / +0.3, mbpp +12% / +2.2, ifeval +8% / +2.8, bfcl +2-9% / -3.4..-0.3)
+- soup 20: **+31.1 / -2.3** (svamp +43% / -4.1, mbpp +32% / -1.9, ifeval +28% / -0.9, bfcl +18-19% / -4.1..+0.9)
+- soup 30: **+54.2 / -3.6** (svamp +42% / -5.0, **mbpp +82% / -8.1**, ifeval +39% / +0.3, bfcl +28-30% / -3.4..-0.6)
+One DPO pass from the untouched model reaches 54% saved (vs 15-41% for every earlier from-raw first round: A1 35.4, B1 24.8,
+v2r1 14.8), but code is over-cut (179 of 554 pairs; 82% shorter at -8). Corrected zoo reports (natural stop = full cut's
+re-answers): zoo A at <= 2 pts: linear probe 35% / 1.1 vs own confidence 12% / -0.8 (classifier helps, +23); zoo B still
+lost ~10 pts in every row because the pooled loss averaged types equally (a type with ~4 held-out replies swung it); pooled
+now counts every reply once, report redone (zooreport r2).
+Loop (user: pursue while promising): stopB2 = same without code pairs, checkpoints every 5 (runtime 2); stopB3 = lots B + B2
+(twice the pairs, code included), checkpoints 15-40 (runtime 1, after lot B2).

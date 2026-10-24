@@ -365,8 +365,10 @@ def summarize(items):
 def pooled(data, score, threshold, sources):
     """One threshold for every data type: (mean saved share over types, mean real loss in points over types), each type
     weighted equally as in the benchmark average."""
-    per = [summarize([(g, threshold) for g in reply_groups(data, score, data.source == s).values()]) for s in sources]
-    return float(np.mean([p[0] for p in per])), float(np.mean([p[1] for p in per]))
+    # every reply counts once (a type with a handful of held-out replies cannot swing the pooled loss by 10+ points)
+    items = [(g, threshold) for g in reply_groups(data, score, np.ones(data.n, bool)).values()]
+    s, l, _ = summarize(items)
+    return s, l
 
 
 def tradeoff_lines(dev, dev_scores, test, test_scores, names, sources, budgets=(0.5, 1, 2, 3, 5), title=""):
