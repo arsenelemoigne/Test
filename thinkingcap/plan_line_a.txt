@@ -61,9 +61,9 @@
 # done: decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
 # 24 Oct: runtime 1 ended after a decide bug (fixed); everything on this runtime now.
 # user's rule: classifier helps -> train the stop (original Qwen, lot B), else targeted round on rc1-rl-40
-decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
+# done: decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
 # zoo reports redone: the natural stop measured like every cut (its re-answers), not the selected reply's outcome
-zooreport --name r1
+# done: zooreport --name r1
 # loop, round 2 (stopB: soup 20 = 31%/-2.3, soup 30 = 54%/-3.6 with code over-cut 82%/-8.1): no code pairs, checkpoints every 5
 zooreport --name r2
 targeted --name stopB2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB --tg-shorten ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 20 25 30 --seeds 0 1 2
