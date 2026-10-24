@@ -1367,3 +1367,15 @@ the evaluation samples. Rationale: DPO compares whole replies and teaches "short
 the information is in layer ~20, and the `</think>` probability is the model's built-in stop judge. Also queued: benchlot
 (the 240 choosing benchmark questions labelled with the original Qwen, measure only) + zbench (judge on lots B+B2+B3 tested
 on them), runtime 2 after lot B3.
+
+**24 Oct, deep-research summary (user-run; 22 sources; evidence mostly math, 1.5B-32B, nothing at 0.6B or on code/tools/
+instructions).** Our judge (0.86-0.905 AUC) is at/above published probes (0.7-0.9+; 2504.05419, LYNX 2512.05325,
+2511.14773); data, not probe size, is the bottleneck (LYNX: 1.4-2.8k problems). Closest transfer recipe = ESTAR
+(2602.10004): classifier -> model writes its own stop token -> RL rewarding good stops (Qwen3-8B 4,799 -> 1,290 thinking
+tokens at -0.7..-1.0). RL length rewards that hit our target on 1.5B math: ShorterBetter 2504.21370 (77-79%, +2.5..+3.2),
+ThinkPrune 2504.01296 (~65%, capped = 0, tightening cap; -2.3 on AIME), AdaptThink 2505.13417 (53%, +2.4), DRPO
+2510.04474 (length ranked only among right answers: -77% at -1.1 on GSM8K). Warning for our rc1 RL: batch-normalized
+right x (1 - alpha*length) can push long RIGHT answers below average (DRPO's failure); any future RL ranks length only
+among right answers. Stop candidates in papers: "Wait"/"Hmm" cue words, fixed delimiters, every 64 tokens; untested vs
+paragraph ends. Roadmap: lots/zoos now -> stop-token training (ESTAR step 2) -> short DRPO-style RL -> separate tests
+(never-solved "stop circling" with a tightening cap; cuts before "Wait"/"Hmm").
