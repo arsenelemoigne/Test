@@ -36,6 +36,15 @@ The policy is trained on those prefix tokens too, so it learns when skipping the
 gives a correct answer; that reply is the group's shortest, so the length reward favours it
 whenever it is right. --no-think-bonus adds AdaptThink's delta to correct no-think replies.
 
+DRPO (--objective drpo; Li, Chen, Lin, Yang, ICLR 2026, arXiv 2510.04474): the right and wrong replies of a group
+are never compared with each other. Each reply is scored s = its mean token log-prob; right replies are all pushed up,
+each with weight w = softmax over the group's RIGHT replies of r_l / lambda, r_l = 1 - len / (the group's longest
+reply), so shorter right replies get more and a long right reply is never pushed down; wrong replies are all pushed
+down with weight softmax(s / tau) over the group's wrong replies (length plays no part). Relative length (not their
+len / 8k) gives a tool call and a code task the same pressure. A trust region pens updates that drift from the
+sampling policy: beta0 * max(0, KL_hat - delta)^2, KL_hat the mean per-token log-ratio to the step's start (only
+non-zero with --updates > 1). --reward and --advantage are ignored.
+
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
     python rl_train.py --init-adapter adapters/pruned_v2 --out adapters/rl --steps 6
@@ -43,6 +52,7 @@ Start from the SFT adapter (--init-adapter) so the model already knows how to st
 """
 
 import argparse
+from collections import defaultdict
 import json
 import math
 import os
@@ -105,6 +115,11 @@ def parse_arguments():
     parser.add_argument("--advantage", choices=["group", "batch"], default="group",
                         help="batch: reward minus the group mean, over the whole batch's spread (DLER), not each group's")
     parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
+    parser.add_argument("--objective", choices=["grpo", "drpo"], default="grpo")
+    parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight temperature (smaller: shorter)")
+    parser.add_argument("--drpo-tau", type=float, default=10.0, help="drpo: log-sum-exp temperature over wrong replies")
+    parser.add_argument("--drpo-delta", type=float, default=1e-4, help="drpo: trust region size")
+    parser.add_argument("--drpo-beta", type=float, default=1e3, help="drpo: trust region penalty")
     parser.add_argument("--grader", choices=["task", "typed"], default="task",
                         help="typed: typed.is_correct (math, multiple choice, code tests, tools, instructions)")
     parser.add_argument("--offset", type=int, default=0,
@@ -143,6 +158,25 @@ def arora_rewards(thinking, correct, alpha):
     spread = statistics.pstdev(lengths) if len(lengths) > 1 else 0.0
     sigmoid = lambda z: 1 / (1 + math.exp(-z))
     return [1 - alpha * sigmoid((n - mean) / (spread + 1e-6)) if ok else 0.0 for n, ok in zip(thinking, correct)]
+
+
+def drpo_weights(lengths, correct, old_scores, lam, tau):
+    """DRPO per-reply coefficients for one group: positive for right replies (they sum to 1, shorter ones more:
+    softmax of r_l / lam, r_l = 1 - len / the group's longest reply), negative for wrong ones (they sum to -1:
+    softmax of the replies' old mean log-prob / tau, length-blind). A right reply's coefficient is never <= 0."""
+    longest = max(max(lengths), 1)
+    right = [i for i, ok in enumerate(correct) if ok]
+    wrong = [i for i, ok in enumerate(correct) if not ok]
+    coef = [0.0] * len(lengths)
+    for members, values, sign in ((right, [(1 - lengths[i] / longest) / lam for i in right], 1.0),
+                                  (wrong, [old_scores[i] / tau for i in wrong], -1.0)):
+        if members:
+            top = max(values)
+            exps = [math.exp(v - top) for v in values]
+            total = sum(exps)
+            for i, e in zip(members, exps):
+                coef[i] = sign * e / total
+    return coef
 
 
 def learning_rate(step, steps, lr, lr_end, restarts):
@@ -507,7 +541,27 @@ def main():
                 thinking_len = reply.index(close_id) if close_id in reply else len(reply)
                 jobs.append([prompt, reply, ok, advantages[index] if advantages else (len(groups) - 1, index),
                              thinking_len, question])
-        if args.advantage == "batch":  # DLER: center per group, scale by the whole batch's spread
+        old_logps = {}
+        if args.objective == "drpo":  # coefficients per reply, from the sampling policy's scores (no gradient)
+            model.eval()
+            with torch.no_grad():
+                for batch in token_batches([tuple(j) for j in jobs if j[1]], args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        lps = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                    for j, lp in zip(batch, lps):
+                        old_logps[id(j[1])] = lp.detach().float()
+            by_group = defaultdict(list)
+            for job in jobs:
+                by_group[id(job[5])].append(job)
+            stats["signal"] = 0
+            for members in by_group.values():
+                scores = [float(old_logps[id(j[1])].mean()) if j[1] else 0.0 for j in members]
+                coef = drpo_weights([len(j[1]) for j in members], [j[2] for j in members], scores,
+                                    args.drpo_lambda, args.drpo_tau)
+                for j, c in zip(members, coef):
+                    j[3] = c
+                stats["signal"] += any(c != 0 for c in coef)
+        elif args.advantage == "batch":  # DLER: center per group, scale by the whole batch's spread
             centered = [[r - sum(g) / len(g) for r in g] for g in groups]
             spread = statistics.pstdev([c for g in centered for c in g]) or 1.0
             for job in jobs:
@@ -525,6 +579,33 @@ def main():
         active = [j for j in jobs if j[1] and not (j[3] == 0 and not j[2])]
         for chunk in split_groups(active, args.updates, rng):
             total_tokens = max(1, sum(len(j[1]) for j in chunk))
+            n_questions = max(1, len({id(j[5]) for j in chunk}))
+            if args.objective == "drpo":
+                kl_sum, kl_terms = 0.0, []
+                for batch in token_batches(chunk, args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                    loss = 0.0
+                    for j, logps in zip(batch, batch_lp):
+                        loss = loss - j[3] * logps.float().mean() / n_questions
+                        kl_terms.append(float((old_logps[id(j[1])].to(logps.device) - logps.float()).sum()))
+                    scaler.scale(loss).backward()
+                    loss_sum += float(loss)
+                kl_hat = sum(kl_terms) / total_tokens
+                if kl_hat > args.drpo_delta:  # trust region: a second pass adds the penalty's gradient
+                    scale_kl = 2 * args.drpo_beta * (kl_hat - args.drpo_delta)
+                    for batch in token_batches(chunk, args.batch_tokens):
+                        with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                            batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                        penalty = sum((old_logps[id(j[1])].to(lp.device) - lp.float()).sum()
+                                      for j, lp in zip(batch, batch_lp)) * scale_kl / total_tokens
+                        scaler.scale(penalty).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                continue
             for batch in token_batches(chunk, args.batch_tokens):
                 with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
                     entropies = []

@@ -1425,3 +1425,17 @@ Runtime 1: lot B4 drawing found only 362 new questions of 850 (mbpp_train/toolac
 KodCode from the wider slice (3,063 tasks); 20 answers each, first batch 79% at 17:34. Then zoo B4, stopB4.
 Runtime 2: lot B3 = 743 new questions of 1,200 drawn x 20 answers (5 batches of 150), 4th batch 95% at ~17:35; then
 labelled cuts, benchlot, zbench.
+
+**24 Oct, DRPO implemented (user agreed; not run yet).** Full paper read (ICLR 2026). Our rc1 RL reward was exactly DRPO's
+RLOO-LP baseline (Arora & Zanette) + ALP's solve-rate scaling, but our failure was the opposite of DRPO's diagnosis:
+thinking grew (200-250 -> 400-500 tokens at 82-96% right; alpha 0.15 drowned by the correctness reward), not right
+answers being cut. DRPO helps both ways: right replies always pushed up with a softmax(r_l / lambda) weight normalised
+among the RIGHT replies only (strong, scale-free length preference), wrong replies pushed down (softmax(s / tau),
+length-blind), trust region beta0 [KL - delta]+^2. Our adaptation: r_l = 1 - len / the group's longest reply (relative,
+so tool calls and code feel the same pressure) instead of 1 - len / 8k. rl_train.py --objective drpo (drpo_weights
+tested: Figure-1 group -> [0.62, 0.33, 0.05 | -1/3 x3]); stage `drpo`: fresh shuffled pool mixed like the evaluation
+(GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train, KodCode; contamination-checked, earlier draws removed),
+48 questions x 8 x 60 steps (~2,900 questions each used once), from rc1-rl-40, lambda 0.2, checkpoints 40 and 60 on fresh
+x8 (~8 GPU-hours). Success (fixed before running): >= 5 pts more saving than rc1-rl-40 (>= ~59%) at accuracy >= -2.5, or
+>55% at better than -2. Caveat: RL cap 4,096 for every type (code's evaluation cap is 8,192). Waiting for the GPUs to be
+visible again and Drive space (arsene@lemoigne.eu nearly full).

@@ -251,6 +251,22 @@ def test_length_rewards_follow_the_shortest_correct_reply():
     assert group_advantages([1.0, 1.0]) == [0.0, 0.0]
 
 
+def test_drpo_weights_right_always_up_shorter_more_wrong_down_length_blind():
+    from rl_train import drpo_weights
+    # DRPO's Figure 1 group: 3 right (2,000 / 2,500 / 4,000 tokens), 3 wrong
+    coef = drpo_weights([2000, 2500, 4000, 2800, 3800, 3200], [True, True, True, False, False, False],
+                        [-0.5] * 6, lam=0.2, tau=10.0)
+    assert all(c > 0 for c in coef[:3]) and coef[0] > coef[1] > coef[2]  # the long right one is still pushed up
+    assert abs(sum(coef[:3]) - 1) < 1e-9 and abs(sum(coef[3:]) + 1) < 1e-9
+    assert max(coef[3:]) - min(coef[3:]) < 1e-12  # equal scores: wrong replies pushed down equally, whatever their length
+    # relative length: a tool call (150 vs 100 tokens) feels the same pressure as code (1,500 vs 1,000)
+    tool = drpo_weights([100, 150], [True, True], [0, 0], 0.2, 10.0)
+    code = drpo_weights([1000, 1500], [True, True], [0, 0], 0.2, 10.0)
+    assert abs(tool[0] - code[0]) < 1e-12 and tool[0] > tool[1]
+    assert drpo_weights([10, 30], [False, False], [-1.0, -2.0], 0.2, 10.0)[0] < -0.5  # all wrong: the likelier pushed more
+    assert drpo_weights([10, 30], [True, True], [0, 0], 1e9, 10.0) == pytest.approx([0.5, 0.5])  # lambda -> inf: DisCO
+
+
 def test_redundant_tokens_and_their_extra_penalty():
     from rl_train import confidence_redundant, settle_redundant, token_advantages
     logps = [-0.1, -3.0, -0.2, -2.5, -0.1, -9.0]  # the last token is the answer, outside the thinking
@@ -289,6 +305,13 @@ def test_rl_train_runs_on_the_toy_model(toy):
     log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
     assert all(e["entropy"] > 0 and 0 <= e["no_think_accuracy"] <= 1 for e in log)
     assert [e["lr"] for e in log] == [1e-4, 1e-4]  # two cycles of one step each: every step restarts
+    out = work / "rl-drpo"
+    run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+        "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
+        "--max-tokens", "40", "--backend", "hf", "--redundant", "none", "--dtype", "float32",
+        "--objective", "drpo", "--updates", "2", "--lr", "1e-3", "--save-every", "1", cwd=ROOT)
+    log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+    assert [e["step"] for e in log] == [1, 2] and (out / "step-2" / "adapter_config.json").exists()
 
 
 def test_learning_rate_schedule_and_group_split():
