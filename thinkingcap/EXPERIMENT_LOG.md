@@ -1405,3 +1405,23 @@ reward) took MATH500 2,019 -> 635, always under the veto. Takeaway: stop-token S
 case) it is untested, so explicit unsafe -> keep-thinking training with our 20-answer gold-graded labels (all safe moments
 labelled) is the key step; in our RL, check stops with the judge / forced answers during training only and measure the plain
 model alone on fresh x8.
+
+**24 Oct, stopB3 (original Qwen, lots B + B2 stop pairs, code included: 1,058 pairs, 3 seeds, checkpoints 15-40), fresh x8:**
+- soup 15: +18.3% / -1.0; soup 20: +27.1% / -2.0; **soup 25: +34.6% / -0.4** (bfcl +20-22% / 0.0..-3.7, ifeval +28% / +2.8,
+  mbpp +50% / -0.3, svamp +36% / -2.2)
+- soup 30: +54.8% / -3.2 (mbpp +85% / -8.4, svamp +37% / -3.7); soup 40: +69.1% / -5.7 (mbpp +94% / -8.1, svamp +48% / -12.5)
+Twice the pairs of stopB2 gives the same saving (34.6%) at a much smaller loss (-0.4 vs -2.1), with code shortened 50% at -0.3.
+Past step 25 code collapses again (85-94% shorter at -8), as in stopB: code pairs over-cut once training runs longer.
+Best clean point on the stop line so far = stopB3 soup 25; still below rc1-rl-40 (53.9 / -2.1).
+
+**24 Oct, wronglen (thinking length on fresh x8, right / wrong / never-solved answers vs the original Qwen; never-solved = 0/8
+for the original, 14% of answers, no training pair ever came from them).** Every model shortens wrong and never-solved answers
+as much as or more than right ones: rc1-rl-40 ALL right +58% / wrong +61% / never solved +59%; stopB2 soup 20 +36 / +43 / +31;
+stopB3 soup 25 +37 / +49 / +46; stopB3 soup 30 +51 / +77 / +80. The shortening spills over onto answers training never saw,
+and on wrong answers most (except svamp never-solved: stopB3 soup 25 only +3%).
+
+**24 Oct ~17:35, both runtimes alive (Colab session list: both GPU, last execution 0 min ago; logs read from Drive).**
+Runtime 1: lot B4 drawing found only 362 new questions of 850 (mbpp_train/toolace/hermes_tools; earlier draws removed) +
+KodCode from the wider slice (3,063 tasks); 20 answers each, first batch 79% at 17:34. Then zoo B4, stopB4.
+Runtime 2: lot B3 = 743 new questions of 1,200 drawn x 20 answers (5 batches of 150), 4th batch 95% at ~17:35; then
+labelled cuts, benchlot, zbench.
