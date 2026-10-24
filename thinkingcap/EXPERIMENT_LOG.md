@@ -1274,3 +1274,18 @@ code and instructions are flat (the thinking barely changes the outcome on avera
 column is inflated by picking the best of several noisy cuts (code +18 with a flat curve is mostly that). Runtime 2's zoo on
 lot A crashed (log(0) in the cut-position feature; fixed) and the runtime released itself; zoo A queued on runtime 1 after
 lot B and zoo B.
+
+**24 Oct, lot B (label_cuts.py on the ORIGINAL Qwen3-0.6B; seed 48, 639 clean questions, 924 replies of which 522 right,
+8,255 paragraph cuts x 20).** Success by share of thinking kept (0-20 / 20-40 / 40-60 / 60-80 / 80-<100% / full); perfect stop
+saved / accuracy gained (optimistic bound):
+- arc_easy (13): .67/.78/.65/.74/.81/.76; 78% / +18.8
+- commonsense_qa (76): .37/.43/.50/.54/.44/.50; 76% / +27.0
+- gsm_ic (211): .24/.48/.55/.55/.55/.52; 64% / +36.9
+- gsm_plus (119): .20/.48/.53/.54/.49/.49; 71% / +35.1
+- ifeval_like (170): .62/.67/.69/.67/.56/.69; 56% / +9.2
+- kodcode (247): .65/.65/.60/.61/.61/.63; 84% / +20.7
+- toolace (88): .31/.34/.37/.31/.30/.48; 63% / +2.3
+Reading: the untouched model's MATH is as good after 20-40% of its thinking as at its natural stop (0.48-0.55 vs 0.49-0.52):
+the second half of its math reasoning adds nothing on average, whereas rc1-rl-40's math keeps climbing to the end (the
+training already removed that slack). Instructions and code are flat for both. The untouched model has much more to save;
+supports training the learned stop on the original model (option B).
