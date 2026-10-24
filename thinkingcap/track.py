@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1392,6 +1392,12 @@ def probezoo(args):
              if test_from else []),
            "--feats-root", "/content/feats", "--out", out)
     print((out / "summary.txt").read_text(), flush=True)
+
+
+def wronglen(args):
+    """Spill-over check (CPU, seconds): thinking length of right, wrong and never-solved answers on the fresh set x8,
+    every scored model vs the original, read straight from the Drive copy (wrong_lengths.py)."""
+    py("wrong_lengths.py", "--root", DRIVE / "runs" / "mvtf", "--out", ROOT / "wrong_lengths.txt")
 
 
 def targeted(args):
