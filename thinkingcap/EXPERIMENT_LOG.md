@@ -1340,3 +1340,13 @@ up stopB2 (the line was pushed a minute late); relaunched.
 question. Same safeguards: training sources only, earlier draws removed, 8-gram contamination check (30%) against all 2,759
 evaluation questions. Then zoo A4 on lots A + A2 + A3 + A4 (~2,400 questions), compared with zoo A and A2 (also on the
 A + A2 held-out questions only, which keep their hash split). Expected +0.02-0.04 AUC; ~8 GPU-hours.
+
+**24 Oct, stopB2 (original Qwen, lot B stop pairs WITHOUT code: 327 training pairs + 48 held out, 3 seeds, one epoch = 21
+steps, so only soup 20 exists), fresh x8: +34.6% / -2.1** (svamp +47% / -3.1, mbpp +37% / +0.0, ifeval +30% / -2.2, bfcl
++21-22% / -3.1..-3.4). Code shortened 37% without a single code pair and lost nothing (stopB soup 20: 31.1 / -2.3, with code
+pairs). Too few pairs to train longer: the run ends where stopB's savings were still climbing.
+Lot plotA3 failed (models/rc1-rl-40 not restored: it was queued after runtime 2's restore). User: much more and more diverse
+data like the evaluation, for the original Qwen. Lots A3/A4 replaced by plotB3 (GSM-IC 350, GSM-Plus 350, IFEval-like 500
+drawn; runtime 2) and plotB4 (KodCode 300 from a wider slice, MBPP train minus MBPP+ 200, ToolACE 400, Hermes tools 250;
+runtime 1 after stopB3), then zoo B4 on B + B2 + B3 + B4. callot now samples every drawn source (it used a fixed list).
+User idea, not implemented yet: safe cut = as right as the question's own rate (not >= 95%); needs a split-sample check.
