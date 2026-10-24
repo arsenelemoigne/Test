@@ -1426,6 +1426,8 @@ def drpo(args):
     draws removed). Checkpoints every 20 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
     import random
     name, base = args.name, args.start
+    if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
+        drive_sync("restore", only=[base])
     pool = Path(f"data/rl-{name}-mixed.jsonl")
     need = args.drpo_steps * args.drpo_questions
     if not pool.exists():
