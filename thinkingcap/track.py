@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -136,6 +136,7 @@ def main():
                         help="callot: questions drawn per type (before the right-answer and contamination filters)")
     parser.add_argument("--paragraphs", action="store_true",
                         help="callot: cut at every paragraph end, right AND wrong replies (label_cuts.py), instead of cal_cuts")
+    parser.add_argument("--margin", type=int, default=10, help="decide: points of extra saving that count as 'helps'")
     parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
     parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
@@ -1424,6 +1425,62 @@ def targeted(args):
         print(score_line(f"{name}-soup-{step} (fresh 240 x 8)", out, base=ROOT / "f8-base"), flush=True)
 
 
+def zoo_margin(summary):
+    """From a zoo summary's pooled trade-off table (TEST, <= 2 pt column): best classifier saving minus the best baseline
+    saving (position, own confidence, answer stability), in points, and the two winners."""
+    import re
+    lines = summary.splitlines()
+    i = next(k for k, l in enumerate(lines) if l.startswith("Trade-off, one threshold"))
+    rows = {}
+    for l in lines[i + 2:]:
+        if not l.strip():
+            break
+        name = re.split(r"\s{2,}", l.strip())[0]
+        vals = re.findall(r"(\d+)% / ([\d.]+)|(?<=\s)-(?=\s|$)", l)
+        col = [(int(v[0]), float(v[1])) if v[0] else (0, 0.0) for v in vals]
+        if len(col) >= 3:
+            rows[name] = col[2]  # budgets 0.5, 1, 2, 3, 5 points: the third is <= 2 (saving %, real test loss)
+    base = {k: v[0] for k, v in rows.items() if k in ("position", "own confidence", "answer stability")}
+    # a classifier counts only if its real loss on the held-out questions also stays near the budget (<= 3 points)
+    probes = {k: v[0] for k, v in rows.items() if k not in base and not k.startswith("confidence") and v[1] <= 3.0}
+    bb, bp = max(base.items(), key=lambda x: x[1], default=("-", 0)), max(probes.items(), key=lambda x: x[1], default=("-", 0))
+    return bp[1] - bb[1], bp, bb
+
+
+def decide(args):
+    """The user's rule (24 Oct): if a classifier clearly beats the simple signals in a zoo (>= --margin points more saving
+    on the held-out questions at <= 2 points of loss, one threshold for all types), train the model itself to stop (lot B,
+    original Qwen, every type at its real safe cuts); otherwise the targeted round on rc1-rl-40 (lot A)."""
+    import time
+    zoos = [BON / "zoo-zA" / "summary.txt", BON / "zoo-zB" / "summary.txt"]
+    for _ in range(36):  # the other runtime's zoo: wait for it on Drive (up to 3 h)
+        if all(z.exists() for z in zoos):
+            break
+        drive_sync("restore", only=[f"runs/bon/{z.parent.name}" for z in zoos])
+        if all(z.exists() for z in zoos):
+            break
+        print("decide: waiting for both zoo summaries", flush=True)
+        time.sleep(300)
+    margins = {}
+    for z in zoos:
+        if z.exists():
+            m, bp, bb = zoo_margin(z.read_text())
+            margins[z.parent.name] = m
+            print(f"decide: {z.parent.name}: best classifier {bp[0]} {bp[1]}% vs best simple signal {bb[0]} {bb[1]}% "
+                  f"at <= 2 pts -> margin {m:+d} pts", flush=True)
+    helps = any(m >= args.margin for m in margins.values())
+    print(f"decide: classifier {'HELPS' if helps else 'does not help'} (threshold {args.margin} pts)", flush=True)
+    sub = (["targeted", "--name", "stopB", "--start", "Qwen/Qwen3-0.6B", "--probe-extra-from", "plotB",
+            "--tg-shorten", "kodcode,ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus", "--tg-long", "none"]
+           if helps else
+           ["targeted", "--name", "tg1", "--start", "models/rc1-rl-40", "--probe-extra-from", "plotA"])
+    (ROOT.parent / "viz").mkdir(parents=True, exist_ok=True)
+    (ROOT.parent / "viz" / "decision.txt").write_text(f"margins {margins}; helps={helps}; running {' '.join(sub)}\n")
+    if not helps:
+        drive_sync("restore", only=["models/rc1-rl-40"])
+    py("track.py", *sub, "--dpo-steps", *args.dpo_steps, "--seeds", *args.seeds)
+
+
 def caltable(args):
     """Confidence vs real outcome per data type and cut point, for every calibration run done so far (cal_table.py)."""
     dirs = [d for d in [BON / "pairs-rc1" / "cal", BON / "calcheck-rc1s30", BON / "calcheck-rc1rl40", BON / "pairs-rc2" / "cal"]
@@ -1927,7 +1984,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
