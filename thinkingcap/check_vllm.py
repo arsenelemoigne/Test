@@ -70,10 +70,11 @@ def main():
         with ThreadPoolExecutor(16) as pool:
             grades = iter(list(pool.map(grade, jobs)))
         for row, output in zip(batch, outputs):
-            passing, wrong = [], None
+            passing, wrong, outcomes = [], None, []
             for completion in output.outputs:
                 tokens = list(completion.token_ids)
                 finished, right = next(grades)
+                outcomes.append(bool(right))
                 if right:
                     passing.append(tokens)
                 elif finished and (wrong is None or len(tokens) < len(wrong)):
@@ -81,7 +82,7 @@ def main():
             ok = len(passing) == len(output.outputs)
             answers[row["key"]] = {"answer_ids": min(passing, key=len) if ok else None, "wrong_ids": wrong,
                                    "right_ids": min(passing, key=len) if passing else None,
-                                   "right": len(passing), "of": len(output.outputs)}
+                                   "right": len(passing), "of": len(output.outputs), "outcomes": outcomes}
     Path(args.out).write_text("".join(json.dumps({"key": k} | v) + "\n" for k, v in answers.items()))
     passed = sum(v["answer_ids"] is not None for v in answers.values())
     print(f"checked {len(rows)} traces: {passed} pass", flush=True)

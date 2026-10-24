@@ -49,6 +49,9 @@ probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --prob
 targeted --name stopB3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 --tg-shorten kodcode,ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 15 20 25 30 40 --seeds 0 1 2
 # user: much more, more diverse data like the evaluation (code + tools half; lot B3 = math + instructions on runtime 2),
 # then the original Qwen's judge on lots B + B2 + B3 + B4 (~2,400 questions; vs zB / zB2)
-callot --name plotB4 --start Qwen/Qwen3-0.6B --data-seed 54 --paragraphs --kod-file data/kodcode3.jsonl --lot kodcode=300,mbpp_train=200,toolace=400,hermes_tools=250
+callot --name plotB4 --start Qwen/Qwen3-0.6B --data-seed 54 --paragraphs --kod-file data/kodcode3.jsonl --lot kodcode=300,mbpp_train=200,toolace=400,hermes_tools=250 --lot-samples 20
 probezoo --name zB4 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 plotB4 --probe-model Qwen/Qwen3-0.6B
+# user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
+# and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
+targeted --name stopB4 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,mbpp_train,ifeval_like,toolace,hermes_tools,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 10 --dpo-steps 30 60 90 120 --seeds 0 1 2
 end

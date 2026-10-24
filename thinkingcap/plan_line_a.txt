@@ -70,5 +70,5 @@
 # done: targeted --name stopB2 (soup 20: +34.6% / -2.1 on fresh x8; one epoch = 21 steps, so no soup 25/30)
 # plotA3 failed (models/rc1-rl-40 not restored: queued after this runtime's restore). User: much more and more diverse data,
 # like the evaluation, for the ORIGINAL Qwen's stop training; lots split by type so the runtimes never draw the same question
-callot --name plotB3 --start Qwen/Qwen3-0.6B --data-seed 53 --paragraphs --lot gsm_ic=350,gsm_plus=350,ifeval_like=500
+callot --name plotB3 --start Qwen/Qwen3-0.6B --data-seed 53 --paragraphs --lot gsm_ic=350,gsm_plus=350,ifeval_like=500 --lot-samples 20
 end

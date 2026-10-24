@@ -138,6 +138,9 @@ def main():
                         help="callot: cut at every paragraph end, right AND wrong replies (label_cuts.py), instead of cal_cuts")
     parser.add_argument("--decide-margin", type=int, default=10, help="decide: points of extra saving that count as 'helps'")
     parser.add_argument("--tg-save-every", type=int, default=10, help="targeted: DPO checkpoint interval")
+    parser.add_argument("--tg-rule", default="strict", choices=("strict", "question"),
+                        help="targeted: safe cut = >= 95%% right (strict) or as right as the question's own rate + margin")
+    parser.add_argument("--lot-samples", type=int, default=8, help="callot: full replies per question (20 = a reliable question rate)")
     parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
     parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
@@ -1299,19 +1302,19 @@ def callot(args):
     n_data = sum(1 for l in data.read_text().splitlines() if l.strip())
     if not (probe / "rollouts.jsonl").exists():
         drawn = ",".join("arc_easy,commonsense_qa" if s == "mc" else s for s in counts if s != "kodcode")
-        py("probe_curve.py", "--data", data, "--sources", drawn, "--per-source", 2000, "--samples", 8,
+        py("probe_curve.py", "--data", data, "--sources", drawn, "--per-source", 2000, "--samples", args.lot_samples,
            "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
            "--max-questions", n_data)
     if counts.get("kodcode") and not (kprobe / "rollouts.jsonl").exists():
         earlier = [p for p in BON.glob("kprobe-*/rollouts.jsonl") if p.parent != kprobe]
         try:
-            py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
+            py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", args.lot_samples,
                "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
                "--max-questions", counts["kodcode"], "--exclude-rollouts", *earlier)
         except subprocess.CalledProcessError:  # every KodCode task of the file was answered by an earlier run
             if args.paragraphs:  # label lots may reuse training tasks; only the probes' test set (rc2) stays out
                 print(f"{name}: no unused KodCode task left; reusing earlier ones except rc2's", flush=True)
-                py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", 8,
+                py("probe_curve.py", "--data", kod_file, "--sources", "kodcode", "--per-source", 5000, "--samples", args.lot_samples,
                    "--model", base, "--out", kprobe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
                    "--max-questions", counts["kodcode"], "--exclude-rollouts", BON / "kprobe-rc2" / "rollouts.jsonl")
             else:
@@ -1405,7 +1408,7 @@ def targeted(args):
                 py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts",
                    BON / f"probe-{lot}" / "rollouts.jsonl", BON / f"kprobe-{lot}" / "rollouts.jsonl",
                    "--keep", BON / f"{lot}-clean.jsonl", "--out", part,
-                   "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long)
+                   "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule)
             print((part / "summary.txt").read_text(), flush=True)
             rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]
         (pairs / "pairs.jsonl").write_text("".join(l + "\n" for l in rows))
