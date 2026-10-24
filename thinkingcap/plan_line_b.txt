@@ -31,13 +31,18 @@
 
 # 24 Oct: restart. Paragraph-level labelled cuts of right AND wrong replies, then the probe zoo on them
 # (development = 70% of the questions, test = the other 30%, held out before any fit).
-callot --name plotB --start Qwen/Qwen3-0.6B --data-seed 48 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
-probezoo --name zB --probe-cal pairs-plotB/cal --probe-model Qwen/Qwen3-0.6B
+# done: callot --name plotB --start Qwen/Qwen3-0.6B --data-seed 48 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+# done: probezoo --name zB --probe-cal pairs-plotB/cal --probe-model Qwen/Qwen3-0.6B
 # lot A was made on runtime 2, whose zoo crashed (log(0) in the position feature, fixed) before it released itself
-probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
+# done: probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
 # user's rule (24 Oct): runtime 2 ended before picking it up, so this runtime decides
-decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
+# done: decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
 # 24 Oct (user): more fresh questions for the original Qwen's judge, then retrain + retest
+# done: callot --name plotB2 --start Qwen/Qwen3-0.6B --data-seed 50 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+# done: probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --probe-model Qwen/Qwen3-0.6B
+# 24 Oct (user): both runtimes; this one makes the extra lots and retrains the judges (runtime 2 runs decide)
+callot --name plotA2 --start models/rc1-rl-40 --data-seed 49 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+probezoo --name zA2 --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --probe-model models/rc1-rl-40
 callot --name plotB2 --start Qwen/Qwen3-0.6B --data-seed 50 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
 probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --probe-model Qwen/Qwen3-0.6B
 end
