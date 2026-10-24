@@ -71,4 +71,8 @@
 # plotA3 failed (models/rc1-rl-40 not restored: queued after this runtime's restore). User: much more and more diverse data,
 # like the evaluation, for the ORIGINAL Qwen's stop training; lots split by type so the runtimes never draw the same question
 callot --name plotB3 --start Qwen/Qwen3-0.6B --data-seed 53 --paragraphs --lot gsm_ic=350,gsm_plus=350,ifeval_like=500 --lot-samples 20
+# user: the judge on REAL benchmark questions (the 240 choosing questions, measure only; never the fresh set):
+# cuts labelled with the original Qwen, then the best judge so far (lots B + B2 + B3) tested on them
+benchlot --name bench40 --start Qwen/Qwen3-0.6B
+probezoo --name zbench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B
 end

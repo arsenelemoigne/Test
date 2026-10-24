@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1392,6 +1392,28 @@ def probezoo(args):
              if test_from else []),
            "--feats-root", "/content/feats", "--out", out)
     print((out / "summary.txt").read_text(), flush=True)
+
+
+def benchlot(args):
+    """Labelled cuts on BENCHMARK questions (the 240 already used to choose models, never the fresh set), only to
+    measure the stopping judge there (bench_rows.py, then label_cuts.py as a callot lot). Nothing trains on them."""
+    name, base = args.name, args.start
+    data = Path(f"data/{name}.jsonl")
+    if not data.exists():
+        py("bench_rows.py", "--questions", QUESTIONS, "--out", data)
+    probe, cal = BON / f"probe-{name}", BON / f"pairs-{name}" / "cal"
+    n_data = sum(1 for l in data.read_text().splitlines() if l.strip())
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", "gsm_plus,kodcode,toolace,ifeval_like", "--per-source", 5000,
+           "--samples", args.lot_samples, "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only",
+           "--chunk", 150, "--max-questions", n_data)
+    if not (cal / "summary.txt").exists():
+        clean = BON / f"{name}-clean.jsonl"
+        ids = {json.loads(l)["id"]: json.loads(l)["source"] for l in (probe / "rollouts.jsonl").read_text().splitlines() if l.strip()}
+        clean.write_text("".join(json.dumps({"id": i, "source": s}) + "\n" for i, s in ids.items()))
+        py("label_cuts.py", "--model", base, "--rollouts", probe / "rollouts.jsonl", "--keep", clean, "--out", cal,
+           "--include-wrong", "--dtype", args.dtype)
+    print((cal / "summary.txt").read_text(), flush=True)
 
 
 def wronglen(args):
