@@ -1326,3 +1326,10 @@ lost ~10 pts in every row because the pooled loss averaged types equally (a type
 now counts every reply once, report redone (zooreport r2).
 Loop (user: pursue while promising): stopB2 = same without code pairs, checkpoints every 5 (runtime 2); stopB3 = lots B + B2
 (twice the pairs, code included), checkpoints 15-40 (runtime 1, after lot B2).
+
+**24 Oct, zoo A2: the rc1-rl-40 judge retrained on lots A + A2 (1,222 questions; test = 540 held-out questions).** TEST AUC
+(ALL): position 0.719, own confidence 0.792, linear 0.845, linear per type 0.874, MLP 0.869, **MLP on all 28 layers x 2 places
+0.905** (zoo A with half the data: 0.843). Per type, MLP all layers: math 0.91/0.88, code 0.92, instructions 0.89, tools 0.69.
+Twice the questions lifted the best judge by +0.06 AUC: the judges were data-limited. Pooled trade-off at <= 2 pts: MLP all
+layers 31% / 2.4 (26% / 1.4 at <= 0.5) vs own confidence 10% / 0.4. Runtime 2 stopped at the end of its queue before picking
+up stopB2 (the line was pushed a minute late); relaunched.
