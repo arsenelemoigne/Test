@@ -1395,3 +1395,13 @@ often linear, AUC > 0.7, 19-24% saved. DEER 2504.15895: geometric-mean confidenc
 math 61.5%. Dynasor 2412.20993: agreement of probes every 64 tokens. FlashThink 2505.13949: 7B yes/no verifier, GSM8K
 76-91% (not 89-95%). Plan update: stop-token SFT WITH negatives -> RL with verify-at-stop + DRPO length weighting; soft
 k/20 labels; report ECE/Brier; never-solved: ThinkPrune-style gentle cap test; instructions: AdaptThink-style test later.
+
+**24 Oct, correction on ESTAR (full paper re-read by the user's research AI).** Every ESTAR result keeps the LightGBM veto at
+test time (a <stop> is accepted only if the classifier scores >= 0.9), including ESTAR-FT; the paper never measures the plain
+model. ESTAR-FT's job was to propose candidate stops (fewer classifier calls), not to save tokens (MATH500 2,401 vs 2,019 for
+the classifier alone); weak labels (one greedy forced answer = the model's own final answer), only the first 5 safe moments
+get <stop>, MATH-500 used for SFT data. RL (on-policy, rollouts cut at the first classifier-confirmed stop, earlier = more
+reward) took MATH500 2,019 -> 635, always under the veto. Takeaway: stop-token SFT + RL works WITH a veto; without one (our
+case) it is untested, so explicit unsafe -> keep-thinking training with our 20-answer gold-graded labels (all safe moments
+labelled) is the key step; in our RL, check stops with the judge / forced answers during training only and measure the plain
+model alone on fresh x8.
