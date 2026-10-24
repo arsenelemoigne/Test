@@ -1379,3 +1379,19 @@ right x (1 - alpha*length) can push long RIGHT answers below average (DRPO's fai
 among right answers. Stop candidates in papers: "Wait"/"Hmm" cue words, fixed delimiters, every 64 tokens; untested vs
 paragraph ends. Roadmap: lots/zoos now -> stop-token training (ESTAR step 2) -> short DRPO-style RL -> separate tests
 (never-solved "stop circling" with a tightening cap; cuts before "Wait"/"Hmm").
+
+**24 Oct, 10 papers read (HTML, partly summarised pages; verify numbers before citing).** ESTAR 2602.10004: LightGBM on
+logprob features -> ESTAR-FT (SFT, <stop> at <= 5 safe positions per trace, positives only, hint-injected wrong traces) ->
+GRPO (16 rollouts, 39 steps; reward 1/4 format + 1/4 earliness + 1/2 correct; truncate at first verified <stop>); the 3.7x
+headline still uses the classifier at test time; ESTAR-FT alone MATH500 3,962 -> 2,401 (-39%) vs ESTAR -84%. DRPO
+2510.04474: length softmax-weighted only among correct answers, wrong answers pushed down regardless of length; GSM8K -77%
+at -1.1 (1.5B); lr 1e-6..2e-6, 8 samples, 1,000 steps. ThinkPrune 2504.01296: reward = correct within cap L, else 0;
+4k -> 3k -> 2k, each round from the best checkpoint within 10% relative accuracy; 1.5B -65% at +0.6, QwQ cliff (-3.2).
+ShorterBetter 2504.21370: alpha*correct - beta*|len - shortest correct|, mean length if none correct (shortest-if-none
+collapses); 1.5B -77..-79% at +2.5..+3.2; removes verification (-14% of tokens). AdaptThink 2505.13417: empty-think mode
+via importance sampling, delta 0.05; GSM8K 87-99% no-think. LYNX 2512.05325: 1 forced answer per cue, MLP on 2 mid + last
+layer, conformal threshold over positives only (weaker guarantee than claimed). 2504.05419: "\n\n" chunks, last-layer probe,
+often linear, AUC > 0.7, 19-24% saved. DEER 2504.15895: geometric-mean confidence > 0.95 at "Wait"; code compresses 19.9% vs
+math 61.5%. Dynasor 2412.20993: agreement of probes every 64 tokens. FlashThink 2505.13949: 7B yes/no verifier, GSM8K
+76-91% (not 89-95%). Plan update: stop-token SFT WITH negatives -> RL with verify-at-stop + DRPO length weighting; soft
+k/20 labels; report ECE/Brier; never-solved: ThinkPrune-style gentle cap test; instructions: AdaptThink-style test later.
