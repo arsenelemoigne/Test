@@ -1457,3 +1457,11 @@ mbpp_train (targeted_pairs makes no pair for unlisted sources), and the drpo poo
 Lots B/B2/B3 had no MBPP; rc1-rl-40 (drpo1's start) comes from clean line A (MBPP-free).
 Lot B3: contamination check dropped 268 of 743 questions (>= 30% 8-gram share with an evaluation question); labelling
 455 questions / 792 replies (422 right) / 7,436 cuts x 20 since 19:28.
+
+**24 Oct, fairer self-confidence baselines (user question: is "own confidence" fair on long answers?).** own_confidence was
+the geometric mean of the per-token probabilities of the model's greedy answer from the cut: fine for short answers (math;
+on rc1-rl-40 it ties the judge there), but long answers (code, instructions) are drowned by easy tokens, so the judge's
+edge there may be overstated (the judge-vs-reality numbers and the replay savings are unaffected). own_conf.py now also
+keeps own_min (least likely token), own_low5 (5 least likely), own_first50 (first 50 tokens, DEER's code trick) and
+own_certainty (minus the mean per-token entropy from top-5 log-probs); probe_zoo reports them as baselines; probezoo always
+calls own_conf (it recomputes files without the variants). Zoo B4 (and zbench) will show them.
