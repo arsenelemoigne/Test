@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1489,6 +1489,19 @@ def decide(args):
     py("track.py", *sub, "--dpo-steps", *args.dpo_steps, "--seeds", *args.seeds)
 
 
+def zooreport(args):
+    """Redo the zoo reports from their saved scores (no features, no fitting) with the current loss accounting."""
+    for name, lot in (("zA", "plotA"), ("zB", "plotB")):
+        out = BON / f"zoo-{name}"
+        if not (out / "scores.npz").exists():
+            drive_sync("restore", only=[f"runs/bon/zoo-{name}", f"runs/bon/pairs-{lot}"])
+        if (out / "scores.npz").exists():
+            py("probe_zoo.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts", "none", "--keep", "none", "--out", out,
+               "--report-only")
+            text = (out / "summary_v2.txt").read_text()
+            print(f"== {name}\n" + text[text.index("Trade-off"):text.index("Cut point by cut point")], flush=True)
+
+
 def caltable(args):
     """Confidence vs real outcome per data type and cut point, for every calibration run done so far (cal_table.py)."""
     dirs = [d for d in [BON / "pairs-rc1" / "cal", BON / "calcheck-rc1s30", BON / "calcheck-rc1rl40", BON / "pairs-rc2" / "cal"]
@@ -1992,7 +2005,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -340,11 +340,16 @@ def reply_groups(data, score, mask):
 
 
 def stop_one(group, threshold):
-    """One reply stopped at its earliest cut with score >= threshold: (saved share, success, stopped early)."""
+    """One reply stopped at its earliest cut with score >= threshold: (saved share, success, stopped early).
+    Paragraph sets (label_cuts.py) hold the full thinking as their last cut: the natural stop is measured the same way as
+    every cut (its re-answers' success, its length), so the replies' selection (longest right / longest wrong) cancels."""
     total, cuts = group
+    if "full_ok" in cuts[-1]:
+        nat = cuts[-1]
+        hit = None if threshold is None else next((c for c in cuts[:-1] if c["score"] >= threshold), None)
+        return (0.0, nat["success"], 0) if hit is None else (1 - hit["size"] / max(1, nat["size"]), hit["success"], 1)
     hit = None if threshold is None else next((c for c in cuts if c["score"] >= threshold), None)
-    # no early stop: the natural reply, right (1) or wrong (0)
-    return (0.0, cuts[-1].get("full_ok", 1.0), 0) if hit is None else (1 - hit["size"] / total, hit["success"], 1)
+    return (0.0, 1.0, 0) if hit is None else (1 - hit["size"] / total, hit["success"], 1)
 
 
 def summarize(items):
@@ -353,7 +358,7 @@ def summarize(items):
         return 0.0, 0.0, 0.0
     r = np.array([stop_one(g, t) for g, t in items])
     # loss against the NATURAL stop (the full reply: right = 1, wrong = 0), so wrong replies do not count as a loss
-    natural = np.array([g[1][-1].get("full_ok", 1.0) for g, _ in items])
+    natural = np.array([g[1][-1]["success"] if "full_ok" in g[1][-1] else 1.0 for g, _ in items])
     return float(r[:, 0].mean()), 100 * (float(natural.mean()) - float(r[:, 1].mean())), float(r[:, 2].mean())
 
 
