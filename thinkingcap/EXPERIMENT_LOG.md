@@ -1439,3 +1439,12 @@ tested: Figure-1 group -> [0.62, 0.33, 0.05 | -1/3 x3]); stage `drpo`: fresh shu
 x8 (~8 GPU-hours). Success (fixed before running): >= 5 pts more saving than rc1-rl-40 (>= ~59%) at accuracy >= -2.5, or
 >55% at better than -2. Caveat: RL cap 4,096 for every type (code's evaluation cap is 8,192). Waiting for the GPUs to be
 visible again and Drive space (arsene@lemoigne.eu nearly full).
+
+**24 Oct, experiment 5 coded and queued (user): the judge as teacher (teach_stop.py, stage `teach`).** The judge (MLP on
+layer 20 at the end of a closed cut, as probe_zoo's best) is fitted on the original Qwen's label lots (B..B4; safe =
+20/20, unsafe <= 15; held-out AUC printed); the original Qwen answers 3,000 fresh mixed questions once (shared
+`mixed_pool` with drpo: benchmark-like, contamination-checked, earlier draws removed); the judge scores up to 16
+paragraph ends per answer (never the natural end), target = sigmoid((p - threshold) / 0.03) so the per-paragraph stop
+signal is near 0 unless the judge is clearly confident (small chances would otherwise add up); a fresh LoRA trains only
+p("</think>" next) at those positions (binary cross-entropy), one model per threshold (0.8, 0.9), each scored on fresh x8.
+Queued on runtime 2 after drpo1. Not run yet; pure parts checked on toy data (CPU, no torch locally).

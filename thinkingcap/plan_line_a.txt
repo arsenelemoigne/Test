@@ -78,4 +78,8 @@ probezoo --name zbench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plo
 # user (24 Oct ~18:00): DRPO RL from rc1-rl-40 (right replies always up, length ranked only among right replies),
 # fresh mixed pool 48 x 8 x 60, checkpoints 40 + 60 on fresh x8; success = >= ~59% saved at >= -2.5, or > 55% at better than -2
 drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl
+# experiment 5 (user): the judge as teacher. Judge fitted on lots B..B4 of the original Qwen; the original Qwen answers
+# 3,000 fresh mixed questions once; its own p(</think>) at every paragraph end is trained toward the judge's sharpened
+# score (threshold 0.8 and 0.9, one model each), then each is scored on fresh x8
+teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-thresholds 0.8 0.9
 end

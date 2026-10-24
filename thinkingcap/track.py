@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -144,6 +144,11 @@ def main():
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[40, 60], help="drpo: checkpoints scored on fresh x8")
+    parser.add_argument("--teach-questions", type=int, default=3000, help="teach: fresh questions answered once each")
+    parser.add_argument("--teach-thresholds", type=float, nargs="*", default=[0.8, 0.9],
+                        help="teach: judge-score thresholds for the sharpened target (one model each)")
+    parser.add_argument("--teach-lots", nargs="*", default=["plotB", "plotB2", "plotB3"],
+                        help="teach: label lots of --start the judge is fitted on")
     parser.add_argument("--lot-samples", type=int, default=8, help="callot: full replies per question (20 = a reliable question rate)")
     parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
     parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
@@ -1420,16 +1425,11 @@ def benchlot(args):
     print((cal / "summary.txt").read_text(), flush=True)
 
 
-def drpo(args):
-    """DRPO RL (rl_train.py --objective drpo) from --start on a fresh pool mixed like the evaluation (math, instructions,
-    tool calls, code), shuffled so every step mixes the types, each question used once (contamination-checked, earlier
-    draws removed). Checkpoints every 20 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
+def mixed_pool(name, need, data_seed, kod_file):
+    """A fresh question pool mixed like the evaluation (GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train,
+    KodCode), shuffled so every batch mixes the types; earlier draws removed, contamination-checked."""
     import random
-    name, base = args.name, args.start
-    if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
-        drive_sync("restore", only=[base])
     pool = Path(f"data/rl-{name}-mixed.jsonl")
-    need = args.drpo_steps * args.drpo_questions
     if not pool.exists():
         raw = Path(f"data/rl-{name}-raw.jsonl")
         per = {"gsm_ic": 0.17, "gsm_plus": 0.17, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1, "mbpp_train": 0.06}
@@ -1437,9 +1437,9 @@ def drpo(args):
         for i, (source, share) in enumerate(per.items()):
             part = Path(f"data/rl-{name}-{source}-raw.jsonl")
             py("prepare_types.py", "--sources", source, "--per-source", int(need * share * 1.8) + 50,
-               "--seed", args.data_seed * 10 + i, "--out", part)
+               "--seed", data_seed * 10 + i, "--out", part)
             rows += [json.loads(l) for l in part.read_text().splitlines() if l.strip()]
-        kod_file = Path(args.kod_file)
+        kod_file = Path(kod_file)
         if not kod_file.exists():
             py("prepare_types.py", "--sources", "kodcode", "--per-source", 10000, "--out", kod_file,
                "--kod-max-task", 110, "--kod-max-solution", 200)
@@ -1447,13 +1447,13 @@ def drpo(args):
         answered = {json.loads(l).get("question") for p in BON.glob("kprobe-*/rollouts.jsonl")
                     for l in p.read_text().splitlines() if l.strip()}
         kod = [json.loads(l) for l in kod_file.read_text().splitlines() if l.strip()]
-        random.Random(args.data_seed).shuffle(kod)
+        random.Random(data_seed).shuffle(kod)
         rows += [r for r in kod if text(r) not in answered][:int(need * 0.1) + 50]
         used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal",
                 "rl-", "lot-")) and "raw" not in p.name and p != pool]
         seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
         rows = [r for r in rows if text(r) not in seen]
-        random.Random(args.data_seed).shuffle(rows)
+        random.Random(data_seed).shuffle(rows)
         for index, row in enumerate(rows):
             row["id"] = f"{row['source']}-{name}-{index}"
         pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
@@ -1464,7 +1464,19 @@ def drpo(args):
         counts = defaultdict(int)
         for l in kept:
             counts[json.loads(l)["source"]] += 1
-        print(f"{name}: DRPO pool {len(kept)} questions (need {need}): {dict(counts)}", flush=True)
+        print(f"{name}: mixed pool {len(kept)} questions (need {need}): {dict(counts)}", flush=True)
+    return pool
+
+
+def drpo(args):
+    """DRPO RL (rl_train.py --objective drpo) from --start on a fresh pool mixed like the evaluation (math, instructions,
+    tool calls, code), shuffled so every step mixes the types, each question used once (contamination-checked, earlier
+    draws removed). Checkpoints every 20 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
+    import random
+    name, base = args.name, args.start
+    if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
+        drive_sync("restore", only=[base])
+    pool = mixed_pool(name, args.drpo_steps * args.drpo_questions, args.data_seed, args.kod_file)
     out = Path("adapters") / f"{name}-drpo"
     if not (out / "adapter_config.json").exists():
         py("rl_train.py", "--model", base, "--data", pool, "--sources", "all", "--out", out,
@@ -1484,6 +1496,39 @@ def drpo(args):
         res = ROOT / f"f8-{name}-{step}"
         evaluate(res, samples=8, questions=fresh_q, model=model)
         print(score_line(f"{name}-{step} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+
+
+def teach(args):
+    """Experiment 5, the judge as teacher (teach_stop.py): the stopping judge is fitted on --teach-lots of --start, the
+    model answers a fresh mixed pool once per question, the judge scores every paragraph end of those answers, and a
+    LoRA trains the model's own p("</think>") there toward the sharpened score (one model per --teach-thresholds).
+    Each model is merged and scored on the fresh set x8."""
+    name, base = args.name, args.start
+    if base.startswith("models/") and not (Path(base) / "config.json").exists():
+        drive_sync("restore", only=[base])
+    missing = [l for l in args.teach_lots if not (BON / f"pairs-{l}" / "cal" / "verdicts.jsonl").exists()]
+    if missing:
+        drive_sync("restore", only=[f"runs/bon/pairs-{l}" for l in missing])
+    pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file)
+    probe = BON / f"probe-{name}"
+    if not (probe / "rollouts.jsonl").exists():
+        n = sum(1 for l in pool.read_text().splitlines() if l.strip())
+        py("probe_curve.py", "--data", pool, "--per-source", 100000, "--samples", 1, "--model", base, "--out", probe,
+           "--dtype", args.dtype, "--generate-only", "--chunk", 300, "--max-questions", min(n, args.teach_questions))
+    out = Path("adapters") / f"{name}-teach"
+    py("teach_stop.py", "--model", base, "--cal", *[BON / f"pairs-{l}" / "cal" for l in args.teach_lots],
+       "--rollouts", probe / "rollouts.jsonl", "--out", out, "--thresholds", *args.teach_thresholds, "--dtype", args.dtype)
+    print((out / "teacher.json").read_text(), flush=True)
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for threshold in args.teach_thresholds:
+        adapter = out / f"t{threshold:g}"
+        model = Path("models") / f"{name}-t{threshold:g}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", f"{adapter}:1")
+        res = ROOT / f"f8-{name}-t{threshold:g}"
+        evaluate(res, samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{name}-t{threshold:g} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
 
 
 def wronglen(args):
