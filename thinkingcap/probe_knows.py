@@ -112,6 +112,9 @@ def load_set(cal, rollouts, keep, args, tokenizer, cache_name):
     return meta, feats
 
 
+OWN_VARIANTS = ("own_min", "own_low5", "own_first50", "own_certainty")  # own_conf.py's fairer self-confidence readings
+
+
 def load_paragraph_meta(cal, close_id):
     """Per-cut metadata of a label_cuts.py run (cuts at paragraph ends, right and wrong replies)."""
     cuts = read_jsonl(cal / "cuts.jsonl")
@@ -131,6 +134,7 @@ def load_paragraph_meta(cal, close_id):
         meta.append({"question": f"{tag}/{r['id']}/{'r' if r['correct'] else 'w'}", "source": r["source"],
                      "fraction": c["frac"], "right": v["right"], "of": v["of"], "success": v["right"] / max(1, v["of"]),
                      "confidence": conf[k], "own": own_rows[k]["own_confidence"] if k in own_rows else float("nan"),
+                     **{v: own_rows.get(k, {}).get(v, float("nan")) for v in OWN_VARIANTS},
                      "answer": own_rows[k].get("answer") if k in own_rows else None, "full_ok": float(r["correct"]),
                      "size": len(t) + len(v["right_ids"] or v["wrong_ids"] or []), "total": r["output_tokens"]})
     return meta, sequences, positions
@@ -295,6 +299,7 @@ class Data:
                                         onehot * frac[:, None]], axis=1)
         self.confidence = np.array([m["confidence"] for m in meta])
         self.own = np.array([m["own"] for m in meta])
+        self.own_variants = {v: np.array([m.get(v, float("nan")) for m in meta]) for v in OWN_VARIANTS}
         self.stability = stability_scores(meta)
         self.success = np.array([m["success"] for m in meta])
 

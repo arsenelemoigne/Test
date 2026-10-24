@@ -117,6 +117,7 @@ def main():
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--window-layers", default="14,21,28")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--drop-sources", default="", help="comma list of sources left out everywhere (e.g. mbpp_train)")
     parser.add_argument("--report-only", action="store_true",
                         help="redo the report from --out/scores.npz (no features, no fitting)")
     args = parser.parse_args()
@@ -143,9 +144,17 @@ def main():
     meta = sum((p[0] for p in parts), [])
     points = np.concatenate([np.asarray(p[1]) for p in parts])
     window = np.concatenate([np.asarray(p[2]) for p in parts])  # float16, a few GB in RAM
+    drop = set(filter(None, args.drop_sources.split(",")))
+    if drop:  # left out before the split, so every other question keeps its side
+        k = np.array([m["source"] not in drop for m in meta])
+        print(f"dropped {int((~k).sum())} cuts from {', '.join(sorted(drop))}", flush=True)
+        meta, points, window = [m for m, x in zip(meta, k) if x], points[k], window[k]
     if args.test_cal:
         tmeta, tpoints, twindow = load(Path(args.test_cal), args.test_rollouts, args.test_keep)
         tpoints, twindow = np.asarray(tpoints), np.asarray(twindow)
+        if drop:
+            k = np.array([m["source"] not in drop for m in tmeta])
+            tmeta, tpoints, twindow = [m for m, x in zip(tmeta, k) if x], tpoints[k], twindow[k]
     else:  # hold out a share of the questions (both replies of a question on the same side), fixed before any fit
         import hashlib
         qid = lambda m: m["question"].rsplit("/", 1)[0] if m["question"].endswith(("/r", "/w")) else m["question"]
@@ -191,6 +200,11 @@ def main():
                            ("confidence (uses the right answer)", dev.confidence, test.confidence)):
             if np.isfinite(d).all() and np.isfinite(t).all():
                 dev_s[name], test_s[name] = d, t
+        for v, label in (("own_min", "own confidence, least likely token"), ("own_low5", "own confidence, 5 least likely"),
+                         ("own_first50", "own confidence, first 50 tokens"), ("own_certainty", "own certainty (entropy)")):
+            d, t = dev.own_variants[v], test.own_variants[v]
+            if np.isfinite(d).all() and np.isfinite(t).all():
+                dev_s[label], test_s[label] = d, t
         # layer sweep (development out-of-fold AUC only; the best one is carried forward)
         for layer in range(n_layers):
             for place in range(2):

@@ -1448,3 +1448,12 @@ paragraph ends per answer (never the natural end), target = sigmoid((p - thresho
 signal is near 0 unless the judge is clearly confident (small chances would otherwise add up); a fresh LoRA trains only
 p("</think>" next) at those positions (binary cross-entropy), one model per threshold (0.8, 0.9), each scored on fresh x8.
 Queued on runtime 2 after drpo1. Not run yet; pure parts checked on toy data (CPU, no torch locally).
+
+**24 Oct ~19:50, no MBPP anywhere (user).** The challenge README only forbids training on the evaluation benchmarks, and MBPP+
+is built on MBPP, so MBPP-family questions are out even after the 8-gram check (its suggested sets: GSM8K, Skywork-OR1 easy
+band, CommonsenseQA, ARC Easy). Lot B4 drew 200 mbpp_train questions (added 14:36; already generated, so its stage line is left
+as is): zoo B4 now drops them (`probe_zoo.py --drop-sources`, before the held-out split), stopB4's --tg-shorten no longer lists
+mbpp_train (targeted_pairs makes no pair for unlisted sources), and the drpo pool's 6% MBPP share moved to KodCode (16%).
+Lots B/B2/B3 had no MBPP; rc1-rl-40 (drpo1's start) comes from clean line A (MBPP-free).
+Lot B3: contamination check dropped 268 of 743 questions (>= 30% 8-gram share with an evaluation question); labelling
+455 questions / 792 replies (422 right) / 7,436 cuts x 20 since 19:28.

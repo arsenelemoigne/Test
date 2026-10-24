@@ -85,7 +85,7 @@ def main():
     parser.add_argument("--samples", type=int, default=4, help="recheck: samples per question")
     parser.add_argument("--no-shorten", default="", help="bon_dpo: sources with guard pairs only")
     parser.add_argument("--eval-samples", type=int, default=2, help="bon_dpo: samples per question in the sweep")
-    parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all")
+    parser.add_argument("--drop-sources", default="", help="bon_dpo: sources with no pairs at all; probezoo: sources left out")
     parser.add_argument("--dpo-epochs", type=int, default=2, help="bon_dpo: passes over the pairs")
     parser.add_argument("--eval-steps", type=int, nargs="*", default=[], help="bon_dpo: checkpoints scored (default all)")
     parser.add_argument("--kod-file", default="data/kodcode2.jsonl", help="chain: KodCode task file")
@@ -1384,8 +1384,7 @@ def probezoo(args):
     sets = [BON / args.probe_cal] + [BON / f"pairs-{r}" / "cal" for r in (args.probe_extra_from or [])] \
         + ([BON / f"pairs-{test_from}" / "cal"] if test_from else [])
     for cal in sets:
-        if not (cal / "own_confidence.jsonl").exists():
-            py("own_conf.py", "--model", args.probe_model, "--cal", cal, "--dtype", args.dtype)
+        py("own_conf.py", "--model", args.probe_model, "--cal", cal, "--dtype", args.dtype)  # skips when up to date
         name = cal.name if cal.name != "cal" else cal.parent.name
         py("extract_feats.py", "--model", args.probe_model, "--cal", cal, "--out", Path("/content/feats") / name,
            "--dtype", args.dtype)
@@ -1399,6 +1398,7 @@ def probezoo(args):
               "--test-rollouts", BON / f"probe-{test_from}" / "rollouts.jsonl", BON / f"kprobe-{test_from}" / "rollouts.jsonl",
               "--test-keep", BON / f"select-{test_from}" / "sft.jsonl", BON / f"kselect-{test_from}" / "sft.jsonl"]
              if test_from else []),
+           *(["--drop-sources", args.drop_sources] if args.drop_sources else []),
            "--feats-root", "/content/feats", "--out", out)
     print((out / "summary.txt").read_text(), flush=True)
 
@@ -1432,7 +1432,7 @@ def mixed_pool(name, need, data_seed, kod_file):
     pool = Path(f"data/rl-{name}-mixed.jsonl")
     if not pool.exists():
         raw = Path(f"data/rl-{name}-raw.jsonl")
-        per = {"gsm_ic": 0.17, "gsm_plus": 0.17, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1, "mbpp_train": 0.06}
+        per = {"gsm_ic": 0.17, "gsm_plus": 0.17, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1}  # no MBPP (user)
         rows = []
         for i, (source, share) in enumerate(per.items()):
             part = Path(f"data/rl-{name}-{source}-raw.jsonl")
@@ -1448,7 +1448,7 @@ def mixed_pool(name, need, data_seed, kod_file):
                     for l in p.read_text().splitlines() if l.strip()}
         kod = [json.loads(l) for l in kod_file.read_text().splitlines() if l.strip()]
         random.Random(data_seed).shuffle(kod)
-        rows += [r for r in kod if text(r) not in answered][:int(need * 0.1) + 50]
+        rows += [r for r in kod if text(r) not in answered][:int(need * 0.16) + 50]  # code share incl. the former MBPP 6%
         used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal",
                 "rl-", "lot-")) and "raw" not in p.name and p != pool]
         seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
