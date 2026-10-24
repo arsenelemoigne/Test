@@ -59,7 +59,12 @@
 # done: probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
 # user's rule (24 Oct): classifier clearly helps -> train the stop on the original Qwen (lot B); else targeted round on rc1-rl-40 (lot A)
 # done: decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
-# 24 Oct (user): more fresh questions for the judge, then retrain + retest (test = 30% of all questions, held out)
+# 24 Oct: runtime 1 ended after a decide bug (fixed); everything on this runtime now.
+# user's rule: classifier helps -> train the stop (original Qwen, lot B), else targeted round on rc1-rl-40
+decide --name d1 --dpo-steps 10 20 30 40 --seeds 0 1 2
+# user: more fresh questions for each judge, retrain + retest (test = 30% of all questions, held out)
 callot --name plotA2 --start models/rc1-rl-40 --data-seed 49 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
 probezoo --name zA2 --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --probe-model models/rc1-rl-40
+callot --name plotB2 --start Qwen/Qwen3-0.6B --data-seed 50 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --probe-model Qwen/Qwen3-0.6B
 end

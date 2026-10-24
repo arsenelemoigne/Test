@@ -136,7 +136,7 @@ def main():
                         help="callot: questions drawn per type (before the right-answer and contamination filters)")
     parser.add_argument("--paragraphs", action="store_true",
                         help="callot: cut at every paragraph end, right AND wrong replies (label_cuts.py), instead of cal_cuts")
-    parser.add_argument("--margin", type=int, default=10, help="decide: points of extra saving that count as 'helps'")
+    parser.add_argument("--decide-margin", type=int, default=10, help="decide: points of extra saving that count as 'helps'")
     parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
     parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
@@ -1476,8 +1476,8 @@ def decide(args):
             margins[z.parent.name] = m
             print(f"decide: {z.parent.name}: best classifier {bp[0]} {bp[1]}% vs best simple signal {bb[0]} {bb[1]}% "
                   f"at <= 2 pts -> margin {m:+d} pts", flush=True)
-    helps = any(m >= args.margin for m in margins.values())
-    print(f"decide: classifier {'HELPS' if helps else 'does not help'} (threshold {args.margin} pts)", flush=True)
+    helps = any(m >= args.decide_margin for m in margins.values())
+    print(f"decide: classifier {'HELPS' if helps else 'does not help'} (threshold {args.decide_margin} pts)", flush=True)
     sub = (["targeted", "--name", "stopB", "--start", "Qwen/Qwen3-0.6B", "--probe-extra-from", "plotB",
             "--tg-shorten", "kodcode,ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus", "--tg-long", "none"]
            if helps else
