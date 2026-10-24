@@ -54,7 +54,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1383,6 +1383,44 @@ def probezoo(args):
     print((out / "summary.txt").read_text(), flush=True)
 
 
+def targeted(args):
+    """Targeted DPO from a label lot (targeted_pairs.py): shorten code and instructions where the lot's cuts show the
+    answer already holds; make math think longer (full right beats an early cut that fails, long right beats short wrong);
+    other types untouched. Fresh LoRA on --start, 3 seeds, soups at --dpo-steps, every soup scored on the fresh set x8."""
+    name, base, lot = args.name, args.start, args.probe_extra_from[0]
+    pairs = BON / f"pairs-{name}"
+    if not (pairs / "pairs.jsonl").exists():
+        py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts", BON / f"probe-{lot}" / "rollouts.jsonl",
+           BON / f"kprobe-{lot}" / "rollouts.jsonl", "--keep", BON / f"{lot}-clean.jsonl", "--out", pairs)
+    print((pairs / "summary.txt").read_text(), flush=True)
+    rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    start = Path("adapters") / f"fresh-{name}"
+    if not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", base, "--out", start)
+    for seed in args.seeds:
+        adapter = Path("adapters") / f"{name}-s{seed}"
+        if not (adapter / "adapter_config.json").exists():
+            py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+               "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 10,
+               "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    if not Path(fresh_q, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for step in args.dpo_steps:
+        members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+        members = [m for m in members if (m / "adapter_config.json").exists()]
+        if not members:
+            continue
+        model = Path("models") / f"{name}-soup-{step}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", *[f"{m}:{1 / len(members):.6f}" for m in members])
+        out = ROOT / f"f8-{name}-soup-{step}"
+        evaluate(out, samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{name}-soup-{step} (fresh 240 x 8)", out, base=ROOT / "f8-base"), flush=True)
+
+
 def caltable(args):
     """Confidence vs real outcome per data type and cut point, for every calibration run done so far (cal_table.py)."""
     dirs = [d for d in [BON / "pairs-rc1" / "cal", BON / "calcheck-rc1s30", BON / "calcheck-rc1rl40", BON / "pairs-rc2" / "cal"]
@@ -1886,9 +1924,11 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
+                                    "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
+                                    "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
                                     *[f"models/{m}" for m in wanted]])
     else:
         drive_sync("restore", models=wanted)
