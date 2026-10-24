@@ -1465,3 +1465,7 @@ edge there may be overstated (the judge-vs-reality numbers and the replay saving
 keeps own_min (least likely token), own_low5 (5 least likely), own_first50 (first 50 tokens, DEER's code trick) and
 own_certainty (minus the mean per-token entropy from top-5 log-probs); probe_zoo reports them as baselines; probezoo always
 calls own_conf (it recomputes files without the variants). Zoo B4 (and zbench) will show them.
+
+**24 Oct ~20:10, runtime 2 ended mid lot B3 labelling** (27% of 148,720 forced answers; log stops with no error; gone from
+Colab's session list at 21:24). The 20-answer generations are on Drive; labelling has no resume, so a relaunch redoes it
+(~2.5 h), then benchlot, zbench, drpo1. Runtime 1 still on lot B4 (KodCode batch 2, 35% at ~21:20).
