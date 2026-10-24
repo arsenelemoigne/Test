@@ -1300,3 +1300,15 @@ Reading: a small non-linear probe on one layer beats every simple signal, mostly
 the model's own confidence in its answer already carries the same information. The trade-off/stopper tables of this first
 report counted loss against "always right" (wrong replies included) and showed nothing; fixed (loss vs the natural stop) and
 redone from the saved scores by the `decide` stage, which then applies the user's rule.
+
+**24 Oct, decision (user's rule) and zoo B.** Zoo B (original Qwen, lot B, 281 held-out questions) TEST AUC: position 0.668,
+own confidence 0.728, MLP 0.826, MLP all layers 0.828 (math 0.92-0.94 vs own confidence 0.87-0.88). Pooled trade-off at
+<= 2 pts (report v2): zoo A linear 42% saved / 1.5 vs own confidence 25% / 0.2 -> margin +17 -> "classifier HELPS"; zoo B all
+rows lost 7-12 points even at the tightest budget (position 67% / 8.9), which exposed a second accounting bias: the natural
+stop was the SELECTED reply's outcome (longest right / longest wrong), while every cut is measured by 20 re-answers. Fixed:
+the natural stop is now the full-thinking cut's own re-answers and length; reports redone by `zooreport` after the current
+training. The decision itself stands as a direction (zoo A's classifiers clearly beat the simple signals on ranking and on
+the pooled table); the stop training it launched is judged on the fresh set x8 anyway.
+Running: `targeted --name stopB` = the original Qwen trained to stop at every type's real safe cut (lot B, 554 pairs:
+code 179, instructions 84, math 202, MC 58, tools 31; shorten pairs only), 3 seeds, soups 10-40 on fresh x8 (runtime 2).
+Runtime 1: lot A2 (rc1-rl-40) and lot B2 (original Qwen), then the judges retrained on twice the questions.
