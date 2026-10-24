@@ -1291,11 +1291,15 @@ def callot(args):
         data.write_text("".join(l + "\n" for l in kept))
         print(f"{name}: {len(kept)} new questions of {len(rows)} drawn (earlier draws removed)", flush=True)
     kod_file = Path(args.kod_file)
+    if counts.get("kodcode") and not kod_file.exists():  # a wider KodCode slice than kodcode2 (longer, harder tasks)
+        py("prepare_types.py", "--sources", "kodcode", "--per-source", 10000, "--out", kod_file,
+           "--kod-max-task", 110, "--kod-max-solution", 200)
     probe, keep = BON / f"probe-{name}", BON / f"select-{name}"
     kprobe, kkeep = BON / f"kprobe-{name}", BON / f"kselect-{name}"
     n_data = sum(1 for l in data.read_text().splitlines() if l.strip())
     if not (probe / "rollouts.jsonl").exists():
-        py("probe_curve.py", "--data", data, "--sources", BAL_SOURCES, "--per-source", 2000, "--samples", 8,
+        drawn = ",".join("arc_easy,commonsense_qa" if s == "mc" else s for s in counts if s != "kodcode")
+        py("probe_curve.py", "--data", data, "--sources", drawn, "--per-source", 2000, "--samples", 8,
            "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
            "--max-questions", n_data)
     if counts.get("kodcode") and not (kprobe / "rollouts.jsonl").exists():

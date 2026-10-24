@@ -66,7 +66,9 @@
 # done: zooreport --name r1
 # loop, round 2 (stopB: soup 20 = 31%/-2.3, soup 30 = 54%/-3.6 with code over-cut 82%/-8.1): no code pairs, checkpoints every 5
 # done: zooreport --name r2
-targeted --name stopB2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB --tg-shorten ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 20 25 30 --seeds 0 1 2
-# 24 Oct (user, units bought): double the rc1-rl-40 judge's questions; lots split by type so the runtimes never draw the same ones
-callot --name plotA3 --start models/rc1-rl-40 --data-seed 51 --paragraphs --lot ifeval_like=800,mc=200,kodcode=200
+# done: targeted --name stopB2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB --tg-shorten ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 20 25 30 --seeds 0 1 2
+# done: targeted --name stopB2 (soup 20: +34.6% / -2.1 on fresh x8; one epoch = 21 steps, so no soup 25/30)
+# plotA3 failed (models/rc1-rl-40 not restored: queued after this runtime's restore). User: much more and more diverse data,
+# like the evaluation, for the ORIGINAL Qwen's stop training; lots split by type so the runtimes never draw the same question
+callot --name plotB3 --start Qwen/Qwen3-0.6B --data-seed 53 --paragraphs --lot gsm_ic=350,gsm_plus=350,ifeval_like=500
 end

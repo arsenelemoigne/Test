@@ -47,7 +47,8 @@ callot --name plotB2 --start Qwen/Qwen3-0.6B --data-seed 50 --paragraphs --lot i
 probezoo --name zB2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 --probe-model Qwen/Qwen3-0.6B
 # loop, round 3: the stop trained on lots B + B2 (twice the pairs), code included but judged per checkpoint
 targeted --name stopB3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 --tg-shorten kodcode,ifeval_like,toolace,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 5 --dpo-steps 15 20 25 30 40 --seeds 0 1 2
-# 24 Oct (user, units bought): second half of the doubling, then the judge on lots A + A2 + A3 + A4 (vs zA 0.85, zA2 0.905)
-callot --name plotA4 --start models/rc1-rl-40 --data-seed 52 --paragraphs --lot gsm_ic=400,gsm_plus=400,toolace=600
-probezoo --name zA4 --probe-cal pairs-plotA/cal --probe-extra-from plotA2 plotA3 plotA4 --probe-model models/rc1-rl-40
+# user: much more, more diverse data like the evaluation (code + tools half; lot B3 = math + instructions on runtime 2),
+# then the original Qwen's judge on lots B + B2 + B3 + B4 (~2,400 questions; vs zB / zB2)
+callot --name plotB4 --start Qwen/Qwen3-0.6B --data-seed 54 --paragraphs --kod-file data/kodcode3.jsonl --lot kodcode=300,mbpp_train=200,toolace=400,hermes_tools=250
+probezoo --name zB4 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 plotB4 --probe-model Qwen/Qwen3-0.6B
 end
