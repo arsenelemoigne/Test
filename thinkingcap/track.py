@@ -1350,6 +1350,12 @@ def probezoo(args):
     the same labelled cuts, compared on the same untouched test set (probe_zoo.py). Hidden states are read once per set
     (extract_feats.py) into /content/feats, not synced to Drive (several GB)."""
     frm, test_from = args.calcheck_from, args.probe_test_from
+    done = BON / f"zoo-{args.name}" / "summary.txt"
+    if not done.exists():
+        drive_sync("restore", only=[f"runs/bon/zoo-{args.name}"])  # the other runtime may have run this zoo already
+    if done.exists():
+        print(done.read_text(), flush=True)
+        return
     needed = [args.probe_cal.split("/")[0]] + [f"pairs-{r}" for r in (args.probe_extra_from or [])] \
         + ([f"pairs-{test_from}"] if test_from else [])
     missing = [n for n in needed if not (BON / n).exists()]

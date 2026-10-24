@@ -51,6 +51,10 @@
 
 # 24 Oct: restart. Paragraph-level labelled cuts of right AND wrong replies, then the probe zoo on them
 # (development = 70% of the questions, test = the other 30%, held out before any fit).
-callot --name plotA --start models/rc1-rl-40 --data-seed 47 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+# done: callot --name plotA --start models/rc1-rl-40 --data-seed 47 --paragraphs --lot ifeval_like=400,gsm_ic=200,gsm_plus=200,toolace=300,mc=100,kodcode=200
+# done: probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
+# done: end
+
+# 24 Oct: zoo A alone on this runtime (runtime 1 is busy with lot B); runtime 1 skips it if this one finishes first
 probezoo --name zA --probe-cal pairs-plotA/cal --probe-model models/rc1-rl-40
 end
