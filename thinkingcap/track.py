@@ -136,6 +136,8 @@ def main():
                         help="callot: questions drawn per type (before the right-answer and contamination filters)")
     parser.add_argument("--paragraphs", action="store_true",
                         help="callot: cut at every paragraph end, right AND wrong replies (label_cuts.py), instead of cal_cuts")
+    parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
+    parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
@@ -1391,7 +1393,8 @@ def targeted(args):
     pairs = BON / f"pairs-{name}"
     if not (pairs / "pairs.jsonl").exists():
         py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts", BON / f"probe-{lot}" / "rollouts.jsonl",
-           BON / f"kprobe-{lot}" / "rollouts.jsonl", "--keep", BON / f"{lot}-clean.jsonl", "--out", pairs)
+           BON / f"kprobe-{lot}" / "rollouts.jsonl", "--keep", BON / f"{lot}-clean.jsonl", "--out", pairs,
+           "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long)
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
