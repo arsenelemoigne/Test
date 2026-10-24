@@ -1333,3 +1333,10 @@ Loop (user: pursue while promising): stopB2 = same without code pairs, checkpoin
 Twice the questions lifted the best judge by +0.06 AUC: the judges were data-limited. Pooled trade-off at <= 2 pts: MLP all
 layers 31% / 2.4 (26% / 1.4 at <= 0.5) vs own confidence 10% / 0.4. Runtime 2 stopped at the end of its queue before picking
 up stopB2 (the line was pushed a minute late); relaunched.
+
+**24 Oct, doubling the rc1-rl-40 judge's data again (user; units bought, 12.96 left before).** Zoo A (643 questions) 0.84-0.85
+-> zoo A2 (1,222) 0.905. Queued: lot A3 (instructions 800 + MC 200 + KodCode 200 drawn, runtime 2 after stopB2) and lot A4
+(GSM-IC 400 + GSM-Plus 400 + ToolACE 600 drawn, runtime 1 after stopB3); split by type so the two runtimes cannot draw the same
+question. Same safeguards: training sources only, earlier draws removed, 8-gram contamination check (30%) against all 2,759
+evaluation questions. Then zoo A4 on lots A + A2 + A3 + A4 (~2,400 questions), compared with zoo A and A2 (also on the
+A + A2 held-out questions only, which keep their hash split). Expected +0.02-0.04 AUC; ~8 GPU-hours.
