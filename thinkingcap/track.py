@@ -1436,7 +1436,7 @@ def zoo_margin(summary):
         if not l.strip():
             break
         name = re.split(r"\s{2,}", l.strip())[0]
-        vals = re.findall(r"(\d+)% / ([\d.]+)|(?<=\s)-(?=\s|$)", l)
+        vals = re.findall(r"(\d+)% / (-?[\d.]+)|(?<=\s)-(?=\s|$)", l)
         col = [(int(v[0]), float(v[1])) if v[0] else (0, 0.0) for v in vals]
         if len(col) >= 3:
             rows[name] = col[2]  # budgets 0.5, 1, 2, 3, 5 points: the third is <= 2 (saving %, real test loss)
