@@ -54,6 +54,9 @@ wronglen --name w1
 callot --name plotB4 --start Qwen/Qwen3-0.6B --data-seed 54 --paragraphs --kod-file data/kodcode3.jsonl --lot kodcode=300,mbpp_train=200,toolace=400,hermes_tools=250 --lot-samples 20
 # user (24 Oct ~19:50): no MBPP anywhere (MBPP+ is built on MBPP); lot B4's 200 mbpp_train questions are left out
 probezoo --name zB4 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 plotB4 --probe-model Qwen/Qwen3-0.6B --drop-sources mbpp_train
+# user (25 Oct): every classifier is compared on the REAL eval sample (the 240 choosing benchmark questions, measure only):
+# the same judge as zoo B4 (lots B..B4, MBPP dropped) tested on bench40; features are cached on this runtime, so it is quick
+probezoo --name zB4bench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 plotB4 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B --drop-sources mbpp_train
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
 # user (25 Oct): per-type stop from the benchmark findings (benchlot/zbench): code and tools only. On MBPP+ the thinking is

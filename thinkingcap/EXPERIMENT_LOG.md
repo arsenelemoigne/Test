@@ -1583,3 +1583,8 @@ before drpo1) reruns the benchmark test with these; zoo B4 uses them too.
 Context for math cuts: trained models already shorten SVAMP far beyond the 30% "oracle" (that is truncation of the original
 replies with all 20 forced answers right): rc1-rl-40 svamp +65% / -4.1; earlier rounds +67-69% at -0.6..+3.1 (x4);
 competitor Lightning McQwen3 SVAMP 66% / -3.8. Benchlot's best-cut ceiling on SVAMP (best cut vs natural stop) is 53% / +8.9.
+
+**25 Oct ~10:30 (CET), both runtimes relaunched by the user (scripts 36a4a86).** User: every classifier must be tested on the
+real eval sample so they can be compared. zbench2 (runtime 2: lots B+B2+B3) and the new zB4bench (runtime 1, right after zoo
+B4: lots B..B4, MBPP dropped) both test on the 240 choosing benchmark questions (measure only, never trained on), with the
+timing-only AUC and the own-confidence combos; zoo B4 itself keeps the held-out practice test, for the practice-vs-benchmark gap.
