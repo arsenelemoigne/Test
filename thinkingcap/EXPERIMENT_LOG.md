@@ -1928,3 +1928,8 @@ gsm_plus / ifeval_like / toolace / hermes / kodcode). drpo3 and drpo2 (not start
 Even step 10 is outside (-3.3): beta 0.005 overshoots within 10 steps; math and BFCL multiple pay first. Runtime 2 moved on to drpo3
 (rl_train with math protected, guard 0.06, proportional batch mix). Runtime 1: stopB5 DPO at step 40/55 of seed 0 (pairs ordered
 right 100%).
+
+**26 Oct, queued (user): ShorterBetter rerun, sb2 (runtime 1, before bal0).** From rc1-rl-40 like sb1, with the paper's beta
+0.001 (sb1 used 0.005, reasoning that our replies are shorter; but the penalty is per token and advantages are normalized per group,
+so 5x was simply 5x the pressure), math protected (correctness-only reward on math), guard 0.06, proportional batch mix,
+checkpoints every 10 steps scored. track.py drpo --rl-sb-beta passes the weight.

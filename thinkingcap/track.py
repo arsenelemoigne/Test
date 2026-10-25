@@ -157,6 +157,7 @@ def main():
     parser.add_argument("--drpo-score-only", action="store_true",
                         help="drpo: never train; only score the saved checkpoints (e.g. a run stopped early)")
     parser.add_argument("--rl-protect", default="", help="drpo: sources with no length pressure (rl_train --protect-sources)")
+    parser.add_argument("--rl-sb-beta", type=float, help="drpo --rl-variant shorterbetter: per-token length weight")
     parser.add_argument("--rl-guard", type=float, default=0.0, help="drpo: per-type accuracy guard (rl_train --guard-drop)")
     parser.add_argument("--drpo-weighted", nargs="*", default=[],
                         help="drpo: STEP:WEIGHT checkpoints merged at that strength and scored (0.5 = halfway back to --start)")
@@ -1528,7 +1529,8 @@ def drpo(args):
     if not (out / "adapter_config.json").exists():  # trained on the other runtime: reuse it, never retrain
         drive_sync("restore", only=[str(out)])
     variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda] if args.rl_variant == "drpo"
-               else ["--objective", "grpo", "--reward", "shorterbetter"])
+               else ["--objective", "grpo", "--reward", "shorterbetter",
+                     *(["--sb-beta", args.rl_sb_beta] if args.rl_sb_beta is not None else [])])
     if not (out / "adapter_config.json").exists() and not args.drpo_score_only:
         py("rl_train.py", "--model", base, "--data", pool, "--sources", "all", "--out", out,
            "--steps", args.drpo_steps, "--questions", args.drpo_questions, "--group", 8, "--max-tokens", 4096,
