@@ -7,7 +7,7 @@ loss = -log sigmoid(beta * [(pi_c - ref_c) - (pi_r - ref_r)]) + nll * (mean toke
 pi and ref are summed log-probabilities of the reply tokens (thinking and answer) under the
 policy and under the starting adapter; the reference is scored once before training. The NLL
 anchor on the chosen reply (as in RPO, Pang et al. 2024) stops DPO from widening the margin by
-lowering both sides. Pair kinds are mixed to --mix (shorten, guard, hard).
+lowering both sides. Pair kinds are mixed to --mix (shorten, guard, hard, right).
 
 Every --save-every optimizer steps a checkpoint is saved. The tripwire watches held-out chosen
 replies: if the probability that the reply ends right after </think> rises above --tripwire, a
@@ -124,8 +124,9 @@ def main():
 
 
 def mix(rows, shares, rng):
-    """Pairs subsampled to the shares of shorten, guard and hard, keeping as many as the scarcest allows."""
-    kinds = {k: [r for r in rows if r["kind"] == k] for k in ("shorten", "guard", "hard")}
+    """Pairs subsampled to the shares of shorten, guard, hard and right, keeping as many as the scarcest allows."""
+    kinds = {k: [r for r in rows if r["kind"] == k] for k in ("shorten", "guard", "hard", "right")}
+    shares = list(shares) + [0.0] * (len(kinds) - len(shares))  # a three-share --mix leaves "right" out
     total = min(len(kinds[k]) / s for k, s in zip(kinds, shares) if s > 0) if rows else 0
     picked = []
     for (k, pool), s in zip(kinds.items(), shares):
@@ -141,7 +142,7 @@ def parse_arguments():
     parser.add_argument("--pairs", required=True)
     parser.add_argument("--init-adapter", required=True, help="the starting LoRA; also the DPO reference")
     parser.add_argument("--out", required=True)
-    parser.add_argument("--mix", default="0.4,0.4,0.2", help="shares of shorten, guard, hard pairs")
+    parser.add_argument("--mix", default="0.4,0.4,0.2", help="shares of shorten, guard, hard (, right) pairs")
     parser.add_argument("--beta", type=float, default=0.1)
     parser.add_argument("--nll", type=float, default=1.0, help="weight of the NLL anchor on the chosen reply")
     parser.add_argument("--lr", type=float, default=2e-5)

@@ -2006,3 +2006,19 @@ code 1,064-1,635, tools/instructions ~200-600; ~12 min per step.
   backwards / with a verification twist, closer to SVAMP's perturbations), prompts drawn evenly from the deciles of SVAMP's
   prompt length, 8-gram check. Key fix: per domain, "shorter right" pairs capped at the number of "right beats wrong" pairs
   (math is right 85% of the time, so it got many shorten pairs and few wrong pairs: SVAMP -3.9 -> -2.4 after the cap).
+
+**26 Oct, data v2 rescaled to the competitors' size (user) + MetaMathQA math + "be right" pairs (user).** Replaces the
+3,500-question version above.
+- **lot V2**: ~10,300 NEW training questions: math = matched GSM8K rest 600 + **MetaMathQA GSM_SV/FOBAR 2,500** (GSM8K-train
+  rewrites: solve for x, or asked backwards from the answer; the twisted wordings closest to SVAMP; michal-bida's mix;
+  prepare_types `metamath_sv`, same "Final answer:" wording), KodCode 3,000, ToolACE 2,000, Hermes rest (~230), IFEval-like
+  2,000. 8 replies each; **8 cuts x 4 forced answers** (Lightning McQwen3's label budget; safe = right on both halves of the
+  4). Estimated ~11-13 GPU-hours.
+- **stopV2**: pairs from lots B..B5 + V2 (~12,000 questions). New pair kind **"right"** for math (targeted_pairs
+  --right-sources): the question's own right reply beats its own wrong one within +-25% length, one per question
+  (Lightning McQwen3's correctness DPO; our NLL anchor is on for every pair; dpo.py mixes 4 kinds). Caps: kodcode 1,800,
+  ifeval_like 1,800, toolace 1,200, hermes 500, math 2,700 (gsm_ic 300, gsm_plus 300, matched 800, metamath 1,300): ~8,000
+  pairs. 3 seeds, DPO stops at the last scored step (300); soups at 25/50/75/100/150/200/300 on fresh x8.
+- Toy test: right pair built for close lengths, skipped when lengths differ > 25%, none for non-listed types.
+Side note: data/gsm8k_matched (mm3) draws GSM8K train AND test; GSM-IC / GSM-Plus are built on GSM8K test, so models trained
+on gsm_ic/gsm_plus (rc1, drpo*) may have seen paraphrases of some held-out matched-math test questions. SVAMP is unaffected.

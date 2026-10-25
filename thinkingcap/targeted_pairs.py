@@ -8,6 +8,9 @@ From the lot's paragraph-end cuts (20 re-answers each) and the model's 8 replies
       (<= --fail of re-answers right) + the wrong answer written there: stopping too early is what goes wrong.
       kind "guard": chosen = the question's longest right reply; rejected = its shortest finished wrong reply, when the
       right one is longer: more thinking, more right.
+  --right-sources (math)   kind "right": the question's own right reply beats its own wrong one of similar length
+      (within --right-band), so the pair says "be right" and nothing about length (Lightning McQwen3's correctness
+      DPO; dpo.py's NLL anchor keeps the right reply likely). One pair per question.
   a type in both lists (code in stopB6) gets both kinds: shorten where a cut is safe, hard/guard where stopping fails.
   every other type: no pairs (left as they are).
 --rule question (shorten only; questions with >= --min-samples full replies, else the strict rule above): the bar is the
@@ -39,6 +42,8 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--shorten-sources", default="kodcode,ifeval_like")
     parser.add_argument("--long-sources", default="gsm_ic,gsm_plus")
+    parser.add_argument("--right-sources", default="none")
+    parser.add_argument("--right-band", type=float, default=0.25, help="right pairs: lengths within this share")
     parser.add_argument("--safe", type=float, default=0.95)
     parser.add_argument("--fail", type=float, default=0.25)
     parser.add_argument("--min-save", type=float, default=0.25)
@@ -49,6 +54,7 @@ def main():
     cal, out = Path(args.cal), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     short_src, long_src = set(args.shorten_sources.split(",")), set(args.long_sources.split(","))
+    right_src = set(args.right_sources.split(","))
     allowed = {r["id"] for r in read(args.keep)}
     rollouts, tries = defaultdict(list), defaultdict(list)
     for p in args.rollouts:
@@ -123,6 +129,19 @@ def main():
                 pairs.append({"id": qid, "source": src, "kind": "guard", "prompt_ids": r["prompt_ids"],
                               "chosen_ids": r["output_ids"], "rejected_ids": w["output_ids"]})
                 counts[(src, "guard")] += 1
+    for qid, group in rollouts.items():  # "be right": own right vs own wrong of similar length
+        src = group[0]["source"]
+        if src not in right_src:
+            continue
+        right = [r for r in group if r["correct"]]
+        wrong = [r for r in group if not r["correct"]]
+        close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in right for w in wrong
+                 if abs(r["output_tokens"] - w["output_tokens"]) <= args.right_band * max(r["output_tokens"], w["output_tokens"])]
+        if close:
+            _, r, w = min(close, key=lambda t: t[0])
+            pairs.append({"id": qid, "source": src, "kind": "right", "prompt_ids": r["prompt_ids"],
+                          "chosen_ids": r["output_ids"], "rejected_ids": w["output_ids"]})
+            counts[(src, "right")] += 1
     (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in pairs))
     text = "\n".join([f"{len(pairs)} targeted pairs"] + [f"  {' / '.join(k)}: {n}" for k, n in sorted(counts.items())])
     (out / "summary.txt").write_text(text + "\n")

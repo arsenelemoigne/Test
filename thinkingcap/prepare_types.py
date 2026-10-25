@@ -43,7 +43,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_matched": gsm8k_matched, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -107,6 +107,27 @@ def gsm8k_matched(args, rng):
         if line.strip():
             r = json.loads(line)
             yield {k: v for k, v in r.items() if k not in ("id", "words", "ops", "kind")}
+
+
+def metamath_sv(args, rng):
+    """MetaMathQA's GSM_SV and GSM_FOBAR rows: GSM8K TRAIN problems rewritten with an unknown x (solve for x) or asked
+    backwards from a given answer, the twisted wordings closest to SVAMP's variations (michal-bida's math mix). MetaMathQA
+    is built from GSM8K and MATH training sets only; plain-number answers only; same prompt wording as gsm8k_matched."""
+    from datasets import load_dataset
+    from utils.train.prepare_data import row
+
+    numeric = "\n\nThe last line of your reply must start with 'Final answer:' followed by the number alone."
+    for r in load_dataset("meta-math/MetaMathQA", split="train"):
+        if r["type"] not in ("GSM_SV", "GSM_FOBAR"):
+            continue
+        answer = r["response"].rsplit("The answer is:", 1)[-1].strip().replace(",", "")
+        try:
+            float(answer)
+        except ValueError:
+            continue
+        out = row(r["query"] + numeric, "", answer, "math", "metamath_sv")
+        out["prompt"][0]["content"] = out["prompt"][0]["content"].rstrip()  # row() appends an empty instruction
+        yield out
 
 
 GSM_PLUS_KINDS = ("distraction insertion", "problem understanding", "reversing operation", "adding operation",

@@ -181,6 +181,7 @@ def main():
     parser.add_argument("--lot-cuts", type=int, default=10, help="callot --paragraphs: paragraph-end cuts per reply")
     parser.add_argument("--lot-checks", type=int, default=20, help="callot --paragraphs: forced answers per cut")
     parser.add_argument("--tg-min-samples", type=int, default=20, help="targeted: full replies a question needs for --tg-rule question")
+    parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
@@ -1893,7 +1894,7 @@ def targeted(args):
                    BON / f"probe-{lot}" / "rollouts.jsonl", BON / f"kprobe-{lot}" / "rollouts.jsonl",
                    "--keep", BON / f"{lot}-clean.jsonl", "--out", part,
                    "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule,
-                   "--min-samples", args.tg_min_samples)
+                   "--min-samples", args.tg_min_samples, "--right-sources", args.tg_right)
             print((part / "summary.txt").read_text(), flush=True)
             rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]
         note = ""
@@ -1914,7 +1915,7 @@ def targeted(args):
         (pairs / "summary.txt").write_text(f"{len(rows)} pairs from {', '.join(args.probe_extra_from)}\n{note}")
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
-    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
     start = Path("adapters") / f"fresh-{name}"
     if not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", base, "--out", start)
@@ -1923,7 +1924,7 @@ def targeted(args):
         if not (adapter / "adapter_config.json").exists():
             py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
                "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.tg_save_every,
-               "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
+               "--epochs", 1, "--dtype", args.dtype, "--seed", seed, "--max-steps", max(args.dpo_steps))
     fresh_q = f"questions_fresh{FRESH_SEED}"
     if not Path(fresh_q, "questions.jsonl").exists():
         py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
