@@ -1857,3 +1857,10 @@ MLP all layers 31% / +5.6); MBPP+: own confidence 87% / -3.2, MLP all layers 72%
 ~19% / -2.2. Reading: on our best model, a learned stop would add most on code (and instructions), little on math or tools.
 Queue note: runtime 1 re-read its queue at ~18:30 (before mathmatch / nt2 / drpo1 half-strength / lot B5 were added) and started
 drpo0 (raw Qwen DRPO, ~8 h); those four run right after it (they sit above it in the queue file).
+
+**25 Oct ~21:15 (CET), queues reordered (user, after another AI's review).** Removed: drpo0 (raw-Qwen DRPO with the aggressive
+lambda 0.2 / lr 1e-5 that overshot, no math protection: drpo3 covers it safely) and stopB4 (superseded by stopB5 and
+experiment 5). Runtime 1 from now on: (drpo0 still running, step 3 of 60, ~1,300-token replies) -> mathmatch -> nt2 -> drpo1
+step 20 at half strength -> lot B5 -> stopB5 -> bal0. Runtime 2: sb1 (running, step 9; every 10-step checkpoint scored) ->
+drpo3 -> teach1 -> teach2 -> drpo2. drpo0 cannot be stopped by editing the queue (a running stage finishes first); stopping it
+needs "Interrupt execution" on runtime 1's queue cell and re-running that cell (saves ~9 GPU-hours).

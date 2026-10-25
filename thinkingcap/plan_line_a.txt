@@ -91,7 +91,6 @@ nothink --name nt1
 drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter
 # user (25 Oct): gentler DRPO rerun (drpo1 overshot by step 20): lambda 0.5 (softer length weights) and lr 5e-6 (half),
 # checkpoints every 10 steps, each scored on fresh x8 (10..60)
-drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6
 # user (25 Oct): RL from the RAW Qwen, protecting math: no length pressure on math (right math replies weighted equally,
 # still trained to be right), gentle DRPO elsewhere, DLER dynamic sampling, and a per-type guard that stops training when a
 # type's batch accuracy falls 6 points below its start; every 10-step checkpoint (and a guard stop) scored on fresh x8
@@ -106,4 +105,5 @@ teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodco
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
 teach --name teach2 --teach-reuse teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode,toolace,hermes_tools --teach-judge none
+drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6
 end
