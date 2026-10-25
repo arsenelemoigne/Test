@@ -34,6 +34,26 @@ from probe_knows import (Data, auc, calibration, fit, fit_mlp, folds_by_question
                          summarize, tradeoff_lines)
 
 
+def timing_auc(scores, data, mask):
+    """Within-reply AUC: only pairs of cuts from the SAME reply (one safe, one unsafe) are compared, so knowing which
+    questions are easy cannot help; it measures whether the score rises when the answer has settled. Returns (AUC,
+    number of replies that hold both a safe and an unsafe cut)."""
+    scores = np.asarray(scores, float)
+    wins, pairs, replies = 0.0, 0, 0
+    groups = defaultdict(list)
+    for k in np.flatnonzero(mask & data.labelled):
+        groups[data.question[k]].append(k)
+    for ks in groups.values():
+        y = data.label[ks].astype(bool)
+        if y.all() or not y.any():
+            continue
+        sp, sn = scores[ks][y], scores[ks][~y]
+        wins += (sp[:, None] > sn[None, :]).sum() + 0.5 * (sp[:, None] == sn[None, :]).sum()
+        pairs += len(sp) * len(sn)
+        replies += 1
+    return (wins / pairs if pairs else float("nan")), replies
+
+
 def attention_fit(get, train_idx, train_y, dim=256, heads=4, epochs=30, seed=0):
     """Attention-pooling probe; get(indices) -> float16 [b, T, d] windows (gathered batch by batch, so the multi-GB
     window array is never copied). Returns predict(get_test, indices)."""
@@ -234,6 +254,20 @@ def main():
         run("mlp", lambda: xbest(dev, points), lambda: xbest(test, tpoints), mlp((256, 64)))
         run(f"mlp, all {n_layers} layers x 2 places", lambda: points.reshape(dev.n, -1).astype(np.float32),
             lambda: tpoints.reshape(test.n, -1).astype(np.float32), mlp((512, 128)))
+        # the model's own confidence as LEARNED features (same training data and fit as the probes): does reading the
+        # hidden state add anything beyond what the model says about its own answer, and do the two combine?
+        def own_x(data):
+            cols = [data.own] + [data.own_variants[v] for v in ("own_min", "own_low5", "own_first50")]
+            x = np.log(np.clip(np.column_stack(cols), 1e-6, 1.0))
+            x = np.column_stack([x, data.own_variants["own_certainty"]])
+            return np.nan_to_num(x.astype(np.float32))
+        if np.isfinite(dev.own).all() and np.isfinite(test.own).all():
+            run("own confidence, learned (5 readings + position)", lambda: np.column_stack([own_x(dev), dev.position]),
+                lambda: np.column_stack([own_x(test), test.position]), linear)
+            run("linear + own confidence", lambda: np.column_stack([xbest(dev, points), own_x(dev)]),
+                lambda: np.column_stack([xbest(test, tpoints), own_x(test)]), linear)
+            run("mlp + own confidence", lambda: np.column_stack([xbest(dev, points), own_x(dev)]),
+                lambda: np.column_stack([xbest(test, tpoints), own_x(test)]), mlp((256, 64)))
         def run_attention(name, js):
             """Attention probe over the window at layers js (concatenated along the feature axis)."""
             def getter(arr):
@@ -279,6 +313,19 @@ def main():
             for s in sources + ["ALL"]:
                 m = data.labelled & ((data.source == s) if s != "ALL" else np.ones(data.n, bool))
                 cells.append(auc(scores[n][m], data.label[m]))
+            lines.append(f"{n:<{width}}" + "".join(f"{c:>13.3f}" for c in cells[:-1]) + f"{cells[-1]:>8.3f}")
+        lines.append("")
+    for title, scores, data in (("TIMING-ONLY AUC, development (out-of-fold): cuts compared only within the same reply",
+                                 dev_s, dev), ("TIMING-ONLY AUC, TEST: cuts compared only within the same reply", test_s, test)):
+        cells0 = [timing_auc(np.zeros(data.n), data, (data.source == s) if s != "ALL" else np.ones(data.n, bool))[1]
+                  for s in sources + ["ALL"]]
+        lines += [title + " (does the score rise when the answer settles? question difficulty cannot help)",
+                  f"{'classifier':<{width}}" + "".join(f"{s[:12]:>13}" for s in sources) + f"{'ALL':>8}",
+                  f"{'(replies with both)':<{width}}" + "".join(f"{c:>13d}" for c in cells0[:-1]) + f"{cells0[-1]:>8d}"]
+        for n in names:
+            sc = data.fraction if n == "position" else scores[n]
+            cells = [timing_auc(sc, data, (data.source == s) if s != "ALL" else np.ones(data.n, bool))[0]
+                     for s in sources + ["ALL"]]
             lines.append(f"{n:<{width}}" + "".join(f"{c:>13.3f}" for c in cells[:-1]) + f"{cells[-1]:>8.3f}")
         lines.append("")
     lines += ["Calibration, TEST, every cut (soft target = real success rate k/20; lower is better): "

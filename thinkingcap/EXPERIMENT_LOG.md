@@ -1571,3 +1571,15 @@ scored on fresh x8. Rationale: on the 240 benchmark questions MBPP+ thinking is 
 judge stops 92-94% at ~1 pt) and BFCL early cuts are safe, while SVAMP settles late and IFEval early cuts cost points.
 Expected: large code saving (MBPP+), some BFCL saving, svamp/ifeval near zero; compare with stopB3 soup 25 (34.6 / -0.4).
 DRPO (drpo1, runtime 2) stays queued unchanged (it does not use the judge).
+
+**25 Oct, measurement fix (user: "are we measuring the right thing?").** The zoo's AUC pools every cut, so it mixes two skills:
+which questions/replies will be right at all (question difficulty) and WHEN inside a reply the answer has settled (what a stop
+needs). Own confidence is strong on the first (SVAMP 0.87-0.88 is largely "this easy question is known"); in the stopping
+simulation on SVAMP it only wins by stopping rarely (15% saved / -3.8; least-likely-token 8% / -1.9; judge 63% / -23.8;
+oracle 30% / +1.3). probe_zoo.py now also reports a TIMING-ONLY AUC (pairs of cuts from the same reply only; toy check: rising
+1.0, difficulty-only 0.5, falling 0.0) for every classifier, dev and test, per type; and three new classifiers: own confidence
+LEARNED (its 5 readings + position, same fit as the probes), linear + own confidence, MLP + own confidence. zbench2 (runtime 2,
+before drpo1) reruns the benchmark test with these; zoo B4 uses them too.
+Context for math cuts: trained models already shorten SVAMP far beyond the 30% "oracle" (that is truncation of the original
+replies with all 20 forced answers right): rc1-rl-40 svamp +65% / -4.1; earlier rounds +67-69% at -0.6..+3.1 (x4);
+competitor Lightning McQwen3 SVAMP 66% / -3.8. Benchlot's best-cut ceiling on SVAMP (best cut vs natural stop) is 53% / +8.9.
