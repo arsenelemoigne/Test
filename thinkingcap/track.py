@@ -253,6 +253,10 @@ def py(*command):
 
 
 def setup(args):
+    try:  # the IFEval grader (typed.py, rl_train.py) needs langdetect, which requirements.txt lacks (drpo1 failed on it)
+        import langdetect  # noqa: F401
+    except ImportError:
+        run(sys.executable, "-m", "pip", "install", "-q", "langdetect")
     if not Path("data/train.jsonl").exists():
         py("utils/train/prepare_data.py")
     if not Path("questions/questions.jsonl").exists():
@@ -1366,6 +1370,16 @@ def cutexamples(args):
     py("cut_examples.py", BON / "pairs-rc2" / "cal", "--out", out, "--per-type", 1)
 
 
+def ensure_lots(lots):
+    """Restore label lots the other runtime finished after this runtime's start-up restore (a lot is usable only once its
+    verdicts.jsonl exists; an earlier light restore may have copied a half-made folder)."""
+    missing = [l for l in lots if not (BON / f"pairs-{l}" / "cal" / "verdicts.jsonl").exists()]
+    if missing:
+        drive_sync("restore", only=[pat for l in missing for pat in (f"runs/bon/pairs-{l}", f"runs/bon/probe-{l}",
+                                    f"runs/bon/kprobe-{l}", f"runs/bon/{l}-clean.jsonl", f"runs/bon/select-{l}",
+                                    f"runs/bon/kselect-{l}")])
+
+
 def probezoo(args):
     """Every stopping classifier (layer sweep, linear, MLP, attention over the last 64 thinking tokens, baselines) on
     the same labelled cuts, compared on the same untouched test set (probe_zoo.py). Hidden states are read once per set
@@ -1377,6 +1391,8 @@ def probezoo(args):
     if done.exists():
         print(done.read_text(), flush=True)
         return
+    ensure_lots([args.probe_cal.split("/")[0][len("pairs-"):]] + list(args.probe_extra_from or [])
+                + ([test_from] if test_from else []))
     needed = [args.probe_cal.split("/")[0]] + [f"pairs-{r}" for r in (args.probe_extra_from or [])] \
         + ([f"pairs-{test_from}"] if test_from else [])
     missing = [n for n in needed if not (BON / n).exists()]
@@ -1452,7 +1468,8 @@ def mixed_pool(name, need, data_seed, kod_file):
         rows += [r for r in kod if text(r) not in answered][:int(need * 0.16) + 50]  # code share incl. the former MBPP 6%
         used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal",
                 "rl-", "lot-")) and "raw" not in p.name and p != pool]
-        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
+        seen = {text(r) for p in used for l in p.read_text().splitlines() if l.strip()
+                for r in [json.loads(l)] if isinstance(r.get("prompt"), list) and r["prompt"]}
         rows = [r for r in rows if text(r) not in seen]
         random.Random(data_seed).shuffle(rows)
         for index, row in enumerate(rows):
@@ -1547,6 +1564,7 @@ def targeted(args):
     name, base = args.name, args.start
     pairs = BON / f"pairs-{name}"
     if not (pairs / "pairs.jsonl").exists():
+        ensure_lots(args.probe_extra_from)
         rows = []
         for lot in args.probe_extra_from:  # one or more label lots of the same model
             part = pairs / lot

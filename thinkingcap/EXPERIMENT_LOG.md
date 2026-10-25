@@ -1555,3 +1555,11 @@ Reading: the judge learned practice math, whose answers settle at 20-40% of the 
 (benchlot: 0.34 at 20-40% vs 0.73 full), so the judge stops SVAMP far too early, while the model's own confidence ranks SVAMP
 cuts well. Code transfers, tools mostly, instructions weakly. Before stop-token training: math needs SVAMP-like (not
 SVAMP) training problems or the own-confidence signal; thresholds must be set per type and checked on benchmark-like data.
+
+**25 Oct ~09:10 (CET), both queues ended on errors, both runtimes released themselves (last cell).** Runtime 1: zoo B4 and
+stopB4 failed (runs/bon/pairs-plotB3/cal/verdicts.jsonl missing: lot B3 finished on runtime 2 after runtime 1's start-up restore,
+which had copied the half-made folder). Runtime 2: drpo1 failed in rl_train.py (IFEval grader: No module named 'langdetect'; the
+mixed pool was built, 48 x 60 MBPP-free), teach1 failed in mixed_pool (KeyError 'prompt': a data file of another format
+contains the word "prompt"). Fixes: ensure_lots() restores a lot from Drive when its verdicts are missing (probezoo, targeted);
+setup installs langdetect; mixed_pool parses rows and skips non-chat ones. The failed lines stay in the queues and rerun on the
+next launch (finished stages are skipped).
