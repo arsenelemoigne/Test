@@ -1758,3 +1758,11 @@ Also seen in the queue (another session): teach2 (--teach-reuse teach1) after te
 averages those checkpoints' LoRA adapters with equal weights (merge.py, as the DPO soups) into models/<name>-soup-S1-S2 and
 scores it on fresh x8 (training skipped when the run exists). Plan: drpo1 steps 20 / 40 / 60 scored individually first; the soup
 line is queued once those scores are in (e.g. the two best neighbouring checkpoints).
+
+**25 Oct ~19:10 (CET), drpo1 step 40 (DRPO from rc1-rl-40), fresh 240 x 8: tokens saved +73.3%, accuracy -6.9 (OUTSIDE).**
+bfcl_irrelevance +60% / +1.6; bfcl_multiple +52% / -7.2; bfcl_simple_python +50% / +0.6; ifeval +66% / -7.2; mbpp +83% / -2.5;
+**svamp +80% / -16.2**. Accuracy: svamp 73.4%, ifeval 58.4%, mbpp 43.8%, bfcl 68.8-88.8%. Mean reply tokens: svamp 126,
+ifeval 237, mbpp 349, bfcl 78-100. Far more saving than rc1-rl-40 (53.9 / -2.1) but math collapses: DRPO with lambda 0.2
+pushes too hard by step 40 (the training batches' flat accuracy hid it: they mix types and change every step). Step 60 is being
+scored; step 20 next (queued) is the likely sweet spot; a soup of step 20 with rc1-rl-40-like weights (or steps 20+40) is the
+candidate merged model.
