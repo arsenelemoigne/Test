@@ -2,6 +2,29 @@
 
 Summary of the research discussion (25 Oct 2026). To be reviewed against the real API data.
 
+## About this document
+
+**What's inside:**
+- **§0** How we got here: Catala, the tree + classifiers idea, the candidate domains
+- **§1** Why patent disputes and IPRs exist
+- **§2** What changed at the PTAB in 2025–2026
+- **§3** Data availability: what is confirmed and what is not
+- **§4** Competitors found
+- **§5** How to get the USPTO API key
+- **§6** The objective (two prediction moments: at filing / after briefing)
+- **§7** Procedural tree with blanks for the counts
+- **§8** Architecture
+- **§9** Plan, effort and risks
+- **§10** Checklist for the first live session with the API
+- **§11** Sources
+
+**Where to find it:** repository `arsenelemoigne/test`, branch `ccr-ee17e0a5-gy4nxo`, file `research/ptab-ipr-predictor/PROJECT_NOTES.md`.
+
+```bash
+git fetch origin ccr-ee17e0a5-gy4nxo
+git checkout ccr-ee17e0a5-gy4nxo
+```
+
 ---
 
 ## 0. How we got here (short history of the discussion)
