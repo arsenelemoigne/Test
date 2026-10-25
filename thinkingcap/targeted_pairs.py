@@ -8,6 +8,7 @@ From the lot's paragraph-end cuts (20 re-answers each) and the model's 8 replies
       (<= --fail of re-answers right) + the wrong answer written there: stopping too early is what goes wrong.
       kind "guard": chosen = the question's longest right reply; rejected = its shortest finished wrong reply, when the
       right one is longer: more thinking, more right.
+  a type in both lists (code in stopB6) gets both kinds: shorten where a cut is safe, hard/guard where stopping fails.
   every other type: no pairs (left as they are).
 --rule question (shorten only; questions with >= --min-samples full replies, else the strict rule above): the bar is the
   question's own rate q over all its full replies (unfinished ones count as wrong, as in the evaluation), the quantity the
@@ -103,7 +104,7 @@ def main():
                 if len(chosen) <= (1 - args.min_save) * len(full["output_ids"]):
                     pairs.append(base | {"kind": "shorten", "chosen_ids": chosen, "rejected_ids": full["output_ids"]})
                     counts[(src, "shorten", "right" if rep["correct"] else "wrong")] += 1
-        elif rep["correct"]:
+        if src in long_src and rep["correct"]:  # a type may be in both lists: shorten where safe, brake where not
             early = [c for c in cs[:-1] if rate(c) <= args.fail and verdict[c["key"]]["wrong_ids"]]
             if early:
                 c = early[-1]
