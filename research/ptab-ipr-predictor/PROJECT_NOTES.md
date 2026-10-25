@@ -99,7 +99,8 @@ Status labels: SECONDARY = third-party or press source only; NOT VERIFIED = must
 5. Keys unused for 90 days are deleted. Store the key in Colab **Secrets**, never in the notebook.
 
 **Without a US passport or SSN (non-US residents):**
-- ID.me has a route for people outside the US: identity is verified **on a video call** with a foreign passport (e.g. a French passport). No SSN is needed on that route. Choose the international / video-call verification path in ID.me.
+- ID.me has a route for people outside the US: identity is verified **on a video call** with a foreign passport (e.g. a French passport). ⚠️ This route is **only for people who were never issued an SSN or ITIN**: it asks you to confirm that, so it is not open to anyone who has one (even without the physical card). With an SSN, use ID.me's "live outside the U.S. and have an SSN" route instead; it asks for the number, not the card.
+- The API key needs an **ID.me-verified** USPTO.gov account (official: data.uspto.gov/support/universal-registration). A free account with only MFA still gives the ODP website: search, document downloads, bulk downloads of up to 3,000 records at a time.
 - Since 18 Aug 2026 the USPTO profile requires 4 extra fields. Keys whose profile was incomplete on 8 Oct 2026 were deactivated, so fill in the whole profile.
 - Keys are personal: the USPTO refuses organisational exemptions. Don't borrow someone else's key; have a collaborator run the scripts with their own key instead.
 - Fallbacks if verification fails:
