@@ -95,7 +95,8 @@ drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3
 # user (25 Oct): RL from the RAW Qwen, protecting math: no length pressure on math (right math replies weighted equally,
 # still trained to be right), gentle DRPO elsewhere, DLER dynamic sampling, and a per-type guard that stops training when a
 # type's batch accuracy falls 6 points below its start; every 10-step checkpoint (and a guard stop) scored on fresh x8
-drpo --name drpo3 --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
+# restarted (user, 26 Oct ~03:15: pool was 1,592 questions, 54% math, 2% code, no Hermes): drpo --name drpo3 --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
+drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
 # experiment 5 (user): the judge as teacher. Judge fitted on lots B..B4 of the original Qwen; the original Qwen answers
 # 3,000 fresh mixed questions once; its own p(</think>) at every paragraph end is trained toward the judge's sharpened
 # target, two models: fixed (yes/no judge > 0.9) and relative (soft judge's predicted success within 0.05 of

@@ -1948,3 +1948,9 @@ drpo3 (raw Qwen, math protected) steps 1-5: thinking 1,208 -> 974 tokens; batch 
 (1,592 questions for 4,320 needed; math 54%, code 2%, Hermes 0%: the earlier-draw filter emptied the small sources, and the
 contamination check's 13-word rule drops IFEval-like prompts that share IFEval's constraint wording) is reported; not fixed yet
 (user decision pending).
+
+**26 Oct ~03:15 (CET), drpo3 restarted as drpo3b with a proper pool (user: option A).** mixed_pool(reuse=...): runs from the RAW
+model (drpo, teach) no longer drop questions drawn by earlier experiments (the raw model never trained on them; the 30% 8-gram /
+13-word check against all 2,759 evaluation questions still applies). drpo3 had only 1,592 of the 4,320 questions it needed
+(54% math, 2% code, no Hermes) and would have cycled them ~2.7x. Same settings otherwise (math protected, guard 0.06, lambda 0.5,
+lr 5e-6, dynamic sampling, proportional batch mix). teach1's pool gets the same fix.

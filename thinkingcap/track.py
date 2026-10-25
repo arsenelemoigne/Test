@@ -1469,7 +1469,7 @@ def benchlot(args):
     print((cal / "summary.txt").read_text(), flush=True)
 
 
-def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16):
+def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16, reuse=False):
     """A fresh question pool mixed like the evaluation (GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train,
     KodCode), shuffled so every batch mixes the types; earlier draws removed, contamination-checked."""
     import random
@@ -1488,7 +1488,10 @@ def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16):
             py("prepare_types.py", "--sources", "kodcode", "--per-source", 10000, "--out", kod_file,
                "--kod-max-task", 110, "--kod-max-solution", 200)
         text = lambda r: r["prompt"][-1]["content"]
-        answered = {json.loads(l).get("question") for p in BON.glob("kprobe-*/rollouts.jsonl")
+        # reuse: a run from the RAW model may draw questions earlier experiments used (it never trained on them; the
+        # evaluation contamination check below still applies); otherwise earlier draws are removed so continued
+        # training sees new questions
+        answered = set() if reuse else {json.loads(l).get("question") for p in BON.glob("kprobe-*/rollouts.jsonl")
                     for l in p.read_text().splitlines() if l.strip()}
         kod = [json.loads(l) for l in kod_file.read_text().splitlines() if l.strip()]
         random.Random(data_seed).shuffle(kod)
@@ -1497,7 +1500,7 @@ def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16):
                 "rl-", "lot-")) and "raw" not in p.name and p != pool]
         seen = {text(r) for p in used for l in p.read_text().splitlines() if l.strip()
                 for r in [json.loads(l)] if isinstance(r.get("prompt"), list) and r["prompt"]}
-        rows = [r for r in rows if text(r) not in seen]
+        rows = [r for r in rows if reuse or text(r) not in seen]
         random.Random(data_seed).shuffle(rows)
         for index, row in enumerate(rows):
             row["id"] = f"{row['source']}-{name}-{index}"
@@ -1524,7 +1527,7 @@ def drpo(args):
     need = math.ceil(args.drpo_steps * args.drpo_questions * max(1.0, args.rl_dynamic))
     if not Path(f"data/rl-{name}-mixed.jsonl").exists():  # built on the other runtime: reuse the same pool
         drive_sync("restore", only=[f"data/rl-{name}-mixed.jsonl", f"data/rl-{name}-text.jsonl"])
-    pool = mixed_pool(name, need, args.data_seed, args.kod_file)
+    pool = mixed_pool(name, need, args.data_seed, args.kod_file, reuse=not base.startswith("models/"))
     out = Path("adapters") / f"{name}-{args.rl_variant}"
     if not (out / "adapter_config.json").exists():  # trained on the other runtime: reuse it, never retrain
         drive_sync("restore", only=[str(out)])
@@ -1790,7 +1793,7 @@ def teach(args):
         if (earlier / "own_confidence.jsonl").exists() and not (out / "own" / "own_confidence.jsonl").exists():
             shutil.copytree(earlier, out / "own", dirs_exist_ok=True)
     else:
-        pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file)
+        pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file, reuse=not base.startswith("models/"))
         probe = BON / f"probe-{name}"
         if not (probe / "rollouts.jsonl").exists():
             n = sum(1 for l in pool.read_text().splitlines() if l.strip())
