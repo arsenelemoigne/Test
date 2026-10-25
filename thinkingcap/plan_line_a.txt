@@ -81,6 +81,8 @@ probezoo --name zbench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plo
 # question difficulty cannot help) and the learned own-confidence baselines + hidden state + own confidence combos
 probezoo --name zbench2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B
 drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl
+# user (25 Oct): test more checkpoints of drpo1 on fresh x8 (only 20/40/60 were saved; 40 and 60 already scored, so this adds step 20)
+drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl --drpo-score 20 40 60
 # user (25 Oct): ShorterBetter (arXiv 2504.21370) reward as a second RL variant, same pool size and scoring as drpo1:
 # GRPO, r = 2*correct - 0.005*|len - SOL|, SOL = shortest correct reply of the group (group mean if none correct)
 drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter

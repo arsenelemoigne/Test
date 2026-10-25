@@ -148,7 +148,7 @@ def main():
                         help="drpo stage: DRPO objective, or GRPO with the ShorterBetter reward (alpha*correct - beta*|len-SOL|)")
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
-    parser.add_argument("--drpo-score", type=int, nargs="*", default=[40, 60], help="drpo: checkpoints scored on fresh x8")
+    parser.add_argument("--drpo-score", type=int, nargs="*", default=[20, 40, 60], help="drpo: checkpoints scored on fresh x8")
     parser.add_argument("--bal-questions", type=int, default=6000, help="balround: fresh benchmark-matched questions")
     parser.add_argument("--bal-samples", type=int, default=4, help="balround: answers per question")
     parser.add_argument("--teach-questions", type=int, default=3000, help="teach: fresh questions answered once each")
@@ -1501,7 +1501,7 @@ def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16):
 def drpo(args):
     """DRPO RL (rl_train.py --objective drpo) from --start on a fresh pool mixed like the evaluation (math, instructions,
     tool calls, code), shuffled so every step mixes the types, each question used once (contamination-checked, earlier
-    draws removed). Checkpoints every 20 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
+    draws removed). Checkpoints every 10 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
     import random
     name, base = args.name, args.start
     if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
@@ -1515,7 +1515,7 @@ def drpo(args):
         py("rl_train.py", "--model", base, "--data", pool, "--sources", "all", "--out", out,
            "--steps", args.drpo_steps, "--questions", args.drpo_questions, "--group", 8, "--max-tokens", 4096,
            *variant, "--updates", 2, "--grader", "typed", "--dynamic-sampling", args.rl_dynamic,
-           "--redundant", "none", "--lr", args.rl_lr, "--save-every", 20, "--dtype", args.dtype)
+           "--redundant", "none", "--lr", args.rl_lr, "--save-every", 10, "--dtype", args.dtype)
     print((out / "rl_log.jsonl").read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)

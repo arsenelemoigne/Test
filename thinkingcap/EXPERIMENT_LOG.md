@@ -1747,3 +1747,9 @@ Thinking -65% from the first block; batch accuracy flat to slightly up until ste
 new questions each step). Watch: the answer part grows at the end (total - thinking: ~45 tokens early -> ~58 at steps 51-60;
 step 57: 243 total vs 123 thinking), i.e. some reasoning may be moving out of the thinking block; the fresh x8 scoring counts
 the reply's tokens, so the checkpoint scores (40 and 60, now being merged and scored) are the real test.
+
+**25 Oct (user): more RL checkpoints tested.** "Merging" = folding a checkpoint's LoRA adapter into a model copy so the
+official vLLM evaluation can score it (weight 1, no averaging): it is how a checkpoint is tested. drpo1 only saved steps 20/40/60
+(40 and 60 queued for scoring); queued a second drpo1 line with --drpo-score 20 40 60 (training skipped, 40/60 already scored,
+adds step 20). track.py drpo now saves every 10 steps and scores 20/40/60 by default (sb1, drpo0 and later runs).
+Also seen in the queue (another session): teach2 (--teach-reuse teach1) after teach1 on runtime 2.
