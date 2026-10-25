@@ -1563,3 +1563,11 @@ mixed pool was built, 48 x 60 MBPP-free), teach1 failed in mixed_pool (KeyError 
 contains the word "prompt"). Fixes: ensure_lots() restores a lot from Drive when its verdicts are missing (probezoo, targeted);
 setup installs langdetect; mixed_pool parses rows and skips non-chat ones. The failed lines stay in the queues and rerun on the
 next launch (finished stages are skipped).
+
+**25 Oct, queued (user): per-type stop from the benchmark findings.** stopB5 (runtime 1, after zoo B4, before stopB4): the
+original Qwen trained on stop pairs from lots B..B4 for code and tools ONLY (kodcode, toolace, hermes_tools; earliest safe cut
+beats the full reply, per-question rule on the 20-try lots), no math / instructions / multiple choice, 3 seeds, soups 10-30
+scored on fresh x8. Rationale: on the 240 benchmark questions MBPP+ thinking is removable almost anywhere (perfect stop 84%,
+judge stops 92-94% at ~1 pt) and BFCL early cuts are safe, while SVAMP settles late and IFEval early cuts cost points.
+Expected: large code saving (MBPP+), some BFCL saving, svamp/ifeval near zero; compare with stopB3 soup 25 (34.6 / -0.4).
+DRPO (drpo1, runtime 2) stays queued unchanged (it does not use the judge).
