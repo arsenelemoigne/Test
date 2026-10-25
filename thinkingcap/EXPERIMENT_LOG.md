@@ -1954,3 +1954,8 @@ model (drpo, teach) no longer drop questions drawn by earlier experiments (the r
 13-word check against all 2,759 evaluation questions still applies). drpo3 had only 1,592 of the 4,320 questions it needed
 (54% math, 2% code, no Hermes) and would have cycled them ~2.7x. Same settings otherwise (math protected, guard 0.06, lambda 0.5,
 lr 5e-6, dynamic sampling, proportional batch mix). teach1's pool gets the same fix.
+
+**drpo3b started (GPU 2, scripts 9c2886c).** Pool = 6,224 questions for 4,320 needed: toolace 1,604, gsm_plus 1,371, gsm_ic 1,371,
+kodcode 707, ifeval_like 693, hermes_tools 478 (math 44%; the drpo3 pool had 54% math, 2% code and no Hermes). The contamination
+check (a 30% 8-gram share or a shared 13-word run) dropped and listed its flagged rows. Training: raw Qwen, DRPO λ 0.5, lr 5e-6, math
+protected, guard 0.06, a checkpoint every 5 steps.
