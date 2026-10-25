@@ -1539,3 +1539,19 @@ mid-reasoning hurts, the safe window is early (20-60%). Runtime 1 now on zoo B4 
 **zbench, first lines (judge trained on lots B+B2+B3 = 2,616 questions / 23,657 cuts; TEST = the 240 benchmark questions'
 1,812 cuts):** position dev AUC 0.722 -> test 0.508; linear dev 0.875 -> test 0.674; linear on the real success rate 0.822 ->
 0.609. A large drop from practice questions to the benchmark (rest of the zoo pending).
+
+**25 Oct ~08:20 (CET), zbench complete: the original Qwen's judge trained on lots B+B2+B3 (2,616 practice questions / 23,657
+cuts), TESTED on the 240 benchmark questions (1,812 cuts; svamp = gsm_plus, ifeval = ifeval_like, mbpp = kodcode, bfcl =
+toolace columns).** ALL AUC dev -> TEST: MLP 0.893 -> 0.736; MLP all layers 0.885 -> 0.738; attention layer 28 0.835 ->
+0.714; linear 0.875 -> 0.674; own confidence (least likely token) 0.728 -> 0.717; position 0.722 -> 0.508.
+Per benchmark (TEST AUC): SVAMP: own confidence 0.87-0.88 BEATS every hidden-state judge (MLP 0.74-0.75; dev math 0.94-0.95);
+IFEval: MLP all layers 0.711, others 0.55-0.65; MBPP+: judges 0.73-0.77 (own confidence 0.68-0.72); BFCL: MLP 0.772.
+Calibration (soft k/20 target): MLP all layers best (log loss 0.82, Brier 0.217, ECE 0.14).
+Trade-off, one threshold chosen on development: the budgets do NOT transfer: MLP all layers "<= 0.5 pt" gives 64% saved at a
+real 6.6-pt loss on the benchmark; own confidence (least likely token) 16-25% saved at ~0 loss. Per-type simulation: MBPP+ 92-94%
+saved at ~1 pt (judges and own confidence alike); BFCL ~44% at 0.4 (MLP all layers); IFEval 43% at -0.4 (linear) to 58% at
+4.0; SVAMP: every judge over-stops (8-24 pt losses).
+Reading: the judge learned practice math, whose answers settle at 20-40% of the thinking; benchmark math (SVAMP) settles late
+(benchlot: 0.34 at 20-40% vs 0.73 full), so the judge stops SVAMP far too early, while the model's own confidence ranks SVAMP
+cuts well. Code transfers, tools mostly, instructions weakly. Before stop-token training: math needs SVAMP-like (not
+SVAMP) training problems or the own-confidence signal; thresholds must be set per type and checked on benchmark-like data.
