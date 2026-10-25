@@ -2022,3 +2022,21 @@ code 1,064-1,635, tools/instructions ~200-600; ~12 min per step.
 - Toy test: right pair built for close lengths, skipped when lengths differ > 25%, none for non-listed types.
 Side note: data/gsm8k_matched (mm3) draws GSM8K train AND test; GSM-IC / GSM-Plus are built on GSM8K test, so models trained
 on gsm_ic/gsm_plus (rc1, drpo*) may have seen paraphrases of some held-out matched-math test questions. SVAMP is unaffected.
+
+**26 Oct ~00:45, lot B5 (matched GSM8K, original Qwen, 600 questions x 20, 0 contaminated): math TIMING now matches SVAMP.**
+Success of the forced answer by share of thinking kept (0-20 / 20-40 / 40-60 / 60-80 / 80-<100 / full), perfect stop:
+
+| source | curve | perfect stop: saved / gained |
+|---|---|---|
+| SVAMP (choosing set, benchlot) | 0.26 / 0.34 / 0.48 / 0.58 / 0.55 / 0.73 | 53% / +8.9 |
+| **matched GSM8K (lot B5)** | 0.08 / 0.25 / 0.44 / 0.56 / 0.61 / 0.72 | 47% / +9.6 |
+| GSM-IC (practice, lot B3) | 0.25 / 0.46 / 0.47 / 0.49 / 0.52 / 0.52 | 66% / +29.5 |
+| GSM-Plus (practice, lot B3) | 0.21 / 0.47 / 0.47 / 0.46 / 0.50 / 0.47 | 71% / +31.8 |
+
+Takeaway: our earlier practice math (GSM-IC/Plus) settles by 20-40% and so teaches early stops that SVAMP punishes; the
+matched GSM8K builds up slowly and ends at SVAMP's level (0.72 vs 0.73), like SVAMP. It is the right math to teach stops on.
+lot V2 started (scripts 639d770): 4,868 new questions of 8,178 drawn (3,310 dropped as earlier draws: lot B5's 600 matched
+math plus ToolACE / IFEval-like overlaps with older pools); probe_curve's per-source cap (2,000) also trims MetaMathQA to
+2,000, so ~4,370 non-code questions + KodCode 3,000 = **~7,400 new questions** (not 10,300). Still ~4x stopB5's base.
+drpo3b steps 10-12: batch accuracy 0.74-0.77 (up from 0.67), thinking still flat (all 1,076-1,218; non-math 397-595;
+code 866-1,426). Accuracy rises, length does not move yet.
