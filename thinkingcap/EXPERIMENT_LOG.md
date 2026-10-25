@@ -1669,3 +1669,11 @@ Per-type, timing-only and stopping tables still being written (report pending).
 drpo1 (DRPO from rc1-rl-40) at step 24/60, training-batch stats (new questions every step, so noisy): mean thinking tokens
 steps 1-10 ~369 (493 at step 1) -> steps 14-24 ~273 (-26%); batch accuracy flat (~0.61 -> ~0.60). Checkpoint 40 is the first
 scored on fresh x8.
+
+**25 Oct, queued (user): DRPO from the raw Qwen with DLER dynamic sampling (drpo0, runtime 1, after zAbench, before stopB5).**
+rl_train.py --dynamic-sampling F: draws F x --questions per step and trains only on groups with at least one right reply (an
+all-wrong group carries no correctness signal), keeping --questions of them; logged as dropped_groups. track drpo --rl-dynamic
+1.5 (pool sized x1.5). One clean RL run from Qwen3-0.6B (no DPO/RL chain; BottleCap's own "collapse of self-trained LMs"
+paper warns about repeated self-training) vs drpo1 from rc1-rl-40. Deep research (25 Oct): the best length rewards are
+correctness-gated and normalized per prompt (Arora & Zanette, L1-Max, PLP, LASER, DRPO, Kimi k1.5); all published runs start
+from a model that already reasons (R1-Distill-1.5B / DeepScaleR), none at 0.6B, none outside math.

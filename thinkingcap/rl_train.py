@@ -119,6 +119,10 @@ def parse_arguments():
     parser.add_argument("--advantage", choices=["group", "batch"], default="group",
                         help="batch: reward minus the group mean, over the whole batch's spread (DLER), not each group's")
     parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
+    parser.add_argument("--dynamic-sampling", type=float, default=0.0,
+                        help="DLER's dynamic sampling: draw this many times --questions per step and train only on groups "
+                             "with at least one right reply (an all-wrong group carries no correctness signal), keeping "
+                             "--questions of them (0: off)")
     parser.add_argument("--objective", choices=["grpo", "drpo"], default="grpo")
     parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight temperature (smaller: shorter)")
     parser.add_argument("--drpo-tau", type=float, default=10.0, help="drpo: log-sum-exp temperature over wrong replies")
@@ -520,7 +524,8 @@ def main():
 
     for step in range(args.steps):
         scale = args.scale_start + (args.scale_end - args.scale_start) * step / max(1, args.steps - 1)
-        questions = [pool[((args.offset + step) * args.questions + i) % len(pool)] for i in range(args.questions)]
+        drawn = math.ceil(args.questions * args.dynamic_sampling) if args.dynamic_sampling else args.questions
+        questions = [pool[((args.offset + step) * drawn + i) % len(pool)] for i in range(drawn)]
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
         no_think = round(args.group * args.no_think_share)
@@ -529,6 +534,11 @@ def main():
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0}
         grades = grade_all(questions, replies, tokenizer, eos, args.grader)
+        dropped = 0
+        if args.dynamic_sampling:  # keep informative groups only, up to --questions of them
+            keep = [k for k in range(len(questions)) if any(grades[k])][:args.questions]
+            dropped = len(questions) - len(keep)
+            questions, prompts, replies, grades = ([xs[k] for k in keep] for xs in (questions, prompts, replies, grades))
         groups = []
         for question, prompt, group, correct in zip(questions, prompts, replies, grades):
             if args.reward == "arora":
@@ -682,7 +692,7 @@ def main():
         entry = {"step": step + 1, "accuracy": stats["correct"] / stats["replies"],
                  "mean_tokens": stats["tokens"] / stats["replies"],
                  "mean_thinking_tokens": stats["thinking"] / stats["replies"],
-                 "questions_with_signal": stats["signal"], "loss": loss_sum, "lr": lr,
+                 "questions_with_signal": stats["signal"], "dropped_groups": dropped, "loss": loss_sum, "lr": lr,
                  "entropy": entropy_sum / max(1, entropy_count)}
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]

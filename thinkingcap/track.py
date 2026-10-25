@@ -17,6 +17,7 @@ import argparse
 from collections import defaultdict
 import filecmp
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -141,6 +142,8 @@ def main():
     parser.add_argument("--tg-rule", default="strict", choices=("strict", "question"),
                         help="targeted: safe cut = >= 95%% right (strict) or as right as the question's own rate + margin")
     parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight (smaller: shorter)")
+    parser.add_argument("--rl-dynamic", type=float, default=0.0,
+                        help="drpo: DLER dynamic sampling factor (draw this many times the questions, keep those with a right reply)")
     parser.add_argument("--rl-variant", choices=("drpo", "shorterbetter"), default="drpo",
                         help="drpo stage: DRPO objective, or GRPO with the ShorterBetter reward (alpha*correct - beta*|len-SOL|)")
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
@@ -1498,14 +1501,15 @@ def drpo(args):
     name, base = args.name, args.start
     if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
         drive_sync("restore", only=[base])
-    pool = mixed_pool(name, args.drpo_steps * args.drpo_questions, args.data_seed, args.kod_file)
+    need = math.ceil(args.drpo_steps * args.drpo_questions * max(1.0, args.rl_dynamic))
+    pool = mixed_pool(name, need, args.data_seed, args.kod_file)
     out = Path("adapters") / f"{name}-{args.rl_variant}"
     variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda] if args.rl_variant == "drpo"
                else ["--objective", "grpo", "--reward", "shorterbetter"])
     if not (out / "adapter_config.json").exists():
         py("rl_train.py", "--model", base, "--data", pool, "--sources", "all", "--out", out,
            "--steps", args.drpo_steps, "--questions", args.drpo_questions, "--group", 8, "--max-tokens", 4096,
-           *variant, "--updates", 2, "--grader", "typed",
+           *variant, "--updates", 2, "--grader", "typed", "--dynamic-sampling", args.rl_dynamic,
            "--redundant", "none", "--lr", args.rl_lr, "--save-every", 20, "--dtype", args.dtype)
     print((out / "rl_log.jsonl").read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
