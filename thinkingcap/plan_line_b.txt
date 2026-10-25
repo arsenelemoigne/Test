@@ -64,7 +64,11 @@ probezoo --name zAbench --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --
 # user (25 Oct): SVAMP-like math without cheating: GSM8K TRAIN problems whose solution makes 1-2 calculations (SVAMP's
 # published difficulty; README-suggested set; no ASDiv/MAWPS, no GSM8K test). Labelled like lots B3/B4 (20 tries, 20 forced
 # answers per cut); its cut-success curve is compared with SVAMP's on the choosing set (benchlot) before any use
-callot --name plotB5 --start Qwen/Qwen3-0.6B --data-seed 62 --paragraphs --lot gsm8k_easy=600 --lot-samples 20
+# user (25 Oct): profile the choosing set's 40 SVAMP questions (ops, kind, length, the original Qwen's accuracy and thinking),
+# pick a GSM8K corpus matched on them (1,200 train + 300 held-out MATH TEST), test the original Qwen on the test part x8,
+# then label 600 of the training part like lots B3/B4
+mathmatch --name mm1 --data-seed 63
+callot --name plotB5 --start Qwen/Qwen3-0.6B --data-seed 62 --paragraphs --lot gsm8k_matched=600 --lot-samples 20
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
 # user (25 Oct): per-type stop from the benchmark findings (benchlot/zbench): code and tools only. On MBPP+ the thinking is

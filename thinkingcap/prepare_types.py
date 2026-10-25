@@ -43,7 +43,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_matched": gsm8k_matched, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -98,6 +98,15 @@ def gsm8k_easy(args, rng):
         if 1 <= r["answer"].count("<<") <= 2:
             answer = r["answer"].split("####")[-1].strip().replace(",", "")
             yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_easy")
+
+
+def gsm8k_matched(args, rng):
+    """The training part of track.py mathmatch's GSM8K corpus matched to SVAMP's operation count x kind and length (the
+    held-out math test part, data/gsm8k_matched-test.jsonl, is never drawn here)."""
+    for line in Path("data/gsm8k_matched-train.jsonl").read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            yield {k: v for k, v in r.items() if k not in ("id", "words", "ops", "kind")}
 
 
 GSM_PLUS_KINDS = ("distraction insertion", "problem understanding", "reversing operation", "adding operation",

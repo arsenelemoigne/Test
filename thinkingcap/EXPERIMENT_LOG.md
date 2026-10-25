@@ -1791,3 +1791,16 @@ with the practice math (GSM-IC 0.25 / 0.46 / 0.47 / 0.49 / 0.52 / 0.52). Also fi
 substring (the KeyError teach1 hit; rl-*-text.jsonl files now exist on Drive).
 Also seen in the queue (another session): balround bal0 (one balanced DPO round from the raw Qwen, 6,000 questions x 4, DPO up
 to 200 steps x 3 seeds) on runtime 1 after drpo0: a large addition.
+
+**25 Oct, queued (user): a math corpus matched to SVAMP, with a held-out math test.** `track.py mathmatch` (runtime 1, after
+zAbench, before lot B5): (1) profiles the CHOOSING set's 40 SVAMP questions (measure only): operations (SVAMP's Equation),
+kind (its Type: Addition / Subtraction / Common-Division / Multiplication), length in words, and the original Qwen's accuracy
+and thinking from benchlot's 8 replies; (2) picks 1,500 GSM8K problems (train + test splits, 1-2 calculations; never
+ASDiv/MAWPS/SVAMP) stratified on SVAMP's ops x kind cells and length, written in the evaluation's numeric prompt wording,
+earlier draws removed, contamination-checked; (3) holds out 300 as a MATH TEST set (data/gsm8k_matched-test.jsonl, never drawn
+for training) and has the original Qwen answer it x8, printing accuracy / thinking / length per cell next to SVAMP's. The
+other 1,200 (data/gsm8k_matched-train.jsonl, source gsm8k_matched) feed lot B5 (600 labelled, 20 tries) and later the RL pool
+and stop teaching. Known limit: SVAMP is ~76% one-operation (whole set; 31/40 in the choosing set) while GSM8K has few
+one-step problems (~330 usable), so every one-step problem is taken and the rest are two-step: the corpus is ~22% one-step.
+SVAMP whole-set composition (looked up only to describe it): Subtraction 531, Addition 195, Common-Division 166,
+Multiplication 108; one operation 762, two 237. Tested locally on fake model outputs (selection, split, tables).

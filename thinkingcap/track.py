@@ -56,7 +56,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "balround", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -150,6 +150,8 @@ def main():
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[10, 20, 30, 40, 50, 60], help="drpo: checkpoints scored on fresh x8 (~7 min each)")
+    parser.add_argument("--match-size", type=int, default=1500, help="mathmatch: matched GSM8K questions (train + test)")
+    parser.add_argument("--match-test", type=int, default=300, help="mathmatch: of which held out as a math test set")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
                         help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
     parser.add_argument("--drpo-soup", type=int, nargs="*", default=[],
@@ -1576,6 +1578,138 @@ def nothink(args):
             print(score_line(f"{tag} with thinking OFF vs {tag} thinking (fresh 240 x 8)", out, base=think), flush=True)
 
 
+def op_kind(expr):
+    """Arithmetic kind of one calculation, named like SVAMP's Type field."""
+    for sym, kind in (("/", "Common-Division"), ("*", "Multiplication"), ("-", "Subtraction"), ("+", "Addition")):
+        if sym in expr:
+            return kind
+    return "other"
+
+
+def mathmatch(args):
+    """SVAMP-like practice math without cheating (user). (1) Profile the 40 SVAMP questions of the CHOOSING set (measure
+    only): number of operations and kind (SVAMP's own Equation/Type fields), length, and the original Qwen's accuracy and
+    thinking length from benchlot's 8 replies. (2) Pick a matched corpus from GSM8K (train + test, 1-2 calculations; never
+    ASDiv/MAWPS, never SVAMP), stratified on the same operation count x kind and on length, in the evaluation's numeric
+    prompt format; earlier draws removed; contamination-checked. (3) Hold out --match-test of it as a MATH TEST set and have
+    the original Qwen answer it x8, to compare accuracy and thinking with SVAMP before using the rest for training."""
+    import random
+    import re
+    import statistics
+    from datasets import load_dataset
+    from utils.train.prepare_data import row
+    numeric = ("\n\nThe last line of your reply must start with 'Final answer:' followed by the number alone.")
+    words = lambda t: len(t.split())
+    # (1) the choosing set's SVAMP questions and how the original model does on them
+    ensure_lots(["bench40"])
+    qs = [json.loads(l) for l in Path(QUESTIONS, "questions.jsonl").read_text().splitlines() if l.strip()]
+    sv = [q for q in qs if q["dataset"] == "svamp"]
+    raw = {f"svamp-{t['ID']}": t for t in json.loads(Path("questions/raw/svamp.json").read_text())}
+    bench = [json.loads(l) for l in Path("data/bench40.jsonl").read_text().splitlines() if l.strip()]
+    order = [r["id"] for r in bench if r["dataset"] == "svamp"]
+    rolls = defaultdict(list)
+    for l in (BON / "probe-bench40" / "rollouts.jsonl").read_text().splitlines():
+        if l.strip():
+            r = json.loads(l)
+            if r["source"] == "gsm_plus":
+                rolls[order[int(r["id"].rsplit("-", 1)[1])]].append(r)
+    prof = []
+    for q in sv:
+        t = raw[q["id"]]
+        ops = re.findall(r"[-+*/]", t["Equation"])
+        rs = rolls.get(q["id"], [])
+        prof.append({"ops": min(2, max(1, len(ops))), "kind": t["Type"].replace("Divison", "Division"),
+                     "words": words(q["messages"][0]["content"]), "acc": statistics.mean(r["correct"] for r in rs) if rs else None,
+                     "think": statistics.mean(r["thinking_tokens"] for r in rs) if rs else None})
+
+    def table(rows, title):
+        lines = [title, f"  {'ops':>3} {'kind':<16} {'n':>4} {'accuracy':>9} {'thinking':>9} {'words':>6}"]
+        cells = defaultdict(list)
+        for r in rows:
+            cells[(r["ops"], r["kind"])].append(r)
+        for key in sorted(cells) + [("all", "")]:
+            rs = rows if key[0] == "all" else cells[key]
+            acc = [r["acc"] for r in rs if r["acc"] is not None]
+            th = [r["think"] for r in rs if r["think"] is not None]
+            lines.append(f"  {key[0]:>3} {key[1]:<16} {len(rs):>4} {statistics.mean(acc) if acc else float('nan'):>9.2f} "
+                         f"{statistics.mean(th) if th else float('nan'):>9.0f} {statistics.mean(r['words'] for r in rs):>6.0f}")
+        return "\n".join(lines)
+    print(table(prof, "SVAMP, choosing set (40 questions, original Qwen x8; measure only):"), flush=True)
+    # (2) the matched GSM8K corpus
+    out_train, out_test = Path("data/gsm8k_matched-train.jsonl"), Path("data/gsm8k_matched-test.jsonl")
+    if not out_test.exists():
+        text = lambda r: r["prompt"][-1]["content"]
+        used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal",
+                "rl-", "lot-")) and "raw" not in p.name]
+        seen = {text(r).split("\n\n")[0] for p in used for l in p.read_text().splitlines() if l.strip()
+                for r in [json.loads(l)] if isinstance(r.get("prompt"), list) and r["prompt"]}
+        pool = defaultdict(list)
+        for split in ("train", "test"):
+            for r in load_dataset("openai/gsm8k", "main", split=split):
+                calcs = re.findall(r"<<([^=]*)=", r["answer"])
+                if not 1 <= len(calcs) <= 2 or r["question"] in seen:
+                    continue
+                kind = op_kind(calcs[-1])
+                if kind == "other":
+                    continue
+                answer = r["answer"].split("####")[-1].strip().replace(",", "")
+                pool[(len(calcs), kind)].append(row(r["question"] + numeric, "", answer, "math", "gsm8k_matched")
+                                                 | {"words": words(r["question"]), "ops": len(calcs), "kind": kind})
+        for rows in pool.values():
+            for r in rows:
+                r["prompt"][0]["content"] = r["prompt"][0]["content"].rstrip()  # row() appends an empty instruction
+        rng = random.Random(args.data_seed)
+        target = defaultdict(int)
+        for r in prof:
+            target[(r["ops"], r["kind"])] += 1
+        lo, hi = sorted(r["words"] for r in prof)[len(prof) // 10], sorted(r["words"] for r in prof)[-(len(prof) // 10) - 1]
+        picked = []
+        for key, n in target.items():
+            cand = [r for r in pool.get(key, []) if lo * 0.8 <= r["words"] <= hi * 1.2] or pool.get(key, [])
+            rng.shuffle(cand)
+            picked += cand[:round(args.match_size * n / len(prof))]
+        rest = [r for k, rs in pool.items() for r in rs if r not in picked]
+        rng.shuffle(rest)
+        picked += rest[:max(0, args.match_size - len(picked))]  # cells GSM8K cannot fill (few one-step problems) topped up
+        rng.shuffle(picked)
+        for i, r in enumerate(picked):
+            r["id"] = f"gsm8k_matched-{i}"
+        test, train = picked[:args.match_test], picked[args.match_test:]
+        out_test.write_text("".join(json.dumps(r) + "\n" for r in test))
+        out_train.write_text("".join(json.dumps(r) + "\n" for r in train))
+        both = Path("data/gsm8k_matched-text.jsonl")
+        both.write_text("".join(json.dumps({"id": r["id"], "question": text(r)}) + "\n" for r in picked))
+        py("contamination.py", "--data", out_train, "--rollouts", both, "--share", 0.3)
+        py("contamination.py", "--data", out_test, "--rollouts", both, "--share", 0.3)
+    train = [json.loads(l) for l in out_train.read_text().splitlines() if l.strip()]
+    test = [json.loads(l) for l in out_test.read_text().splitlines() if l.strip()]
+    print(f"matched GSM8K corpus: {len(train)} train + {len(test)} held-out math test (after contamination check)",
+          flush=True)
+    # (3) the original model on the held-out math test, x8
+    probe = BON / "probe-mathmatch"
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", out_test, "--sources", "gsm8k_matched", "--per-source", 100000, "--samples", 8,
+           "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", len(test))
+    meta = {r["id"]: r for r in test}
+    by_q = defaultdict(list)
+    for l in (probe / "rollouts.jsonl").read_text().splitlines():
+        if l.strip():
+            r = json.loads(l)
+            by_q[r["id"]].append(r)
+    keys = list(meta)
+    rows = []
+    for i, k in enumerate(keys):  # probe_curve renames rows source-index in file order
+        rs = by_q.get(f"gsm8k_matched-{i}", [])
+        q = meta[k]
+        rows.append({"ops": q.get("ops", 0), "kind": q.get("kind", ""), "words": q["words"],
+                     "acc": statistics.mean(r["correct"] for r in rs) if rs else None,
+                     "think": statistics.mean(r["thinking_tokens"] for r in rs) if rs else None})
+    print(table(rows, "Matched GSM8K, held-out math test (original Qwen x8):"), flush=True)
+    print(table([{"ops": r["ops"], "kind": r["kind"], "words": r["words"], "acc": None, "think": None} for r in train],
+                "Matched GSM8K, training part (composition only):"), flush=True)
+
+
 def teach(args):
     """Experiment 5, the judge as teacher (teach_stop.py): the stopping judge is fitted on --teach-lots of --start, the
     model answers a fresh mixed pool once per question, the judge scores every paragraph end of those answers, and a
@@ -2303,7 +2437,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
