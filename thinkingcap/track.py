@@ -149,7 +149,7 @@ def main():
                         help="drpo stage: DRPO objective, or GRPO with the ShorterBetter reward (alpha*correct - beta*|len-SOL|)")
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
-    parser.add_argument("--drpo-score", type=int, nargs="*", default=[20, 40, 60], help="drpo: checkpoints scored on fresh x8")
+    parser.add_argument("--drpo-score", type=int, nargs="*", default=[10, 20, 30, 40, 50, 60], help="drpo: checkpoints scored on fresh x8 (~7 min each)")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
                         help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
     parser.add_argument("--drpo-soup", type=int, nargs="*", default=[],

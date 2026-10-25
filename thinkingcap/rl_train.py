@@ -531,6 +531,7 @@ def main():
         no_think = round(args.group * args.no_think_share)
         replies = sampler.sample(prompts, current, args.offset + step, model, no_think)
 
+        by_type = {}
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0}
         grades = grade_all(questions, replies, tokenizer, eos, args.grader)
@@ -558,6 +559,11 @@ def main():
             stats["no_think_replies"] += sum(skipped)
             stats["thinking"] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
             stats["correct"] += sum(correct)
+            kind = question.get("source", "all")  # per data type: a collapse of one type shows even in a mixed batch
+            by_type.setdefault(kind, [0, 0, 0])
+            by_type[kind][0] += sum(correct)
+            by_type[kind][1] += len(group)
+            by_type[kind][2] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
             stats["replies"] += len(group)
             stats["tokens"] += sum(map(len, group))
             if advantages and any(a != 0 for a in advantages):
@@ -694,6 +700,8 @@ def main():
                  "mean_thinking_tokens": stats["thinking"] / stats["replies"],
                  "questions_with_signal": stats["signal"], "dropped_groups": dropped, "loss": loss_sum, "lr": lr,
                  "entropy": entropy_sum / max(1, entropy_count)}
+        entry["by_type"] = {k: {"accuracy": round(c / max(1, n), 3), "thinking": round(t / max(1, n)), "replies": n}
+                            for k, (c, n, t) in sorted(by_type.items())}
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)

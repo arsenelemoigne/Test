@@ -1772,3 +1772,11 @@ drpo1's step-20 scoring, before sb1): the original Qwen and rc1-rl-40 answer the
 of the official evaluate.py with enable_thinking=True -> False: the chat template writes an empty think block and the model
 answers directly; measure only, never a submission setting). Reported vs the original thinking (f8-base), and rc1-rl-40 also vs
 itself thinking: tokens saved and accuracy change per benchmark (= the accuracy that thinking buys, and its token price).
+
+**25 Oct, why training accuracy hid the test drop (user) and RL monitoring fix.** drpo1's batch accuracy is a mixed average
+(~34% math, 24% instructions, 30% tools, 16% code) over new questions every step (batch-to-batch swing 0.48-0.81), so a 16-pt
+math drop moves it ~5 pts, inside the noise; the practice math (GSM-IC/Plus) settles early unlike SVAMP; training grades
+IFEval-like prompts with our checker, not the official IFEval; and training starts from rc1-rl-40 (already -2.1), so step 40 is
+-4.8 vs its own start. Fix for sb1 / drpo0 (not started yet): rl_train.py logs per-type batch accuracy and thinking every step
+("by_type"); track.py drpo scores every saved checkpoint (10, 20, ..., 60) on fresh x8 by default (~7 min each for these
+short models).
