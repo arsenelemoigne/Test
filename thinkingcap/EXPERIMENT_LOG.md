@@ -1986,3 +1986,12 @@ ends near soup 30, where code collapsed. The labels were the bottleneck (up to 1
   shortest wrong); math gets "keep thinking" only. **Per-type caps**: kodcode 700, ifeval_like 700, toolace 400, hermes 300,
   gsm_ic 200, gsm_plus 200, gsm8k_matched 300 (max ~2,800; no type above 25%). 3 seeds, soups at 20/40/60/80/110/140/170 on
   fresh x8. Code: targeted_pairs lets one type get both kinds; track.py --lot-cuts/--lot-checks/--tg-min-samples/--tg-quota.
+
+**mm3 (GPU 1): matched GSM8K built; original Qwen x8.** Choosing set SVAMP (40): accuracy 0.79, thinking 858 tokens, 50 words;
+30 of 40 are one-operation. Matched GSM8K held-out math test (300, contamination 0 flagged): accuracy **0.87**, thinking
+**761**, 40 words; but only 60 of 300 are one-operation (training part: 199 of 1,200). The match is close on thinking length,
+but NOT on composition: GSM8K has few true one-step problems, so the corpus is mostly two-step, shorter in words, and easier
+for the model (+8 points). Usable as a math guard/test set; it is not a copy of SVAMP's difficulty (SVAMP's twisted wording
+is what costs the model). Lot B5 (600 of the training part x20) labelling started; its cut curve vs SVAMP's comes next.
+drpo3b (GPU 2) steps 1-3: thinking 1,189 -> 1,061 -> 1,120; batch accuracy 0.67-0.68; math (protected) 1,800-2,900 tokens,
+code 1,064-1,635, tools/instructions ~200-600; ~12 min per step.
