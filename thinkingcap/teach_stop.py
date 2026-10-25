@@ -27,6 +27,7 @@
 """
 
 import argparse
+from collections import defaultdict
 import hashlib
 import json
 import math
@@ -232,6 +233,9 @@ def main():
         random.Random(args.seed).shuffle(order)
         model.train()
         total, n, before, after = 0.0, 0, [], []
+        window = defaultdict(lambda: {"p_stop": [], "p_keep": [], "saved": [], "fired": 0, "good": 0, "answers": 0})
+        progress = out / f"progress-{kind}{value:g}.jsonl"
+        progress.write_text("")
         for step, k in enumerate(order):
             r, cuts, end_p = answers[k]
             stop = r["output_ids"].index(close_id)
@@ -249,6 +253,17 @@ def main():
                 pos = 2 if who == "judge" else 3  # soft judge's predicted success, or own confidence
                 bar = max(end_p[pos - 2] - value, args.min_p)
                 goals = [sharpen(c[pos], bar, args.temperature) for c in cuts]
+            with torch.no_grad():  # progress (user: follow the training live), per teacher type
+                p = torch.exp(logp).tolist()
+                w = window[r["source"] if who != "protect" else "kept thinking"]
+                w["answers"] += 1
+                w["p_stop"] += [pi for pi, g in zip(p, goals) if g >= 0.5]
+                w["p_keep"] += [pi for pi, g in zip(p, goals) if g < 0.5]
+                first = next((i for i, pi in enumerate(p) if pi >= 0.5), None)  # where the model would stop now (greedy)
+                w["saved"].append(0.0 if first is None else 1 - cuts[first][0] / max(1, stop))
+                if first is not None:
+                    w["fired"] += 1
+                    w["good"] += goals[first] >= 0.5
             target = torch.tensor(goals, device="cuda")
             loss = -(target * logp + (1 - target) * log1m).mean()
             (loss / args.accumulate).backward()
@@ -261,9 +276,21 @@ def main():
                 before.append(float(torch.exp(logp).mean()))
             if step >= len(order) - 50:
                 after.append(float(torch.exp(logp).mean()))
-            if (step + 1) % 500 == 0:
-                print(f"{variant}: {step + 1}/{len(order)} answers, loss {total / n:.4f}", flush=True)
+            if (step + 1) % 100 == 0 or step == len(order) - 1:
+                m = lambda v: round(float(np.mean(v)), 4) if v else None
+                row = {"answers": step + 1, "of": len(order), "loss": round(total / max(1, n), 4), "types": {
+                    t: {"p_stop_where_should_stop": m(w["p_stop"]), "p_stop_where_should_keep": m(w["p_keep"]),
+                        "thinking_saved_if_stopped_now": m(w["saved"]), "stops_at_a_good_place": (
+                            round(w["good"] / w["fired"], 3) if w["fired"] else None), "answers": w["answers"]}
+                    for t, w in sorted(window.items())}}
+                with progress.open("a") as f:
+                    f.write(json.dumps(row) + "\n")
+                print(f"{variant}: {step + 1}/{len(order)} answers, loss {total / max(1, n):.4f} | " + "; ".join(
+                    f"{t}: stop {v['p_stop_where_should_stop']}, keep {v['p_stop_where_should_keep']}, saved "
+                    f"{v['thinking_saved_if_stopped_now']}, good {v['stops_at_a_good_place']}"
+                    for t, v in row["types"].items()), flush=True)
                 total, n = 0.0, 0
+                window.clear()
         model.save_pretrained(target_dir)
         print(f"{variant}: saved {target_dir}; mean p(</think>) at paragraph ends {np.mean(before):.3f} (first 50) "
               f"-> {np.mean(after):.3f} (last 50)", flush=True)

@@ -1872,3 +1872,13 @@ and the judge's only edge (tools, 0.81 vs 0.72 on 25 replies in zbench2) vanishe
 own-confidence trajectory 0.80). teach2 (the same configuration reusing teach1's answers) removed as a duplicate. Runtime 2 order:
 sb1 (running) -> drpo3 -> teach1 -> drpo2. GPU 1 relaunched by the user/assistant at ~22:00 on the reordered queue (drpo0
 interrupted at step 3; the release cell that followed was stopped before releasing the runtime; Drive remounted).
+
+**25 Oct, SVAMP double-check (user: "some models cut math a lot while improving it?").** Yes, but only on the CHOOSING set
+(questions_40, also used to pick those checkpoints): gentle round-2 model step 10, 240 x 8: svamp +64% / 0.0 (23 lost, 23
+gained); balanced soup x8: svamp +68% / -1.6; several x4 checks +55-69% at -0.6..+3.1. On FRESH questions every heavy math cut
+lost: round 2 retrain -9.7, round 2 on questions 41-80 -7.5, rounds 4 -9.1 / -10.6, balanced soup +64% / -4.7, rc1-rl-40 +65% /
+-4.1 (the log noted at the time: picking checkpoints on those 40 SVAMP questions selected for them). Reliable conclusion: a
+~2/3 SVAMP cut has cost ~4-10 points on unseen questions; "no loss" results were selection on the choosing set.
+Live progress for stop teaching (user): teach_stop.py now writes progress-<variant>.jsonl and prints every 100 answers, per
+source: mean p("</think>") where the target says stop vs where it says keep thinking, thinking saved if the model stopped now
+(first paragraph end with p >= 0.5), and the share of those stops at a good place; for plotting during training.
