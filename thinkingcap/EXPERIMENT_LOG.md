@@ -1826,3 +1826,10 @@ drpo1 deltas, f8-base) -> OFF; mean reply tokens OFF: bfcl irrelevance 80.9 -> 8
 60.6 (-5.0; 284 tokens); mbpp 46.3 -> 37.2 (-9.1; 53 tokens); **svamp 89.6 -> 17.5 (-72; 9.7 tokens, 24.7% unreadable)**.
 Thinking is worth ~72 points on SVAMP (part of it format: a quarter of no-thinking answers miss the "Final answer" line), 9 on
 MBPP+, 5 on IFEval, 11-17 on two BFCL subsets, and nothing (it even hurts) on BFCL irrelevance.
+
+**25 Oct, queued (user): two fixes for drpo1's overshoot.**
+- drpo1 step 20 at HALF strength (runtime 1, after nt2): track.py drpo --drpo-weighted 20:0.5 merges the step-20 LoRA at weight
+  0.5 into rc1-rl-40 (the delta halved: halfway between the start and step 20) and scores it on fresh x8. The drpo stage now
+  restores an adapter / pool trained on the other runtime instead of retraining.
+- drpo2 (runtime 2, after sb1): DRPO from rc1-rl-40 again, gentler: lambda 0.5 (was 0.2; larger = softer length preference)
+  and lr 5e-6 (was 1e-5), new pool (seed 64), per-type batch accuracy logged, checkpoints every 10 steps each scored on fresh x8.

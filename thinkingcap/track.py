@@ -154,6 +154,8 @@ def main():
     parser.add_argument("--match-test", type=int, default=300, help="mathmatch: of which held out as a math test set")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
                         help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
+    parser.add_argument("--drpo-weighted", nargs="*", default=[],
+                        help="drpo: STEP:WEIGHT checkpoints merged at that strength and scored (0.5 = halfway back to --start)")
     parser.add_argument("--drpo-soup", type=int, nargs="*", default=[],
                         help="drpo: also average these checkpoints' adapters (equal weights) into one model and score it")
     parser.add_argument("--bal-questions", type=int, default=6000, help="balround: fresh benchmark-matched questions")
@@ -1515,8 +1517,12 @@ def drpo(args):
     if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
         drive_sync("restore", only=[base])
     need = math.ceil(args.drpo_steps * args.drpo_questions * max(1.0, args.rl_dynamic))
+    if not Path(f"data/rl-{name}-mixed.jsonl").exists():  # built on the other runtime: reuse the same pool
+        drive_sync("restore", only=[f"data/rl-{name}-mixed.jsonl", f"data/rl-{name}-text.jsonl"])
     pool = mixed_pool(name, need, args.data_seed, args.kod_file)
     out = Path("adapters") / f"{name}-{args.rl_variant}"
+    if not (out / "adapter_config.json").exists():  # trained on the other runtime: reuse it, never retrain
+        drive_sync("restore", only=[str(out)])
     variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda] if args.rl_variant == "drpo"
                else ["--objective", "grpo", "--reward", "shorterbetter"])
     if not (out / "adapter_config.json").exists():
@@ -1537,6 +1543,18 @@ def drpo(args):
         res = ROOT / f"f8-{name}-{step}"
         evaluate(res, samples=8, questions=fresh_q, model=model)
         print(score_line(f"{name}-{step} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+    for spec in args.drpo_weighted:  # one checkpoint at reduced strength (user: halfway between the start and the step)
+        step, weight = spec.split(":")
+        ckpt = out / f"step-{step}"
+        if not (ckpt / "adapter_config.json").exists():
+            continue
+        tag = f"{step}x{float(weight):g}"
+        model = Path("models") / f"{name}-{tag}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", f"{ckpt}:{float(weight)}")
+        res = ROOT / f"f8-{name}-{tag}"
+        evaluate(res, samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{name}-{tag} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
     members = [out / f"step-{s}" for s in args.drpo_soup if (out / f"step-{s}" / "adapter_config.json").exists()]
     if len(members) >= 2:  # checkpoint soup along the RL trajectory (user: chosen after the single checkpoints' scores)
         tag = "soup-" + "-".join(str(s) for s in args.drpo_soup)

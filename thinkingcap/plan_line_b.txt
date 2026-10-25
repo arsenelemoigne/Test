@@ -71,6 +71,9 @@ mathmatch --name mm1 --data-seed 63
 # thinking OFF again (nt1 on runtime 2 scored the original but crashed in compare.py, which refuses two runs of one model):
 # the original's thinking-off run is reused; rc1-rl-40 added; per-benchmark accuracy and tokens read from the records
 nothink --name nt2
+# user (25 Oct): drpo1's step-20 changes at HALF strength (merged at weight 0.5 = halfway back to rc1-rl-40), scored on
+# fresh x8; drpo1's adapter and pool are restored from Drive (nothing retrained, its scored steps not rescored)
+drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl --drpo-score --drpo-weighted 20:0.5
 callot --name plotB5 --start Qwen/Qwen3-0.6B --data-seed 62 --paragraphs --lot gsm8k_matched=600 --lot-samples 20
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
