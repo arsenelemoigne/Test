@@ -1995,3 +1995,14 @@ for the model (+8 points). Usable as a math guard/test set; it is not a copy of 
 is what costs the model). Lot B5 (600 of the training part x20) labelling started; its cut curve vs SVAMP's comes next.
 drpo3b (GPU 2) steps 1-3: thinking 1,189 -> 1,061 -> 1,120; batch accuracy 0.67-0.68; math (protected) 1,800-2,900 tokens,
 code 1,064-1,635, tools/instructions ~200-600; ~12 min per step.
+
+**26 Oct, how the public competitors handle math (read from their repos).** Nobody keeps SVAMP intact: Lightning McQwen3 SVAMP
+66% / -3.8, michal-bida 56% / -2.4, ours rc1-rl-40 65% / -4.1; their totals near -0.8 come from gains on the other parts.
+- basta/lightning-mcqwen3: math = GSM8K + Skywork-OR1 (the challenge's suggested sets), no SVAMP matching, only answers SVAMP's
+  grader parses. Scale: 2,500 questions per source x 4 traces, cuts at 10..90% re-answered 4x (197k cuts), 9,034 pairs
+  (40% shorten, 40% guard, 20% hard), plus an NLL-anchored "be right" DPO on math only (own right vs own wrong trace,
+  lengths within +-25%, 732 pairs).
+- michal-bida/thinking-compression: math = GSM8K 70% + MetaMathQA GSM_SV 15% + GSM_FOBAR 15% (GSM8K problems rewritten
+  backwards / with a verification twist, closer to SVAMP's perturbations), prompts drawn evenly from the deciles of SVAMP's
+  prompt length, 8-gram check. Key fix: per domain, "shorter right" pairs capped at the number of "right beats wrong" pairs
+  (math is right 85% of the time, so it got many shorten pairs and few wrong pairs: SVAMP -3.9 -> -2.4 after the cap).
