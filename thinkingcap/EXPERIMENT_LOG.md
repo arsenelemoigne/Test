@@ -1933,3 +1933,8 @@ right 100%).
 0.001 (sb1 used 0.005, reasoning that our replies are shorter; but the penalty is per token and advantages are normalized per group,
 so 5x was simply 5x the pressure), math protected (correctness-only reward on math), guard 0.06, proportional batch mix,
 checkpoints every 10 steps scored. track.py drpo --rl-sb-beta passes the weight.
+
+**26 Oct (user): more careful RL steps, evaluated more often.** RL runs started from now on save a checkpoint every 5 steps and
+score steps 5, 10, 15, 20, 25, 30, 40, 50, 60 on fresh x8 (~7 min each, ~1 h per run): the first 30 steps, where drpo1 and sb1
+overshot, are seen every 5 steps. sb2 also halves its learning rate (5e-6, as drpo2 / drpo3). drpo3 (already running) keeps its
+10-step checkpoints, with the per-type guard.

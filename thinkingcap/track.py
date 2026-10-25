@@ -149,7 +149,7 @@ def main():
                         help="drpo stage: DRPO objective, or GRPO with the ShorterBetter reward (alpha*correct - beta*|len-SOL|)")
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
-    parser.add_argument("--drpo-score", type=int, nargs="*", default=[10, 20, 30, 40, 50, 60], help="drpo: checkpoints scored on fresh x8 (~7 min each)")
+    parser.add_argument("--drpo-score", type=int, nargs="*", default=[5, 10, 15, 20, 25, 30, 40, 50, 60], help="drpo: checkpoints scored on fresh x8 (~7 min each)")
     parser.add_argument("--match-size", type=int, default=1500, help="mathmatch: matched GSM8K questions (train + test)")
     parser.add_argument("--match-test", type=int, default=300, help="mathmatch: of which held out as a math test set")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
@@ -1516,7 +1516,7 @@ def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16):
 def drpo(args):
     """DRPO RL (rl_train.py --objective drpo) from --start on a fresh pool mixed like the evaluation (math, instructions,
     tool calls, code), shuffled so every step mixes the types, each question used once (contamination-checked, earlier
-    draws removed). Checkpoints every 10 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
+    draws removed). Checkpoints every 5 steps; the --drpo-score ones are merged and scored on the fresh set x8."""
     import random
     name, base = args.name, args.start
     if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
@@ -1537,7 +1537,7 @@ def drpo(args):
            *variant, "--updates", 2, "--grader", "typed",
            *(["--protect-sources", args.rl_protect] if args.rl_protect else []),
            *(["--guard-drop", args.rl_guard] if args.rl_guard else []), "--dynamic-sampling", args.rl_dynamic,
-           "--redundant", "none", "--lr", args.rl_lr, "--save-every", 10, "--dtype", args.dtype)
+           "--redundant", "none", "--lr", args.rl_lr, "--save-every", 5, "--dtype", args.dtype)
     log_file = out / "rl_log.jsonl"
     if log_file.exists():
         print(log_file.read_text(), flush=True)
