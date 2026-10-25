@@ -26,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path("runs/mvtf")
 QUESTIONS = "questions_40"
+BASE_MODEL_ID = "Qwen/Qwen3-0.6B"
 BASE = ROOT / "eval-base"
 ROLLOUTS = ROOT / "probe" / "rollouts.jsonl"
 LIMIT = -3.0  # accuracy points against the raw model
@@ -55,7 +56,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "balround", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "balround", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -149,6 +150,8 @@ def main():
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[20, 40, 60], help="drpo: checkpoints scored on fresh x8")
+    parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
+                        help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
     parser.add_argument("--drpo-soup", type=int, nargs="*", default=[],
                         help="drpo: also average these checkpoints' adapters (equal weights) into one model and score it")
     parser.add_argument("--bal-questions", type=int, default=6000, help="balround: fresh benchmark-matched questions")
@@ -1542,6 +1545,36 @@ def drpo(args):
         print(score_line(f"{name}-{tag} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
 
 
+def nothink(args):
+    """How much thinking adds at this scale (user, measure only): each model answers the fresh set x8 with thinking OFF
+    (the chat template's enable_thinking=False: an empty think block, the answer comes directly), compared with the same
+    model thinking. Uses a copy of the official evaluate.py with that one switch flipped; never a submission setting."""
+    src, dst = Path("evaluate.py"), Path("evaluate_nothink.py")
+    text = src.read_text()
+    assert text.count("enable_thinking=True") == 1, "evaluate.py changed: the thinking switch is not where expected"
+    dst.write_text(text.replace("enable_thinking=True", "enable_thinking=False"))
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for m in args.nothink_models:
+        if m.startswith("models/") and not (Path(m) / "config.json").exists():
+            drive_sync("restore", only=[m])
+        tag = "base" if m == BASE_MODEL_ID else Path(m).name
+        think = ROOT / ("f8-base" if tag == "base" else f"f8-{tag}")
+        if not (think / "results.json").exists():
+            drive_sync("restore", only=[f"runs/mvtf/{think.name}"])  # scored earlier on the other runtime?
+        if not (think / "results.json").exists():
+            evaluate(think, samples=8, questions=fresh_q, model=None if tag == "base" else m)
+        out = ROOT / f"f8-{tag}-nothink"
+        if not (out / "results.json").exists():
+            shutil.rmtree(out, ignore_errors=True)
+            py("evaluate_nothink.py", "--questions", fresh_q, "--samples", 8, "--out", out,
+               *([] if tag == "base" else ["--model", m]))
+        print(score_line(f"{tag} with thinking OFF vs the original thinking (fresh 240 x 8)", out, base=ROOT / "f8-base"),
+              flush=True)
+        if tag != "base":
+            print(score_line(f"{tag} with thinking OFF vs {tag} thinking (fresh 240 x 8)", out, base=think), flush=True)
+
+
 def teach(args):
     """Experiment 5, the judge as teacher (teach_stop.py): the stopping judge is fitted on --teach-lots of --start, the
     model answers a fresh mixed pool once per question, the judge scores every paragraph end of those answers, and a
@@ -2269,7 +2302,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

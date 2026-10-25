@@ -1766,3 +1766,9 @@ ifeval 237, mbpp 349, bfcl 78-100. Far more saving than rc1-rl-40 (53.9 / -2.1) 
 pushes too hard by step 40 (the training batches' flat accuracy hid it: they mix types and change every step). Step 60 is being
 scored; step 20 next (queued) is the likely sweet spot; a soup of step 20 with rc1-rl-40-like weights (or steps 20+40) is the
 candidate merged model.
+
+**25 Oct, queued (user): thinking OFF.** How much does thinking add at this scale? `track.py nothink` (runtime 2, right after
+drpo1's step-20 scoring, before sb1): the original Qwen and rc1-rl-40 answer the fresh set x8 with thinking switched off (a copy
+of the official evaluate.py with enable_thinking=True -> False: the chat template writes an empty think block and the model
+answers directly; measure only, never a submission setting). Reported vs the original thinking (f8-base), and rc1-rl-40 also vs
+itself thinking: tokens saved and accuracy change per benchmark (= the accuracy that thinking buys, and its token price).
