@@ -1658,3 +1658,14 @@ doublings). Per type (MLP): gsm 0.94-0.95, hermes 0.91, ifeval_like 0.86, kodcod
 Timing-only TEST (429 replies with both): own confidence 0.833 vs MLP math 0.94 / code 0.76 / toolace ~0.5 / hermes 0.81;
 own confidence leads on code (0.86) and toolace (0.74). Pooled trade-off on the practice test: MLP all layers 64% saved at
 -0.2 (gain) for a 0.5-pt budget; MLP 70% / 2.6. (Started before the ESTAR features were pushed: zB4bench has them.)
+
+**25 Oct ~16:30 (CET), interim.**
+zB4bench (original Qwen's judge on lots B+B2+B3+B4, MBPP dropped; dev 3,519 questions / 31,110 cuts; TEST = bench40) TEST
+AUC ALL: position 0.516, linear 0.670, MLP 0.722, MLP all layers 0.760, own confidence learned 0.661, linear + own 0.718, MLP +
+own 0.713, **own-confidence trajectory learned (ESTAR features) 0.741**, MLP + trajectory 0.723, ESTAR label (trained on "same
+as final answer", true for only 36% of cuts): trajectory 0.700, MLP 0.674; attention 0.70-0.71. Versus zbench (lots B-B3):
+MLP 0.736 -> 0.722, all layers 0.738 -> 0.760: lot B4 does not move the benchmark score (practice test rose, zoo B4 0.879).
+Per-type, timing-only and stopping tables still being written (report pending).
+drpo1 (DRPO from rc1-rl-40) at step 24/60, training-batch stats (new questions every step, so noisy): mean thinking tokens
+steps 1-10 ~369 (493 at step 1) -> steps 14-24 ~273 (-26%); batch accuracy flat (~0.61 -> ~0.60). Checkpoint 40 is the first
+scored on fresh x8.
