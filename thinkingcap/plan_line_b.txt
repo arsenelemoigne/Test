@@ -57,6 +57,10 @@ probezoo --name zB4 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3
 # user (25 Oct): every classifier is compared on the REAL eval sample (the 240 choosing benchmark questions, measure only):
 # the same judge as zoo B4 (lots B..B4, MBPP dropped) tested on bench40; features are cached on this runtime, so it is quick
 probezoo --name zB4bench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 plotB4 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B --drop-sources mbpp_train
+# user (25 Oct): the same benchmark test for rc1-rl-40 (our best model): its cuts on the 240 choosing questions (measure only),
+# then its judge (lots A + A2) and ITS own confidence tested there, to compare with the original Qwen's (zbench2 / zB4bench)
+benchlot --name benchA40 --start models/rc1-rl-40
+probezoo --name zAbench --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --probe-test-from benchA40 --probe-model models/rc1-rl-40
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
 # user (25 Oct): per-type stop from the benchmark findings (benchlot/zbench): code and tools only. On MBPP+ the thinking is

@@ -1634,3 +1634,10 @@ that its SVAMP score was only question difficulty is wrong. (3) Its poor SVAMP s
 THRESHOLD chosen on practice data, not from the ranking: per-type thresholds set on benchmark-like data are the fix. (4) Tools are
 the one type where the hidden-state MLP leads (0.81). (5) Learning own confidence on practice data (with position) lowers its
 benchmark timing (0.813 vs 0.845-0.871 raw): fitting to practice hurts transfer.
+
+**25 Oct, queued (user): the benchmark test for rc1-rl-40.** All benchmark judge tests so far read the ORIGINAL Qwen (its
+replies, hidden states and own confidence); rc1-rl-40's own confidence was only tested on practice questions (0.79 vs the
+original's 0.74 pooled). Runtime 1, after zB4bench: benchlot benchA40 (rc1-rl-40's replies to the 240 choosing questions, cuts
+x 20 forced answers, measure only; benchlot now restores a models/ start itself), then zAbench (rc1-rl-40's judge on lots A + A2
+and its own confidence, tested on benchA40, with the timing-only AUC, own-confidence combos, ESTAR trajectory and label).
+Compare with zbench2 / zB4bench (original Qwen).

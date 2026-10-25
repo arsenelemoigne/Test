@@ -1426,6 +1426,8 @@ def benchlot(args):
     """Labelled cuts on BENCHMARK questions (the 240 already used to choose models, never the fresh set), only to
     measure the stopping judge there (bench_rows.py, then label_cuts.py as a callot lot). Nothing trains on them."""
     name, base = args.name, args.start
+    if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
+        drive_sync("restore", only=[base])
     data = Path(f"data/{name}.jsonl")
     if not data.exists():
         py("bench_rows.py", "--questions", QUESTIONS, "--out", data)
