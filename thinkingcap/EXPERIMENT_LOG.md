@@ -1845,3 +1845,15 @@ batch accuracy of the last 5 steps falls more than G below the first 5 steps'; t
 drpo --rl-protect / --rl-guard. Queued drpo3 (runtime 2, after drpo2): from the RAW Qwen, math protected (gsm_ic, gsm_plus,
 gsm8k*), lambda 0.5, lr 5e-6, DLER dynamic sampling 1.5, guard 0.06, every 10-step checkpoint scored on fresh x8.
 Already queued that is related: drpo0 (runtime 1, another session: raw Qwen, DRPO lambda 0.2, dynamic sampling, no protection).
+
+**25 Oct ~20:30 (CET), zAbench: rc1-rl-40's own confidence and judge on the benchmark (benchA40; 53 replies with both labels).**
+Pooled TEST AUC: MLP + own 0.768 (best), MLP all layers 0.745, ESTAR label trajectory 0.736. TIMING-ONLY TEST AUC ALL: own
+certainty (entropy) **0.870**, own confidence first-50 0.860, own confidence 0.854, ESTAR label trajectory 0.841, position 0.827,
+linear + own / MLP + own 0.824, MLP 0.767, MLP all layers 0.728. SVAMP timing: own confidence 0.91-0.93 (original Qwen 0.96-0.98),
+MLP 0.82, position 0.82. As for the original Qwen: the model's own confidence is the best timing signal, the hidden-state judge
+is below "later is safer". Stopping simulation (2 pts per type, thresholds from rc1-rl-40's practice lots): SVAMP: every signal
+stops almost nothing (0-2%; the oracle bound is 17%); IFEval: stopping early GAINS accuracy (own confidence 33% saved at +6.9,
+MLP all layers 31% / +5.6); MBPP+: own confidence 87% / -3.2, MLP all layers 72% / +0.4 (gain), MLP 54% / +2.8 (gain); BFCL:
+~19% / -2.2. Reading: on our best model, a learned stop would add most on code (and instructions), little on math or tools.
+Queue note: runtime 1 re-read its queue at ~18:30 (before mathmatch / nt2 / drpo1 half-strength / lot B5 were added) and started
+drpo0 (raw Qwen DRPO, ~8 h); those four run right after it (they sit above it in the queue file).
