@@ -91,4 +91,7 @@ drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3
 # zbench2 (user): own confidence teaches math + code, the hidden-state judge teaches tools, instructions protected;
 # relative rule (as good as finishing, within the same answer), margins 0.05 and 0.1
 teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1
+# user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
+# timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
+teach --name teach2 --teach-reuse teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode,toolace,hermes_tools --teach-judge none
 end

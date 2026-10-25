@@ -1716,3 +1716,9 @@ vs >= 1.5x longer right, balanced per domain; SFT only +4.5%, offline GRPO faile
 architecture (ours): raw Qwen -> experiment 5 (own-confidence stop spikes) -> DRPO; the balanced round is the baseline /
 fallback stage 1, queued as balround bal0 (runtime 1, after drpo0): balanced_pairs.py (toy-tested) + dpo.py's NLL anchor
 (already default 1.0), GSM8K instead of GSM-IC/Plus for math, 6,000 questions x 4, 3 seeds, soups 50-200 on fresh x8.
+
+**25 Oct, queued (user): teach2 = experiment 5 with tool calls also taught by own confidence (runtime 2, after teach1).**
+zB4bench: with lots B..B4 the hidden-state judge's BFCL timing fell to 0.64 (own confidence, 5 least likely: 0.72; ESTAR
+trajectory 0.80). teach2 reuses teach1's answers and own-confidence readings (--teach-reuse), so only the teachers differ:
+own confidence for math, code and tools (--teach-own ...,toolace,hermes_tools; --teach-judge none), instructions protected,
+margins 0.05 and 0.1. track teach gains --teach-own / --teach-judge / --teach-reuse.

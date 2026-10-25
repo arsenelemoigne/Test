@@ -155,6 +155,9 @@ def main():
     parser.add_argument("--teach-variants", nargs="*", default=["rel:0.05", "rel:0.1"],
                         help="teach: stop targets, one model each (fixed:T = yes/no judge above T; rel:M = soft judge's "
                              "predicted success within M of the full thinking's)")
+    parser.add_argument("--teach-own", help="teach: types taught by own confidence (teach_stop's default when unset)")
+    parser.add_argument("--teach-judge", help="teach: types taught by the hidden-state judge ('' = none)")
+    parser.add_argument("--teach-reuse", help="teach: reuse this earlier teach run's answers and own-confidence readings")
     parser.add_argument("--teach-lots", nargs="*", default=["plotB", "plotB2", "plotB3"],
                         help="teach: label lots of --start the judge is fitted on")
     parser.add_argument("--lot-samples", type=int, default=8, help="callot: full replies per question (20 = a reliable question rate)")
@@ -1539,15 +1542,26 @@ def teach(args):
     missing = [l for l in args.teach_lots if not (BON / f"pairs-{l}" / "cal" / "verdicts.jsonl").exists()]
     if missing:
         drive_sync("restore", only=[f"runs/bon/pairs-{l}" for l in missing])
-    pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file)
-    probe = BON / f"probe-{name}"
-    if not (probe / "rollouts.jsonl").exists():
-        n = sum(1 for l in pool.read_text().splitlines() if l.strip())
-        py("probe_curve.py", "--data", pool, "--per-source", 100000, "--samples", 1, "--model", base, "--out", probe,
-           "--dtype", args.dtype, "--generate-only", "--chunk", 300, "--max-questions", min(n, args.teach_questions))
     out = Path("adapters") / f"{name}-teach"
+    if args.teach_reuse:  # same answers and own-confidence readings as an earlier teach run: only the teachers differ
+        probe = BON / f"probe-{args.teach_reuse}"
+        if not (probe / "rollouts.jsonl").exists():
+            drive_sync("restore", only=[f"runs/bon/probe-{args.teach_reuse}", f"adapters/{args.teach_reuse}-teach/own"])
+        earlier = Path("adapters") / f"{args.teach_reuse}-teach" / "own"
+        if (earlier / "own_confidence.jsonl").exists() and not (out / "own" / "own_confidence.jsonl").exists():
+            shutil.copytree(earlier, out / "own", dirs_exist_ok=True)
+    else:
+        pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file)
+        probe = BON / f"probe-{name}"
+        if not (probe / "rollouts.jsonl").exists():
+            n = sum(1 for l in pool.read_text().splitlines() if l.strip())
+            py("probe_curve.py", "--data", pool, "--per-source", 100000, "--samples", 1, "--model", base, "--out", probe,
+               "--dtype", args.dtype, "--generate-only", "--chunk", 300, "--max-questions", min(n, args.teach_questions))
+    teachers = ([*(["--own-sources", args.teach_own] if args.teach_own is not None else []),
+                 *(["--judge-sources", args.teach_judge] if args.teach_judge is not None else [])])
     py("teach_stop.py", "--model", base, "--cal", *[BON / f"pairs-{l}" / "cal" for l in args.teach_lots],
-       "--rollouts", probe / "rollouts.jsonl", "--out", out, "--variants", *args.teach_variants, "--dtype", args.dtype)
+       "--rollouts", probe / "rollouts.jsonl", "--out", out, "--variants", *args.teach_variants, "--dtype", args.dtype,
+       *teachers)
     print((out / "teacher.json").read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
