@@ -1938,3 +1938,13 @@ checkpoints every 10 steps scored. track.py drpo --rl-sb-beta passes the weight.
 score steps 5, 10, 15, 20, 25, 30, 40, 50, 60 on fresh x8 (~7 min each, ~1 h per run): the first 30 steps, where drpo1 and sb1
 overshot, are seen every 5 steps. sb2 also halves its learning rate (5e-6, as drpo2 / drpo3). drpo3 (already running) keeps its
 10-step checkpoints, with the per-type guard.
+
+**26 Oct ~03:00 (CET), interim.** stopB5 (original Qwen, stop pairs from lots B..B4 on code and tools only: 928 pairs; lot B3 has
+no code/tool questions, 0 pairs), fresh x8: soup 10 **+0.2% / +0.4** (bfcl -2..+3%, mbpp -4% / +3.4, svamp -1%); soup 15 **+5.6% /
+-0.9** (bfcl +4-8% / -0.6..-1.9, ifeval +11% / -2.2, mbpp -1% / +0.9, svamp +6% / -0.9). Barely shorter so far, and code (the
+target) not shorter at all: soups 20-30 pending.
+drpo3 (raw Qwen, math protected) steps 1-5: thinking 1,208 -> 974 tokens; batch accuracy 0.66-0.72; gsm_ic 0.51-0.65, gsm_plus
+0.30-0.55, ifeval_like 0.85-0.95, kodcode 0.94-1.00 (8-16 replies per step), toolace 0.67-0.96; no guard stop. Its pool problem
+(1,592 questions for 4,320 needed; math 54%, code 2%, Hermes 0%: the earlier-draw filter emptied the small sources, and the
+contamination check's 13-word rule drops IFEval-like prompts that share IFEval's constraint wording) is reported; not fixed yet
+(user decision pending).
