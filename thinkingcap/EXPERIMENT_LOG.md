@@ -1864,3 +1864,11 @@ experiment 5). Runtime 1 from now on: (drpo0 still running, step 3 of 60, ~1,300
 step 20 at half strength -> lot B5 -> stopB5 -> bal0. Runtime 2: sb1 (running, step 9; every 10-step checkpoint scored) ->
 drpo3 -> teach1 -> teach2 -> drpo2. drpo0 cannot be stopped by editing the queue (a running stage finishes first); stopping it
 needs "Interrupt execution" on runtime 1's queue cell and re-running that cell (saves ~9 GPU-hours).
+
+**25 Oct ~22:00 (CET), experiment 5 without any classifier (user).** teach1 now uses the model's own confidence as the teacher for
+every type it covers (math, code, tool calls: --teach-own ... --teach-judge none); instructions and multiple choice still "keep
+thinking". Reason: on the benchmark, own confidence is the best timing signal overall (0.87 vs 0.77 for the hidden-state judge)
+and the judge's only edge (tools, 0.81 vs 0.72 on 25 replies in zbench2) vanished with lots B..B4 (zB4bench: judge 0.64, ESTAR
+own-confidence trajectory 0.80). teach2 (the same configuration reusing teach1's answers) removed as a duplicate. Runtime 2 order:
+sb1 (running) -> drpo3 -> teach1 -> drpo2. GPU 1 relaunched by the user/assistant at ~22:00 on the reordered queue (drpo0
+interrupted at step 3; the release cell that followed was stopped before releasing the runtime; Drive remounted).
