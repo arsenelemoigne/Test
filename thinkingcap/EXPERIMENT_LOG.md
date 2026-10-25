@@ -1505,3 +1505,20 @@ Math: the answer is nearly settled after 20-40% of the thinking (0.46-0.47 vs 0.
 is too early (0.21-0.25). Instructions: stopping in the first fifth is as good as finishing (0.77 vs 0.73), and the last fifth is
 the worst (0.66): extra thinking slightly hurts. A perfect per-reply stop would save 61-71% of thinking and turn many wrong
 replies right (+11 to +32 pts), the ceiling a judge can approach. Runtime 2 moved on to benchlot (240 choosing questions x 8).
+
+**25 Oct ~07:00 (CET), benchlot: the same labelled cuts on the 240 choosing BENCHMARK questions (original Qwen, 8 replies each;
+measure only, nothing trains on them).** Source names are the labelling kinds: gsm_plus = SVAMP, ifeval_like = IFEval,
+kodcode = MBPP+, toolace = BFCL.
+
+| benchmark | replies (right) | cuts | success by share of thinking kept: 0-20 / 20-40 / 40-60 / 60-80 / 80-100 / full | perfect stop: saved / gained |
+|---|---|---|---|---|
+| SVAMP | 51 (36) | 431 | 0.26 / 0.34 / 0.48 / 0.58 / 0.55 / 0.73 | 53% / +8.9 |
+| IFEval | 53 (29) | 331 | 0.56 / 0.50 / 0.49 / 0.51 / 0.45 / 0.61 | 55% / +11.0 |
+| MBPP+ | 52 (26) | 572 | 0.46 / 0.53 / 0.44 / 0.52 / 0.49 / 0.50 | 84% / +17.0 |
+| BFCL | 148 (109) | 478 | 0.70 / 0.70 / 0.72 / 0.77 / 0.62 / 0.75 | 51% / +8.7 |
+
+Differs from the practice lots on math: on SVAMP the answer is NOT settled early (0.34 at 20-40% vs 0.73 at the full reply;
+practice GSM-IC/Plus reach their final level by 20-40%), so a judge trained on practice math may stop SVAMP too early (zbench
+measures this). Code and tools: early cuts are about as good as finishing (MBPP+ 0.46-0.53 vs 0.50; BFCL 0.70 vs 0.75).
+IFEval: early cuts a little below the full reply (0.50-0.56 vs 0.61). Perfect-stop ceiling on the benchmark: 51-84% saved.
+Runtime 2 now on zbench (features for lots B/B2/B3, then the judge tested on these 240 questions).
