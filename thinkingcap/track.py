@@ -141,6 +141,8 @@ def main():
     parser.add_argument("--tg-rule", default="strict", choices=("strict", "question"),
                         help="targeted: safe cut = >= 95%% right (strict) or as right as the question's own rate + margin")
     parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight (smaller: shorter)")
+    parser.add_argument("--rl-variant", choices=("drpo", "shorterbetter"), default="drpo",
+                        help="drpo stage: DRPO objective, or GRPO with the ShorterBetter reward (alpha*correct - beta*|len-SOL|)")
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[40, 60], help="drpo: checkpoints scored on fresh x8")
@@ -1495,11 +1497,13 @@ def drpo(args):
     if base.startswith("models/") and not (Path(base) / "config.json").exists():  # queued after this runtime's restore
         drive_sync("restore", only=[base])
     pool = mixed_pool(name, args.drpo_steps * args.drpo_questions, args.data_seed, args.kod_file)
-    out = Path("adapters") / f"{name}-drpo"
+    out = Path("adapters") / f"{name}-{args.rl_variant}"
+    variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda] if args.rl_variant == "drpo"
+               else ["--objective", "grpo", "--reward", "shorterbetter"])
     if not (out / "adapter_config.json").exists():
         py("rl_train.py", "--model", base, "--data", pool, "--sources", "all", "--out", out,
            "--steps", args.drpo_steps, "--questions", args.drpo_questions, "--group", 8, "--max-tokens", 4096,
-           "--objective", "drpo", "--drpo-lambda", args.drpo_lambda, "--updates", 2, "--grader", "typed",
+           *variant, "--updates", 2, "--grader", "typed",
            "--redundant", "none", "--lr", args.rl_lr, "--save-every", 20, "--dtype", args.dtype)
     print((out / "rl_log.jsonl").read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
@@ -2192,7 +2196,7 @@ def plan(args):
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
+                                    "runs/bon/*bench*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
                                     *[f"models/{m}" for m in wanted]])
     else:
         drive_sync("restore", models=wanted)

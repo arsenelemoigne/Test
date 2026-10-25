@@ -54,6 +54,43 @@ def timing_auc(scores, data, mask):
     return (wins / pairs if pairs else float("nan")), replies
 
 
+def answer_norm(a):
+    return "".join(str(a).lower().split())[-120:]  # spacing differences ("x=5" vs "x = 5") are not answer changes
+
+
+def trajectory(data):
+    """ESTAR-style self-confidence trajectory features per cut, from the model's own greedy answers at the earlier cuts of
+    the SAME reply (all readable at stopping time): log own confidence and least-likely-token probability, their change
+    since the previous cut, the running maximum, the slope over the last 3 cuts, answer stability, the share of earlier
+    cuts whose answer changed, and the cut fraction. Also returns the ESTAR label: does this cut's own answer equal the
+    reply's FINAL (full-thinking) own answer (NaN when answers are missing)."""
+    n = data.n
+    lo = lambda v: np.log(np.clip(np.nan_to_num(np.asarray(v, float), nan=1e-6), 1e-6, 1.0))
+    own, low = lo(data.own), lo(data.own_variants["own_min"])
+    feats = np.zeros((n, 9), np.float32)
+    same_final = np.full(n, np.nan)
+    groups = defaultdict(list)
+    for k in range(n):
+        groups[data.question[k]].append(k)
+    for ks in groups.values():
+        ks.sort(key=lambda k: data.fraction[k])
+        answers = [data.meta[k].get("answer") for k in ks]
+        final = answers[-1]
+        changes = 0
+        for i, k in enumerate(ks):
+            prev = ks[i - 1] if i else k
+            if i and answers[i] is not None and answers[i - 1] is not None and \
+                    answer_norm(answers[i]) != answer_norm(answers[i - 1]):
+                changes += 1
+            last = ks[max(0, i - 2):i + 1]
+            slope = np.polyfit(np.arange(len(last)), own[last], 1)[0] if len(last) > 1 else 0.0
+            feats[k] = [own[k], low[k], own[k] - own[prev], low[k] - low[prev], own[ks[:i + 1]].max(), slope,
+                        np.nan_to_num(data.stability[k]), changes / max(1, i), data.fraction[k]]
+            if answers[i] is not None and final is not None:
+                same_final[k] = float(answer_norm(answers[i]) == answer_norm(final))
+    return feats, same_final
+
+
 def attention_fit(get, train_idx, train_y, dim=256, heads=4, epochs=30, seed=0):
     """Attention-pooling probe; get(indices) -> float16 [b, T, d] windows (gathered batch by batch, so the multi-GB
     window array is never copied). Returns predict(get_test, indices)."""
@@ -268,6 +305,35 @@ def main():
                 lambda: np.column_stack([xbest(test, tpoints), own_x(test)]), linear)
             run("mlp + own confidence", lambda: np.column_stack([xbest(dev, points), own_x(dev)]),
                 lambda: np.column_stack([xbest(test, tpoints), own_x(test)]), mlp((256, 64)))
+        # ESTAR (arXiv 2602.10004) ideas: (a) features = the trajectory of the model's own answer confidence across the cuts of
+        # the reply; (b) label = "this cut's answer equals the reply's final answer" (consistency, no correctness needed)
+        traj_d, cons_d = trajectory(dev)
+        traj_t, _ = trajectory(test)
+        small = lambda x, y, s: fit_mlp(x, y, hidden=(64, 16), seed=s)
+        run("own-confidence trajectory, learned (ESTAR features)", lambda: np.column_stack([traj_d, dev.position]),
+            lambda: np.column_stack([traj_t, test.position]), small)
+        run("mlp + trajectory", lambda: np.column_stack([xbest(dev, points), traj_d]),
+            lambda: np.column_stack([xbest(test, tpoints), traj_t]), mlp((256, 64)))
+
+        def run_target(name, xd, xt, target, fitter):
+            """Like run(), but fitted to another target (here the ESTAR consistency label) on every cut that has it;
+            scored against the usual safe/unsafe labels, so it is comparable with the rest."""
+            ok = np.isfinite(target)
+            if ok.sum() < 100 or len(set(target[ok])) < 2:
+                return
+            p = np.full(dev.n, np.nan)
+            for f in range(args.folds):
+                tr = (folds != f) & ok
+                p[folds == f] = fitter(xd[tr], target[tr], f)(xd[folds == f])
+            dev_s[name] = p
+            test_s[name] = fitter(xd[ok], target[ok], 99)(xt)
+            print(f"zoo: {name}: dev AUC {auc(p[lab], dev.label[lab]):.3f}, test AUC "
+                  f"{auc(test_s[name][test.labelled], test.label[test.labelled]):.3f} (trained on 'same as final answer', "
+                  f"{np.nanmean(target):.2f} of cuts)", flush=True)
+        run_target("ESTAR label: trajectory, trained on 'same as final answer'", np.column_stack([traj_d, dev.position]),
+                   np.column_stack([traj_t, test.position]), cons_d, small)
+        run_target("ESTAR label: mlp, trained on 'same as final answer'", xbest(dev, points), xbest(test, tpoints), cons_d,
+                   mlp((256, 64)))
         def run_attention(name, js):
             """Attention probe over the window at layers js (concatenated along the feature axis)."""
             def getter(arr):

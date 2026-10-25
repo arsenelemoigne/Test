@@ -107,7 +107,11 @@ def parse_arguments():
     parser.add_argument("--gpu-memory", type=float, default=0.35, help="vLLM share of the GPU")
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--reward", choices=["shorter", "arora"], default="shorter",
+    parser.add_argument("--sb-alpha", type=float, default=2.0, help="shorterbetter: weight of the correctness term")
+    parser.add_argument("--sb-beta", type=float, default=0.005,
+                        help="shorterbetter: per-token weight of |len - SOL| (paper 0.001 on 5-11k-token replies; ours are"
+                             " ~5-10x shorter, so 0.005 keeps a similar pressure)")
+    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter"], default="shorter",
                         help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
                              "standardized among the group's correct replies; wrong or cut off = 0")
     parser.add_argument("--adaptive", action="store_true",
@@ -145,6 +149,15 @@ def length_rewards(lengths, correct, alpha):
     target = max(target, 1)
     return [max(0.0, 1 - alpha * abs(n - target) / target) if ok else -alpha * abs(n - target) / target
             for n, ok in zip(lengths, correct)]
+
+
+def shorterbetter_rewards(lengths, correct, alpha, beta):
+    """ShorterBetter (arXiv 2504.21370, Eq. 1) exactly: r = alpha * correct - beta * |len - SOL|, SOL = the shortest correct
+    reply's length in the group, or the group's mean length when none is correct (its neutral fallback; the shortest-reply
+    target collapsed in its ablation). Absolute token lengths, not relative ones as in length_rewards."""
+    lengths_correct = [n for n, ok in zip(lengths, correct) if ok]
+    sol = min(lengths_correct) if lengths_correct else sum(lengths) / len(lengths)
+    return [alpha * float(ok) - beta * abs(n - sol) for n, ok in zip(lengths, correct)]
 
 
 def arora_rewards(thinking, correct, alpha):
@@ -522,6 +535,8 @@ def main():
                 thinking = [r.index(close_id) if close_id in r else len(r) for r in group]
                 alpha = args.alpha * (sum(correct) / len(correct) if args.adaptive else 1.0)
                 rewards = arora_rewards(thinking, correct, alpha)
+            elif args.reward == "shorterbetter":
+                rewards = shorterbetter_rewards([len(r) for r in group], correct, args.sb_alpha, args.sb_beta)
             else:
                 rewards = length_rewards([len(r) for r in group], correct, args.alpha)
             skipped = [i >= len(group) - no_think for i in range(len(group))]

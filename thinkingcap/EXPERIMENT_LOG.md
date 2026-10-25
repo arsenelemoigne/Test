@@ -1594,3 +1594,20 @@ timing-only AUC and the own-confidence combos; zoo B4 itself keeps the held-out 
 spill-over seen in every stop model cannot teach early math stops; code, tools and instructions follow the judge (fixed:0.9)
 or the relative rule (rel:0.05). Math shortening is left to length training (DRPO) and to a math-specific signal (pending
 zbench2's timing-only AUC for own confidence and the combined judges).
+
+**25 Oct, ideas from the papers (user asked why ESTAR / ShorterBetter succeed).** Reading: both use far longer-thinking models
+(ESTAR Qwen3-8B, 2.4-6k tokens; ShorterBetter R1-Distill 1.5B/7B, 5-11k tokens; ours ~360 tokens when right), stay mostly in
+one domain (math / medical MC), and ESTAR keeps its LightGBM classifier at TEST time (tau 0.9), which our fixed evaluation does
+not allow; most of ESTAR's saving comes from RL (MATH500 3,951 -> 2,019 classifier only -> 635 with RL). ShorterBetter (pure
+GRPO, no classifier): out-of-domain ~62% shorter at ~-0.5 (BBH -5.2, LiveCodeBench -40% / -1.1): same range as rc1-rl-40.
+Built (toy-tested only):
+- probe_zoo.py: ESTAR-style self-confidence TRAJECTORY features per cut (log own confidence and least-likely-token prob, their
+  change since the previous cut, running max, slope over the last 3 cuts, answer stability, share of answer changes, fraction):
+  "own-confidence trajectory, learned" (small MLP) and "mlp + trajectory"; and the ESTAR LABEL ("this cut's own answer equals
+  the reply's final own answer", no correctness needed): "ESTAR label: trajectory" and "ESTAR label: mlp", fitted on that label
+  and scored against the usual safe/unsafe labels. Answers compared ignoring spacing. zB4bench (runtime 1) will run them;
+  zbench2 started before this change.
+- rl_train.py --reward shorterbetter: r = alpha*correct - beta*|len - SOL| (alpha 2; beta 0.005 instead of the paper's 0.001
+  because our replies are 5-10x shorter), SOL = shortest correct reply of the group, else the group mean; GRPO advantages.
+  track.py drpo --rl-variant shorterbetter. Queued sb1 (runtime 2, after drpo1): from rc1-rl-40, same fresh MBPP-free pool size
+  (48 x 8 x 60), checkpoints 40/60 on fresh x8, same success bar as drpo1.
