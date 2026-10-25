@@ -1641,3 +1641,11 @@ original's 0.74 pooled). Runtime 1, after zB4bench: benchlot benchA40 (rc1-rl-40
 x 20 forced answers, measure only; benchlot now restores a models/ start itself), then zAbench (rc1-rl-40's judge on lots A + A2
 and its own confidence, tested on benchA40, with the timing-only AUC, own-confidence combos, ESTAR trajectory and label).
 Compare with zbench2 / zB4bench (original Qwen).
+
+**25 Oct, experiment 5 redesigned from zbench2 (user).** Teacher per type: the model's own confidence (geometric mean of its 5
+least likely answer tokens, read with own_conf.py at every scored paragraph end and at the full thinking of the 3,000 teacher
+answers) for math and code (benchmark timing SVAMP 0.977, MBPP+ 0.833); the soft hidden-state judge for tool calls (BFCL 0.806);
+instructions and multiple choice protected (keep thinking). Targets use only the relative rule, within the same answer
+(teacher value here >= its value at the full thinking - margin, floor 0.3): it uses the signal's timing, which transferred to
+the benchmark, and no absolute threshold, which did not. Two models: margins 0.05 and 0.1. Extra cost: one greedy forced
+answer per scored point (~30-50k short generations, ~1 GPU-hour).

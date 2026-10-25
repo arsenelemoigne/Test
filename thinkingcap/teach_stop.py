@@ -8,19 +8,22 @@
 2. Teacher labels: the model's own answers to fresh questions (--rollouts, one sampled answer each). At each paragraph
    end of the thinking (a token ending in a blank line; at most --max-cuts per answer, evenly spaced; never the natural
    end) the cut is closed as in label_cuts ("<think>\\n...\\n</think>\\n\\n") and scored, and so is the full thinking.
-   Targets, one model per --variants entry, always sharpened as sigmoid((p - bar) / temperature) so small
-   per-paragraph chances do not add up to an early stop somewhere:
-     fixed:T  the yes/no judge's p against the fixed bar T (stop when the judge is clearly sure it is safe);
-     rel:M    the soft judge's predicted success here against max(predicted success of the full thinking - M, --min-p):
-              stop when stopping here is as right as finishing (the user's per-question rule). --min-p keeps answers
-              the judge expects to fail anyway out of the stop targets ("stop circling" is a separate, later test).
-   Math answers (--protect-sources) get target 0 everywhere: the judge, trained on practice math that settles early, stops
-   benchmark math (SVAMP, settles late) far too early (zbench), and stop training spills over across types.
+   The model's own confidence (own_conf.py: the geometric mean of its 5 least likely tokens when it answers greedily from
+   that point) is read at the same points. Teacher per type (zbench2, timing measured within the same reply on the 240
+   benchmark questions): own confidence for math and code (--own-sources: SVAMP 0.98, MBPP+ 0.83), the soft judge for
+   tool calls (--judge-sources: BFCL 0.81), none for instructions and multiple choice (--protect-sources: target 0,
+   "keep thinking", since stop training spills over across types). Targets, one model per --variants entry, always
+   sharpened as sigmoid((p - bar) / temperature) so small per-paragraph chances do not add up to an early stop:
+     rel:M    the teacher's value here against max(its value at the full thinking of the SAME answer - M, --min-p): stop
+              where stopping is as good as finishing (the user's rule). Comparing within one answer uses the signal's
+              timing, which transfers, and needs no absolute threshold, which did not (a bar tuned on practice math
+              over-stopped SVAMP). --min-p keeps expected failures out ("stop circling" is a separate, later test).
+     fixed:T  the yes/no judge above the fixed bar T, on tool calls only (kept for comparison).
 3. Training: a fresh LoRA on --model; one forward pass per answer; at every scored paragraph end the loss is the binary
    cross-entropy between p("</think>" next) and its target. Nothing else is trained.
 
     python teach_stop.py --model Qwen/Qwen3-0.6B --cal runs/bon/pairs-plotB/cal runs/bon/pairs-plotB2/cal \\
-        --rollouts runs/bon/probe-teach1/rollouts.jsonl --out adapters/teach1 --variants fixed:0.9 rel:0.05
+        --rollouts runs/bon/probe-teach1/rollouts.jsonl --out adapters/teach1 --variants rel:0.05 rel:0.1
 """
 
 import argparse
@@ -28,6 +31,8 @@ import hashlib
 import json
 import math
 import random
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -62,11 +67,17 @@ def main():
     parser.add_argument("--unsafe", type=int, default=15)
     parser.add_argument("--drop-sources", default="mbpp_train", help="never learn from these (MBPP+ is built on MBPP)")
     parser.add_argument("--max-cuts", type=int, default=16)
-    parser.add_argument("--variants", nargs="+", default=["fixed:0.9", "rel:0.05"], help="fixed:T or rel:M, one model each")
+    parser.add_argument("--variants", nargs="+", default=["rel:0.05", "rel:0.1"], help="fixed:T or rel:M, one model each")
     parser.add_argument("--min-p", type=float, default=0.3, help="rel: never a stop target below this predicted success")
-    parser.add_argument("--protect-sources", default="gsm_ic,gsm_plus,gsm8k,gsm8k_all",
-                        help="answers of these types are trained toward 'keep thinking' (target 0) at every paragraph end: "
-                             "the judge stops benchmark math (SVAMP) far too early (zbench), and stop training spills over")
+    parser.add_argument("--own-sources", default="gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode",
+                        help="teacher = the model's own confidence (5 least likely answer tokens): on the 240 benchmark "
+                             "questions it reads WHEN an answer is settled best for math (SVAMP 0.98) and code (0.83; zbench2)")
+    parser.add_argument("--judge-sources", default="toolace,hermes_tools",
+                        help="teacher = the hidden-state judge: it leads only on tool calls (BFCL 0.81; zbench2)")
+    parser.add_argument("--protect-sources", default="ifeval_like,arc_easy,commonsense_qa",
+                        help="trained toward 'keep thinking' (target 0) at every paragraph end: no signal is trusted there "
+                             "(IFEval had 6 usable benchmark replies), and stop training spills over across types")
+    parser.add_argument("--answer-tokens", type=int, default=2048, help="own confidence: cap of the forced answer at each cut")
     parser.add_argument("--temperature", type=float, default=0.03)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--rank", type=int, default=16)
@@ -84,6 +95,37 @@ def main():
     tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
     open_id, close_id = tok.convert_tokens_to_ids("<think>"), tok.convert_tokens_to_ids("</think>")
     dtype = getattr(torch, args.dtype)
+    dropped = set(args.drop_sources.split(",")) if args.drop_sources else set()
+
+    # the model's own answers: every scored paragraph end, plus the full thinking (the natural stop)
+    rows = [r for r in read(args.rollouts) if r["closed_thinking"] and not r["truncated"] and r["source"] not in dropped]
+    decode = lambda ids: tok.decode(ids, skip_special_tokens=False)
+    closed = lambda ids: tok.encode("<think>\n" + tok.decode([t for t in ids if t not in (open_id, close_id)]).strip()
+                                    + "\n</think>\n\n", add_special_tokens=False)
+    items, seqs = [], []
+    for r in rows:
+        tokens = r["output_ids"]
+        ends = paragraph_ends(tokens, close_id, open_id, decode, args.max_cuts)
+        if not ends:
+            continue
+        for i in ends:
+            seqs.append(r["prompt_ids"] + closed(tokens[:i + 1]))
+            items.append((id(r), i))
+        seqs.append(r["prompt_ids"] + closed(tokens[:tokens.index(close_id)]))
+        items.append((id(r), None))
+    # own confidence at every one of those points (own_conf.py: one greedy forced answer each, vLLM, then the GPU is freed)
+    own_dir = out / "own"
+    own_dir.mkdir(exist_ok=True)
+    if not (own_dir / "own_confidence.jsonl").exists():
+        by_id = {id(r): r for r in rows}
+        (own_dir / "cuts.jsonl").write_text("".join(json.dumps({"key": k, "prompt_ids": by_id[rid]["prompt_ids"],
+                                                                 "thinking_ids": seq[len(by_id[rid]["prompt_ids"]):],
+                                                                 "max_tokens": args.answer_tokens}) + "\n"
+                                                     for k, ((rid, _), seq) in enumerate(zip(items, seqs))))
+        subprocess.run([sys.executable, "own_conf.py", "--model", args.model, "--cal", str(own_dir), "--dtype", args.dtype],
+                       check=True)
+    own = {o["key"]: o["own_low5"] for o in read(own_dir / "own_confidence.jsonl")}
+    own_p = np.array([own[k] for k in range(len(items))])
     base = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to("cuda").eval()
 
     def last_states(seqs):
@@ -114,7 +156,6 @@ def main():
 
     # 1. the judges
     xs, success, qs = [], [], []
-    dropped = set(args.drop_sources.split(",")) if args.drop_sources else set()
     for cal in map(Path, args.cal):
         cuts, replies = read(cal / "cuts.jsonl"), {r["reply"]: r for r in read(cal / "replies.jsonl")}
         verdict = {v["key"]: v for v in read(cal / "verdicts.jsonl")}
@@ -147,34 +188,20 @@ def main():
     soft = fit_mlp(x, success, seed=args.seed)
     print(f"judges: {len(success)} cuts ({int(labelled.sum())} yes/no labelled), layer {args.layer}", flush=True)
 
-    # 2. teacher labels on the model's own answers
-    rows = [r for r in read(args.rollouts) if r["closed_thinking"] and not r["truncated"] and r["source"] not in dropped]
-    decode = lambda ids: tok.decode(ids, skip_special_tokens=False)
-    closed = lambda ids: tok.encode("<think>\n" + tok.decode([t for t in ids if t not in (open_id, close_id)]).strip()
-                                    + "\n</think>\n\n", add_special_tokens=False)
-    items, seqs = [], []
-    for r in rows:
-        tokens = r["output_ids"]
-        ends = paragraph_ends(tokens, close_id, open_id, decode, args.max_cuts)
-        if not ends:
-            continue
-        for i in ends:
-            seqs.append(r["prompt_ids"] + closed(tokens[:i + 1]))
-            items.append((id(r), i))
-        seqs.append(r["prompt_ids"] + closed(tokens[:tokens.index(close_id)]))  # the full thinking: the natural stop
-        items.append((id(r), None))
+    # 2. teacher signals at every point: the judges (hidden state) and the model's own confidence
     feats = last_states(seqs)
     hard_p, soft_p = hard(feats), soft(feats)
     by_answer, at_end = {}, {}
-    for (rid, i), h, sp in zip(items, hard_p, soft_p):
+    for (rid, i), h, sp, op in zip(items, hard_p, soft_p, own_p):
         if i is None:
-            at_end[rid] = float(sp)
+            at_end[rid] = (float(sp), float(op))
         else:
-            by_answer.setdefault(rid, []).append((i, float(h), float(sp)))
+            by_answer.setdefault(rid, []).append((i, float(h), float(sp), float(op)))
     cut = np.array([i is not None for _, i in items])
     report = {"judges": grades, "answers": len(by_answer), "cuts": int(cut.sum()),
               "yes_no_mean_p": float(hard_p[cut].mean()), "soft_mean_success_at_cuts": float(soft_p[cut].mean()),
-              "soft_mean_success_at_end": float(soft_p[~cut].mean())}
+              "soft_mean_success_at_end": float(soft_p[~cut].mean()),
+              "own_low5_mean_at_cuts": float(own_p[cut].mean()), "own_low5_mean_at_end": float(own_p[~cut].mean())}
     (out / "teacher.json").write_text(json.dumps(report, indent=1))
     print(f"teacher: {len(by_answer)} answers, {int(cut.sum())} paragraph ends; yes/no p > 0.9 at "
           f"{np.mean(hard_p[cut] > 0.9):.0%}; predicted success {soft_p[cut].mean():.2f} at cuts vs "
@@ -185,8 +212,11 @@ def main():
     # 3. one adapter per variant
     from peft import LoraConfig, get_peft_model
     answers = [(r, by_answer[id(r)], at_end[id(r)]) for r in rows if id(r) in by_answer]
-    protected = set(args.protect_sources.split(",")) if args.protect_sources else set()
-    print(f"protected (keep thinking): {sum(r['source'] in protected for r, _, _ in answers)} of {len(answers)} answers", flush=True)
+    split = lambda v: set(v.split(",")) if v else set()
+    protected, own_src, judge_src = split(args.protect_sources), split(args.own_sources), split(args.judge_sources)
+    teacher = lambda src: "own" if src in own_src else "judge" if src in judge_src else "protect"
+    counts = {t: sum(teacher(r["source"]) == t for r, _, _ in answers) for t in ("own", "judge", "protect")}
+    print(f"teachers: own confidence {counts['own']}, judge {counts['judge']}, keep thinking {counts['protect']} answers", flush=True)
     for variant in args.variants:
         kind, value = variant.split(":")
         value = float(value)
@@ -207,16 +237,18 @@ def main():
             stop = r["output_ids"].index(close_id)
             ids = torch.tensor([r["prompt_ids"] + r["output_ids"][:stop]], device="cuda")
             hidden = model.base_model.model.model(input_ids=ids).last_hidden_state[0]
-            positions = torch.tensor([len(r["prompt_ids"]) + i for i, _, _ in cuts], device="cuda")
+            positions = torch.tensor([len(r["prompt_ids"]) + c[0] for c in cuts], device="cuda")
             logp = torch.log_softmax(model.base_model.model.lm_head(hidden[positions]).float(), -1)[:, close_id]
             log1m = torch.log1p(-torch.exp(logp).clamp(max=1 - 1e-6))
-            if r["source"] in protected:
+            who = teacher(r["source"])
+            if who == "protect" or (kind == "fixed" and who != "judge"):
                 goals = [0.0] * len(cuts)
-            elif kind == "fixed":
-                goals = [sharpen(h, value, args.temperature) for _, h, _ in cuts]
-            else:  # as right as finishing (minus the margin), never below --min-p
-                bar = max(end_p - value, args.min_p)
-                goals = [sharpen(sp, bar, args.temperature) for _, _, sp in cuts]
+            elif kind == "fixed":  # the yes/no judge above a fixed bar (tools only)
+                goals = [sharpen(h, value, args.temperature) for _, h, _, _ in cuts]
+            else:  # as right as finishing (minus the margin), never below --min-p; within the same answer
+                pos = 2 if who == "judge" else 3  # soft judge's predicted success, or own confidence
+                bar = max(end_p[pos - 2] - value, args.min_p)
+                goals = [sharpen(c[pos], bar, args.temperature) for c in cuts]
             target = torch.tensor(goals, device="cuda")
             loss = -(target * logp + (1 - target) * log1m).mean()
             (loss / args.accumulate).backward()

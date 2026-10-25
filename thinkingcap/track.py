@@ -147,7 +147,7 @@ def main():
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[40, 60], help="drpo: checkpoints scored on fresh x8")
     parser.add_argument("--teach-questions", type=int, default=3000, help="teach: fresh questions answered once each")
-    parser.add_argument("--teach-variants", nargs="*", default=["fixed:0.9", "rel:0.05"],
+    parser.add_argument("--teach-variants", nargs="*", default=["rel:0.05", "rel:0.1"],
                         help="teach: stop targets, one model each (fixed:T = yes/no judge above T; rel:M = soft judge's "
                              "predicted success within M of the full thinking's)")
     parser.add_argument("--teach-lots", nargs="*", default=["plotB", "plotB2", "plotB3"],
