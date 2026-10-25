@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# PTAB step 0 output (raw API responses)
+research/ptab-ipr-predictor/step0_out/

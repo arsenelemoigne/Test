@@ -95,7 +95,7 @@ Status labels: SECONDARY = third-party or press source only; NOT VERIFIED = must
    ```bash
    curl -H "X-API-Key: YOUR_KEY" "https://api.uspto.gov/api/v1/patent/trials/proceedings/IPR2025-00318"
    ```
-   (If the path errors, check the exact path on the data.uspto.gov "PTAB Trials" page: `/patent/proceedings/` vs `/patent/trials/proceedings/`.)
+   (Checked 25 Oct 2026 without a key: `/patent/trials/...` routes answer 401, so they exist; `/patent/proceedings/...` answers 403 "Missing Authentication Token", so it does not.)
 5. Keys unused for 90 days are deleted. Store the key in Colab **Secrets**, never in the notebook.
 
 **Without a US passport or SSN (non-US residents):**
@@ -220,6 +220,15 @@ Total: about 8–12 weeks part-time. Difficulty: medium (the hard parts are clea
 ---
 
 ## 10. Checklist for the first live session (fills the blanks in §7)
+
+Automated in `step0_feasibility.py`. Run it once the key exists:
+
+```bash
+export USPTO_API_KEY=...   # in Colab: a secret named USPTO_API_KEY
+python step0_feasibility.py --out step0_out
+```
+
+It writes `step0_out/REPORT.md` (a PASS/FAIL/CHECK table, then the details per item) and saves every raw response to `step0_out/raw/`. It makes about 60–80 calls.
 
 - [ ] API key works (the test call returns JSON)
 - [ ] Total IPR count by petition-filing year → N at node [0] per regime
