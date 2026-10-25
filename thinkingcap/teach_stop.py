@@ -1,19 +1,24 @@
 """The judge as teacher: train the model's own "</think>" signal at every paragraph end to follow the stopping judge.
 
-1. Judge: an MLP on one layer's hidden state at the end of a closed cut (place "after </think>", as probe_zoo's best),
-   fitted on labelled cuts of the SAME model (label_cuts.py lots: safe = every forced answer right, unsafe <= --unsafe
-   of 20; in between left out). Its AUC on 20% of the questions (held out by hash) is printed, then it is refitted on all.
+1. Judges: MLPs on one layer's hidden state at the end of a closed cut (place "after </think>", as probe_zoo's best),
+   fitted on labelled cuts of the SAME model (label_cuts.py lots). The yes/no judge learns safe (every forced answer
+   right) vs unsafe (<= --unsafe of 20; in between left out). The soft judge learns every cut's real success rate k/20
+   with cross-entropy, so its output is a calibrated "right this often if it stops here". On 20% of the questions (held
+   out by hash) both are graded by AUC, log loss, Brier and calibration error, then refitted on all.
 2. Teacher labels: the model's own answers to fresh questions (--rollouts, one sampled answer each). At each paragraph
    end of the thinking (a token ending in a blank line; at most --max-cuts per answer, evenly spaced; never the natural
-   end) the cut is closed as in label_cuts ("<think>\\n...\\n</think>\\n\\n") and scored by the judge. Target =
-   sigmoid((p - threshold) / temperature): near 0 unless the judge is clearly confident, so small per-paragraph
-   chances do not add up to an early stop somewhere.
+   end) the cut is closed as in label_cuts ("<think>\\n...\\n</think>\\n\\n") and scored, and so is the full thinking.
+   Targets, one model per --variants entry, always sharpened as sigmoid((p - bar) / temperature) so small
+   per-paragraph chances do not add up to an early stop somewhere:
+     fixed:T  the yes/no judge's p against the fixed bar T (stop when the judge is clearly sure it is safe);
+     rel:M    the soft judge's predicted success here against max(predicted success of the full thinking - M, --min-p):
+              stop when stopping here is as right as finishing (the user's per-question rule). --min-p keeps answers
+              the judge expects to fail anyway out of the stop targets ("stop circling" is a separate, later test).
 3. Training: a fresh LoRA on --model; one forward pass per answer; at every scored paragraph end the loss is the binary
-   cross-entropy between p("</think>" next) and its target. Nothing else is trained. One adapter per --thresholds value
-   (same judge scores).
+   cross-entropy between p("</think>" next) and its target. Nothing else is trained.
 
     python teach_stop.py --model Qwen/Qwen3-0.6B --cal runs/bon/pairs-plotB/cal runs/bon/pairs-plotB2/cal \\
-        --rollouts runs/bon/probe-teach1/rollouts.jsonl --out adapters/teach1 --thresholds 0.8 0.9
+        --rollouts runs/bon/probe-teach1/rollouts.jsonl --out adapters/teach1 --variants fixed:0.9 rel:0.05
 """
 
 import argparse
@@ -55,7 +60,8 @@ def main():
     parser.add_argument("--unsafe", type=int, default=15)
     parser.add_argument("--drop-sources", default="mbpp_train", help="never learn from these (MBPP+ is built on MBPP)")
     parser.add_argument("--max-cuts", type=int, default=16)
-    parser.add_argument("--thresholds", type=float, nargs="+", default=[0.8, 0.9])
+    parser.add_argument("--variants", nargs="+", default=["fixed:0.9", "rel:0.05"], help="fixed:T or rel:M, one model each")
+    parser.add_argument("--min-p", type=float, default=0.3, help="rel: never a stop target below this predicted success")
     parser.add_argument("--temperature", type=float, default=0.03)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--rank", type=int, default=16)
@@ -66,7 +72,7 @@ def main():
     args = parser.parse_args()
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from probe_knows import auc, fit_mlp
+    from probe_knows import auc, calibration, fit_mlp
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -101,8 +107,9 @@ def main():
             flush()
         return feats
 
-    # 1. the judge
-    xs, ys, qs = [], [], []
+    # 1. the judges
+    xs, success, qs = [], [], []
+    dropped = set(args.drop_sources.split(",")) if args.drop_sources else set()
     for cal in map(Path, args.cal):
         cuts, replies = read(cal / "cuts.jsonl"), {r["reply"]: r for r in read(cal / "replies.jsonl")}
         verdict = {v["key"]: v for v in read(cal / "verdicts.jsonl")}
@@ -112,49 +119,71 @@ def main():
             feats = np.asarray(np.load(cached, mmap_mode="r")[:, args.layer - 1, 1], dtype=np.float32)
         else:
             feats = last_states([c["prompt_ids"] + c["thinking_ids"] for c in cuts])
-        dropped = set(args.drop_sources.split(",")) if args.drop_sources else set()
         for c, f in zip(cuts, feats):
             if replies[c["reply"]]["source"] in dropped:
                 continue
             v = verdict[c["key"]]
-            if v["right"] == v["of"] or v["right"] <= args.unsafe:
-                xs.append(f)
-                ys.append(float(v["right"] == v["of"]))
-                qs.append(f"{name}/{replies[c['reply']]['id']}")
-    x, y = np.stack(xs), np.array(ys)
+            xs.append(f)
+            success.append(v["right"] / max(1, v["of"]))
+            qs.append(f"{name}/{replies[c['reply']]['id']}")
+    x, success = np.stack(xs), np.array(success)
+    labelled = (success == 1) | (success <= args.unsafe / 20)
+    label = (success == 1).astype(float)
     held = np.array([int(hashlib.md5(q.encode()).hexdigest(), 16) % 10 < 2 for q in qs])
-    check = fit_mlp(x[~held], y[~held], seed=args.seed)
-    held_auc = auc(check(x[held]), y[held])
-    judge = fit_mlp(x, y, seed=args.seed)
-    print(f"judge: {len(y)} labelled cuts ({int(y.sum())} safe), layer {args.layer}; held-out AUC {held_auc:.3f}", flush=True)
+    grades = {}
+    for kind, rows, target in (("yes/no", labelled, label), ("soft", np.ones(len(success), bool), success)):
+        check = fit_mlp(x[rows & ~held], target[rows & ~held], seed=args.seed)(x[held])
+        ll, brier, ece = calibration(check, success[held])
+        grades[kind] = {"auc": auc(check[labelled[held]], label[held][labelled[held]]), "log_loss": ll,
+                        "brier": brier, "ece": ece}
+        print(f"judge {kind}: held-out AUC {grades[kind]['auc']:.3f}, log loss {ll:.3f}, Brier {brier:.3f}, "
+              f"calibration error {ece:.3f}", flush=True)
+    hard = fit_mlp(x[labelled], label[labelled], seed=args.seed)
+    soft = fit_mlp(x, success, seed=args.seed)
+    print(f"judges: {len(success)} cuts ({int(labelled.sum())} yes/no labelled), layer {args.layer}", flush=True)
 
     # 2. teacher labels on the model's own answers
     rows = [r for r in read(args.rollouts) if r["closed_thinking"] and not r["truncated"] and r["source"] not in dropped]
     decode = lambda ids: tok.decode(ids, skip_special_tokens=False)
+    closed = lambda ids: tok.encode("<think>\n" + tok.decode([t for t in ids if t not in (open_id, close_id)]).strip()
+                                    + "\n</think>\n\n", add_special_tokens=False)
     items, seqs = [], []
     for r in rows:
         tokens = r["output_ids"]
-        for i in paragraph_ends(tokens, close_id, open_id, decode, args.max_cuts):
-            text = tok.decode([t for t in tokens[:i + 1] if t not in (open_id, close_id)]).strip()
-            seqs.append(r["prompt_ids"] + tok.encode("<think>\n" + text + "\n</think>\n\n", add_special_tokens=False))
+        ends = paragraph_ends(tokens, close_id, open_id, decode, args.max_cuts)
+        if not ends:
+            continue
+        for i in ends:
+            seqs.append(r["prompt_ids"] + closed(tokens[:i + 1]))
             items.append((id(r), i))
-    scores = judge(last_states(seqs))
-    by_answer = {}
-    for (rid, i), p in zip(items, scores):
-        by_answer.setdefault(rid, []).append((i, float(p)))
-    (out / "teacher.json").write_text(json.dumps({"held_out_auc": held_auc, "answers": len(by_answer),
-                                                  "cuts": len(items), "mean_p": float(np.mean(scores)),
-                                                  "share_above_0.9": float(np.mean(scores > 0.9))}))
-    print(f"teacher: {len(by_answer)} answers, {len(items)} paragraph ends, mean p {np.mean(scores):.2f}, "
-          f"{np.mean(scores > 0.8):.0%} above 0.8, {np.mean(scores > 0.9):.0%} above 0.9", flush=True)
+        seqs.append(r["prompt_ids"] + closed(tokens[:tokens.index(close_id)]))  # the full thinking: the natural stop
+        items.append((id(r), None))
+    feats = last_states(seqs)
+    hard_p, soft_p = hard(feats), soft(feats)
+    by_answer, at_end = {}, {}
+    for (rid, i), h, sp in zip(items, hard_p, soft_p):
+        if i is None:
+            at_end[rid] = float(sp)
+        else:
+            by_answer.setdefault(rid, []).append((i, float(h), float(sp)))
+    cut = np.array([i is not None for _, i in items])
+    report = {"judges": grades, "answers": len(by_answer), "cuts": int(cut.sum()),
+              "yes_no_mean_p": float(hard_p[cut].mean()), "soft_mean_success_at_cuts": float(soft_p[cut].mean()),
+              "soft_mean_success_at_end": float(soft_p[~cut].mean())}
+    (out / "teacher.json").write_text(json.dumps(report, indent=1))
+    print(f"teacher: {len(by_answer)} answers, {int(cut.sum())} paragraph ends; yes/no p > 0.9 at "
+          f"{np.mean(hard_p[cut] > 0.9):.0%}; predicted success {soft_p[cut].mean():.2f} at cuts vs "
+          f"{soft_p[~cut].mean():.2f} at the full thinking", flush=True)
     del base
     torch.cuda.empty_cache()
 
-    # 3. one adapter per threshold
+    # 3. one adapter per variant
     from peft import LoraConfig, get_peft_model
-    answers = [(r, by_answer[id(r)]) for r in rows if id(r) in by_answer]
-    for threshold in args.thresholds:
-        target_dir = out / f"t{threshold:g}"
+    answers = [(r, by_answer[id(r)], at_end[id(r)]) for r in rows if id(r) in by_answer]
+    for variant in args.variants:
+        kind, value = variant.split(":")
+        value = float(value)
+        target_dir = out / f"{kind}{value:g}"
         if (target_dir / "adapter_config.json").exists():
             continue
         torch.manual_seed(args.seed)
@@ -167,14 +196,19 @@ def main():
         model.train()
         total, n, before, after = 0.0, 0, [], []
         for step, k in enumerate(order):
-            r, cuts = answers[k]
+            r, cuts, end_p = answers[k]
             stop = r["output_ids"].index(close_id)
             ids = torch.tensor([r["prompt_ids"] + r["output_ids"][:stop]], device="cuda")
             hidden = model.base_model.model.model(input_ids=ids).last_hidden_state[0]
-            positions = torch.tensor([len(r["prompt_ids"]) + i for i, _ in cuts], device="cuda")
+            positions = torch.tensor([len(r["prompt_ids"]) + i for i, _, _ in cuts], device="cuda")
             logp = torch.log_softmax(model.base_model.model.lm_head(hidden[positions]).float(), -1)[:, close_id]
             log1m = torch.log1p(-torch.exp(logp).clamp(max=1 - 1e-6))
-            target = torch.tensor([sharpen(p, threshold, args.temperature) for _, p in cuts], device="cuda")
+            if kind == "fixed":
+                goals = [sharpen(h, value, args.temperature) for _, h, _ in cuts]
+            else:  # as right as finishing (minus the margin), never below --min-p
+                bar = max(end_p - value, args.min_p)
+                goals = [sharpen(sp, bar, args.temperature) for _, _, sp in cuts]
+            target = torch.tensor(goals, device="cuda")
             loss = -(target * logp + (1 - target) * log1m).mean()
             (loss / args.accumulate).backward()
             if (step + 1) % args.accumulate == 0 or step == len(order) - 1:
@@ -187,10 +221,10 @@ def main():
             if step >= len(order) - 50:
                 after.append(float(torch.exp(logp).mean()))
             if (step + 1) % 500 == 0:
-                print(f"t{threshold:g}: {step + 1}/{len(order)} answers, loss {total / n:.4f}", flush=True)
+                print(f"{variant}: {step + 1}/{len(order)} answers, loss {total / n:.4f}", flush=True)
                 total, n = 0.0, 0
         model.save_pretrained(target_dir)
-        print(f"t{threshold:g}: saved {target_dir}; mean p(</think>) at paragraph ends {np.mean(before):.3f} (first 50) "
+        print(f"{variant}: saved {target_dir}; mean p(</think>) at paragraph ends {np.mean(before):.3f} (first 50) "
               f"-> {np.mean(after):.3f} (last 50)", flush=True)
         del model, optimizer
         torch.cuda.empty_cache()

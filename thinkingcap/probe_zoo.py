@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-from probe_knows import (Data, auc, fit, fit_mlp, folds_by_question, load_meta, pick_threshold, reply_groups,
+from probe_knows import (Data, auc, calibration, fit, fit_mlp, folds_by_question, load_meta, pick_threshold, reply_groups,
                          summarize, tradeoff_lines)
 
 
@@ -281,6 +281,14 @@ def main():
                 cells.append(auc(scores[n][m], data.label[m]))
             lines.append(f"{n:<{width}}" + "".join(f"{c:>13.3f}" for c in cells[:-1]) + f"{cells[-1]:>8.3f}")
         lines.append("")
+    lines += ["Calibration, TEST, every cut (soft target = real success rate k/20; lower is better): "
+              "log loss / Brier / ECE", f"{'classifier':<{width}}{'log loss':>10}{'Brier':>8}{'ECE':>8}"]
+    for n in names:
+        sc = np.asarray(test_s[n], float)
+        if np.isfinite(sc).all() and sc.min() >= 0 and sc.max() <= 1:
+            ll, br, ece = calibration(sc, test.success)
+            lines.append(f"{n:<{width}}{ll:>10.3f}{br:>8.3f}{ece:>8.3f}")
+    lines += ["(yes/no classifiers predict P(20/20 safe), not the success rate: their ECE is expected to be worse)", ""]
     lines += tradeoff_lines(dev, dev_s, test, test_s, names, sources) + [""]
     for title, allow in (("each type's allowance", dict(s.split("=") for s in args.allow.split(","))),
                          ("2 points for every type", {"default": "2"})):

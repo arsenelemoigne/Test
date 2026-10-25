@@ -145,8 +145,9 @@ def main():
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[40, 60], help="drpo: checkpoints scored on fresh x8")
     parser.add_argument("--teach-questions", type=int, default=3000, help="teach: fresh questions answered once each")
-    parser.add_argument("--teach-thresholds", type=float, nargs="*", default=[0.8, 0.9],
-                        help="teach: judge-score thresholds for the sharpened target (one model each)")
+    parser.add_argument("--teach-variants", nargs="*", default=["fixed:0.9", "rel:0.05"],
+                        help="teach: stop targets, one model each (fixed:T = yes/no judge above T; rel:M = soft judge's "
+                             "predicted success within M of the full thinking's)")
     parser.add_argument("--teach-lots", nargs="*", default=["plotB", "plotB2", "plotB3"],
                         help="teach: label lots of --start the judge is fitted on")
     parser.add_argument("--lot-samples", type=int, default=8, help="callot: full replies per question (20 = a reliable question rate)")
@@ -1501,7 +1502,7 @@ def drpo(args):
 def teach(args):
     """Experiment 5, the judge as teacher (teach_stop.py): the stopping judge is fitted on --teach-lots of --start, the
     model answers a fresh mixed pool once per question, the judge scores every paragraph end of those answers, and a
-    LoRA trains the model's own p("</think>") there toward the sharpened score (one model per --teach-thresholds).
+    LoRA trains the model's own p("</think>") there toward the sharpened target (one model per --teach-variants).
     Each model is merged and scored on the fresh set x8."""
     name, base = args.name, args.start
     if base.startswith("models/") and not (Path(base) / "config.json").exists():
@@ -1517,18 +1518,20 @@ def teach(args):
            "--dtype", args.dtype, "--generate-only", "--chunk", 300, "--max-questions", min(n, args.teach_questions))
     out = Path("adapters") / f"{name}-teach"
     py("teach_stop.py", "--model", base, "--cal", *[BON / f"pairs-{l}" / "cal" for l in args.teach_lots],
-       "--rollouts", probe / "rollouts.jsonl", "--out", out, "--thresholds", *args.teach_thresholds, "--dtype", args.dtype)
+       "--rollouts", probe / "rollouts.jsonl", "--out", out, "--variants", *args.teach_variants, "--dtype", args.dtype)
     print((out / "teacher.json").read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
-    for threshold in args.teach_thresholds:
-        adapter = out / f"t{threshold:g}"
-        model = Path("models") / f"{name}-t{threshold:g}"
+    for variant in args.teach_variants:
+        kind, value = variant.split(":")
+        tag = f"{kind}{float(value):g}"
+        adapter = out / tag
+        model = Path("models") / f"{name}-{tag}"
         if not (model / "config.json").exists():
             py("merge.py", "--model", base, "--out", model, "--adapters", f"{adapter}:1")
-        res = ROOT / f"f8-{name}-t{threshold:g}"
+        res = ROOT / f"f8-{name}-{tag}"
         evaluate(res, samples=8, questions=fresh_q, model=model)
-        print(score_line(f"{name}-t{threshold:g} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+        print(score_line(f"{name}-{tag} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
 
 
 def wronglen(args):

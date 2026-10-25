@@ -1469,3 +1469,13 @@ calls own_conf (it recomputes files without the variants). Zoo B4 (and zbench) w
 **24 Oct ~20:10, runtime 2 ended mid lot B3 labelling** (27% of 148,720 forced answers; log stops with no error; gone from
 Colab's session list at 21:24). The 20-answer generations are on Drive; labelling has no resume, so a relaunch redoes it
 (~2.5 h), then benchlot, zbench, drpo1. Runtime 1 still on lot B4 (KodCode batch 2, 35% at ~21:20).
+
+**25 Oct, cross-entropy ideas (user, from the "Compression is intelligence part 2" video) added to the pipeline.**
+(1) Soft judge: experiment 5 now also fits a judge on every cut's real success rate k/20 with cross-entropy (the yes/no
+judge drops the 16-19/20 cuts), so its output is a calibrated "right this often if it stops here". (2) Relative stop
+target: variant rel:0.05 trains p("</think>") toward sigmoid((soft success here - max(soft success of the full thinking
+- 0.05, 0.3)) / 0.03), i.e. stop where stopping is as right as finishing (the user's per-question rule; 0.3 floor keeps
+expected failures out, "stop circling" stays a separate test); it replaces the fixed-0.8 model, so teach1 still trains two
+(fixed:0.9, rel:0.05). (3) Calibration grading: teach_stop prints held-out AUC, log loss, Brier and calibration error
+for both judges; probe_zoo adds a TEST calibration table (log loss / Brier / ECE against k/20) for every classifier, so zoo
+B4 reports it. Extra compute: one judge pass per answer on the full thinking (~5%); everything else is arithmetic.

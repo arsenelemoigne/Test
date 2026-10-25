@@ -168,6 +168,19 @@ def load_meta(cal, rollouts, keep, fractions, tokenizer):
     return meta, sequences, positions
 
 
+def calibration(scores, success, bins=10):
+    """How well predicted probabilities match the real success rate (k/20) of each cut: log loss (cross-entropy against
+    the soft target), Brier score, and expected calibration error (|mean predicted - mean real| over 10 equal-width bins,
+    weighted by bin size). Lower is better for all three; meaningful only for scores in [0, 1]."""
+    p = np.clip(np.asarray(scores, float), 1e-6, 1 - 1e-6)
+    y = np.asarray(success, float)
+    log_loss = float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
+    brier = float(np.mean((p - y) ** 2))
+    idx = np.minimum((p * bins).astype(int), bins - 1)
+    ece = float(sum(abs(p[idx == b].mean() - y[idx == b].mean()) * (idx == b).mean() for b in range(bins) if (idx == b).any()))
+    return log_loss, brier, ece
+
+
 def auc(scores, labels):
     """Area under the ROC curve, ties counted half."""
     scores, labels = np.asarray(scores, float), np.asarray(labels, bool)
