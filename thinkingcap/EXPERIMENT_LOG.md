@@ -1833,3 +1833,15 @@ MBPP+, 5 on IFEval, 11-17 on two BFCL subsets, and nothing (it even hurts) on BF
   restores an adapter / pool trained on the other runtime instead of retraining.
 - drpo2 (runtime 2, after sb1): DRPO from rc1-rl-40 again, gentler: lambda 0.5 (was 0.2; larger = softer length preference)
   and lr 5e-6 (was 1e-5), new pool (seed 64), per-type batch accuracy logged, checkpoints every 10 steps each scored on fresh x8.
+
+**25 Oct, where thinking HURTS (user question) and RL from the raw Qwen with math protected (queued).** Thinking makes results
+worse on BFCL irrelevance (thinking OFF 87.2% vs ON 80.9%, +6.3), and cut-curve data point the same way for parts of the
+instruction prompts (practice IFEval-like: forced answer after 0-20% of the thinking 0.77 vs 0.73 full; the last fifth is the
+worst, 0.66; rc1-rl-40 on IFEval: 0.14 at 80-100%) and for late tool calls (Hermes 0.18 at 80-100% vs 0.49 full). Thinking is
+essential on SVAMP (-72 without it). Strategy that follows: protect math, cut everything else hard.
+Built (syntax-checked only): rl_train.py --protect-sources (those groups get NO length pressure: DRPO weights right replies
+equally, ShorterBetter's length term is 0; they are still trained to be right) and --guard-drop G (per type: stop when the mean
+batch accuracy of the last 5 steps falls more than G below the first 5 steps'; that checkpoint is kept and scored). track.py
+drpo --rl-protect / --rl-guard. Queued drpo3 (runtime 2, after drpo2): from the RAW Qwen, math protected (gsm_ic, gsm_plus,
+gsm8k*), lambda 0.5, lr 5e-6, DLER dynamic sampling 1.5, guard 0.06, every 10-step checkpoint scored on fresh x8.
+Already queued that is related: drpo0 (runtime 1, another session: raw Qwen, DRPO lambda 0.2, dynamic sampling, no protection).

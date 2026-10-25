@@ -124,6 +124,12 @@ def parse_arguments():
                              "with at least one right reply (an all-wrong group carries no correctness signal), keeping "
                              "--questions of them (0: off)")
     parser.add_argument("--objective", choices=["grpo", "drpo"], default="grpo")
+    parser.add_argument("--protect-sources", default="",
+                        help="comma list of sources (e.g. math) given NO length pressure: right replies weighted equally "
+                             "(drpo) / correctness-only reward (shorterbetter); they are still trained to stay right")
+    parser.add_argument("--guard-drop", type=float, default=0.0,
+                        help="stop training when a data type's batch accuracy (mean of its last 5 steps) falls more than "
+                             "this below its mean over the first 5 steps (e.g. 0.06); the last checkpoint is kept")
     parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight temperature (smaller: shorter)")
     parser.add_argument("--drpo-tau", type=float, default=10.0, help="drpo: log-sum-exp temperature over wrong replies")
     parser.add_argument("--drpo-delta", type=float, default=1e-4, help="drpo: trust region size")
@@ -532,6 +538,7 @@ def main():
         replies = sampler.sample(prompts, current, args.offset + step, model, no_think)
 
         by_type = {}
+        protect = set(filter(None, args.protect_sources.split(",")))
         jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
                            "no_think_correct": 0, "no_think_replies": 0}
         grades = grade_all(questions, replies, tokenizer, eos, args.grader)
@@ -547,7 +554,8 @@ def main():
                 alpha = args.alpha * (sum(correct) / len(correct) if args.adaptive else 1.0)
                 rewards = arora_rewards(thinking, correct, alpha)
             elif args.reward == "shorterbetter":
-                rewards = shorterbetter_rewards([len(r) for r in group], correct, args.sb_alpha, args.sb_beta)
+                rewards = shorterbetter_rewards([len(r) for r in group], correct, args.sb_alpha,
+                                                0.0 if question.get("source") in protect else args.sb_beta)
             else:
                 rewards = length_rewards([len(r) for r in group], correct, args.alpha)
             skipped = [i >= len(group) - no_think for i in range(len(group))]
@@ -587,8 +595,9 @@ def main():
             stats["signal"] = 0
             for members in by_group.values():
                 scores = [float(old_logps[id(j[1])].mean()) if j[1] else 0.0 for j in members]
+                protected = members[0][5].get("source") in protect
                 coef = drpo_weights([len(j[1]) for j in members], [j[2] for j in members], scores,
-                                    args.drpo_lambda, args.drpo_tau)
+                                    1e9 if protected else args.drpo_lambda, args.drpo_tau)
                 for j, c in zip(members, coef):
                     j[3] = c
                 stats["signal"] += any(c != 0 for c in coef)
@@ -706,6 +715,20 @@ def main():
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)
         print(json.dumps(entry), flush=True)
+        if args.guard_drop > 0 and len(log) >= 10:  # per-type accuracy guard (user: strict checks per data type)
+            def acc(entries, kind):
+                c = sum(e["by_type"][kind]["accuracy"] * e["by_type"][kind]["replies"] for e in entries if kind in e["by_type"])
+                n = sum(e["by_type"][kind]["replies"] for e in entries if kind in e["by_type"])
+                return c / n if n >= 40 else None
+            fallen = []
+            for kind in sorted({k for e in log for k in e["by_type"]}):
+                first, last = acc(log[:5], kind), acc(log[-5:], kind)
+                if first is not None and last is not None and last < first - args.guard_drop:
+                    fallen.append(f"{kind} {first:.2f} -> {last:.2f}")
+            if fallen:
+                print(f"guard: stopping at step {step + 1}, accuracy fell: {'; '.join(fallen)}", flush=True)
+                model.save_pretrained(out / f"step-{step + 1}")
+                break
 
     model.save_pretrained(out)
     (out / "rl_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in log))
