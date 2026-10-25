@@ -1485,3 +1485,10 @@ mounted but its queue sat in a FULL restore (benchlot/drpo/teach were not on the
 model was copied from Drive) and the page lost it. Fix 11f3e5b: those stages use the light restore. Fresh runtime at ~02:45:
 light restore 12 min, then lot B3 labelling restarted (455 questions / 792 replies / 7,436 cuts x 20) at ~02:58.
 Runtime 1: lot B4 labelled (647 questions / 921 replies / 7,651 cuts x 20; contamination dropped 15), grading at 02:30.
+
+**25 Oct ~03:50, both runtimes gone.** Colab's session list: no active sessions. Runtime 1's log stops at ~02:44 (lot B4 in its
+grading step, after the 153,020 forced answers); runtime 2's queue cell "ended unsuccessfully" after 1,606 s (~03:13, lot B3
+labelling at 9%), no error text, no out-of-memory sign. Both dying within half an hour points at an account-level stop
+(compute units or a usage limit), not the code; not verified (the plan page could not be read). Nothing restarted overnight:
+relaunching needs the user's Drive consent click and the unit balance checked first. On relaunch, finished generations are
+reused (lot B3/B4 answers on Drive); labelling redoes its forced answers unless verdicts.jsonl was saved.
