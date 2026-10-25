@@ -1492,3 +1492,16 @@ labelling at 9%), no error text, no out-of-memory sign. Both dying within half a
 (compute units or a usage limit), not the code; not verified (the plan page could not be read). Nothing restarted overnight:
 relaunching needs the user's Drive consent click and the unit balance checked first. On relaunch, finished generations are
 reused (lot B3/B4 answers on Drive); labelling redoes its forced answers unless verdicts.jsonl was saved.
+
+**25 Oct ~05:40 (CET), lot B3 labelled (original Qwen, 20 forced answers per paragraph cut; right AND wrong replies).**
+
+| source | replies (right) | cuts | forced-answer success by share of thinking kept: 0-20 / 20-40 / 40-60 / 60-80 / 80-100 / full | perfect stop: saved / accuracy gained |
+|---|---|---|---|---|
+| gsm_ic | 397 (200) | 4,282 | 0.25 / 0.46 / 0.47 / 0.49 / 0.52 / 0.52 | 66% / +29.5 |
+| gsm_plus | 184 (84) | 2,003 | 0.21 / 0.47 / 0.47 / 0.46 / 0.50 / 0.47 | 71% / +31.8 |
+| ifeval_like | 211 (138) | 1,151 | 0.77 / 0.73 / 0.75 / 0.73 / 0.66 / 0.73 | 61% / +11.4 |
+
+Math: the answer is nearly settled after 20-40% of the thinking (0.46-0.47 vs 0.47-0.52 at the full reply); only the first fifth
+is too early (0.21-0.25). Instructions: stopping in the first fifth is as good as finishing (0.77 vs 0.73), and the last fifth is
+the worst (0.66): extra thinking slightly hurts. A perfect per-reply stop would save 61-71% of thinking and turn many wrong
+replies right (+11 to +32 pts), the ceiling a judge can approach. Runtime 2 moved on to benchlot (240 choosing questions x 8).
