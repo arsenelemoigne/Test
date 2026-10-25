@@ -1677,3 +1677,32 @@ all-wrong group carries no correctness signal), keeping --questions of them; log
 paper warns about repeated self-training) vs drpo1 from rc1-rl-40. Deep research (25 Oct): the best length rewards are
 correctness-gated and normalized per prompt (Arora & Zanette, L1-Max, PLP, LASER, DRPO, Kimi k1.5); all published runs start
 from a model that already reasons (R1-Distill-1.5B / DeepScaleR), none at 0.6B, none outside math.
+
+**25 Oct ~17:00 (CET), zB4bench complete (judge on lots B..B4, MBPP dropped; TEST = bench40, 83 replies with both labels for
+timing).** Pooled TEST AUC: MLP all layers 0.760, ESTAR trajectory learned 0.741, MLP 0.722, MLP + own 0.713, own confidence
+(5 least likely, raw) 0.713. TIMING-ONLY TEST AUC ALL: position 0.814; own confidence 0.845, 5 least likely **0.871**; ESTAR
+label (trajectory trained on "same as final answer") **0.834**; ESTAR trajectory learned 0.826; own confidence learned 0.807;
+MLP + own 0.775; MLP 0.709; MLP all layers 0.697; linear 0.645; attention 0.65-0.68. Per type (timing): SVAMP own 0.96-0.98,
+ESTAR trajectory 0.930, MLP 0.820; MBPP+ own 0.83-0.85, ESTAR label 0.822, MLP 0.617; BFCL ESTAR trajectory **0.798** (own
+5-least 0.721, MLP 0.643; zbench2's MLP 0.806). Stopping simulation (2 pts each type, thresholds from practice): SVAMP every
+learned signal over-stops (19-48 pt losses; raw own confidence 15% / 3.8, least likely 15% / 1.9); MBPP+ 83-91% saved at
+0.8-4.4 (own 5 least likely 91% / 1.3, ESTAR trajectory 91% / 1.6); IFEval own confidence 68% / 1.0; BFCL ESTAR trajectory
+23% / -2.0 (gain), linear 51% / 1.8, MLP 47% / 0.7.
+Reading: more practice data (lot B4) does not help on the benchmark; the hidden-state judges' timing stays below "later is
+safer"; the ESTAR self-confidence features come close to raw own confidence (0.83 vs 0.87) and lead on tools; raw own
+confidence (5 least likely tokens) remains the best timing signal overall, and practice-set thresholds still fail on SVAMP.
+
+**benchA40 (rc1-rl-40's replies to the 240 choosing questions, 8 each, cuts x 20 forced answers; measure only):** 323 replies
+(206 right), 1,096 cuts (vs 1,812 for the original: rc1-rl-40 thinks less).
+
+| benchmark | replies (right) | cuts | success: 0-20 / 20-40 / 40-60 / 60-80 / 80-100 / full | perfect stop: saved / gained |
+|---|---|---|---|---|
+| SVAMP | 59 (37) | 209 | 0.18 / 0.35 / 0.26 / 0.62 / 0.58 / 0.63 | 37% / +10.1 |
+| IFEval | 56 (30) | 124 | 0.58 / 0.55 / 0.48 / 0.63 / 0.14 / 0.53 | 32% / +11.0 |
+| MBPP+ | 57 (28) | 562 | 0.38 / 0.34 / 0.38 / 0.49 / 0.42 / 0.48 | 75% / +12.7 |
+| BFCL | 151 (111) | 201 | 0.52 / 0.69 / 0.50 / 1.00 / - / 0.76 | 15% / +2.3 |
+
+rc1-rl-40 has much less left to cut by stopping than the original (perfect stop SVAMP 37% vs 53%, BFCL 15% vs 51%), except
+code (75%). zAbench (its judge and own confidence on these cuts) is running.
+Schedule change (another session, 1589f05): drpo0 = DRPO from the raw Qwen with DLER dynamic sampling, runtime 1 after zAbench,
+before stopB5 (adds ~8-10 GPU-hours to runtime 1).
