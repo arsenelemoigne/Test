@@ -14,6 +14,8 @@
      rel:M    the soft judge's predicted success here against max(predicted success of the full thinking - M, --min-p):
               stop when stopping here is as right as finishing (the user's per-question rule). --min-p keeps answers
               the judge expects to fail anyway out of the stop targets ("stop circling" is a separate, later test).
+   Math answers (--protect-sources) get target 0 everywhere: the judge, trained on practice math that settles early, stops
+   benchmark math (SVAMP, settles late) far too early (zbench), and stop training spills over across types.
 3. Training: a fresh LoRA on --model; one forward pass per answer; at every scored paragraph end the loss is the binary
    cross-entropy between p("</think>" next) and its target. Nothing else is trained.
 
@@ -62,6 +64,9 @@ def main():
     parser.add_argument("--max-cuts", type=int, default=16)
     parser.add_argument("--variants", nargs="+", default=["fixed:0.9", "rel:0.05"], help="fixed:T or rel:M, one model each")
     parser.add_argument("--min-p", type=float, default=0.3, help="rel: never a stop target below this predicted success")
+    parser.add_argument("--protect-sources", default="gsm_ic,gsm_plus,gsm8k,gsm8k_all",
+                        help="answers of these types are trained toward 'keep thinking' (target 0) at every paragraph end: "
+                             "the judge stops benchmark math (SVAMP) far too early (zbench), and stop training spills over")
     parser.add_argument("--temperature", type=float, default=0.03)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--rank", type=int, default=16)
@@ -180,6 +185,8 @@ def main():
     # 3. one adapter per variant
     from peft import LoraConfig, get_peft_model
     answers = [(r, by_answer[id(r)], at_end[id(r)]) for r in rows if id(r) in by_answer]
+    protected = set(args.protect_sources.split(",")) if args.protect_sources else set()
+    print(f"protected (keep thinking): {sum(r['source'] in protected for r, _, _ in answers)} of {len(answers)} answers", flush=True)
     for variant in args.variants:
         kind, value = variant.split(":")
         value = float(value)
@@ -203,7 +210,9 @@ def main():
             positions = torch.tensor([len(r["prompt_ids"]) + i for i, _, _ in cuts], device="cuda")
             logp = torch.log_softmax(model.base_model.model.lm_head(hidden[positions]).float(), -1)[:, close_id]
             log1m = torch.log1p(-torch.exp(logp).clamp(max=1 - 1e-6))
-            if kind == "fixed":
+            if r["source"] in protected:
+                goals = [0.0] * len(cuts)
+            elif kind == "fixed":
                 goals = [sharpen(h, value, args.temperature) for _, h, _ in cuts]
             else:  # as right as finishing (minus the margin), never below --min-p
                 bar = max(end_p - value, args.min_p)

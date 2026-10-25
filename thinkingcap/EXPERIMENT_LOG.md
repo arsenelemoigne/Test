@@ -1588,3 +1588,9 @@ competitor Lightning McQwen3 SVAMP 66% / -3.8. Benchlot's best-cut ceiling on SV
 real eval sample so they can be compared. zbench2 (runtime 2: lots B+B2+B3) and the new zB4bench (runtime 1, right after zoo
 B4: lots B..B4, MBPP dropped) both test on the 240 choosing benchmark questions (measure only, never trained on), with the
 timing-only AUC and the own-confidence combos; zoo B4 itself keeps the held-out practice test, for the practice-vs-benchmark gap.
+
+**25 Oct, experiment 5 protects math (user).** After zbench (the judge stops SVAMP far too early), teach_stop trains math answers
+(gsm_ic, gsm_plus, gsm8k) toward "keep thinking" (target 0) at every paragraph end instead of following the judge, so the
+spill-over seen in every stop model cannot teach early math stops; code, tools and instructions follow the judge (fixed:0.9)
+or the relative rule (rel:0.05). Math shortening is left to length training (DRPO) and to a math-specific signal (pending
+zbench2's timing-only AUC for own confidence and the combined judges).
