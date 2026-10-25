@@ -1882,3 +1882,11 @@ lost: round 2 retrain -9.7, round 2 on questions 41-80 -7.5, rounds 4 -9.1 / -10
 Live progress for stop teaching (user): teach_stop.py now writes progress-<variant>.jsonl and prints every 100 answers, per
 source: mean p("</think>") where the target says stop vs where it says keep thinking, thinking saved if the model stopped now
 (first paragraph end with p >= 0.5), and the share of those stops at a good place; for plotting during training.
+
+**25 Oct ~23:15 (CET), runtime 1 restarted with the light-restore fix (balround was missing from the light list: the first
+relaunch sat 45 min in a full Drive restore).** mathmatch (mm1) then failed: IndexError mapping benchlot's replies to SVAMP
+questions (probe_curve numbers rows by their line in the whole bench file, not within SVAMP); fixed (tested locally with the real
+layout) and requeued as mm2, next after nt2.
+nt2, original Qwen thinking OFF vs ON (records diff, fresh x8): bfcl irrelevance 80.9 -> 87.2 (+6.2; tokens 195 -> 8, 96% saved);
+bfcl multiple 75.9 -> 58.8 (-17.2; 206 -> 20); bfcl simple 88.1 -> 76.6 (-11.6; 197 -> 24); ifeval 65.6 -> 60.6 (-5.0; 703 -> 284);
+mbpp 46.2 -> 37.2 (-9.1; 2,098 -> 53); svamp 89.7 -> 17.5 (-72.2; 644 -> 10). rc1-rl-40 thinking OFF being scored.

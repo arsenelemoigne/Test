@@ -1653,12 +1653,12 @@ def mathmatch(args):
     sv = [q for q in qs if q["dataset"] == "svamp"]
     raw = {f"svamp-{t['ID']}": t for t in json.loads(Path("questions/raw/svamp.json").read_text())}
     bench = [json.loads(l) for l in Path("data/bench40.jsonl").read_text().splitlines() if l.strip()]
-    order = [r["id"] for r in bench if r["dataset"] == "svamp"]
+    order = [r["id"] for r in bench]  # probe_curve numbers rows by their line in the WHOLE file (source-index)
     rolls = defaultdict(list)
     for l in (BON / "probe-bench40" / "rollouts.jsonl").read_text().splitlines():
         if l.strip():
             r = json.loads(l)
-            if r["source"] == "gsm_plus":
+            if r["source"] == "gsm_plus":  # SVAMP rows carry the practice name gsm_plus (bench_rows.py)
                 rolls[order[int(r["id"].rsplit("-", 1)[1])]].append(r)
     prof = []
     for q in sv:

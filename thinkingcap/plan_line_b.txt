@@ -67,7 +67,7 @@ probezoo --name zAbench --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --
 # user (25 Oct): profile the choosing set's 40 SVAMP questions (ops, kind, length, the original Qwen's accuracy and thinking),
 # pick a GSM8K corpus matched on them (1,200 train + 300 held-out MATH TEST), test the original Qwen on the test part x8,
 # then label 600 of the training part like lots B3/B4
-mathmatch --name mm1 --data-seed 63
+mathmatch --name mm2 --data-seed 63
 # thinking OFF again (nt1 on runtime 2 scored the original but crashed in compare.py, which refuses two runs of one model):
 # the original's thinking-off run is reused; rc1-rl-40 added; per-benchmark accuracy and tokens read from the records
 nothink --name nt2
