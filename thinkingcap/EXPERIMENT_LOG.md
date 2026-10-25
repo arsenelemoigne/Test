@@ -1479,3 +1479,9 @@ expected failures out, "stop circling" stays a separate test); it replaces the f
 (fixed:0.9, rel:0.05). (3) Calibration grading: teach_stop prints held-out AUC, log loss, Brier and calibration error
 for both judges; probe_zoo adds a TEST calibration table (log loss / Brier / ECE against k/20) for every classifier, so zoo
 B4 reports it. Extra compute: one judge pass per answer on the full thinking (~5%); everything else is arithmetic.
+
+**25 Oct ~03:00, runtime 2 relaunched (third try).** 21:34 relaunch: Drive mount failed (consent pop-up unanswered); 01:45 one
+mounted but its queue sat in a FULL restore (benchlot/drpo/teach were not on the light-restore list, so every run, adapter and
+model was copied from Drive) and the page lost it. Fix 11f3e5b: those stages use the light restore. Fresh runtime at ~02:45:
+light restore 12 min, then lot B3 labelling restarted (455 questions / 792 replies / 7,436 cuts x 20) at ~02:58.
+Runtime 1: lot B4 labelled (647 questions / 921 replies / 7,651 cuts x 20; contamination dropped 15), grading at 02:30.
