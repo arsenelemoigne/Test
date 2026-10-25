@@ -69,6 +69,10 @@ probezoo --name zAbench --probe-cal pairs-plotA/cal --probe-extra-from plotA2 --
 # user: DRPO from the RAW Qwen (one clean RL run, no chain), with DLER dynamic sampling (draw 1.5x the questions,
 # train only on groups with a right reply); same fresh MBPP-free pool design, 48 x 8 x 60, checkpoints 40/60 on fresh x8
 drpo --name drpo0 --start Qwen/Qwen3-0.6B --data-seed 59 --kod-file data/kodcode3.jsonl --rl-dynamic 1.5
+# user: stage 1 of a clean recipe = one balanced DPO round from the raw Qwen on its own graded answers (benchmark-
+# matched pool: GSM8K / KodCode / ToolACE+Hermes / IFEval-like, equal weight, no MBPP); shortest right beats longest wrong
+# or truncated (guard) and a right answer >= 1.5x longer (shorten, capped at guard per type); NLL anchor; 3 seeds
+balround --name bal0 --start Qwen/Qwen3-0.6B --data-seed 61 --kod-file data/kodcode3.jsonl --bal-questions 6000 --bal-samples 4 --tg-save-every 25 --dpo-steps 50 100 150 200 --seeds 0 1 2
 targeted --name stopB5 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,toolace,hermes_tools --tg-long none --tg-save-every 5 --dpo-steps 10 15 20 25 30 --seeds 0 1 2
 targeted --name stopB4 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,ifeval_like,toolace,hermes_tools,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 10 --dpo-steps 30 60 90 120 --seeds 0 1 2
 end

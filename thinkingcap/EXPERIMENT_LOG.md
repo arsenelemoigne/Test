@@ -1706,3 +1706,13 @@ rc1-rl-40 has much less left to cut by stopping than the original (perfect stop 
 code (75%). zAbench (its judge and own confidence on these cuts) is running.
 Schedule change (another session, 1589f05): drpo0 = DRPO from the raw Qwen with DLER dynamic sampling, runtime 1 after zAbench,
 before stopB5 (adds ~8-10 GPU-hours to runtime 1).
+
+**25 Oct, target and clean recipe (user).** Goal now: > 50% saved at better than -1 pt, clean (evaluation untouched, no
+test-time gate), short recipe. Public forks read: basta/lightning-mcqwen3 47.3% / -0.9 (43.2 / -0.85 without its test-time
+think gate; recipe: Chain-of-Draft prompt distillation SFT -> cut oracle (4 re-answers) -> shorten/guard/hard DPO ->
+NLL-anchored correctness DPO -> layer-21 probe gate in evaluate.py) and michal-bida thinking-compression 47.0% / -0.78 (one
+DPO round from the raw model on own graded samples, benchmark-matched prompts, shortest right vs longest wrong/truncated +
+vs >= 1.5x longer right, balanced per domain; SFT only +4.5%, offline GRPO failed, long pairs alone collapse). Planned
+architecture (ours): raw Qwen -> experiment 5 (own-confidence stop spikes) -> DRPO; the balanced round is the baseline /
+fallback stage 1, queued as balround bal0 (runtime 1, after drpo0): balanced_pairs.py (toy-tested) + dpo.py's NLL anchor
+(already default 1.0), GSM8K instead of GSM-IC/Plus for math, 6,000 questions x 4, 3 seeds, soups 50-200 on fresh x8.

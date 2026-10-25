@@ -55,7 +55,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "balround", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -149,6 +149,8 @@ def main():
     parser.add_argument("--drpo-steps", type=int, default=60, help="drpo: RL steps (--drpo-questions x 8 replies each)")
     parser.add_argument("--drpo-questions", type=int, default=48, help="drpo: questions per step, each used once")
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[40, 60], help="drpo: checkpoints scored on fresh x8")
+    parser.add_argument("--bal-questions", type=int, default=6000, help="balround: fresh benchmark-matched questions")
+    parser.add_argument("--bal-samples", type=int, default=4, help="balround: answers per question")
     parser.add_argument("--teach-questions", type=int, default=3000, help="teach: fresh questions answered once each")
     parser.add_argument("--teach-variants", nargs="*", default=["rel:0.05", "rel:0.1"],
                         help="teach: stop targets, one model each (fixed:T = yes/no judge above T; rel:M = soft judge's "
@@ -1449,14 +1451,14 @@ def benchlot(args):
     print((cal / "summary.txt").read_text(), flush=True)
 
 
-def mixed_pool(name, need, data_seed, kod_file):
+def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16):
     """A fresh question pool mixed like the evaluation (GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train,
     KodCode), shuffled so every batch mixes the types; earlier draws removed, contamination-checked."""
     import random
     pool = Path(f"data/rl-{name}-mixed.jsonl")
     if not pool.exists():
         raw = Path(f"data/rl-{name}-raw.jsonl")
-        per = {"gsm_ic": 0.17, "gsm_plus": 0.17, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1}  # no MBPP (user)
+        per = mix or {"gsm_ic": 0.17, "gsm_plus": 0.17, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1}  # no MBPP (user)
         rows = []
         for i, (source, share) in enumerate(per.items()):
             part = Path(f"data/rl-{name}-{source}-raw.jsonl")
@@ -1472,7 +1474,7 @@ def mixed_pool(name, need, data_seed, kod_file):
                     for l in p.read_text().splitlines() if l.strip()}
         kod = [json.loads(l) for l in kod_file.read_text().splitlines() if l.strip()]
         random.Random(data_seed).shuffle(kod)
-        rows += [r for r in kod if text(r) not in answered][:int(need * 0.16) + 50]  # code share incl. the former MBPP 6%
+        rows += [r for r in kod if text(r) not in answered][:int(need * kod_share) + 50]  # code share (default incl. the former MBPP 6%)
         used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal",
                 "rl-", "lot-")) and "raw" not in p.name and p != pool]
         seen = {text(r) for p in used for l in p.read_text().splitlines() if l.strip()
@@ -1559,6 +1561,52 @@ def teach(args):
         res = ROOT / f"f8-{name}-{tag}"
         evaluate(res, samples=8, questions=fresh_q, model=model)
         print(score_line(f"{name}-{tag} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+
+
+def balround(args):
+    """Stage 1 of the clean recipe: one balanced DPO round from the raw model on its own graded answers. A fresh pool
+    matched to the four benchmarks with equal weight (GSM8K, simpler and closer to SVAMP than GSM-IC/Plus; KodCode;
+    ToolACE + Hermes with no-fit cases; IFEval-like; no MBPP; contamination-checked, earlier draws removed); --start
+    answers each question --bal-samples times; balanced_pairs.py: shortest right beats the longest wrong or truncated
+    answer (guard) and beats a right answer >= 1.5x longer (shorten), shorten capped at guard per type; DPO with the NLL
+    anchor (dpo.py default), --seeds, soups at --dpo-steps scored on the fresh set x8."""
+    name, base = args.name, args.start
+    mix = {"gsm8k_all": 0.25, "ifeval_like": 0.25, "toolace": 0.17, "hermes_tools": 0.08}
+    pool = mixed_pool(name, args.bal_questions, args.data_seed, args.kod_file, mix=mix, kod_share=0.25)
+    probe = BON / f"probe-{name}"
+    if not (probe / "rollouts.jsonl").exists():
+        n = sum(1 for l in pool.read_text().splitlines() if l.strip())
+        py("probe_curve.py", "--data", pool, "--per-source", 100000, "--samples", args.bal_samples, "--model", base,
+           "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+           "--max-questions", min(n, args.bal_questions))
+    pairs = BON / f"pairs-{name}"
+    if not (pairs / "pairs.jsonl").exists():
+        py("balanced_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--out", pairs)
+    print((pairs / "summary.txt").read_text(), flush=True)
+    rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    start = Path("adapters") / f"fresh-{name}"
+    if not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", base, "--out", start)
+    for seed in args.seeds:
+        adapter = Path("adapters") / f"{name}-s{seed}"
+        if not (adapter / "adapter_config.json").exists():
+            py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+               "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.tg_save_every,
+               "--epochs", 1, "--dtype", args.dtype, "--seed", seed)
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for step in args.dpo_steps:
+        members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+        members = [m for m in members if (m / "adapter_config.json").exists()]
+        if not members:
+            continue
+        model = Path("models") / f"{name}-soup-{step}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", *[f"{m}:{1 / len(members):.6f}" for m in members])
+        out = ROOT / f"f8-{name}-soup-{step}"
+        evaluate(out, samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{name}-soup-{step} (fresh 240 x 8)", out, base=ROOT / "f8-base"), flush=True)
 
 
 def wronglen(args):
