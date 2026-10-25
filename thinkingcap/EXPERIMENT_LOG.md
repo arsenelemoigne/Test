@@ -1908,3 +1908,11 @@ Thinking 472 -> ~95 tokens; batch accuracy 0.62 -> 0.27-0.42 at steps 28-33; per
 at the start), gsm_plus 0.04-0.19 (0.42-0.75), kodcode 0.16-0.26 (0.33-0.65), toolace 0.07-0.60. beta 0.005 (5x the paper's,
 chosen for our shorter replies) is far too strong. Also seen: steps 22-30 drew only gsm_ic / ifeval_like questions (the pool's
 type mix is not even along the run). No guard was set on sb1; its 10/20/30 checkpoints are saved and are scored after step 60.
+
+**26 Oct ~01:00 (CET), RL batch mix bug found and fixed (user: double-check the shuffling).** rl_train.py's balanced_order
+interleaved the pool round-robin by source: every step got the SAME count of each source (not the evaluation-like mix the pool
+was built with), and once the smaller sources ran out, the remaining steps held only the larger ones (sb1 steps 22-30: math and
+instructions only). drpo1 and sb1 were trained this way (their later steps were skewed). Now each row of a source with n rows is
+placed at (k + u) / n and the pool is sorted by position: every batch holds the sources in their pool proportions from the first
+step to the last (checked on a 4,368-row pool, 72 drawn per step: steps 0, 20, 40, 59 each ~12/12/17/15/8/8 for gsm_ic /
+gsm_plus / ifeval_like / toolace / hermes / kodcode). drpo3 and drpo2 (not started) use the fix.

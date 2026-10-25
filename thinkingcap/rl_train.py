@@ -249,20 +249,21 @@ def settle_redundant(p_gold_by_cut, thinking_len, threshold):
 
 
 def balanced_order(rows, rng):
-    """Rows shuffled within each source, then interleaved round-robin, so every step sees every
-    source in equal measure however unequal their sizes; --seed picks a different slice."""
+    """Rows shuffled within each source, then spread so that EVERY stretch of the order (each step's batch) holds the
+    sources in their pool proportions from the first step to the last: row k of a source with n rows is placed at
+    (k + u) / n, u uniform in [0, 1), and all rows are sorted by that position. (The former round-robin gave every source
+    the same count per step until the smaller ones ran out, after which steps held only the larger sources: sb1's steps
+    22-30 were all math and instructions.)"""
     by_source = {}
     for row in rows:
         by_source.setdefault(row["source"], []).append(row)
-    queues = []
+    placed = []
     for source in sorted(by_source):
-        rng.shuffle(by_source[source])
-        queues.append(by_source[source])
-    order, index = [], 0
-    while any(index < len(q) for q in queues):
-        order += [q[index] for q in queues if index < len(q)]
-        index += 1
-    return order
+        group = by_source[source]
+        rng.shuffle(group)
+        placed += [((k + rng.random()) / len(group), row) for k, row in enumerate(group)]
+    placed.sort(key=lambda x: x[0])
+    return [row for _, row in placed]
 
 
 def batch_logps(model, rows, device, entropies=None):
