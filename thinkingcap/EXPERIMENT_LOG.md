@@ -1902,3 +1902,9 @@ multiple +43% / -5.6; simple +41% / -0.3; ifeval +53% / -4.7; mbpp +67% / -2.8; 
 mathmatch mm2 failed again (benchlot's generate-only rollouts carry output_ids, not a thinking count: now read from the position
 of "</think>"; tested locally) and lot B5 failed for want of its file; both requeued (mm3; plotB5 with a changed line) after
 stopB5, which is running.
+
+**26 Oct ~00:30 (CET), sb1 (ShorterBetter reward, from rc1-rl-40) is collapsing (per-type batch logging, step 33 of 60).**
+Thinking 472 -> ~95 tokens; batch accuracy 0.62 -> 0.27-0.42 at steps 28-33; per type at steps 31-33: gsm_ic 0.28-0.42 (0.80-0.96
+at the start), gsm_plus 0.04-0.19 (0.42-0.75), kodcode 0.16-0.26 (0.33-0.65), toolace 0.07-0.60. beta 0.005 (5x the paper's,
+chosen for our shorter replies) is far too strong. Also seen: steps 22-30 drew only gsm_ic / ifeval_like questions (the pool's
+type mix is not even along the run). No guard was set on sb1; its 10/20/30 checkpoints are saved and are scored after step 60.
