@@ -1522,3 +1522,20 @@ practice GSM-IC/Plus reach their final level by 20-40%), so a judge trained on p
 measures this). Code and tools: early cuts are about as good as finishing (MBPP+ 0.46-0.53 vs 0.50; BFCL 0.70 vs 0.75).
 IFEval: early cuts a little below the full reply (0.50-0.56 vs 0.61). Perfect-stop ceiling on the benchmark: 51-84% saved.
 Runtime 2 now on zbench (features for lots B/B2/B3, then the judge tested on these 240 questions).
+
+**25 Oct ~07:45 (CET), lot B4 labelled (code + tools, original Qwen, 20 forced answers per cut).**
+
+| source | replies (right) | cuts | success: 0-20 / 20-40 / 40-60 / 60-80 / 80-100 / full | perfect stop: saved / gained |
+|---|---|---|---|---|
+| kodcode | 466 (241) | 5,116 | 0.46 / 0.50 / 0.46 / 0.47 / 0.50 / 0.52 | 79% / +22.9 |
+| hermes_tools | 301 (144) | 1,768 | 0.27 / 0.44 / 0.41 / 0.29 / 0.18 / 0.49 | 72% / +9.1 |
+| toolace | 136 (67) | 569 | 0.35 / 0.46 / 0.49 / 0.41 / 0.42 / 0.54 | 46% / +6.3 |
+| mbpp_train (dropped downstream) | 18 (8) | 198 | 0.26 / 0.28 / 0.34 / 0.39 / 0.42 / 0.44 | 77% / +9.2 |
+
+Code: success is flat (0.46-0.52) wherever the thinking is cut, so most code thinking is removable (perfect stop 79%).
+Tools: a forced answer late in the thinking is worse than the full reply (Hermes 0.18 at 80-100% vs 0.49): cutting tool calls
+mid-reasoning hurts, the safe window is early (20-60%). Runtime 1 now on zoo B4 (lots B+B2+B3+B4, MBPP dropped).
+
+**zbench, first lines (judge trained on lots B+B2+B3 = 2,616 questions / 23,657 cuts; TEST = the 240 benchmark questions'
+1,812 cuts):** position dev AUC 0.722 -> test 0.508; linear dev 0.875 -> test 0.674; linear on the real success rate 0.822 ->
+0.609. A large drop from practice questions to the benchmark (rest of the zoo pending).
