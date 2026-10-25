@@ -1569,13 +1569,36 @@ def nothink(args):
             evaluate(think, samples=8, questions=fresh_q, model=None if tag == "base" else m)
         out = ROOT / f"f8-{tag}-nothink"
         if not (out / "results.json").exists():
+            drive_sync("restore", only=[f"runs/mvtf/{out.name}"])  # scored on the other runtime?
+        if not (out / "results.json").exists():
             shutil.rmtree(out, ignore_errors=True)
             py("evaluate_nothink.py", "--questions", fresh_q, "--samples", 8, "--out", out,
                *([] if tag == "base" else ["--model", m]))
-        print(score_line(f"{tag} with thinking OFF vs the original thinking (fresh 240 x 8)", out, base=ROOT / "f8-base"),
+        print(raw_diff(f"{tag} with thinking OFF vs the original thinking (fresh 240 x 8)", out, ROOT / "f8-base"),
               flush=True)
         if tag != "base":
-            print(score_line(f"{tag} with thinking OFF vs {tag} thinking (fresh 240 x 8)", out, base=think), flush=True)
+            print(raw_diff(f"{tag} with thinking OFF vs {tag} thinking (fresh 240 x 8)", out, think), flush=True)
+
+
+def raw_diff(name, out, base):
+    """Per-benchmark accuracy and mean reply tokens of two scored runs, read from their records (compare.py refuses
+    two runs of the same model, which is exactly the thinking ON vs OFF case)."""
+    def load(d):
+        acc, tok = defaultdict(list), defaultdict(list)
+        for l in (Path(d) / "records.jsonl").read_text().splitlines():
+            if l.strip():
+                r = json.loads(l)
+                acc[r["dataset"]].append(float(bool(r.get("correct"))))
+                tok[r["dataset"]].append(r["output_tokens"])
+        return acc, tok
+    (a1, t1), (a0, t0) = load(out), load(base)
+    lines = [f"== {name}"]
+    for ds in sorted(a0):
+        m = lambda v: sum(v) / max(1, len(v))
+        lines.append(f"   {ds:<20} accuracy {100 * m(a0[ds]):5.1f} -> {100 * m(a1.get(ds, [])):5.1f} "
+                     f"({100 * (m(a1.get(ds, [])) - m(a0[ds])):+5.1f}); tokens {m(t0[ds]):6.0f} -> {m(t1.get(ds, [])):6.0f} "
+                     f"({1 - m(t1.get(ds, [])) / max(1e-9, m(t0[ds])):+.0%} saved)")
+    return "\n".join(lines)
 
 
 def op_kind(expr):

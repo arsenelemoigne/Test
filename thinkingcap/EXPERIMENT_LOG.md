@@ -1804,3 +1804,25 @@ and stop teaching. Known limit: SVAMP is ~76% one-operation (whole set; 31/40 in
 one-step problems (~330 usable), so every one-step problem is taken and the rest are two-step: the corpus is ~22% one-step.
 SVAMP whole-set composition (looked up only to describe it): Subtraction 531, Addition 195, Common-Division 166,
 Multiplication 108; one operation 762, two 237. Tested locally on fake model outputs (selection, split, tables).
+
+**25 Oct ~20:00 (CET), drpo1 checkpoints on fresh x8 (DRPO from rc1-rl-40):**
+
+| checkpoint | tokens saved | accuracy | svamp | ifeval | mbpp | bfcl irr / mult / simple |
+|---|---|---|---|---|---|---|
+| step 20 | 61.7% | **-4.9** | +74% / -10.0 | +49% / -5.0 | +69% / -1.9 | +54% / -1.6, +46% / -6.6, +42% / -0.3 |
+| step 40 | 73.3% | -6.9 | +80% / -16.2 | +66% / -7.2 | +83% / -2.5 | +60% / +1.6, +52% / -7.2, +50% / +0.6 |
+| step 60 | 78.7% | -6.0 | +85% / -14.1 | +73% / -5.9 | +88% / -3.1 | +64% / +2.8, +55% / -5.0, +53% / -0.3 |
+| (rc1-rl-40, start) | 53.9% | -2.1 | +65% / -4.1 | +46% / -0.6 | +59% / -1.9 | +41-45% / -1.2.. |
+
+Every checkpoint is outside the limit; even step 20 loses 10 points on SVAMP and ~6 on IFEval / BFCL multiple. DRPO at lambda
+0.2 / lr 1e-5 overshoots within the first 20 steps. A soup of the three checkpoints cannot repair math (all three lose it);
+the merged candidate worth testing is rc1-rl-40 + half of step 20 (step-20 adapter at weight 0.5, i.e. halfway back to the
+start), or a gentler rerun (lambda higher / lr 5e-6) with every 10-step checkpoint scored.
+
+**nothink nt1 (runtime 2): the original Qwen with thinking OFF, fresh x8** (it then crashed in compare.py, which refuses two
+runs of one model; replaced by a records-based diff, nt2 queued on runtime 1 for rc1-rl-40). Accuracy thinking ON (from the
+drpo1 deltas, f8-base) -> OFF; mean reply tokens OFF: bfcl irrelevance 80.9 -> 87.2 (+6.3; 7.9 tokens); bfcl multiple 76.0 ->
+58.8 (-17.2; 20.5 tokens, 11.9% unreadable); bfcl simple 88.1 -> 76.6 (-11.5; 24.3 tokens, 9.4% unreadable); ifeval 65.6 ->
+60.6 (-5.0; 284 tokens); mbpp 46.3 -> 37.2 (-9.1; 53 tokens); **svamp 89.6 -> 17.5 (-72; 9.7 tokens, 24.7% unreadable)**.
+Thinking is worth ~72 points on SVAMP (part of it format: a quarter of no-thinking answers miss the "Final answer" line), 9 on
+MBPP+, 5 on IFEval, 11-17 on two BFCL subsets, and nothing (it even hurts) on BFCL irrelevance.
