@@ -1959,3 +1959,18 @@ lr 5e-6, dynamic sampling, proportional batch mix). teach1's pool gets the same 
 kodcode 707, ifeval_like 693, hermes_tools 478 (math 44%; the drpo3 pool had 54% math, 2% code and no Hermes). The contamination
 check (a 30% 8-gram share or a shared 13-word run) dropped and listed its flagged rows. Training: raw Qwen, DRPO λ 0.5, lr 5e-6, math
 protected, guard 0.06, a checkpoint every 5 steps.
+
+**stopB5 final (GPU 1), fresh 240 x 8, cut / accuracy vs original Qwen:**
+
+| soup | all | bfcl irrel. | bfcl multiple | bfcl simple | ifeval | mbpp | svamp |
+|---|---|---|---|---|---|---|---|
+| 10 | +0.2% / +0.4 | | | | | -4% / +3.4 | -1% |
+| 15 | +5.6% / -0.9 | +4% / -1.9 | +8% / -1.6 | +5% / -0.6 | +11% / -2.2 | -1% / +0.9 | +6% / -0.9 |
+| 20 | +11.9% / -1.2 | +14% / -2.5 | +14% / -1.9 | +14% / +0.6 | +15% / +0.6 | +11% / -1.3 | +8% / -2.8 |
+| 25 | +40.7% / -2.2 | +27% / -0.9 | +22% / +0.9 | +24% / -0.9 | +31% / -0.6 | +69% / -5.6 | +23% / -2.2 |
+| 30 | **+56.3% / -2.7** | +49% / +0.0 | +39% / -1.3 | +39% / -0.6 | +31% / -1.2 | +88% / -6.9 | +20% / -2.2 |
+
+Reading: the pairs were code + tools only, yet every type got shorter (the stop habit spreads). Between steps 20 and 25 code
+falls off a cliff (+11% -> +69% cut, -1.3 -> -5.6) and drives both the headline cut and most of the loss (mbpp holds most of the
+tokens). Without code, soup 30 cuts tools 39-49% and IFEval 31% at 0 to -1.3. SVAMP loses about 2 points though math was never
+trained. Next idea (not queued): soup 30 for everything except code, or the same run with code pairs capped. mm3 now running.
