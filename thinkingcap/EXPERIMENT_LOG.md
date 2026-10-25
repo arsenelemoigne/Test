@@ -1730,3 +1730,20 @@ zAbench first lines (rc1-rl-40's judge, lots A + A2: 1,762 questions / 9,595 cut
 AUC position 0.512, linear 0.649, MLP 0.694, MLP all layers 0.745, attention 0.73, own confidence learned 0.661, MLP + own
 **0.768**, MLP + trajectory 0.749, ESTAR trajectory 0.696, ESTAR label trajectory 0.736 (same-as-final true for 52% of cuts).
 Raw own confidence, timing-only and stopping tables pending.
+
+**25 Oct ~18:15 (CET), drpo1 training finished (60 steps; 48 new questions x 8 replies per step; rl_train.py --objective drpo
+--drpo-lambda 0.2 --lr 1e-5 --updates 2 --max-tokens 4096, from rc1-rl-40).** Training-batch averages per 10 steps:
+
+| steps | batch accuracy | thinking tokens | total tokens (thinking + answer) |
+|---|---|---|---|
+| 1-10 | 0.62 | 369 | 414 |
+| 11-20 | 0.60 | 289 | 338 |
+| 21-30 | 0.61 | 266 | 307 |
+| 31-40 | 0.69 | 218 | 270 |
+| 41-50 | 0.66 | 149 | 184 |
+| 51-60 | 0.59 | 129 | 187 |
+
+Thinking -65% from the first block; batch accuracy flat to slightly up until step 50, lower in the last block (0.59; noisy,
+new questions each step). Watch: the answer part grows at the end (total - thinking: ~45 tokens early -> ~58 at steps 51-60;
+step 57: 243 total vs 123 thinking), i.e. some reasoning may be moving out of the thinking block; the fresh x8 scoring counts
+the reply's tokens, so the checkpoint scores (40 and 60, now being merged and scored) are the real test.
