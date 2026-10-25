@@ -14,11 +14,12 @@ Run from the ThinkingCap-Test root, with this repo's scripts copied next to eval
 """
 
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 import filecmp
 import json
 import math
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -177,6 +178,10 @@ def main():
     parser.add_argument("--lot-samples", type=int, default=8, help="callot: full replies per question (20 = a reliable question rate)")
     parser.add_argument("--tg-shorten", default="kodcode,ifeval_like", help="targeted: types whose safe early cuts are taught")
     parser.add_argument("--tg-long", default="gsm_ic,gsm_plus", help="targeted: types taught to think longer (math)")
+    parser.add_argument("--lot-cuts", type=int, default=10, help="callot --paragraphs: paragraph-end cuts per reply")
+    parser.add_argument("--lot-checks", type=int, default=20, help="callot --paragraphs: forced answers per cut")
+    parser.add_argument("--tg-min-samples", type=int, default=20, help="targeted: full replies a question needs for --tg-rule question")
+    parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
@@ -1375,7 +1380,8 @@ def callot(args):
                 for p, _ in pairs:
                     py("contamination.py", "--data", clean, "--rollouts", p / "rollouts.jsonl", "--share", 0.3)
             py("label_cuts.py", "--model", base, "--rollouts", *[p / "rollouts.jsonl" for p, _ in pairs],
-               "--keep", clean, "--out", cal, "--include-wrong", "--dtype", args.dtype)
+               "--keep", clean, "--out", cal, "--include-wrong", "--dtype", args.dtype,
+               "--max-cuts", args.lot_cuts, "--samples", args.lot_checks)
         print((cal / "summary.txt").read_text(), flush=True)
         return
     for p, k in pairs:
@@ -1886,11 +1892,26 @@ def targeted(args):
                 py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts",
                    BON / f"probe-{lot}" / "rollouts.jsonl", BON / f"kprobe-{lot}" / "rollouts.jsonl",
                    "--keep", BON / f"{lot}-clean.jsonl", "--out", part,
-                   "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule)
+                   "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule,
+                   "--min-samples", args.tg_min_samples)
             print((part / "summary.txt").read_text(), flush=True)
             rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]
+        note = ""
+        if args.tg_quota:  # cap each type (a random share of its pairs, so its kinds keep their proportions)
+            quota = dict((k, int(v)) for k, v in (x.split("=") for x in args.tg_quota.split(",")))
+            by_src = {}
+            for l in rows:
+                by_src.setdefault(json.loads(l)["source"], []).append(l)
+            rng = random.Random(0)
+            rows = []
+            for src, group in sorted(by_src.items()):
+                rng.shuffle(group)
+                rows += group[:quota.get(src, len(group))]
+            kinds = Counter((json.loads(l)["source"], json.loads(l)["kind"]) for l in rows)
+            note = "".join(f"  {s} / {k}: {n}\n" for (s, k), n in sorted(kinds.items()))
+            rng.shuffle(rows)
         (pairs / "pairs.jsonl").write_text("".join(l + "\n" for l in rows))
-        (pairs / "summary.txt").write_text(f"{len(rows)} pairs from {', '.join(args.probe_extra_from)}\n")
+        (pairs / "summary.txt").write_text(f"{len(rows)} pairs from {', '.join(args.probe_extra_from)}\n{note}")
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]

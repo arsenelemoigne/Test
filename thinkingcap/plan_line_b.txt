@@ -75,6 +75,14 @@ nothink --name nt2
 # fresh x8; drpo1's adapter and pool are restored from Drive (nothing retrained, its scored steps not rescored)
 drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl --drpo-score --drpo-weighted 20:0.5
 callot --name plotB5 --start Qwen/Qwen3-0.6B --data-seed 62 --paragraphs --lot gsm8k_matched=600 --lot-samples 20 --dtype bfloat16
+# user (26 Oct): DATA V2 in place of stopB6. stopB5 had 928 pairs, 71% code, all "stop earlier", none "keep thinking".
+# Lot V2 = ~3,500 NEW training questions (matched GSM8K rest after lot B5, KodCode, ToolACE, Hermes rest, IFEval-like),
+# 8 replies each, cheaper labels (6 cuts x 8 forced answers instead of 10 x 20: ~4.5x cheaper, half-split check kept)
+callot --name plotV2 --start Qwen/Qwen3-0.6B --data-seed 67 --paragraphs --kod-file data/kodcode3.jsonl --lot gsm8k_matched=1200,kodcode=1200,toolace=900,hermes_tools=478,ifeval_like=700 --lot-samples 8 --lot-cuts 6 --lot-checks 8 --dtype bfloat16
+# stopV2: pairs from ALL original-Qwen lots (B..B5 + V2); code/tools/instructions get "stop here" where safe AND "keep
+# thinking" where stopping fails; math gets "keep thinking" only; capped per type (no type above ~25%); 3 seeds,
+# soups every 20 steps scored on fresh x8
+targeted --name stopV2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 plotB5 plotV2 --tg-rule question --tg-min-samples 8 --tg-shorten kodcode,toolace,hermes_tools,ifeval_like --tg-long kodcode,toolace,hermes_tools,ifeval_like,gsm_ic,gsm_plus,gsm8k_matched --tg-quota kodcode=700,toolace=400,hermes_tools=300,ifeval_like=700,gsm_ic=200,gsm_plus=200,gsm8k_matched=300 --tg-save-every 20 --dpo-steps 20 40 60 80 110 140 170 --seeds 0 1 2
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
 # user (25 Oct): per-type stop from the benchmark findings (benchlot/zbench): code and tools only. On MBPP+ the thinking is

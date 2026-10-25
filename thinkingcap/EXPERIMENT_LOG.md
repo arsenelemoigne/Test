@@ -1974,3 +1974,15 @@ Reading: the pairs were code + tools only, yet every type got shorter (the stop 
 falls off a cliff (+11% -> +69% cut, -1.3 -> -5.6) and drives both the headline cut and most of the loss (mbpp holds most of the
 tokens). Without code, soup 30 cuts tools 39-49% and IFEval 31% at 0 to -1.3. SVAMP loses about 2 points though math was never
 trained. Next idea (not queued): soup 30 for everything except code, or the same run with code pairs capped. mm3 now running.
+
+**26 Oct, queued (user): DATA V2 in place of stopB6 (GPU 1, after lot B5, before sb2).** Why: stopB5 trained on 928 pairs,
+71% code (~660 KodCode, ~155 Hermes, ~110 ToolACE), all "stop earlier", no "keep thinking", no math or instructions; one epoch
+ends near soup 30, where code collapsed. The labels were the bottleneck (up to 11 cuts x 20 forced answers per reply).
+- **lot V2** (plotV2, original Qwen): ~3,500 NEW training questions: matched GSM8K (the 600 lot B5 left), KodCode 1,200,
+  ToolACE 900, Hermes (the ~230 lot B4 left), IFEval-like 700; 8 replies each; **6 cuts x 8 forced answers** (~4.5x cheaper
+  per reply; the half-split check still chooses on 4 answers and confirms on the other 4). Contamination check as always.
+- **stopV2**: pairs from all original-Qwen lots (B, B2, B3, B4, B5, V2: ~5,400 questions). Code, tools and instructions get
+  "stop here" where a cut is safe AND "keep thinking" pairs (full right reply beats its failing early cut; longest right beats
+  shortest wrong); math gets "keep thinking" only. **Per-type caps**: kodcode 700, ifeval_like 700, toolace 400, hermes 300,
+  gsm_ic 200, gsm_plus 200, gsm8k_matched 300 (max ~2,800; no type above 25%). 3 seeds, soups at 20/40/60/80/110/140/170 on
+  fresh x8. Code: targeted_pairs lets one type get both kinds; track.py --lot-cuts/--lot-checks/--tg-min-samples/--tg-quota.
