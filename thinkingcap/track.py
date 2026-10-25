@@ -1647,6 +1647,13 @@ def mathmatch(args):
     from utils.train.prepare_data import row
     numeric = ("\n\nThe last line of your reply must start with 'Final answer:' followed by the number alone.")
     words = lambda t: len(t.split())
+    close_id = 151668  # Qwen3's "</think>"; generate-only rollouts keep output_ids, not a thinking count
+
+    def think_len(r):
+        if "thinking_tokens" in r:
+            return r["thinking_tokens"]
+        ids = r.get("output_ids") or []
+        return ids.index(close_id) if close_id in ids else r.get("output_tokens", len(ids))
     # (1) the choosing set's SVAMP questions and how the original model does on them
     ensure_lots(["bench40"])
     qs = [json.loads(l) for l in Path(QUESTIONS, "questions.jsonl").read_text().splitlines() if l.strip()]
@@ -1667,7 +1674,7 @@ def mathmatch(args):
         rs = rolls.get(q["id"], [])
         prof.append({"ops": min(2, max(1, len(ops))), "kind": t["Type"].replace("Divison", "Division"),
                      "words": words(q["messages"][0]["content"]), "acc": statistics.mean(r["correct"] for r in rs) if rs else None,
-                     "think": statistics.mean(r["thinking_tokens"] for r in rs) if rs else None})
+                     "think": statistics.mean(think_len(r) for r in rs) if rs else None})
 
     def table(rows, title):
         lines = [title, f"  {'ops':>3} {'kind':<16} {'n':>4} {'accuracy':>9} {'thinking':>9} {'words':>6}"]
@@ -1751,7 +1758,7 @@ def mathmatch(args):
         q = meta[k]
         rows.append({"ops": q.get("ops", 0), "kind": q.get("kind", ""), "words": q["words"],
                      "acc": statistics.mean(r["correct"] for r in rs) if rs else None,
-                     "think": statistics.mean(r["thinking_tokens"] for r in rs) if rs else None})
+                     "think": statistics.mean(think_len(r) for r in rs) if rs else None})
     print(table(rows, "Matched GSM8K, held-out math test (original Qwen x8):"), flush=True)
     print(table([{"ops": r["ops"], "kind": r["kind"], "words": r["words"], "acc": None, "think": None} for r in train],
                 "Matched GSM8K, training part (composition only):"), flush=True)

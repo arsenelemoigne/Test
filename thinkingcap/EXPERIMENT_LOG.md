@@ -1890,3 +1890,15 @@ layout) and requeued as mm2, next after nt2.
 nt2, original Qwen thinking OFF vs ON (records diff, fresh x8): bfcl irrelevance 80.9 -> 87.2 (+6.2; tokens 195 -> 8, 96% saved);
 bfcl multiple 75.9 -> 58.8 (-17.2; 206 -> 20); bfcl simple 88.1 -> 76.6 (-11.6; 197 -> 24); ifeval 65.6 -> 60.6 (-5.0; 703 -> 284);
 mbpp 46.2 -> 37.2 (-9.1; 2,098 -> 53); svamp 89.7 -> 17.5 (-72.2; 644 -> 10). rc1-rl-40 thinking OFF being scored.
+
+**26 Oct ~00:00 (CET), runtime 1 results.**
+nt2, rc1-rl-40 thinking OFF vs rc1-rl-40 thinking (fresh x8): bfcl irrelevance 79.7 -> 86.6 (+6.9; tokens 106 -> 5); bfcl
+multiple 71.9 -> 63.4 (-8.4; 121 -> 20); bfcl simple 87.8 -> 78.8 (-9.1; 121 -> 24); ifeval 65.0 -> 55.3 (-9.7; 379 -> 229); mbpp
+44.4 -> 33.1 (-11.2; 867 -> 45); svamp 85.6 -> 23.1 (-62.5; 224 -> 9). Same pattern as the original: thinking is essential for
+math, worth ~9-11 points elsewhere, and hurts on BFCL irrelevance.
+**drpo1 step 20 at half strength (weight 0.5 into rc1-rl-40), fresh x8: +59.8% / -3.7 (outside).** irrelevance +50% / -1.2;
+multiple +43% / -5.6; simple +41% / -0.3; ifeval +53% / -4.7; mbpp +67% / -2.8; svamp +69% / -5.0. Halfway between rc1-rl-40
+(53.9 / -2.1) and step 20 (61.7 / -4.9), roughly linear: no free lunch from halving.
+mathmatch mm2 failed again (benchlot's generate-only rollouts carry output_ids, not a thinking count: now read from the position
+of "</think>"; tested locally) and lot B5 failed for want of its file; both requeued (mm3; plotB5 with a changed line) after
+stopB5, which is running.
