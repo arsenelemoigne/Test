@@ -1722,3 +1722,11 @@ zB4bench: with lots B..B4 the hidden-state judge's BFCL timing fell to 0.64 (own
 trajectory 0.80). teach2 reuses teach1's answers and own-confidence readings (--teach-reuse), so only the teachers differ:
 own confidence for math, code and tools (--teach-own ...,toolace,hermes_tools; --teach-judge none), instructions protected,
 margins 0.05 and 0.1. track teach gains --teach-own / --teach-judge / --teach-reuse.
+
+**25 Oct ~18:00 (CET), interim.** drpo1 training batches (new questions each step): mean thinking tokens ~369 at steps 1-10
+-> ~273 at 14-24 -> **110-160 at steps 46-56** (-60 to -70% vs the start); batch accuracy ~0.61 at the start, 0.48-0.70 at
+steps 45-56 (noisy, possibly a little lower). Checkpoints 40 and 60 are scored on fresh x8 after step 60.
+zAbench first lines (rc1-rl-40's judge, lots A + A2: 1,762 questions / 9,595 cuts; TEST = benchA40, 1,096 cuts): pooled TEST
+AUC position 0.512, linear 0.649, MLP 0.694, MLP all layers 0.745, attention 0.73, own confidence learned 0.661, MLP + own
+**0.768**, MLP + trajectory 0.749, ESTAR trajectory 0.696, ESTAR label trajectory 0.736 (same-as-final true for 52% of cuts).
+Raw own confidence, timing-only and stopping tables pending.
