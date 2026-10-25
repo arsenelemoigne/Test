@@ -1649,3 +1649,12 @@ instructions and multiple choice protected (keep thinking). Targets use only the
 (teacher value here >= its value at the full thinking - margin, floor 0.3): it uses the signal's timing, which transferred to
 the benchmark, and no absolute threshold, which did not. Two models: margins 0.05 and 0.1. Extra cost: one greedy forced
 answer per scored point (~30-50k short generations, ~1 GPU-hour).
+
+**25 Oct ~15:00 (CET), zoo B4: the original Qwen's judge on lots B+B2+B3+B4 (MBPP dropped: 198 cuts; dev 2,447 questions /
+21,539 cuts; TEST = 1,072 held-out PRACTICE questions / 9,571 cuts).** TEST AUC ALL: position 0.681, own confidence 0.721
+(5 least likely 0.740), linear 0.858, MLP 0.879, MLP all layers 0.872, attention 0.80-0.83, own confidence learned 0.812,
+linear + own 0.868, **MLP + own confidence 0.892** (zoo B2 MLP 0.864: +0.015 for twice the data, smaller than earlier
+doublings). Per type (MLP): gsm 0.94-0.95, hermes 0.91, ifeval_like 0.86, kodcode 0.80, toolace 0.74, mc 0.59-0.62.
+Timing-only TEST (429 replies with both): own confidence 0.833 vs MLP math 0.94 / code 0.76 / toolace ~0.5 / hermes 0.81;
+own confidence leads on code (0.86) and toolace (0.74). Pooled trade-off on the practice test: MLP all layers 64% saved at
+-0.2 (gain) for a 0.5-pt budget; MLP 70% / 2.6. (Started before the ESTAR features were pushed: zB4bench has them.)
