@@ -1916,3 +1916,15 @@ instructions only). drpo1 and sb1 were trained this way (their later steps were 
 placed at (k + u) / n and the pool is sorted by position: every batch holds the sources in their pool proportions from the first
 step to the last (checked on a 4,368-row pool, 72 drawn per step: steps 0, 20, 40, 59 each ~12/12/17/15/8/8 for gsm_ic /
 gsm_plus / ifeval_like / toolace / hermes / kodcode). drpo3 and drpo2 (not started) use the fix.
+
+**26 Oct ~01:45 (CET), sb1 (ShorterBetter reward, beta 0.005, from rc1-rl-40; stopped at step 33), fresh x8:**
+
+| checkpoint | saved | accuracy | svamp | mbpp | ifeval | bfcl irr / mult / simple |
+|---|---|---|---|---|---|---|
+| step 10 | 58.6% | -3.3 | +67% / -5.3 | +70% / -2.8 | +47% / -1.9 | +50% / -1.2, +43% / -6.9, +42% / -1.6 |
+| step 20 | 66.2% | -5.7 | +69% / -10.0 | +82% / -4.7 | +55% / -4.1 | +56% / -3.1, +48% / -6.2, +46% / -2.2 |
+| step 30 | 78.2% | -11.2 | +83% / -28.4 | +90% / -10.0 | +68% / -4.4 | +64% / +0.9, +54% / -3.4, +54% / -3.1 |
+
+Even step 10 is outside (-3.3): beta 0.005 overshoots within 10 steps; math and BFCL multiple pay first. Runtime 2 moved on to drpo3
+(rl_train with math protected, guard 0.06, proportional batch mix). Runtime 1: stopB5 DPO at step 40/55 of seed 0 (pairs ordered
+right 100%).
