@@ -43,7 +43,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -85,6 +85,19 @@ def gsm8k_all(args, rng):
         for r in load_dataset("openai/gsm8k", "main", split=split):
             answer = r["answer"].split("####")[-1].strip().replace(",", "")
             yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_all")
+
+
+def gsm8k_easy(args, rng):
+    """GSM8K TRAIN problems whose reference solution makes 1 or 2 calculations (counted by its <<...>> annotations): the
+    difficulty SVAMP's paper describes (one- or two-operation grade-school word problems), from a README-suggested training
+    set. The test split is left out (GSM-Plus and GSM-IC are built on it); ASDiv and MAWPS (SVAMP's sources) are not used."""
+    from datasets import load_dataset
+    from utils.train.prepare_data import MATH_INSTRUCTION, row
+
+    for r in load_dataset("openai/gsm8k", "main", split="train"):
+        if 1 <= r["answer"].count("<<") <= 2:
+            answer = r["answer"].split("####")[-1].strip().replace(",", "")
+            yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_easy")
 
 
 GSM_PLUS_KINDS = ("distraction insertion", "problem understanding", "reversing operation", "adding operation",

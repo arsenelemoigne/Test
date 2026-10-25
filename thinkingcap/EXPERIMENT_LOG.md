@@ -1780,3 +1780,14 @@ IFEval-like prompts with our checker, not the official IFEval; and training star
 -4.8 vs its own start. Fix for sb1 / drpo0 (not started yet): rl_train.py logs per-type batch accuracy and thinking every step
 ("by_type"); track.py drpo scores every saved checkpoint (10, 20, ..., 60) on fresh x8 by default (~7 min each for these
 short models).
+
+**25 Oct, queued (user): SVAMP-like math without cheating (lot B5, runtime 1 after zAbench).** New source gsm8k_easy
+(prepare_types.py): GSM8K TRAIN problems whose reference solution makes 1-2 calculations (counted by its <<...>> annotations;
+2,579 of 7,473: 404 one-step, 2,175 two-step), the difficulty SVAMP's paper describes; README-suggested set; GSM8K test (GSM-Plus
+/ GSM-IC base), ASDiv and MAWPS (SVAMP's sources) not used; earlier draws removed and the usual 30% 8-gram check vs all 2,759
+evaluation questions. callot plotB5: 600 drawn, original Qwen, 20 tries each, 20 forced answers per paragraph cut. Before any
+use, its cut-success curve is compared with SVAMP's on the choosing set (benchlot: 0.26 / 0.34 / 0.48 / 0.58 / 0.55 / 0.73) and
+with the practice math (GSM-IC 0.25 / 0.46 / 0.47 / 0.49 / 0.52 / 0.52). Also fixed: callot's earlier-draw filter parsed rows by
+substring (the KeyError teach1 hit; rl-*-text.jsonl files now exist on Drive).
+Also seen in the queue (another session): balround bal0 (one balanced DPO round from the raw Qwen, 6,000 questions x 4, DPO up
+to 200 steps x 3 seeds) on runtime 1 after drpo0: a large addition.

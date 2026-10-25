@@ -1318,7 +1318,8 @@ def callot(args):
             rows += [l for l in raw.read_text().splitlines() if l.strip()]
         used = [p for p in Path("data").glob("*.jsonl") if p.name.startswith(("bon", "bal", "chain", "trapmath", "rlcal", "rl-", "lot-"))
                 and "raw" not in p.name and p != data]
-        seen = {text(json.loads(l)) for p in used for l in p.read_text().splitlines() if l.strip() and "prompt" in l}
+        seen = {text(r) for p in used for l in p.read_text().splitlines() if l.strip()
+                for r in [json.loads(l)] if isinstance(r.get("prompt"), list) and r["prompt"]}  # skips non-chat rows
         kept = [l for l in rows if text(json.loads(l)) not in seen]
         data.write_text("".join(l + "\n" for l in kept))
         print(f"{name}: {len(kept)} new questions of {len(rows)} drawn (earlier draws removed)", flush=True)
