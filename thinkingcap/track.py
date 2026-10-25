@@ -154,6 +154,8 @@ def main():
     parser.add_argument("--match-test", type=int, default=300, help="mathmatch: of which held out as a math test set")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
                         help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
+    parser.add_argument("--drpo-score-only", action="store_true",
+                        help="drpo: never train; only score the saved checkpoints (e.g. a run stopped early)")
     parser.add_argument("--rl-protect", default="", help="drpo: sources with no length pressure (rl_train --protect-sources)")
     parser.add_argument("--rl-guard", type=float, default=0.0, help="drpo: per-type accuracy guard (rl_train --guard-drop)")
     parser.add_argument("--drpo-weighted", nargs="*", default=[],
@@ -1527,18 +1529,20 @@ def drpo(args):
         drive_sync("restore", only=[str(out)])
     variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda] if args.rl_variant == "drpo"
                else ["--objective", "grpo", "--reward", "shorterbetter"])
-    if not (out / "adapter_config.json").exists():
+    if not (out / "adapter_config.json").exists() and not args.drpo_score_only:
         py("rl_train.py", "--model", base, "--data", pool, "--sources", "all", "--out", out,
            "--steps", args.drpo_steps, "--questions", args.drpo_questions, "--group", 8, "--max-tokens", 4096,
            *variant, "--updates", 2, "--grader", "typed",
            *(["--protect-sources", args.rl_protect] if args.rl_protect else []),
            *(["--guard-drop", args.rl_guard] if args.rl_guard else []), "--dynamic-sampling", args.rl_dynamic,
            "--redundant", "none", "--lr", args.rl_lr, "--save-every", 10, "--dtype", args.dtype)
-    print((out / "rl_log.jsonl").read_text(), flush=True)
+    log_file = out / "rl_log.jsonl"
+    if log_file.exists():
+        print(log_file.read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
-    ran = sum(1 for l in (out / "rl_log.jsonl").read_text().splitlines() if l.strip())
-    steps = list(args.drpo_score) + ([ran] if args.drpo_score and ran not in args.drpo_score else [])  # guard stop
+    ran = sum(1 for l in log_file.read_text().splitlines() if l.strip()) if log_file.exists() else 0
+    steps = list(args.drpo_score) + ([ran] if args.drpo_score and ran and ran not in args.drpo_score else [])  # guard stop
     for step in steps:
         ckpt = out / f"step-{step}"
         if not (ckpt / "adapter_config.json").exists():

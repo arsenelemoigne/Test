@@ -88,7 +88,8 @@ drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcod
 nothink --name nt1
 # user (25 Oct): ShorterBetter (arXiv 2504.21370) reward as a second RL variant, same pool size and scoring as drpo1:
 # GRPO, r = 2*correct - 0.005*|len - SOL|, SOL = shortest correct reply of the group (group mean if none correct)
-drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter
+# stopped (user, 26 Oct ~00:40: collapsing, beta 0.005 too strong): drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter
+drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter --drpo-score-only --drpo-score 10 20 30
 # user (25 Oct): gentler DRPO rerun (drpo1 overshot by step 20): lambda 0.5 (softer length weights) and lr 5e-6 (half),
 # checkpoints every 10 steps, each scored on fresh x8 (10..60)
 # user (25 Oct): RL from the RAW Qwen, protecting math: no length pressure on math (right math replies weighted equally,
