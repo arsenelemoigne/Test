@@ -98,6 +98,18 @@ Status labels: SECONDARY = third-party or press source only; NOT VERIFIED = must
    (If the path errors, check the exact path on the data.uspto.gov "PTAB Trials" page: `/patent/proceedings/` vs `/patent/trials/proceedings/`.)
 5. Keys unused for 90 days are deleted. Store the key in Colab **Secrets**, never in the notebook.
 
+**Without a US passport or SSN (non-US residents):**
+- ID.me has a route for people outside the US: identity is verified **on a video call** with a foreign passport (e.g. a French passport). No SSN is needed on that route. Choose the international / video-call verification path in ID.me.
+- Since 18 Aug 2026 the USPTO profile requires 4 extra fields. Keys whose profile was incomplete on 8 Oct 2026 were deactivated, so fill in the whole profile.
+- Keys are personal: the USPTO refuses organisational exemptions. Don't borrow someone else's key; have a collaborator run the scripts with their own key instead.
+- Fallbacks if verification fails:
+  - ODP "data products" downloadable without a key (check whether PTAB is included)
+  - Google BigQuery `patents-public-data.uspto_ptab` (trials metadata; may be outdated; no documents table confirmed) for historical counts from Colab
+  - the public PTAB website, to manually check the test cases in §10
+  - paid docket services (Docket Alarm, Lex Machina, Docket Navigator)
+  - Unified Patents Portal (free account)
+- Read the ODP terms of use before downloading at scale (registration was introduced partly to curb AI scraping).
+
 ---
 
 ## 6. Objective
