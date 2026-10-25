@@ -1611,3 +1611,26 @@ Built (toy-tested only):
   because our replies are 5-10x shorter), SOL = shortest correct reply of the group, else the group mean; GRPO advantages.
   track.py drpo --rl-variant shorterbetter. Queued sb1 (runtime 2, after drpo1): from rc1-rl-40, same fresh MBPP-free pool size
   (48 x 8 x 60), checkpoints 40/60 on fresh x8, same success bar as drpo1.
+
+**25 Oct ~13:00 (CET), zbench2: TIMING-ONLY AUC (cuts compared only within the same reply) on the 240 benchmark questions.**
+Only 83 test replies hold both a safe and an unsafe cut (SVAMP 36, IFEval 6, MBPP+ 16, BFCL 25): small, read with care.
+
+| classifier | dev timing ALL (practice) | TEST timing ALL | SVAMP | IFEval | MBPP+ | BFCL |
+|---|---|---|---|---|---|---|
+| position ("later = safer") | 0.603 | **0.814** | 0.836 | 0.800 | 0.829 | 0.721 |
+| own confidence | 0.806 | 0.845 | **0.963** | 0.550 | **0.850** | 0.574 |
+| own confidence, 5 least likely | 0.807 | **0.871** | **0.977** | 0.625 | 0.833 | 0.721 |
+| linear (hidden state) | 0.828 | 0.710 | 0.768 | 0.525 | 0.666 | 0.698 |
+| mlp (hidden state) | **0.847** | 0.774 | 0.815 | 0.650 | 0.721 | **0.806** |
+| mlp, all layers | 0.825 | 0.690 | 0.807 | 0.625 | 0.561 | 0.651 |
+| own confidence, learned (+ position) | 0.826 | 0.813 | 0.937 | 0.475 | 0.735 | 0.721 |
+| mlp + own confidence | n/a | 0.844 | 0.963 | 0.400 | 0.787 | 0.752 |
+
+Pooled AUC (unchanged from zbench): mlp + own confidence 0.753 (best), mlp all layers 0.738, mlp 0.736, own conf. least likely 0.717.
+Reading: (1) on the benchmark, inside a reply the hidden-state judges know LESS about timing than "later is safer" (0.71-0.77
+vs 0.81); on practice they knew more (0.85 vs 0.60): what they learned about timing is practice-specific. (2) The model's own
+confidence carries real TIMING information on the benchmark, strongest on SVAMP (0.96-0.98) and code (0.85): the earlier worry
+that its SVAMP score was only question difficulty is wrong. (3) Its poor SVAMP stopping (15% / -3.8) therefore comes from the
+THRESHOLD chosen on practice data, not from the ranking: per-type thresholds set on benchmark-like data are the fix. (4) Tools are
+the one type where the hidden-state MLP leads (0.81). (5) Learning own confidence on practice data (with position) lowers its
+benchmark timing (0.813 vs 0.845-0.871 raw): fitting to practice hurts transfer.
