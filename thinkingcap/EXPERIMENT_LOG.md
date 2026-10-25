@@ -1753,3 +1753,8 @@ official vLLM evaluation can score it (weight 1, no averaging): it is how a chec
 (40 and 60 queued for scoring); queued a second drpo1 line with --drpo-score 20 40 60 (training skipped, 40/60 already scored,
 adds step 20). track.py drpo now saves every 10 steps and scores 20/40/60 by default (sb1, drpo0 and later runs).
 Also seen in the queue (another session): teach2 (--teach-reuse teach1) after teach1 on runtime 2.
+
+**25 Oct (user): RL checkpoints tested one by one, then a soup chosen from their scores.** track.py drpo --drpo-soup S1 S2 ...
+averages those checkpoints' LoRA adapters with equal weights (merge.py, as the DPO soups) into models/<name>-soup-S1-S2 and
+scores it on fresh x8 (training skipped when the run exists). Plan: drpo1 steps 20 / 40 / 60 scored individually first; the soup
+line is queued once those scores are in (e.g. the two best neighbouring checkpoints).
