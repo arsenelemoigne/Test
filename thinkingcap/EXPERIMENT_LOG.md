@@ -2069,3 +2069,8 @@ but the scripts restarted from zero after a lost runtime. Now:
 drpo3b restarted with it: "resuming after step 10 from step-10 (no optimizer state saved: fresh AdamW)" (steps 11-12 and the
 log of steps 1-10 lost; its guard baseline restarts from step 11). Not yet resumable: teach_stop.py, evaluate.py (one scoring
 run, < 1 h each).
+
+**26 Oct ~04:30, drpo3b at step 16 (the step-15 check).** Steps 11-16: batch accuracy 0.70-0.77 (step 1: 0.67); all thinking
+924-1,101 (step 1: 1,189); non-math 317-537 (step 1: 433: no drop); code 896-1,413 (step 1: 1,635, noisy). The run mostly
+raises accuracy; it barely shortens anything but math's own drift. ~20 min per step. lot V2 (GPU 1): 2,400 / 4,368 non-code
+questions answered.
