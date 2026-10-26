@@ -248,6 +248,18 @@ def settle_redundant(p_gold_by_cut, thinking_len, threshold):
     return set() if settle is None else set(range(settle, thinking_len))
 
 
+def type_of(question):
+    """A question's data type for logging and the guard: its source, split by category where one exists (ToolACE's
+    simple / multiple / irrelevance, so a loss on choosing among several functions is not hidden by the others)."""
+    source = question.get("source", "all")
+    return f"{source}/{question['category']}" if question.get("category") else source
+
+
+def protected_kind(question, protect):
+    """No length pressure for this question: its source (math) or its source/category (toolace/multiple) is listed."""
+    return question.get("source") in protect or type_of(question) in protect
+
+
 def balanced_order(rows, rng):
     """Rows shuffled within each source, then spread so that EVERY stretch of the order (each step's batch) holds the
     sources in their pool proportions from the first step to the last: row k of a source with n rows is placed at
@@ -581,7 +593,7 @@ def main():
                 rewards = arora_rewards(thinking, correct, alpha)
             elif args.reward == "shorterbetter":
                 rewards = shorterbetter_rewards([len(r) for r in group], correct, args.sb_alpha,
-                                                0.0 if question.get("source") in protect else args.sb_beta)
+                                                0.0 if protected_kind(question, protect) else args.sb_beta)
             else:
                 rewards = length_rewards([len(r) for r in group], correct, args.alpha)
             skipped = [i >= len(group) - no_think for i in range(len(group))]
@@ -593,7 +605,7 @@ def main():
             stats["no_think_replies"] += sum(skipped)
             stats["thinking"] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
             stats["correct"] += sum(correct)
-            kind = question.get("source", "all")  # per data type: a collapse of one type shows even in a mixed batch
+            kind = type_of(question)  # per data type: a collapse of one type shows even in a mixed batch
             by_type.setdefault(kind, [0, 0, 0])
             by_type[kind][0] += sum(correct)
             by_type[kind][1] += len(group)
@@ -621,7 +633,7 @@ def main():
             stats["signal"] = 0
             for members in by_group.values():
                 scores = [float(old_logps[id(j[1])].mean()) if j[1] else 0.0 for j in members]
-                protected = members[0][5].get("source") in protect
+                protected = protected_kind(members[0][5], protect)
                 coef = drpo_weights([len(j[1]) for j in members], [j[2] for j in members], scores,
                                     1e9 if protected else args.drpo_lambda, args.drpo_tau)
                 for j, c in zip(members, coef):

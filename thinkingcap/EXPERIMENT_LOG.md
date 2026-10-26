@@ -2166,3 +2166,10 @@ drpo3b + 3d, 43 steps from the raw Qwen: 21.2% saved at +0.2, still rising ~0.7%
 GPU 2 moved on to teach1b. stopV2: all 3 seeds trained (300 steps each, tripwire 0.000); soups being scored.
 **Queued (user): drpo3e** = drpo3d-23 continued (GPU 2, after teach1b): same settings, 40 steps, every 5 scored on fresh x8,
 guard 10 points, pool may reuse earlier draws except drpo3b's and drpo3d's.
+
+**26 Oct, BFCL multiple protected in drpo3e (user).** BFCL "multiple" = several functions offered, one call: the thinking
+is where the model compares them. drpo3d: bfcl_multiple 0.0 / +0.6 / 0.0 at 3d-5..15, then -2.2 / -2.5 at 3d-20/23 (40
+questions x 8, so within noise but two in a row), while bfcl_simple stayed +0.6..+1.3; the guard stopped drpo3d on ToolACE
+(0.87 -> 0.76). rl_train.py: types are now logged and guarded per ToolACE category (toolace/simple, toolace/multiple,
+toolace/irrelevance), and --protect-sources accepts source/category; drpo3e protects toolace/multiple (equal weight among
+right replies: trained to be right, no push to be short).
