@@ -2306,3 +2306,7 @@ Practical test: a "give up" threshold at the 2nd paragraph that stops at most 5%
 WRONG ones (code 19%, Hermes 14%, math 8-9%, IFEval 8%, ToolACE 7%). Reading: own confidence does not reveal early that an answer
 will fail (math: no signal before the end); code and tools carry a weak early signal. A hidden-state probe trained on "ends
 wrong" was not tried (the earlier probes predicted "answering now is right", a different question).
+**mf1 soup 50, fresh 240 x 8: +32.2% / -0.5** (svamp +30% / -0.3; mbpp +29% / +2.5; ifeval +35% / -2.8; bfcl irr +37% / -0.3,
+mult +34% / -3.8, simple +32% / 0.0). From soup 25 (+45.6 / -1.4) the saving falls 13 points on every type, not only math:
+the math-only "be right" + keep-thinking pairs (chosen = full right replies, NLL anchor on) lengthen every type, as the
+long-chosen pairs did in stopV2. Accuracy +0.9 overall, mostly MBPP+ (+2.5); IFEval and BFCL multiple stay down.
