@@ -2051,3 +2051,9 @@ code 866-1,426). Accuracy rises, length does not move yet.
 - **RL pools**: new --pool-math (34% math split evenly). teach1 (raw Qwen): matched GSM8K + MetaMathQA, both taught by own
   confidence. sb2 and drpo2 (from rc1-rl-40, which only draw unused questions; every matched question is now in a lot):
   MetaMathQA; sb2 protects it like the other math. drpo3b keeps its built pool (GSM-IC/Plus, protected).
+
+**26 Oct ~00:40-01:50, both runtimes lost and relaunched (user approved; Drive access granted by the user).** Around 00:40
+every Chrome tab got a new id and both Colab pages fell back to "Connect"; both Drive logs stopped (GPU 1 in lot V2 at 750 /
+4,368 questions sampled; GPU 2 at drpo3b step 12). Relaunched ~01:20 on scripts 1b57c7c: queues replay and skip finished
+stages from Drive. GPU 1 re-samples mm3's 300-question math test (its samples were not in the light restore; fixed in
+f0ab9d7), then resumes lot V2 from its saved chunks. GPU 2 restarts drpo3b's training from step 0 (~15 h).
