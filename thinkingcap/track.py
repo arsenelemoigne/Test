@@ -198,6 +198,8 @@ def main():
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
     parser.add_argument("--bp-budgets", default="svamp=400,mbpp=750,ifeval=200,bfcl=70",
                         help="budgetprompt: thinking budget per benchmark stated in the system prompt (measurement only)")
+    parser.add_argument("--drop", nargs="*", default=[],
+                        help="dropmodels: MODEL=ADAPTER pairs; models/MODEL is removed from Drive and here only if adapters/ADAPTER is on Drive")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
                         help="stopgold: label lots of --start whose cut verdicts are the teacher")
     parser.add_argument("--sg-save-every", type=int, default=100, help="stopgold: optimizer steps between scored checkpoints")
@@ -1920,6 +1922,30 @@ def budgetprompt(args):
              f"{next((v for k, v in budgets.items() if d.startswith(k)), '-')}" for d, st in sorted(with_b.items())]
     (out / "budget_talk.txt").write_text("\n".join(lines) + "\n")
     print("\n".join(lines), flush=True)
+
+
+def dropmodels(args):
+    """Free Drive space (user, 27 Oct): remove merged models that can be rebuilt from their LoRA adapters (merge.py, about
+    a minute each; recipes in EXPERIMENT_LOG.md, 27 Oct "Drive cleanup"). A model goes only if its adapter folder is on
+    Drive; results, adapters, lots and rollouts are never touched. Files removed through the Drive mount go to the Drive
+    trash (recoverable for 30 days)."""
+    freed, kept = 0, []
+    for pair in args.drop:
+        model, adapter = pair.split("=")
+        target, backup = DRIVE / "models" / model, DRIVE / "adapters" / adapter
+        if not target.exists():
+            print(f"dropmodels: {model}: not on Drive", flush=True)
+            continue
+        if not backup.exists() or not any(backup.iterdir()):
+            kept.append(model)
+            print(f"dropmodels: {model}: KEPT, adapters/{adapter} not found on Drive", flush=True)
+            continue
+        size = sum(f.stat().st_size for f in target.rglob("*") if f.is_file())
+        shutil.rmtree(target)
+        shutil.rmtree(Path("models") / model, ignore_errors=True)  # a local copy would be re-uploaded by the next save
+        freed += size
+        print(f"dropmodels: {model}: removed ({size / 1e9:.2f} GB; rebuild from adapters/{adapter})", flush=True)
+    print(f"dropmodels: freed {freed / 1e9:.1f} GB; kept for lack of adapters: {', '.join(kept) or 'none'}", flush=True)
 
 
 def stopgold(args):

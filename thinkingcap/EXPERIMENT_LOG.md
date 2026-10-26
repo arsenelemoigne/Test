@@ -2358,3 +2358,12 @@ rc1-rl-20 54.8% / -3.67; rc1-rl-60 49.6% / -3.39; rc1-soup-10 48.6% / -3.02; rc1
 stopB3-soup-15 18.3% / -1.04; stopB3-soup-20 27.1% / -2.03; stopB3-soup-30 54.8% / -3.20; stopB3-soup-40 69.1% / -5.71.
 Emptying the trash (permanent) is left to the user. Not deleted, for a later pass: 12 models of the unverified families
 (~13.5 GB) and the post-00:40 models (~20 GB) once their runtimes are released.
+**Cleanup done by a runtime stage instead (user):** scripted clicks are ignored by Drive and the Chrome extension was not
+connected, so `dropmodels --name drop1` (GPU 2, after mf1's soups, before bp1) removes the models through the Drive mount
+(to the Drive trash). It checks each model's adapter folder on Drive first and KEEPS the model if it is missing. List (31):
+the 19 above, plus stopB-soup-10/20/30 (adapter stopB-s0, later found on Drive), stopB2-soup-20 (stopB2-s0), rc2-soup-10/20/30/60
+(rc2-s0), rr1-rl-20 (rr1-rl), sb1-10/20/30 (sb1-drpo); the last four families are removed only if their adapters are found.
+Extra recipes: sb1-<N> = merge(models/rc1-rl-40, adapters/sb1-drpo/step-<N>); rc2-soup-<N> = merge(models/rc1-rl-40,
+adapters/rc2-s0..2/step-<N>, 1/3 each); rr1-rl-<N> as rc1-rl (rlcal). Fresh-x8 scores of these: stopB soups 10/20/30 11.9/+0.9,
+31.1/-2.3, 54.2/-3.6; stopB2-20 34.6/-2.1; rc2 soups 10/20/30/60 in density_points (63-64% / -4.9 for 20/30); sb1 10/20/30
+58.6/-3.3, 66.2/-5.7, 78.2/-11.2. Expected: up to ~35 GB freed if every adapter is found.
