@@ -2111,3 +2111,24 @@ never trained on lot questions), except the pools of the runs it continues (drpo
 lot V2 (GPU 1): contamination dropped 997 of 4,573 non-code questions, nearly all IFEval-like (their constraint sentences are
 IFEval's own templates, so the 13-word run rule fires; the 8-gram shares listed are 6-25%, one 63%). 3,554 questions remain
 (4,996 replies, 38,939 cuts x 4 forced answers) and are being labelled. Fewer instruction pairs for stopV2 as a result.
+
+**26 Oct ~09:40, lot V2 labelled (GPU 1): 3,554 questions, 4,996 replies, 38,939 cuts x 4 (12,156 fully safe).**
+Success by share of thinking kept (0-20 / 20-40 / 40-60 / 60-80 / 80-<100 / full), perfect stop:
+
+| source | replies | curve | perfect stop |
+|---|---|---|---|
+| matched GSM8K | 780 | 0.08 / 0.21 / 0.40 / 0.57 / 0.63 / 0.75 | 49% / +6.6 |
+| MetaMathQA SV/FOBAR | 2,918 | 0.06 / 0.09 / 0.19 / 0.43 / 0.64 / 0.69 | 39% / +16.3 |
+| IFEval-like | 672 | 0.75 / 0.76 / 0.77 / 0.74 / 0.68 / 0.75 | 67% / +11.6 |
+| KodCode | 293 | 0.41 / 0.45 / 0.44 / 0.45 / 0.49 / 0.50 | 81% / +20.6 |
+| ToolACE | 333 | 0.35 / 0.35 / 0.47 / 0.42 / 0.37 / 0.52 | 49% / +8.6 |
+
+Both math sets build up late like SVAMP (MetaMathQA even later); instructions are settled from the start; code barely
+depends on thinking. The lot came out math-heavy: KodCode gave only ~180 questions and ToolACE ~200 (earlier-draw and
+contamination filters), Hermes none (all used before) — to check before any later lot.
+**stopV2 started (GPU 1)**: SVAMP-likeness gate: matched GSM8K 0.32, MetaMathQA 0.13 (bar 0.6) -> both get stop pairs. 6,021
+pairs after caps (5,970 trained, 48 held out): math 2,600 (matched 1,300: shorten 421 / hard 509 / guard 176 / right 194;
+MetaMathQA 1,300: shorten 377 / hard 533 / guard 169 / right 221), KodCode 1,500 (shorten 833 / hard 281 / guard 386),
+IFEval-like 1,258 (shorten 836 / hard 123 / guard 299), ToolACE ~420, Hermes 243. 6.5x stopB5's 928, 40% brake/be-right pairs.
+**drpo3d (GPU 2)**: pool 3,227 for 2,880 (ToolACE 816, GSM-IC 846, GSM-Plus 731, IFEval-like 476, KodCode 358; no Hermes left);
+steps 1-2: batch accuracy 0.78 / 0.75, thinking 1,065 / 1,094.
