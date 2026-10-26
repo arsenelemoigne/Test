@@ -2134,3 +2134,6 @@ IFEval-like 1,258 (shorten 836 / hard 123 / guard 299), ToolACE ~420, Hermes 243
 steps 1-2: batch accuracy 0.78 / 0.75, thinking 1,065 / 1,094.
 ~10:45: stopV2 seed 0 at DPO step 115/300 (pairs ordered right 62-76%, tripwire 0.000). drpo3d steps 1-6: batch accuracy
 0.75-0.84; non-math thinking 401 -> 300; code 1,175 -> 767 (continuing from step 20, lengths now fall outside math too).
+~13:15: **drpo3d stopped by the 10-point guard at step 23** ("toolace 0.87 -> 0.76", batch accuracy, steps 19-23 vs 1-5);
+steps 7-23: batch accuracy 0.74-0.83, all thinking 818-1,162, code 557-1,910 (noisy). Its checkpoints 5/10/15/20 and the step-23
+stop are now scored on fresh x8 (= drpo3b steps 25-43). stopV2: seed 1 done (300 steps, tripwire 0.000), seed 2 started.
