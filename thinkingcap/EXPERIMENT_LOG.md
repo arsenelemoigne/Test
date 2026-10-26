@@ -2267,3 +2267,19 @@ rough, a little optimistic. IFEval's reply is 284 tokens even with thinking off 
 **bp1** (GPU 2 after mf1): original Qwen with "Think briefly: keep your thinking under N tokens" appended to the system
 message (svamp 400, mbpp 750, ifeval 200, bfcl 70), fresh x8, vs the original; thinking scanned for budget words
 (tokens/budget/limit/brief/quick/concise/short) against the same scan without the prompt. Measure only.
+
+**26 Oct ~22:50, benchlot's "perfect stop" recomputed strictly (user: does it mean right once or right 95% of the time?).**
+The original figure (label_cuts.py summary) is the earliest cut whose 20 forced answers are right at least as often as the
+full thinking's 20, over the 2 labelled replies per question (longest right + longest wrong), averaged per reply; its "accuracy
+gained" is the BEST cut anywhere minus the full thinking (hindsight). Wrong replies whose full thinking scores 0/20 count as
+cuttable at the first paragraph, which inflates "saved". Recomputed from pairs-bench40/cal (original reproduced exactly:
+53 / 55 / 84 / 51%):
+| rule | SVAMP | IFEval | MBPP+ | BFCL |
+|---|---|---|---|---|
+| original rule, all replies | 53% / +5.0 | 55% / +9.5 | 84% / +13.1 | 51% / +8.2 |
+| right replies only, as right as finishing (= 20/20 here) | 41% / 0.0 | 49% / +1.7 | 72% / 0.0 | 49% / +0.4 |
+| right replies only, cut right >= 19/20 | 47% / -1.0 | 49% / +0.7 | 74% / -0.6 | 49% / +0.4 |
+| right replies only, as right as finishing on both halves | 41% / 0.0 | 45% / +1.4 | 72% / 0.0 | 49% / +0.4 |
+(thinking cut / forced-answer accuracy at that stop minus finishing, points; replies: SVAMP 36, IFEval 29, MBPP+ 26, BFCL 109
+right). Oracle still: the cut is chosen with the labels. Strict stop-only ceiling on the original: ~41-47% math, ~45-49%
+instructions, ~72-74% code, ~49% tools.
