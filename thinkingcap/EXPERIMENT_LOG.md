@@ -2197,3 +2197,8 @@ wrong or unfinished reply, only when that one is longer) on code, tools and inst
 and its SVAMP-gated shorten pairs, no guard; hard pairs on code/tools/instructions capped at 0.25 x their shorten pairs
 (--hard-ratio / --hard-cap-sources). Toy-tested: old default unchanged; flipped guard picks the unfinished 900-token reply
 over a 100-token right one; the cap removes hard pairs above the ratio.
+
+**stopV2 first soups (fresh 240 x 8): LONGER, not shorter.** soup 25: -9.6% saved (i.e. 9.6% more tokens) / +0.0; soup 50:
+-8.6% / +1.0 (every type 2-19% longer; mbpp +2.2, bfcl multiple +1.6). The "keep thinking" side (hard: full right beats a
+failing cut; guard: longest right beats shortest wrong; ~40% of the 6,021 pairs) outweighs the "stop here" side early on.
+Soups 75-300 pending; if they stay longer, the brake share (or the guard pairs, which reward length itself) must be cut.
