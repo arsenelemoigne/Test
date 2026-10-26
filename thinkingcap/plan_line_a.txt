@@ -99,6 +99,10 @@ drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3
 # user (26 Oct, step-15 check: accuracy up, length barely down): stop at step 30 (resumes from its saved state), score 5-30
 # was: drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
 drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06 --drpo-steps 30 --drpo-score 5 10 15 20 25 30
+# user (26 Oct): CONTINUE drpo3b. Its fresh x8 kept improving (step 5/10/15/20: +3.5/-0.2, +5.2/0.0, +8.0/+1.3,
+# +13.5/-0.3) when the noisy batch guard stopped it. Same gentle settings from the step-20 model, 40 more steps, every 5
+# steps scored on fresh x8; guard loosened to 10 points (the batch guard is noisy: 8-16 replies per type per step)
+drpo --name drpo3c --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40
 # experiment 5 (user): the judge as teacher. Judge fitted on lots B..B4 of the original Qwen; the original Qwen answers
 # 3,000 fresh mixed questions once; its own p(</think>) at every paragraph end is trained toward the judge's sharpened
 # target, two models: fixed (yes/no judge > 0.9) and relative (soft judge's predicted success within 0.05 of
@@ -107,7 +111,7 @@ drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcod
 # relative rule (as good as finishing, within the same answer), margins 0.05 and 0.1
 # user (25 Oct ~22:00): no classifier at all: the model's own confidence teaches every type it covers (math, code, tools);
 # instructions and multiple choice still kept thinking; teach2 (the same thing reusing teach1) removed as a duplicate
-teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none
+# teach1 trained on 0 answers (bug fixed in 9ce5f18), its scores mean nothing; teach1b reuses its answers: teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none
 teach --name teach1b --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none --teach-reuse teach1
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1

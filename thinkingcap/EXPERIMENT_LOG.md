@@ -2097,3 +2097,9 @@ confidence 0, judge 0, keep thinking 0"; p(</think>) nan): both teach1 adapters 
 their scores mean nothing. Fixed (loop variable renamed); queued teach1b on GPU 2 right after teach1, same settings, reusing
 teach1's 2,512 answers and own-confidence readings (--teach-reuse teach1); the judge fit (~2 h of hidden states) runs again.
 Before the bug the setup read: 19,466 paragraph ends; the soft judge predicts success 0.34 at cuts vs 0.62 at the full thinking.
+
+**26 Oct ~08:45, queued (user): drpo3c = drpo3b continued** from models/drpo3b-20 (GPU 2, next), same gentle settings
+(lambda 0.5, lr 5e-6, dynamic sampling, math protected, GSM-IC/Plus math as before), 40 more steps, every 5 steps scored on
+fresh x8, guard loosened to 10 points (the 6-point batch guard fired on noisy per-type batches while fresh x8 still improved).
+teach1's line commented (it trained on 0 answers; teach1b follows drpo3c). GPU 2's queue was interrupted at ~07:32 during
+teach1-rel0.1's (meaningless) scoring and is restarted.
