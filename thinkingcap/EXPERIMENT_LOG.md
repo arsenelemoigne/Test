@@ -2222,3 +2222,6 @@ forced answers are right at least as often as the reply's full thinking (and >= 
 MBPP and never-solved replies left out; per-type caps as stopV2; LoRA r16, lr 1e-4, 8 replies per step; a checkpoint every
 100 steps, each scored on fresh x8 (dose chosen by score). Toy-tested with the real tokenizer: labels land on the right
 paragraph-end tokens; a cut less right than finishing gets 0, cuts as right get 1; a never-solved reply is skipped.
+stopV2 soup 75 (~560 shorten pairs seen): **-9.9% / +0.9** (svamp +5.5 / +1.3; mbpp -20.3 / +2.2; ifeval -12.7 / +0.9; bfcl irr
+-10.9 / -0.6, mult -16.9 / 0.0, simple -14.2 / -1.6). Still longer past the dose where every shorten-only run had taken off:
+the long-chosen pairs and their NLL anchor hold it; accuracy slightly up.
