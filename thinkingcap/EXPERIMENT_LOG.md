@@ -2057,3 +2057,15 @@ every Chrome tab got a new id and both Colab pages fell back to "Connect"; both 
 4,368 questions sampled; GPU 2 at drpo3b step 12). Relaunched ~01:20 on scripts 1b57c7c: queues replay and skip finished
 stages from Drive. GPU 1 re-samples mm3's 300-question math test (its samples were not in the light restore; fixed in
 f0ab9d7), then resumes lot V2 from its saved chunks. GPU 2 restarts drpo3b's training from step 0 (~15 h).
+
+**26 Oct ~02:30, saving made resumable (user: "keep saving everything throughout").** Drive already got a copy every 5 min,
+but the scripts restarted from zero after a lost runtime. Now:
+- rl_train.py: adapter + optimizer + RNG + log saved every step (resume.pt, rl_log.jsonl); restarts continue after the last
+  step; without that state, from the latest step-N checkpoint (fresh AdamW).
+- check_vllm.py (cut labelling, the hours-long part of every lot): results appended per 2,000-trace chunk (.part); a restart
+  skips finished chunks.
+- dpo.py: reference scores cached (ref.json), latest checkpoint + optimizer saved at every checkpoint, resume skips done
+  steps; it no longer writes the final adapter early (track.py took a half-trained seed for a finished one).
+drpo3b restarted with it: "resuming after step 10 from step-10 (no optimizer state saved: fresh AdamW)" (steps 11-12 and the
+log of steps 1-10 lost; its guard baseline restarts from step 11). Not yet resumable: teach_stop.py, evaluate.py (one scoring
+run, < 1 h each).
