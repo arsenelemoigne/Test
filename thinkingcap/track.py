@@ -167,6 +167,10 @@ def main():
                         help="drpo: also average these checkpoints' adapters (equal weights) into one model and score it")
     parser.add_argument("--bal-questions", type=int, default=6000, help="balround: fresh benchmark-matched questions")
     parser.add_argument("--bal-samples", type=int, default=4, help="balround: answers per question")
+    parser.add_argument("--bal-mix", default="gsm8k_all=0.25,ifeval_like=0.25,toolace=0.17,hermes_tools=0.08",
+                        help="balround: pool shares per source (KodCode takes --bal-kod)")
+    parser.add_argument("--bal-kod", type=float, default=0.25, help="balround: KodCode share of the pool")
+    parser.add_argument("--bal-protect", default="", help="balround: sources or source/category given only right>wrong pairs")
     parser.add_argument("--teach-questions", type=int, default=3000, help="teach: fresh questions answered once each")
     parser.add_argument("--teach-variants", nargs="*", default=["rel:0.05", "rel:0.1"],
                         help="teach: stop targets, one model each (fixed:T = yes/no judge above T; rel:M = soft judge's "
@@ -1950,8 +1954,9 @@ def balround(args):
     answer (guard) and beats a right answer >= 1.5x longer (shorten), shorten capped at guard per type; DPO with the NLL
     anchor (dpo.py default), --seeds, soups at --dpo-steps scored on the fresh set x8."""
     name, base = args.name, args.start
-    mix = {"gsm8k_all": 0.25, "ifeval_like": 0.25, "toolace": 0.17, "hermes_tools": 0.08}
-    pool = mixed_pool(name, args.bal_questions, args.data_seed, args.kod_file, mix=mix, kod_share=0.25)
+    mix = dict((k, float(v)) for k, v in (x.split("=") for x in args.bal_mix.split(",")))
+    pool = mixed_pool(name, args.bal_questions, args.data_seed, args.kod_file, mix=mix, kod_share=args.bal_kod,
+                      reuse=not base.startswith("models/"))
     probe = BON / f"probe-{name}"
     if not (probe / "rollouts.jsonl").exists():
         n = sum(1 for l in pool.read_text().splitlines() if l.strip())
@@ -1960,10 +1965,11 @@ def balround(args):
            "--max-questions", min(n, args.bal_questions))
     pairs = BON / f"pairs-{name}"
     if not (pairs / "pairs.jsonl").exists():
-        py("balanced_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--out", pairs)
+        py("balanced_pairs.py", "--rollouts", probe / "rollouts.jsonl", "--out", pairs,
+           *(["--protect", args.bal_protect] if args.bal_protect else []))
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
-    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard")]
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
     start = Path("adapters") / f"fresh-{name}"
     if not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", base, "--out", start)

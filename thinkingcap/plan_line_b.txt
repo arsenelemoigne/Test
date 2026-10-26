@@ -118,6 +118,13 @@ teach --name teach1c --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodc
 targeted --name stopB5 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,toolace,hermes_tools --tg-long none --tg-save-every 5 --dpo-steps 10 15 20 25 30 --seeds 0 1 2
 # user (26 Oct): ShorterBetter rerun with the PAPER's beta 0.001 (sb1's 0.005 overshot within 10 steps), plus math protection,
 # the per-type guard and the fixed batch mix; from rc1-rl-40 like sb1; every 10-step checkpoint scored on fresh x8
+# sp1 (user, 27 Oct): one big self-preference round from the ORIGINAL Qwen, michal-bida style but bigger and with math
+# protected: 12,000 fresh benchmark-like questions (MetaMathQA SVAMP-like math 25%, IFEval-like 25%, KodCode 25%,
+# ToolACE 17%, Hermes 8%; contamination-checked), 4 answers each; pairs: shortest right > longest wrong/unfinished and
+# > right >= 1.5x longer (shorten capped at guard per type); math and ToolACE multiple-function calls get only
+# similar-length right > wrong pairs (no length push). DPO with the anchor, 3 seeds, soups 25-200 on fresh x8.
+# Target: beat round 1 (40.4% / -0.9) without stacking.
+balround --name sp1 --start Qwen/Qwen3-0.6B --data-seed 71 --kod-file data/kodcode3.jsonl --bal-questions 12000 --bal-samples 4 --bal-mix metamath_sv=0.25,ifeval_like=0.25,toolace=0.17,hermes_tools=0.08 --bal-kod 0.25 --bal-protect metamath_sv,toolace/multiple --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 --seeds 0 1 2
 drpo --name sb2 --start models/rc1-rl-40 --data-seed 66 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --rl-variant shorterbetter --rl-sb-beta 0.001 --rl-lr 5e-6 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv --rl-guard 0.06
 balround --name bal0 --start Qwen/Qwen3-0.6B --data-seed 61 --kod-file data/kodcode3.jsonl --bal-questions 6000 --bal-samples 4 --tg-save-every 25 --dpo-steps 50 100 150 200 --seeds 0 1 2
 # removed (user, 25 Oct: superseded / same aggressive DRPO that overshot): targeted --name stopB4 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,ifeval_like,toolace,hermes_tools,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 10 --dpo-steps 30 60 90 120 --seeds 0 1 2
