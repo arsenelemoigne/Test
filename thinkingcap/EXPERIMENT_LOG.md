@@ -2159,3 +2159,8 @@ cleanest curve of the project. 3d-20 and the step-23 guard stop are being scored
 drpo3d step 20: **+20.5% / -0.8** (svamp +29.6 / -2.5; mbpp +14.6 / +0.6; ifeval +22.7 / -0.6; bfcl irr +16.7 / -1.6, mult
 +13.7 / -2.2, simple +12.3 / +1.3). BFCL pooled about -0.8 (the ToolACE batch drop shows a little on irrelevance/multiple);
 SVAMP -2.5 (wide CI). Step 23 being scored.
+| 3d-20 (40) | +20.5% | -0.8 | +30% / -2.5 | +15% / +0.6 | +23% / -0.6 | +17/-1.6, +14/-2.2, +12/+1.3 |
+| **3d-23 (43, guard stop)** | **+21.2%** | **+0.2** | +30% / -0.9 | +21% / +1.9 | +17% / +0.9 | +17/-1.6, +18/-2.5, +14/+0.6 |
+
+drpo3b + 3d, 43 steps from the raw Qwen: 21.2% saved at +0.2, still rising ~0.7%/step; BFCL multiple begins to cost (-2.2..-2.5).
+GPU 2 moved on to teach1b. stopV2: all 3 seeds trained (300 steps each, tripwire 0.000); soups being scored.
