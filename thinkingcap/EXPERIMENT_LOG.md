@@ -2310,3 +2310,13 @@ wrong" was not tried (the earlier probes predicted "answering now is right", a d
 mult +34% / -3.8, simple +32% / 0.0). From soup 25 (+45.6 / -1.4) the saving falls 13 points on every type, not only math:
 the math-only "be right" + keep-thinking pairs (chosen = full right replies, NLL anchor on) lengthen every type, as the
 long-chosen pairs did in stopV2. Accuracy +0.9 overall, mostly MBPP+ (+2.5); IFEval and BFCL multiple stay down.
+
+### 2026-10-27 ~00:00 — mf1 soups 50/75 and stopV3 soup 25 (fresh 240 x 8)
+- mf1-soup-50: +32.2% / -0.5 (svamp +30% / -0.3, mbpp +29% / +2.5, ifeval +35% / -2.8, bfcl irr +37% / -0.3, mult +34% / -3.7, simple +32% / 0.0).
+- mf1-soup-75: +33.0% / -1.3 (svamp +24% / -0.6, ifeval +42% / -3.7, mult +35% / -3.7).
+  Reading: more mf1 training only makes every type think longer (saving 53.9 -> 45.6 -> 32-33) without buying accuracy back
+  (SVAMP stays at -0.3/-0.6 from soup 25 on; IFEval and BFCL multiple get worse). The "longest right beats shortest wrong"
+  guard pairs teach length to all types, not just math. Best mf1 point = soup 25 (+45.6 / -1.4); not the goal.
+- stopV3-soup-25 (from the original Qwen): +13.4% / -0.7 (svamp +18% / -0.6, mbpp +12% / +0.6, ifeval +14% / -0.9, bfcl irr +7% / -2.8,
+  mult +11% / -2.2, simple +10% / -0.3). Unlike stopV2 (replies got longer), dropping guard pairs and capping keep-thinking pairs gives a
+  real if small saving. Soups 50-300 next.
