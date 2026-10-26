@@ -2367,3 +2367,10 @@ Extra recipes: sb1-<N> = merge(models/rc1-rl-40, adapters/sb1-drpo/step-<N>); rc
 adapters/rc2-s0..2/step-<N>, 1/3 each); rr1-rl-<N> as rc1-rl (rlcal). Fresh-x8 scores of these: stopB soups 10/20/30 11.9/+0.9,
 31.1/-2.3, 54.2/-3.6; stopB2-20 34.6/-2.1; rc2 soups 10/20/30/60 in density_points (63-64% / -4.9 for 20/30); sb1 10/20/30
 58.6/-3.3, 66.2/-5.7, 78.2/-11.2. Expected: up to ~35 GB freed if every adapter is found.
+
+### 2026-10-27 ~01:30 — mf1 soups 100/150, stopV3 soups 50/75 (fresh 240 x 8)
+- mf1-soup-100: +31.4% / -0.5 (svamp +23% / +1.3, ifeval +43% / -5.0, mult +35% / -4.1, mbpp +24% / +2.5).
+- mf1-soup-150: +29.9% / -0.3 (svamp +24% / +1.3, ifeval +38% / -1.9, mult +34% / -3.7).
+  mf1 settles at ~30% saved / ~-0.4: the math repair gives back ~24 points of rc1-rl-40's saving for ~1.7 pts accuracy. SVAMP is now
+  above the original (+1.3) but BFCL multiple stays ~-4. Not the goal; soup 25 (+45.6 / -1.4) remains mf1's best trade.
+- stopV3-soup-50: +16.4% / -1.4; stopV3-soup-75: +11.8% / +0.2. The stop line from the original Qwen plateaus at 12-16% saved.
