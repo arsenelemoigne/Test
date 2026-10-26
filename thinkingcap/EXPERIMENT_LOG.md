@@ -2087,3 +2087,7 @@ Step 15 per benchmark: svamp +18.4% / -0.3; mbpp +5.5% / +4.1; ifeval +3.7% / +2
 -1.4% / +0.3, simple +5.7% / -2.8. Step 20 being scored. Reading: gentle DRPO from raw is safe and slightly raises accuracy
 but saves very little in 15 steps (8%; rc1-rl-40 53.9%, rivals ~47%); the savings come mostly from math (wrong long loops
 pushed down), not from the length pressure on the other types.
+**drpo3b step 20 (the guard-stop checkpoint), fresh 240 x 8: +13.5% / -0.3 (CI -1.95..).** svamp +21.4% / -0.6; mbpp +10.2% /
+-1.6; ifeval +12.0% / +1.3; bfcl irrelevance +13.7% / +0.3, multiple +8.5% / -1.3, simple +8.0% / +0.3. Steady, every type a
+little shorter at no clear cost: 5 -> 20 steps went 3.5 -> 13.5% saved. The guard (noisy batch accuracy) may have stopped a run
+that was still safe on the fresh set. GPU 2 moved on to teach1.
