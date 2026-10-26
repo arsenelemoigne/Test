@@ -142,6 +142,8 @@ def main():
                            LoraConfig(r=args.rank, lora_alpha=2 * args.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
                                       target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj",
                                                       "down_proj"]))
+    model.gradient_checkpointing_enable()  # long replies ran teach1b out of memory on a 22 GB L4
+    model.enable_input_require_grads()
     trainable = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=args.lr)
     order = [i for _ in range(args.epochs) for i in rng.sample(range(len(items)), len(items))]
@@ -151,7 +153,8 @@ def main():
     step, window = 0, defaultdict(lambda: {"stop": [], "keep": [], "loss": []})
     for position, k in enumerate(order, 1):
         src, prompt, thinking, points = items[k]
-        ids = torch.tensor([prompt + thinking], device="cuda")
+        last = max(i for i, _ in points) + 1  # nothing after the last labelled paragraph end is needed (causal)
+        ids = torch.tensor([prompt + thinking[:last]], device="cuda")
         hidden = model.base_model.model.model(input_ids=ids).last_hidden_state[0]
         at = torch.tensor([len(prompt) + i for i, _ in points], device="cuda")
         logp = torch.log_softmax(model.base_model.model.lm_head(hidden[at]).float(), -1)[:, close_id]

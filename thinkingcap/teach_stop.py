@@ -155,9 +155,16 @@ def main():
             flush()
         return feats
 
+    points_cache = out / "teacher_points.npz"
+    if points_cache.exists() and len(np.load(points_cache)["hard"]) == len(items):  # a rerun: judges already applied
+        cache = np.load(points_cache)
+        hard_p, soft_p = cache["hard"], cache["soft"]
+        print(f"teacher points reused from {points_cache}", flush=True)
+    else:
+        hard_p = soft_p = None
     # 1. the judges
     xs, success, qs = [], [], []
-    for cal in map(Path, args.cal):
+    for cal in (map(Path, args.cal) if hard_p is None else []):
         cuts, replies = read(cal / "cuts.jsonl"), {r["reply"]: r for r in read(cal / "replies.jsonl")}
         verdict = {v["key"]: v for v in read(cal / "verdicts.jsonl")}
         name = cal.name if cal.name != "cal" else cal.parent.name
@@ -173,25 +180,29 @@ def main():
             xs.append(f)
             success.append(v["right"] / max(1, v["of"]))
             qs.append(f"{name}/{replies[c['reply']]['id']}")
-    x, success = np.stack(xs), np.array(success)
-    labelled = (success == 1) | (success <= args.unsafe / 20)
-    label = (success == 1).astype(float)
-    held = np.array([int(hashlib.md5(q.encode()).hexdigest(), 16) % 10 < 2 for q in qs])
-    grades = {}
-    for kind, mask, target in (("yes/no", labelled, label), ("soft", np.ones(len(success), bool), success)):
-        check = fit_mlp(x[mask & ~held], target[mask & ~held], seed=args.seed)(x[held])
-        ll, brier, ece = calibration(check, success[held])
-        grades[kind] = {"auc": auc(check[labelled[held]], label[held][labelled[held]]), "log_loss": ll,
-                        "brier": brier, "ece": ece}
-        print(f"judge {kind}: held-out AUC {grades[kind]['auc']:.3f}, log loss {ll:.3f}, Brier {brier:.3f}, "
-              f"calibration error {ece:.3f}", flush=True)
-    hard = fit_mlp(x[labelled], label[labelled], seed=args.seed)
-    soft = fit_mlp(x, success, seed=args.seed)
-    print(f"judges: {len(success)} cuts ({int(labelled.sum())} yes/no labelled), layer {args.layer}", flush=True)
+    if hard_p is None:
+        x, success = np.stack(xs), np.array(success)
+        labelled = (success == 1) | (success <= args.unsafe / 20)
+        label = (success == 1).astype(float)
+        held = np.array([int(hashlib.md5(q.encode()).hexdigest(), 16) % 10 < 2 for q in qs])
+        grades = {}
+        for kind, mask, target in (("yes/no", labelled, label), ("soft", np.ones(len(success), bool), success)):
+            check = fit_mlp(x[mask & ~held], target[mask & ~held], seed=args.seed)(x[held])
+            ll, brier, ece = calibration(check, success[held])
+            grades[kind] = {"auc": auc(check[labelled[held]], label[held][labelled[held]]), "log_loss": ll,
+                            "brier": brier, "ece": ece}
+            print(f"judge {kind}: held-out AUC {grades[kind]['auc']:.3f}, log loss {ll:.3f}, Brier {brier:.3f}, "
+                  f"calibration error {ece:.3f}", flush=True)
+        hard = fit_mlp(x[labelled], label[labelled], seed=args.seed)
+        soft = fit_mlp(x, success, seed=args.seed)
+        print(f"judges: {len(success)} cuts ({int(labelled.sum())} yes/no labelled), layer {args.layer}", flush=True)
 
-    # 2. teacher signals at every point: the judges (hidden state) and the model's own confidence
-    feats = last_states(seqs)
-    hard_p, soft_p = hard(feats), soft(feats)
+        # 2. teacher signals at every point: the judges (hidden state) and the model's own confidence
+        feats = last_states(seqs)
+        hard_p, soft_p = hard(feats), soft(feats)
+        np.savez(points_cache, hard=hard_p, soft=soft_p)
+    else:
+        grades = json.loads((out / "teacher.json").read_text())["judges"] if (out / "teacher.json").exists() else {}
     by_answer, at_end = {}, {}
     for (rid, i), h, sp, op in zip(items, hard_p, soft_p, own_p):
         if i is None:
@@ -228,6 +239,8 @@ def main():
         model = get_peft_model(AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to("cuda"), LoraConfig(
             r=args.rank, lora_alpha=2 * args.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
+        model.gradient_checkpointing_enable()  # teach1b ran out of memory on a long answer (22 GB L4)
+        model.enable_input_require_grads()
         optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
         order = list(range(len(answers)))
         random.Random(args.seed).shuffle(order)
@@ -239,7 +252,8 @@ def main():
         for step, k in enumerate(order):
             r, cuts, end_p = answers[k]
             stop = r["output_ids"].index(close_id)
-            ids = torch.tensor([r["prompt_ids"] + r["output_ids"][:stop]], device="cuda")
+            last = max(c[0] for c in cuts) + 1  # nothing after the last scored paragraph end is needed (causal)
+            ids = torch.tensor([r["prompt_ids"] + r["output_ids"][:last]], device="cuda")
             hidden = model.base_model.model.model(input_ids=ids).last_hidden_state[0]
             positions = torch.tensor([len(r["prompt_ids"]) + c[0] for c in cuts], device="cuda")
             logp = torch.log_softmax(model.base_model.model.lm_head(hidden[positions]).float(), -1)[:, close_id]

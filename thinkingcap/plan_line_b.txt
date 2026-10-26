@@ -100,6 +100,10 @@ targeted --name stopV3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 p
 # (and >= 25%), -> 0 where not; no reply imitated, no whole-reply pairs; never-solved replies and GSM-IC/Plus left out;
 # per-type caps as stopV2; a checkpoint every 100 steps, each scored on fresh x8.
 stopgold --name gold1 --start Qwen/Qwen3-0.6B --sg-save-every 100
+# teach1c = teach1b rerun (teach1b ran out of GPU memory on GPU 2 at 1,800/2,512 answers, 26 Oct ~17:30; the queue
+# moved on to drpo3e). Fixes: forward pass stops at the last scored paragraph end, gradient checkpointing; teacher points
+# cached for any later rerun. Same settings, reusing teach1's answers and own-confidence readings.
+teach --name teach1c --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none --teach-reuse teach1
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
 # user (25 Oct): per-type stop from the benchmark findings (benchlot/zbench): code and tools only. On MBPP+ the thinking is

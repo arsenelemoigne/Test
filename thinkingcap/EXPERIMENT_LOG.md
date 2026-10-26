@@ -2232,3 +2232,8 @@ bfcl 13-19% longer, svamp flat). Getting longer with training: the brake pairs w
 caps; guard pairs dropped (longest right beats shortest wrong: rewards length itself); "keep thinking" (hard) pairs capped at
 20% of each type; stop-here and be-right pairs unchanged. track.py --tg-drop-kinds / --tg-brake-share. 3 seeds, soups
 25-300 on fresh x8.
+**26 Oct ~17:30, teach1b crashed: CUDA out of memory** (GPU 2, variant rel:0.05 at 1,800/2,512 answers, on a long answer;
+progress until then: gsm8k_matched p(stop) 0.53-0.59 where it should stop vs 0.23-0.30 where it should keep, "good stop"
+0.61-0.73). The queue moved on to drpo3e (running). Fixes in teach_stop.py and stop_gold.py: the forward pass ends at the
+last scored paragraph end (causal, nothing after it is needed) and gradient checkpointing is on; teach_stop caches its
+teacher points (teacher_points.npz) so a rerun skips the ~2 h judge fit. Requeued as teach1c on GPU 1 after gold1.
