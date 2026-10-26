@@ -506,7 +506,18 @@ def main():
     base = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to(device)
     base.gradient_checkpointing_enable()
     base.enable_input_require_grads()
-    if args.init_adapter:
+    out_dir = Path(args.out)
+    state_path = out_dir / "resume.pt"
+    done_steps = sorted((int(d.name[5:]) for d in out_dir.glob("step-*") if (d / "adapter_config.json").exists()),
+                        reverse=True)
+    resume_from = None  # a lost runtime resumes here (state saved every step), not from step 0
+    if state_path.exists() and (out_dir / "current" / "adapter_config.json").exists():
+        resume_from = out_dir / "current"
+    elif done_steps:  # older runs saved checkpoints but no optimizer state: continue from the latest one
+        resume_from = out_dir / f"step-{done_steps[0]}"
+    if resume_from:
+        model = PeftModel.from_pretrained(base, str(resume_from), is_trainable=True)
+    elif args.init_adapter:
         model = PeftModel.from_pretrained(base, args.init_adapter, is_trainable=True)
     else:
         model = get_peft_model(base, LoraConfig(
@@ -524,12 +535,26 @@ def main():
     pool = balanced_order([r for r in read_jsonl(Path(args.data)) if args.sources == "all" or r["source"] in keep],
                           random.Random(args.seed))
     current = out / "current"
-    model.save_pretrained(current)
     sampler = Sampler(args, tokenizer)
     log = []
     rng = random.Random(args.seed)
+    start = 0
+    if resume_from and state_path.exists():
+        state = torch.load(state_path, weights_only=False)
+        optimizer.load_state_dict(state["optimizer"])
+        scaler.load_state_dict(state["scaler"])
+        rng.setstate(state["rng"])
+        torch.set_rng_state(state["torch_rng"])
+        log, start = state["log"], state["step"]
+        print(f"resuming after step {start} (adapter, optimizer and log restored)", flush=True)
+    elif resume_from:
+        start = done_steps[0]
+        log_path = out / "rl_log.jsonl"
+        log = [json.loads(l) for l in log_path.read_text().splitlines() if l.strip()][:start] if log_path.exists() else []
+        print(f"resuming after step {start} from {resume_from.name} (no optimizer state saved: fresh AdamW)", flush=True)
+    model.save_pretrained(current)
 
-    for step in range(args.steps):
+    for step in range(start, args.steps):
         scale = args.scale_start + (args.scale_end - args.scale_start) * step / max(1, args.steps - 1)
         drawn = math.ceil(args.questions * args.dynamic_sampling) if args.dynamic_sampling else args.questions
         questions = [pool[((args.offset + step) * drawn + i) % len(pool)] for i in range(drawn)]
@@ -716,6 +741,9 @@ def main():
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)
         print(json.dumps(entry), flush=True)
+        (out / "rl_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in log))
+        torch.save({"step": step + 1, "optimizer": optimizer.state_dict(), "scaler": scaler.state_dict(),
+                    "rng": rng.getstate(), "torch_rng": torch.get_rng_state(), "log": log}, state_path)
         if args.guard_drop > 0 and len(log) >= 10:  # per-type accuracy guard (user: strict checks per data type)
             def acc(entries, kind):
                 c = sum(e["by_type"][kind]["accuracy"] * e["by_type"][kind]["replies"] for e in entries if kind in e["by_type"])
