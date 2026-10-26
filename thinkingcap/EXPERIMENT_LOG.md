@@ -2040,3 +2040,14 @@ math plus ToolACE / IFEval-like overlaps with older pools); probe_curve's per-so
 2,000, so ~4,370 non-code questions + KodCode 3,000 = **~7,400 new questions** (not 10,300). Still ~4x stopB5's base.
 drpo3b steps 10-12: batch accuracy 0.74-0.77 (up from 0.67), thinking still flat (all 1,076-1,218; non-math 397-595;
 code 866-1,426). Accuracy rises, length does not move yet.
+
+**26 Oct, math now taught from SVAMP-like data everywhere it can be (user).**
+- **stopV2**: math = matched GSM8K + MetaMathQA only (GSM-IC/Plus dropped: they settle by 20-40%, the wrong teacher). Each gets
+  "keep thinking" + "be right" pairs, and ALSO "stop here" pairs on safe cuts IF its lots' curve builds up like SVAMP's:
+  success at 20-40% of the thinking / success with the full thinking <= 0.6 (SVAMP 0.47; matched GSM8K 0.35 -> ON; GSM-IC
+  0.88, GSM-Plus 1.0 would be OFF; MetaMathQA decided automatically from lot V2, printed in the log). track.py
+  --tg-shorten-if-svamp / early_ratio() (toy-tested on the real lot B5 and B3 summary lines). Caps: gsm8k_matched 1,300,
+  metamath_sv 1,300.
+- **RL pools**: new --pool-math (34% math split evenly). teach1 (raw Qwen): matched GSM8K + MetaMathQA, both taught by own
+  confidence. sb2 and drpo2 (from rc1-rl-40, which only draw unused questions; every matched question is now in a lot):
+  MetaMathQA; sb2 protects it like the other math. drpo3b keeps its built pool (GSM-IC/Plus, protected).

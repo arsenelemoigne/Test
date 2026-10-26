@@ -181,6 +181,9 @@ def main():
     parser.add_argument("--lot-cuts", type=int, default=10, help="callot --paragraphs: paragraph-end cuts per reply")
     parser.add_argument("--lot-checks", type=int, default=20, help="callot --paragraphs: forced answers per cut")
     parser.add_argument("--tg-min-samples", type=int, default=20, help="targeted: full replies a question needs for --tg-rule question")
+    parser.add_argument("--tg-shorten-if-svamp", default="none",
+                        help="targeted: types given stop pairs only if their lots' curve builds up like SVAMP's (math)")
+    parser.add_argument("--pool-math", default="gsm_ic,gsm_plus", help="drpo/teach: math sources of the RL pool (34%% split)")
     parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
@@ -1476,6 +1479,14 @@ def benchlot(args):
     print((cal / "summary.txt").read_text(), flush=True)
 
 
+def pool_mix(args):
+    """The RL pool's shares with --pool-math as its math (34% split evenly); the other types as mixed_pool's default."""
+    math = [m for m in args.pool_math.split(",") if m]
+    if "gsm8k_matched" in math and not Path("data/gsm8k_matched-train.jsonl").exists():  # built by mathmatch, maybe elsewhere
+        drive_sync("restore", only=["data/gsm8k_matched-train.jsonl"])
+    return {**{m: 0.34 / len(math) for m in math}, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1}
+
+
 def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16, reuse=False):
     """A fresh question pool mixed like the evaluation (GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train,
     KodCode), shuffled so every batch mixes the types; earlier draws removed, contamination-checked."""
@@ -1534,7 +1545,7 @@ def drpo(args):
     need = math.ceil(args.drpo_steps * args.drpo_questions * max(1.0, args.rl_dynamic))
     if not Path(f"data/rl-{name}-mixed.jsonl").exists():  # built on the other runtime: reuse the same pool
         drive_sync("restore", only=[f"data/rl-{name}-mixed.jsonl", f"data/rl-{name}-text.jsonl"])
-    pool = mixed_pool(name, need, args.data_seed, args.kod_file, reuse=not base.startswith("models/"))
+    pool = mixed_pool(name, need, args.data_seed, args.kod_file, mix=pool_mix(args), reuse=not base.startswith("models/"))
     out = Path("adapters") / f"{name}-{args.rl_variant}"
     if not (out / "adapter_config.json").exists():  # trained on the other runtime: reuse it, never retrain
         drive_sync("restore", only=[str(out)])
@@ -1800,7 +1811,8 @@ def teach(args):
         if (earlier / "own_confidence.jsonl").exists() and not (out / "own" / "own_confidence.jsonl").exists():
             shutil.copytree(earlier, out / "own", dirs_exist_ok=True)
     else:
-        pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file, reuse=not base.startswith("models/"))
+        pool = mixed_pool(name, args.teach_questions, args.data_seed, args.kod_file, mix=pool_mix(args),
+                          reuse=not base.startswith("models/"))
         probe = BON / f"probe-{name}"
         if not (probe / "rollouts.jsonl").exists():
             n = sum(1 for l in pool.read_text().splitlines() if l.strip())
@@ -1878,6 +1890,24 @@ def wronglen(args):
     py("wrong_lengths.py", "--root", DRIVE / "runs" / "mvtf", "--out", ROOT / "wrong_lengths.txt")
 
 
+def early_ratio(lots, source):
+    """A type's settling speed from label lots' summaries: forced-answer success at 20-40% of the thinking over success
+    with the full thinking (cut-weighted over the lots). SVAMP 0.34 / 0.73 = 0.47 (builds up slowly); practice GSM-IC
+    0.88 and GSM-Plus 1.0 (settled early: stop pairs there teach stops SVAMP punishes)."""
+    early = full = weight = 0.0
+    for lot in lots:
+        path = BON / f"pairs-{lot}" / "cal" / "summary.txt"
+        for line in (path.read_text().splitlines() if path.exists() else []):
+            parts = line.split()
+            if parts and parts[0] == source and len(parts) > 4:
+                vals = [x for x in parts[4:] if x != "/"][:6]  # 0-20 / 20-40 / 40-60 / 60-80 / 80-<100 / full
+                if len(vals) == 6 and vals[1] != "-" and vals[5] != "-":
+                    cuts = float(parts[3])
+                    early, full, weight = early + cuts * float(vals[1]), full + cuts * float(vals[5]), weight + cuts
+                break
+    return early / full if weight and full else None
+
+
 def targeted(args):
     """Targeted DPO from a label lot (targeted_pairs.py): shorten code and instructions where the lot's cuts show the
     answer already holds; make math think longer (full right beats an early cut that fails, long right beats short wrong);
@@ -1886,6 +1916,15 @@ def targeted(args):
     pairs = BON / f"pairs-{name}"
     if not (pairs / "pairs.jsonl").exists():
         ensure_lots(args.probe_extra_from)
+        shorten = args.tg_shorten
+        for src in [s for s in args.tg_shorten_if_svamp.split(",") if s and s != "none"]:
+            ratio = early_ratio(args.probe_extra_from, src)
+            ok = ratio is not None and ratio <= 0.6
+            print(f"{name}: {src} answer at 20-40% of the thinking / full = "
+                  f"{'n/a' if ratio is None else f'{ratio:.2f}'} (SVAMP 0.47, GSM-IC 0.88; bar 0.6): "
+                  f"{'stop pairs ON' if ok else 'stop pairs OFF'}", flush=True)
+            if ok:
+                shorten += f",{src}"
         rows = []
         for lot in args.probe_extra_from:  # one or more label lots of the same model
             part = pairs / lot
@@ -1893,7 +1932,7 @@ def targeted(args):
                 py("targeted_pairs.py", "--cal", BON / f"pairs-{lot}" / "cal", "--rollouts",
                    BON / f"probe-{lot}" / "rollouts.jsonl", BON / f"kprobe-{lot}" / "rollouts.jsonl",
                    "--keep", BON / f"{lot}-clean.jsonl", "--out", part,
-                   "--shorten-sources", args.tg_shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule,
+                   "--shorten-sources", shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule,
                    "--min-samples", args.tg_min_samples, "--right-sources", args.tg_right)
             print((part / "summary.txt").read_text(), flush=True)
             rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]

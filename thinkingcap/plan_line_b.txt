@@ -84,7 +84,9 @@ callot --name plotV2 --start Qwen/Qwen3-0.6B --data-seed 67 --paragraphs --kod-f
 # stopV2: pairs from ALL original-Qwen lots (B..B5 + V2, ~12,000 questions); code/tools/instructions get "stop here" where
 # safe AND "keep thinking" where stopping fails; math gets "keep thinking" + "be right" pairs (own right vs own wrong of
 # similar length, says nothing about length; NLL anchor on); capped per type (~8,000 pairs); 3 seeds, soups on fresh x8
-targeted --name stopV2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 plotB5 plotV2 --tg-rule question --tg-min-samples 8 --tg-shorten kodcode,toolace,hermes_tools,ifeval_like --tg-long kodcode,toolace,hermes_tools,ifeval_like,gsm_ic,gsm_plus,gsm8k_matched,metamath_sv --tg-right gsm_ic,gsm_plus,gsm8k_matched,metamath_sv --tg-quota kodcode=1800,toolace=1200,hermes_tools=500,ifeval_like=1800,gsm_ic=300,gsm_plus=300,gsm8k_matched=800,metamath_sv=1300 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 300 --seeds 0 1 2
+# user (26 Oct): math = matched GSM8K + MetaMathQA only (GSM-IC/Plus settle early: wrong teacher); a math type also gets
+# "stop here" pairs IF its lots' curve builds up like SVAMP's (20-40% success / full <= 0.6; SVAMP 0.47, matched 0.35, GSM-IC 0.88)
+targeted --name stopV2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 plotB5 plotV2 --tg-rule question --tg-min-samples 8 --tg-shorten kodcode,toolace,hermes_tools,ifeval_like --tg-shorten-if-svamp gsm8k_matched,metamath_sv --tg-long kodcode,toolace,hermes_tools,ifeval_like,gsm8k_matched,metamath_sv --tg-right gsm8k_matched,metamath_sv --tg-quota kodcode=1800,toolace=1200,hermes_tools=500,ifeval_like=1800,gsm8k_matched=1300,metamath_sv=1300 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 300 --seeds 0 1 2
 # user's rule: a cut is safe when as right as the question's own rate (20 tries) + margin, chosen on half the re-answers
 # and checked on the other half (lots B/B2 have 8 tries: strict rule kept there); never-solved questions left for later
 # user (25 Oct): per-type stop from the benchmark findings (benchlot/zbench): code and tools only. On MBPP+ the thinking is
@@ -99,7 +101,7 @@ targeted --name stopV2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 p
 targeted --name stopB5 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,toolace,hermes_tools --tg-long none --tg-save-every 5 --dpo-steps 10 15 20 25 30 --seeds 0 1 2
 # user (26 Oct): ShorterBetter rerun with the PAPER's beta 0.001 (sb1's 0.005 overshot within 10 steps), plus math protection,
 # the per-type guard and the fixed batch mix; from rc1-rl-40 like sb1; every 10-step checkpoint scored on fresh x8
-drpo --name sb2 --start models/rc1-rl-40 --data-seed 66 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter --rl-sb-beta 0.001 --rl-lr 5e-6 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
+drpo --name sb2 --start models/rc1-rl-40 --data-seed 66 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --rl-variant shorterbetter --rl-sb-beta 0.001 --rl-lr 5e-6 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv --rl-guard 0.06
 balround --name bal0 --start Qwen/Qwen3-0.6B --data-seed 61 --kod-file data/kodcode3.jsonl --bal-questions 6000 --bal-samples 4 --tg-save-every 25 --dpo-steps 50 100 150 200 --seeds 0 1 2
 # removed (user, 25 Oct: superseded / same aggressive DRPO that overshot): targeted --name stopB4 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,ifeval_like,toolace,hermes_tools,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 10 --dpo-steps 30 60 90 120 --seeds 0 1 2
 end

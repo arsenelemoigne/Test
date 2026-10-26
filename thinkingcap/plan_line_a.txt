@@ -105,9 +105,9 @@ drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcod
 # relative rule (as good as finishing, within the same answer), margins 0.05 and 0.1
 # user (25 Oct ~22:00): no classifier at all: the model's own confidence teaches every type it covers (math, code, tools);
 # instructions and multiple choice still kept thinking; teach2 (the same thing reusing teach1) removed as a duplicate
-teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,kodcode,toolace,hermes_tools --teach-judge none
+teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
 # removed (user, 25 Oct: teach1 now does exactly this): teach --name teach2 --teach-reuse teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode,toolace,hermes_tools --teach-judge none
-drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6
+drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
 end
