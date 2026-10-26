@@ -2257,3 +2257,13 @@ MetaMathQA 655 / 276 / 369; KodCode 833 / 208; IFEval-like 836 / 123; ToolACE 21
   2,850 pairs: gsm8k_matched guard 397 / right 413; metamath_sv guard 995 / right 1,045 (no hard pairs: mathfix has no cut labels).
   DPO mix guard 0.49 / right 0.51, 176 steps per seed (one pass). Seed 0 done (pairs ordered right 79–92% late, tripwire 0); seed 1 started.
 - stopV3 (GPU 1): seed 1 at step 245/300 (pairs ordered right ~80–84%); seed 2 and the soups next.
+
+**26 Oct ~22:30, density map + budget-prompt test queued (user).** Density map (artifact "ThinkingCap Density Map"): all 71
+fresh-x8 results.json files read from Drive (one question-set fingerprint; recomputed scores match the logged headlines).
+Noise: an untouched copy of the original vs the original: SVAMP -42 thinking tokens / -0.3 pts, MBPP+ -1.5 pts. Cheapest
+model within 1 pt of the original, per benchmark (thinking tokens): BFCL pooled 67 (drpo1-60) vs 174; MBPP+ 742 (rep4-blend50)
+vs 2,050; IFEval 193 (bon-dpo-r2g step 10) vs 454; SVAMP 405 (clean-b1 step 20) vs 635. Best-of-71 on 40 questions each:
+rough, a little optimistic. IFEval's reply is 284 tokens even with thinking off (703 with), so it cannot be cut as deep.
+**bp1** (GPU 2 after mf1): original Qwen with "Think briefly: keep your thinking under N tokens" appended to the system
+message (svamp 400, mbpp 750, ifeval 200, bfcl 70), fresh x8, vs the original; thinking scanned for budget words
+(tokens/budget/limit/brief/quick/concise/short) against the same scan without the prompt. Measure only.

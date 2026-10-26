@@ -20,6 +20,7 @@ import json
 import math
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -191,6 +192,8 @@ def main():
                         help="targeted: most share of 'keep thinking' (hard) pairs within each type")
     parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
+    parser.add_argument("--bp-budgets", default="svamp=400,mbpp=750,ifeval=200,bfcl=70",
+                        help="budgetprompt: thinking budget per benchmark stated in the system prompt (measurement only)")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
                         help="stopgold: label lots of --start whose cut verdicts are the teacher")
     parser.add_argument("--sg-save-every", type=int, default=100, help="stopgold: optimizer steps between scored checkpoints")
@@ -1858,6 +1861,61 @@ def teach(args):
         res = ROOT / f"f8-{name}-{tag}"
         evaluate(res, samples=8, questions=fresh_q, model=model)
         print(score_line(f"{name}-{tag} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+
+
+def budgetprompt(args):
+    """Does a token budget in the system prompt shorten the ORIGINAL model's thinking, at what cost, and how often does
+    the model talk about the budget instead of the problem (user, measure only; a system prompt changes the evaluation, so
+    this is never a submission setting: at most a training-time prompt to distil and remove). A copy of evaluate.py adds
+    one sentence per benchmark to the system message (appended to an existing one, e.g. BFCL's function list), then the
+    fresh set x8 is compared with the original, and the thinking text is scanned for budget talk."""
+    budgets = dict((k, int(v)) for k, v in (x.split("=") for x in args.bp_budgets.split(",")))
+    src, dst = Path("evaluate.py"), Path("evaluate_budget.py")
+    text = src.read_text()
+    call = 'tokenizer.apply_chat_template(row["messages"], tokenize=True,'
+    assert text.count(call) == 1, "evaluate.py changed: the chat-template call is not where expected"
+    helper = (f"BUDGETS = {budgets!r}\n"
+              "def budget_messages(row):\n"
+              "    key = next((k for k in BUDGETS if row['dataset'].startswith(k)), None)\n"
+              "    if key is None:\n"
+              "        return row['messages']\n"
+              "    note = f'Think briefly: keep your thinking under {BUDGETS[key]} tokens.'\n"
+              "    msgs = [dict(m) for m in row['messages']]\n"
+              "    if msgs and msgs[0]['role'] == 'system':\n"
+              "        msgs[0]['content'] = msgs[0]['content'].rstrip() + '\\n\\n' + note\n"
+              "    else:\n"
+              "        msgs.insert(0, {'role': 'system', 'content': note})\n"
+              "    return msgs\n\n\n")
+    text = text.replace(call, 'tokenizer.apply_chat_template(budget_messages(row), tokenize=True,')
+    text = text.replace("def build_jobs(", helper + "def build_jobs(", 1)
+    dst.write_text(text)
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    out = ROOT / f"f8-{args.name}"
+    if not (out / "results.json").exists():
+        shutil.rmtree(out, ignore_errors=True)
+        py("evaluate_budget.py", "--questions", fresh_q, "--samples", 8, "--out", out)
+    print(raw_diff(f"{args.name}: original Qwen with a thinking budget in the system prompt vs without (fresh 240 x 8)",
+                   out, ROOT / "f8-base"), flush=True)
+    talk = re.compile(r"\b(tokens?|budget|limit|brief(ly)?|quick(ly)?|concise|short(er)?)\b", re.I)
+    def scan(run):  # answers, answers mentioning the words, mentions, thinking tokens; per dataset
+        stats = defaultdict(lambda: [0, 0, 0, 0])
+        for line in (run / "records.jsonl").read_text().splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            thinking = r["text"][:max(0, len(r["text"]) - len(r["response"]))]
+            hits = len(talk.findall(thinking))
+            st = stats[r["dataset"]]
+            st[0] += 1; st[1] += hits > 0; st[2] += hits; st[3] += r["reasoning_tokens"]
+        return stats
+    with_b, without = scan(out), scan(ROOT / "f8-base")  # the same words occur in ordinary thinking too: compare
+    lines = [f"{d}: budget words in the thinking of {st[1] / st[0]:.0%} of answers ({st[2] / st[0]:.1f} per answer) vs "
+             f"{without[d][1] / max(1, without[d][0]):.0%} ({without[d][2] / max(1, without[d][0]):.1f}) without the prompt; "
+             f"thinking {st[3] / st[0]:.0f} vs {without[d][3] / max(1, without[d][0]):.0f} tokens; budget "
+             f"{next((v for k, v in budgets.items() if d.startswith(k)), '-')}" for d, st in sorted(with_b.items())]
+    (out / "budget_talk.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
 
 
 def stopgold(args):

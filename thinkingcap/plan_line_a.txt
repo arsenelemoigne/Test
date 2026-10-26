@@ -124,6 +124,11 @@ mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --t
 # 40 steps, every 5 scored on fresh x8, guard 10 points; never drpo3b's or drpo3d's training questions
 # user (26 Oct): BFCL multiple (choose among several functions) began to cost (3d-20/23: -2.2/-2.5) and the guard fired
 # on ToolACE: ToolACE's several-function questions get no length pressure (still trained to be right), like math
+# bp1 (user, 26 Oct, measure only): the ORIGINAL Qwen with a per-benchmark thinking budget in the system prompt
+# ("Think briefly: keep your thinking under N tokens"; N from the density map: the cheapest models within 1 pt), fresh x8.
+# Does it shorten, what does it cost, and how often does the thinking talk about the budget (vs the same words without
+# the prompt)? A system prompt changes the evaluation: never a submission setting, at most a training-time prompt.
+budgetprompt --name bp1 --bp-budgets svamp=400,mbpp=750,ifeval=200,bfcl=70
 drpo --name drpo3e --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
