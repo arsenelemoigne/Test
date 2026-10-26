@@ -129,7 +129,11 @@ mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --t
 # Does it shorten, what does it cost, and how often does the thinking talk about the budget (vs the same words without
 # the prompt)? A system prompt changes the evaluation: never a submission setting, at most a training-time prompt.
 budgetprompt --name bp1 --bp-budgets svamp=400,mbpp=750,ifeval=200,bfcl=70
-drpo --name drpo3e --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
+# drpo3f (user, 27 Oct) replaces drpo3e: the same continuation of drpo3d-23 (21.2% / +0.2) with a stronger push,
+# lambda 0.3 (between the safe 0.5 and drpo1's overshooting 0.2); math and BFCL-multiple-like tool calls protected;
+# guard 10 pts; every 5 steps scored on fresh x8.
+# was: drpo --name drpo3e --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
+drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.3 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
 # removed (user, 25 Oct: teach1 now does exactly this): teach --name teach2 --teach-reuse teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode,toolace,hermes_tools --teach-judge none

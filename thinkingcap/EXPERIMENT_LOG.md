@@ -2320,3 +2320,7 @@ long-chosen pairs did in stopV2. Accuracy +0.9 overall, mostly MBPP+ (+2.5); IFE
 - stopV3-soup-25 (from the original Qwen): +13.4% / -0.7 (svamp +18% / -0.6, mbpp +12% / +0.6, ifeval +14% / -0.9, bfcl irr +7% / -2.8,
   mult +11% / -2.2, simple +10% / -0.3). Unlike stopV2 (replies got longer), dropping guard pairs and capping keep-thinking pairs gives a
   real if small saving. Soups 50-300 next.
+**27 Oct ~00:15, drpo3e replaced by drpo3f (user):** the same continuation of drpo3d-23 (21.2% / +0.2) but lambda 0.3 instead
+of 0.5; math and toolace/multiple protected, guard 10 pts, 40 steps, every 5 scored on fresh x8 (GPU 2, after mf1's soups and
+bp1). stopB3's pairs by type (from pairs-stopB3): kodcode 359, gsm_ic 248, gsm_plus 130, ifeval_like 166, commonsense_qa 80,
+toolace 60, arc_easy 15 (1,058, all shorten); stopB5 ~71% code.
