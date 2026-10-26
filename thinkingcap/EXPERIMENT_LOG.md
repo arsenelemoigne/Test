@@ -2225,3 +2225,5 @@ paragraph-end tokens; a cut less right than finishing gets 0, cuts as right get 
 stopV2 soup 75 (~560 shorten pairs seen): **-9.9% / +0.9** (svamp +5.5 / +1.3; mbpp -20.3 / +2.2; ifeval -12.7 / +0.9; bfcl irr
 -10.9 / -0.6, mult -16.9 / 0.0, simple -14.2 / -1.6). Still longer past the dose where every shorten-only run had taken off:
 the long-chosen pairs and their NLL anchor hold it; accuracy slightly up.
+stopV2 soup 75: -9.9% / +0.9 (svamp +6% shorter, everything else 11-20% longer); soup 100: **-15.8% / +0.2** (mbpp 32% longer,
+bfcl 13-19% longer, svamp flat). Getting longer with training: the brake pairs win. Soups 150/200/300 pending.
