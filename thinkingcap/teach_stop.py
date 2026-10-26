@@ -178,8 +178,8 @@ def main():
     label = (success == 1).astype(float)
     held = np.array([int(hashlib.md5(q.encode()).hexdigest(), 16) % 10 < 2 for q in qs])
     grades = {}
-    for kind, rows, target in (("yes/no", labelled, label), ("soft", np.ones(len(success), bool), success)):
-        check = fit_mlp(x[rows & ~held], target[rows & ~held], seed=args.seed)(x[held])
+    for kind, mask, target in (("yes/no", labelled, label), ("soft", np.ones(len(success), bool), success)):
+        check = fit_mlp(x[mask & ~held], target[mask & ~held], seed=args.seed)(x[held])
         ll, brier, ece = calibration(check, success[held])
         grades[kind] = {"auc": auc(check[labelled[held]], label[held][labelled[held]]), "log_loss": ll,
                         "brier": brier, "ece": ece}

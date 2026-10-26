@@ -2091,3 +2091,9 @@ pushed down), not from the length pressure on the other types.
 -1.6; ifeval +12.0% / +1.3; bfcl irrelevance +13.7% / +0.3, multiple +8.5% / -1.3, simple +8.0% / +0.3. Steady, every type a
 little shorter at no clear cost: 5 -> 20 steps went 3.5 -> 13.5% saved. The guard (noisy batch accuracy) may have stopped a run
 that was still safe on the fresh set. GPU 2 moved on to teach1.
+**26 Oct ~08:30, teach1 trained on nothing (bug, fixed).** teach_stop.py's judge loop reused the name `rows` for its mask
+(`for kind, rows, target in ...`), overwriting the list of answers, so step 3 found 0 teacher answers ("teachers: own
+confidence 0, judge 0, keep thinking 0"; p(</think>) nan): both teach1 adapters are untouched copies of the raw model and
+their scores mean nothing. Fixed (loop variable renamed); queued teach1b on GPU 2 right after teach1, same settings, reusing
+teach1's 2,512 answers and own-confidence readings (--teach-reuse teach1); the judge fit (~2 h of hidden states) runs again.
+Before the bug the setup read: 19,466 paragraph ends; the soft judge predicts success 0.34 at cuts vs 0.62 at the full thinking.
