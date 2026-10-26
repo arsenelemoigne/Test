@@ -2164,3 +2164,5 @@ SVAMP -2.5 (wide CI). Step 23 being scored.
 
 drpo3b + 3d, 43 steps from the raw Qwen: 21.2% saved at +0.2, still rising ~0.7%/step; BFCL multiple begins to cost (-2.2..-2.5).
 GPU 2 moved on to teach1b. stopV2: all 3 seeds trained (300 steps each, tripwire 0.000); soups being scored.
+**Queued (user): drpo3e** = drpo3d-23 continued (GPU 2, after teach1b): same settings, 40 steps, every 5 scored on fresh x8,
+guard 10 points, pool may reuse earlier draws except drpo3b's and drpo3d's.
