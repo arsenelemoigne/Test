@@ -2227,3 +2227,8 @@ stopV2 soup 75 (~560 shorten pairs seen): **-9.9% / +0.9** (svamp +5.5 / +1.3; m
 the long-chosen pairs and their NLL anchor hold it; accuracy slightly up.
 stopV2 soup 75: -9.9% / +0.9 (svamp +6% shorter, everything else 11-20% longer); soup 100: **-15.8% / +0.2** (mbpp 32% longer,
 bfcl 13-19% longer, svamp flat). Getting longer with training: the brake pairs win. Soups 150/200/300 pending.
+
+**26 Oct, queued (user): stopV3 = stopV2 rebalanced (GPU 1, next; stopV2's soups 150-300 skipped).** Same lots, gate and
+caps; guard pairs dropped (longest right beats shortest wrong: rewards length itself); "keep thinking" (hard) pairs capped at
+20% of each type; stop-here and be-right pairs unchanged. track.py --tg-drop-kinds / --tg-brake-share. 3 seeds, soups
+25-300 on fresh x8.

@@ -186,6 +186,9 @@ def main():
     parser.add_argument("--pool-continues", nargs="*", default=[],
                         help="drpo: the RL runs this one continues: earlier draws may be reused, except these runs' pools")
     parser.add_argument("--pool-math", default="gsm_ic,gsm_plus", help="drpo/teach: math sources of the RL pool (34%% split)")
+    parser.add_argument("--tg-drop-kinds", default="", help="targeted: pair kinds left out, e.g. guard")
+    parser.add_argument("--tg-brake-share", type=float, default=1.0,
+                        help="targeted: most share of 'keep thinking' (hard) pairs within each type")
     parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
@@ -1992,6 +1995,21 @@ def targeted(args):
             print((part / "summary.txt").read_text(), flush=True)
             rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]
         note = ""
+        if args.tg_drop_kinds or args.tg_brake_share < 1:  # rebalance: drop pair kinds; cap "keep thinking" per type
+            drop = set(filter(None, args.tg_drop_kinds.split(",")))
+            by_src = {}
+            for l in rows:
+                r = json.loads(l)
+                if r["kind"] not in drop:
+                    by_src.setdefault(r["source"], []).append((r["kind"], l))
+            rng = random.Random(1)
+            rows = []
+            for src, group in sorted(by_src.items()):
+                hard = [l for k, l in group if k == "hard"]
+                other = [l for k, l in group if k != "hard"]
+                rng.shuffle(hard)
+                share = args.tg_brake_share
+                rows += other + hard[:len(hard) if share >= 1 else int(round(share / (1 - share) * len(other)))]
         if args.tg_quota:  # cap each type (a random share of its pairs, so its kinds keep their proportions)
             quota = dict((k, int(v)) for k, v in (x.split("=") for x in args.tg_quota.split(",")))
             by_src = {}
