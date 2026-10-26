@@ -2146,3 +2146,13 @@ drpo3d fresh x8: step 10 **+14.8% / -0.6** (svamp +24.8 / -1.9; mbpp +11.6 / -1.
 mult +11.9 / +0.6, simple +9.9 / -1.3); step 15 **+18.8% / +0.3** (svamp +30.9 / -0.3; mbpp +17.6 / 0.0; ifeval +13.6 / +1.6;
 bfcl irr +13.0 / -0.3, mult +12.1 / 0.0, simple +10.2 / +0.6). Savings growing again, accuracy flat, BFCL steady through step
 15 (the guard's ToolACE drop is at batch steps 19-23). Steps 20/23 being scored.
+**drpo3d fresh 240 x 8 (continuing drpo3b-20, which was +13.5% / -0.3):**
+
+| checkpoint (total steps) | saved | accuracy | svamp | mbpp | ifeval | bfcl irr / mult / simple |
+|---|---|---|---|---|---|---|
+| 3d-5 (25) | +12.7% | +0.9 | +22% / +0.9 | +4% / +1.2 | +14% / +1.9 | +12/-0.9, +7/0.0, +10/-0.6 |
+| 3d-10 (30) | +14.8% | -0.6 | +25% / -1.9 | +12% / -1.3 | +10% / +0.9 | +13/-0.3, +12/+0.6, +10/-1.2 |
+| 3d-15 (35) | **+18.8%** | **+0.3** | +31% / -0.3 | +18% / 0.0 | +14% / +1.6 | +13/-0.3, +12/0.0, +10/+0.6 |
+
+Steady: about +1% saved per step at no accuracy cost so far (35 steps: 18.8% at +0.3). Far from 50% at this pace, but the
+cleanest curve of the project. 3d-20 and the step-23 guard stop are being scored.
