@@ -2289,3 +2289,20 @@ instructions, ~72-74% code, ~49% tools.
 - The math repair worked on SVAMP (accuracy loss -4.1 -> -0.3), but SVAMP gave back 15 points of saving, and the overall saving fell 53.9 -> 45.6 for +0.7 pt accuracy.
   Between the two rivals (Lightning 43.2 / -0.85, michal 47.0 / -0.78) on saving, still behind on accuracy. Soups 50-175 next.
 - stopV3 (GPU 1): seed 2 at step 245/300.
+
+**26 Oct ~23:40, does the model know EARLY that its answer will fail? (user; CPU analysis of teach1's saved data.)**
+teach1's 2,506 answers (original Qwen, one per question; 21,978 paragraph-end own-confidence readings, own_low5 = geometric
+mean of the 5 least likely tokens of a greedy forced answer), matched to each answer's final outcome. AUC of "this answer will
+END wrong" from LOW own confidence (0.5 = no signal), by where it is read:
+| type (right/wrong) | 1st paragraph | 2nd | by 25% of the thinking | by 50% | at the end |
+|---|---|---|---|---|---|
+| matched GSM8K (541/79) | 0.48 | 0.50 | 0.38 | 0.46 | 0.64 |
+| MetaMathQA (476/87) | 0.55 | 0.51 | 0.54 | 0.52 | 0.76 |
+| KodCode (213/99) | 0.70 | 0.70 | 0.68 | 0.66 | 0.60 |
+| IFEval-like (192/50) | 0.57 | 0.60 | 0.63 | 0.58 | 0.60 |
+| ToolACE (260/225) | 0.67 | 0.62 | 0.64 | 0.65 | 0.50 |
+| Hermes (130/154) | 0.67 | 0.80 | 0.68 | 0.69 | 0.57 |
+Practical test: a "give up" threshold at the 2nd paragraph that stops at most 5% of RIGHT answers catches only 7-19% of the
+WRONG ones (code 19%, Hermes 14%, math 8-9%, IFEval 8%, ToolACE 7%). Reading: own confidence does not reveal early that an answer
+will fail (math: no signal before the end); code and tools carry a weak early signal. A hidden-state probe trained on "ends
+wrong" was not tried (the earlier probes predicted "answering now is right", a different question).
