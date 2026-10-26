@@ -2251,3 +2251,9 @@ teach1b parked (needs a memory fix); GPU 2 restarted so mf1 runs first; drpo3e r
 stopV3 pairs: 5,060 (no guard pairs; keep-thinking 20% per type: matched GSM8K shorten 722 / hard 254 / right 324;
 MetaMathQA 655 / 276 / 369; KodCode 833 / 208; IFEval-like 836 / 123; ToolACE 212 / 53; Hermes 156 / 39); seed 0 at step
 65/300 (pairs ordered right 78-81%).
+
+### 2026-10-26 ~20:40 — mf1 pairs built, DPO under way; stopV3 seed 1 nearly done
+- mf1 (GPU 2): rc1-rl-40 answered 3,700 math questions x8. Contamination check: 0 of 3,700 flagged.
+  2,850 pairs: gsm8k_matched guard 397 / right 413; metamath_sv guard 995 / right 1,045 (no hard pairs: mathfix has no cut labels).
+  DPO mix guard 0.49 / right 0.51, 176 steps per seed (one pass). Seed 0 done (pairs ordered right 79–92% late, tripwire 0); seed 1 started.
+- stopV3 (GPU 1): seed 1 at step 245/300 (pairs ordered right ~80–84%); seed 2 and the soups next.
