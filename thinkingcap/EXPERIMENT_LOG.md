@@ -2245,3 +2245,9 @@ answers only: "be right" (right beats wrong within +-25% length) + "keep thinkin
 longer); no pairs for any other type; then the targeted DPO (fresh LoRA on rc1-rl-40, NLL anchor, 3 seeds, soups 25-200 on
 fresh x8). No cut labelling. Goal: SVAMP back to ~-1 with the other types still short (~50% at ~-1). Dry-tested with stand-in
 data (filters math rows, builds both pair kinds, hands over to targeted()).
+
+**26 Oct ~17:00: teach1b crashed (CUDA out of memory in teach_stop.py) and GPU 2 jumped to drpo3e before mf1 was read.**
+teach1b parked (needs a memory fix); GPU 2 restarted so mf1 runs first; drpo3e resumes afterwards from its saved step.
+stopV3 pairs: 5,060 (no guard pairs; keep-thinking 20% per type: matched GSM8K shorten 722 / hard 254 / right 324;
+MetaMathQA 655 / 276 / 369; KodCode 833 / 208; IFEval-like 836 / 123; ToolACE 212 / 53; Hermes 156 / 39); seed 0 at step
+65/300 (pairs ordered right 78-81%).
