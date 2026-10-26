@@ -2132,3 +2132,5 @@ MetaMathQA 1,300: shorten 377 / hard 533 / guard 169 / right 221), KodCode 1,500
 IFEval-like 1,258 (shorten 836 / hard 123 / guard 299), ToolACE ~420, Hermes 243. 6.5x stopB5's 928, 40% brake/be-right pairs.
 **drpo3d (GPU 2)**: pool 3,227 for 2,880 (ToolACE 816, GSM-IC 846, GSM-Plus 731, IFEval-like 476, KodCode 358; no Hermes left);
 steps 1-2: batch accuracy 0.78 / 0.75, thinking 1,065 / 1,094.
+~10:45: stopV2 seed 0 at DPO step 115/300 (pairs ordered right 62-76%, tripwire 0.000). drpo3d steps 1-6: batch accuracy
+0.75-0.84; non-math thinking 401 -> 300; code 1,175 -> 767 (continuing from step 20, lengths now fall outside math too).
