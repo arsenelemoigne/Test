@@ -57,7 +57,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -188,6 +188,10 @@ def main():
     parser.add_argument("--pool-math", default="gsm_ic,gsm_plus", help="drpo/teach: math sources of the RL pool (34%% split)")
     parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
+    parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
+                        help="stopgold: label lots of --start whose cut verdicts are the teacher")
+    parser.add_argument("--sg-save-every", type=int, default=100, help="stopgold: optimizer steps between scored checkpoints")
+    parser.add_argument("--sg-extra", default="", help="stopgold: extra stop_gold.py arguments, e.g. '--min-rate 0.5'")
     parser.add_argument("--tg-guard-mode", default="longer", choices=("longer", "shorter"),
                         help="targeted: guard pairs longest right > shortest wrong (longer) or shortest right > longest wrong")
     parser.add_argument("--tg-guard", default="", help="targeted: types given guard pairs (default: the --tg-long types)")
@@ -1853,6 +1857,30 @@ def teach(args):
         print(score_line(f"{name}-{tag} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
 
 
+def stopgold(args):
+    """Stop-token training with the lots' labels as teacher (stop_gold.py): at every labelled paragraph end of the lots'
+    own replies, p("</think>") is trained toward 1 where the cut's forced answers are as right as the full thinking and 0
+    where they are not; nothing else is trained. A checkpoint every --sg-save-every steps; each one is merged and scored on
+    the fresh set x8 (the training dose is chosen by score, as the DPO stop runs all fell off a cliff past ~400 pairs)."""
+    name, base = args.name, args.start
+    ensure_lots(args.sg_lots)
+    out = Path("adapters") / name
+    if not (out / "adapter_config.json").exists():
+        probes = [BON / f"{kind}-{l}" for l in args.sg_lots for kind in ("probe", "kprobe")]
+        py("stop_gold.py", "--model", base, "--lots", *[BON / f"pairs-{l}" for l in args.sg_lots], "--probes", *probes,
+           "--out", out, "--save-every", args.sg_save_every, "--dtype", args.dtype, *args.sg_extra.split())
+    print((out / "labels.txt").read_text(), flush=True)
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for ckpt in sorted(out.glob("step-*"), key=lambda p: int(p.name.split("-")[1])):
+        model = Path("models") / f"{name}-{ckpt.name}"
+        if not (model / "config.json").exists():
+            py("merge.py", "--model", base, "--out", model, "--adapters", f"{ckpt}:1")
+        res = ROOT / f"f8-{name}-{ckpt.name}"
+        evaluate(res, samples=8, questions=fresh_q, model=model)
+        print(score_line(f"{name}-{ckpt.name} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+
+
 def balround(args):
     """Stage 1 of the clean recipe: one balanced DPO round from the raw model on its own graded answers. A fresh pool
     matched to the four benchmarks with equal weight (GSM8K, simpler and closer to SVAMP than GSM-IC/Plus; KodCode;
@@ -2588,7 +2616,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -2202,3 +2202,23 @@ over a 100-token right one; the cap removes hard pairs above the ratio.
 -8.6% / +1.0 (every type 2-19% longer; mbpp +2.2, bfcl multiple +1.6). The "keep thinking" side (hard: full right beats a
 failing cut; guard: longest right beats shortest wrong; ~40% of the 6,021 pairs) outweighs the "stop here" side early on.
 Soups 75-300 pending; if they stay longer, the brake share (or the guard pairs, which reward length itself) must be cut.
+
+**26 Oct ~17:40, re-analysis of the stop line from scratch (user) and gold1 queued.**
+- Every DPO stop run follows one curve set by pairs SEEN (batch 16, constant lr 2e-5), not by data size: ~30-35% saved at
+  320-400 pairs, ~55% at 480 (stopB 554 pairs, B2 327, B3 1,058, B5 928), with code collapsing between 400 and 480 in each.
+  More distinct pairs bought accuracy at equal saving (B3 soup 25 34.6/-0.4 vs B2 34.6/-2.1), not saving.
+- The habit is global: B2 (no code pairs) cut code 37%; B5 (code + tools only) cut IFEval 31%, SVAMP 20%; wrong and
+  never-solved answers shorten as much as right ones (wronglen).
+- dpo.py anchors the CHOSEN reply with NLL weight 1.0: in stopB..B5 every chosen reply was a short cut (the anchor itself
+  imitates shorter replies); in stopV2 53% of chosen replies are full-length or the question's longest right reply (hard,
+  guard, right), so the anchor imitates long replies half the time. stopV2 kinds: shorten 2,835 (47%), hard 1,564, guard
+  1,207, right 415. Soup 50 (~376 shorten pairs seen, where stopB3 was at ~30%) is still -8.6% / +1.0.
+- Only shorten and hard pairs share a prefix up to a cut, so they are pure "stop / continue here" decisions; guard and
+  right compare whole replies. The lots' perfect stop saves 39-81% per type and GAINS accuracy: the labels hold far more
+  than one global dose uses.
+stopV3 put on hold (it kept a whole-reply guard and the reply-imitating anchor). **gold1** (GPU 1 after stopV2):
+stop_gold.py trains only p("</think>") at the lots' labelled paragraph ends of their own replies: target 1 where the cut's
+forced answers are right at least as often as the reply's full thinking (and >= 25%), else 0; lots B..B5 + V2; GSM-IC/Plus,
+MBPP and never-solved replies left out; per-type caps as stopV2; LoRA r16, lr 1e-4, 8 replies per step; a checkpoint every
+100 steps, each scored on fresh x8 (dose chosen by score). Toy-tested with the real tokenizer: labels land on the right
+paragraph-end tokens; a cut less right than finishing gets 0, cuts as right get 1; a never-solved reply is skipped.
