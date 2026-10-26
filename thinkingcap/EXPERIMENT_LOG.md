@@ -2137,3 +2137,8 @@ steps 1-2: batch accuracy 0.78 / 0.75, thinking 1,065 / 1,094.
 ~13:15: **drpo3d stopped by the 10-point guard at step 23** ("toolace 0.87 -> 0.76", batch accuracy, steps 19-23 vs 1-5);
 steps 7-23: batch accuracy 0.74-0.83, all thinking 818-1,162, code 557-1,910 (noisy). Its checkpoints 5/10/15/20 and the step-23
 stop are now scored on fresh x8 (= drpo3b steps 25-43). stopV2: seed 1 done (300 steps, tripwire 0.000), seed 2 started.
+
+**26 Oct ~14:30, drpo3d (drpo3b-20 continued, guard 10 pts) stopped by the guard at step 23:** "accuracy fell: toolace 0.87 ->
+0.76" (batch; ToolACE 72-104 replies per step). Fresh 240 x 8 vs original Qwen, step 5 (= 25 RL steps in all): **+12.7% / +0.9**
+(svamp +22.2% / +0.9; ifeval +13.8% / +1.9; mbpp +4.0% / +1.3; bfcl irrelevance +12.5% / -0.9, multiple +7.1% / 0.0, simple
++9.6% / -0.6). About drpo3b-20's level (+13.5 / -0.3) with better accuracy; steps 10/15/20/23 being scored.
