@@ -2142,3 +2142,7 @@ stop are now scored on fresh x8 (= drpo3b steps 25-43). stopV2: seed 1 done (300
 0.76" (batch; ToolACE 72-104 replies per step). Fresh 240 x 8 vs original Qwen, step 5 (= 25 RL steps in all): **+12.7% / +0.9**
 (svamp +22.2% / +0.9; ifeval +13.8% / +1.9; mbpp +4.0% / +1.3; bfcl irrelevance +12.5% / -0.9, multiple +7.1% / 0.0, simple
 +9.6% / -0.6). About drpo3b-20's level (+13.5 / -0.3) with better accuracy; steps 10/15/20/23 being scored.
+drpo3d fresh x8: step 10 **+14.8% / -0.6** (svamp +24.8 / -1.9; mbpp +11.6 / -1.3; ifeval +10.1 / +0.9; bfcl irr +13.0 / -0.3,
+mult +11.9 / +0.6, simple +9.9 / -1.3); step 15 **+18.8% / +0.3** (svamp +30.9 / -0.3; mbpp +17.6 / 0.0; ifeval +13.6 / +1.6;
+bfcl irr +13.0 / -0.3, mult +12.1 / 0.0, simple +10.2 / +0.6). Savings growing again, accuracy flat, BFCL steady through step
+15 (the guard's ToolACE drop is at batch steps 19-23). Steps 20/23 being scored.
