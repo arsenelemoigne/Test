@@ -2567,7 +2567,7 @@ def plan(args):
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
                                     *[f"models/{m}" for m in wanted]])
     else:
         drive_sync("restore", models=wanted)
