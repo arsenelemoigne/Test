@@ -2184,3 +2184,16 @@ shortened (soccer_stat(...) instead of soccer_stat.get_player_stats(...)). So it
 it is skipping the re-read of the function's exact name and allowed values, which the shorter thinking drops. Same risk on
 BFCL simple (enum values), though simple did not drop. drpo3e's protection of toolace/multiple addresses the main case.
 (scripts: scratchpad bfcl_errors.py; records from Drive runs/mvtf/f8-base and f8-drpo3d-23.)
+
+**26 Oct ~17:15, stopV2 soup 25 is LONGER (-9.6% / 0.0; every benchmark -3 to -13.5%) and stopV3 is queued (user).**
+Why: about 2,480 of stopV2's 6,021 pairs reward the longer reply ("hard": full right reply over a failing early cut, ~1,450;
+"guard": the question's LONGEST right reply over its SHORTEST wrong one, ~1,030) against ~2,500 shorten pairs: the length
+signals roughly cancel, and the easy one ("don't close </think> early") is learned first. The guard points the opposite way
+from michal-bida's balanced DPO (shortest right over longest wrong) and was also applied to code and instructions, where lot
+V2 shows thinking barely changes the outcome.
+**stopV3** (GPU 1, right after stopV2; runs only if no stopV2 soup saved >= 35% at >= -1.0 pt, --tg-skip-if stopV2:0.35:1.0):
+same lots, rule and caps as stopV2; guard flipped (targeted_pairs --guard-mode shorter: shortest right over the longest
+wrong or unfinished reply, only when that one is longer) on code, tools and instructions; math keeps hard + be-right brakes
+and its SVAMP-gated shorten pairs, no guard; hard pairs on code/tools/instructions capped at 0.25 x their shorten pairs
+(--hard-ratio / --hard-cap-sources). Toy-tested: old default unchanged; flipped guard picks the unfinished 900-token reply
+over a 100-token right one; the cap removes hard pairs above the ratio.

@@ -12,6 +12,11 @@ From the lot's paragraph-end cuts (20 re-answers each) and the model's 8 replies
       (within --right-band), so the pair says "be right" and nothing about length (Lightning McQwen3's correctness
       DPO; dpo.py's NLL anchor keeps the right reply likely). One pair per question.
   a type in both lists (code in stopB6) gets both kinds: shorten where a cut is safe, hard/guard where stopping fails.
+  --guard-mode shorter (stopV3): the guard flips to the balanced-DPO direction: the question's SHORTEST right reply beats
+      its LONGEST wrong or unfinished one, when the wrong one is longer, so it protects accuracy and shortens at once
+      ("longer" says "more thinking, more right", which is wrong for code and instructions); --guard-sources picks the types
+      (default: the --long-sources). --hard-ratio R caps "hard" pairs at R x the type's shorten pairs for the
+      --hard-cap-sources (types whose answer barely depends on thinking), so brakes cannot outweigh the stops.
   every other type: no pairs (left as they are).
 --rule question (shorten only; questions with >= --min-samples full replies, else the strict rule above): the bar is the
   question's own rate q over all its full replies (unfinished ones count as wrong, as in the evaluation), the quantity the
@@ -26,6 +31,7 @@ From the lot's paragraph-end cuts (20 re-answers each) and the model's 8 replies
 
 import argparse
 import json
+import random
 from collections import defaultdict
 from pathlib import Path
 
@@ -43,6 +49,12 @@ def main():
     parser.add_argument("--shorten-sources", default="kodcode,ifeval_like")
     parser.add_argument("--long-sources", default="gsm_ic,gsm_plus")
     parser.add_argument("--right-sources", default="none")
+    parser.add_argument("--guard-mode", default="longer", choices=("longer", "shorter"),
+                        help="guard pairs: longest right over shortest wrong (longer) or shortest right over longest wrong")
+    parser.add_argument("--guard-sources", default="", help="types given guard pairs (default: --long-sources)")
+    parser.add_argument("--hard-ratio", type=float, default=0.0, help="cap hard pairs at this x shorten pairs (0: no cap)")
+    parser.add_argument("--hard-cap-sources", default="none", help="types the --hard-ratio cap applies to")
+    parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--right-band", type=float, default=0.25, help="right pairs: lengths within this share")
     parser.add_argument("--safe", type=float, default=0.95)
     parser.add_argument("--fail", type=float, default=0.25)
@@ -55,8 +67,9 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     short_src, long_src = set(args.shorten_sources.split(",")), set(args.long_sources.split(","))
     right_src = set(args.right_sources.split(","))
+    guard_src = set(args.guard_sources.split(",")) if args.guard_sources else long_src
     allowed = {r["id"] for r in read(args.keep)}
-    rollouts, tries = defaultdict(list), defaultdict(list)
+    rollouts, tries, unfinished = defaultdict(list), defaultdict(list), defaultdict(list)
     for p in args.rollouts:
         if Path(p).exists():
             for r in read(p):
@@ -64,6 +77,8 @@ def main():
                     tries[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
                 if r["id"] in allowed and r["closed_thinking"] and not r["truncated"]:
                     rollouts[r["id"]].append(r)
+                elif r["id"] in allowed:
+                    unfinished[r["id"]].append(r)
     replies = {r["reply"]: r for r in read(cal / "replies.jsonl")}
     verdict = {v["key"]: v for v in read(cal / "verdicts.jsonl")}
     cuts = defaultdict(list)
@@ -117,15 +132,22 @@ def main():
                 pairs.append(base | {"kind": "hard", "chosen_ids": full["output_ids"],
                                      "rejected_ids": c["thinking_ids"] + verdict[c["key"]]["wrong_ids"]})
                 counts[(src, "hard")] += 1
-    for qid, group in rollouts.items():  # math: the longest right reply beats the shortest wrong one
+    for qid, group in rollouts.items():  # guard: longest right over shortest wrong, or (shorter) the reverse
         src = group[0]["source"]
-        if src not in long_src:
+        if src not in guard_src:
             continue
         right = [r for r in group if r["correct"]]
         wrong = [r for r in group if not r["correct"]]
+        if args.guard_mode == "shorter":
+            wrong += unfinished[qid]  # a capped or unclosed reply is wrong, as in the evaluation
         if right and wrong:
-            r, w = max(right, key=lambda r: r["output_tokens"]), min(wrong, key=lambda r: r["output_tokens"])
-            if r["output_tokens"] > w["output_tokens"]:
+            if args.guard_mode == "longer":
+                r, w = max(right, key=lambda r: r["output_tokens"]), min(wrong, key=lambda r: r["output_tokens"])
+                keep = r["output_tokens"] > w["output_tokens"]
+            else:
+                r, w = min(right, key=lambda r: r["output_tokens"]), max(wrong, key=lambda r: r["output_tokens"])
+                keep = r["output_tokens"] < w["output_tokens"]
+            if keep:
                 pairs.append({"id": qid, "source": src, "kind": "guard", "prompt_ids": r["prompt_ids"],
                               "chosen_ids": r["output_ids"], "rejected_ids": w["output_ids"]})
                 counts[(src, "guard")] += 1
@@ -142,6 +164,22 @@ def main():
             pairs.append({"id": qid, "source": src, "kind": "right", "prompt_ids": r["prompt_ids"],
                           "chosen_ids": r["output_ids"], "rejected_ids": w["output_ids"]})
             counts[(src, "right")] += 1
+    capped = set(args.hard_cap_sources.split(",")) if args.hard_ratio > 0 else set()
+    if capped:  # brakes may not outweigh the stops on types whose answer barely depends on thinking
+        rng = random.Random(args.seed)
+        kept = []
+        for src in sorted({p["source"] for p in pairs}):
+            mine = [p for p in pairs if p["source"] == src]
+            hard = [p for p in mine if p["kind"] == "hard"]
+            if src in capped:
+                rng.shuffle(hard)
+                limit = int(args.hard_ratio * sum(p["kind"] == "shorten" for p in mine))
+                counts[(src, "hard capped from")] = len(hard)
+                hard = hard[:limit]
+                counts[(src, "hard")] = len(hard)
+            kept += [p for p in mine if p["kind"] != "hard"] + hard
+        pairs = kept
+        rng.shuffle(pairs)
     (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in pairs))
     text = "\n".join([f"{len(pairs)} targeted pairs"] + [f"  {' / '.join(k)}: {n}" for k, n in sorted(counts.items())])
     (out / "summary.txt").write_text(text + "\n")

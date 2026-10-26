@@ -188,6 +188,14 @@ def main():
     parser.add_argument("--pool-math", default="gsm_ic,gsm_plus", help="drpo/teach: math sources of the RL pool (34%% split)")
     parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
+    parser.add_argument("--tg-guard-mode", default="longer", choices=("longer", "shorter"),
+                        help="targeted: guard pairs longest right > shortest wrong (longer) or shortest right > longest wrong")
+    parser.add_argument("--tg-guard", default="", help="targeted: types given guard pairs (default: the --tg-long types)")
+    parser.add_argument("--tg-hard-ratio", type=float, default=0.0, help="targeted: hard pairs <= this x shorten pairs ...")
+    parser.add_argument("--tg-hard-cap", default="none", help="targeted: ... for these types (0 ratio: no cap)")
+    parser.add_argument("--tg-skip-if", default="",
+                        help="targeted: NAME:SAVED:LOSS, skip this stage when a soup of run NAME already saved >= SAVED "
+                             "(e.g. 0.3) at an accuracy change >= -LOSS points on the fresh set (e.g. 1.0)")
     parser.add_argument("--probe-extra-from", nargs="*", help="probeknow: callot runs whose cuts are added to the development set")
     parser.add_argument("--probe-test-from", help="probeknow: a later run of the same model whose new cuts are the held-out test set")
     parser.add_argument("--rl-block", type=int, default=20, help="rlcal: RL steps per block (saved, merged, scored x2)")
@@ -1920,6 +1928,16 @@ def targeted(args):
     answer already holds; make math think longer (full right beats an early cut that fails, long right beats short wrong);
     other types untouched. Fresh LoRA on --start, 3 seeds, soups at --dpo-steps, every soup scored on the fresh set x8."""
     name, base = args.name, args.start
+    if args.tg_skip_if:  # a conditional stage: only run when the earlier run fell short
+        other, want_saved, max_loss = args.tg_skip_if.split(":")
+        for res in sorted(ROOT.glob(f"f8-{other}-soup-*")):
+            if (res / "compare.json").exists():
+                avg = json.loads((res / "compare.json").read_text())["average"]
+                if (avg["token_reduction"] or 0) >= float(want_saved) and 100 * avg["accuracy_delta"] >= -float(max_loss):
+                    print(f"{name}: skipped, {res.name} already saved {avg['token_reduction']:+.1%} at "
+                          f"{100 * avg['accuracy_delta']:+.1f} points", flush=True)
+                    return
+        print(f"{name}: no {other} soup reached {float(want_saved):.0%} at >= -{max_loss} points: running", flush=True)
     pairs = BON / f"pairs-{name}"
     if not (pairs / "pairs.jsonl").exists():
         ensure_lots(args.probe_extra_from)
@@ -1940,7 +1958,9 @@ def targeted(args):
                    BON / f"probe-{lot}" / "rollouts.jsonl", BON / f"kprobe-{lot}" / "rollouts.jsonl",
                    "--keep", BON / f"{lot}-clean.jsonl", "--out", part,
                    "--shorten-sources", shorten, "--long-sources", args.tg_long, "--rule", args.tg_rule,
-                   "--min-samples", args.tg_min_samples, "--right-sources", args.tg_right)
+                   "--min-samples", args.tg_min_samples, "--right-sources", args.tg_right,
+                   "--guard-mode", args.tg_guard_mode, "--guard-sources", args.tg_guard or args.tg_long,
+                   "--hard-ratio", args.tg_hard_ratio, "--hard-cap-sources", args.tg_hard_cap)
             print((part / "summary.txt").read_text(), flush=True)
             rows += [l for l in (part / "pairs.jsonl").read_text().splitlines() if l.strip()]
         note = ""
