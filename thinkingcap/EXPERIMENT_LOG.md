@@ -2074,3 +2074,16 @@ run, < 1 h each).
 924-1,101 (step 1: 1,189); non-math 317-537 (step 1: 433: no drop); code 896-1,413 (step 1: 1,635, noisy). The run mostly
 raises accuracy; it barely shortens anything but math's own drift. ~20 min per step. lot V2 (GPU 1): 2,400 / 4,368 non-code
 questions answered.
+
+**26 Oct ~05:00 (CET), drpo3b (raw Qwen, DRPO lambda 0.5, lr 5e-6, math protected) stopped by the guard at step 20.**
+"guard: stopping at step 20, accuracy fell: gsm_ic 0.77 -> 0.68; ifeval_like 0.83 -> 0.76" (batch accuracy, steps 16-20 vs
+11-15: the baseline restarted at step 11 after the resume). Fresh 240 x 8 vs original Qwen:
+| checkpoint | saved | accuracy |
+|---|---|---|
+| step 5 | +3.5% | -0.2 |
+| step 10 | +5.2% | +0.0 |
+| step 15 | +8.0% | +1.3 (CI -0.6..+3.3) |
+Step 15 per benchmark: svamp +18.4% / -0.3; mbpp +5.5% / +4.1; ifeval +3.7% / +2.2; bfcl irrelevance +6.5% / -0.3, multiple
+-1.4% / +0.3, simple +5.7% / -2.8. Step 20 being scored. Reading: gentle DRPO from raw is safe and slightly raises accuracy
+but saves very little in 15 steps (8%; rc1-rl-40 53.9%, rivals ~47%); the savings come mostly from math (wrong long loops
+pushed down), not from the length pressure on the other types.
