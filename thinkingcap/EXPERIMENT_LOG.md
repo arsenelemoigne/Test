@@ -2330,3 +2330,31 @@ type) but 12,000 questions x 4 (vs our A1's 438 pairs) and math + toolace/multip
 them only similar-length (+-25%) right > wrong pairs, no length push. Pool: MetaMathQA 25%, IFEval-like 25%, KodCode 25%,
 ToolACE 17%, Hermes 8%. balround gained --bal-mix / --bal-kod / --bal-protect; toy-tested (protected math gets 300-vs-320
 right > wrong, not 300-vs-900 shorten; code keeps guard + shorten; toolace/multiple protected by category).
+
+### 2026-10-27 ~01:00 — Drive cleanup (user: free ~40 GB; record everything first)
+**State before:** personal Drive 408.05 GB used (Drive 125.9 GB, Photos 270.2 GB, Gmail 11.6 GB). thinkingcap-mvtf/models/
+holds ~62 merged models at ~1.13 GB each (model.safetensors 1.11 GB + tokenizer files). Every scored model's evaluation stays
+on Drive untouched (runs/mvtf/f8-*/results.json, records.jsonl, compare.json): only merged weights are removed, never results,
+adapters, lots, rollouts or data.
+**Why safe:** a merged model = base + LoRA adapter(s) (merge.py); the adapters stay in thinkingcap-mvtf/adapters/ (a few MB
+each), so each one is rebuilt in about a minute:
+- `<run>-soup-<N>` (targeted / clean / balround / mathfix stages): `python merge.py --model <base> --out models/<run>-soup-<N>
+  --adapters adapters/<run>-s0/step-<N>:0.333333 adapters/<run>-s1/step-<N>:0.333333 adapters/<run>-s2/step-<N>:0.333333`
+  (base: Qwen/Qwen3-0.6B for stop*; the parent model for chained rounds: ca1 from the clean-a2 line, ca2 from ca1, see the
+  24 Oct entries "Line A (runtime 2): ca1 from clean-a2" / "ca2").
+- `drpo1-<N>`: `python merge.py --model models/rc1-rl-40 --out models/drpo1-<N> --adapters adapters/drpo1-drpo/step-<N>:1`
+  (drpo1-20x0.5: weight 0.5).
+- `rc1-rl-<N>`: rlcal: `--model models/rc1-soup-30` (the chosen cal soup) `--adapters adapters/rc1-rl/<checkpoint N>:1`.
+**Only models made before both runtimes were replaced (26 Oct ~00:40) are deleted:** the runtimes copy their local models/ back
+to Drive after every stage, so anything a running runtime still holds would be re-uploaded. Kept: every chain start and queue
+start (ca1-soup-10, rc1-soup-30, rc1-rl-40, drpo3b-20, drpo3d-23, mf1-soup-25), every model made or restored since 26 Oct 00:40
+(stopB5, stopV2, stopV3, drpo3b/3d, mf1, teach1), and every family whose adapters could not be confirmed on Drive (stopB,
+stopB2, rc2, rr1, sb1: Drive search did not show stopB-s0 / rc2-s0 / sb1-drpo; to verify before any later deletion).
+**Moved to the Drive trash (19 models, ~21.5 GB; adapters confirmed on Drive: ca1-s0..2, ca2-s0..2, drpo1-drpo, rc1-rl,
+rc1-s0, stopB3-s0), with their fresh-x8 scores where scored:**
+ca1-soup-20, ca1-soup-30, ca1-soup-40, ca2-soup-10, ca2-soup-30, ca2-soup-40 (choosing-set scores only, see 23-24 Oct);
+ca2-soup-20 46.4% / -2.73; drpo1-20 61.7% / -4.92; drpo1-20x0.5 59.8% / -3.72; drpo1-40 73.3% / -6.90; drpo1-60 78.7% / -5.99;
+rc1-rl-20 54.8% / -3.67; rc1-rl-60 49.6% / -3.39; rc1-soup-10 48.6% / -3.02; rc1-soup-20 54.8% / -4.01;
+stopB3-soup-15 18.3% / -1.04; stopB3-soup-20 27.1% / -2.03; stopB3-soup-30 54.8% / -3.20; stopB3-soup-40 69.1% / -5.71.
+Emptying the trash (permanent) is left to the user. Not deleted, for a later pass: 12 models of the unverified families
+(~13.5 GB) and the post-00:40 models (~20 GB) once their runtimes are released.
