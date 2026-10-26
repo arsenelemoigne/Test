@@ -2237,3 +2237,11 @@ progress until then: gsm8k_matched p(stop) 0.53-0.59 where it should stop vs 0.2
 0.61-0.73). The queue moved on to drpo3e (running). Fixes in teach_stop.py and stop_gold.py: the forward pass ends at the
 last scored paragraph end (causal, nothing after it is needed) and gradient checkpointing is on; teach_stop caches its
 teacher points (teacher_points.npz) so a rerun skips the ~2 h judge fit. Requeued as teach1c on GPU 1 after gold1.
+
+**26 Oct, queued (user): mf1 = repair rc1-rl-40's math (GPU 2, after teach1b, before drpo3e).** rc1-rl-40 is still the best
+model (53.9% / -2.1); its loss is mostly math (SVAMP 65% shorter / -4.1). New stage `mathfix`: rc1-rl-40 answers the
+SVAMP-like math of lots B5 + V2 (matched GSM8K ~1,200 + MetaMathQA ~2,500) x8, contamination check rerun; pairs from its own
+answers only: "be right" (right beats wrong within +-25% length) + "keep thinking" (longest right beats shortest wrong when
+longer); no pairs for any other type; then the targeted DPO (fresh LoRA on rc1-rl-40, NLL anchor, 3 seeds, soups 25-200 on
+fresh x8). No cut labelling. Goal: SVAMP back to ~-1 with the other types still short (~50% at ~-1). Dry-tested with stand-in
+data (filters math rows, builds both pair kinds, hands over to targeted()).

@@ -57,7 +57,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1936,6 +1936,48 @@ def wronglen(args):
     py("wrong_lengths.py", "--root", DRIVE / "runs" / "mvtf", "--out", ROOT / "wrong_lengths.txt")
 
 
+def mathfix(args):
+    """Repair a model's math with its OWN answers (user, 26 Oct: rc1-rl-40 loses mostly on SVAMP, -4.1): it answers the
+    SVAMP-like math questions of label lots (--probe-extra-from; matched GSM8K + MetaMathQA) x8; pairs = "be right" (its
+    right reply beats its wrong one of similar length) + "keep thinking" (its longest right beats its shortest wrong when
+    the right one is longer); nothing touches the other types. Contamination-checked again here. Then targeted()'s DPO
+    (fresh LoRA on --start, NLL anchor, seeds, soups scored on fresh x8). No cut labelling needed."""
+    name, base = args.name, args.start
+    pairs = BON / f"pairs-{name}"
+    if not (pairs / "pairs.jsonl").exists():
+        math = ("gsm8k_matched", "metamath_sv")
+        data = Path(f"data/mathfix-{name}.jsonl")
+        if not data.exists():
+            lots = [Path(f"data/lot-{lot}.jsonl") for lot in args.probe_extra_from]
+            if not all(p.exists() for p in lots):
+                drive_sync("restore", only=[str(p) for p in lots])
+            rows = [l for p in lots for l in p.read_text().splitlines() if l.strip() and json.loads(l)["source"] in math]
+            data.write_text("".join(l + "\n" for l in rows))
+            print(f"{name}: {len(rows)} math questions from {', '.join(args.probe_extra_from)}", flush=True)
+        probe = BON / f"probe-{name}"
+        n = sum(1 for l in data.read_text().splitlines() if l.strip())
+        if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 8 * n:
+            py("probe_curve.py", "--data", data, "--sources", ",".join(math), "--per-source", 100000, "--samples", 8,
+               "--model", base, "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", n)
+        keep = BON / f"{name}-clean.jsonl"
+        if not keep.exists():
+            ids = {}
+            for l in (probe / "rollouts.jsonl").read_text().splitlines():
+                if l.strip():
+                    r = json.loads(l)
+                    ids.setdefault(r["id"], {"id": r["id"], "source": r["source"]})
+            keep.write_text("".join(json.dumps(r) + "\n" for r in ids.values()))
+            py("contamination.py", "--data", keep, "--rollouts", probe / "rollouts.jsonl", "--share", 0.3)
+        cal = BON / f"pairs-{name}-nocal"  # no cut labels: only the rollout-based kinds are built
+        cal.mkdir(parents=True, exist_ok=True)
+        for f in ("replies.jsonl", "verdicts.jsonl", "cuts.jsonl"):
+            (cal / f).touch()
+        py("targeted_pairs.py", "--cal", cal, "--rollouts", probe / "rollouts.jsonl", "--keep", keep, "--out", pairs,
+           "--shorten-sources", "none", "--long-sources", ",".join(math), "--right-sources", ",".join(math))
+    targeted(args)  # pairs exist: straight to DPO + soups
+
+
 def early_ratio(lots, source):
     """A type's settling speed from label lots' summaries: forced-answer success at 20-40% of the thinking over success
     with the full thinking (cut-weighted over the lots). SVAMP 0.34 / 0.73 = 0.47 (builds up slowly); practice GSM-IC
@@ -2634,13 +2676,14 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
                                     *[f"models/{m}" for m in wanted]])
     else:
         drive_sync("restore", models=wanted)

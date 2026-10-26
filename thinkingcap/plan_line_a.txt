@@ -116,6 +116,10 @@ drpo --name drpo3d --start models/drpo3b-20 --data-seed 68 --kod-file data/kodco
 # instructions and multiple choice still kept thinking; teach2 (the same thing reusing teach1) removed as a duplicate
 # teach1 trained on 0 answers (bug fixed in 9ce5f18), its scores mean nothing; teach1b reuses its answers: teach --name teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none
 teach --name teach1b --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --pool-math gsm8k_matched,metamath_sv --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools --teach-judge none --teach-reuse teach1
+# user (26 Oct): REPAIR rc1-rl-40's math (best model: 53.9% / -2.1, mostly SVAMP -4.1) with the new SVAMP-like math: it
+# answers lots B5 + V2's matched GSM8K + MetaMathQA questions x8; its own 'be right' + 'keep thinking' pairs, math only;
+# DPO (NLL anchor) from rc1-rl-40, 3 seeds, soups on fresh x8. Goal: math back to ~-1 while the rest stays short
+mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 --seeds 0 1 2
 # user (26 Oct): continue again (drpo3d-23 = 43 steps from raw: +21.2% / +0.2, still rising ~0.7%/step); same settings,
 # 40 steps, every 5 scored on fresh x8, guard 10 points; never drpo3b's or drpo3d's training questions
 # user (26 Oct): BFCL multiple (choose among several functions) began to cost (3d-20/23: -2.2/-2.5) and the guard fired
