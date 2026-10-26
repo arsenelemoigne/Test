@@ -2156,3 +2156,6 @@ bfcl irr +13.0 / -0.3, mult +12.1 / 0.0, simple +10.2 / +0.6). Savings growing a
 
 Steady: about +1% saved per step at no accuracy cost so far (35 steps: 18.8% at +0.3). Far from 50% at this pace, but the
 cleanest curve of the project. 3d-20 and the step-23 guard stop are being scored.
+drpo3d step 20: **+20.5% / -0.8** (svamp +29.6 / -2.5; mbpp +14.6 / +0.6; ifeval +22.7 / -0.6; bfcl irr +16.7 / -1.6, mult
++13.7 / -2.2, simple +12.3 / +1.3). BFCL pooled about -0.8 (the ToolACE batch drop shows a little on irrelevance/multiple);
+SVAMP -2.5 (wide CI). Step 23 being scored.
