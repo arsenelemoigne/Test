@@ -2173,3 +2173,14 @@ questions x 8, so within noise but two in a row), while bfcl_simple stayed +0.6.
 (0.87 -> 0.76). rl_train.py: types are now logged and guarded per ToolACE category (toolace/simple, toolace/multiple,
 toolace/irrelevance), and --protect-sources accepts source/category; drpo3e protects toolace/multiple (equal weight among
 right replies: trained to be right, no push to be short).
+
+**26 Oct, BFCL multiple error breakdown: drpo3d-23 vs original Qwen (fresh x8, 40 questions x 8 = 320 answers each).**
+Right 243 -> 235 (-8 answers = -2.5 pts). Mean thinking 182 -> 145 tokens. Wrong answers by kind (base -> drpo3d-23): right
+function + wrong arguments 28 -> 34; wrong function 7 -> 10; unparseable 10 -> 9; never solved by either 32 -> 32. The loss sits
+in 7 questions (-15 answers) partly offset by 4 that improved (+5); on the 7, thinking fell from ~230 to ~170 tokens.
+What the extra errors are (examples): an allowed value not checked against the function's list (mode "public" / "public
+transport" instead of the listed "transit"; categories "vegetarian" instead of the listed "vegan"), and a dotted function name
+shortened (soccer_stat(...) instead of soccer_stat.get_player_stats(...)). So it is not choosing the wrong tool for the job:
+it is skipping the re-read of the function's exact name and allowed values, which the shorter thinking drops. Same risk on
+BFCL simple (enum values), though simple did not drop. drpo3e's protection of toolace/multiple addresses the main case.
+(scripts: scratchpad bfcl_errors.py; records from Drive runs/mvtf/f8-base and f8-drpo3d-23.)
