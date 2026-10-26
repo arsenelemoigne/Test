@@ -183,6 +183,8 @@ def main():
     parser.add_argument("--tg-min-samples", type=int, default=20, help="targeted: full replies a question needs for --tg-rule question")
     parser.add_argument("--tg-shorten-if-svamp", default="none",
                         help="targeted: types given stop pairs only if their lots' curve builds up like SVAMP's (math)")
+    parser.add_argument("--pool-continues", nargs="*", default=[],
+                        help="drpo: the RL runs this one continues: earlier draws may be reused, except these runs' pools")
     parser.add_argument("--pool-math", default="gsm_ic,gsm_plus", help="drpo/teach: math sources of the RL pool (34%% split)")
     parser.add_argument("--tg-right", default="none", help="targeted: types given 'be right' pairs (own right vs own wrong, similar length)")
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
@@ -1487,7 +1489,7 @@ def pool_mix(args):
     return {**{m: 0.34 / len(math) for m in math}, "ifeval_like": 0.24, "toolace": 0.2, "hermes_tools": 0.1}
 
 
-def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16, reuse=False):
+def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16, reuse=False, exclude=()):
     """A fresh question pool mixed like the evaluation (GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train,
     KodCode), shuffled so every batch mixes the types; earlier draws removed, contamination-checked."""
     import random
@@ -1519,6 +1521,10 @@ def mixed_pool(name, need, data_seed, kod_file, mix=None, kod_share=0.16, reuse=
         seen = {text(r) for p in used for l in p.read_text().splitlines() if l.strip()
                 for r in [json.loads(l)] if isinstance(r.get("prompt"), list) and r["prompt"]}
         rows = [r for r in rows if reuse or text(r) not in seen]
+        if exclude:  # a continued run: never the questions the run it continues was trained on
+            trained = {text(json.loads(l)) for e in exclude for l in Path(f"data/rl-{e}-mixed.jsonl").read_text().splitlines()
+                       if l.strip()}
+            rows = [r for r in rows if text(r) not in trained]
         random.Random(data_seed).shuffle(rows)
         for index, row in enumerate(rows):
             row["id"] = f"{row['source']}-{name}-{index}"
@@ -1545,7 +1551,8 @@ def drpo(args):
     need = math.ceil(args.drpo_steps * args.drpo_questions * max(1.0, args.rl_dynamic))
     if not Path(f"data/rl-{name}-mixed.jsonl").exists():  # built on the other runtime: reuse the same pool
         drive_sync("restore", only=[f"data/rl-{name}-mixed.jsonl", f"data/rl-{name}-text.jsonl"])
-    pool = mixed_pool(name, need, args.data_seed, args.kod_file, mix=pool_mix(args), reuse=not base.startswith("models/"))
+    pool = mixed_pool(name, need, args.data_seed, args.kod_file, mix=pool_mix(args),
+                      reuse=not base.startswith("models/") or bool(args.pool_continues), exclude=args.pool_continues)
     out = Path("adapters") / f"{name}-{args.rl_variant}"
     if not (out / "adapter_config.json").exists():  # trained on the other runtime: reuse it, never retrain
         drive_sync("restore", only=[str(out)])

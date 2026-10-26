@@ -2103,3 +2103,11 @@ Before the bug the setup read: 19,466 paragraph ends; the soft judge predicts su
 fresh x8, guard loosened to 10 points (the 6-point batch guard fired on noisy per-type batches while fresh x8 still improved).
 teach1's line commented (it trained on 0 answers; teach1b follows drpo3c). GPU 2's queue was interrupted at ~07:32 during
 teach1-rel0.1's (meaningless) scoring and is restarted.
+
+**26 Oct ~09:30, drpo3c stopped at step 2 (bad pool) and requeued as drpo3d.** drpo3c starts from a merged model, so its pool
+removed every question any earlier experiment drew: 914 questions for 2,880 needed (ifeval 339, gsm_ic 393, gsm_plus 120,
+toolace 59, KodCode 3, Hermes 0), the drpo3 problem again. New --pool-continues: a continued run may reuse earlier draws (it
+never trained on lot questions), except the pools of the runs it continues (drpo3b's). Same settings otherwise.
+lot V2 (GPU 1): contamination dropped 997 of 4,573 non-code questions, nearly all IFEval-like (their constraint sentences are
+IFEval's own templates, so the 13-word run rule fires; the 8-gram shares listed are 6-25%, one 63%). 3,554 questions remain
+(4,996 replies, 38,939 cuts x 4 forced answers) and are being labelled. Fewer instruction pairs for stopV2 as a result.

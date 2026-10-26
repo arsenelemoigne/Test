@@ -102,7 +102,10 @@ drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcod
 # user (26 Oct): CONTINUE drpo3b. Its fresh x8 kept improving (step 5/10/15/20: +3.5/-0.2, +5.2/0.0, +8.0/+1.3,
 # +13.5/-0.3) when the noisy batch guard stopped it. Same gentle settings from the step-20 model, 40 more steps, every 5
 # steps scored on fresh x8; guard loosened to 10 points (the batch guard is noisy: 8-16 replies per type per step)
-drpo --name drpo3c --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40
+# drpo3c's first pool had 914 questions (3 code, 59 tools: earlier draws all removed): restarted as drpo3d, which may reuse
+# earlier draws except drpo3b's own pool
+# was: drpo --name drpo3c --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40
+drpo --name drpo3d --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b
 # experiment 5 (user): the judge as teacher. Judge fitted on lots B..B4 of the original Qwen; the original Qwen answers
 # 3,000 fresh mixed questions once; its own p(</think>) at every paragraph end is trained toward the judge's sharpened
 # target, two models: fixed (yes/no judge > 0.9) and relative (soft judge's predicted success within 0.05 of
