@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--samples", type=int, default=2)
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--chunk", type=int, default=2000, help="rows per saved chunk (a lost runtime resumes after it)")
     args = parser.parse_args()
 
     os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
@@ -47,9 +48,19 @@ def main():
     lora = LoRARequest("adapter", 1, args.adapter) if args.adapter else None
     # one request per distinct cap, so a short multiple-choice answer does not reserve a code-sized budget
     caps = sorted({r["max_tokens"] for r in rows})
+    part = Path(args.out + ".part")  # finished chunks, kept across a lost runtime
     answers = {}
-    for cap in caps:
-        batch = [r for r in rows if r["max_tokens"] == cap]
+    if part.exists():
+        for line in part.read_text().splitlines():
+            if line.strip():
+                v = json.loads(line)
+                answers[v.pop("key")] = v
+        print(f"resuming: {len(answers)} of {len(rows)} traces already checked", flush=True)
+    todo = [r for r in rows if r["key"] not in answers]
+    chunks = [[r for r in todo if r["max_tokens"] == cap][i:i + args.chunk]
+              for cap in caps for i in range(0, sum(r["max_tokens"] == cap for r in todo), args.chunk)]
+    for batch in chunks:
+        cap = batch[0]["max_tokens"]
         params = SamplingParams(n=args.samples, max_tokens=cap, seed=SEED, stop_token_ids=[end], **SAMPLING)
         outputs = engine.generate([{"prompt_token_ids": r["prompt_ids"] + r["thinking_ids"]} for r in batch],
                                   params, lora_request=lora)
@@ -83,6 +94,8 @@ def main():
             answers[row["key"]] = {"answer_ids": min(passing, key=len) if ok else None, "wrong_ids": wrong,
                                    "right_ids": min(passing, key=len) if passing else None,
                                    "right": len(passing), "of": len(output.outputs), "outcomes": outcomes}
+        with part.open("a") as handle:
+            handle.write("".join(json.dumps({"key": row["key"]} | answers[row["key"]]) + "\n" for row in batch))
     Path(args.out).write_text("".join(json.dumps({"key": k} | v) + "\n" for k, v in answers.items()))
     passed = sum(v["answer_ids"] is not None for v in answers.values())
     print(f"checked {len(rows)} traces: {passed} pass", flush=True)

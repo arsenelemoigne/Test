@@ -18,6 +18,7 @@ import argparse
 import json
 import math
 import random
+import shutil
 from pathlib import Path
 
 
@@ -60,11 +61,19 @@ def main():
             total = total + logp.gather(1, torch.tensor(reply[start:start + 1024], device=device)[:, None]).sum()
         return total
 
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    ref_path, latest, state_path = out / "ref.json", out / "latest", out / "resume.pt"
     model.eval()
-    with torch.no_grad():  # the reference: the starting adapter, scored once
-        for r in rows:
-            r["ref_c"] = float(logps(r["prompt_ids"], r["chosen_ids"], False))
-            r["ref_r"] = float(logps(r["prompt_ids"], r["rejected_ids"], False))
+    if ref_path.exists():  # a lost runtime: the reference scores are kept (rows are the same for the same seed)
+        for r, (c, rj) in zip(rows, json.loads(ref_path.read_text())):
+            r["ref_c"], r["ref_r"] = c, rj
+    else:
+        with torch.no_grad():  # the reference: the starting adapter, scored once
+            for r in rows:
+                r["ref_c"] = float(logps(r["prompt_ids"], r["chosen_ids"], False))
+                r["ref_r"] = float(logps(r["prompt_ids"], r["rejected_ids"], False))
+        ref_path.write_text(json.dumps([[r["ref_c"], r["ref_r"]] for r in rows]))
     print("reference scored", flush=True)
 
     def tripwire():
@@ -89,9 +98,22 @@ def main():
     order = [i for _ in range(args.epochs) for i in rng.sample(range(len(rows)), len(rows))][:steps * args.batch]
     baseline = tripwire()
     print(f"tripwire baseline {baseline:.3f}; {steps} steps of {args.batch} pairs", flush=True)
-    model.train()
     step, stats = 0, []
+    if state_path.exists() and (latest / "adapter_config.json").exists():  # resume after the last saved checkpoint
+        from peft import set_peft_model_state_dict
+        from safetensors.torch import load_file
+        set_peft_model_state_dict(model, load_file(str(latest / "adapter_model.safetensors")))
+        for p in trainable:
+            p.data = p.data.float()
+        state = torch.load(state_path, weights_only=False)
+        optimizer.load_state_dict(state["optimizer"])
+        torch.set_rng_state(state["torch_rng"])
+        step = state["step"]
+        print(f"resuming after step {step}", flush=True)
+    model.train()
     for position, i in enumerate(order, 1):
+        if position <= step * args.batch:
+            continue
         r = rows[i]
         pc = logps(r["prompt_ids"], r["chosen_ids"], True)
         pr = logps(r["prompt_ids"], r["rejected_ids"], True)
@@ -118,8 +140,14 @@ def main():
                     print(f"tripwire: replies start ending right after </think>; stopped at step {step}, "
                           "keeping the previous checkpoint", flush=True)
                     break
-                model.save_pretrained(Path(args.out) / f"step-{step}")
-                model.save_pretrained(args.out)
+                model.save_pretrained(out / f"step-{step}")
+                model.save_pretrained(latest)  # not args.out: an adapter there means "finished" to track.py
+                torch.save({"step": step, "optimizer": optimizer.state_dict(), "torch_rng": torch.get_rng_state()},
+                           state_path)
+    if (latest / "adapter_config.json").exists():  # the last checkpoint (before a tripwire stop, the previous one)
+        shutil.copytree(latest, out, dirs_exist_ok=True)
+    else:
+        model.save_pretrained(out)
     print(f"saved {args.out}")
 
 
