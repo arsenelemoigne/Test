@@ -2283,3 +2283,9 @@ cuttable at the first paragraph, which inflates "saved". Recomputed from pairs-b
 (thinking cut / forced-answer accuracy at that stop minus finishing, points; replies: SVAMP 36, IFEval 29, MBPP+ 26, BFCL 109
 right). Oracle still: the cut is chosen with the labels. Strict stop-only ceiling on the original: ~41-47% math, ~45-49%
 instructions, ~72-74% code, ~49% tools.
+
+### 2026-10-26 ~22:25 — mf1 soup 25 (rc1-rl-40 + matched-math repair), fresh 240 x 8: **+45.6% / -1.4 (within the limit)**
+- svamp +50% / -0.3 (rc1-rl-40: +65% / -4.1); mbpp +47% / -2.5; ifeval +47% / -1.9; bfcl irr +42% / -0.9, multiple +38% / -3.1, simple +35% / +0.9.
+- The math repair worked on SVAMP (accuracy loss -4.1 -> -0.3), but SVAMP gave back 15 points of saving, and the overall saving fell 53.9 -> 45.6 for +0.7 pt accuracy.
+  Between the two rivals (Lightning 43.2 / -0.85, michal 47.0 / -0.78) on saving, still behind on accuracy. Soups 50-175 next.
+- stopV3 (GPU 1): seed 2 at step 245/300.
