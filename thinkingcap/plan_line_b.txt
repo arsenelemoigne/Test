@@ -158,5 +158,7 @@ buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,g
 buildpool2 --name dp3 --data-seed 73 --dp-step select --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # dp4 (user, 27 Oct night: start fixing right away; refined after dp3's held-out check): new math and no-fit candidates,
 # re-selection over dp3's answered candidates + the new ones, full held-out check.
-poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15
+# two GPUs (user, 27 Oct night): half a here, half b on GPU 2, select + check here
+poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step a
+poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step select
 end

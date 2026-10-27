@@ -207,7 +207,7 @@ def main():
     parser.add_argument("--dp-per-benchmark", type=int, default=3000, help="buildpool: training questions per benchmark")
     parser.add_argument("--dp-math-mix", default="gsm8k_matched=0.7,metamath_sv=0.3", help="buildpool: SVAMP-side sources")
     parser.add_argument("--dp-check-per-part", type=int, default=200, help="buildpool: pool questions per part answered x4")
-    parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2: answer half a / b, or select")
+    parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2 / poolfix: answer half a / b, or select")
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
     parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
     parser.add_argument("--dp-parts", default="svamp,bfcl_irrelevance", help="poolfix: parts given new candidates")
@@ -2233,13 +2233,41 @@ def poolfix(args):
         print(f"{name}: {len(rows)} new candidates {dict(count)}", flush=True)
         drive_sync("save")
     sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like"
+    import hashlib
+    import time
+    digest = hashlib.sha256(pool.read_bytes()).hexdigest()[:16]
+    halves = []
+    for h, parity in (("a", 0), ("b", 1)):  # two runtimes answer one half each (user, 27 Oct night: use both GPUs)
+        probe = BON / f"probe-poolcand-{name}-{h}"
+        if args.dp_step not in (h, "select"):
+            continue
+        if args.dp_step == h:
+            data = Path(f"data/poolcand-{name}-{h}.jsonl")
+            rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+            data.write_text("".join(json.dumps(r) + "\n" for r in rows
+                                    if int(r["pool_id"].rsplit("-", 1)[1]) % 2 == parity))
+            n = sum(1 for l in data.read_text().splitlines() if l.strip())
+            drive_sync("restore", only=[str(probe)])
+            if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 4 * n:
+                py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", 1000000, "--samples", 4,
+                   "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only",
+                   "--chunk", 150, "--max-questions", n)
+            (probe / "poolcand.sha256").write_text(digest)
+            drive_sync("save")
+            return
+        target, stamp = probe / "rollouts.jsonl", probe / "poolcand.sha256"
+        for _ in range(96):  # the other runtime's half: up to 8 hours
+            if target.exists() and stamp.exists():
+                break
+            drive_sync("restore", only=[str(probe)])
+            if not (target.exists() and stamp.exists()):
+                print(f"waiting for {target} on Drive", flush=True)
+                time.sleep(300)
+        assert target.exists() and stamp.exists() and stamp.read_text() == digest, f"{name} half {h} missing or from another pool"
+        halves.append(target)
     probe = BON / f"probe-poolcand-{name}"
-    n = sum(1 for l in pool.read_text().splitlines() if l.strip())
-    if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 4 * n:
-        py("probe_curve.py", "--data", pool, "--sources", sources, "--per-source", 1000000, "--samples", 4,
-           "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
-           "--max-questions", n)
-    drive_sync("save")
+    probe.mkdir(parents=True, exist_ok=True)
+    (probe / "rollouts.jsonl").write_text("".join(t.read_text() for t in halves))
     union, answers = Path(f"data/poolcand-{name}-all.jsonl"), BON / f"probe-poolcand-{name}-all" / "rollouts.jsonl"
     union.write_text(old_pool.read_text() + pool.read_text())
     answers.parent.mkdir(parents=True, exist_ok=True)

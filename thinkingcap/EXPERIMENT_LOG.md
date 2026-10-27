@@ -2797,3 +2797,4 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
   selection answers reused, 6 more generated: ~72,000 answers, ~13 GPU-hours). Measured with 4 answers (dp1 check): longest
   right / shortest right ~1.4-1.7x, shortest right ~15-19% shorter than a typical answer, per type.
 - User (27 Oct night): the training PAIRS must match the evaluation distribution as well as the pool. After the 10 answers, pairs are selected per part and per (solve rate x thinking) cell to the evaluation's shares, and checked before training (LUPIN_SPEC 2.0).
+- dp4 split over two GPUs (user): GPU 1 poolfix half a then select + check; GPU 2 poolfix half b (before tsk1). Halves hash-stamped like dp3; whichever runtime gets there first builds the dp4 candidates and saves them, the other restores them.
