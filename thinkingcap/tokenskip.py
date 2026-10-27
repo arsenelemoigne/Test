@@ -94,6 +94,12 @@ def main():
                      "prompt_ids": r["prompt_ids"], "thinking_ids": thinking + [close_id],
                      "completion_ids": thinking + [close_id] + ids[cut + 1:]})
 
+    if compressor is not None:  # LLMLingua's GPU memory must be back before vLLM starts (tsk1 died on this, 27 Oct)
+        import gc
+        import torch
+        del compressor
+        gc.collect()
+        torch.cuda.empty_cache()
     passed = {}
     if args.verify:
         passed = verify(rows, args, tokenizer)
@@ -132,7 +138,7 @@ def verify(rows, args, tokenizer):
     from utils.eval.recipe import SAMPLING, SEED
 
     prompts = [x["prompt_ids"] + x["thinking_ids"] for x in rows]
-    engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.85,
+    engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.7,
                  max_model_len=max(len(p) for p in prompts) + 4096 + 16, generation_config="vllm")
     eos = tokenizer.eos_token_id
     eos_ids = eos if isinstance(eos, list) else [eos]

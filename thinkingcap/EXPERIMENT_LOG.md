@@ -2759,3 +2759,6 @@ Also LUPIN_SPEC M12 (TokenSkip on LUPIN0's answers, gentle ratios).
   failed at once: vLLM could not get its GPU memory (ValueError in request_memory at engine start; root cause above it
   in the log). GPU 2's queue then ended ("everything is on Drive"), so that runtime releases itself; nothing else of
   dp3 needs it. GPU 1: dp3 half a at 48 of ~63 chunks, then select + the held-out check.
+- Fix for tsk1: tokenskip.py now frees LLMLingua (del, gc, torch.cuda.empty_cache) before starting vLLM for --verify, and
+  asks vLLM for 0.7 of the GPU instead of 0.85. Compression itself worked (6214 questions with a right answer); only the
+  verify start failed. Re-run needs a GPU runtime (user's call); the plan line can stay as is.
