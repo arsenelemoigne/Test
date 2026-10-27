@@ -2488,3 +2488,4 @@ rl_train.py --drpo-solve-scale (RL2).
 - GPU 1: finished stages skipped via the light restore; stopV3 soups 25/50/75 kept; now scoring soup 100 on fresh x8.
   Next on GPU 1: drop1, ps1, dp1, gold1, bp1b, teach1c, sb2.
 - stopV3-soup-100 (fresh 240 x 8): +10.0% / -0.6. The stop line from the original stays at 10-16% saved (soups 25-100); drpo3f resumed after step 2 and is at step 5.
+- stopV3 soups 150 / 200: +12.4% / +0.5, +16.2% / -0.9 (soup 300 scoring). Flat at 10-16% saved through soup 200.
