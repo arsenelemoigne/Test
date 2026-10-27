@@ -2653,3 +2653,18 @@ dp2 changes (contamination check unchanged; fresh set never read):
   (accuracy, median reply and thinking tokens, capped share); IFEval instruction-id mix equals IFEval's; proportions:
   each benchmark 25%, BFCL split 11.9 / 6.0 / 7.1% (its 400 / 200 / 240), select_pool.py now prints this check.
 - All run results keep being logged here as they arrive (drpo2, sb2 checkpoints).
+
+### 2026-10-27 ~10:55 — sb2 and drpo2 checkpoints (fresh 240 x 8), dp2 candidates built
+Both runs start from rc1-rl-40.
+- **sb2** (ShorterBetter, beta 0.001, math protected, guard 0.06): the guard stopped it at step 10 (ifeval_like 0.75 -> 0.69).
+  - sb2-5: +53.7% / -2.9 (irrelevance +45/-2.2, multiple +41/-5.9, simple +39/0.0, ifeval +46/-3.1, mbpp +61/-2.2, svamp +63/-3.7)
+  - sb2-10: +52.6% / -3.2 OUTSIDE (irrelevance +45/-2.8, multiple +41/-5.0, simple +39/-0.6, ifeval +47/-2.8, mbpp +59/-4.1, svamp +60/-3.1)
+- **drpo2** (lambda 0.5, 60 steps), scored checkpoints so far:
+  - drpo2-5: +55.5% / -2.0 (irrelevance +46/-0.9, multiple +42/-3.1, simple +39/+0.3, ifeval +50/-0.6, mbpp +61/-1.9, svamp +65/-4.1)
+  - drpo2-10: +56.4% / -3.0 (irrelevance +46/-3.1, multiple +42/-4.1, simple +39/-1.6, ifeval +48/-1.9, mbpp +63/-1.6, svamp +67/-5.6)
+  - drpo2-15: +56.0% / -2.6 (irrelevance +47/-4.1, multiple +42/-3.7, simple +39/-1.6, ifeval +40/0.0, mbpp +66/-1.6, svamp +68/-5.6)
+  Both sit at ~53-56% saved for -2 to -3 pts. Math (svamp -4 to -6) costs the most; neither beats the -1 goal.
+- **dp2 half a started on GPU 1** (candidates, seed 73): gsm8k_easy 2,579, gsm8k_matched 1,200, metamath_sv 80,000;
+  toolace simple 3,061 / multiple 2,319 / no-fit 5,944 (11,324); ifeval_like 11,993 = **4,662 real + 7,331 built** from
+  IFEval's instruction library (instruction counts 1/2/3: 6,759 / 3,969 / 1,265); KodCode-V1 (484k) loading.
+  Note: 61% of the IFEval-like prompts are built, not real; the held-out check should report built vs real separately.
