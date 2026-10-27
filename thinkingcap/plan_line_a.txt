@@ -70,26 +70,26 @@
 # done: targeted --name stopB2 (soup 20: +34.6% / -2.1 on fresh x8; one epoch = 21 steps, so no soup 25/30)
 # plotA3 failed (models/rc1-rl-40 not restored: queued after this runtime's restore). User: much more and more diverse data,
 # like the evaluation, for the ORIGINAL Qwen's stop training; lots split by type so the runtimes never draw the same question
-callot --name plotB3 --start Qwen/Qwen3-0.6B --data-seed 53 --paragraphs --lot gsm_ic=350,gsm_plus=350,ifeval_like=500 --lot-samples 20
+# finished, kept out of restarts (28 Oct): callot --name plotB3 --start Qwen/Qwen3-0.6B --data-seed 53 --paragraphs --lot gsm_ic=350,gsm_plus=350,ifeval_like=500 --lot-samples 20
 # user: the judge on REAL benchmark questions (the 240 choosing questions, measure only; never the fresh set):
 # cuts labelled with the original Qwen, then the best judge so far (lots B + B2 + B3) tested on them
-benchlot --name bench40 --start Qwen/Qwen3-0.6B
-probezoo --name zbench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B
+# finished, kept out of restarts (28 Oct): benchlot --name bench40 --start Qwen/Qwen3-0.6B
+# finished, kept out of restarts (28 Oct): probezoo --name zbench --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B
 # user (24 Oct ~18:00): DRPO RL from rc1-rl-40 (right replies always up, length ranked only among right replies),
 # fresh mixed pool 48 x 8 x 60, checkpoints 40 + 60 on fresh x8; success = >= ~59% saved at >= -2.5, or > 55% at better than -2
 # user (25 Oct): measure it properly: zbench again with the timing-only AUC (cuts compared within the same reply, so
 # question difficulty cannot help) and the learned own-confidence baselines + hidden state + own confidence combos
-probezoo --name zbench2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B
-drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl
+# finished, kept out of restarts (28 Oct): probezoo --name zbench2 --probe-cal pairs-plotB/cal --probe-extra-from plotB2 plotB3 --probe-test-from bench40 --probe-model Qwen/Qwen3-0.6B
+# finished, kept out of restarts (28 Oct): drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl
 # user (25 Oct): test more checkpoints of drpo1 on fresh x8 (only 20/40/60 were saved; 40 and 60 already scored, so this adds step 20)
-drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl --drpo-score 20 40 60
+# finished, kept out of restarts (28 Oct): drpo --name drpo1 --start models/rc1-rl-40 --data-seed 55 --kod-file data/kodcode3.jsonl --drpo-score 20 40 60
 # user (25 Oct): how much does thinking add at this scale? The original Qwen and rc1-rl-40 answer the fresh set x8 with
 # thinking OFF (enable_thinking=False, empty think block; measure only, never a submission setting) vs thinking
-nothink --name nt1
+# finished, kept out of restarts (28 Oct): nothink --name nt1
 # user (25 Oct): ShorterBetter (arXiv 2504.21370) reward as a second RL variant, same pool size and scoring as drpo1:
 # GRPO, r = 2*correct - 0.005*|len - SOL|, SOL = shortest correct reply of the group (group mean if none correct)
 # stopped (user, 26 Oct ~00:40: collapsing, beta 0.005 too strong): drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter
-drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter --drpo-score-only --drpo-score 10 20 30
+# finished, kept out of restarts (28 Oct): drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3.jsonl --rl-variant shorterbetter --drpo-score-only --drpo-score 10 20 30
 # user (25 Oct): gentler DRPO rerun (drpo1 overshot by step 20): lambda 0.5 (softer length weights) and lr 5e-6 (half),
 # checkpoints every 10 steps, each scored on fresh x8 (10..60)
 # user (25 Oct): RL from the RAW Qwen, protecting math: no length pressure on math (right math replies weighted equally,
@@ -98,14 +98,14 @@ drpo --name sb1 --start models/rc1-rl-40 --data-seed 58 --kod-file data/kodcode3
 # restarted (user, 26 Oct ~03:15: pool was 1,592 questions, 54% math, 2% code, no Hermes): drpo --name drpo3 --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
 # user (26 Oct, step-15 check: accuracy up, length barely down): stop at step 30 (resumes from its saved state), score 5-30
 # was: drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06
-drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06 --drpo-steps 30 --drpo-score 5 10 15 20 25 30
+# finished, kept out of restarts (28 Oct): drpo --name drpo3b --start Qwen/Qwen3-0.6B --data-seed 65 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.06 --drpo-steps 30 --drpo-score 5 10 15 20 25 30
 # user (26 Oct): CONTINUE drpo3b. Its fresh x8 kept improving (step 5/10/15/20: +3.5/-0.2, +5.2/0.0, +8.0/+1.3,
 # +13.5/-0.3) when the noisy batch guard stopped it. Same gentle settings from the step-20 model, 40 more steps, every 5
 # steps scored on fresh x8; guard loosened to 10 points (the batch guard is noisy: 8-16 replies per type per step)
 # drpo3c's first pool had 914 questions (3 code, 59 tools: earlier draws all removed): restarted as drpo3d, which may reuse
 # earlier draws except drpo3b's own pool
 # was: drpo --name drpo3c --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40
-drpo --name drpo3d --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b
+# finished, kept out of restarts (28 Oct): drpo --name drpo3d --start models/drpo3b-20 --data-seed 68 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b
 # experiment 5 (user): the judge as teacher. Judge fitted on lots B..B4 of the original Qwen; the original Qwen answers
 # 3,000 fresh mixed questions once; its own p(</think>) at every paragraph end is trained toward the judge's sharpened
 # target, two models: fixed (yes/no judge > 0.9) and relative (soft judge's predicted success within 0.05 of
@@ -119,7 +119,7 @@ drpo --name drpo3d --start models/drpo3b-20 --data-seed 68 --kod-file data/kodco
 # user (26 Oct): REPAIR rc1-rl-40's math (best model: 53.9% / -2.1, mostly SVAMP -4.1) with the new SVAMP-like math: it
 # answers lots B5 + V2's matched GSM8K + MetaMathQA questions x8; its own 'be right' + 'keep thinking' pairs, math only;
 # DPO (NLL anchor) from rc1-rl-40, 3 seeds, soups on fresh x8. Goal: math back to ~-1 while the rest stays short
-mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 --seeds 0 1 2
+# finished, kept out of restarts (28 Oct): mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 --seeds 0 1 2
 # user (26 Oct): continue again (drpo3d-23 = 43 steps from raw: +21.2% / +0.2, still rising ~0.7%/step); same settings,
 # 40 steps, every 5 scored on fresh x8, guard 10 points; never drpo3b's or drpo3d's training questions
 # user (26 Oct): BFCL multiple (choose among several functions) began to cost (3d-20/23: -2.2/-2.5) and the guard fired
@@ -136,7 +136,7 @@ mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --t
 # lambda 0.3 (between the safe 0.5 and drpo1's overshooting 0.2); math and BFCL-multiple-like tool calls protected;
 # guard 10 pts; every 5 steps scored on fresh x8.
 # was: drpo --name drpo3e --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.5 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
-drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.3 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
+# finished, kept out of restarts (28 Oct): drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodcode3.jsonl --drpo-lambda 0.3 --rl-lr 5e-6 --rl-dynamic 1.5 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,toolace/multiple --rl-guard 0.10 --drpo-steps 40 --drpo-score 5 10 15 20 25 30 35 40 --pool-continues drpo3b drpo3d
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
 # removed (user, 25 Oct: teach1 now does exactly this): teach --name teach2 --teach-reuse teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode,toolace,hermes_tools --teach-judge none
@@ -149,7 +149,7 @@ drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodco
 buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # user away (27 Oct ~16:00): GPU 1 is stuck in dp2's select wait until ~21:30, so GPU 2 also answers half a
 # GPU 1 was unstuck by the user and runs half a itself (27 Oct evening): buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
-drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
+# finished, kept out of restarts (28 Oct): drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
 # user (27 Oct): TokenSkip raw on the original Qwen (cut the thinking to its most important words, SFT); ratios 0.5 / 0.7 and
 # 1.0 = the same SFT uncut (control); after dp3, scored on fresh x8 per epoch
 # dp4 half b first (dataset before anything else, user 27 Oct)
