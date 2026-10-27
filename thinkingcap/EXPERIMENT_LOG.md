@@ -2378,3 +2378,14 @@ adapters/rc2-s0..2/step-<N>, 1/3 each); rr1-rl-<N> as rc1-rl (rlcal). Fresh-x8 s
 list at the same place, so my edits adding "budgetprompt" and "dropmodels" did not apply (no assert). Fixed with an assert and a
 check that every stage function is in the list. drop1 moved to GPU 1 right after stopV3 (GPU 2 is on drpo3f for ~13 h); bp1
 requeued as bp1b on GPU 1 after gold1.
+
+### 2026-10-27 ~02:00 — ps1 queued: prompt search before prompt distillation (user)
+- Lightning McQwen3's first step (distil a terse prompt into the weights) is the one piece of his recipe we never tried.
+  Before distilling, ps1 measures 11 prompts on the ORIGINAL model: no prompt, concise, prefill, no-re-check (+prefill),
+  token budget 100, Chain of Draft, his examples / ex-draft (+prefill), and ex-draft with one example per task type
+  (math, code, tool call, instructions). 50 training questions per type of lot V2 x 4 replies each; tokens saved,
+  accuracy change, leak rate, all paired against no prompt. Training questions only (choosing on the benchmarks would
+  fit to them). GPU 1, after stopV3, before gold1. prompt_search.py, prompt_candidates.py, track.py promptsearch.
+- Public competitors re-checked: 4 forks of ThinkingCap-Test; only basta (Lightning McQwen3) and michal-bida have work,
+  miroslavmyrha and horychtom have no commits. Submissions go to BottleCap by email (git bundle), so most are private.
+  BottleCap publishes no 0.6B score of its own; the README's guide is > 20% saved at <= 0.2 pt lost per 1% saved.
