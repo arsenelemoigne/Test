@@ -2494,3 +2494,8 @@ rl_train.py --drpo-solve-scale (RL2).
 - soup 100: +10.0% / -0.6; soup 150: +12.4% / +0.5; soup 200: +16.2% / -0.9 (mbpp +32% / 0.0, ifeval +21% / +1.6,
   but svamp 0% / -3.7 and BFCL 7-8%). The stop line from the original Qwen stays at 10-16% saved at every length of
   training: cut-label stop pairs alone do not move it far. Soup 300 next, then ps1 and dp1.
+- **stopV3-soup-300 (fresh 240 x 8): +25.5% / -0.6.** The last soup finally shortens more (10-16% through soup 200).
+- **drop1 done (GPU 1, 27 Oct ~03:00): 28 merged models removed from Drive, 34.6 GB freed** (ca1-soup-20/30/40, ca2-soup-10..40,
+  drpo1-20/20x0.5/40/60, rc1-rl-20/60, rc1-soup-10/20, stopB3-soup-15/20/30/40, stopB-soup-10/20/30, stopB2-soup-20,
+  rc2-soup-10/20/30/60, rr1-rl-20); kept sb1-10/20/30 (adapters/sb1-drpo not on Drive). All rebuildable from their adapters
+  (recipes above). GPU 1 now on ps1 (prompt search); drpo3f at step 10 on GPU 2.
