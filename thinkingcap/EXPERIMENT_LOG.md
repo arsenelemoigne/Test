@@ -2709,3 +2709,6 @@ Both runs start from rc1-rl-40.
 - drpo2 (strong RL from rc1-rl-40, lambda 0.5, math unprotected): -20 +57.6 / -3.9, -25 +57.8 / -4.0,
   -30 +58.2 / -4.7 (math sliding to -11.9). More saving, accuracy getting worse: not a candidate.
 - drpo2-40: +62.1% / -4.6 (outside the limit); drpo2-50 scoring. GPU 1 still waiting in dp2's select (needs the user's stop + rerun of the plan cell).
+- drpo2-40: +62.1% / -4.6 OUTSIDE (irrelevance +47/-5.0, multiple +43/-4.1, simple +40/+0.3, ifeval +58/-2.5, mbpp +67/-1.9,
+  svamp +74/-10.9); drpo2-50: +62.9% / -5.4 OUTSIDE (irrelevance +48/-5.0, multiple +44/-5.6, simple +40/-0.3, ifeval +59/-0.9,
+  mbpp +68/-1.6, svamp +74/-15.3). drpo2-60 scoring. GPU 1 still waiting in dp2's select (needs the user's stop + rerun for dp3).
