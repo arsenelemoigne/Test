@@ -2389,3 +2389,10 @@ requeued as bp1b on GPU 1 after gold1.
 - Public competitors re-checked: 4 forks of ThinkingCap-Test; only basta (Lightning McQwen3) and michal-bida have work,
   miroslavmyrha and horychtom have no commits. Submissions go to BottleCap by email (git bundle), so most are private.
   BottleCap publishes no 0.6B score of its own; the README's guide is > 20% saved at <= 0.2 pt lost per 1% saved.
+
+### 2026-10-27 ~02:40 — GPU 2 moved on; bp1 failed at start
+- mf1 finished (one epoch = 176 steps, so no soup 200): best trade stays soup 25 (+45.6 / -1.4); later soups ~30% / -0.4.
+- bp1 (budget prompt, GPU 2) failed at once: "invalid choice: 'budgetprompt'", the runtime's track.py was older than the plan
+  line when the stage started. bp1b on GPU 1 measures the same thing, so it was not requeued. GPU 2 now runs drpo3f
+  (from drpo3d-23, toolace/multiple protected, 40 steps scored every 5).
+- GPU 1: stopV3 soups 100-300 scoring (25/50/75 = +13.4/-0.7, +16.4/-1.4, +11.8/+0.2); then drop1, ps1, gold1, bp1b, teach1c, sp1.
