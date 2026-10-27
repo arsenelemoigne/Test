@@ -43,6 +43,8 @@ def main():
     parser.add_argument("--tool-clean", action="store_true",
                         help="toolace v2 (dp2): BFCL type names, single-turn only, references grounded in the question, "
                              "no-fit questions made by offering another conversation's function")
+    parser.add_argument("--tool-near", action="store_true",
+                        help="toolace (dp4): also no-fit questions offered only the functions the reply did not call")
     parser.add_argument("--ifeval-match", type=int, default=0,
                         help="ifeval_like v2 (dp2): this many questions drawn to IFEval's instruction mix (0: old filter)")
     parser.add_argument("--kod-dataset", default="KodCode/KodCode-Light-RL-10K",
@@ -50,7 +52,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -105,6 +107,42 @@ def gsm8k_easy(args, rng):
         if 1 <= r["answer"].count("<<") <= 2:
             answer = r["answer"].split("####")[-1].strip().replace(",", "")
             yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_easy")
+
+
+def gsm8k_easy_test(args, rng):
+    """GSM8K TEST problems with 1 or 2 calculations (dp4: dp3's math pool lacked easy, short-thinking questions; GSM8K
+    is not an evaluation benchmark, GSM-Plus / GSM-IC built on its test split are not used in dp4)."""
+    from datasets import load_dataset
+    from utils.train.prepare_data import MATH_INSTRUCTION, row
+
+    for r in load_dataset("openai/gsm8k", "main", split="test"):
+        if 1 <= r["answer"].count("<<") <= 2:
+            answer = r["answer"].split("####")[-1].strip().replace(",", "")
+            yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_easy_test")
+
+
+def metamath_easy(args, rng):
+    """MetaMathQA's GSM_Rephrased rows whose original is a 1-2 calculation GSM8K problem (dp4): a rewording keeps the
+    final answer, so a row is linked to the easy GSM8K question with the same answer that shares most of its words
+    (Jaccard >= 0.4); unlinked rows are dropped. Same prompt wording as gsm8k_easy."""
+    from collections import defaultdict
+    from datasets import load_dataset
+    from utils.train.prepare_data import MATH_INSTRUCTION, row
+
+    words = lambda t: set(re.findall(r"[a-z]+", t.lower()))
+    easy = defaultdict(list)
+    for split in ("train", "test"):
+        for r in load_dataset("openai/gsm8k", "main", split=split):
+            if 1 <= r["answer"].count("<<") <= 2:
+                easy[r["answer"].split("####")[-1].strip().replace(",", "")].append(words(r["question"]))
+    for r in load_dataset("meta-math/MetaMathQA", split="train"):
+        if r["type"] != "GSM_Rephrased":
+            continue
+        answer = r["response"].rsplit("The answer is:", 1)[-1].strip().replace(",", "")
+        w = words(r["query"])
+        if not w or not any(len(w & o) / len(w | o) >= 0.4 for o in easy.get(answer, ())):
+            continue
+        yield row(r["query"], MATH_INSTRUCTION, answer, "math", "metamath_easy")
 
 
 def gsm8k_matched(args, rng):
@@ -238,6 +276,12 @@ def toolace(args, rng):
         pools[kind].append(example(kind, functions))
         if kind == "multiple":  # ToolACE rarely offers one function: the called one alone makes BFCL's simple case
             pools["simple"].append(example("simple", called))
+            if args.tool_near:  # dp4: the same question offered only the functions the reply did NOT call (close
+                others = [f for f in functions if f["name"] != called[0]["name"]]  # domain, harder to refuse)
+                # a function sharing a name word with the called one may answer it too ("trackAdImpression" for "ad
+                # tracking data"): such a question is not no-fit, and its "wrong" answers would pass for difficulty
+                if not any(name_words(f["name"]) & name_words(called[0]["name"]) for f in others):
+                    pools["irrelevance"].append(example("irrelevance", others) | {"reference": None, "origin": "near"})
     if args.tool_clean:  # BFCL's irrelevance: a question offered a function from an unrelated conversation
         donors = pools["simple"]
         for row in list(pools["simple"]):
@@ -248,6 +292,7 @@ def toolace(args, rng):
                 text = json.dumps(donor).lower()
                 if not any(w in text for w in words):
                     pools["irrelevance"].append(row | {"category": "irrelevance", "function": donor, "reference": None,
+                                                       "origin": "far",
                                                        "prompt": [{"role": "system", "content": bfcl_system_prompt(root, donor)},
                                                                   row["prompt"][1]]})
                     made += 1
@@ -300,6 +345,13 @@ def grounded(arguments, question):
             return all(stated(v) for v in value.values())
         return False
     return all(stated(v) for v in arguments.values())
+
+
+def name_words(name):
+    """Words of a function name ("Get_Ad_Tracking", "getAdTracking" -> {"tracking"}), 4+ letters, minus verbs like get."""
+    parts = re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name.replace(".", "_"))
+    return {w.lower() for w in parts if len(w) >= 4} - {"list", "fetch", "search", "find", "create", "update", "info",
+                                                        "data", "details", "check", "calculate", "retrieve"}
 
 
 def identifier(name):

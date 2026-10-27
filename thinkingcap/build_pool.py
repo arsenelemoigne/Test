@@ -39,7 +39,7 @@ TOOL_CATEGORY = {"simple": "bfcl_simple_python", "multiple": "bfcl_multiple", "i
 def part_of(row):
     """The evaluation part a training row imitates (None: a source this pool does not use)."""
     source = row["source"]
-    if source in ("gsm8k_matched", "gsm8k_easy", "metamath_sv"):
+    if source in ("gsm8k_matched", "gsm8k_easy", "gsm8k_easy_test", "metamath_easy", "metamath_sv"):
         return "svamp"
     if source == "kodcode":
         return "mbpp"
@@ -73,6 +73,7 @@ def main():
     parser.add_argument("--tool-sources", default="toolace", help="sources for the BFCL parts")
     parser.add_argument("--bins", type=int, default=5, help="prompt-length quantile bins per part (40 questions -> 5)")
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B", help="tokenizer for prompt lengths")
+    parser.add_argument("--parts", default="", help="only these evaluation parts (dp4 rebuilds math and no-fit only)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -115,6 +116,8 @@ def main():
     targets = {"svamp": args.per_benchmark, "mbpp": args.per_benchmark, "ifeval": args.per_benchmark}
     total = sum(BFCL_SIZES.values())
     targets |= {p: round(args.per_benchmark * n / total) for p, n in BFCL_SIZES.items()}
+    if args.parts:
+        targets = {p: n for p, n in targets.items() if p in args.parts.split(",")}
     pool, report = [], {}
     for part, want in targets.items():
         ref = sorted(choosing.get(part, []))

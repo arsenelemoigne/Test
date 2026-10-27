@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "tokenskip", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "tokenskip", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -209,6 +209,8 @@ def main():
     parser.add_argument("--dp-check-per-part", type=int, default=200, help="buildpool: pool questions per part answered x4")
     parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2: answer half a / b, or select")
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
+    parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
+    parser.add_argument("--dp-parts", default="svamp,bfcl_irrelevance", help="poolfix: parts given new candidates")
     parser.add_argument("--dp-ifeval", type=int, default=12000, help="buildpool2: IFEval-like prompts drawn to IFEval's mix")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2197,6 +2199,74 @@ def buildpool2(args):
     drive_sync("save")
 
 
+def poolfix(args):
+    """dp4: rebuild only the parts of an answered pool that missed (user, 27 Oct night: start fixing right away). dp3's
+    selection showed math thinking 500 vs 384 (too few easy, short-thinking problems) and no-fit tool questions at 97%
+    vs 80% (unrelated functions are obvious to refuse). New candidates for --dp-parts only: gsm8k_easy_test, metamath_easy
+    (rewordings of 1-2 calculation GSM8K problems), and "near" no-fit questions (a ToolACE question offered only the
+    functions its reply did not call, none sharing a name word with the called one). They are answered x4 here, then the
+    selection draws from dp3's answered candidates PLUS the new ones (every part re-selected, all parts re-checked on new
+    answers against both references). --dp-reuse names the answered pool."""
+    name, old = args.name, args.dp_reuse
+    parts = args.dp_parts
+    val = f"questions_val{VAL_SEED}"
+    drive_sync("restore", only=[f"data/poolcand-{old}.jsonl", f"runs/bon/probe-poolcand-{old}", f"data/cand-{name}.jsonl",
+                                f"data/poolcand-{name}.jsonl", "runs/mvtf/eval-base", "runs/mvtf/v4-base"])
+    old_pool, old_answers = Path(f"data/poolcand-{old}.jsonl"), BON / f"probe-poolcand-{old}" / "rollouts.jsonl"
+    assert old_pool.exists() and old_answers.exists(), f"{old}'s answered pool is not here"
+    cand, pool = Path(f"data/cand-{name}.jsonl"), Path(f"data/poolcand-{name}.jsonl")
+    if not cand.exists() and not pool.exists():
+        py("prepare_types.py", "--sources", "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,toolace",
+           "--per-source", 1000000, "--seed", args.data_seed, "--out", cand, "--tool-clean", "--tool-near")
+    if not pool.exists():
+        py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", parts,
+           "--per-benchmark", round(args.dp_per_benchmark * args.dp_oversample), "--math-mix", args.dp_math_mix,
+           "--seed", args.data_seed, "--out", pool)
+        seen = {json.dumps(json.loads(l)["prompt"]) for l in old_pool.read_text().splitlines() if l.strip()}
+        rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+        rows = [r for r in rows if json.dumps(r["prompt"]) not in seen]  # already a dp3 candidate
+        count = Counter()
+        for r in rows:
+            r["pool_id"] = f"{name}-{r['part']}-{count[r['part']]}"
+            count[r["part"]] += 1
+        pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        print(f"{name}: {len(rows)} new candidates {dict(count)}", flush=True)
+        drive_sync("save")
+    sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like"
+    probe = BON / f"probe-poolcand-{name}"
+    n = sum(1 for l in pool.read_text().splitlines() if l.strip())
+    if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 4 * n:
+        py("probe_curve.py", "--data", pool, "--sources", sources, "--per-source", 1000000, "--samples", 4,
+           "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", n)
+    drive_sync("save")
+    union, answers = Path(f"data/poolcand-{name}-all.jsonl"), BON / f"probe-poolcand-{name}-all" / "rollouts.jsonl"
+    union.write_text(old_pool.read_text() + pool.read_text())
+    answers.parent.mkdir(parents=True, exist_ok=True)
+    answers.write_text(old_answers.read_text() + (probe / "rollouts.jsonl").read_text())
+    evaluate(ROOT / "v4-base", samples=4, questions=val)
+    evaluate(BASE)
+    selected = Path(f"data/pool-{name}.jsonl")
+    py("select_pool.py", "--pool", union, "--rollouts", answers, "--reference", ROOT / "v4-base", BASE,
+       "--per-benchmark", args.dp_per_benchmark, "--seed", args.data_seed, "--out", selected)
+    rows = [json.loads(l) for l in selected.read_text().splitlines() if l.strip()]
+    random.Random(args.data_seed).shuffle(rows)
+    per = Counter()
+    check = Path(f"data/poolcheck-{name}.jsonl")
+    check.write_text("".join(json.dumps(r) + "\n" for r in rows
+                             if per.update([r["part"]]) or per[r["part"]] <= args.dp_check_per_part))
+    held = BON / f"probe-poolcand-{name}-check"
+    m = sum(1 for l in check.read_text().splitlines() if l.strip())
+    if not (held / "rollouts.jsonl").exists() or sum(1 for _ in (held / "rollouts.jsonl").open()) < 4 * m:
+        py("probe_curve.py", "--data", check, "--sources", sources, "--per-source", 1000000, "--samples", 4,
+           "--model", "Qwen/Qwen3-0.6B", "--out", held, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", m, "--seed", 7)
+    for tag, refs in (("both", [ROOT / "v4-base", BASE]), ("choosing", [ROOT / "v4-base"]), ("q40", [BASE])):
+        py("pool_check.py", "--rollouts", held / "rollouts.jsonl", "--reference", *refs,
+           "--out", BON / f"poolcheck-{name}-{tag}", "--pool", selected)
+    drive_sync("save")
+
+
 def promptsearch(args):
     """Candidate prompts for prompt distillation (user, 27 Oct; Lightning McQwen3's ex-draft step): the ORIGINAL model
     answers --ps-per-source training questions per type of lot --ps-lot x --ps-samples under each prompt of
@@ -2993,7 +3063,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "tokenskip", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "tokenskip", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

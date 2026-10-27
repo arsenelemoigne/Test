@@ -2779,3 +2779,10 @@ IFEval real 1,307 kept (46%, thinking 214), built 1,694 (61%, thinking 273). Pro
 7.1 / 25%). Early reading: math candidates lack short-thinking easy questions (half the math pool borrowed from
 neighbouring cells; thinking +30%); the built no-fit tool questions are too easy (97% vs 80%: unrelated functions are
 obvious to refuse; BFCL's irrelevance functions are closer to the question). Wait for the held-out check.
+- dp4 queued on GPU 1 after dp3's check (user: start fixing now, refine after the check): stage poolfix.
+  Math: new sources gsm8k_easy_test (GSM8K test, 1-2 calculations) and metamath_easy (MetaMath GSM_Rephrased linked to
+  a 1-2 calculation GSM8K problem by same answer + word Jaccard >= 0.4). No-fit: "near" questions (ToolACE question
+  offered only the functions its reply did not call), dropped when an offered function shares a name word with the
+  called one (local: 1,719 near kept of 2,319; e.g. "ad tracking data" + trackAdImpression was a false no-fit).
+  Residual risk: some near rows may still be answerable; their "wrong" answers would look like difficulty to the
+  selection. Selection over dp3's 18,640 answered candidates + the new ones; every part re-checked on new answers.
