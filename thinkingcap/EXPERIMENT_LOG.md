@@ -2708,3 +2708,4 @@ Both runs start from rc1-rl-40.
   (sb2 commented out so a rerun does not resume its RL past the guard stop).
 - drpo2 (strong RL from rc1-rl-40, lambda 0.5, math unprotected): -20 +57.6 / -3.9, -25 +57.8 / -4.0,
   -30 +58.2 / -4.7 (math sliding to -11.9). More saving, accuracy getting worse: not a candidate.
+- drpo2-40: +62.1% / -4.6 (outside the limit); drpo2-50 scoring. GPU 1 still waiting in dp2's select (needs the user's stop + rerun of the plan cell).
