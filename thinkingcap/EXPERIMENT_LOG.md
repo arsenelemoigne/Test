@@ -2624,3 +2624,22 @@ dp2 changes (contamination check unchanged; fresh set never read):
 - ~10:00 check: drpo3f ended after its step-20 score (no step 25-40 scores in the log; stop reason not printed in the
   visible output). GPU 2 then started drpo2 (scripts 9ba75c2, before the dp2 push), now at RL step 30/60; dp2 b waits
   behind it. GPU 1 still on teach1c (rel:0.05 at 1,200/2,512 answers, then rel:0.1). dp2 starts when each finishes.
+
+### 2026-10-27 ~11:00 — teach1c broken like gold1; dp2 first try crashed (bug fixed), IFEval mix now exact
+- teach1c (teach_stop.py from the original Qwen, BCE on p("</think>"), no anchor), fresh 240 x 8:
+  rel:0.05 +85.9% / -49.4; rel:0.1 +85.3% / -55.6. Per part (rel:0.05): SVAMP +92% / -89.7, MBPP+ +96% / -45.0,
+  BFCL simple +86% / -88.1, multiple +85% / -75.9, irrelevance +83% / +18.4, IFEval +9% / -14.4. Same failure as gold1
+  (the model stops answering); confirms the unanchored stop-token loss is broken, not a dose problem.
+- dp2 a and select failed on GPU 1 in prepare_types.py: some argilla default-config rows have kwargs "null"
+  (TypeError on len). Fixed (rows without kwargs, or malformed JSON, are skipped).
+- Second IFEval problem found while testing locally on 3 of the 10 default shards: argilla rows with 1-3 instructions
+  barely hold the hard ids (no-comma 60, quotation 43, repeat-prompt 16, capital-word-frequency 14 among 39,667), so
+  real rows alone reach 4,373 of 12,000 with those ids far short. Fix: ifeval_fill() builds the missing prompts from a
+  Dolly question (creative_writing / brainstorming / open_qa / general_qa, no context; not an evaluation set) followed
+  by IFEval's OWN instruction sentences and random arguments (its instruction library's build_description; conflicting
+  pairs excluded by its registry; repeat-prompt last, repeating everything before it). Local result: 4,373 real + 7,619
+  built = 11,992 prompts; every instruction id's share and the 1/2/3-instruction split equal IFEval's (e.g. no-comma
+  7.9% / 7.9%, 1 instruction 56%). IFEval's official checker grades the built prompts (300 graded without error; a
+  no-comma reply passes, one with a comma fails). With all 10 shards more of the 12,000 will be real rows.
+- Queue: GPU 1 is now on sb2 (60 RL steps); dp2 a + select re-queued right after it (distinct lines, a failed line is
+  not retried in the same session). GPU 2: dp2 b after drpo2. A runtime restart would start dp2 sooner.

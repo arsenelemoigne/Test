@@ -368,6 +368,62 @@ def kodcode(args, rng):
                "prompt": [{"role": "user", "content": content}]}
 
 
+def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room):
+    """Prompts for the instruction ids IFEval-like data cannot supply: argilla's rows with 1-3 instructions hold almost no
+    no-comma, quotation, repeat-prompt, all-capitals or two-responses instructions (60 no-comma among ~40,000 such rows
+    in 3 of its 10 shards). Each prompt is a Dolly writing / brainstorming / open question (no context; not an evaluation
+    set) followed by IFEval's own instruction sentences, written by IFEval's instruction library with its own random
+    arguments (build_description), so the official checker grades them exactly as it grades IFEval. The rarest missing
+    id leads each prompt; its partners come from the other missing ids, never two that IFEval's registry marks as
+    conflicting. Updates got_n / got_id in place."""
+    import random as stdrandom
+    from datasets import load_dataset
+    from utils.eval.benchmarks import paths
+    from utils.eval.graders import importable
+
+    official = paths(args.questions)["ifeval"]
+    with importable(Path(official).parent):
+        from instruction_following_eval import instructions_registry as registry
+    conflicts = registry.conflict_make(dict(registry.INSTRUCTION_CONFLICTS))
+    bases = [r["instruction"].strip() for r in load_dataset("databricks/databricks-dolly-15k", split="train")
+             if r["category"] in ("creative_writing", "brainstorming", "open_qa", "general_qa") and not r["context"]
+             and 4 <= len(r["instruction"].split()) <= 60]
+    rng.shuffle(bases)
+    built = []
+    for base in bases:
+        missing = {i: want_id[i] - got_id[i] for i in want_id if want_id[i] - got_id[i] >= 1}
+        if not missing or len(built) >= room:
+            break
+        lead = max(missing, key=missing.get)
+        sizes = {n: max(0.0, want_n[n] - got_n[n]) for n in want_n}
+        n = rng.choices(list(sizes), weights=[w or 1e-3 for w in sizes.values()])[0]
+        ids = [lead]
+        while len(ids) < n:
+            options = [i for i in missing if i not in ids and not any(i in conflicts.get(j, ()) or j in conflicts.get(i, ())
+                                                                      for j in ids)]
+            if not options:
+                break
+            ids.append(rng.choices(options, weights=[missing[i] for i in options])[0])
+        stdrandom.seed(rng.random())  # build_description draws its arguments from the random module
+        # the repeat-prompt instruction goes last and its request is everything before it, as in IFEval
+        ids.sort(key=lambda i: i == "combination:repeat_prompt")
+        prompt, kwargs = base, []
+        for i in ids:
+            instruction = registry.INSTRUCTION_DICT[i](i)
+            if i == "combination:repeat_prompt":
+                text = instruction.build_description(prompt_to_repeat=prompt)
+            else:
+                text = instruction.build_description()
+            kwargs.append({k: v for k, v in (instruction.get_instruction_args() or {}).items() if v is not None})
+            prompt += " " + text
+        got_n[len(ids)] += 1
+        got_id.update(ids)
+        built.append({"source": "ifeval_like", "origin": "built", "task": "instructions", "answer": "",
+                      "grader": "ifeval", "id": f"ifeval_built-{len(built)}", "instruction_id_list": ids,
+                      "kwargs": kwargs, "original_prompt": prompt, "prompt": [{"role": "user", "content": prompt}]})
+    return built
+
+
 TOOLS = re.compile(r"<tools>\s*(.*?)\s*</tools>", re.DOTALL)
 CALL = re.compile(r"<tool_call>\s*(.*?)\s*</tool_call>", re.DOTALL)
 
@@ -447,8 +503,10 @@ def ifeval_like(args, rng):
             ids = ast.literal_eval(row["instruction_id_list"]) if isinstance(row["instruction_id_list"], str) \
                 else row["instruction_id_list"]
             kwargs = json.loads(row["kwargs"]) if isinstance(row["kwargs"], str) else row["kwargs"]
-        except (ValueError, SyntaxError):
+        except (ValueError, SyntaxError, TypeError):
             continue
+        if not isinstance(ids, list) or not isinstance(kwargs, (list, dict)):
+            continue  # some default-config rows carry no kwargs at all ("null")
         if isinstance(kwargs, dict):
             if not args.ifeval_match or any(i not in keys for i in ids):
                 continue
@@ -463,20 +521,34 @@ def ifeval_like(args, rng):
         if not args.ifeval_match:
             yield out
             continue
-        # quota draw: a prompt is kept while its instruction count and every one of its ids are under IFEval's share
-        if row["prompt"] in seen or len(ids) not in want_n or got_n[len(ids)] + 1 > want_n[len(ids)] + 1 \
-                or any(i not in want_id or got_id[i] + 1 > want_id[i] + 1 for i in ids):
+        if row["prompt"] in seen or len(ids) not in want_n or any(i not in want_id for i in ids):
             continue
         seen.add(row["prompt"])
-        got_n[len(ids)] += 1
-        got_id.update(ids)
         kept.append(out)
-        if len(kept) >= args.ifeval_match:
-            break
     if args.ifeval_match:
+        # quota draw, rarest instruction first: a prompt is kept while its instruction count and every one of its ids are
+        # under IFEval's share (filling common ids first blocked the rare ones: 4,132 prompts, no-comma 8 of 1,464)
+        eligible, kept = kept, []
+        rng.shuffle(eligible)
+        supply = Counter(i for r in eligible for i in r["instruction_id_list"])
+        taken = set()
+        for target in sorted(want_id, key=lambda i: supply[i] / want_id[i]):
+            for k, r in enumerate(eligible):
+                if got_id[target] >= want_id[target] or len(kept) >= args.ifeval_match:
+                    break
+                ids = r["instruction_id_list"]
+                if k in taken or target not in ids or got_n[len(ids)] + 1 > want_n[len(ids)] + 1 \
+                        or any(got_id[i] + 1 > want_id[i] + 1 for i in ids):
+                    continue
+                taken.add(k)
+                kept.append(r)
+                got_n[len(ids)] += 1
+                got_id.update(ids)
+        real = len(kept)
+        kept += ifeval_fill(args, rng, want_n, want_id, got_n, got_id, args.ifeval_match - len(kept))
         short = {i: round(w - got_id[i]) for i, w in want_id.items() if got_id[i] < w - 1}
-        print(f"ifeval_like matched: {len(kept)} prompts; by instruction count {dict(sorted(got_n.items()))}"
-              + (f"; ids short of IFEval's share: {short}" if short else ""), flush=True)
+        print(f"ifeval_like matched: {real} real + {len(kept) - real} built prompts ({len(eligible)} real eligible); by instruction count "
+              f"{dict(sorted(got_n.items()))}" + (f"; ids short of IFEval's share: {short}" if short else ""), flush=True)
         yield from kept
 
 
