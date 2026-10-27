@@ -44,6 +44,10 @@ down with weight softmax(s / tau) over the group's wrong replies (length plays n
 len / 8k) gives a tool call and a code task the same pressure. A trust region pens updates that drift from the
 sampling policy: beta0 * max(0, KL_hat - delta)^2, KL_hat the mean per-token log-ratio to the step's start (only
 non-zero with --updates > 1). --reward and --advantage are ignored.
+--drpo-solve-scale (ALP, Xiang et al. 2025, arXiv 2506.05256; LUPIN1.0): the length pressure follows the question's solve
+rate p in its own group: lambda_q = lambda / max(p, 1/group size), so a question solved 8/8 gets the full pressure and one
+solved 1/8 eight times less (a softer softmax over its right replies): easy questions are shortened, hard ones keep
+their thinking.
 
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
@@ -131,6 +135,8 @@ def parse_arguments():
                         help="stop training when a data type's batch accuracy (mean of its last 5 steps) falls more than "
                              "this below its mean over the first 5 steps (e.g. 0.06); the last checkpoint is kept")
     parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight temperature (smaller: shorter)")
+    parser.add_argument("--drpo-solve-scale", action="store_true",
+                        help="drpo: lambda / solve rate per question (ALP): length pressure only where it is solved often")
     parser.add_argument("--drpo-tau", type=float, default=10.0, help="drpo: log-sum-exp temperature over wrong replies")
     parser.add_argument("--drpo-delta", type=float, default=1e-4, help="drpo: trust region size")
     parser.add_argument("--drpo-beta", type=float, default=1e3, help="drpo: trust region penalty")
@@ -634,8 +640,11 @@ def main():
             for members in by_group.values():
                 scores = [float(old_logps[id(j[1])].mean()) if j[1] else 0.0 for j in members]
                 protected = protected_kind(members[0][5], protect)
+                lam = args.drpo_lambda
+                if args.drpo_solve_scale:  # ALP: easy questions (high solve rate) get the full length pressure
+                    lam = lam / max(sum(j[2] for j in members) / len(members), 1 / len(members))
                 coef = drpo_weights([len(j[1]) for j in members], [j[2] for j in members], scores,
-                                    1e9 if protected else args.drpo_lambda, args.drpo_tau)
+                                    1e9 if protected else lam, args.drpo_tau)
                 for j, c in zip(members, coef):
                     j[3] = c
                 stats["signal"] += any(c != 0 for c in coef)

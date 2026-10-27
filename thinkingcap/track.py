@@ -145,6 +145,8 @@ def main():
     parser.add_argument("--tg-rule", default="strict", choices=("strict", "question"),
                         help="targeted: safe cut = >= 95%% right (strict) or as right as the question's own rate + margin")
     parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight (smaller: shorter)")
+    parser.add_argument("--drpo-solve-scale", action="store_true",
+                        help="drpo: length pressure divided by each question's solve rate (ALP; LUPIN1.0)")
     parser.add_argument("--rl-dynamic", type=float, default=0.0,
                         help="drpo: DLER dynamic sampling factor (draw this many times the questions, keep those with a right reply)")
     parser.add_argument("--rl-variant", choices=("drpo", "shorterbetter"), default="drpo",
@@ -1587,7 +1589,8 @@ def drpo(args):
     out = Path("adapters") / f"{name}-{args.rl_variant}"
     if not (out / "adapter_config.json").exists():  # trained on the other runtime: reuse it, never retrain
         drive_sync("restore", only=[str(out)])
-    variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda] if args.rl_variant == "drpo"
+    variant = (["--objective", "drpo", "--drpo-lambda", args.drpo_lambda,
+                *(["--drpo-solve-scale"] if args.drpo_solve_scale else [])] if args.rl_variant == "drpo"
                else ["--objective", "grpo", "--reward", "shorterbetter",
                      *(["--sb-beta", args.rl_sb_beta] if args.rl_sb_beta is not None else [])])
     if not (out / "adapter_config.json").exists() and not args.drpo_score_only:

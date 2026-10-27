@@ -7,7 +7,11 @@ loss = -log sigmoid(beta * [(pi_c - ref_c) - (pi_r - ref_r)]) + nll * (mean toke
 pi and ref are summed log-probabilities of the reply tokens (thinking and answer) under the
 policy and under the starting adapter; the reference is scored once before training. The NLL
 anchor on the chosen reply (as in RPO, Pang et al. 2024) stops DPO from widening the margin by
-lowering both sides. Pair kinds are mixed to --mix (shorten, guard, hard, right).
+lowering both sides. Pair kinds are mixed to --mix (shorten, guard, hard, right), or all kept with --mix all.
+
+--checker (LUPIN0.x, VeriThinker-style practice): every --checker-every pairs, one "is this solution right? Yes/No"
+example (lupin_checker.py) adds --checker-weight x its answer's mean token NLL to the loss. Same model, same step;
+nothing changes at test time, where the model is never asked to judge.
 
 Every --save-every optimizer steps a checkpoint is saved. The tripwire watches held-out chosen
 replies: if the probability that the reply ends right after </think> rises above --tripwire, a
@@ -32,7 +36,17 @@ def main():
     rng = random.Random(args.seed)
     rows = [json.loads(l) for l in Path(args.pairs).read_text().splitlines() if l.strip()]
     rows = [r for r in rows if len(r["prompt_ids"]) + max(len(r["chosen_ids"]), len(r["rejected_ids"])) <= args.max_len]
-    rows = mix(rows, [float(x) for x in args.mix.split(",")], rng)
+    if args.mix != "all":
+        rows = mix(rows, [float(x) for x in args.mix.split(",")], rng)
+    else:
+        rng.shuffle(rows)
+    checks = []
+    if args.checker:
+        checks = [json.loads(l) for l in Path(args.checker).read_text().splitlines() if l.strip()]
+        checks = [c for c in checks if len(c["prompt_ids"]) + len(c["target_ids"]) <= args.max_len]
+        random.Random(args.seed + 1).shuffle(checks)
+        print(f"checker practice: {len(checks)} examples, one every {args.checker_every} pairs, weight {args.checker_weight}",
+              flush=True)
     held_out, rows = rows[:args.held_out], rows[args.held_out:]
     print(f"training on {len(rows)} pairs, {len(held_out)} held out", flush=True)
 
@@ -98,7 +112,7 @@ def main():
     order = [i for _ in range(args.epochs) for i in rng.sample(range(len(rows)), len(rows))][:steps * args.batch]
     baseline = tripwire()
     print(f"tripwire baseline {baseline:.3f}; {steps} steps of {args.batch} pairs", flush=True)
-    step, stats = 0, []
+    step, stats, check_stats = 0, [], []
     if state_path.exists() and (latest / "adapter_config.json").exists():  # resume after the last saved checkpoint
         from peft import set_peft_model_state_dict
         from safetensors.torch import load_file
@@ -119,6 +133,11 @@ def main():
         pr = logps(r["prompt_ids"], r["rejected_ids"], True)
         margin = args.beta * ((pc - r["ref_c"]) - (pr - r["ref_r"]))
         loss = -torch.nn.functional.logsigmoid(margin) + args.nll * (-pc / len(r["chosen_ids"]))
+        if checks and position % args.checker_every == 0:  # a fixed example per position: a resumed run sees the same
+            c = checks[(position // args.checker_every) % len(checks)]
+            check_nll = -logps(c["prompt_ids"], c["target_ids"], True) / len(c["target_ids"])
+            loss = loss + args.checker_weight * check_nll
+            check_stats.append(float(check_nll))
         (loss / args.batch).backward()
         stats.append((float(loss), float(margin) > 0))
         if position % args.batch == 0 or position == len(order):  # the last, partial batch too
@@ -129,8 +148,9 @@ def main():
             if step % args.log_every == 0:
                 loss_avg = sum(s[0] for s in stats) / len(stats)
                 acc = sum(s[1] for s in stats) / len(stats)
-                print(f"step {step}/{steps}  loss {loss_avg:.4f}  pairs ordered right {acc:.0%}", flush=True)
-                stats = []
+                extra = f"  checker NLL {sum(check_stats) / len(check_stats):.3f}" if check_stats else ""
+                print(f"step {step}/{steps}  loss {loss_avg:.4f}  pairs ordered right {acc:.0%}{extra}", flush=True)
+                stats, check_stats = [], []
             if step % args.save_every == 0 or step == steps:
                 model.eval()
                 wire = tripwire()
@@ -170,7 +190,10 @@ def parse_arguments():
     parser.add_argument("--pairs", required=True)
     parser.add_argument("--init-adapter", required=True, help="the starting LoRA; also the DPO reference")
     parser.add_argument("--out", required=True)
-    parser.add_argument("--mix", default="0.4,0.4,0.2", help="shares of shorten, guard, hard (, right) pairs")
+    parser.add_argument("--mix", default="0.4,0.4,0.2", help="shares of shorten, guard, hard (, right) pairs, or 'all'")
+    parser.add_argument("--checker", default="", help="LUPIN0.x: Yes/No judging examples from lupin_checker.py")
+    parser.add_argument("--checker-weight", type=float, default=0.1, help="weight of the checker NLL in the loss")
+    parser.add_argument("--checker-every", type=int, default=2, help="one checker example every N pairs")
     parser.add_argument("--beta", type=float, default=0.1)
     parser.add_argument("--nll", type=float, default=1.0, help="weight of the NLL anchor on the chosen reply")
     parser.add_argument("--lr", type=float, default=2e-5)
