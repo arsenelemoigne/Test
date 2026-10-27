@@ -185,6 +185,15 @@ Any recipe can also take:
   the final model also on the full evaluation (2,759 x 8).
 - No training starts before the dataset check passes (user, 28 Oct).
 
+## Answer statistics kept every round (user, 28 Oct)
+Per data type, for the original Qwen, the evaluation sets, the pool, LUPIN v1 and v2, computed offline from saved answers:
+accuracy; thinking tokens; paragraphs (blank-line blocks) and tokens per paragraph; spread of thinking length across the
+answers to one question (coefficient of variation); re-check words (wait / let me check / double-check / hmm);
+repetition (share of 4-word phrases seen twice or more); redundancy (gzip ratio of the thinking); where the final answer
+first appears in the thinking (math, tools); **vocabulary diversity** (user: does it use a smaller part of its
+vocabulary?): distinct tokens per 100-token window averaged over the thinking (length-fair, MATTR), the entropy of its
+token distribution, and the number of distinct tokens a model uses across all its answers of a type per 10,000 tokens.
+
 ## Step 3: Stage 2, online RL from LUPIN0 → LUPIN1.0 (implemented after Stage 1 is scored)
 
 RL lets the model answer live and pushes it towards its own better-scoring answers, so it keeps improving where fixed
