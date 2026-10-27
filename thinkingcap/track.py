@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -202,6 +202,9 @@ def main():
     parser.add_argument("--ps-per-source", type=int, default=50, help="promptsearch: questions per type")
     parser.add_argument("--ps-samples", type=int, default=4, help="promptsearch: replies per question and prompt")
     parser.add_argument("--ps-only", default="", help="promptsearch: comma-separated candidates (default: all)")
+    parser.add_argument("--dp-per-benchmark", type=int, default=3000, help="buildpool: training questions per benchmark")
+    parser.add_argument("--dp-math-mix", default="gsm8k_matched=0.7,metamath_sv=0.3", help="buildpool: SVAMP-side sources")
+    parser.add_argument("--dp-check-per-part", type=int, default=200, help="buildpool: pool questions per part answered x4")
     parser.add_argument("--drop", nargs="*", default=[],
                         help="dropmodels: MODEL=ADAPTER pairs; models/MODEL is removed from Drive and here only if adapters/ADAPTER is on Drive")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
@@ -2030,6 +2033,53 @@ def wronglen(args):
     py("wrong_lengths.py", "--root", DRIVE / "runs" / "mvtf", "--out", ROOT / "wrong_lengths.txt")
 
 
+def buildpool(args):
+    """A training pool that behaves like the evaluation, checked before anything trains on it (user, 27 Oct).
+    1. Candidates from every imitating source (prepare_types.py, the parts' own prompt formats).
+    2. build_pool.py: per evaluation part, prompt lengths matched to the CHOOSING set's bins, BFCL's sub-type sizes,
+       math mix --dp-math-mix, 8-word contamination check against every evaluation question (shared templates exempt).
+    3. The original model answers --dp-check-per-part pool questions per part x4; pool_check.py compares accuracy, reply
+       and thinking length and capped share with its own run on the choosing set (v4-base). The fresh set is never read.
+    No training here: the pool is only used once its check reads OK."""
+    name = args.name
+    val, fresh_q = f"questions_val{VAL_SEED}", f"questions_fresh{FRESH_SEED}"
+    if not Path(fresh_q, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
+    if not Path(val, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", VAL_SEED, "--exclude", QUESTIONS, fresh_q, "--out", val)
+    evaluate(ROOT / "v4-base", samples=4, questions=val)  # the original model on the choosing set (kept if it exists)
+    if not Path("data/gsm8k_matched-train.jsonl").exists():
+        drive_sync("restore", only=["data/gsm8k_matched-train.jsonl"])
+    cand, kod = Path(f"data/cand-{name}.jsonl"), Path(f"data/kodcand-{name}.jsonl")
+    if not cand.exists():
+        py("prepare_types.py", "--sources", "gsm8k_matched,metamath_sv,toolace,ifeval_like", "--per-source", 1000000,
+           "--seed", args.data_seed, "--out", cand)
+    if not kod.exists():
+        py("prepare_types.py", "--sources", "kodcode", "--per-source", 15000, "--seed", args.data_seed, "--out", kod,
+           "--kod-max-task", 110, "--kod-max-solution", 200)
+    pool = Path(f"data/pool-{name}.jsonl")
+    if not pool.exists():
+        py("build_pool.py", "--candidates", cand, kod, "--choosing", val, "--all-questions", "questions",
+           "--per-benchmark", args.dp_per_benchmark, "--math-mix", args.dp_math_mix, "--seed", args.data_seed,
+           "--out", pool)
+    check = Path(f"data/poolcheck-{name}.jsonl")
+    if not check.exists():
+        rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+        rng = random.Random(args.data_seed)
+        rng.shuffle(rows)
+        per = Counter()
+        keep = [r for r in rows if per.update([r["part"]]) or per[r["part"]] <= args.dp_check_per_part]
+        check.write_text("".join(json.dumps(r) + "\n" for r in keep))
+    n = sum(1 for l in check.read_text().splitlines() if l.strip())
+    probe = BON / f"probe-poolcheck-{name}"
+    if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 4 * n:
+        py("probe_curve.py", "--data", check, "--sources", "gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like",
+           "--per-source", 100000, "--samples", 4, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype,
+           "--generate-only", "--chunk", 150, "--max-questions", n)
+    py("pool_check.py", "--rollouts", probe / "rollouts.jsonl", "--reference", ROOT / "v4-base",
+       "--out", BON / f"poolcheck-{name}")
+
+
 def promptsearch(args):
     """Candidate prompts for prompt distillation (user, 27 Oct; Lightning McQwen3's ex-draft step): the ORIGINAL model
     answers --ps-per-source training questions per type of lot --ps-lot x --ps-samples under each prompt of
@@ -2783,13 +2833,13 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/mvtf/v4-base", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
                                     "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
                                     *[f"models/{m}" for m in wanted]])
     else:

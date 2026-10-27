@@ -101,6 +101,13 @@ dropmodels --name drop1 --drop ca1-soup-20=ca1-s0 ca1-soup-30=ca1-s0 ca1-soup-40
 # to distil (Lightning McQwen3's ex-draft step)? 11 prompts (prompt_candidates.py) x 50 training questions per type of lot
 # V2 x 4 replies, paired against no prompt: tokens saved, accuracy, leak rate. Training questions only (~1 h).
 promptsearch --name ps1 --start Qwen/Qwen3-0.6B
+# dp1 (user, 27 Oct): build the training pool and PROVE it behaves like the evaluation before any pairs or training.
+# Per part (SVAMP, MBPP+, BFCL simple/multiple/irrelevance, IFEval): the part's prompt format, prompt lengths matched
+# to the choosing set's 5 length bins, BFCL's sub-type sizes, math 70% matched GSM8K + 30% MetaMathQA, 8-word
+# contamination check (templates shared by >= 3 evaluation questions exempt). Then the original model answers 200 pool
+# questions per part x4 and pool_check.py compares accuracy, reply/thinking length and capped share with v4-base on
+# the choosing set. Fresh set never read. No training in this stage.
+buildpool --name dp1 --data-seed 72
 # sp1 (user, 27 Oct; moved right after ps1, ahead of gold1/bp1b/teach1c): one big self-preference round from the ORIGINAL Qwen, michal-bida style but bigger and with math
 # protected: 12,000 fresh benchmark-like questions (MetaMathQA SVAMP-like math 25%, IFEval-like 25%, KodCode 25%,
 # ToolACE 17%, Hermes 8%; contamination-checked), 4 answers each; pairs: shortest right > longest wrong/unfinished and
