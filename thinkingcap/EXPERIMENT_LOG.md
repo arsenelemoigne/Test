@@ -2544,3 +2544,12 @@ its answers think longer (540 vs gsm8k 456 vs choosing 366). Tools: ToolACE's gr
 than BFCL's. LUPIN step 1 stays blocked until a pool passes.
 - drpo3f-5 (fresh 240 x 8): +18.8% / -1.6 (its start, drpo3d-23, was +21.2% / +0.2): 5 more RL steps made it worse.
 - GPU 1 moved on to gold1 (old queue). GPU 2: drpo3f at step 20/40.
+
+### 2026-10-27 ~05:46 — drpo3f-10 scored (fresh 240 x 8)
+drpo3f = gentle RL (DRPO, lambda 0.3) continued from drpo3d-23 (21.2% / +0.2), protect math + toolace/multiple.
+- step 10: tokens saved +23.6% CI [+19.5, +27.9], accuracy +0.23 pp CI [-1.80, +2.37] (within the limit).
+  SVAMP +29.5% / -1.56; MBPP+ +22.2% / +2.19; IFEval +26.0% / +0.62; BFCL simple +13.5% / +1.56,
+  multiple +18.2% / -0.94, irrelevance +16.8% / -1.56.
+- vs its start drpo3d-23: +2.4 points saved at the same accuracy (noise floor ~0.8 pt / 0.1 pp). Steps 15-40 next.
+- Same time, GPU 1: dp1 done, gold1 training (step 600/660); math separates safe/unsafe stops (p 0.57-0.67 vs 0.15-0.23),
+  code weakly (0.60 vs 0.43), tools and instructions barely.
