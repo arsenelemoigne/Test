@@ -2553,3 +2553,22 @@ drpo3f = gentle RL (DRPO, lambda 0.3) continued from drpo3d-23 (21.2% / +0.2), p
 - vs its start drpo3d-23: +2.4 points saved at the same accuracy (noise floor ~0.8 pt / 0.1 pp). Steps 15-40 next.
 - Same time, GPU 1: dp1 done, gold1 training (step 600/660); math separates safe/unsafe stops (p 0.57-0.67 vs 0.15-0.23),
   code weakly (0.60 vs 0.43), tools and instructions barely.
+
+### 2026-10-27 ~06:20 — gold1 scored: BROKEN at every checkpoint (fresh 240 x 8)
+gold1 = stop_gold.py from the original Qwen (BCE on p("</think>") at labelled paragraph ends, LoRA r16, lr 1e-4).
+| checkpoint | tokens saved | accuracy |
+|---|---|---|
+| step 100 | 96.5% | -62.5 |
+| step 200 / 300 / 400 / 500 | 95.8 / 95.9 / 96.0 / 95.2% | -62.5 / -62.7 / -62.4 / -62.5 |
+| step 600 / 660 | 96.7 / 95.6% | -63.0 / -63.0 |
+Step 100 detail: replies are ~18-32 tokens in total; 0% right on SVAMP, MBPP+, IFEval, BFCL simple and multiple, and
+~100% "unreadable" (no parsable answer); BFCL irrelevance 99% (an empty reply counts as a correct refusal).
+So this is not "stopping early": the model no longer writes an answer at all. Thinking-off would score far better.
+Likely cause (hypothesis, replies not yet read): the loss only touches p("</think>") at paragraph ends and nothing
+anchors the rest of the distribution; the training log shows p(stop) pushed to 0.5-0.8 even where the label says keep
+(tools, IFEval, code), i.e. a global "</think>" boost, so the model emits </think> almost at once and probably keeps
+emitting it (or EOS) after it. Already broken by step 100 (800 replies seen).
+Fix needed before any rerun: a KL/NLL anchor on all other tokens of the same replies (and on the reply after
+</think>), a much lower lr or fewer steps, and a smoke test (generate 5 replies) before scoring.
+Warning: teach_stop.py (teach1c, queued on GPU 1 after bp1b) uses the same unanchored BCE on p("</think>").
+- drpo3f-15: +24.6% / +0.5; drpo3f-20: +22.5% / +0.4 (start drpo3d-23 was 21.2 / +0.2; step 10 was 23.6 / +0.2).
