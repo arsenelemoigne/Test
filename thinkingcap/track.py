@@ -2135,6 +2135,7 @@ def buildpool2(args):
     def answer(half, data, seed=None):
         probe = BON / f"probe-poolcand-{name}-{half}"
         n = sum(1 for l in Path(data).read_text().splitlines() if l.strip())
+        drive_sync("restore", only=[str(probe)])  # the other runtime may have answered this half already
         if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 4 * n:
             py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", 1000000, "--samples", 4,
                "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,

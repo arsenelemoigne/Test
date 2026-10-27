@@ -2728,3 +2728,6 @@ dp3 candidates (GPU 2): ToolACE clean 3,061 / 2,319 / 5,944; IFEval-like 4,696 r
 eligible after the checker test, all 10 shards); build_pool: same counts as dp2 (18,640; BFCL simple 1,726/2,286),
 IFEval dropped 3,104 by the 8-gram check. GPU 2 answers half b (9,319 questions x4). GPU 1 still waits in dp2's select
 (stop + rerun of its plan cell needed to start half a).
+- ~16:00 user away from the computer, so GPU 1 cannot be unstuck by hand: GPU 2 now answers dp3 half a after
+  half b. Each half first restores its answers from Drive and skips if they are complete, so GPU 1 (freed when dp2's
+  select wait times out, ~21:30) joins or skips half a, then runs dp3 select.
