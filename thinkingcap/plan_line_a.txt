@@ -131,7 +131,7 @@ mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --t
 # drop1 (user, 27 Oct): free Drive space. Removes merged models made before 26 Oct 00:40 (no runtime holds a copy) whose
 # LoRA adapters are on Drive; a model whose adapter folder is missing is KEPT. Recipes: EXPERIMENT_LOG.md 27 Oct "Drive cleanup".
 # moved to plan_line_b (GPU 1): dropmodels --name drop1 --drop ca1-soup-20=ca1-s0 ca1-soup-3...
-budgetprompt --name bp1 --bp-budgets svamp=400,mbpp=750,ifeval=200,bfcl=70
+# failed (stage name missing), rerun as bp1b on GPU 1: budgetprompt --name bp1 --bp-budgets svamp=400,mbpp=750,ifeval=200,bfcl=70
 # drpo3f (user, 27 Oct) replaces drpo3e: the same continuation of drpo3d-23 (21.2% / +0.2) with a stronger push,
 # lambda 0.3 (between the safe 0.5 and drpo1's overshooting 0.2); math and BFCL-multiple-like tool calls protected;
 # guard 10 pts; every 5 steps scored on fresh x8.
