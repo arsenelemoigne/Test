@@ -2396,3 +2396,21 @@ requeued as bp1b on GPU 1 after gold1.
   line when the stage started. bp1b on GPU 1 measures the same thing, so it was not requeued. GPU 2 now runs drpo3f
   (from drpo3d-23, toolace/multiple protected, 40 steps scored every 5).
 - GPU 1: stopV3 soups 100-300 scoring (25/50/75 = +13.4/-0.7, +16.4/-1.4, +11.8/+0.2); then drop1, ps1, gold1, bp1b, teach1c, sp1.
+
+### 2026-10-27 — literature on building pairs for shorter thinking (research pass, for the "many pair strategies" step)
+Strategies to test offline on one fixed set of graded answers, best supported first:
+1. DAST (2503.04472): add "longer WRONG beats shorter wrong" pairs on top of "shorter right beats longer right"; the
+   wrong-longer pairs are the accuracy guard (correct-shorter only: 90.0 / -60%; both: 93.6 / -18%; R1-Distill-7B MATH500).
+   SimPO, 1 epoch, max-margin pair per kind per question, bottom ~15% margins dropped. Opposite of michal-bida's "longest wrong".
+2. First-correct + one check (Chen et al. 2412.21187): chosen = the reply cut after its first right answer plus one
+   re-check, rejected = longest; QwQ-32B MATH500 92.8 at -45% (shortest reply as chosen: -22%). BFCL analogue: ThinkBrake
+   (2510.00546) stop at the first right call. Code: cut at the first draft that passes.
+3. Shortest right PER QUESTION, drop never-solved questions (Munkhbat et al. 2502.20122): ~30% shorter on GSM8K.
+4. Ada-R1 (2504.21659): shortest right vs the 2 longest of any outcome; DPO beta 0.05-0.1, lr 5e-7, 2 epochs; -51% at -1.65.
+5. Difficulty by solve rate p: long-vs-short right pairs only when p >= ~0.5; hard questions get right-vs-wrong and
+   wrong-longer pairs only (DAST budget, Difficulty-Aware DLER 2510.15110, Arora & Zanette 2502.04463).
+6. Drop near-identical pairs (likelihood displacement, 2410.08847): similar-length right-vs-wrong pairs are at risk.
+Loss: DPO kept most accuracy, SimPO compressed most; NLL anchor did not help length DPO in Chen et al. (helps right-vs-wrong
+only). Free dial: merge / interpolate the trained adapter with the base (DLER: top-25% updates x0.7). RL beats offline pairs
+only at aggressive compression (DLER, AdaptThink, LC-R1); offline DPO comes close otherwise (Arora & Zanette).
+Per type (ThinkingCap-27B blog): instructions and tools cheap, code safe but small saving, math costly.
