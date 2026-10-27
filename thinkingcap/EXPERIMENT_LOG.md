@@ -2673,3 +2673,15 @@ Both runs start from rc1-rl-40.
   (accuracy, median thinking and tokens vs the references), so a pass carried by built prompts can be seen; select
   pulls the new scripts when it starts, so dp2 uses them. gsm8k_easy supplies 2,579, just enough for 55% of the
   4,800 math candidates.
+- dp2 candidate pool built on GPU 1 (build_pool.py, 1.6x oversample of 3,000 per benchmark): 18,640 questions.
+  | part | kept / wanted | sources | prompt tokens p10-p90 pool vs choosing | dropped by 8-gram check |
+  |---|---|---|---|---|
+  | svamp | 4800/4800 | gsm8k_easy 2145, gsm8k_matched 819, metamath_sv 1836 | 60-85 vs 55-81 | 174 |
+  | mbpp | 4800/4800 | kodcode (V1) | 85-152 vs 84-168 | 24,516 of 40,000 |
+  | ifeval | 4800/4800 | ifeval_like (real + built) | 32-73 vs 34-76 | 3,135 |
+  | bfcl_simple | **1726/2286 (short 560)** | toolace | 348-458 vs 385-482 | 632 |
+  | bfcl_multiple | 1143/1143 | toolace | 564-1028 vs 591-951 | 550 |
+  | bfcl_irrelevance | 1371/1371 | toolace | 383-473 vs 382-449 | 1,257 |
+  BFCL simple has 1,726 candidates for the 1,429 the final pool needs (1.2x instead of 1.6x): less room to match
+  behaviour cells there; select_pool reports any shortfall. GPU 1 now answers half a (9,321 questions x4).
+- drpo2-15: +56.0% / -2.6 (drpo2-5 +55.5 / -2.0, -10 +56.4 / -3.0); GPU 2 scoring drpo2-20 next.
