@@ -2472,3 +2472,12 @@ Not yet in the check: the answer-timing match (success at 20-40% of the thinking
 - For LUPIN (variants, ranked): (1) a Yes/No verdict NLL term on our own graded answers mixed into LUPIN0's DPO, low LoRA rank,
   watched for forgetting; (2) SVAMP backward questions (mask a number, give the answer, recover the number) as an accuracy
   guard, measuring tokens; (3) backward check only to choose the "chosen" answer. Lowest: answer-first formats.
+
+### 2026-10-27 — LUPIN_SPEC.md written (user): full plan from data to RL
+Step 0 dataset + verification (adds parse-rate and answer-timing checks), Step 1 answers (8 per question; optional
+prompted set and cut labels), Step 2 Stage 1 (pair kinds; recipes R1-R9; methods M1-M11 incl. checker practice,
+backward questions, SimPO, KTO, listwise, prompt-distillation round, stop tokens, iterative round, curriculum; dials:
+soups, strength blend, per-part adapters; screen on choosing x4 -> confirm on fresh x8), Step 3 Stage 2 RL (RL1-RL11:
+DRPO, solve-scaled DRPO, ALP, budget reward, ShorterBetter, DLER, progressive cap, stop reward, checker reward, online DPO,
+per-part lambda). Built today: lupin_pairs.py (R1-R5 + difficulty rule), lupin_checker.py + dpo.py --checker (M3),
+rl_train.py --drpo-solve-scale (RL2).
