@@ -43,7 +43,7 @@ def part_of(row):
         return "svamp"
     if source == "kodcode":
         return "mbpp"
-    if source == "ifeval_like":
+    if source in ("ifeval_like", "ifeval_built"):
         return "ifeval"
     if source in ("toolace", "hermes_tools"):
         return TOOL_CATEGORY.get(row.get("category"))

@@ -52,7 +52,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -452,7 +452,33 @@ def ifeval_buildable(registry, ids, kwargs, prompt):
         stdrandom.setstate(state)
 
 
-def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room):
+def ifeval_built(args, rng):
+    """dp5: IFEval prompts the model thinks LONGER on. dp3's held-out check: IFEval-like thinking 246 vs 316 tokens on the
+    evaluation (real argilla rows 232, Dolly-based built ones 258), replies 354 vs 488: the base tasks were too short
+    ("Why do you love Biriyani?"). Here the base task is a human-written request from HuggingFaceH4/no_robots (train;
+    Generation, Brainstorm, Open QA, Rewrite, Summarize: letters, stories, posts, rewrites of a given text, like IFEval's
+    own "write a 300+ word ..." tasks), 8-150 words, followed by IFEval's own instruction sentences (ifeval_fill: the
+    1/2/3-instruction split and every instruction id's share follow IFEval). --ifeval-match prompts (default 12,000)."""
+    from collections import Counter
+    from datasets import load_dataset
+    from utils.eval.benchmarks import paths
+
+    lines = [json.loads(l) for l in (paths(args.questions)["ifeval"] / "data/input_data.jsonl").read_text().splitlines()
+             if l.strip()]
+    n = args.ifeval_match or 12000
+    want_n = {k: n * c / len(lines) for k, c in Counter(len(r["instruction_id_list"]) for r in lines).items()}
+    want_id = {k: n * c / len(lines) for k, c in Counter(i for r in lines for i in r["instruction_id_list"]).items()}
+    bases = [r["prompt"].strip() for r in load_dataset("HuggingFaceH4/no_robots", split="train")
+             if r["category"] in ("Generation", "Brainstorm", "Open QA", "Rewrite", "Summarize")
+             and 8 <= len(r["prompt"].split()) <= 150]
+    bases = bases * (1 + n // max(1, len(bases)))  # ~6,000 requests: each may carry up to two different instruction sets
+    built = ifeval_fill(args, rng, want_n, want_id, Counter(), Counter(), n, bases=bases)
+    print(f"ifeval_built: {len(built)} prompts from {len(set(bases))} no_robots requests", flush=True)
+    for r in built:
+        yield r | {"origin": "built-long", "id": r["id"].replace("ifeval_built", "ifeval_long")}
+
+
+def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room, bases=None):
     """Prompts for the instruction ids IFEval-like data cannot supply: argilla's rows with 1-3 instructions hold almost no
     no-comma, quotation, repeat-prompt, all-capitals or two-responses instructions (60 no-comma among ~40,000 such rows
     in 3 of its 10 shards). Each prompt is a Dolly writing / brainstorming / open question (no context; not an evaluation
@@ -469,9 +495,10 @@ def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room):
     with importable(Path(official).parent):
         from instruction_following_eval import instructions_registry as registry
     conflicts = registry.conflict_make(dict(registry.INSTRUCTION_CONFLICTS))
-    bases = [r["instruction"].strip() for r in load_dataset("databricks/databricks-dolly-15k", split="train")
-             if r["category"] in ("creative_writing", "brainstorming", "open_qa", "general_qa") and not r["context"]
-             and 4 <= len(r["instruction"].split()) <= 60]
+    if bases is None:
+        bases = [r["instruction"].strip() for r in load_dataset("databricks/databricks-dolly-15k", split="train")
+                 if r["category"] in ("creative_writing", "brainstorming", "open_qa", "general_qa") and not r["context"]
+                 and 4 <= len(r["instruction"].split()) <= 60]
     rng.shuffle(bases)
     built = []
     for base in bases:

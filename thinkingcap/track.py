@@ -211,6 +211,8 @@ def main():
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
     parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
     parser.add_argument("--dp-parts", default="svamp,bfcl_irrelevance", help="poolfix: parts given new candidates")
+    parser.add_argument("--dp-sources", default="gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,toolace",
+                        help="poolfix: prepare_types.py sources of the new candidates (dp5: ifeval_built)")
     parser.add_argument("--dp-ifeval", type=int, default=12000, help="buildpool2: IFEval-like prompts drawn to IFEval's mix")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2216,8 +2218,8 @@ def poolfix(args):
     assert old_pool.exists() and old_answers.exists(), f"{old}'s answered pool is not here"
     cand, pool = Path(f"data/cand-{name}.jsonl"), Path(f"data/poolcand-{name}.jsonl")
     if not cand.exists() and not pool.exists():
-        py("prepare_types.py", "--sources", "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,toolace",
-           "--per-source", 1000000, "--seed", args.data_seed, "--out", cand, "--tool-clean", "--tool-near")
+        py("prepare_types.py", "--sources", args.dp_sources, "--per-source", 1000000, "--seed", args.data_seed,
+           "--out", cand, "--tool-clean", "--tool-near", "--ifeval-match", args.dp_ifeval)
     if not pool.exists():
         py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", parts,
            "--per-benchmark", round(args.dp_per_benchmark * args.dp_oversample), "--math-mix", args.dp_math_mix,
@@ -2232,7 +2234,7 @@ def poolfix(args):
         pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
         print(f"{name}: {len(rows)} new candidates {dict(count)}", flush=True)
         drive_sync("save")
-    sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like"
+    sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like,ifeval_built"
     import hashlib
     import time
     digest = hashlib.sha256(pool.read_bytes()).hexdigest()[:16]
@@ -2272,7 +2274,7 @@ def poolfix(args):
     # dp3's gsm8k_easy questions carried the wrong answer instruction (25% unreadable, 11% capped): left out, and
     # their answers with them; dp4's own gsm8k_easy rows use the evaluation's SVAMP wording
     bad = {r["pool_id"] for r in map(json.loads, filter(str.strip, old_pool.read_text().splitlines()))
-           if r["source"] == "gsm8k_easy"}
+           if r["source"] == "gsm8k_easy" and "like: Final answer: 42" in r["prompt"][-1]["content"]}
     keep_old = [l for l in old_pool.read_text().splitlines() if l.strip() and json.loads(l)["pool_id"] not in bad]
     union.write_text("\n".join(keep_old) + "\n" + pool.read_text())
     answers.parent.mkdir(parents=True, exist_ok=True)

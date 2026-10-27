@@ -2831,3 +2831,9 @@ number_paragraphs 17%, json_format 23%, two_responses 0% (12 answers) are the ha
 Reading: math and no-fit are the two known gaps (dp4, now answering on both GPUs: 2,674 new candidates per half).
 IFEval thinking too short is NEW: the selection had too few long-thinking IFEval candidates (borrowed 984); dp4 does not
 touch IFEval, so it needs its own fix (dp5) before any training.
+- dp5 queued after dp4 (user): IFEval only. New source ifeval_built: human-written requests from HuggingFaceH4/no_robots
+  (Generation, Brainstorm, Open QA, Rewrite, Summarize; 8-150 words; e.g. "write a sad breakup song, two verses and a
+  chorus") + IFEval's own instruction sentences in IFEval's mix. Local: 11,993 prompts from 6,501 requests, median 51
+  words (Dolly bases were shorter), 1/2/3-instruction split 6,764 / 3,966 / 1,263 as IFEval. 2.5x oversample, answered
+  on both GPUs, re-selection over dp4's answered pool + these, full held-out check. Also: dp4's leave-out of dp3's
+  gsm8k_easy now keys on the old instruction text, so dp4's fixed gsm8k_easy rows stay in dp5's pool.

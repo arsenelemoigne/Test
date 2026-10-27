@@ -155,4 +155,7 @@ buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,g
 # dp4 half b first (dataset before anything else, user 27 Oct)
 poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step b
 # paused (user, 28 Oct: no training until the training data is shown to overlap the evaluation): tokenskip --name tsk1 --start Qwen/Qwen3-0.6B --tsk-ratios 0.5 0.7 1.0
+# dp5 (user, 28 Oct): IFEval only. dp3's check: IFEval thinking 246 vs 316 (too short). New candidates: no_robots requests +
+# IFEval's instruction sentences (ifeval_built), 2.5x oversample; re-selection over dp4's answered pool + these; full check.
+poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step b
 end
