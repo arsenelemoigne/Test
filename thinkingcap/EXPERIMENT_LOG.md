@@ -2786,3 +2786,4 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
   called one (local: 1,719 near kept of 2,319; e.g. "ad tracking data" + trackAdImpression was a false no-fit).
   Residual risk: some near rows may still be answerable; their "wrong" answers would look like difficulty to the
   selection. Selection over dp3's 18,640 answered candidates + the new ones; every part re-checked on new answers.
+- Night: GPU 1's runtime DISCONNECTED during dp3's held-out check (1 of ~8 check chunks done; tab shows 'Reconnect L4'). Answers so far are on Drive; after a reconnect + Run all, dp3 select re-runs (same seed, same pool) and the check resumes, then dp4. GPU 2 is off too (its queue ended). Both need the user.
