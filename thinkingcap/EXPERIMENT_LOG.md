@@ -2503,3 +2503,25 @@ rl_train.py --drpo-solve-scale (RL2).
   irrelevance +2% / 0.0, svamp +2% / +0.6. The jump is almost all code (and IFEval); math and tool calls barely move.
 - ~05:10: GPU 1 on ps1, 10 of 11 prompts sampled (draft-typed last), table next, then dp1. GPU 2: drpo3f at training
   step 14/40 (~8 min a step; its fresh scores come after training, ~3.5 h).
+
+### 2026-10-27 ~05:50 — ps1 prompt search (original Qwen, plotV2 lot, 50 questions x 4 per source, vs no prompt)
+Training sources only (gsm8k_matched, metamath_sv, ifeval_like, toolace; no code in this lot). Leak = the thinking
+uses a prompt word the question lacks; the base row (no prompt) already reads 15% (false hits, IFEval-like 40%),
+so read leaks against 15%.
+| prompt | saved | acc pp | leak | gsm8k / metamath / ifeval-like / toolace (saved/acc) |
+|---|---|---|---|---|
+| concise | +1.4% | +2.0 | 11% | +10/+1.0, +6/+4.5, -9/-0.5, -2/+3.0 |
+| prefill | -4.3% | -1.0 | 13% | -6/+1.5, -3/-0.5, -21/-1.5, +10/-3.5 |
+| nocheck | +5.3% | +2.4 | 12% | +25/+1.5, +8/+5.0, -9/+1.0, -6/+2.0 |
+| nocheck-prefill | +0.2% | +0.9 | 10% | +20/+2.5, +4/+5.5, -25/-6.0, -4/+1.5 |
+| **budget** (100 tokens) | **+21.5%** | **+1.9** | 22% | +41/+3.5, +22/+5.0, +4/0.0, +15/-1.0 |
+| cod | +17.1% | -11.9 | 16% | +44/-30.0, +26/-12.5, -14/-5.5, 0/+0.5 |
+| examples | +19.3% | -0.4 | 25% | +48/+3.0, +18/-1.5, -10/-3.0, +10/0.0 |
+| exdraft | +24.8% | -2.3 | 27% | +54/-1.5, +35/-3.0, -1/-3.5, -7/-1.0 |
+| exdraft-prefill | +24.8% | -1.9 | 24% | +55/-1.0, +33/-3.5, -14/-4.0, +8/+1.0 |
+| draft-typed | +20.3% | -3.5 | 30% | +60/-1.0, +24/-8.5, -22/-6.0, -11/+1.5 |
+Reading: the "budget" prompt is the only one that saves a lot (+21.5%) without losing accuracy, and the only one that
+helps every type a little; it is the candidate for prompted answers in LUPIN step 1. Worked-example prompts save more on
+math (+48-60%) but cost accuracy and leak more (the model talks about the example). Chain-of-draft breaks math (-30 pts).
+No prompt shortens IFEval-like questions; several lengthen them. Small sample (200 replies per source): a screen, not a score.
+- dp1 (dataset build + check) started on GPU 1. drpo3f at step 17/40 on GPU 2.
