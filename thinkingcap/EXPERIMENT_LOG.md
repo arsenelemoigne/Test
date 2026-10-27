@@ -2685,3 +2685,12 @@ Both runs start from rc1-rl-40.
   BFCL simple has 1,726 candidates for the 1,429 the final pool needs (1.2x instead of 1.6x): less room to match
   behaviour cells there; select_pool reports any shortfall. GPU 1 now answers half a (9,321 questions x4).
 - drpo2-15: +56.0% / -2.6 (drpo2-5 +55.5 / -2.0, -10 +56.4 / -3.0); GPU 2 scoring drpo2-20 next.
+
+### 2026-10-27 ~11:20 — drpo2-20/25/30; dp2 half a CRASHED
+- drpo2-20: +57.6% / -3.9 OUTSIDE (svamp +68/-7.8); drpo2-25: +57.8% / -4.0 OUTSIDE (svamp +69/-9.7);
+  drpo2-30: +58.2% / -4.7 OUTSIDE (irrelevance +47/-4.7, multiple +42/-4.4, simple +39/-1.2, ifeval +49/-1.9,
+  mbpp +65/-1.6, svamp +71/-11.9). Past step 15 drpo2 only buys ~2 pts of saving while math collapses.
+- dp2 half a (GPU 1) crashed while grading its answers: an IFEval-like candidate asks for a response language ('zh')
+  missing from IFEval's language table (graders.py build_description -> KeyError 'zh'). GPU 1 moved on to the select step,
+  which now waits (up to 8 h) for half a's answers that will not come. dp2 b on GPU 2 would hit the same error.
+  Reported to the session that owns dp2 for a candidate fix (drop rows whose instruction IFEval cannot build).
