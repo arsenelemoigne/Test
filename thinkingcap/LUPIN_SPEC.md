@@ -1,5 +1,10 @@
 # LUPIN: training spec
 
+> **HARD GATE (user, 28 Oct, "very important"): no LUPIN training of any kind until the training data passes.**
+> "Passes" = the held-out pool check (new answers) reads OK for all six parts against the choosing set + questions_40,
+> the IFEval instruction mix and the proportions match, and the user has seen the result. Every LUPIN training stage,
+> when built, refuses to start unless that check's report says ALL OK (code gate, not only this note).
+
 The final ThinkingCap model: Qwen3-0.6B that thinks shorter at (nearly) the same accuracy.
 Written 27 Oct 2026. Stage 2 (RL) is implemented only once Stage 1 is scored; Stage 1 can be re-run and refined first.
 
