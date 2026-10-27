@@ -2621,3 +2621,6 @@ dp2 changes (contamination check unchanged; fresh set never read):
   and each alone, plus IFEval pass rate per instruction id.
 - Queue: GPU 1 buildpool2 dp2 a then select (after teach1c), GPU 2 dp2 b (after drpo3f). ~19k candidates x4, about
   4-5 h per GPU. No training on any pool until every part reads OK.
+- ~10:00 check: drpo3f ended after its step-20 score (no step 25-40 scores in the log; stop reason not printed in the
+  visible output). GPU 2 then started drpo2 (scripts 9ba75c2, before the dp2 push), now at RL step 30/60; dp2 b waits
+  behind it. GPU 1 still on teach1c (rel:0.05 at 1,200/2,512 answers, then rel:0.1). dp2 starts when each finishes.
