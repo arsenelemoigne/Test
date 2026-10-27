@@ -106,7 +106,20 @@ def gsm8k_easy(args, rng):
     for r in load_dataset("openai/gsm8k", "main", split="train"):
         if 1 <= r["answer"].count("<<") <= 2:
             answer = r["answer"].split("####")[-1].strip().replace(",", "")
-            yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_easy")
+            yield svamp_row(r["question"], answer, "gsm8k_easy")
+
+
+SVAMP_LAST_LINE = "The last line of your reply must start with 'Final answer:' followed by the number alone."
+
+
+def svamp_row(question, answer, source):
+    """A math question in the evaluation's own SVAMP wording (as gsm8k_matched and metamath_sv). prepare_data.py's
+    MATH_INSTRUCTION ("... like: Final answer: 42") made 25% of dp3's gsm8k_easy answers unreadable and 11% loop to the
+    cap (8,580 answers: 2,187 no final answer, 941 capped, 292 really wrong), so those questions looked hard and long."""
+    from utils.train.prepare_data import row
+    out = row(question.strip() + "\n\n" + SVAMP_LAST_LINE, "", answer, "math", source)
+    out["prompt"][0]["content"] = out["prompt"][0]["content"].rstrip()
+    return out
 
 
 def gsm8k_easy_test(args, rng):
@@ -118,7 +131,7 @@ def gsm8k_easy_test(args, rng):
     for r in load_dataset("openai/gsm8k", "main", split="test"):
         if 1 <= r["answer"].count("<<") <= 2:
             answer = r["answer"].split("####")[-1].strip().replace(",", "")
-            yield row(r["question"], MATH_INSTRUCTION, answer, "math", "gsm8k_easy_test")
+            yield svamp_row(r["question"], answer, "gsm8k_easy_test")
 
 
 def metamath_easy(args, rng):
@@ -142,7 +155,7 @@ def metamath_easy(args, rng):
         w = words(r["query"])
         if not w or not any(len(w & o) / len(w | o) >= 0.4 for o in easy.get(answer, ())):
             continue
-        yield row(r["query"], MATH_INSTRUCTION, answer, "math", "metamath_easy")
+        yield svamp_row(r["query"], answer, "metamath_easy")
 
 
 def gsm8k_matched(args, rng):

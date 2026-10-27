@@ -2269,9 +2269,15 @@ def poolfix(args):
     probe.mkdir(parents=True, exist_ok=True)
     (probe / "rollouts.jsonl").write_text("".join(t.read_text() for t in halves))
     union, answers = Path(f"data/poolcand-{name}-all.jsonl"), BON / f"probe-poolcand-{name}-all" / "rollouts.jsonl"
-    union.write_text(old_pool.read_text() + pool.read_text())
+    # dp3's gsm8k_easy questions carried the wrong answer instruction (25% unreadable, 11% capped): left out, and
+    # their answers with them; dp4's own gsm8k_easy rows use the evaluation's SVAMP wording
+    bad = {r["pool_id"] for r in map(json.loads, filter(str.strip, old_pool.read_text().splitlines()))
+           if r["source"] == "gsm8k_easy"}
+    keep_old = [l for l in old_pool.read_text().splitlines() if l.strip() and json.loads(l)["pool_id"] not in bad]
+    union.write_text("\n".join(keep_old) + "\n" + pool.read_text())
     answers.parent.mkdir(parents=True, exist_ok=True)
-    answers.write_text(old_answers.read_text() + (probe / "rollouts.jsonl").read_text())
+    old_rows = [l for l in old_answers.read_text().splitlines() if l.strip() and json.loads(l)["id"] not in bad]
+    answers.write_text("\n".join(old_rows) + "\n" + (probe / "rollouts.jsonl").read_text())
     evaluate(ROOT / "v4-base", samples=4, questions=val)
     evaluate(BASE)
     selected = Path(f"data/pool-{name}.jsonl")

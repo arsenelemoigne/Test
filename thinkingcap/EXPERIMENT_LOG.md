@@ -2798,3 +2798,15 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
   right / shortest right ~1.4-1.7x, shortest right ~15-19% shorter than a typical answer, per type.
 - User (27 Oct night): the training PAIRS must match the evaluation distribution as well as the pool. After the 10 answers, pairs are selected per part and per (solve rate x thinking) cell to the evaluation's shares, and checked before training (LUPIN_SPEC 2.0).
 - dp4 split over two GPUs (user): GPU 1 poolfix half a then select + check; GPU 2 poolfix half b (before tsk1). Halves hash-stamped like dp3; whichever runtime gets there first builds the dp4 candidates and saves them, the other restores them.
+
+### 2026-10-28 ~00:00 — data bug found while drawing the overlap chart: gsm8k_easy used the wrong answer instruction
+- dp3's gsm8k_easy candidates were built with prepare_data.py's MATH_INSTRUCTION ("Put the final answer on the last
+  line, like: Final answer: 42"), not the evaluation's SVAMP wording ("The last line of your reply must start with
+  'Final answer:' followed by the number alone.") used by gsm8k_matched and metamath_sv. Of their 8,580 answers: 2,187
+  (25%) no readable final answer, 941 (11%) capped, 292 really wrong: accuracy 69%, median thinking 786 (gsm8k_matched
+  93% / 410, metamath_sv 93% / 484). The selection kept 1,023 of them, so they look like hard, long math: a likely cause
+  of dp3's math thinking 500 vs 384.
+- Fix (before dp4 runs): gsm8k_easy, gsm8k_easy_test and metamath_easy now use the SVAMP wording (svamp_row); dp4's
+  re-selection leaves out dp3's gsm8k_easy rows and their answers.
+- GPU 1's restart re-ran gold1's training (stop_gold.py) while walking the plan; gold1, bp1b, teach1c and stopB5 are now
+  commented out so a restart cannot redo them.
