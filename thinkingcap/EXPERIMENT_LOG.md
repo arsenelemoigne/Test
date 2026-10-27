@@ -2712,3 +2712,19 @@ Both runs start from rc1-rl-40.
 - drpo2-40: +62.1% / -4.6 OUTSIDE (irrelevance +47/-5.0, multiple +43/-4.1, simple +40/+0.3, ifeval +58/-2.5, mbpp +67/-1.9,
   svamp +74/-10.9); drpo2-50: +62.9% / -5.4 OUTSIDE (irrelevance +48/-5.0, multiple +44/-5.6, simple +40/-0.3, ifeval +59/-0.9,
   mbpp +68/-1.6, svamp +74/-15.3). drpo2-60 scoring. GPU 1 still waiting in dp2's select (needs the user's stop + rerun for dp3).
+
+### 2026-10-27 ~15:30 — drpo2 finished; dp3 candidates built on GPU 2 (half b answering)
+drpo2 (rc1-rl-40 + DRPO lambda 0.5, math unprotected), fresh 240 x 8, per part saved / accuracy:
+| step | overall | SVAMP | MBPP+ | IFEval | BFCL simple | BFCL multiple | BFCL irrelevance |
+|---|---|---|---|---|---|---|---|
+| 30 | 58.2 / -4.7 | 71 / -11.9 | 65 / -1.6 | 49 / -1.9 | 39 / -1.2 | 42 / -4.4 | 47 / -4.7 |
+| 40 | 62.1 / -4.6 | 74 / -10.9 | 67 / -1.9 | 58 / -2.5 | 40 / +0.3 | 43 / -4.1 | 47 / -5.0 |
+| 50 | 62.9 / -5.4 | 74 / -15.3 | 68 / -1.6 | 59 / -0.9 | 40 / -0.3 | 44 / -5.6 | 48 / -5.0 |
+| 60 | 62.7 / -6.0 | 76 / -15.0 | 69 / -2.2 | 54 / -1.9 | 40 / -1.2 | 44 / -6.9 | 48 / -6.2 |
+Reading: most of the loss is math (-11 to -15) and BFCL multiple / irrelevance (-4 to -7); code and IFEval lose about
+1-2 points at 54-69% saved. Not a candidate as is; it says strong length pressure on rc1-rl-40 is affordable on
+code/IFEval but not on math or tool choice (measured on one run, no seeds).
+dp3 candidates (GPU 2): ToolACE clean 3,061 / 2,319 / 5,944; IFEval-like 4,696 real + 7,298 built (58,230 real
+eligible after the checker test, all 10 shards); build_pool: same counts as dp2 (18,640; BFCL simple 1,726/2,286),
+IFEval dropped 3,104 by the 8-gram check. GPU 2 answers half b (9,319 questions x4). GPU 1 still waits in dp2's select
+(stop + rerun of its plan cell needed to start half a).
