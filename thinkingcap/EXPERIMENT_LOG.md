@@ -2458,3 +2458,17 @@ Not yet in the check: the answer-timing match (success at 20-40% of the thinking
   (DAST / Difficulty-Aware DLER agree); (2) step 3 RL (LUPIN1.0): scale our drpo length penalty by the solve rate p instead of
   a flat lambda. Our drpo penalizes length only among right answers (Arora-Zanette style); ALP also pushes wrong answers
   shorter; compare both.
+
+### 2026-10-27 — "backwards" research pass (user's idea: answer -> question for a stronger link, fewer tokens)
+- No paper shows answer -> question training SHORTENS reasoning. The reversal curse is about facts stored in the weights;
+  the question is in the prompt here, where models already infer "B is A" (Berglund et al.). Reverse Training (2403.13799)
+  fixes stored-fact reversal (0% -> 99%) but that is a different mechanism.
+- Math backward data helps ACCURACY: MetaMath SV + FOBAR rewrites GSM8K 60.6 -> 64.4 (LLaMA-2-7B, Table 3), no length data.
+  Forward DPO (right vs wrong) beats backward DPO (PASS/FAIL verdicts): GSM8K +3.5 vs +0.5 (2601.07199, Llama-3.1-8B).
+  CoThink (2505.22017) even blames backward / re-check training for verbosity (5-question case study).
+- The one SHORTENING result nearby: VeriThinker (2505.17941, NeurIPS 2025): LoRA trained only on "is this solution right?
+  Yes/No" from labelled answers, no teacher: R1-Distill-7B MATH500 3,790 -> 2,125 tokens at 94.0 -> 94.8; fewer "Wait"
+  after right partial work. Did NOT work at 1.5B (forgetting).
+- For LUPIN (variants, ranked): (1) a Yes/No verdict NLL term on our own graded answers mixed into LUPIN0's DPO, low LoRA rank,
+  watched for forgetting; (2) SVAMP backward questions (mask a number, give the answer, recover the number) as an accuracy
+  guard, measuring tokens; (3) backward check only to choose the "chosen" answer. Lowest: answer-first formats.
