@@ -2414,3 +2414,13 @@ Loss: DPO kept most accuracy, SimPO compressed most; NLL anchor did not help len
 only). Free dial: merge / interpolate the trained adapter with the base (DLER: top-25% updates x0.7). RL beats offline pairs
 only at aggressive compression (DLER, AdaptThink, LC-R1); offline DPO comes close otherwise (Arora & Zanette).
 Per type (ThinkingCap-27B blog): instructions and tools cheap, code safe but small saving, math costly.
+
+### 2026-10-27 — dp1 queued: build the pool, then prove it behaves like the evaluation (user)
+sp1 paused; data first. buildpool (GPU 1, after ps1): build_pool.py makes ~12,000 questions (3,000 per benchmark;
+BFCL split 400/200/240 like the evaluation) in each part's own prompt format, with prompt lengths drawn bin by bin from
+the CHOOSING set's length spread, math 70% matched GSM8K + 30% MetaMathQA, and an 8-word contamination check against all
+evaluation questions (sequences found in >= 3 evaluation questions are templates and exempt). pool_check.py then has the
+original model answer 200 pool questions per part x4 and compares, part by part, accuracy, median reply/thinking tokens and
+capped share with its v4-base run on the choosing set (tolerance +-5 pts, +-15%, +-3 pts, or inside the choosing set's
+own interval). Only once every part reads OK do we generate answers for the whole pool and try pair strategies.
+Not yet in the check: the answer-timing match (success at 20-40% of the thinking vs full), which needs cut labels.
