@@ -2108,13 +2108,15 @@ def buildpool2(args):
     if not Path(val, "questions.jsonl").exists():
         py("subset_questions.py", "--per-dataset", 40, "--seed", VAL_SEED, "--exclude", QUESTIONS, fresh_q, "--out", val)
     cand, kod = Path(f"data/cand-{name}.jsonl"), Path(f"data/kodcand-{name}.jsonl")
-    if not cand.exists():
+    pool = Path(f"data/poolcand-{name}.jsonl")
+    # one candidate pool for both runtimes: the first to get here builds it and saves it, the other takes it from Drive
+    drive_sync("restore", only=[str(pool), str(cand), str(kod)])
+    if not cand.exists() and not pool.exists():
         py("prepare_types.py", "--sources", "gsm8k_easy,gsm8k_matched,metamath_sv,toolace,ifeval_like", "--per-source",
            1000000, "--seed", args.data_seed, "--out", cand, "--tool-clean", "--ifeval-match", args.dp_ifeval)
-    if not kod.exists():
+    if not kod.exists() and not pool.exists():
         py("prepare_types.py", "--sources", "kodcode", "--per-source", args.dp_kod, "--seed", args.data_seed, "--out", kod,
            "--kod-dataset", "KodCode/KodCode-V1", "--kod-max-task", 110, "--kod-max-solution", 200)
-    pool = Path(f"data/poolcand-{name}.jsonl")
     if not pool.exists():
         py("build_pool.py", "--candidates", cand, kod, "--choosing", val, "--all-questions", "questions",
            "--per-benchmark", round(args.dp_per_benchmark * args.dp_oversample), "--math-mix", args.dp_math_mix,
@@ -2125,6 +2127,9 @@ def buildpool2(args):
             r["pool_id"] = f"{r['part']}-{count[r['part']]}"
             count[r["part"]] += 1
         pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        drive_sync("save")
+    import hashlib
+    digest = hashlib.sha256(pool.read_bytes()).hexdigest()[:16]
     sources = "gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like"
 
     def answer(half, data, seed=None):
@@ -2141,7 +2146,8 @@ def buildpool2(args):
         rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
         keep = [r for r in rows if int(r["pool_id"].rsplit("-", 1)[1]) % 2 == (0 if args.dp_step == "a" else 1)]
         half.write_text("".join(json.dumps(r) + "\n" for r in keep))
-        answer(args.dp_step, half)
+        rollouts = answer(args.dp_step, half)
+        (rollouts.parent / "poolcand.sha256").write_text(digest)  # select checks both halves came from one pool
         drive_sync("save")
         return
     # select: both halves' answers, then the selection, then the held-out check
@@ -2149,14 +2155,16 @@ def buildpool2(args):
     halves = []
     for h in ("a", "b"):
         target = BON / f"probe-poolcand-{name}-{h}" / "rollouts.jsonl"
+        stamp = target.parent / "poolcand.sha256"
         for _ in range(96):  # the other runtime's half: up to 8 hours
-            if target.exists():
+            if target.exists() and stamp.exists():
                 break
             drive_sync("restore", only=[f"runs/bon/probe-poolcand-{name}-{h}"])
-            if not target.exists():
+            if not (target.exists() and stamp.exists()):
                 print(f"waiting for {target} on Drive", flush=True)
                 time.sleep(300)
         assert target.exists(), f"{target} never arrived"
+        assert stamp.exists() and stamp.read_text() == digest, f"half {h} was answered on another candidate pool"
         halves.append(target)
     both = BON / f"probe-poolcand-{name}" / "rollouts.jsonl"
     both.parent.mkdir(parents=True, exist_ok=True)
