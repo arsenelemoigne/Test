@@ -2374,3 +2374,7 @@ adapters/rc2-s0..2/step-<N>, 1/3 each); rr1-rl-<N> as rc1-rl (rlcal). Fresh-x8 s
   mf1 settles at ~30% saved / ~-0.4: the math repair gives back ~24 points of rc1-rl-40's saving for ~1.7 pts accuracy. SVAMP is now
   above the original (+1.3) but BFCL multiple stays ~-4. Not the goal; soup 25 (+45.6 / -1.4) remains mf1's best trade.
 - stopV3-soup-50: +16.4% / -1.4; stopV3-soup-75: +11.8% / +0.2. The stop line from the original Qwen plateaus at 12-16% saved.
+**27 Oct ~01:35, bp1 failed (my bug): "invalid choice: 'budgetprompt'"** — another session had added "mathfix" to the stage
+list at the same place, so my edits adding "budgetprompt" and "dropmodels" did not apply (no assert). Fixed with an assert and a
+check that every stage function is in the list. drop1 moved to GPU 1 right after stopV3 (GPU 2 is on drpo3f for ~13 h); bp1
+requeued as bp1b on GPU 1 after gold1.

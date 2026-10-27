@@ -91,6 +91,8 @@ targeted --name stopV2 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 p
 # skipped. stopV3 = same lots and caps, rebalanced: no guard pairs (longest right vs shortest wrong rewards length itself),
 # 'keep thinking' (hard) pairs capped at 20% of each type; stop-here and be-right pairs as before
 targeted --name stopV3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 plotB5 plotV2 --tg-rule question --tg-min-samples 8 --tg-shorten kodcode,toolace,hermes_tools,ifeval_like --tg-shorten-if-svamp gsm8k_matched,metamath_sv --tg-long kodcode,toolace,hermes_tools,ifeval_like,gsm8k_matched,metamath_sv --tg-right gsm8k_matched,metamath_sv --tg-quota kodcode=1800,toolace=1200,hermes_tools=500,ifeval_like=1800,gsm8k_matched=1300,metamath_sv=1300 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 300 --seeds 0 1 2 --tg-drop-kinds guard --tg-brake-share 0.2
+# drop1 (user): free Drive space; see plan_line_a history and EXPERIMENT_LOG 27 Oct "Drive cleanup"
+dropmodels --name drop1 --drop ca1-soup-20=ca1-s0 ca1-soup-30=ca1-s0 ca1-soup-40=ca1-s0 ca2-soup-10=ca2-s0 ca2-soup-20=ca2-s0 ca2-soup-30=ca2-s0 ca2-soup-40=ca2-s0 drpo1-20=drpo1-drpo drpo1-20x0.5=drpo1-drpo drpo1-40=drpo1-drpo drpo1-60=drpo1-drpo rc1-rl-20=rc1-rl rc1-rl-60=rc1-rl rc1-soup-10=rc1-s0 rc1-soup-20=rc1-s0 stopB3-soup-15=stopB3-s0 stopB3-soup-20=stopB3-s0 stopB3-soup-30=stopB3-s0 stopB3-soup-40=stopB3-s0 stopB-soup-10=stopB-s0 stopB-soup-20=stopB-s0 stopB-soup-30=stopB-s0 stopB2-soup-20=stopB2-s0 rc2-soup-10=rc2-s0 rc2-soup-20=rc2-s0 rc2-soup-30=rc2-s0 rc2-soup-60=rc2-s0 rr1-rl-20=rr1-rl sb1-10=sb1-drpo sb1-20=sb1-drpo sb1-30=sb1-drpo
 # stopV3 (user, 26 Oct): runs only if no stopV2 soup saved >= 35% at >= -1.0 pt. Same lots/caps as stopV2, but the guard
 # flips to shortest right > longest wrong/unfinished (code, tools, instructions; math keeps hard + be-right brakes, no guard),
 # and hard (keep-thinking) pairs on code/tools/instructions are capped at 0.25 x their shorten pairs.
@@ -100,6 +102,8 @@ targeted --name stopV3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 p
 # (and >= 25%), -> 0 where not; no reply imitated, no whole-reply pairs; never-solved replies and GSM-IC/Plus left out;
 # per-type caps as stopV2; a checkpoint every 100 steps, each scored on fresh x8.
 stopgold --name gold1 --start Qwen/Qwen3-0.6B --sg-save-every 100
+# bp1b = bp1 rerun (bp1 failed: the stage name was missing from track.py's stage list)
+budgetprompt --name bp1b --bp-budgets svamp=400,mbpp=750,ifeval=200,bfcl=70
 # teach1c = teach1b rerun (teach1b ran out of GPU memory on GPU 2 at 1,800/2,512 answers, 26 Oct ~17:30; the queue
 # moved on to drpo3e). Fixes: forward pass stops at the last scored paragraph end, gradient checkpointing; teacher points
 # cached for any later rerun. Same settings, reusing teach1's answers and own-confidence readings.

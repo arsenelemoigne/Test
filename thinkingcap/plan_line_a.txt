@@ -130,7 +130,7 @@ mathfix --name mf1 --start models/rc1-rl-40 --probe-extra-from plotB5 plotV2 --t
 # the prompt)? A system prompt changes the evaluation: never a submission setting, at most a training-time prompt.
 # drop1 (user, 27 Oct): free Drive space. Removes merged models made before 26 Oct 00:40 (no runtime holds a copy) whose
 # LoRA adapters are on Drive; a model whose adapter folder is missing is KEPT. Recipes: EXPERIMENT_LOG.md 27 Oct "Drive cleanup".
-dropmodels --name drop1 --drop ca1-soup-20=ca1-s0 ca1-soup-30=ca1-s0 ca1-soup-40=ca1-s0 ca2-soup-10=ca2-s0 ca2-soup-20=ca2-s0 ca2-soup-30=ca2-s0 ca2-soup-40=ca2-s0 drpo1-20=drpo1-drpo drpo1-20x0.5=drpo1-drpo drpo1-40=drpo1-drpo drpo1-60=drpo1-drpo rc1-rl-20=rc1-rl rc1-rl-60=rc1-rl rc1-soup-10=rc1-s0 rc1-soup-20=rc1-s0 stopB3-soup-15=stopB3-s0 stopB3-soup-20=stopB3-s0 stopB3-soup-30=stopB3-s0 stopB3-soup-40=stopB3-s0 stopB-soup-10=stopB-s0 stopB-soup-20=stopB-s0 stopB-soup-30=stopB-s0 stopB2-soup-20=stopB2-s0 rc2-soup-10=rc2-s0 rc2-soup-20=rc2-s0 rc2-soup-30=rc2-s0 rc2-soup-60=rc2-s0 rr1-rl-20=rr1-rl sb1-10=sb1-drpo sb1-20=sb1-drpo sb1-30=sb1-drpo
+# moved to plan_line_b (GPU 1): dropmodels --name drop1 --drop ca1-soup-20=ca1-s0 ca1-soup-3...
 budgetprompt --name bp1 --bp-budgets svamp=400,mbpp=750,ifeval=200,bfcl=70
 # drpo3f (user, 27 Oct) replaces drpo3e: the same continuation of drpo3d-23 (21.2% / +0.2) with a stronger push,
 # lambda 0.3 (between the safe 0.5 and drpo1's overshooting 0.2); math and BFCL-multiple-like tool calls protected;
