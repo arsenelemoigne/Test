@@ -2643,3 +2643,13 @@ dp2 changes (contamination check unchanged; fresh set never read):
   no-comma reply passes, one with a comma fails). With all 10 shards more of the 12,000 will be real rows.
 - Queue: GPU 1 is now on sb2 (60 RL steps); dp2 a + select re-queued right after it (distinct lines, a failed line is
   not retried in the same session). GPU 2: dp2 b after drpo2. A runtime restart would start dp2 sooner.
+
+### 2026-10-27 ~12:00 — user: build and verify the dataset before any LUPIN step; keep the running stages
+- No restart: GPU 1 finishes sb2 (scoring its checkpoints), GPU 2 finishes drpo2 (scoring), then each runs dp2
+  (GPU 2: half b, next line after drpo2; GPU 1: half a + select, re-added after sb2 with different spelling because its
+  first dp2 lines failed this session). No LUPIN stage is queued; LUPIN steps 1-3 wait until dp2's check passes.
+- Pass criteria for dp2 (all on held-out answers, never the fresh set): every part (SVAMP, MBPP+, IFEval, BFCL simple,
+  BFCL multiple, BFCL irrelevance) matches the original model's behaviour on the choosing set and on questions_40
+  (accuracy, median reply and thinking tokens, capped share); IFEval instruction-id mix equals IFEval's; proportions:
+  each benchmark 25%, BFCL split 11.9 / 6.0 / 7.1% (its 400 / 200 / 240), select_pool.py now prints this check.
+- All run results keep being logged here as they arrive (drpo2, sb2 checkpoints).

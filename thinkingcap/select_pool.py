@@ -131,6 +131,14 @@ def main():
                      + f"; median thinking {r['kept_median_thinking_selection_answers']:.0f} vs "
                      f"{r['choosing_median_thinking']:.0f}; borrowed {sum(borrowed.values())}; {r['sources']}")
         pool += [{k: v for k, v in row.items() if k != "_key"} | {"part": part} for row in chosen]
+    # proportions: each benchmark an equal share (BFCL's three parts together one), BFCL split as its 400 / 200 / 240
+    kept = Counter(r["part"] for r in pool)
+    lines.append("proportions (kept share vs target share):")
+    for part in PARTS:
+        want_share, got_share = targets[part] / sum(targets.values()), kept[part] / max(1, len(pool))
+        ok = abs(got_share - want_share) <= 0.02
+        report[part]["share"] = {"kept": got_share, "target": want_share, "ok": ok}
+        lines.append(f"  {part}: {got_share:.1%} vs {want_share:.1%} {'OK' if ok else 'CHECK'}")
     rng.shuffle(pool)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

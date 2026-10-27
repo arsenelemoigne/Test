@@ -146,6 +146,10 @@ targeted --name stopB5 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 p
 # user (26 Oct): ShorterBetter rerun with the PAPER's beta 0.001 (sb1's 0.005 overshot within 10 steps), plus math protection,
 # the per-type guard and the fixed batch mix; from rc1-rl-40 like sb1; every 10-step checkpoint scored on fresh x8
 drpo --name sb2 --start models/rc1-rl-40 --data-seed 66 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --rl-variant shorterbetter --rl-sb-beta 0.001 --rl-lr 5e-6 --rl-protect gsm_ic,gsm_plus,gsm8k,gsm8k_all,gsm8k_easy,gsm8k_matched,metamath_sv --rl-guard 0.06
+# dp2 on GPU 1 after sb2 (user, 27 Oct: keep the running stages, build the dataset next; the first dp2 a/select lines
+# failed this session and are not retried until a restart, so these lines are spelled differently):
+buildpool2 --name dp2 --data-seed 73 --dp-step a --dp-oversample 1.6 --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+buildpool2 --name dp2 --data-seed 73 --dp-step select --dp-oversample 1.6 --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # removed (user, 27 Oct: redundant with sp1): balround --name bal0 --start Qwen/Qwen3-0.6B --data-seed 61 --kod-file data/kodcode3.jsonl --bal-questions 6000 --bal-samples 4 --tg-save-every 25 --dpo-steps 50 100 150 200 --seeds 0 1 2
 # removed (user, 25 Oct: superseded / same aggressive DRPO that overshot): targeted --name stopB4 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,ifeval_like,toolace,hermes_tools,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 10 --dpo-steps 30 60 90 120 --seeds 0 1 2
 end
