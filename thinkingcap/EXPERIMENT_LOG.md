@@ -2499,3 +2499,7 @@ rl_train.py --drpo-solve-scale (RL2).
   drpo1-20/20x0.5/40/60, rc1-rl-20/60, rc1-soup-10/20, stopB3-soup-15/20/30/40, stopB-soup-10/20/30, stopB2-soup-20,
   rc2-soup-10/20/30/60, rr1-rl-20); kept sb1-10/20/30 (adapters/sb1-drpo not on Drive). All rebuildable from their adapters
   (recipes above). GPU 1 now on ps1 (prompt search); drpo3f at step 10 on GPU 2.
+- stopV3-soup-300 per part: mbpp +54% / -4.1, ifeval +26% / +2.5, bfcl simple +14% / -1.2, multiple +7% / -2.8,
+  irrelevance +2% / 0.0, svamp +2% / +0.6. The jump is almost all code (and IFEval); math and tool calls barely move.
+- ~05:10: GPU 1 on ps1, 10 of 11 prompts sampled (draft-typed last), table next, then dp1. GPU 2: drpo3f at training
+  step 14/40 (~8 min a step; its fresh scores come after training, ~3.5 h).
