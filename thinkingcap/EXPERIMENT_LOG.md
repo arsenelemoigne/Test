@@ -2814,3 +2814,4 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
 - 28 Oct (user): NO training of any kind until the training data is shown to overlap the evaluation and the two gaps are
   fixed (math thinking too long, mostly the gsm8k_easy format bug; no-fit tool questions too easy, 97% vs 79%). tsk1
   (TokenSkip, trains) paused in plan_line_a. Active queues: dataset stages only (dp3 check, dp4 a/b/select).
+- 28 Oct (user): LUPIN in rounds: v1 = DPO on the original Qwen's answers (10/question); v2 = DPO from v1 on v1's answers to a new representative sample (8-10/question, matched to v1's own behaviour on choosing + questions_40). After each round, per-type thinking distributions vs the original on fresh x8 in the overlap dashboard (LUPIN_SPEC 'Rounds').

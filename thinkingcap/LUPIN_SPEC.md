@@ -174,6 +174,17 @@ Any recipe can also take:
 
 ---
 
+## Rounds and what we show (user, 28 Oct)
+- **Round 1 → LUPIN v1:** the original Qwen answers the checked pool 10 times per question; pairs selected to the
+  evaluation's distribution (2.0); DPO.
+- **Round 2 → LUPIN v2:** LUPIN v1 answers a NEW representative sample 8-10 times per question; pairs selected the same
+  way; DPO from LUPIN v1. "Representative" is re-measured with LUPIN v1: its own runs on the choosing set and
+  questions_40 are the reference the new sample is matched to (as the original model's were for round 1).
+- **Shown after each round:** the per-type thinking-length distribution and accuracy of LUPIN v1, then v2, against the
+  original Qwen, on the fresh test (240 x 8), in the ThinkingCap Pool Overlap dashboard (one curve per model per type);
+  the final model also on the full evaluation (2,759 x 8).
+- No training starts before the dataset check passes (user, 28 Oct).
+
 ## Step 3: Stage 2, online RL from LUPIN0 → LUPIN1.0 (implemented after Stage 1 is scored)
 
 RL lets the model answer live and pushes it towards its own better-scoring answers, so it keeps improving where fixed
