@@ -78,7 +78,8 @@ Timing needs forced answers at cuts: about 100 questions per part, a few cuts ea
 
 ## Step 1: The answers (to build: an `answers` stage, `probe_curve.py --generate-only` on the whole pool)
 
-- **1.1 Main set:** the original model answers every pool question **8 times**, graded with the evaluation's graders.
+- **1.1 Main set (decided by the user, 27 Oct night): 10 answers per question**, starting only once the dataset passes its check. The pool's 4 selection answers per question are reused, so 6 more are generated (~72,000 answers, ~13 GPU-hours on an L4 at ~5,500 answers/hour). Why 10: accuracy first. With 4 answers a question solved 70% of the time shows 4/4 about 24% of the time and gets wrongly shortened; with 10, 3%. Spread is a bonus (longest/shortest right ~1.5x measured at 4 answers; more expected at 10). Later rounds (each LUPIN round re-answers 4-8 times and retrains) are decided per round.
+- (previous text) the original model answers every pool question **8 times**, graded with the evaluation's graders.
   That is ~96,000 answers, ~10–12 h on one L4 (~5–6 h split across two), resumable by chunk. Eight answers give a usable
   solve rate p per question (0, 1/8 … 1) and enough length spread for pairs. Lightning McQwen3 and michal-bida used 4;
   Kimi and DAST used 8–20.

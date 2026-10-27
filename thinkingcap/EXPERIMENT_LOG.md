@@ -2787,3 +2787,12 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
   Residual risk: some near rows may still be answerable; their "wrong" answers would look like difficulty to the
   selection. Selection over dp3's 18,640 answered candidates + the new ones; every part re-checked on new answers.
 - Night: GPU 1's runtime DISCONNECTED during dp3's held-out check (1 of ~8 check chunks done; tab shows 'Reconnect L4'). Answers so far are on Drive; after a reconnect + Run all, dp3 select re-runs (same seed, same pool) and the check resumes, then dp4. GPU 2 is off too (its queue ended). Both need the user.
+
+### 2026-10-27 night — user decisions for LUPIN (nothing built yet)
+- Pair sources, with accuracy as the priority: backbone = the model's own natural answers (more answers per question,
+  difficulty protection: no shorten pairs on questions it often fails) + repeated rounds (each round re-answers 4-8 times
+  and retrains, scored after every round). Cut pairs only for code, strict labels, small dose. Prompted answers skipped
+  (cost -2.7 on the real test, math hit hardest).
+- LUPIN step 1: **10 answers per question** on the final pool, starting only once the dataset check passes (the pool's 4
+  selection answers reused, 6 more generated: ~72,000 answers, ~13 GPU-hours). Measured with 4 answers (dp1 check): longest
+  right / shortest right ~1.4-1.7x, shortest right ~15-19% shorter than a typical answer, per type.
