@@ -148,6 +148,6 @@ drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodco
 # every IFEval row is now tried against the checker when candidates are built. New name: no stale dp2 files reused.
 buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # user away (27 Oct ~16:00): GPU 1 is stuck in dp2's select wait until ~21:30, so GPU 2 also answers half a
-buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+# GPU 1 was unstuck by the user and runs half a itself (27 Oct evening): buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
 end

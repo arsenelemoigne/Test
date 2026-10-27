@@ -2742,3 +2742,4 @@ IFEval dropped 3,104 by the 8-gram check. GPU 2 answers half b (9,319 questions 
   (SHORT 560, still 1.2 x its final 1,429); bfcl_multiple 1143/1143; bfcl_irrelevance 1371/1371. Prompt lengths match the
   choosing set in every part. Now: GPU 2 answering half b (9,319 questions x 4, ~4 h), then half a; GPU 1 frees itself
   when dp2's select wait times out (~21:30) and joins dp3 a / runs dp3 select.
+- Evening: user unstuck GPU 1 (plan cell rerun); GPU 1 answers dp3 half a (9,321 x4), GPU 2 half b (9,319 x4); half a removed from GPU 2's plan.
