@@ -39,7 +39,7 @@ TOOL_CATEGORY = {"simple": "bfcl_simple_python", "multiple": "bfcl_multiple", "i
 def part_of(row):
     """The evaluation part a training row imitates (None: a source this pool does not use)."""
     source = row["source"]
-    if source in ("gsm8k_matched", "metamath_sv"):
+    if source in ("gsm8k_matched", "gsm8k_easy", "metamath_sv"):
         return "svamp"
     if source == "kodcode":
         return "mbpp"

@@ -55,7 +55,8 @@ def interval(groups, key, rounds=1000, seed=0):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--rollouts", required=True, help="the original model's answers on the pool sample")
-    parser.add_argument("--reference", required=True, help="the original model's evaluation run on the choosing set")
+    parser.add_argument("--reference", nargs="+", required=True,
+                        help="the original model's evaluation runs on non-fresh sets (choosing set v4-base, questions_40 eval-base)")
     parser.add_argument("--out", required=True)
     parser.add_argument("--acc-tol", type=float, default=5.0)
     parser.add_argument("--len-tol", type=float, default=0.15)
@@ -71,9 +72,10 @@ def main():
         answer = (bool(r["correct"]), r["output_tokens"], thinking, bool(r["truncated"]))
         pool[part][r["id"]].append(answer)
         by_source[(part, r["source"])][r["id"]].append(answer)
-    for r in read(Path(args.reference) / "records.jsonl"):
-        ref[r["dataset"]][r["id"]].append((bool(r["correct"]), r["output_tokens"],
-                                           r.get("reasoning_tokens") or r["output_tokens"], bool(r["truncated"])))
+    for k, run in enumerate(args.reference):
+        for r in read(Path(run) / "records.jsonl"):
+            ref[r["dataset"]][(k, r["id"])].append((bool(r["correct"]), r["output_tokens"],
+                                               r.get("reasoning_tokens") or r["output_tokens"], bool(r["truncated"])))
     report, lines = {}, ["part: pool vs choosing set [choosing 95% interval] -> verdict"]
     verdicts = []
     for part in PARTS:
@@ -102,6 +104,14 @@ def main():
             if pp == part and len({s2 for (p2, s2) in by_source if p2 == part}) > 1:
                 st = stats(g)
                 lines.append(f"      - {s}: accuracy {st['accuracy']:.0f}%, median tokens {st['median_tokens']:.0f}")
+    instr = defaultdict(list)  # IFEval-like: pass rate per instruction id (the choosing run does not record them)
+    for r in read(args.rollouts):
+        if part_of(r) == "ifeval":
+            for i in r.get("instruction_id_list") or []:
+                instr[i].append(bool(r["correct"]))
+    if instr:
+        lines.append("  ifeval pool, pass rate per instruction id (answers):")
+        lines += [f"      {i}: {100 * sum(v) / len(v):.0f}% of {len(v)}" for i, v in sorted(instr.items(), key=lambda kv: -len(kv[1]))]
     lines.append(f"verdict: {'ALL OK' if verdicts and all(verdicts) else 'CHECK the lines marked CHECK'} "
                  f"({sum(verdicts)}/{len(verdicts)} measures OK)")
     out = Path(args.out)

@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -207,6 +207,10 @@ def main():
     parser.add_argument("--dp-per-benchmark", type=int, default=3000, help="buildpool: training questions per benchmark")
     parser.add_argument("--dp-math-mix", default="gsm8k_matched=0.7,metamath_sv=0.3", help="buildpool: SVAMP-side sources")
     parser.add_argument("--dp-check-per-part", type=int, default=200, help="buildpool: pool questions per part answered x4")
+    parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2: answer half a / b, or select")
+    parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
+    parser.add_argument("--dp-ifeval", type=int, default=12000, help="buildpool2: IFEval-like prompts drawn to IFEval's mix")
+    parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--drop", nargs="*", default=[],
                         help="dropmodels: MODEL=ADAPTER pairs; models/MODEL is removed from Drive and here only if adapters/ADAPTER is on Drive")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
@@ -2083,6 +2087,98 @@ def buildpool(args):
        "--out", BON / f"poolcheck-{name}")
 
 
+def buildpool2(args):
+    """dp2: the training pool rebuilt after dp1 failed its check (user, 27 Oct: "a big representative dataset across all
+    data types first"), and chosen by how the original model BEHAVES on each question, not by prompt length alone.
+    dp1's causes, read in its check answers (EXPERIMENT_LOG): ToolACE "int" parameter types fail BFCL's checker on right
+    calls, ToolACE references hold values the question never states, undecodable replies were labelled no-fit;
+    IFEval-like is mostly easy instruction ids; math is GSM8K-hard; KodCode-Light-10K is too small after the 8-gram check.
+    Steps (--dp-step):
+      a / b    candidates (prepare_types.py --tool-clean --ifeval-match, gsm8k_easy, KodCode-V1), build_pool.py at
+               --dp-oversample x --dp-per-benchmark with the same seed on both runtimes (identical files), then the
+               original model answers this runtime's half x4 (the answers are reused as LUPIN step 1's).
+      select   waits for the other half on Drive, select_pool.py matches each part's (solve rate x thinking) cells to the
+               original model's runs on the choosing set (v4-base) AND questions_40 (eval-base), then the held-out check:
+               NEW answers (another sampling seed) to --dp-check-per-part selected questions per part, pool_check.py
+               against both references, IFEval per instruction id. The fresh set is never read. No training here."""
+    name = args.name
+    val, fresh_q = f"questions_val{VAL_SEED}", f"questions_fresh{FRESH_SEED}"
+    if not Path(fresh_q, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", FRESH_SEED, "--exclude", QUESTIONS, "--out", fresh_q)
+    if not Path(val, "questions.jsonl").exists():
+        py("subset_questions.py", "--per-dataset", 40, "--seed", VAL_SEED, "--exclude", QUESTIONS, fresh_q, "--out", val)
+    cand, kod = Path(f"data/cand-{name}.jsonl"), Path(f"data/kodcand-{name}.jsonl")
+    if not cand.exists():
+        py("prepare_types.py", "--sources", "gsm8k_easy,gsm8k_matched,metamath_sv,toolace,ifeval_like", "--per-source",
+           1000000, "--seed", args.data_seed, "--out", cand, "--tool-clean", "--ifeval-match", args.dp_ifeval)
+    if not kod.exists():
+        py("prepare_types.py", "--sources", "kodcode", "--per-source", args.dp_kod, "--seed", args.data_seed, "--out", kod,
+           "--kod-dataset", "KodCode/KodCode-V1", "--kod-max-task", 110, "--kod-max-solution", 200)
+    pool = Path(f"data/poolcand-{name}.jsonl")
+    if not pool.exists():
+        py("build_pool.py", "--candidates", cand, kod, "--choosing", val, "--all-questions", "questions",
+           "--per-benchmark", round(args.dp_per_benchmark * args.dp_oversample), "--math-mix", args.dp_math_mix,
+           "--seed", args.data_seed, "--out", pool)
+        rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+        count = Counter()
+        for r in rows:  # a stable name per question, kept by probe_curve.py: both halves and the selection agree on it
+            r["pool_id"] = f"{r['part']}-{count[r['part']]}"
+            count[r["part"]] += 1
+        pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    sources = "gsm8k_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like"
+
+    def answer(half, data, seed=None):
+        probe = BON / f"probe-poolcand-{name}-{half}"
+        n = sum(1 for l in Path(data).read_text().splitlines() if l.strip())
+        if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < 4 * n:
+            py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", 1000000, "--samples", 4,
+               "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+               "--max-questions", n, *(["--seed", seed] if seed is not None else []))
+        return probe / "rollouts.jsonl"
+
+    if args.dp_step in ("a", "b"):
+        half = Path(f"data/poolcand-{name}-{args.dp_step}.jsonl")
+        rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+        keep = [r for r in rows if int(r["pool_id"].rsplit("-", 1)[1]) % 2 == (0 if args.dp_step == "a" else 1)]
+        half.write_text("".join(json.dumps(r) + "\n" for r in keep))
+        answer(args.dp_step, half)
+        drive_sync("save")
+        return
+    # select: both halves' answers, then the selection, then the held-out check
+    import time
+    halves = []
+    for h in ("a", "b"):
+        target = BON / f"probe-poolcand-{name}-{h}" / "rollouts.jsonl"
+        for _ in range(96):  # the other runtime's half: up to 8 hours
+            if target.exists():
+                break
+            drive_sync("restore", only=[f"runs/bon/probe-poolcand-{name}-{h}"])
+            if not target.exists():
+                print(f"waiting for {target} on Drive", flush=True)
+                time.sleep(300)
+        assert target.exists(), f"{target} never arrived"
+        halves.append(target)
+    both = BON / f"probe-poolcand-{name}" / "rollouts.jsonl"
+    both.parent.mkdir(parents=True, exist_ok=True)
+    both.write_text("".join(h.read_text() for h in halves))
+    drive_sync("restore", only=["runs/mvtf/eval-base", "runs/mvtf/v4-base"])
+    evaluate(ROOT / "v4-base", samples=4, questions=val)
+    evaluate(BASE)  # the original model on questions_40 (x2): a second non-fresh reference
+    selected = Path(f"data/pool-{name}.jsonl")
+    py("select_pool.py", "--pool", pool, "--rollouts", both, "--reference", ROOT / "v4-base", BASE,
+       "--per-benchmark", args.dp_per_benchmark, "--seed", args.data_seed, "--out", selected)
+    rows = [json.loads(l) for l in selected.read_text().splitlines() if l.strip()]
+    random.Random(args.data_seed).shuffle(rows)
+    per = Counter()
+    check = Path(f"data/poolcheck-{name}.jsonl")
+    check.write_text("".join(json.dumps(r) + "\n" for r in rows
+                             if per.update([r["part"]]) or per[r["part"]] <= args.dp_check_per_part))
+    held = answer("check", check, seed=7)
+    for tag, refs in (("both", [ROOT / "v4-base", BASE]), ("choosing", [ROOT / "v4-base"]), ("q40", [BASE])):
+        py("pool_check.py", "--rollouts", held, "--reference", *refs, "--out", BON / f"poolcheck-{name}-{tag}")
+    drive_sync("save")
+
+
 def promptsearch(args):
     """Candidate prompts for prompt distillation (user, 27 Oct; Lightning McQwen3's ex-draft step): the ORIGINAL model
     answers --ps-per-source training questions per type of lot --ps-lot x --ps-samples under each prompt of
@@ -2836,13 +2932,13 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/mvtf/v4-base", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
                                     "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
                                     *[f"models/{m}" for m in wanted]])
     else:

@@ -106,6 +106,8 @@ def parse_arguments():
                         help="sample this many questions at a time and append each chunk to rollouts.jsonl.partial, "
                              "resuming from it after a disconnect (0: one batch, saved at the end)")
     parser.add_argument("--exclude-rollouts", nargs="*", default=[], help="chunk mode: skip the questions already in this rollouts file")
+    parser.add_argument("--seed", type=int, default=None, help="sampling seed (default: the evaluation's); a new one "
+                        "gives fresh answers to the same questions (dp2's held-out pool check)")
     parser.add_argument("--max-questions", type=int, default=0, help="chunk mode: stop after this many questions")
     parser.add_argument("--summarize-only", action="store_true")
     parser.add_argument("--generate-only", action="store_true", help=argparse.SUPPRESS)
@@ -117,7 +119,7 @@ def load_questions(args):
     by_source = defaultdict(list)
     for index, row in enumerate(read_jsonl(Path(args.data))):
         if keep is None or row["source"] in keep:
-            by_source[row["source"]].append({**row, "id": f"{row['source']}-{index}"})
+            by_source[row["source"]].append({**row, "id": row.get("pool_id") or f"{row['source']}-{index}"})
     rng = random.Random(SEED)
     picked = []
     for rows in by_source.values():
@@ -141,13 +143,13 @@ def generate(questions, args, sink=None):
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
     extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
-    engine = LLM(model=args.model, dtype=args.dtype, seed=SEED, gpu_memory_utilization=0.85,
+    engine = LLM(model=args.model, dtype=args.dtype, seed=SEED if args.seed is None else args.seed, gpu_memory_utilization=0.85,
                  max_model_len=max(args.max_tokens, args.code_max_tokens) + max(len(p) for p in prompts) + 16,
                  generation_config="vllm", enable_lora=bool(args.adapter), max_lora_rank=32, **extra)
     from vllm.lora.request import LoRARequest
     lora = LoRARequest("adapter", 1, args.adapter) if args.adapter else None
     # one cap per question, as the evaluation does: 8,192 for code, 4,096 for everything else
-    params = [SamplingParams(n=args.samples, seed=SEED, stop_token_ids=eos_ids, **SAMPLING,
+    params = [SamplingParams(n=args.samples, seed=SEED if args.seed is None else args.seed, stop_token_ids=eos_ids, **SAMPLING,
                              max_tokens=args.code_max_tokens if q["task"] == "code" else args.max_tokens)
               for q in questions]
     size = args.chunk or len(questions)

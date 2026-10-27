@@ -140,5 +140,9 @@ drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodco
 # user: separate experiment = experiment 5 with tool calls ALSO taught by own confidence (zB4bench: the judge's BFCL
 # timing fell to 0.64 with lots B..B4, own confidence 0.72); same answers and own-confidence readings as teach1
 # removed (user, 25 Oct: teach1 now does exactly this): teach --name teach2 --teach-reuse teach1 --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodcode3.jsonl --teach-lots plotB plotB2 plotB3 plotB4 --teach-variants rel:0.05 rel:0.1 --teach-own gsm_ic,gsm_plus,gsm8k,gsm8k_all,kodcode,toolace,hermes_tools --teach-judge none
+# dp2 (user, 27 Oct: "a big representative dataset across all data types first"): dp1 failed its check; fixed sources
+# (ToolACE types/grounding/no-fit, IFEval instruction mix, gsm8k_easy, KodCode-V1), selection by the original model's
+# behaviour, held-out check against the choosing set AND questions_40. Half b here; half a and the selection on GPU 1.
+buildpool2 --name dp2 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
 end

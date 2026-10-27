@@ -137,6 +137,11 @@ teach --name teach1c --start Qwen/Qwen3-0.6B --data-seed 57 --kod-file data/kodc
 # user: stage 1 of a clean recipe = one balanced DPO round from the raw Qwen on its own graded answers (benchmark-
 # matched pool: GSM8K / KodCode / ToolACE+Hermes / IFEval-like, equal weight, no MBPP); shortest right beats longest wrong
 # or truncated (guard) and a right answer >= 1.5x longer (shorten, capped at guard per type); NLL anchor; 3 seeds
+# dp2 (user, 27 Oct: "a big representative dataset across all data types first"): dp1 failed its check; fixed sources
+# (ToolACE types/grounding/no-fit, IFEval instruction mix, gsm8k_easy, KodCode-V1), selection by the original model's
+# behaviour, held-out check against the choosing set AND questions_40. Half a here, half b on GPU 2, select here.
+buildpool2 --name dp2 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+buildpool2 --name dp2 --data-seed 73 --dp-step select --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 targeted --name stopB5 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,toolace,hermes_tools --tg-long none --tg-save-every 5 --dpo-steps 10 15 20 25 30 --seeds 0 1 2
 # user (26 Oct): ShorterBetter rerun with the PAPER's beta 0.001 (sb1's 0.005 overshot within 10 steps), plus math protection,
 # the per-type guard and the fixed batch mix; from rc1-rl-40 like sb1; every 10-step checkpoint scored on fresh x8

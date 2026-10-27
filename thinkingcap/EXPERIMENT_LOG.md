@@ -2586,3 +2586,38 @@ Overall (my computation, geometric mean of ratios, BFCL pooled ~1.02): ~22% save
 training questions (+1.9 there); math halves but loses ~3 points; code and tools ignore the budget.
 Reading: distilling this prompt alone cannot reach the goal; at best a math-only ingredient.
 - GPU 1 then started teach1c (teach_stop.py, same unanchored BCE as gold1) — user asked whether to pause it.
+
+### 2026-10-27 ~09:30 — why dp1 failed (read in its 4,800 check answers) and dp2 (LUPIN step 0, user: "a big representative dataset across all data types first")
+Diagnosis, from runs/bon/probe-poolcheck-dp1/rollouts.jsonl (original Qwen x4, 200 pool questions per part):
+- **BFCL simple 56% / multiple 62% is mostly GRADING, not difficulty.** Of 356 wrong simple answers, re-read with an
+  independent matcher: 80 are exactly the reference call (e.g. `getAdDuration(start_date="2024-01-01", end_date=
+  "2024-06-30", frequency=5)`), failed because ToolACE declares `"type": "int"` (BFCL knows "integer"); 201 differ from a
+  single GPT-written reference whose values the question never states ("this month" -> "2026-02-01..26", "Tesla" vs
+  "TSLA", "@fashionnova" vs "fashionnova"); 63 malformed; 12 empty. 136 of 800 simple prompts are multi-turn
+  ("Inquirer: ... historical dialog"), which BFCL never is.
+- **BFCL irrelevance was mislabelled**: "no-fit" = any ToolACE reply that failed to decode, so many are real requests
+  with malformed parallel calls ("team-week rounds for Manchester United, Chelsea and Liverpool"); the model called a
+  function in 143/800.
+- **IFEval-like is easy because of its instruction mix**: dp1's prompts are mostly "at least N sentences" (93% passed),
+  "include keywords" (93%), "N highlighted sections" (92%). The "filtered" config has 0 repeat-prompt, 0 response-language,
+  11 two-responses, 157 no-comma, 112 quotation, 147 all-capitals rows (IFEval: 4.9%, 3.7%, 2.9%, 7.9%, 4.9%, 3.0% of its
+  instructions). The "default" config (550k rows) has them.
+- **Math**: SVAMP is 1-2 operations; dp1 math was 73% MetaMath SV/FOBAR ("solve for x" / backwards), median thinking 529,
+  gsm8k_matched 445 (choosing 366). GSM8K train has 2,579 problems with 1-2 calculations (gsm8k_easy).
+- **Code**: KodCode-Light-RL-10K is too small after the 8-gram check (1,055 / 3,000); KodCode-V1 has 484k tasks, same schema.
+dp2 changes (contamination check unchanged; fresh set never read):
+- prepare_types.py `--tool-clean`: BFCL type names (int->integer, number->float, ...; unknown -> dropped), single-turn
+  only, reference values must be stated in the question, no-fit = a simple question offered 2 unrelated functions from
+  other conversations (BFCL's construction). Local run on ToolACE: 3,061 simple, 2,319 multiple, 5,944 no-fit
+  (old: 5,025 / 3,615 / 1,554).
+- `--ifeval-match N`: N prompts drawn so the 1/2/3-instruction split and each instruction id's share follow IFEval's 541
+  prompts; default-config kwargs converted to IFEval's per-instruction form. Local test on filtered + 1 of 10 default
+  shards: 2,117 matched prompts (hard ids still short there; the full config has ~10x).
+- `--kod-dataset KodCode/KodCode-V1`; math mix gsm8k_easy 0.55 / gsm8k_matched 0.15 / metamath_sv 0.30.
+- select_pool.py (new): every candidate (1.6x oversampled) answered x4 by the original model; per part, cells of
+  solve rate (never / <half / >=half / always) x thinking terciles matched to the original model's runs on the choosing
+  set (v4-base x4) AND questions_40 (eval-base x2): 80 reference questions per part instead of 40.
+- Check on NEW answers (probe_curve.py --seed 7, 200 selected questions per part), pool_check.py against both references
+  and each alone, plus IFEval pass rate per instruction id.
+- Queue: GPU 1 buildpool2 dp2 a then select (after teach1c), GPU 2 dp2 b (after drpo3f). ~19k candidates x4, about
+  4-5 h per GPU. No training on any pool until every part reads OK.
