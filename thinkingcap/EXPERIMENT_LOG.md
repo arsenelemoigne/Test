@@ -2762,3 +2762,20 @@ Also LUPIN_SPEC M12 (TokenSkip on LUPIN0's answers, gentle ratios).
 - Fix for tsk1: tokenskip.py now frees LLMLingua (del, gc, torch.cuda.empty_cache) before starting vLLM for --verify, and
   asks vLLM for 0.7 of the GPU instead of 0.85. Compression itself worked (6214 questions with a right answer); only the
   verify start failed. Re-run needs a GPU runtime (user's call); the plan line can stay as is.
+
+### 2026-10-27 night — dp3 selection done (select_pool.py, GPU 1); held-out check running
+11,998 questions selected from 18,640 answered candidates, matched to the original model on choosing set (v4-base x4)
++ questions_40 (eval-base x2). Numbers below are on the SELECTION answers (flattering by construction); the verdict is
+the held-out check (new answers, seed 7, 200 per part) now running.
+| part | kept | accuracy pool vs reference | median thinking pool vs reference | borrowed from other cells |
+|---|---|---|---|---|
+| svamp | 2998/3000 | 85 vs 87 | **500 vs 384** | 1411 |
+| mbpp | 2999/3000 | 56 vs 54 | 954 vs 1051 | 231 |
+| bfcl_simple | 1429/1429 | 83 vs 87 | 120 vs 145 | 278 |
+| bfcl_multiple | 714/714 | 77 vs 77 | 159 vs 170 | 147 |
+| bfcl_irrelevance | 857/857 | **97 vs 80** | 138 vs 131 | 242 |
+| ifeval | 3001/3000 | 54 vs 52 | 249 vs 290 | 984 |
+IFEval real 1,307 kept (46%, thinking 214), built 1,694 (61%, thinking 273). Proportions all OK (25 / 25 / 11.9 / 6.0 /
+7.1 / 25%). Early reading: math candidates lack short-thinking easy questions (half the math pool borrowed from
+neighbouring cells; thinking +30%); the built no-fit tool questions are too easy (97% vs 80%: unrelated functions are
+obvious to refuse; BFCL's irrelevance functions are closer to the question). Wait for the held-out check.
