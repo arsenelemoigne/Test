@@ -97,6 +97,10 @@ dropmodels --name drop1 --drop ca1-soup-20=ca1-s0 ca1-soup-30=ca1-s0 ca1-soup-40
 # flips to shortest right > longest wrong/unfinished (code, tools, instructions; math keeps hard + be-right brakes, no guard),
 # and hard (keep-thinking) pairs on code/tools/instructions are capped at 0.25 x their shorten pairs.
 # ON HOLD (user disagrees with the V3 design, 26 Oct 17:10): targeted --name stopV3 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 plotB5 plotV2 --tg-rule question --tg-min-samples 8 --tg-shorten kodcode,toolace,hermes_tools,ifeval_like --tg-shorten-if-svamp gsm8k_matched,metamath_sv --tg-long kodcode,toolace,hermes_tools,ifeval_like,gsm8k_matched,metamath_sv --tg-right gsm8k_matched,metamath_sv --tg-quota kodcode=1800,toolace=1200,hermes_tools=500,ifeval_like=1800,gsm8k_matched=1300,metamath_sv=1300 --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 300 --seeds 0 1 2 --tg-guard-mode shorter --tg-guard kodcode,toolace,hermes_tools,ifeval_like --tg-hard-ratio 0.25 --tg-hard-cap kodcode,toolace,hermes_tools,ifeval_like --tg-skip-if stopV2:0.35:1.0
+# ps1 (user, 27 Oct): which prompt makes the ORIGINAL model think shortest without losing answers, before choosing one
+# to distil (Lightning McQwen3's ex-draft step)? 11 prompts (prompt_candidates.py) x 50 training questions per type of lot
+# V2 x 4 replies, paired against no prompt: tokens saved, accuracy, leak rate. Training questions only (~1 h).
+promptsearch --name ps1 --start Qwen/Qwen3-0.6B
 # gold1 (user, 26 Oct: option B): stop-token training with the lots' own labels as teacher (stop_gold.py). At every
 # labelled paragraph end of lots B..B5 + V2, p(</think>) -> 1 where the forced answers are as right as the full thinking
 # (and >= 25%), -> 0 where not; no reply imitated, no whole-reply pairs; never-solved replies and GSM-IC/Plus left out;

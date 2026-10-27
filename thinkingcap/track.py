@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -198,6 +198,10 @@ def main():
     parser.add_argument("--tg-quota", default="", help="targeted: most pairs kept per type, e.g. kodcode=700,toolace=400")
     parser.add_argument("--bp-budgets", default="svamp=400,mbpp=750,ifeval=200,bfcl=70",
                         help="budgetprompt: thinking budget per benchmark stated in the system prompt (measurement only)")
+    parser.add_argument("--ps-lot", default="plotV2", help="promptsearch: label lot whose training questions are used")
+    parser.add_argument("--ps-per-source", type=int, default=50, help="promptsearch: questions per type")
+    parser.add_argument("--ps-samples", type=int, default=4, help="promptsearch: replies per question and prompt")
+    parser.add_argument("--ps-only", default="", help="promptsearch: comma-separated candidates (default: all)")
     parser.add_argument("--drop", nargs="*", default=[],
                         help="dropmodels: MODEL=ADAPTER pairs; models/MODEL is removed from Drive and here only if adapters/ADAPTER is on Drive")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
@@ -2026,6 +2030,19 @@ def wronglen(args):
     py("wrong_lengths.py", "--root", DRIVE / "runs" / "mvtf", "--out", ROOT / "wrong_lengths.txt")
 
 
+def promptsearch(args):
+    """Candidate prompts for prompt distillation (user, 27 Oct; Lightning McQwen3's ex-draft step): the ORIGINAL model
+    answers --ps-per-source training questions per type of lot --ps-lot x --ps-samples under each prompt of
+    prompt_candidates.py; prompt_search.py reports tokens saved, accuracy change and leak rate against no prompt.
+    Measurement only, on training questions: the evaluation sets are never used to choose the prompt."""
+    data = Path(f"data/lot-{args.ps_lot}.jsonl")
+    if not data.exists():
+        drive_sync("restore", only=[str(data)])
+    cmd = ["--data", data, "--per-source", args.ps_per_source, "--samples", args.ps_samples,
+           "--model", args.start or "Qwen/Qwen3-0.6B", "--dtype", args.dtype, "--out", BON / f"ps-{args.name}"]
+    py("prompt_search.py", *cmd, *(["--only", args.ps_only] if args.ps_only else []))
+
+
 def mathfix(args):
     """Repair a model's math with its OWN answers (user, 26 Oct: rc1-rl-40 loses mostly on SVAMP, -4.1): it answers the
     SVAMP-like math questions of label lots (--probe-extra-from; matched GSM8K + MetaMathQA) x8; pairs = "be right" (its
@@ -2766,13 +2783,13 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
                                     "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
                                     *[f"models/{m}" for m in wanted]])
     else:
