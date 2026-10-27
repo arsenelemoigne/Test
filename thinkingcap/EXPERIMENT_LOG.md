@@ -2811,3 +2811,6 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
 - GPU 1's restart re-ran gold1's training (stop_gold.py) while walking the plan; gold1, bp1b, teach1c and stopB5 are now
   commented out so a restart cannot redo them.
 - 28 Oct: GPU 2 stuck 'Connecting' for 25 min (no second GPU granted); dp4 half b also queued on GPU 1 (a, b, select).
+- 28 Oct (user): NO training of any kind until the training data is shown to overlap the evaluation and the two gaps are
+  fixed (math thinking too long, mostly the gsm8k_easy format bug; no-fit tool questions too easy, 97% vs 79%). tsk1
+  (TokenSkip, trains) paused in plan_line_a. Active queues: dataset stages only (dp3 check, dp4 a/b/select).
