@@ -2448,3 +2448,13 @@ Not yet in the check: the answer-timing match (success at 20-40% of the thinking
 - For LUPIN: no teacher needed for math, MetaMathQA's GSM_FOBAR / GSM_SV rows ARE backward rewrites of GSM8K train
   questions (Q, Qb pairs ready-made); Rb = our model's own right answer to the rewrite. Use = an accuracy guard mixed into
   the shortening DPO (an extra NLL task), aimed at the math loss; not expected to shorten by itself.
+
+### 2026-10-27 — ALP checked (arXiv 2506.05256, "Just Enough Thinking", Stanford/SynthLabs, preprint)
+- RL (GRPO), math only, DeepScaleR-1.5B: reward = right - beta * length * max(solve rate p, 1/K), p from the question's own
+  K rollouts, penalty on ALL rollouts (wrong ones too). Easy questions pay more for length, hard ones keep thinking.
+- Table 1 (64 samples, 4,096 budget): MATH-500 0.81 -> 0.80 at -72% tokens; AIME 0.22 -> 0.24 at -42%; OlympiadBench
+  0.47 -> 0.51 at -36%. beta 1e-7, 100 steps, batch 512. No code released; no 0.6B, no code/tools/instructions.
+- For LUPIN: (1) step 2 pairs: allow "shorter right" pairs only when p is high, the offline version of the same idea
+  (DAST / Difficulty-Aware DLER agree); (2) step 3 RL (LUPIN1.0): scale our drpo length penalty by the solve rate p instead of
+  a flat lambda. Our drpo penalizes length only among right answers (Arora-Zanette style); ALP also pushes wrong answers
+  shorter; compare both.
