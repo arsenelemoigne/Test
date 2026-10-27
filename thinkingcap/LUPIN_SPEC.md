@@ -142,6 +142,7 @@ Any recipe can also take:
 | M9 | **stop-token training** at paragraph ends from the cut labels (gold1 idea) | small extra loss | stop_gold.py exists |
 | M10 | **iterative round:** LUPIN0 answers the pool again (on-policy), new pairs, second DPO round (the cheap version of RL; michal-bida's next step) | 2 rounds | stages exist |
 | M11 | **curriculum:** easy questions (high p) first, hard last; or two epochs where epoch 2 has only right / hard pairs | order only | to build |
+| M12 | **TokenSkip densify** (arXiv 2502.12067): LUPIN0's right answers with the thinking cut to its most important words by LLMLingua-2 (reply verbatim), kept only if the model still answers right from the cut thinking; SFT on top of LUPIN0. Trims words within steps (pairs and RL trim whole steps), so the two can stack. Paper: ~50% fewer tokens costs 14B -1.7, 7B -5.4, 3B -9.3 pts (GSM8K): expect gentle ratios (0.8-0.9) at 0.6B, likely not math | SFT round | built: tokenskip.py + `tokenskip` stage (raw test on the original Qwen queued first, ratios 0.5 / 0.7 / 1.0 control) |
 
 ### 2.4 Free dials after training (no retraining)
 - **Soups:** average the 3 seeds at each checkpoint (built).

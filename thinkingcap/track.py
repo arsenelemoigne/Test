@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "tokenskip", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -211,6 +211,14 @@ def main():
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
     parser.add_argument("--dp-ifeval", type=int, default=12000, help="buildpool2: IFEval-like prompts drawn to IFEval's mix")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
+    parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
+                        help="tokenskip: share of the thinking's words kept, one model per ratio (1.0: same SFT, no compression)")
+    parser.add_argument("--tsk-ratio-by", default="", help="tokenskip: source=ratio overrides, e.g. gsm8k_matched=0.9")
+    parser.add_argument("--tsk-pick", default="random", choices=("random", "shortest"), help="tokenskip: right answer kept per question")
+    parser.add_argument("--tsk-epochs", type=int, default=2, help="tokenskip: SFT passes (a checkpoint after each)")
+    parser.add_argument("--tsk-lr", type=float, default=5e-5, help="tokenskip: SFT learning rate (the paper's)")
+    parser.add_argument("--tsk-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
+                        help="tokenskip: label lots whose original-model rollouts give the right answers")
     parser.add_argument("--drop", nargs="*", default=[],
                         help="dropmodels: MODEL=ADAPTER pairs; models/MODEL is removed from Drive and here only if adapters/ADAPTER is on Drive")
     parser.add_argument("--sg-lots", nargs="*", default=["plotB", "plotB2", "plotB3", "plotB4", "plotB5", "plotV2"],
@@ -2202,6 +2210,49 @@ def promptsearch(args):
     py("prompt_search.py", *cmd, *(["--only", args.ps_only] if args.ps_only else []))
 
 
+def tokenskip(args):
+    """TokenSkip (arXiv 2502.12067) raw, from the original model (user, 27 Oct: "try it raw, maybe we will be surprised"):
+    one right answer per question of the label lots' original-Qwen rollouts (training sources only), its thinking cut to
+    --tsk-ratios of its words by LLMLingua-2 (the reply kept verbatim), kept only if the original model, handed the cut
+    thinking, still answers right (tokenskip.py --verify); a LoRA SFT per ratio, a checkpoint per epoch, each merged and
+    scored on the fresh set x8. Ratio 1.0 is the control: the same SFT on the uncut answers, so the effect of the cut is
+    the difference."""
+    name, base = args.name, args.start or "Qwen/Qwen3-0.6B"
+    ensure_lots(args.tsk_lots)
+    drive_sync("restore", only=[f"runs/bon/tskip-{name}-*", f"adapters/{name}-*", f"runs/mvtf/f8-{name}-*"])
+    try:
+        import llmlingua  # noqa: F401
+    except ImportError:
+        run(sys.executable, "-m", "pip", "install", "-q", "llmlingua")
+    rollouts = [p for l in args.tsk_lots for kind in ("probe", "kprobe")
+                if (p := BON / f"{kind}-{l}" / "rollouts.jsonl").exists()]
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for ratio in args.tsk_ratios:
+        tag = f"{name}-r{round(ratio * 100)}"
+        data = BON / f"tskip-{tag}"
+        if not (data / "sft.jsonl").exists():
+            py("tokenskip.py", "--rollouts", *rollouts, "--ratio", ratio, "--pick", args.tsk_pick, "--model", base,
+               "--dtype", args.dtype, "--out", data, *(["--ratio-by", args.tsk_ratio_by] if args.tsk_ratio_by else []),
+               *(["--verify"] if ratio < 1 else []))
+            drive_sync("save")
+        print((data / "summary.txt").read_text(), flush=True)
+        adapter = Path("adapters") / f"{tag}-sft"
+        n = sum(1 for l in (data / "sft.jsonl").read_text().splitlines() if l.strip())
+        if not (adapter / "adapter_config.json").exists():
+            py("sft.py", "--model", base, "--data", data / "sft.jsonl", "--out", adapter, "--epochs", args.tsk_epochs,
+               "--lr", args.tsk_lr, "--save-every", math.ceil(n / 16), "--dtype", args.dtype)
+            drive_sync("save")
+        checkpoints = sorted(adapter.glob("step-*"), key=lambda p: int(p.name.split("-")[1])) + [adapter]
+        for epoch, ckpt in enumerate(checkpoints, 1):
+            model = Path("models") / f"{tag}-e{epoch}"
+            if not (model / "config.json").exists():
+                py("merge.py", "--model", base, "--out", model, "--adapters", f"{ckpt}:1")
+            res = ROOT / f"f8-{tag}-e{epoch}"
+            evaluate(res, samples=8, questions=fresh_q, model=model)
+            print(score_line(f"{tag}-e{epoch} (fresh 240 x 8)", res, base=ROOT / "f8-base"), flush=True)
+
+
 def mathfix(args):
     """Repair a model's math with its OWN answers (user, 26 Oct: rc1-rl-40 loses mostly on SVAMP, -4.1): it answers the
     SVAMP-like math questions of label lots (--probe-extra-from; matched GSM8K + MetaMathQA) x8; pairs = "be right" (its
@@ -2942,14 +2993,14 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "tokenskip", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
                                     "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
-                                    "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*",
+                                    "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*", "runs/bon/tskip-*", "adapters/tsk*", "runs/mvtf/f8-tsk*",
                                     *[f"models/{m}" for m in wanted]])
     else:
         drive_sync("restore", models=wanted)

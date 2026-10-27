@@ -2743,3 +2743,15 @@ IFEval dropped 3,104 by the 8-gram check. GPU 2 answers half b (9,319 questions 
   choosing set in every part. Now: GPU 2 answering half b (9,319 questions x 4, ~4 h), then half a; GPU 1 frees itself
   when dp2's select wait times out (~21:30) and joins dp3 a / runs dp3 select.
 - Evening: user unstuck GPU 1 (plan cell rerun); GPU 1 answers dp3 half a (9,321 x4), GPU 2 half b (9,319 x4); half a removed from GPU 2's plan.
+
+### 2026-10-27 ~17:30 — TokenSkip (arXiv 2502.12067) read, built, queued raw (tsk1, GPU 2 after dp3)
+Paper (EMNLP 2025): LLMLingua-2 (a BERT-size "keep / drop" word classifier) scores each word of a right chain of thought;
+the top gamma share is kept in order; LoRA SFT on the cut chains (~7.5k GSM8K/MATH examples, gamma in the prompt). GSM8K,
+~50% fewer tokens: Qwen2.5-14B -1.7, 7B -5.4, 3B -9.3 pts (smaller = worse); LLaMA-8B MATH-500 -30% tokens / -1.9. It cuts
+words (connectors, articles, restatements), never steps; only instruct-model chains of 200-500 tokens, no thinking model.
+Built: tokenskip.py (thinking only; reply verbatim; one right answer per question; --verify keeps an example only if the
+original model, handed the cut thinking, still answers right) + track.py stage `tokenskip` (SFT per ratio, checkpoint per
+epoch, fresh x8). Local test on a GSM8K-style trace: ratio 0.6 -> actual 0.62 (247 -> 153 tokens), numbers and equations
+kept, filler gone, the "let me double-check" step kept (cut to "double-check 16 minus 3 is 13, 13 minus 4 is 9").
+Queued: tsk1 = original Qwen, label-lot rollouts (training sources), ratios 0.5 / 0.7 and 1.0 (same SFT, uncut: control).
+Also LUPIN_SPEC M12 (TokenSkip on LUPIN0's answers, gentle ratios).

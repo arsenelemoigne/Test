@@ -150,4 +150,7 @@ buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,g
 # user away (27 Oct ~16:00): GPU 1 is stuck in dp2's select wait until ~21:30, so GPU 2 also answers half a
 # GPU 1 was unstuck by the user and runs half a itself (27 Oct evening): buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
+# user (27 Oct): TokenSkip raw on the original Qwen (cut the thinking to its most important words, SFT); ratios 0.5 / 0.7 and
+# 1.0 = the same SFT uncut (control); after dp3, scored on fresh x8 per epoch
+tokenskip --name tsk1 --start Qwen/Qwen3-0.6B --tsk-ratios 0.5 0.7 1.0
 end
