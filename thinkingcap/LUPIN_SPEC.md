@@ -97,6 +97,15 @@ Everything in Step 2 is built from these fixed answers, so comparing recipes cos
 
 ## Step 2: Stage 1, offline training on the answers → LUPIN0 and its variants
 
+### 2.0 The PAIRS must match the evaluation too (user, 27 Oct night: "as important")
+A representative pool is not enough: pair recipes skew it (always-failed questions give no shorten pairs, always-solved
+easy ones give many), so training would be dominated by easy questions. After the 10 answers, the training pairs are
+selected like the pool: per evaluation part (each benchmark 25%, BFCL 400 / 200 / 240 inside its share, as the score
+weights them) and per cell of solve rate x thinking length, each cell keeps the evaluation's share (original model's
+runs on the choosing set + questions_40). Hard cells are still present, with right / guard / hard pairs instead of
+shorten pairs. The pair set's mix is checked against those references (same report as pool_check) before any
+training; a recipe whose pairs cannot fill a cell says so instead of silently over-weighting another.
+
 ### 2.1 Pair kinds (the vocabulary)
 
 | kind | chosen > rejected | teaches |
