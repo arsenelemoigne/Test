@@ -2436,3 +2436,15 @@ Not yet in the check: the answer-timing match (success at 20-40% of the thinking
   al. 2024, "Reverse Thinking Makes LLMs Stronger Reasoners": training on forward reasoning + the backward question +
   backward reasoning raised reasoning accuracy); FOBAR / MetaMathQA GSM_FOBAR (already in our math: questions asked
   backwards from the answer). None measured thinking LENGTH; to test as an extra NLL task mixed into LUPIN0's DPO.
+
+### 2026-10-27 — RevThink checked (arXiv 2411.19865, NAACL 2025; Chen et al., UNC + Google)
+- Method: a teacher (Gemini-1.5-Pro) writes per question: forward reasoning Rf (kept only if right), a backward question Qb
+  (from Q + gold answer), backward reasoning Rb; consistency-checked. Student = 3-task SFT, equal weights 1/3:
+  Q -> Rf, Q -> Qb, Qb -> Rb. LoRA r32; 3 epochs (math), 10 (others). At TEST time: forward reasoning only.
+- Students Mistral-7B / Gemma-7B; 12 datasets (no SVAMP). +13.5% avg over zero-shot, +6.8% over the best distillation
+  baseline. Mistral-7B GSM8K 54.7 -> 60.9 (distillation 56.2), MATH 10.4 -> 15.3. 10% of the data beats plain fine-tuning
+  on all of it (StrategyQA). Ablation: all three tasks best; Q -> Qb added to Q -> Rf already helps; Qb -> Rb alone hurts.
+- Length: "comparable number of tokens ... at test time" (no numbers). So: an ACCURACY method, not a shortening one.
+- For LUPIN: no teacher needed for math, MetaMathQA's GSM_FOBAR / GSM_SV rows ARE backward rewrites of GSM8K train
+  questions (Q, Qb pairs ready-made); Rb = our model's own right answer to the rewrite. Use = an accuracy guard mixed into
+  the shortening DPO (an extra NLL task), aimed at the math loss; not expected to shorten by itself.
