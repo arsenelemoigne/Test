@@ -2694,3 +2694,17 @@ Both runs start from rc1-rl-40.
   missing from IFEval's language table (graders.py build_description -> KeyError 'zh'). GPU 1 moved on to the select step,
   which now waits (up to 8 h) for half a's answers that will not come. dp2 b on GPU 2 would hit the same error.
   Reported to the session that owns dp2 for a candidate fix (drop rows whose instruction IFEval cannot build).
+
+### 2026-10-27 ~14:00 — dp2 half a crashed while answering; rebuilt as dp3
+- probe_curve.py -> typed.is_correct -> IFEval build_description: KeyError 'zh'. Real argilla rows use language codes
+  IFEval's checker does not know (its LANGUAGE_CODES has no 'zh'); my candidate filter only checked argument names.
+  GPU 1's select step then idled waiting for half a (up to 8 h).
+- Fix: ifeval_buildable() tries every IFEval-like row (real and built) against IFEval's checker once at candidate
+  time and drops what it rejects. Local run (filtered + 3 of 10 default shards): 37,342 eligible real rows (2,325
+  rejected), 4,330 real + 7,663 built = 11,993; all 11,993 graded by the official checker without an error; mix still
+  equals IFEval's.
+- Renamed dp3 (fresh files; dp2's saved candidates are not reused). GPU 2: dp3 b after drpo2. GPU 1: dp3 a + select
+  queued; GPU 1 is stuck in dp2's select wait until it times out (8 h) or the user stops and reruns the plan cell
+  (sb2 commented out so a rerun does not resume its RL past the guard stop).
+- drpo2 (strong RL from rc1-rl-40, lambda 0.5, math unprotected): -20 +57.6 / -3.9, -25 +57.8 / -4.0,
+  -30 +58.2 / -4.7 (math sliding to -11.9). More saving, accuracy getting worse: not a candidate.

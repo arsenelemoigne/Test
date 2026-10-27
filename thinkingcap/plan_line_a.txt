@@ -143,6 +143,9 @@ drpo --name drpo3f --start models/drpo3d-23 --data-seed 69 --kod-file data/kodco
 # dp2 (user, 27 Oct: "a big representative dataset across all data types first"): dp1 failed its check; fixed sources
 # (ToolACE types/grounding/no-fit, IFEval instruction mix, gsm8k_easy, KodCode-V1), selection by the original model's
 # behaviour, held-out check against the choosing set AND questions_40. Half b here; half a and the selection on GPU 1.
-buildpool2 --name dp2 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+# dp2 crashed (zh), replaced by dp3: buildpool2 --name dp2 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+# dp3 = dp2 rebuilt (27 Oct ~14:00): dp2 a crashed while answering, IFEval's checker has no language code 'zh' (KeyError);
+# every IFEval row is now tried against the checker when candidates are built. New name: no stale dp2 files reused.
+buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 drpo --name drpo2 --start models/rc1-rl-40 --data-seed 64 --kod-file data/kodcode3.jsonl --pool-math metamath_sv --drpo-lambda 0.5 --rl-lr 5e-6
 end

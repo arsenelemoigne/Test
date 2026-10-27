@@ -368,6 +368,25 @@ def kodcode(args, rng):
                "prompt": [{"role": "user", "content": content}]}
 
 
+def ifeval_buildable(registry, ids, kwargs, prompt):
+    """Does IFEval's checker accept these instruction arguments? The grader calls build_description(**kwargs) on every
+    answer, so a row it rejects would crash the whole answering run; tried once here, at candidate time."""
+    import random as stdrandom
+    state = stdrandom.getstate()
+    try:
+        for i, kw in zip(ids, kwargs):
+            instruction = registry.INSTRUCTION_DICT[i](i)
+            instruction.build_description(**{k: v for k, v in (kw or {}).items() if v is not None})
+            wants = instruction.get_instruction_args_keys() if hasattr(instruction, "get_instruction_args_keys") else []
+            if "prompt" in wants:
+                instruction.build_description(prompt=prompt)
+        return True
+    except Exception:
+        return False
+    finally:
+        stdrandom.setstate(state)
+
+
 def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room):
     """Prompts for the instruction ids IFEval-like data cannot supply: argilla's rows with 1-3 instructions hold almost no
     no-comma, quotation, repeat-prompt, all-capitals or two-responses instructions (60 no-comma among ~40,000 such rows
@@ -416,6 +435,8 @@ def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room):
                 text = instruction.build_description()
             kwargs.append({k: v for k, v in (instruction.get_instruction_args() or {}).items() if v is not None})
             prompt += " " + text
+        if not ifeval_buildable(registry, ids, kwargs, prompt):
+            continue
         got_n[len(ids)] += 1
         got_id.update(ids)
         built.append({"source": "ifeval_like", "origin": "built", "task": "instructions", "answer": "",
@@ -489,6 +510,9 @@ def ifeval_like(args, rng):
         want_n = {n: args.ifeval_match * c / len(lines) for n, c in n_share.items()}
         want_id = {i: args.ifeval_match * c / len(lines) for i, c in id_share.items()}
         got_n, got_id, kept, seen = Counter(), Counter(), [], set()
+        from utils.eval.graders import importable
+        with importable(Path(paths(args.questions)["ifeval"]).parent):
+            from instruction_following_eval import instructions_registry as registry
         keys = {}  # each instruction id's argument names, as IFEval's own prompts give them
         for r in lines:
             for i, kw in zip(r["instruction_id_list"], r["kwargs"]):
@@ -523,6 +547,8 @@ def ifeval_like(args, rng):
             continue
         if row["prompt"] in seen or len(ids) not in want_n or any(i not in want_id for i in ids):
             continue
+        if not ifeval_buildable(registry, ids, out["kwargs"], row["prompt"]):
+            continue  # e.g. language "zh": IFEval's checker has no such code and crashed dp2's answering (KeyError)
         seen.add(row["prompt"])
         kept.append(out)
     if args.ifeval_match:
