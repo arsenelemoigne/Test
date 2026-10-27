@@ -2731,3 +2731,14 @@ IFEval dropped 3,104 by the 8-gram check. GPU 2 answers half b (9,319 questions 
 - ~16:00 user away from the computer, so GPU 1 cannot be unstuck by hand: GPU 2 now answers dp3 half a after
   half b. Each half first restores its answers from Drive and skips if they are complete, so GPU 1 (freed when dp2's
   select wait times out, ~21:30) joins or skips half a, then runs dp3 select.
+
+### 2026-10-27 ~12:45 — drpo2-60; dp3 candidate pool built (GPU 2)
+- drpo2-60: +62.7% / -6.0 OUTSIDE (irrelevance +48/-6.2, multiple +44/-6.9, simple +40/-1.2, ifeval +54/-1.9, mbpp +69/-2.2,
+  svamp +76/-15.0). drpo2 summary: best trade at step 5-15 (+55.5-56.0% / -2.0 to -2.6); later steps add ~6 pts of saving
+  and lose ~3-4 pts, mostly math (svamp -15).
+- dp3 candidates (1.6 x the pool, seed 73): 18,640 questions. IFEval-like: 4,696 real + 7,298 built (all graded by IFEval's
+  own checker). Per part kept/wanted: svamp 4800/4800 (gsm8k_easy 2,145, gsm8k_matched 819, metamath_sv 1,836); mbpp
+  4800/4800 (KodCode-V1; 24,516 dropped by the 8-gram check, 43,212 usable); ifeval 4800/4800; bfcl_simple 1726/2286
+  (SHORT 560, still 1.2 x its final 1,429); bfcl_multiple 1143/1143; bfcl_irrelevance 1371/1371. Prompt lengths match the
+  choosing set in every part. Now: GPU 2 answering half b (9,319 questions x 4, ~4 h), then half a; GPU 1 frees itself
+  when dp2's select wait times out (~21:30) and joins dp3 a / runs dp3 select.
