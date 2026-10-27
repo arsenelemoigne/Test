@@ -2755,3 +2755,7 @@ epoch, fresh x8). Local test on a GSM8K-style trace: ratio 0.6 -> actual 0.62 (2
 kept, filler gone, the "let me double-check" step kept (cut to "double-check 16 minus 3 is 13, 13 minus 4 is 9").
 Queued: tsk1 = original Qwen, label-lot rollouts (training sources), ratios 0.5 / 0.7 and 1.0 (same SFT, uncut: control).
 Also LUPIN_SPEC M12 (TokenSkip on LUPIN0's answers, gentle ratios).
+- ~18:20 GPU 2: dp3 half b finished (no failure line; answers saved to Drive). tsk1 (TokenSkip, other session) then
+  failed at once: vLLM could not get its GPU memory (ValueError in request_memory at engine start; root cause above it
+  in the log). GPU 2's queue then ended ("everything is on Drive"), so that runtime releases itself; nothing else of
+  dp3 needs it. GPU 1: dp3 half a at 48 of ~63 chunks, then select + the held-out check.
