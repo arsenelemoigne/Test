@@ -2810,3 +2810,4 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
   re-selection leaves out dp3's gsm8k_easy rows and their answers.
 - GPU 1's restart re-ran gold1's training (stop_gold.py) while walking the plan; gold1, bp1b, teach1c and stopB5 are now
   commented out so a restart cannot redo them.
+- 28 Oct: GPU 2 stuck 'Connecting' for 25 min (no second GPU granted); dp4 half b also queued on GPU 1 (a, b, select).
