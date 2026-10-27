@@ -2815,3 +2815,19 @@ obvious to refuse; BFCL's irrelevance functions are closer to the question). Wai
   fixed (math thinking too long, mostly the gsm8k_easy format bug; no-fit tool questions too easy, 97% vs 79%). tsk1
   (TokenSkip, trains) paused in plan_line_a. Active queues: dataset stages only (dp3 check, dp4 a/b/select).
 - 28 Oct (user): LUPIN in rounds: v1 = DPO on the original Qwen's answers (10/question); v2 = DPO from v1 on v1's answers to a new representative sample (8-10/question, matched to v1's own behaviour on choosing + questions_40). After each round, per-type thinking distributions vs the original on fresh x8 in the overlap dashboard (LUPIN_SPEC 'Rounds').
+
+### 2026-10-28 — dp3 HELD-OUT CHECK (new answers, seed 7, 200 selected questions per part x4) — FAILS on 3 parts
+Reference "both" = choosing set x4 + questions_40 x2 (80 questions per part); interval = the reference's 95% bootstrap.
+| part | accuracy pool vs ref | median thinking pool vs ref | verdict |
+|---|---|---|---|
+| svamp | 81 vs 88 [83, 93] | **516 vs 366 (+41%)** | CHECK: gsm8k_easy (format bug) 65% / 987 tokens; gsm8k_matched 88% / 447, metamath_sv 90% / 465 |
+| mbpp | 59 vs 53 | 902 vs 1054 (-14%) | OK |
+| bfcl_simple | 84 vs 88 | 122 vs 143 (-15%) | OK vs both (CHECK vs choosing alone: -6.5 / -18%) |
+| bfcl_multiple | 77 vs 78 | 161 vs 175 (-8%) | OK |
+| bfcl_irrelevance | **98 vs 79** | 133 vs 129 | CHECK: built no-fit questions too easy |
+| ifeval | 58 vs 51 | **246 vs 316 (-22%)** | CHECK (new): thinks too SHORT; real 53% / 232, built 63% / 258; replies 354 vs 488 tokens |
+17/24 measures OK vs both references (15/24 vs choosing, q40 similar pattern). IFEval per instruction: no_comma 24%,
+number_paragraphs 17%, json_format 23%, two_responses 0% (12 answers) are the hard ones; mix matches IFEval's.
+Reading: math and no-fit are the two known gaps (dp4, now answering on both GPUs: 2,674 new candidates per half).
+IFEval thinking too short is NEW: the selection had too few long-thinking IFEval candidates (borrowed 984); dp4 does not
+touch IFEval, so it needs its own fix (dp5) before any training.
