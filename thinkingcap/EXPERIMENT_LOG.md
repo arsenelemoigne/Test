@@ -2525,3 +2525,22 @@ helps every type a little; it is the candidate for prompted answers in LUPIN ste
 math (+48-60%) but cost accuracy and leak more (the model talks about the example). Chain-of-draft breaks math (-30 pts).
 No prompt shortens IFEval-like questions; several lengthen them. Small sample (200 replies per source): a screen, not a score.
 - dp1 (dataset build + check) started on GPU 1. drpo3f at step 17/40 on GPU 2.
+
+### 2026-10-27 ~06:45 — dp1 (LUPIN step 0): pool built, representativeness check FAILS (15/24 measures OK)
+Pool: 9,580 questions (wanted 11,000). Prompt lengths match the choosing set in every part (by construction), but the
+original Qwen does NOT behave on the pool as on the choosing set (200 pool questions x 4 per part vs choosing x 4):
+| part | pool size | accuracy pool vs choosing | median thinking pool vs choosing | verdict |
+|---|---|---|---|---|
+| svamp | 3000 (gsm8k 819 / metamath_sv 2181, mix inverted) | 92 vs 91 OK | 512 vs 366 (+40%) | CHECK: math pool thinks 40% longer |
+| mbpp | **1055 / 3000** (kodcode: 1,994 dropped by the 8-gram check) | 56 vs 51 OK | 956 vs 1101 (-13%) OK | OK, but short of questions |
+| bfcl_simple | 1429 | **56 vs 91** | 138 vs 148 OK | CHECK: ToolACE simple calls fail 35 pts more |
+| bfcl_multiple | 714 | **62 vs 78** | 158 vs 182 OK | CHECK: -16 pts |
+| bfcl_irrelevance | **382 / 857** | 82 vs 77 OK | 164 vs 125 (+31%) | CHECK: thinks longer, short of questions |
+| ifeval | 3000 | **89 vs 49** | **190 vs 332 (-43%)** | CHECK: IFEval-like is far easier and shorter |
+Reading: matching prompt length is not enough; difficulty and thinking length differ by part. Only code passes.
+IFEval-like is the worst (an easy, short-thinking set: training on it would teach "be short" where the real test needs
+thought). Math: gsm8k_matched lacks short prompts, so metamath_sv filled the short bins (mix 27/73 instead of 70/30) and
+its answers think longer (540 vs gsm8k 456 vs choosing 366). Tools: ToolACE's graded calls are much harder (or noisier)
+than BFCL's. LUPIN step 1 stays blocked until a pool passes.
+- drpo3f-5 (fresh 240 x 8): +18.8% / -1.6 (its start, drpo3d-23, was +21.2% / +0.2): 5 more RL steps made it worse.
+- GPU 1 moved on to gold1 (old queue). GPU 2: drpo3f at step 20/40.
