@@ -130,6 +130,11 @@ def main():
                      + f"; accuracy {r['kept_accuracy_selection_answers']:.0f}% vs choosing {r['choosing_accuracy']:.0f}%"
                      + f"; median thinking {r['kept_median_thinking_selection_answers']:.0f} vs "
                      f"{r['choosing_median_thinking']:.0f}; borrowed {sum(borrowed.values())}; {r['sources']}")
+        if part == "ifeval":  # real IFEval-like rows vs prompts built from IFEval's instruction library
+            for kind in ("real", "built"):
+                rs = [r for r in chosen if r.get("origin", "real") == kind]
+                report[part][f"{kind}_prompts"] = {"kept": len(rs), "accuracy": acc(rs), "median_thinking": med(rs)}
+                lines.append(f"      ifeval {kind}: {len(rs)} kept, accuracy {acc(rs):.0f}%, median thinking {med(rs):.0f}")
         pool += [{k: v for k, v in row.items() if k != "_key"} | {"part": part} for row in chosen]
     # proportions: each benchmark an equal share (BFCL's three parts together one), BFCL split as its 400 / 200 / 240
     kept = Counter(r["part"] for r in pool)

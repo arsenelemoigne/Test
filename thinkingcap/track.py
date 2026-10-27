@@ -2183,7 +2183,8 @@ def buildpool2(args):
                              if per.update([r["part"]]) or per[r["part"]] <= args.dp_check_per_part))
     held = answer("check", check, seed=7)
     for tag, refs in (("both", [ROOT / "v4-base", BASE]), ("choosing", [ROOT / "v4-base"]), ("q40", [BASE])):
-        py("pool_check.py", "--rollouts", held, "--reference", *refs, "--out", BON / f"poolcheck-{name}-{tag}")
+        py("pool_check.py", "--rollouts", held, "--reference", *refs, "--out", BON / f"poolcheck-{name}-{tag}",
+           "--pool", selected)
     drive_sync("save")
 
 

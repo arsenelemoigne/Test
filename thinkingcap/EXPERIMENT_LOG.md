@@ -2668,3 +2668,8 @@ Both runs start from rc1-rl-40.
   toolace simple 3,061 / multiple 2,319 / no-fit 5,944 (11,324); ifeval_like 11,993 = **4,662 real + 7,331 built** from
   IFEval's instruction library (instruction counts 1/2/3: 6,759 / 3,969 / 1,265); KodCode-V1 (484k) loading.
   Note: 61% of the IFEval-like prompts are built, not real; the held-out check should report built vs real separately.
+- ~13:00 dp2 a running on GPU 1. Its IFEval-like candidates: 4,662 real + 7,331 built of 11,993 (61% built from
+  IFEval's library). select_pool.py and pool_check.py (--pool) now report IFEval real vs built separately
+  (accuracy, median thinking and tokens vs the references), so a pass carried by built prompts can be seen; select
+  pulls the new scripts when it starts, so dp2 uses them. gsm8k_easy supplies 2,579, just enough for 55% of the
+  4,800 math candidates.

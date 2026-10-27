@@ -58,6 +58,7 @@ def main():
     parser.add_argument("--reference", nargs="+", required=True,
                         help="the original model's evaluation runs on non-fresh sets (choosing set v4-base, questions_40 eval-base)")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--pool", help="the pool file: IFEval-like questions split into real rows and IFEval-library-built ones")
     parser.add_argument("--acc-tol", type=float, default=5.0)
     parser.add_argument("--len-tol", type=float, default=0.15)
     parser.add_argument("--cap-tol", type=float, default=3.0)
@@ -104,6 +105,21 @@ def main():
             if pp == part and len({s2 for (p2, s2) in by_source if p2 == part}) > 1:
                 st = stats(g)
                 lines.append(f"      - {s}: accuracy {st['accuracy']:.0f}%, median tokens {st['median_tokens']:.0f}")
+    if args.pool:  # dp2: 61% of IFEval-like is built from IFEval's library; a pass carried by built prompts is weaker
+        origin = {r["pool_id"]: r.get("origin", "real") for r in read(args.pool) if r.get("pool_id")}
+        split = defaultdict(lambda: defaultdict(list))
+        for r in read(args.rollouts):
+            if part_of(r) == "ifeval":
+                split[origin.get(r["id"], "real")][r["id"]].append(
+                    (bool(r["correct"]), r["output_tokens"], len(r.get("thinking_ids") or []) or r["output_tokens"],
+                     bool(r["truncated"])))
+        c = stats(ref["ifeval"])
+        for kind, groups in sorted(split.items()):
+            st = stats(groups)
+            lines.append(f"  ifeval {kind} prompts ({st['questions']} q): accuracy {st['accuracy']:.0f}% vs {c['accuracy']:.0f}%, "
+                         f"median thinking {st['median_thinking']:.0f} vs {c['median_thinking']:.0f}, "
+                         f"median tokens {st['median_tokens']:.0f} vs {c['median_tokens']:.0f}")
+            report.setdefault("ifeval_by_origin", {})[kind] = st
     instr = defaultdict(list)  # IFEval-like: pass rate per instruction id (the choosing run does not record them)
     for r in read(args.rollouts):
         if part_of(r) == "ifeval":
