@@ -2572,3 +2572,17 @@ Fix needed before any rerun: a KL/NLL anchor on all other tokens of the same rep
 </think>), a much lower lr or fewer steps, and a smoke test (generate 5 replies) before scoring.
 Warning: teach_stop.py (teach1c, queued on GPU 1 after bp1b) uses the same unanchored BCE on p("</think>").
 - drpo3f-15: +24.6% / +0.5; drpo3f-20: +22.5% / +0.4 (start drpo3d-23 was 21.2 / +0.2; step 10 was 23.6 / +0.2).
+
+### 2026-10-27 ~06:41 — bp1b: original Qwen + "Think briefly: keep your thinking under N tokens" (fresh 240 x 8)
+Test-time prompt (NOT a clean method; it only says what a distilled prompt could buy). Budgets svamp 400, mbpp 750,
+ifeval 200, bfcl 70. Reply tokens without -> with the prompt, accuracy change:
+| benchmark | tokens | saved | accuracy |
+|---|---|---|---|
+| SVAMP | 644 -> 344 | 47% | -2.8 |
+| IFEval | 703 -> 526 | 25% | -3.4 (budget words in 68% of thinkings vs 28%) |
+| MBPP+ | 2098 -> 1922 | 8% | -4.1 |
+| BFCL simple / multiple / irrelevance | ~200 -> ~200 | -1 to -3% | -1.2 / -0.6 / 0.0 |
+Overall (my computation, geometric mean of ratios, BFCL pooled ~1.02): ~22% saved at ~-2.7 pts. Worse than ps1 on
+training questions (+1.9 there); math halves but loses ~3 points; code and tools ignore the budget.
+Reading: distilling this prompt alone cannot reach the goal; at best a math-only ingredient.
+- GPU 1 then started teach1c (teach_stop.py, same unanchored BCE as gold1) — user asked whether to pause it.
