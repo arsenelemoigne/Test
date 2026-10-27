@@ -2489,3 +2489,8 @@ rl_train.py --drpo-solve-scale (RL2).
   Next on GPU 1: drop1, ps1, dp1, gold1, bp1b, teach1c, sb2.
 - stopV3-soup-100 (fresh 240 x 8): +10.0% / -0.6. The stop line from the original stays at 10-16% saved (soups 25-100); drpo3f resumed after step 2 and is at step 5.
 - stopV3 soups 150 / 200: +12.4% / +0.5, +16.2% / -0.9 (soup 300 scoring). Flat at 10-16% saved through soup 200.
+
+### 2026-10-27 ~04:00 — stopV3 soups 100/150/200 (fresh 240 x 8)
+- soup 100: +10.0% / -0.6; soup 150: +12.4% / +0.5; soup 200: +16.2% / -0.9 (mbpp +32% / 0.0, ifeval +21% / +1.6,
+  but svamp 0% / -3.7 and BFCL 7-8%). The stop line from the original Qwen stays at 10-16% saved at every length of
+  training: cut-label stop pairs alone do not move it far. Soup 300 next, then ps1 and dp1.
