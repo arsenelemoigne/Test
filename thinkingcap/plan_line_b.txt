@@ -107,7 +107,7 @@ promptsearch --name ps1 --start Qwen/Qwen3-0.6B
 # > right >= 1.5x longer (shorten capped at guard per type); math and ToolACE multiple-function calls get only
 # similar-length right > wrong pairs (no length push). DPO with the anchor, 3 seeds, soups 25-200 on fresh x8.
 # Target: beat round 1 (40.4% / -0.9) without stacking.
-balround --name sp1 --start Qwen/Qwen3-0.6B --data-seed 71 --kod-file data/kodcode3.jsonl --bal-questions 12000 --bal-samples 4 --bal-mix metamath_sv=0.25,ifeval_like=0.25,toolace=0.17,hermes_tools=0.08 --bal-kod 0.25 --bal-protect metamath_sv,toolace/multiple --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 --seeds 0 1 2
+# PAUSED (user, 27 Oct: build and verify a representative dataset first): balround --name sp1 --start Qwen/Qwen3-0.6B --data-seed 71 --kod-file data/kodcode3.jsonl --bal-questions 12000 --bal-samples 4 --bal-mix metamath_sv=0.25,ifeval_like=0.25,toolace=0.17,hermes_tools=0.08 --bal-kod 0.25 --bal-protect metamath_sv,toolace/multiple --tg-save-every 25 --dpo-steps 25 50 75 100 150 200 --seeds 0 1 2
 # gold1 (user, 26 Oct: option B): stop-token training with the lots' own labels as teacher (stop_gold.py). At every
 # labelled paragraph end of lots B..B5 + V2, p(</think>) -> 1 where the forced answers are as right as the full thinking
 # (and >= 25%), -> 0 where not; no reply imitated, no whole-reply pairs; never-solved replies and GSM-IC/Plus left out;
