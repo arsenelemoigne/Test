@@ -2481,3 +2481,9 @@ soups, strength blend, per-part adapters; screen on choosing x4 -> confirm on fr
 DRPO, solve-scaled DRPO, ALP, budget reward, ShorterBetter, DLER, progressive cap, stop reward, checker reward, online DPO,
 per-part lambda). Built today: lupin_pairs.py (R1-R5 + difficulty rule), lupin_checker.py + dpo.py --checker (M3),
 rl_train.py --drpo-solve-scale (RL2).
+
+### 2026-10-27 ~02:55 — both runtimes restarted ~02:11 (cause not seen here); the resume work held
+- Both notebooks show setup + queue cells started 02:11-02:12 on fresh machines (setup rebuilt data/train and questions).
+- GPU 2: drpo3f resumed "after step 2 (adapter, optimizer and log restored)", now sampling step 3.
+- GPU 1: finished stages skipped via the light restore; stopV3 soups 25/50/75 kept; now scoring soup 100 on fresh x8.
+  Next on GPU 1: drop1, ps1, dp1, gold1, bp1b, teach1c, sb2.
