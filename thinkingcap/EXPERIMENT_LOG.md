@@ -2424,3 +2424,15 @@ original model answer 200 pool questions per part x4 and compares, part by part,
 capped share with its v4-base run on the choosing set (tolerance +-5 pts, +-15%, +-3 pts, or inside the choosing set's
 own interval). Only once every part reads OK do we generate answers for the whole pool and try pair strategies.
 Not yet in the check: the answer-timing match (success at 20-40% of the thinking vs full), which needs cut labels.
+
+### 2026-10-27 — PRIORITY (user): the final model, LUPIN
+- Step 0: dataset proven representative (dp1: buildpool, choosing set only).
+- Step 1: the original model answers the whole pool; optionally also under the best shortening prompt from ps1
+  (prompt removed afterwards = prompt distillation).
+- Step 2: several pair strategies from the same answers -> best = LUPIN0; variants LUPIN0.1, 0.2, ... by pair type.
+- Step 3: LUPIN1.0 = LUPIN0 + our guarded online RL (drpo).
+- Idea to test as a variant (user): "backward" practice, answer -> question (like reciting backwards to memorize).
+  Related work: the reversal curse (Berglund et al. 2023: "A is B" training does not teach "B is A"); RevThink (Chen et
+  al. 2024, "Reverse Thinking Makes LLMs Stronger Reasoners": training on forward reasoning + the backward question +
+  backward reasoning raised reasoning accuracy); FOBAR / MetaMathQA GSM_FOBAR (already in our math: questions asked
+  backwards from the answer). None measured thinking LENGTH; to test as an extra NLL task mixed into LUPIN0's DPO.
