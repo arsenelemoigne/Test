@@ -2837,3 +2837,10 @@ touch IFEval, so it needs its own fix (dp5) before any training.
   words (Dolly bases were shorter), 1/2/3-instruction split 6,764 / 3,966 / 1,263 as IFEval. 2.5x oversample, answered
   on both GPUs, re-selection over dp4's answered pool + these, full held-out check. Also: dp4's leave-out of dp3's
   gsm8k_easy now keys on the old instruction text, so dp4's fixed gsm8k_easy rows stay in dp5's pool.
+- dp4 selection (GPU 1, selection answers): math median thinking 422 vs 384 (dp3 507), accuracy 85 vs 87; sources
+  metamath_easy 1340, gsm8k_easy (fixed wording) 521, gsm8k_matched 366, metamath_sv 700, gsm8k_easy_test 71. No-fit
+  94% vs 80% (dp3 97%): still too easy. IFEval unchanged (248 vs 290; dp5 targets it). Proportions all OK. Held-out
+  check running on GPU 1.
+- GPU 2: dp5 b failed at once ("dp4-all's answered pool is not here": GPU 1 had not finished dp4's selection yet), its
+  queue ended and the runtime released itself. poolfix now waits up to 8 h for the reused pool on Drive. GPU 1 runs
+  dp5 a, b and select by itself anyway; reconnecting GPU 2 would only halve dp5's answering time.

@@ -2215,6 +2215,13 @@ def poolfix(args):
     drive_sync("restore", only=[f"data/poolcand-{old}.jsonl", f"runs/bon/probe-poolcand-{old}", f"data/cand-{name}.jsonl",
                                 f"data/poolcand-{name}.jsonl", "runs/mvtf/eval-base", "runs/mvtf/v4-base"])
     old_pool, old_answers = Path(f"data/poolcand-{old}.jsonl"), BON / f"probe-poolcand-{old}" / "rollouts.jsonl"
+    import time
+    for _ in range(96):  # the pool being reused may still be built by the other runtime: up to 8 hours
+        if old_pool.exists() and old_answers.exists():
+            break
+        print(f"waiting for {old}'s answered pool on Drive", flush=True)
+        time.sleep(300)
+        drive_sync("restore", only=[f"data/poolcand-{old}.jsonl", f"runs/bon/probe-poolcand-{old}"])
     assert old_pool.exists() and old_answers.exists(), f"{old}'s answered pool is not here"
     cand, pool = Path(f"data/cand-{name}.jsonl"), Path(f"data/poolcand-{name}.jsonl")
     if not cand.exists() and not pool.exists():
