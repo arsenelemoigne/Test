@@ -228,6 +228,7 @@ def main():
     parser.add_argument("--dp-chunk", type=int, default=150, help="poolmore: questions per generation chunk (dp10, code only: "
                         "600, so a few very long answers do not leave the GPU nearly idle at the end of every chunk)")
     parser.add_argument("--dp-more-cap", type=int, default=0, help="poolmore: most questions answered per half (0: all)")
+    parser.add_argument("--dp-if-poor", default="", help="poolmore: run only if this pool's check leaves code off (dp11: dp10)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2367,6 +2368,21 @@ def poolmore(args):
     import hashlib
     import time
     name, old = args.name, args.dp_reuse
+    if args.dp_if_poor:  # dp11: only when the earlier pool's code is still off (user rule, see code_close_enough)
+        for _ in range(96):
+            drive_sync("restore", only=[str(BON / f"poolcheck-{args.dp_if_poor}-both")])
+            close, why = code_close_enough(args.dp_if_poor)
+            if close is not None:
+                break
+            print(f"{name}: waiting for {args.dp_if_poor}'s check ({why})", flush=True)
+            time.sleep(300)
+        print(f"{name}: {args.dp_if_poor} {why} -> {'close enough, SKIPPED' if close else 'still off, RUNNING'}", flush=True)
+        marker = BON / (f"{name}-skipped" if close else f"{args.dp_if_poor}-superseded")
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(why + "\n")
+        drive_sync("save")
+        if close:
+            return
     parts = set(args.dp_more_parts.split(","))
     val = f"questions_val{VAL_SEED}"
     union, answers = Path(f"data/poolcand-{old}.jsonl"), BON / f"probe-poolcand-{old}" / "rollouts.jsonl"
@@ -2443,6 +2459,32 @@ def poolmore(args):
     drive_sync("save")
 
 
+def code_close_enough(pool):
+    """dp11's rule (user, 28 Oct night): run another 1,200 code questions per half unless the pool's held-out check
+    (poolcheck-<pool>-both) has code within 5 accuracy points AND median / p75 thinking within 10%.
+    Returns (close, text) or (None, reason) when the report is not there."""
+    import re as _re
+    report = BON / f"poolcheck-{pool}-both" / "report.txt"
+    if not report.exists():
+        return None, f"no {report}"
+    block, inside = [], False
+    for line in report.read_text().splitlines():
+        if _re.match(r"\s{2}mbpp\b", line):
+            inside = True
+            continue
+        if inside and _re.match(r"\s{2}\S", line) and not line.startswith("      "):
+            break
+        if inside:
+            block.append(line)
+    acc = next((float(m.group(1)) for l in block if (m := _re.search(r"accuracy .*\] ([+-][\d.]+)", l))), None)
+    pct = {k: float(m.group(1)) for l in block for k in ("median_thinking", "p75_thinking")
+           if l.strip().startswith(k) and (m := _re.search(r"\] ([+-]\d+)%", l))}
+    if acc is None or len(pct) < 2:
+        return None, "code lines not found: " + " | ".join(block[:4])
+    close = abs(acc) < 5 and all(abs(v) < 10 for v in pct.values())
+    return close, f"code accuracy {acc:+.1f} pts, median {pct['median_thinking']:+.0f}%, p75 {pct['p75_thinking']:+.0f}%"
+
+
 def lupinanswers(args):
     """LUPIN step 1: 10 answers per question on the final pool (user, 28 Oct), by the ORIGINAL model. The pool's 4
     selection answers are reused; this answers 6 more (another sampling seed), half the pool per runtime (--dp-step).
@@ -2450,6 +2492,11 @@ def lupinanswers(args):
     "verdict: ALL OK"; otherwise it says so and does nothing. Data only: no training here."""
     import time
     name = args.la_pool
+    for marker in (f"{name}-skipped", f"{name}-superseded"):  # dp10 / dp11: only the pool that is used gets answers
+        drive_sync("restore", only=[str(BON / marker)])
+        if (BON / marker).exists():
+            print(f"lupinanswers: {name} {marker.split('-')[-1]} ({(BON / marker).read_text().strip()}); nothing to do", flush=True)
+            return
     report = BON / f"poolcheck-{name}-both" / "report.txt"
     pool = Path(f"data/pool-{name}.jsonl")
     for _ in range(96):  # the other runtime may still be selecting and checking this pool: up to 8 hours

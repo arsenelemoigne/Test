@@ -3071,3 +3071,9 @@ so the code part moves by several points and its long tail (hard questions, long
 - ~22:30: Colab displays never reattached after the Mac shutdown; the user reconnected, then both sessions were restarted (Runtime > Restart session; the machines came back fresh: full setup + Drive mount approved by the user) and the plans relaunched with --dp-more-cap 1200. At 22:55 both still in the plan runner's first Drive restore (all pool answers, adapters: several GB on a fresh machine); dp10 resumes from the 600 code questions per half saved on Drive. New estimate: answering ~00:40, check ~01:30.
 - 23:15: dp10 resumed on both GPUs but from ZERO (0 already sampled, 1,200 to go per half): the first 600-question chunks had not reached Drive before the old runtimes ended (fresh machines came back). 2 chunks x ~80 min per GPU: answering ~01:55, check ~02:45.
 - dp11 staged (commented) in both plans: next 1,200 code questions per half to 8 answers (dp8-dp10 answers reused), check seed 19; runs only if dp10's check is poor.
+- ~01:00 (user: "run 1,200 more on code overnight, except if we get <10% length and <5% accuracy"): dp11 now queued
+  for real, decided by the runtime itself (track.py code_close_enough): after dp10's check, if code (vs both) is within
+  5 accuracy points AND median and p75 thinking within 10%, dp11 is skipped (marker dp11-skipped) and dp10 goes to the
+  gated 10 answers; otherwise dp11 runs (next 1,200 code questions per half to 8 answers, check seed 19; marker
+  dp10-superseded, so only dp11 gets the 10 answers, still gated on its check being ALL OK). Tested on dp9's numbers:
+  +9.2 pts / -15% / -31% -> runs.
