@@ -225,6 +225,8 @@ def main():
     parser.add_argument("--dp-more-extra", default="", help="poolmore: earlier poolmores whose answers are merged in, comma-separated (dp9: dp8; dp10: dp8,dp9)")
     parser.add_argument("--dp-more-target", type=int, default=0,
                         help="poolmore: answer only questions with fewer than this many answers, up to it (0: all, +samples)")
+    parser.add_argument("--dp-chunk", type=int, default=150, help="poolmore: questions per generation chunk (dp10, code only: "
+                        "600, so a few very long answers do not leave the GPU nearly idle at the end of every chunk)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2398,7 +2400,7 @@ def poolmore(args):
             if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < args.dp_more_samples * len(half):
                 py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", 1000000,
                    "--samples", args.dp_more_samples, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype,
-                   "--generate-only", "--chunk", 150, "--max-questions", len(half), "--seed", 5)
+                   "--generate-only", "--chunk", args.dp_chunk, "--max-questions", len(half), "--seed", 5)
             (probe / "poolcand.sha256").write_text(digest)
             drive_sync("save")
             return

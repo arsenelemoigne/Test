@@ -3055,3 +3055,4 @@ same data seed 81 as dp9, so only the code selection changes; held-out check see
 from the SAME code candidates and got 56 / 55 / 62% on new answers: 4 answers per question misjudge hard code (a question
 right 1/4 times is often really 2-3/4), and each new data seed reshuffles which borderline questions fill the cells,
 so the code part moves by several points and its long tail (hard questions, long thinking) moves with it.
+- ~20:50: dp10 code answering very slow at chunk 150 (~20 min per chunk, ~600 tokens/s: a few capped code answers keep the GPU nearly idle at each chunk's end; ~7 h per half). Restarted with --dp-chunk 600 (resumes from the saved chunks).
