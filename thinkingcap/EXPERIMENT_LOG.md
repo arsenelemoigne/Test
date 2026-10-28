@@ -2971,3 +2971,8 @@ unchanged: lupinanswers dp8 runs only on "verdict: ALL OK". No training.
   (ifeval 5,299, no-fit 2,033, simple 1,712), seed 5; half b (GPU 2) the other 9,044. Estimate ~2.5 h of answering,
   then GPU 1 selects on 8 answers (4 thinking bins) and runs the seed-9 held-out check (~45 min). Checks every 30 min.
 - ~14:30: dp8 both halves at 3,450/9,044 questions (~1.7 min per 150-question chunk, ~2,300 tokens/s); answering done in ~1 h.
+- ~15:45: dp8 answering done on both halves (9,044 x4 each). dp8 selection (8 answers for tools / IFEval, 4 thinking bins):
+  12,000 questions, proportions all OK. vs choosing: svamp 84 vs 87 / 396 vs 384; mbpp 56 vs 54 / 1028 vs 1051;
+  simple 83 vs 87 / 130 vs 145 (glaive 660, toolace 766); multiple 77 vs 77 / 160 vs 170; no-fit 87 vs 80 / 140 vs 131
+  (still too easy even on 8 answers: the candidates lack hard no-fit questions, selection cannot fix that);
+  IFEval 56 vs 52 / 284 vs 290. Held-out check (seed 9, 1,200 questions x4) running on GPU 1; GPU 2 waits on the gate.
