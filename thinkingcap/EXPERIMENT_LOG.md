@@ -2996,3 +2996,12 @@ Gate: closed (both not ALL OK): lupinanswers dp8 skipped. Choosing-only adds mbp
   in BFCL's calculation style: nearest functions are synonyms (rank 0-60: 4/200 kept, 112 YES); ranks 15-60 give
   same-style wrong functions (BMI -> calculate_speed, rectangle area -> calculate_emission): 123/150 kept; ranks 60-200
   140/150 but less related. Full run started: --rank 15,60 --singles 1 --max 8000 (unique questions), ~$1.
+
+### 2026-10-28 ~17:15 — dp9 queued (user: "yes queue dp9 once haiku finishes")
+- Glaive no-fit Haiku run done (report below); kept rows committed as nofit_glaive_verified.jsonl (prepare_types source
+  glaive_nofit_verified, origin near-verified-glaive).
+- dp9n (poolfix, both GPUs): new candidates for bfcl_simple (the Glaive simple rows not yet used) and bfcl_irrelevance
+  (Glaive no-fit), oversample 3, x4 answers; union with dp7c-all only (no selection).
+- dp9 (poolmore): every svamp / simple / no-fit / IFEval question brought to 8 answers (dp8's 4 extra reused, the rest
+  answered with seed 5), selection on 8 answers with quartile thinking bins, held-out check on seed 13 (seeds 7 and 9 shaped
+  the design). Gate unchanged.
