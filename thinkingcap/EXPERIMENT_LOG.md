@@ -2875,3 +2875,18 @@ Math sources now: gsm8k_easy (fixed wording) 88% / 366, gsm8k_easy_test 83% / 34
   92 no-fit of 478) added as candidates. Few simple ones: may not be enough to close the simple gap.
 - ~03:00: Google Drive is FULL ('Org storage full', 499.48 GB used). Saves to Drive may silently fail (rsync without check), so GPU 2 waits for dp4-all forever. GPU 1 holds everything on its own disk and runs dp5 a+b+select, dp6 a+b+select and now both lupinanswers halves alone. Needs the user in the morning: free Drive space (old merged models, as drop1 did) or results stay only on GPU 1's disk.
 - dp5 selection (selection answers): IFEval median thinking 298 vs 290 (dp4 248), accuracy 54 vs 52, borrowed 189 (dp4 984): the no_robots-based prompts fill the long-thinking cells. IFEval kept: real 494, Dolly-built 690, no_robots-built ~1,817. Other parts as dp4. Held-out check running on GPU 1.
+
+### 2026-10-28 ~04:00 — dp5 held-out check (first with p25/p75): IFEval FIXED; code tail found short; dp7 queued
+vs choosing + questions_40 (80 q per part), new answers, 200 pool q per part; 30/36 measures OK:
+| part | accuracy | median thinking | p25 | p75 | failing |
+|---|---|---|---|---|---|
+| svamp | 86 vs 88 | 408 vs 366 (+11%) | 329 vs 282 (+17%) | 561 vs 585 | p25 |
+| mbpp | 58 vs 53 | 885 vs 1054 (-16%, in interval) | 574 vs 586 | **1446 vs 2220 (-35%)** | p75 |
+| bfcl_simple | 86 vs 88 | 120 vs 143 (-16%) | 102 vs 117 | 152 vs 199 (-24%) | median, p75 |
+| bfcl_multiple | 78 vs 78 | 154 vs 175 | 124 vs 135 | 191 vs 224 | none |
+| bfcl_irrelevance | **96 vs 79** | 140 vs 129 | 115 vs 111 | 183 vs 172 | accuracy |
+| ifeval | 55 vs 51 | 286 vs 316 (-9%) | 210 vs 231 | 402 vs 457 | **none (fixed)** |
+IFEval by origin: no_robots-built 131 q 52% / 305; Dolly-built 38 q 62% / 278; real 31 q 61% / 240.
+- dp6 (running) targets svamp p25, bfcl_simple, no-fit. New dp7 targets code's missing long tail: KodCode-V1 medium+hard,
+  tasks up to 160 tokens and solutions up to 400; re-selection over dp6's pool. The 10-answer step now waits for dp7's
+  check (gate on poolcheck-dp7-both ALL OK).

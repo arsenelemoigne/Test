@@ -175,7 +175,12 @@ poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_sim
 poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step select
 # LUPIN step 1 (user): 10 answers per question on dp6's pool (4 reused + 6 new). GATED in code: does nothing unless
 # poolcheck-dp6-both says ALL OK. Data only, no training.
-lupinanswers --la-pool dp6 --dp-step a
+# dp7 (28 Oct ~04:00, user asleep; check now compares p25/p75): dp5's code pool lacks the long-thinking tail
+# (p75 thinking 1,446 vs 2,220). New candidates: KodCode-V1 medium+hard, longer tasks; re-selection over dp6's pool.
+poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp --dp-sources kodcode --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
+poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp --dp-sources kodcode --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
+poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp --dp-sources kodcode --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select
+lupinanswers --la-pool dp7 --dp-step a
 # Drive full (28 Oct ~03:00): GPU 2 cannot get files, so GPU 1 also does the other half
-lupinanswers --la-pool dp6 --dp-step b
+lupinanswers --la-pool dp7 --dp-step b
 end

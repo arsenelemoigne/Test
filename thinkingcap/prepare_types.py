@@ -47,6 +47,8 @@ def main():
                         help="toolace (dp4): also no-fit questions offered only the functions the reply did not call")
     parser.add_argument("--ifeval-match", type=int, default=0,
                         help="ifeval_like v2 (dp2): this many questions drawn to IFEval's instruction mix (0: old filter)")
+    parser.add_argument("--kod-difficulty", default="easy,medium",
+                        help="kodcode: GPT difficulty labels kept (dp7 adds hard: dp5's code pool lacked the long-thinking tail)")
     parser.add_argument("--kod-dataset", default="KodCode/KodCode-Light-RL-10K",
                         help="kodcode: KodCode/KodCode-V1 for a big pool (the 10K slice runs short after contamination)")
     args = parser.parse_args()
@@ -412,7 +414,7 @@ def kodcode(args, rng):
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
     size = lambda text: len(tokenizer.encode(text or "", add_special_tokens=False))
     for task in load_dataset(args.kod_dataset, split="train"):
-        if task["style"] != "instruct" or task["gpt_difficulty"] not in ("easy", "medium"):
+        if task["style"] != "instruct" or task["gpt_difficulty"] not in args.kod_difficulty.split(","):
             continue
         if len(task["test_info"] or []) != 1:
             continue

@@ -2228,7 +2228,9 @@ def poolfix(args):
     cand, pool = Path(f"data/cand-{name}.jsonl"), Path(f"data/poolcand-{name}.jsonl")
     if not cand.exists() and not pool.exists():
         py("prepare_types.py", "--sources", args.dp_sources, "--per-source", 1000000, "--seed", args.data_seed,
-           "--out", cand, "--tool-clean", "--tool-near", "--ifeval-match", args.dp_ifeval)
+           "--out", cand, "--tool-clean", "--tool-near", "--ifeval-match", args.dp_ifeval,
+           *(["--kod-dataset", "KodCode/KodCode-V1", "--kod-max-task", 160, "--kod-max-solution", 400,
+              "--kod-difficulty", "medium,hard"] if "kodcode" in args.dp_sources else []))
     if not pool.exists():
         py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", parts,
            "--tool-sources", "toolace,hermes_tools",
