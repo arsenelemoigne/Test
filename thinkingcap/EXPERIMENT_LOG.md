@@ -3007,3 +3007,7 @@ Gate: closed (both not ALL OK): lupinanswers dp8 skipped. Choosing-only adds mbp
   the design). Gate unchanged.
 - Glaive no-fit Haiku report: 8,000 candidates -> NO+NO 6,070 kept (76%), NO/UNSURE 636, UNSURE/NO 321, UNSURE 823, UNSURE/YES 95, YES 54 (~$1).
 - ~17:40: dp9n new candidates 4,068 (bfcl_simple 2,774 Glaive, no-fit 1,294 Glaive-verified; 3,610 Glaive no-fit dropped by the 8-gram / length window, prompt lengths a bit short: no-fit median 396 vs 416, simple 383 vs 427). Both GPUs answering their 2,034 x4, fast (~25 s per chunk).
+- ~19:50: dp9 answering done; selection on 8 answers (12,000, proportions OK). vs choosing: svamp 86 vs 87 / 398 vs 384
+  (dp8 84); mbpp 55 vs 54 / 1034 vs 1051; simple 84 vs 87 / 132 vs 145 (glaive 880, toolace 547; dp8 83); multiple 77 vs 77;
+  no-fit 84 vs 80 / 142 vs 131 (glaive 212 + toolace 646; dp8 87); IFEval 56 vs 52 / 284 vs 290. Held-out check seed 13
+  running on GPU 1 (300/1,200).
