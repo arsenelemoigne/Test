@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -1977,6 +1977,24 @@ def dropmodels(args):
     print(f"dropmodels: freed {freed / 1e9:.1f} GB; kept for lack of adapters: {', '.join(kept) or 'none'}", flush=True)
 
 
+def drivereport(args):
+    """What fills Drive (user, 28 Oct: free ~40 GB): size of each top folder of the project copy, then every merged model
+    with its size, date and whether an adapter folder of the same run is kept (so it can be rebuilt). Read only."""
+    def size(path):
+        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+    for top in sorted(p for p in DRIVE.iterdir() if p.is_dir()):
+        print(f"drivereport: folder {top.name}: {size(top) / 1e9:.1f} GB", flush=True)
+    adapters = sorted(p.name for p in (DRIVE / "adapters").iterdir() if p.is_dir())
+    print("drivereport: adapters " + " ".join(adapters), flush=True)
+    import time
+    for m in sorted((DRIVE / "models").iterdir(), key=lambda p: p.stat().st_mtime):
+        if m.is_dir():
+            run = m.name.split("-soup-")[0].rsplit("-", 1)[0] if "-soup-" not in m.name else m.name.split("-soup-")[0]
+            near = [a for a in adapters if a.startswith(run)]
+            print(f"drivereport: model {m.name} {size(m) / 1e9:.2f} GB {time.strftime('%Y-%m-%d', time.localtime(m.stat().st_mtime))} "
+                  f"adapters: {','.join(near) or 'NONE'}", flush=True)
+
+
 def stopgold(args):
     """Stop-token training with the lots' labels as teacher (stop_gold.py): at every labelled paragraph end of the lots'
     own replies, p("</think>") is trained toward 1 where the cut's forced answers are as right as the full thinking and 0
@@ -3152,7 +3170,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

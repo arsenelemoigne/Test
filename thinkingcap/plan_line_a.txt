@@ -146,6 +146,8 @@
 # dp2 crashed (zh), replaced by dp3: buildpool2 --name dp2 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # dp3 = dp2 rebuilt (27 Oct ~14:00): dp2 a crashed while answering, IFEval's checker has no language code 'zh' (KeyError);
 # every IFEval row is now tried against the checker when candidates are built. New name: no stale dp2 files reused.
+# user, 28 Oct: Drive is full, free ~40 GB: first list what is there (read only)
+drivereport --name dr2
 buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # user away (27 Oct ~16:00): GPU 1 is stuck in dp2's select wait until ~21:30, so GPU 2 also answers half a
 # GPU 1 was unstuck by the user and runs half a itself (27 Oct evening): buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
