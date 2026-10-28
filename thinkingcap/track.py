@@ -1971,7 +1971,8 @@ def dropmodels(args):
     for pair in args.drop:
         model, adapter = pair.split("=")
         target, backup = DRIVE / "models" / model, DRIVE / "adapters" / adapter
-        if not target.exists():
+        if not target.exists():  # still clear a local copy: the next save would put it back (drop2's soups came back)
+            shutil.rmtree(Path("models") / model, ignore_errors=True)
             print(f"dropmodels: {model}: not on Drive", flush=True)
             continue
         if not backup.exists() or not any(backup.iterdir()):

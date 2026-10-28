@@ -3017,3 +3017,20 @@ Gate: closed (both not ALL OK): lupinanswers dp8 skipped. Choosing-only adds mbp
   the eval per type, shown to the user; LUPIN v1 training only after the user approves.
 - Drive cleanup asked (user: only what is really unnecessary, log everything first): drivereport (read only) queued on
   GPU 1 right after dp9's check; the delete list goes to the user before anything is removed.
+
+### 2026-10-28 ~20:45 — dp9 HELD-OUT CHECK (seed 13, 200 per part x4): 34/36 vs both, 30/36 choosing
+| part | accuracy (both) | median thinking | verdict |
+|---|---|---|---|
+| svamp | 88 vs 88 (dp8 81) | 416 vs 366 (+14%); p25 308/282, p75 626/585 | OK (fixed by 8 answers) |
+| mbpp | 62 vs 53 [44,64] | 898 vs 1054 (-15%); **p75 1541 vs 2220 (-31%)** | p75 CHECK (code still selected on 4 answers; dp8 p75 -17%) |
+| bfcl_simple | 84 vs 88 [82,93] (dp8 81) | 133 vs 143; **p75 166 vs 199 (-17%, CI 171-221)** | p75 CHECK (glaive 87%/149, toolace 79%/176) |
+| bfcl_multiple | 77 vs 78 | 155 vs 175 | OK |
+| bfcl_irrelevance | 85 vs 79 [70,87] (dp8 87) | 143 vs 129 | OK (glaive 87%, toolace 85%) |
+| ifeval | 58 vs 51 | 286 vs 316; p75 395 vs 457 (-14%) | OK |
+Choosing-only adds: mbpp p75 -47%, simple p75 -20%, multiple median -15% / p75 -16%, IFEval reply -15% / p75 -16%.
+Gate: closed, lupinanswers dp9 skipped on both GPUs; both queues ended.
+
+drivereport drive3 (GPU 1, read only): models 47.1 GB (39 merged; drop2's stopV2/stopV3 soups are BACK: GPU 1's
+runtime still held local copies and its next save re-uploaded them; dropmodels now also clears local copies when the
+Drive copy is already gone, and must run on BOTH runtimes), adapters 28.2 GB, runs 23.5 GB, data 2.0 GB. Every model's
+adapters are on Drive. Delete list proposed to the user (nothing removed yet).
