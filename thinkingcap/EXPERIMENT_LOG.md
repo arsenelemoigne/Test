@@ -2970,3 +2970,4 @@ unchanged: lupinanswers dp8 runs only on "verdict: ALL OK". No training.
 - dp8 started on both GPUs (user reconnected both runtimes; scripts at e47cc3b). Half a (GPU 1): 9,044 candidates x4
   (ifeval 5,299, no-fit 2,033, simple 1,712), seed 5; half b (GPU 2) the other 9,044. Estimate ~2.5 h of answering,
   then GPU 1 selects on 8 answers (4 thinking bins) and runs the seed-9 held-out check (~45 min). Checks every 30 min.
+- ~14:30: dp8 both halves at 3,450/9,044 questions (~1.7 min per 150-question chunk, ~2,300 tokens/s); answering done in ~1 h.
