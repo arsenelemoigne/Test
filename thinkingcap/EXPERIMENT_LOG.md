@@ -2923,3 +2923,25 @@ to free quota). Every one is superseded or failed, and its adapter is kept. Rebu
 Kept models: rc1-rl-40, rc1-soup-30, ca1-soup-10, stopB3-soup-25, stopB5 soups, sb1-*, drpo3b-*, drpo3d-*, drpo3f-*,
 stopV3-soup-300, mf1-soup-25, drpo1-*. All scores, adapters, lots and answers stay.
 - drop2 done on GPU 2: 37 models removed, freed 44.7 GB (now in the Drive trash: the user empties it). GPU 2 then started dp7c half b (both GPUs on dp7c).
+
+### 2026-10-28 — SUMMARY: the LUPIN training dataset, dp1 → dp7c (state at dp7c answering)
+Goal (user): ~12,000 training questions that behave like the evaluation for the ORIGINAL Qwen, per part (SVAMP, MBPP+,
+IFEval, BFCL simple / multiple / no-fit), each benchmark 25% (BFCL split 400 / 200 / 240), checked on NEW answers against
+the choosing set (x4) + questions_40 (x2); the fresh set is never used. No LUPIN training before the check passes and
+the user has seen it (hard gate, also in code for the 10-answer step).
+Pool check, held-out answers, measures OK vs both references (out of 24 until dp4, 36 from dp5 with p25 / p75):
+| pool | math | code | IFEval | simple | multiple | no-fit | OK |
+|---|---|---|---|---|---|---|---|
+| dp1 | +40% thinking | short of questions | 89 vs 49% right | 56 vs 91% (grading) | -16 pts | +31% thinking | 15/24 |
+| dp3 | +41% thinking (format bug) | OK | -22% thinking | OK | OK | 98 vs 79% | 17/24 |
+| dp4 | OK (+14%) | OK | -26% thinking | -19% thinking | OK | 94 vs 79% | 17/24 |
+| dp5 | p25 +17% | p75 -35% | **OK** | -16% median | OK | 96 vs 79% | 30/36 |
+| dp6 | accuracy 83 vs 88 | p75 -31% | OK | -17% median | OK | 91 vs 79% | 29/36 |
+| dp7c | (running) | KodCode-V1 medium+hard | — | Glaive one-call | — | Haiku-verified one-function near | |
+Bugs found and fixed on the way: ToolACE "int" types (BFCL rejects right calls); ungrounded ToolACE references; undecodable
+replies labelled no-fit; IFEval-like instruction mix too easy; IFEval language codes the checker lacks (crash); GSM8K easy
+problems with the wrong answer instruction (25% unreadable); no-fit candidates too easy (unrelated functions); BFCL's narrow
+one-function prompt-length window; hard code answers too slow (dp7 -> capped dp7c).
+Infra this night: Drive full (499.5 / 540 GB org) -> drop2 freed 44.7 GB, user emptied the trash -> 411.7 GB used (Drive
+129.5 GB); GPU 2 was blocked until then, now on dp7c half b. Next: dp7c select + check -> if ALL OK, 6 more answers per
+question (10 total) -> pairs selected to the evaluation's distribution -> user review -> LUPIN v1.
