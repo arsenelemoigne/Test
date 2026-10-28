@@ -3098,3 +3098,4 @@ Built and queued after the 10 answers (both GPUs):
   GPU 2: lp-l2s75 (long2short, protection p<0.75), lp-adar1 (Ada-R1 + protection).
   Next: the best 2 -> 3 seeds + soups on the fresh set x8; code-only cut pairs (strict labels, small dose) on the best;
   then LUPIN v2 (v1 answers a new matched sample).
+- Red-flag rule (user, 29 Oct ~02:00: 'let it drift to <10% for any one data type'): a screen variation is stopped/flagged only if it loses 10 points or more on any one data type at every checkpoint. Finalist rule unchanged (overall accuracy change better than -1 on the choosing set).
