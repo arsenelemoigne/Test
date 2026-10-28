@@ -170,9 +170,9 @@ poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_buil
 poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step select
 # dp6 (user, 28 Oct): harder no-fit questions with Haiku-verified labels (nofit_near_verified.jsonl, made on the Mac)
 # + more short math candidates; re-selection over dp5's answered pool + these; full held-out check (now also p25/p75).
-poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance --dp-sources toolace_near_verified,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step a
-poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance --dp-sources toolace_near_verified,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step b
-poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance --dp-sources toolace_near_verified,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step select
+poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step a
+poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step b
+poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step select
 # LUPIN step 1 (user): 10 answers per question on dp6's pool (4 reused + 6 new). GATED in code: does nothing unless
 # poolcheck-dp6-both says ALL OK. Data only, no training.
 lupinanswers --la-pool dp6 --dp-step a

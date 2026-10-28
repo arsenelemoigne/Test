@@ -2231,6 +2231,7 @@ def poolfix(args):
            "--out", cand, "--tool-clean", "--tool-near", "--ifeval-match", args.dp_ifeval)
     if not pool.exists():
         py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", parts,
+           "--tool-sources", "toolace,hermes_tools",
            "--per-benchmark", round(args.dp_per_benchmark * args.dp_oversample), "--math-mix", args.dp_math_mix,
            "--seed", args.data_seed, "--out", pool)
         seen = {json.dumps(json.loads(l)["prompt"]) for l in old_pool.read_text().splitlines() if l.strip()}
@@ -2243,7 +2244,7 @@ def poolfix(args):
         pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
         print(f"{name}: {len(rows)} new candidates {dict(count)}", flush=True)
         drive_sync("save")
-    sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,ifeval_like,ifeval_built"
+    sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools,ifeval_like,ifeval_built"
     import hashlib
     import time
     digest = hashlib.sha256(pool.read_bytes()).hexdigest()[:16]
@@ -2340,7 +2341,7 @@ def lupinanswers(args):
     drive_sync("restore", only=[str(out)])
     if not (out / "rollouts.jsonl").exists() or sum(1 for _ in (out / "rollouts.jsonl").open()) < args.la_samples * n:
         py("probe_curve.py", "--data", data, "--sources", "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,"
-           "kodcode,toolace,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.la_samples,
+           "kodcode,toolace,hermes_tools,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.la_samples,
            "--model", "Qwen/Qwen3-0.6B", "--out", out, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
            "--max-questions", n, "--seed", 11)
     drive_sync("save")

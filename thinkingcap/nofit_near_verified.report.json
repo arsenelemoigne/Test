@@ -1,0 +1,14 @@
+{
+ "candidates": 5380,
+ "verdicts": {
+  "NO": 926,
+  "UNSURE": 3000,
+  "NO/UNSURE": 526,
+  "UNSURE/YES": 385,
+  "YES": 241,
+  "UNSURE/NO": 287,
+  "YES/UNSURE": 15
+ },
+ "kept": 926,
+ "model": "anthropic/claude-haiku-5.5"
+}

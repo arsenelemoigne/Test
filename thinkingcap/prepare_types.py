@@ -579,6 +579,8 @@ def hermes_tools(args, rng):
         called = [f for f in functions if f["name"] == calls[0]["name"]]
         if not called or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in functions):
             continue
+        if args.tool_clean and (not bfcl_types(functions) or not grounded(calls[0]["arguments"], turns["human"])):
+            continue  # dp6: the same clean-up as ToolACE (BFCL type names, values stated in the question)
         parsed.append((turns["human"], functions, called[0], calls[0]["arguments"], row["category"]))
     irrelevant = int(len(parsed) * args.irrelevant_share)
     for index, (question, functions, called, arguments, category) in enumerate(parsed):

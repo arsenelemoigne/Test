@@ -2856,3 +2856,20 @@ touch IFEval, so it needs its own fix (dp5) before any training.
 - pool_check now also compares the thinking-length p25 and p75 (user: the whole distribution, not only the median).
 - lupinanswers (LUPIN step 1): 6 new answers per question (4 reused = 10) on dp6's pool, split over both GPUs, GATED in
   code on "verdict: ALL OK" in poolcheck-dp6-both; otherwise it logs the gate and does nothing. No training queued.
+
+### 2026-10-28 ~02:30 — dp4 held-out check + verified no-fit file + dp6 widened
+dp4 check (new answers, vs choosing + questions_40; run with the older pool_check, no p25/p75):
+| part | accuracy | median thinking | verdict |
+|---|---|---|---|
+| svamp | 84 vs 88 | 416 vs 366 (+14%) | OK (dp3 +41%: format bug fixed) |
+| mbpp | 53 vs 53 | 993 vs 1054 | OK |
+| bfcl_simple | 82 vs 88 | 116 vs 143 (-19%) | CHECK (dp3 -15%, borderline both times) |
+| bfcl_multiple | 73 vs 78 | 157 vs 175 | OK |
+| bfcl_irrelevance | 94 vs 79 | 143 vs 129 | CHECK (dp6) |
+| ifeval | 52 vs 51 | 233 vs 316 (-26%) | CHECK (dp5, running) |
+Math sources now: gsm8k_easy (fixed wording) 88% / 366, gsm8k_easy_test 83% / 342, metamath_easy 90% / 380.
+- nofit_near_verified.jsonl (Mac, Haiku 5.5, two checks): of ~5,400 near candidates, NO+NO 926 kept; YES 241 (would have
+  been wrong no-fit labels), UNSURE 3,000, mixed 1,198. Kept examples are tempting the way BFCL's are ("a recipe with
+  chicken" + Search_Chicken_Dishes_by_ID; "oral health status" + getGastroenterologyReport).
+- dp6 widened to BFCL simple: clean Hermes questions (BFCL types, grounded values; locally 115 simple / 161 multiple /
+  92 no-fit of 478) added as candidates. Few simple ones: may not be enough to close the simple gap.
