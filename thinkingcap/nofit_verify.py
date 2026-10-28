@@ -86,6 +86,12 @@ def main():
     parser.add_argument("--model", default="anthropic/claude-haiku-5.5")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--singles", type=int, default=0, help="one-function candidates per question (dp7: 3)")
+    parser.add_argument("--hard", action="store_true",
+                        help="dp9: same-domain look-alikes: functions MAY share name words with the called one (only its own "
+                             "functions are left out), the closest ones by meaning first; Haiku's NO + NO still decides")
+    parser.add_argument("--rank", default="0,60", help="nearness window FROM,TO in the meaning ranking (Glaive: 20,120, "
+                        "past the near-synonyms of the called function)")
+    parser.add_argument("--skip", default="", help="JSONL of earlier kept candidates: (question, function) pairs not sent again")
     parser.add_argument("--encoder", default="sentence-transformers/all-MiniLM-L6-v2")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -106,18 +112,32 @@ def main():
     names = list(functions)
     fvec = encoder.encode([n.replace("_", " ") + ": " + str(functions[n].get("description", "")) for n in names],
                           batch_size=128, normalize_embeddings=True, show_progress_bar=False)
-    candidates = []
+    skip = set()
+    if args.skip:
+        for l in Path(args.skip).read_text().splitlines():
+            if l.strip():
+                c = json.loads(l)
+                skip |= {(c["question"], f["name"]) for f in c["functions"]}
+    candidates, asked_once = [], set()
     order = list(range(len(asked)))
     rng.shuffle(order)
     for k in order:
         r = asked[k]
         question = r["prompt"][-1]["content"]
+        if question in asked_once:  # Glaive repeats questions (the same BMI request many times)
+            continue
+        asked_once.add(question)
         called = {next(iter(c)) for c in (r.get("reference") or [])} | {f["name"] for f in r["function"]}
         avoid = set().union(*(name_words(c) for c in called)) if called else set()
         qvec = encoder.encode([question], normalize_embeddings=True, show_progress_bar=False)[0]
         sims = fvec @ qvec
-        top = [names[i] for i in np.argsort(-sims)[:60]]
-        pick = [n for n in top if n not in called and k not in owner[n] and not (name_words(n) & avoid)]
+        lo, hi = map(int, args.rank.split(","))
+        top = [names[i] for i in np.argsort(-sims)[lo:hi]]
+        if lo:
+            rng.shuffle(top)
+        same = {c.lower().replace(".", "_") for c in called}
+        pick = [n for n in top if n not in called and k not in owner[n] and n.lower().replace(".", "_") not in same
+                and (args.hard or not (name_words(n) & avoid)) and (question, n) not in skip]
         if not pick:
             continue
         if args.singles:  # BFCL's no-fit questions offer ONE function: up to --singles one-function candidates per question
@@ -134,11 +154,11 @@ def main():
         second = list(pool.map(lambda c: judge(c["question"], c["functions"], key, args.model, PROMPT2), candidates))
     verdicts = [a if a == b else f"{a}/{b}" for a, b in zip(first, second)]
     tally = Counter(verdicts)
-    kept = [c | {"verdict": v} for c, v in zip(candidates, verdicts) if v == "NO"]
+    kept = [c | {"verdict": v, "hard": args.hard} for c, v in zip(candidates, verdicts) if v == "NO"]
     Path(args.out).write_text("".join(json.dumps(c) + "\n" for c in kept))
     print(f"verdicts {dict(tally)}; kept {len(kept)} (NO only) -> {args.out}", flush=True)
     Path(args.out).with_suffix(".report.json").write_text(json.dumps({"candidates": len(candidates), "verdicts": tally,
-                                                                       "kept": len(kept), "model": args.model}, indent=1))
+                                                                       "kept": len(kept), "model": args.model, "hard": args.hard}, indent=1))
 
 
 if __name__ == "__main__":

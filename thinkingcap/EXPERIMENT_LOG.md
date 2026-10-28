@@ -2976,3 +2976,23 @@ unchanged: lupinanswers dp8 runs only on "verdict: ALL OK". No training.
   simple 83 vs 87 / 130 vs 145 (glaive 660, toolace 766); multiple 77 vs 77 / 160 vs 170; no-fit 87 vs 80 / 140 vs 131
   (still too easy even on 8 answers: the candidates lack hard no-fit questions, selection cannot fix that);
   IFEval 56 vs 52 / 284 vs 290. Held-out check (seed 9, 1,200 questions x4) running on GPU 1; GPU 2 waits on the gate.
+
+### 2026-10-28 ~16:30 — dp8 HELD-OUT CHECK (seed 9, 200 per part x4): 33/36 vs both, 30/36 choosing, 36/36 q40
+| part | accuracy (both) | median thinking | verdict |
+|---|---|---|---|
+| svamp | **81 vs 88** [83,93] | 400 vs 366; p25 312/282, p75 575/585 | accuracy CHECK (dp7c 87: 4-answer selection drift, now on math) |
+| mbpp | 55 vs 53 | 982 vs 1054; p75 1842 vs 2220 (-17%) | OK |
+| bfcl_simple | **81 vs 88** [82,93] | 126 vs 143; **p75 157 vs 199 (-21%)** | 2 CHECK (glaive 83%/141, toolace 80%/157) |
+| bfcl_multiple | 77 vs 78 | 160 vs 175 | OK |
+| bfcl_irrelevance | 87 vs 79 [70,87] | 140 vs 129 | OK, but at the edge of the interval (dp7c 88 CHECK) |
+| ifeval | 57 vs 51 | 292 vs 316; p75 395 vs 457 (-14%, was -17%) | OK |
+Gate: closed (both not ALL OK): lupinanswers dp8 skipped. Choosing-only adds mbpp p75 -36%, simple median -15%, IFEval p75 -16%.
+8 answers + quartile bins fixed IFEval p75 and moved no-fit inside its interval; simple did not move; math drifted
+(it was still selected on 4 answers).
+
+- Harder no-fit, Mac (user: "prepare the harder no-fit questions with haiku", Glaive download approved): ToolACE
+  look-alikes (--hard, name words allowed) failed in trial: 200 -> 18 kept, all obviously unrelated (Haiku is UNSURE on
+  close ones). Glaive (glaiveai/glaive-function-calling-v2 downloaded to the Mac scratch; 40,942 clean rows, same as Colab)
+  in BFCL's calculation style: nearest functions are synonyms (rank 0-60: 4/200 kept, 112 YES); ranks 15-60 give
+  same-style wrong functions (BMI -> calculate_speed, rectangle area -> calculate_emission): 123/150 kept; ranks 60-200
+  140/150 but less related. Full run started: --rank 15,60 --singles 1 --max 8000 (unique questions), ~$1.
