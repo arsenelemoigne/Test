@@ -2899,3 +2899,4 @@ IFEval by origin: no_robots-built 131 q 52% / 305; Dolly-built 38 q 62% / 278; r
     9,862 multiple, many compute-style like BFCL simple (calculate_loan_payment(principal=50000, interest_rate=5, ...)).
   - dp7 now covers mbpp (KodCode-V1 medium+hard) + bfcl_simple + bfcl_irrelevance.
 - One-function near no-fit run (Haiku x2, ~16,500 candidates): 4,542 kept on NO+NO (report in scratch); 3,672 new appended -> nofit_near_verified.jsonl now 4,598 questions, read by dp7.
+- dp6 selection (selection answers): math median 402 vs 384 (dp5 423), borrowed 90 (dp5 373); no-fit 92% vs 80% (dp5 94%); simple unchanged (121 vs 145, Hermes 6 rows); IFEval kept 298 vs 290. dp6 held-out check running; dp7 (one-function no-fit, Glaive simple, harder code) next.
