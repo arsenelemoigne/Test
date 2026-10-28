@@ -213,6 +213,7 @@ def main():
     parser.add_argument("--la-samples", type=int, default=6, help="lupinanswers: new answers per question (4 reused)")
     parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
     parser.add_argument("--dp-parts", default="svamp,bfcl_irrelevance", help="poolfix: parts given new candidates")
+    parser.add_argument("--dp-cap", default="", help="poolfix: most new candidates per part, e.g. mbpp=1200")
     parser.add_argument("--dp-sources", default="gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,toolace",
                         help="poolfix: prepare_types.py sources of the new candidates (dp5: ifeval_built)")
     parser.add_argument("--dp-ifeval", type=int, default=12000, help="buildpool2: IFEval-like prompts drawn to IFEval's mix")
@@ -2239,6 +2240,12 @@ def poolfix(args):
         seen = {json.dumps(json.loads(l)["prompt"]) for l in old_pool.read_text().splitlines() if l.strip()}
         rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
         rows = [r for r in rows if json.dumps(r["prompt"]) not in seen]  # already a dp3 candidate
+        caps = dict((k, int(v)) for k, v in (x.split("=") for x in args.dp_cap.split(",") if x))
+        if caps:  # dp7c: hard code answers are long (~25 min per chunk): keep only what the missing tail needs
+            rng = random.Random(args.data_seed)
+            rng.shuffle(rows)
+            kept = Counter()
+            rows = [r for r in rows if kept.update([r["part"]]) or kept[r["part"]] <= caps.get(r["part"], 10 ** 9)]
         count = Counter()
         for r in rows:
             r["pool_id"] = f"{name}-{r['part']}-{count[r['part']]}"

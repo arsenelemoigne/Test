@@ -2907,3 +2907,4 @@ mbpp p75 thinking 1,522 vs 2,220 (-31%) and capped 3% vs 8%; bfcl_simple median 
 199 (-28%); bfcl_irrelevance accuracy 91 vs 79. IFEval and bfcl_multiple pass on every measure. The two references
 disagree (choosing set: harder and longer; questions_40: the pool passes 35/36), so "both" is the fair target.
 dp7 (running) targets code, simple and no-fit; math accuracy is the one gap no stage targets (borderline).
+- ~07:00: dp7 too slow (hard KodCode answers ~25 min per 150-question chunk, ~12 h per half). Replaced by dp7c: same sources, new candidates capped (mbpp 1,200, bfcl_simple 1,600, no-fit all ~1,371); answers gated on poolcheck-dp7c-both. dp7's candidate build showed: mbpp 4,800 (10,327 dropped by the 8-gram check, prompts longer than the choosing set's), Glaive simple 2,286 (12,310 dropped by the 8-gram check), verified no-fit 1,371 (738 dropped).
