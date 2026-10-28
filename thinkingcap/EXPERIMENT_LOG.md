@@ -2844,3 +2844,15 @@ touch IFEval, so it needs its own fix (dp5) before any training.
 - GPU 2: dp5 b failed at once ("dp4-all's answered pool is not here": GPU 1 had not finished dp4's selection yet), its
   queue ended and the runtime released itself. poolfix now waits up to 8 h for the reused pool on Drive. GPU 1 runs
   dp5 a, b and select by itself anyway; reconnecting GPU 2 would only halve dp5's answering time.
+
+### 2026-10-28 ~02:00 — overnight chain (user asleep): dp5 (IFEval) → dp6 (no-fit + math) → gated 10 answers
+- dp6: harder no-fit questions. nofit_verify.py (runs on the Mac, user's OpenRouter key): each ToolACE question is offered
+  the 1-3 functions from other conversations closest to it in meaning (all-MiniLM-L6-v2 embeddings), never its own or
+  one sharing a name word; Haiku 5.5 (anthropic/claude-haiku-5.5, $0.10/M in) answers two differently worded "could one
+  of these functions fulfil this request?" checks; kept only on NO + NO. Trial of 100 (after fixing empty replies):
+  NO 17, UNSURE 57, mixed 22, YES 4 -> ~17% kept. First trial with word-overlap nearness gave unrelated pairs
+  ("semiconductor fabrication" + legal.caseSummary): replaced by embeddings. Full run (~5,400 candidates) under way.
+  dp6 also adds short math candidates (metamath_easy, gsm8k_easy_test); re-selection over dp5's answered pool.
+- pool_check now also compares the thinking-length p25 and p75 (user: the whole distribution, not only the median).
+- lupinanswers (LUPIN step 1): 6 new answers per question (4 reused = 10) on dp6's pool, split over both GPUs, GATED in
+  code on "verdict: ALL OK" in poolcheck-dp6-both; otherwise it logs the gate and does nothing. No training queued.

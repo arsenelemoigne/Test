@@ -37,6 +37,8 @@ def stats(groups):
             "median_tokens": statistics.median(a[1] for a in answers),
             "mean_tokens": statistics.fmean(a[1] for a in answers),
             "median_thinking": statistics.median(a[2] for a in answers),
+            "p25_thinking": sorted(a[2] for a in answers)[len(answers) // 4],
+            "p75_thinking": sorted(a[2] for a in answers)[3 * len(answers) // 4],
             "capped": 100 * sum(a[3] for a in answers) / len(answers)}
 
 
@@ -86,7 +88,8 @@ def main():
             continue
         rows = {}
         for key, tol, relative in (("accuracy", args.acc_tol, False), ("median_tokens", args.len_tol, True),
-                                   ("median_thinking", args.len_tol, True), ("capped", args.cap_tol, False)):
+                                   ("median_thinking", args.len_tol, True), ("p25_thinking", args.len_tol, True),
+                                   ("p75_thinking", args.len_tol, True), ("capped", args.cap_tol, False)):
             lo, hi = interval(ref[part], key)
             gap = (p[key] / c[key] - 1) if relative and c[key] else p[key] - c[key]
             ok = abs(gap) <= tol or lo <= p[key] <= hi
@@ -97,7 +100,7 @@ def main():
         cells = []
         for key, r in rows.items():
             unit = "%" if key in ("accuracy", "capped") else ""
-            gap = f"{r['gap']:+.0%}" if key in ("median_tokens", "median_thinking") else f"{r['gap']:+.1f}"
+            gap = f"{r['gap']:+.0%}" if "tokens" in key or "thinking" in key else f"{r['gap']:+.1f}"
             cells.append(f"{key} {r['pool']:.0f}{unit} vs {r['choosing']:.0f}{unit} [{r['interval'][0]:.0f}, "
                          f"{r['interval'][1]:.0f}] {gap} {'OK' if r['ok'] else 'CHECK'}")
         lines.append(f"  {part} ({p['questions']} pool q / {c['questions']} choosing q):\n      " + "\n      ".join(cells))

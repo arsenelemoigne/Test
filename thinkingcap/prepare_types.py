@@ -52,7 +52,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -450,6 +450,24 @@ def ifeval_buildable(registry, ids, kwargs, prompt):
         return False
     finally:
         stdrandom.setstate(state)
+
+
+def toolace_near_verified(args, rng):
+    """dp6: harder no-fit tool questions (nofit_verify.py, run on the Mac with the user's OpenRouter key): a ToolACE
+    question offered the 1-3 functions from other conversations closest to it in meaning (sentence embeddings), kept
+    only when Haiku answered NO to two differently worded "could one of these functions fulfil this request?" checks.
+    Read from the repo clone (the Colab stage copies only *.py and plan files to the working directory)."""
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    path = next((p for p in (Path("/content/T/thinkingcap/nofit_near_verified.jsonl"),
+                             Path(__file__).with_name("nofit_near_verified.jsonl")) if p.exists()), None)
+    assert path, "nofit_near_verified.jsonl not found"
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        yield {"source": "toolace", "origin": "near-verified", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"toolace_nv-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
+                          {"role": "user", "content": r["question"]}]}
 
 
 def ifeval_built(args, rng):

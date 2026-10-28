@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "tokenskip", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -209,6 +209,8 @@ def main():
     parser.add_argument("--dp-check-per-part", type=int, default=200, help="buildpool: pool questions per part answered x4")
     parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2 / poolfix: answer half a / b, or select")
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
+    parser.add_argument("--la-pool", default="dp6", help="lupinanswers: the checked pool to answer")
+    parser.add_argument("--la-samples", type=int, default=6, help="lupinanswers: new answers per question (4 reused)")
     parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
     parser.add_argument("--dp-parts", default="svamp,bfcl_irrelevance", help="poolfix: parts given new candidates")
     parser.add_argument("--dp-sources", default="gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,toolace",
@@ -2310,6 +2312,40 @@ def poolfix(args):
     drive_sync("save")
 
 
+def lupinanswers(args):
+    """LUPIN step 1: 10 answers per question on the final pool (user, 28 Oct), by the ORIGINAL model. The pool's 4
+    selection answers are reused; this answers 6 more (another sampling seed), half the pool per runtime (--dp-step).
+    GATE (user, 28 Oct, "very important"): runs only when the pool's held-out check (poolcheck-<pool>-both) reads
+    "verdict: ALL OK"; otherwise it says so and does nothing. Data only: no training here."""
+    import time
+    name = args.la_pool
+    report = BON / f"poolcheck-{name}-both" / "report.txt"
+    pool = Path(f"data/pool-{name}.jsonl")
+    for _ in range(96):  # the other runtime may still be selecting and checking this pool: up to 8 hours
+        drive_sync("restore", only=[str(BON / f"poolcheck-{name}-both"), str(pool)])
+        if report.exists() and pool.exists():
+            break
+        print(f"waiting for {report} on Drive", flush=True)
+        time.sleep(300)
+    if not report.exists() or "verdict: ALL OK" not in report.read_text():
+        print(f"GATE: {name}'s pool check is not ALL OK; no answers generated. {report.read_text()[-300:] if report.exists() else ''}",
+              flush=True)
+        return
+    rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+    parity = 0 if args.dp_step == "a" else 1
+    data = Path(f"data/lupin-ans-{name}-{args.dp_step}.jsonl")
+    data.write_text("".join(json.dumps(r) + "\n" for k, r in enumerate(rows) if k % 2 == parity))
+    n = sum(1 for l in data.read_text().splitlines() if l.strip())
+    out = BON / f"lupin-answers-{name}-{args.dp_step}"
+    drive_sync("restore", only=[str(out)])
+    if not (out / "rollouts.jsonl").exists() or sum(1 for _ in (out / "rollouts.jsonl").open()) < args.la_samples * n:
+        py("probe_curve.py", "--data", data, "--sources", "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,"
+           "kodcode,toolace,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.la_samples,
+           "--model", "Qwen/Qwen3-0.6B", "--out", out, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", n, "--seed", 11)
+    drive_sync("save")
+
+
 def promptsearch(args):
     """Candidate prompts for prompt distillation (user, 27 Oct; Lightning McQwen3's ex-draft step): the ORIGINAL model
     answers --ps-per-source training questions per type of lot --ps-lot x --ps-samples under each prompt of
@@ -3106,13 +3142,13 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "tokenskip", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/bon/lupin-answers-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
                                     "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*", "runs/bon/tskip-*", "adapters/tsk*", "runs/mvtf/f8-tsk*",
                                     *[f"models/{m}" for m in wanted]])
     else:
