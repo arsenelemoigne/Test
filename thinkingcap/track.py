@@ -227,6 +227,7 @@ def main():
                         help="poolmore: answer only questions with fewer than this many answers, up to it (0: all, +samples)")
     parser.add_argument("--dp-chunk", type=int, default=150, help="poolmore: questions per generation chunk (dp10, code only: "
                         "600, so a few very long answers do not leave the GPU nearly idle at the end of every chunk)")
+    parser.add_argument("--dp-more-cap", type=int, default=0, help="poolmore: most questions answered per half (0: all)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2393,14 +2394,15 @@ def poolmore(args):
         if args.dp_step == h:
             data = Path(f"data/poolmore-{name}-{h}.jsonl")
             half = [r for k, r in enumerate(more) if k % 2 == parity]
+            target = min(len(half), args.dp_more_cap or len(half))  # dp10 (user: "1200 questions only"): 600 per half
             data.write_text("".join(json.dumps(r) + "\n" for r in half))
             print(f"{name} half {h}: {len(half)} candidates x{args.dp_more_samples} ({dict(Counter(r['part'] for r in half))})",
                   flush=True)
             drive_sync("restore", only=[str(probe)])
-            if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < args.dp_more_samples * len(half):
+            if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < args.dp_more_samples * target:
                 py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", 1000000,
                    "--samples", args.dp_more_samples, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype,
-                   "--generate-only", "--chunk", args.dp_chunk, "--max-questions", len(half), "--seed", 5)
+                   "--generate-only", "--chunk", args.dp_chunk, "--max-questions", target, "--seed", 5)
             (probe / "poolcand.sha256").write_text(digest)
             drive_sync("save")
             return
