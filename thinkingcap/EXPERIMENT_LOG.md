@@ -2946,3 +2946,4 @@ Infra this night: Drive full (499.5 / 540 GB org) -> drop2 freed 44.7 GB, user e
 129.5 GB); GPU 2 was blocked until then, now on dp7c half b. Next: dp7c select + check -> if ALL OK, 6 more answers per
 question (10 total) -> pairs selected to the evaluation's distribution -> user review -> LUPIN v1.
 - 28 Oct: SPARSE add-on project specified (thinkingcap/SPARSE_SPEC.md): Wanda / Lottery Ticket pruning of Qwen3-0.6B, then LoRA or freed-weight training to think shorter; separate from LUPIN, reuses LUPIN data, pilot ~15-20 GPU-h on the Wanda cut. Nothing built.
+- dp7c selection (selection answers): no-fit 84% vs 80% (dp6 92%), simple median thinking 132 vs 145 (dp6 121; Glaive 666 + ToolACE 759 kept), code borrowed 100 (dp6 231), math 85 vs 87 / 398 vs 384, IFEval 300 vs 290; proportions OK. Held-out check running on GPU 1; GPU 2 waits for its verdict (lupinanswers gate).
