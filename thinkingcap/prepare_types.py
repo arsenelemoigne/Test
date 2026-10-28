@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -452,6 +452,57 @@ def ifeval_buildable(registry, ids, kwargs, prompt):
         return False
     finally:
         stdrandom.setstate(state)
+
+
+GLAIVE_CALL = re.compile(r"<functioncall>\s*(\{.*?\})\s*<\|endoftext\|>", re.DOTALL)
+
+
+def glaive_tools(args, rng):
+    """dp7: one-call tool questions from glaiveai/glaive-function-calling-v2 (113k single-turn chats, Apache 2.0), many of
+    them compute-style ("calculate the monthly loan payment ...") like BFCL simple, where ToolACE's are mostly API lookups
+    that the model answers with less thinking (dp5 check: BFCL simple thinking 120 vs 143). Same clean-up as ToolACE /
+    Hermes: BFCL type names, every argument value stated in the question. One function offered -> simple, several -> multiple."""
+    from datasets import load_dataset
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    decoder = json.JSONDecoder()
+    for r in load_dataset("glaiveai/glaive-function-calling-v2", split="train"):
+        system, chat = r["system"], r["chat"]
+        start = system.find("{")
+        if start < 0 or not chat.startswith("USER:"):
+            continue
+        tools, text = [], system[start:]
+        try:
+            while text.strip():
+                obj, end = decoder.raw_decode(text.strip())
+                tools.append(obj)
+                text = text.strip()[end:]
+        except ValueError:
+            continue
+        question = chat[len("USER:"):].split("ASSISTANT:", 1)[0].strip()
+        reply = chat.split("ASSISTANT:", 1)[1] if "ASSISTANT:" in chat else ""
+        m = GLAIVE_CALL.search(reply.split("USER:", 1)[0])
+        if not m or not question:
+            continue
+        try:
+            call = json.loads(m.group(1).replace("'{", "{").replace("}'", "}"))
+            name, arguments = call["name"], call.get("arguments") or {}
+            if isinstance(arguments, str):
+                arguments = json.loads(arguments)
+            functions = [bfcl_function(t) for t in tools]
+        except (ValueError, KeyError, TypeError, AttributeError):
+            continue
+        called = [f for f in functions if f["name"] == name]
+        if not called or not isinstance(arguments, dict) or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in functions):
+            continue
+        if not bfcl_types(functions) or not grounded(arguments, question):
+            continue
+        yield {"source": "glaive_tools", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "simple" if len(functions) == 1 else "multiple", "function": functions,
+               "reference": bfcl_reference(called[0], arguments),
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
+                          {"role": "user", "content": question}]}
 
 
 def toolace_near_verified(args, rng):

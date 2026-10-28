@@ -2890,3 +2890,11 @@ IFEval by origin: no_robots-built 131 q 52% / 305; Dolly-built 38 q 62% / 278; r
 - dp6 (running) targets svamp p25, bfcl_simple, no-fit. New dp7 targets code's missing long tail: KodCode-V1 medium+hard,
   tasks up to 160 tokens and solutions up to 400; re-selection over dp6's pool. The 10-answer step now waits for dp7's
   check (gate on poolcheck-dp7-both ALL OK).
+- ~05:45: dp6's build_pool kept only 332 of 1,371 wanted no-fit candidates (from the 926 verified; 174 dropped by the
+  8-gram check) and 6 of 2,286 simple ones (Hermes): BFCL's no-fit and simple prompts sit in a narrow length window
+  (382-449 / 385-482 tokens, one function each), which most multi-function or long candidates miss. For dp7:
+  - nofit_verify.py --singles 3: up to 3 one-function near candidates per ToolACE question, each Haiku-checked twice
+    (~16,500 candidates, running on the Mac); kept ones are appended to nofit_near_verified.jsonl before dp7 starts.
+  - glaive_tools (glaiveai/glaive-function-calling-v2, Apache 2.0): clean one-call questions, locally 31,080 simple /
+    9,862 multiple, many compute-style like BFCL simple (calculate_loan_payment(principal=50000, interest_rate=5, ...)).
+  - dp7 now covers mbpp (KodCode-V1 medium+hard) + bfcl_simple + bfcl_irrelevance.

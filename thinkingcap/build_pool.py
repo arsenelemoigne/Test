@@ -45,7 +45,7 @@ def part_of(row):
         return "mbpp"
     if source in ("ifeval_like", "ifeval_built"):
         return "ifeval"
-    if source in ("toolace", "hermes_tools"):
+    if source in ("toolace", "hermes_tools", "glaive_tools"):
         return TOOL_CATEGORY.get(row.get("category"))
     return None
 

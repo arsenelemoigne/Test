@@ -165,6 +165,6 @@ poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_sim
 # poolcheck-dp6-both says ALL OK. Data only, no training.
 # dp7 (28 Oct ~04:00, user asleep; check now compares p25/p75): dp5's code pool lacks the long-thinking tail
 # (p75 thinking 1,446 vs 2,220). New candidates: KodCode-V1 medium+hard, longer tasks; re-selection over dp6's pool.
-poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp --dp-sources kodcode --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
+poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
 lupinanswers --la-pool dp7 --dp-step b
 end

@@ -85,6 +85,7 @@ def main():
     parser.add_argument("--max", type=int, default=6000, help="candidates sent to the judge")
     parser.add_argument("--model", default="anthropic/claude-haiku-5.5")
     parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument("--singles", type=int, default=0, help="one-function candidates per question (dp7: 3)")
     parser.add_argument("--encoder", default="sentence-transformers/all-MiniLM-L6-v2")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -119,8 +120,12 @@ def main():
         pick = [n for n in top if n not in called and k not in owner[n] and not (name_words(n) & avoid)]
         if not pick:
             continue
-        size = rng.choices((1, 2, 3), weights=(0.6, 0.25, 0.15))[0]
-        candidates.append({"question": question, "functions": [functions[n] for n in pick[:size]], "source_row": k})
+        if args.singles:  # BFCL's no-fit questions offer ONE function: up to --singles one-function candidates per question
+            for n in pick[:args.singles]:
+                candidates.append({"question": question, "functions": [functions[n]], "source_row": k})
+        else:
+            size = rng.choices((1, 2, 3), weights=(0.6, 0.25, 0.15))[0]
+            candidates.append({"question": question, "functions": [functions[n] for n in pick[:size]], "source_row": k})
         if len(candidates) >= args.max:
             break
     print(f"{len(candidates)} near candidates from {len(asked)} ToolACE questions; judging with {args.model}", flush=True)
