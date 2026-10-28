@@ -2945,3 +2945,4 @@ one-function prompt-length window; hard code answers too slow (dp7 -> capped dp7
 Infra this night: Drive full (499.5 / 540 GB org) -> drop2 freed 44.7 GB, user emptied the trash -> 411.7 GB used (Drive
 129.5 GB); GPU 2 was blocked until then, now on dp7c half b. Next: dp7c select + check -> if ALL OK, 6 more answers per
 question (10 total) -> pairs selected to the evaluation's distribution -> user review -> LUPIN v1.
+- 28 Oct: SPARSE add-on project specified (thinkingcap/SPARSE_SPEC.md): Wanda / Lottery Ticket pruning of Qwen3-0.6B, then LoRA or freed-weight training to think shorter; separate from LUPIN, reuses LUPIN data, pilot ~15-20 GPU-h on the Wanda cut. Nothing built.
