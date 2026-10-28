@@ -195,5 +195,6 @@ poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrel
 poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select --dp-union-only
 poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step a
 poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step select
+drivereport --name drive3
 lupinanswers --la-pool dp9 --dp-step a
 end

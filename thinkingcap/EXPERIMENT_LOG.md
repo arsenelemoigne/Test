@@ -3011,3 +3011,9 @@ Gate: closed (both not ALL OK): lupinanswers dp8 skipped. Choosing-only adds mbp
   (dp8 84); mbpp 55 vs 54 / 1034 vs 1051; simple 84 vs 87 / 132 vs 145 (glaive 880, toolace 547; dp8 83); multiple 77 vs 77;
   no-fit 84 vs 80 / 142 vs 131 (glaive 212 + toolace 646; dp8 87); IFEval 56 vs 52 / 284 vs 290. Held-out check seed 13
   running on GPU 1 (300/1,200).
+- Next if dp9's check is ALL OK (explained to the user 28 Oct ~20:00): lupinanswers dp9, ORIGINAL model, 6 new answers
+  per question (seed 11), both GPUs, ~4-6 h (code answers are the long ones). Each question then has >= 10 answers
+  (math / tools / IFEval 14: 8 selection + 6). Data only. Then: topic-overlap check + a pair-selection proposal matched to
+  the eval per type, shown to the user; LUPIN v1 training only after the user approves.
+- Drive cleanup asked (user: only what is really unnecessary, log everything first): drivereport (read only) queued on
+  GPU 1 right after dp9's check; the delete list goes to the user before anything is removed.
