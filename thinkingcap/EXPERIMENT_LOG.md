@@ -3082,3 +3082,19 @@ so the code part moves by several points and its long tail (hard questions, long
   most 1.5 points (accuracy, capped) or 3% of the bound (token counts) (track.py near_misses_only). Tested: dp9 would
   stay closed (code p75 71 tokens outside = FAR; simple p75 5 tokens = near). Training is NOT automatic: pairs (spec
   2.0) are built after the answers.
+
+### 2026-10-29 ~01:45 — user: "run all these steps unless I interrupt or there is a clear red flag" (+ the pair variations)
+Built and queued after the 10 answers (both GPUs):
+- lupin_select.py (spec 2.0): pairs drawn per part (25% per benchmark, BFCL 400/200/240) and per solve x thinking cell
+  (4 x 4, quartiles) at the shares of the original model's own runs on choosing + questions_40; questions visited
+  round-robin; short cells reported (never filled from others); then every part trimmed to the lowest fill ratio so the
+  part shares stay exact. Dry run on synthetic answers OK.
+- track.py stage `lupin`: waits for the 10 answers of the pool used (auto: dp11 if dp10 superseded), merges every answer
+  of the pool questions (selection + poolmore + 10-answer files), lupin_pairs.py recipe -> lupin_select.py (3,200
+  wanted) -> DPO from the original model (NLL anchor) -> checkpoints 50/100/150/200 merged on local scratch (no Drive copy)
+  and scored on the choosing set x4.
+- Screen (the decided variations: natural answers + difficulty protection; no prompted answers):
+  GPU 1: lp-l2s50 (long2short, protection p<0.5), lp-dast (DAST + protection), lp-right (right>wrong only, baseline);
+  GPU 2: lp-l2s75 (long2short, protection p<0.75), lp-adar1 (Ada-R1 + protection).
+  Next: the best 2 -> 3 seeds + soups on the fresh set x8; code-only cut pairs (strict labels, small dose) on the best;
+  then LUPIN v2 (v1 answers a new matched sample).

@@ -1,0 +1,129 @@
+"""LUPIN spec 2.0: the training PAIRS must match the evaluation, like the pool (user, 27 Oct night: "as important").
+
+A recipe's raw pairs (lupin_pairs.py) skew the pool: always-solved easy questions give many shorten pairs, hard ones few
+or none, so training would be dominated by easy questions. Here the pairs are drawn per evaluation part (each benchmark
+an equal share, BFCL split as its 400 / 200 / 240) and, inside a part, per cell of solve rate x thinking length, each
+cell holding the share the ORIGINAL model's own evaluation runs have there (choosing set v4-base + questions_40
+eval-base; same bins as select_pool.py, thinking in --think-bins quantiles). A question's solve rate and median thinking
+come from ALL its answers (>= 10 per pool question). Inside a cell, questions are visited round-robin (one pair per
+question before any question gives a second). A cell short of pairs is reported, never filled from another cell.
+
+    python lupin_select.py --pairs runs/bon/pairs-L1/pairs.jsonl --rollouts all.jsonl --reference runs/mvtf/v4-base \\
+        runs/mvtf/eval-base --total 3200 --out runs/bon/pairs-L1-matched
+"""
+
+import argparse
+import json
+import random
+import statistics
+from collections import Counter, defaultdict
+from pathlib import Path
+
+from build_pool import BFCL_SIZES
+from select_pool import PARTS, features, solve_bin, think_bin
+
+
+def read(path):
+    return [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--pairs", required=True)
+    parser.add_argument("--rollouts", nargs="+", required=True, help="every answer to the pool questions")
+    parser.add_argument("--reference", nargs="+", required=True)
+    parser.add_argument("--total", type=int, default=3200, help="pairs wanted in all (200 steps x 16)")
+    parser.add_argument("--think-bins", type=int, default=4)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--out", required=True)
+    args = parser.parse_args()
+    rng = random.Random(args.seed)
+
+    answers = defaultdict(list)
+    for path in args.rollouts:
+        with open(path) as handle:
+            for line in handle:
+                if line.strip():
+                    r = json.loads(line)
+                    finished = r.get("closed_thinking", True) and not r.get("truncated", False)
+                    answers[r["id"]].append((bool(r["correct"]) and finished, len(r.get("thinking_ids") or []) or r["output_tokens"]))
+    ref = defaultdict(lambda: defaultdict(list))
+    for k, run in enumerate(args.reference):
+        for r in read(Path(run) / "records.jsonl"):
+            ref[r["dataset"]][(k, r["id"])].append((bool(r["correct"]), r.get("reasoning_tokens") or r["output_tokens"]))
+    pairs = read(args.pairs)
+    by_part = defaultdict(list)
+    for p in pairs:
+        by_part[p["part"]].append(p)
+
+    bfcl = sum(BFCL_SIZES.values())
+    share = {"svamp": 0.25, "mbpp": 0.25, "ifeval": 0.25} | {p: 0.25 * n / bfcl for p, n in BFCL_SIZES.items()}
+    chosen, report, lines = [], {}, [f"pairs matched to the evaluation: wanted {args.total}"]
+    for part in PARTS:
+        want = round(args.total * share[part])
+        refs = [features(a) for a in ref[part].values()]
+        medians = sorted(t for _, t in refs)
+        edges = [medians[k * len(medians) // args.think_bins] for k in range(1, args.think_bins)]
+        cells = [(a, b) for a in range(4) for b in range(args.think_bins)]
+        cell_ref = Counter((solve_bin(s), think_bin(t, edges)) for s, t in refs)
+        cell_share = {c: (cell_ref[c] + 0.5) / (len(refs) + 0.5 * len(cells)) for c in cells}
+        per_cell = defaultdict(lambda: defaultdict(list))  # cell -> question -> its pairs
+        no_answers = 0
+        for p in by_part.get(part, []):
+            if p["id"] not in answers:
+                no_answers += 1
+                continue
+            s, t = features(answers[p["id"]])
+            per_cell[(solve_bin(s), think_bin(t, edges))][p["id"]].append(p)
+        got, short = Counter(), Counter()
+        kinds = Counter()
+        for c in cells:
+            need = round(want * cell_share[c])
+            questions = list(per_cell[c].values())
+            rng.shuffle(questions)
+            for q in questions:
+                rng.shuffle(q)
+            taken, depth = [], 0
+            while len(taken) < need and any(len(q) > depth for q in questions):
+                for q in questions:
+                    if len(q) > depth and len(taken) < need:
+                        taken.append(q[depth])
+                depth += 1
+            got[c] = len(taken)
+            short[c] = need - len(taken)
+            kinds.update(p["kind"] for p in taken)
+            chosen += taken
+        n = sum(got.values())
+        report[part] = {"wanted": want, "kept": n, "short_cells": {str(c): v for c, v in short.items() if v > 0},
+                        "kinds": dict(kinds), "pairs_without_answers": no_answers,
+                        "reference_cells": {str(c): cell_ref[c] for c in cells}, "kept_cells": {str(c): got[c] for c in cells}}
+        lines.append(f"  {part}: {n}/{want} pairs; kinds {dict(kinds)}; short {sum(short.values())} in "
+                     f"{sum(v > 0 for v in short.values())} cells " +
+                     ", ".join(f"solve{c[0]}/think{c[1]} -{v}" for c, v in short.items() if v > 0))
+    # part shares stay the evaluation's: a part that filled less of its quota (hard cells give few pairs) sets the
+    # fill ratio, the other parts are trimmed to it at random (which keeps their cell mix)
+    fill = min(report[part]["kept"] / max(1, report[part]["wanted"]) for part in PARTS)
+    trimmed = []
+    for part in PARTS:
+        mine = [p for p in chosen if p["part"] == part]
+        rng.shuffle(mine)
+        keep = round(report[part]["wanted"] * fill)
+        report[part]["after_share_trim"] = min(keep, len(mine))
+        trimmed += mine[:keep]
+    lines.append(f"fill ratio {fill:.2f}: every part trimmed to {fill:.0%} of its quota, {len(chosen) - len(trimmed)} pairs dropped")
+    chosen = trimmed
+    kept = Counter(p["part"] for p in chosen)
+    lines.append("part shares (kept vs target): " + ", ".join(
+        f"{p} {kept[p] / max(1, len(chosen)):.1%} vs {share[p]:.1%}" for p in PARTS))
+    rng.shuffle(chosen)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in chosen))
+    (out / "match.json").write_text(json.dumps(report, indent=1))
+    lines.insert(1, f"kept {len(chosen)} pairs, kinds {dict(Counter(p['kind'] for p in chosen))}")
+    (out / "summary.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
+
+
+if __name__ == "__main__":
+    main()

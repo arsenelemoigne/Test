@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -229,6 +229,14 @@ def main():
                         "600, so a few very long answers do not leave the GPU nearly idle at the end of every chunk)")
     parser.add_argument("--dp-more-cap", type=int, default=0, help="poolmore: most questions answered per half (0: all)")
     parser.add_argument("--dp-if-poor", default="", help="poolmore: run only if this pool's check leaves code off (dp11: dp10)")
+    parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
+    parser.add_argument("--lp-recipe", default="long2short", help="lupin: lupin_pairs.py recipe")
+    parser.add_argument("--lp-min-solve", type=float, default=0.5, help="lupin: difficulty protection (0: none)")
+    parser.add_argument("--lp-extra", default="", help="lupin: more lupin_pairs.py flags, e.g. '--add-right'")
+    parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
+    parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
+    parser.add_argument("--lp-dpo", default="", help="lupin: more dpo.py flags, e.g. '--nll 0'")
+    parser.add_argument("--lp-fresh", action="store_true", help="lupin: score soups on the fresh set x8 (finalists)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2507,6 +2515,105 @@ def code_close_enough(pool):
     return close, f"code accuracy {acc:+.1f} pts, median {pct['median_thinking']:+.0f}%, p75 {pct['p75_thinking']:+.0f}%"
 
 
+def lupin_pool(args):
+    """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
+    if args.lp_pool != "auto":
+        return args.lp_pool
+    drive_sync("restore", only=[str(BON / "dp10-superseded")])
+    return "dp11" if (BON / "dp10-superseded").exists() else "dp10"
+
+
+def lupin(args):
+    """LUPIN round 1 screen (spec 2.2 / 2.5, user 29 Oct: "run all these steps"; pair variations as decided 27 Oct:
+    the model's own natural answers, difficulty protection, no prompted answers; code-only cut pairs come later).
+    1. Waits for the 10 answers (lupin-answers-<pool>-a/b: written only if the pool's check opened the gate).
+    2. Every answer to the pool's questions (4-8 selection answers + 6 new) -> one file; lupin_pairs.py --recipe
+       --lp-recipe (--lp-min-solve: difficulty protection) -> raw pairs.
+    3. lupin_select.py: pairs matched to the evaluation per part and per solve x thinking cell (spec 2.0), --lp-total.
+    4. DPO from the ORIGINAL model (NLL anchor, dpo.py defaults: beta 0.1, lr 2e-5, LoRA r32, 16 pairs per step),
+       --seeds, a checkpoint every --lp-save steps.
+    5. Every checkpoint in --dpo-steps merged (local scratch, never on Drive) and scored on the CHOOSING set x4
+       (decisions only on it); with --lp-fresh, the seeds' soups on the fresh set x8 instead (finalists)."""
+    import statistics
+    import time
+    pool_name = lupin_pool(args)
+    name, base = args.name, "Qwen/Qwen3-0.6B"
+    halves = [BON / f"lupin-answers-{pool_name}-{h}" / "rollouts.jsonl" for h in "ab"]
+    for _ in range(288):  # the 10 answers take ~6 h on two GPUs: wait up to 24 h
+        drive_sync("restore", only=[str(h.parent) for h in halves] + [f"data/pool-{pool_name}.jsonl", "runs/mvtf/v4-base",
+                                                                     "runs/mvtf/eval-base"])
+        if all(h.exists() for h in halves):
+            break
+        print(f"lupin {name}: waiting for {pool_name}'s 10 answers on Drive", flush=True)
+        time.sleep(300)
+    assert all(h.exists() for h in halves), f"{pool_name}'s answers are not on Drive"
+    allfile = BON / f"lupin-all-{pool_name}.jsonl"
+    if not allfile.exists():
+        ids = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
+        sources = [BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl", *halves,
+                   *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp8", "dp9", "dp10", "dp11") for h in "ab"]]
+        drive_sync("restore", only=[str(f.parent) for f in sources])
+        count = Counter()
+        with open(allfile, "w") as out:
+            for f in sources:
+                if not f.exists():
+                    continue
+                for line in open(f):
+                    if line.strip() and json.loads(line)["id"] in ids:
+                        out.write(line if line.endswith("\n") else line + "\n")
+                        count[f.parent.name] += 1
+        per_q = Counter(json.loads(l)["id"] for l in open(allfile))
+        print(f"lupin: {len(per_q)} pool questions, answers per question min {min(per_q.values())} median "
+              f"{statistics.median(per_q.values())}; from {dict(count)}", flush=True)
+        drive_sync("save")
+    raw, pairs = BON / f"pairs-{name}-raw", BON / f"pairs-{name}"
+    if not (raw / "pairs.jsonl").exists():
+        py("lupin_pairs.py", "--rollouts", allfile, "--recipe", args.lp_recipe, "--out", raw,
+           *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split())
+    if not (pairs / "pairs.jsonl").exists():
+        py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", ROOT / "v4-base", BASE,
+           "--total", args.lp_total, "--out", pairs)
+        drive_sync("save")
+    print((pairs / "summary.txt").read_text(), flush=True)
+    rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
+    start = Path("adapters") / f"fresh-{name}"
+    if not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", base, "--out", start)
+    for seed in args.seeds:
+        adapter = Path("adapters") / f"{name}-s{seed}"
+        if not (adapter / "adapter_config.json").exists():
+            py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+               "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.lp_save,
+               "--epochs", 1, "--dtype", args.dtype, "--seed", seed, *args.lp_dpo.split())
+            drive_sync("save")
+    val, fresh_q = f"questions_val{VAL_SEED}", f"questions_fresh{FRESH_SEED}"
+    scratch = Path("/content/lupin-models")
+    if args.lp_fresh:
+        evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    else:
+        evaluate(ROOT / "v4-base", samples=4, questions=val)
+    for step in args.dpo_steps:
+        members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+        members = [m for m in members if (m / "adapter_config.json").exists()]
+        if not members:
+            continue
+        tag = f"{name}-{'soup-' if len(members) > 1 else ''}{step}"
+        out = ROOT / (f"f8-{tag}" if args.lp_fresh else f"v4-{tag}")
+        if not (out / "results.json").exists():
+            model = scratch / tag
+            if not (model / "config.json").exists():
+                py("merge.py", "--model", base, "--out", model, "--adapters", *[f"{m}:{1 / len(members):.6f}" for m in members])
+            if args.lp_fresh:
+                evaluate(out, samples=8, questions=fresh_q, model=model)
+            else:
+                evaluate(out, samples=4, questions=val, model=model)
+            shutil.rmtree(model, ignore_errors=True)  # rebuildable from the adapters; Drive keeps no merged copy
+            drive_sync("save")
+        ref = ROOT / ("f8-base" if args.lp_fresh else "v4-base")
+        print(score_line(f"{tag} ({'fresh 240 x 8' if args.lp_fresh else 'choosing 240 x 4'})", out, base=ref), flush=True)
+
+
 def lupinanswers(args):
     """LUPIN step 1: 10 answers per question on the final pool (user, 28 Oct), by the ORIGINAL model. The pool's 4
     selection answers are reused; this answers 6 more (another sampling seed), half the pool per runtime (--dp-step).
@@ -3345,7 +3452,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
