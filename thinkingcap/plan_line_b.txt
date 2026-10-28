@@ -191,10 +191,16 @@
 # poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step select
 # lupinanswers --la-pool dp8 --dp-step a
 # dp9 (28 Oct): Glaive no-fit (Haiku-verified, BFCL calculation style) + rest of Glaive simple; then every question 8 answers (dp8's reused), select, check seed 13
-poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
-poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select --dp-union-only
-poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step a
-poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step select
-drivereport --name drive3
-lupinanswers --la-pool dp9 --dp-step a
+# poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
+# poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select --dp-union-only
+# poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step a
+# poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step select
+# drivereport --name drive3
+# lupinanswers --la-pool dp9 --dp-step a
+# drop3 (user 28 Oct: delete some, keep the strong candidates of methods A-H; runs on BOTH runtimes so no local copy is re-uploaded; drop2's names re-listed to clear their local copies)
+# dp10 (user: option A): code candidates brought to 8 answers (dp8+dp9 answers reused for the rest), same selection seed so only code changes, check seed 17
+dropmodels --name drop3 --drop ca1-soup-10=ca1-s0 sb1-10=sb1-shorterbetter sb1-20=sb1-shorterbetter stopB5-soup-10=stopB5-s0 stopB5-soup-15=stopB5-s0 stopB5-soup-20=stopB5-s0 stopB5-soup-25=stopB5-s0 stopB5-soup-30=stopB5-s0 drpo3b-5=drpo3b-drpo drpo3b-10=drpo3b-drpo drpo3b-15=drpo3b-drpo drpo3d-5=drpo3d-drpo drpo3d-10=drpo3d-drpo drpo3d-15=drpo3d-drpo drpo3d-20=drpo3d-drpo drpo3f-5=drpo3f-drpo drpo1-20=drpo1-drpo drpo1-40=drpo1-drpo drpo1-60=drpo1-drpo stopV2-soup-25=stopV2-s0 stopV2-soup-50=stopV2-s0 stopV2-soup-75=stopV2-s0 stopV2-soup-100=stopV2-s0 stopV3-soup-25=stopV3-s0 stopV3-soup-50=stopV3-s0 stopV3-soup-75=stopV3-s0 stopV3-soup-100=stopV3-s0 stopV3-soup-150=stopV3-s0 stopV3-soup-200=stopV3-s0 gold1-step-100=gold1 gold1-step-200=gold1 gold1-step-300=gold1 gold1-step-400=gold1 gold1-step-500=gold1 gold1-step-600=gold1 gold1-step-660=gold1 teach1c-rel0.05=teach1c-teach teach1c-rel0.1=teach1c-teach teach1-rel0.05=teach1-teach teach1-rel0.1=teach1-teach drpo2-5=drpo2-drpo drpo2-10=drpo2-drpo drpo2-15=drpo2-drpo drpo2-20=drpo2-drpo drpo2-25=drpo2-drpo drpo2-30=drpo2-drpo drpo2-40=drpo2-drpo drpo2-50=drpo2-drpo drpo2-60=drpo2-drpo sb2-5=sb2-shorterbetter sb2-10=sb2-shorterbetter mf1-soup-50=mf1-s0 mf1-soup-75=mf1-s0 mf1-soup-100=mf1-s0 mf1-soup-150=mf1-s0
+poolmore --name dp10 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9 --dp-more-target 8 --data-seed 81 --dp-check-seed 17 --dp-step a
+poolmore --name dp10 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9 --dp-more-target 8 --data-seed 81 --dp-check-seed 17 --dp-step select
+lupinanswers --la-pool dp10 --dp-step a
 end

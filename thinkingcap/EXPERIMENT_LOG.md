@@ -3034,3 +3034,24 @@ drivereport drive3 (GPU 1, read only): models 47.1 GB (39 merged; drop2's stopV2
 runtime still held local copies and its next save re-uploaded them; dropmodels now also clears local copies when the
 Drive copy is already gone, and must run on BOTH runtimes), adapters 28.2 GB, runs 23.5 GB, data 2.0 GB. Every model's
 adapters are on Drive. Delete list proposed to the user (nothing removed yet).
+
+### 2026-10-28 ~21:15 — user: option A (dp10) + drop3 (keep the strong candidates of methods A-H)
+**drop3 (both runtimes, Drive trash; user empties it):** 29 merged models still on Drive, ~34 GB, all rebuildable
+(merge.py, ~2 min each; scores already logged):
+- ca1-soup-10 = Qwen3-0.6B + mean of adapters/ca1-s{0,1,2}/step-10
+- sb1-{10,20} = rc1-rl-40 + adapters/sb1-shorterbetter/step-N (strong RL, H)
+- stopB5-soup-{10..30} = Qwen3-0.6B + mean of adapters/stopB5-s{0,1,2}/step-N
+- drpo3b-{5,10,15} = drpo3b's start + adapters/drpo3b-drpo/step-N; drpo3d-{5..20} = drpo3b-20 + adapters/drpo3d-drpo/step-N;
+  drpo3f-5 = drpo3d-23 + adapters/drpo3f-drpo/step-5; drpo1-{20,40,60} = drpo1's start + adapters/drpo1-drpo/step-N
+- stopV2-soup-{25..100}, stopV3-soup-{25..200} = Qwen3-0.6B + mean of adapters/stopV2|V3-s{0,1,2}/step-N
+Plus drop2's names again (their Drive copies are gone; this clears local copies that a save would re-upload).
+**Kept (strong candidates per method):** A stop training: stopB3-soup-25, stopV3-soup-300 (+25.5 / -0.6);
+E rc1: rc1-soup-30; F rc1-rl-40 (53.9 / -2.1); F+math: mf1-soup-25; G gentle RL: drpo3b-20 (+13.5 / -0.3),
+drpo3d-23 (+21.2 / +0.2), drpo3f-10 (+23.6 / +0.2), drpo3f-15 (+24.6 / +0.5), drpo3f-20 (+22.5 / +0.4);
+H strong RL: sb1-30. (B self-preference, C balanced, D clean have adapters only.) Adapters, runs, data untouched.
+
+**dp10 (poolmore):** every code candidate of dp9n-all brought to 8 answers (seed 5); dp8 + dp9 extra answers reused;
+same data seed 81 as dp9, so only the code selection changes; held-out check seed 17. Why code drifted: dp7c/dp8/dp9 drew
+from the SAME code candidates and got 56 / 55 / 62% on new answers: 4 answers per question misjudge hard code (a question
+right 1/4 times is often really 2-3/4), and each new data seed reshuffles which borderline questions fill the cells,
+so the code part moves by several points and its long tail (hard questions, long thinking) moves with it.

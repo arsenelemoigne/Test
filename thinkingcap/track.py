@@ -222,7 +222,7 @@ def main():
     parser.add_argument("--dp-more-samples", type=int, default=4, help="poolmore: extra answers per candidate (seed 5)")
     parser.add_argument("--dp-think-bins", type=int, default=4, help="poolmore: select_pool.py --think-bins")
     parser.add_argument("--dp-union-only", action="store_true", help="poolfix select: build the answered union only, no selection")
-    parser.add_argument("--dp-more-extra", default="", help="poolmore: an earlier poolmore whose answers are merged in (dp9: dp8)")
+    parser.add_argument("--dp-more-extra", default="", help="poolmore: earlier poolmores whose answers are merged in, comma-separated (dp9: dp8; dp10: dp8,dp9)")
     parser.add_argument("--dp-more-target", type=int, default=0,
                         help="poolmore: answer only questions with fewer than this many answers, up to it (0: all, +samples)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
@@ -2375,7 +2375,7 @@ def poolmore(args):
         time.sleep(300)
     assert union.exists() and answers.exists(), f"{old}'s answered pool is not here"
     sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools,glaive_tools,ifeval_like,ifeval_built"
-    extra = [BON / f"probe-poolmore-{args.dp_more_extra}-{h}" / "rollouts.jsonl" for h in "ab"] if args.dp_more_extra else []
+    extra = [BON / f"probe-poolmore-{e}-{h}" / "rollouts.jsonl" for e in args.dp_more_extra.split(",") if e for h in "ab"]
     for e in extra:
         drive_sync("restore", only=[str(e.parent)])
         assert e.exists(), f"{e} is not here"
