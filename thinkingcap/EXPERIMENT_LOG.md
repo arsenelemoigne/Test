@@ -3056,3 +3056,12 @@ from the SAME code candidates and got 56 / 55 / 62% on new answers: 4 answers pe
 right 1/4 times is often really 2-3/4), and each new data seed reshuffles which borderline questions fill the cells,
 so the code part moves by several points and its long tail (hard questions, long thinking) moves with it.
 - ~20:50: dp10 code answering very slow at chunk 150 (~20 min per chunk, ~600 tokens/s: a few capped code answers keep the GPU nearly idle at each chunk's end; ~7 h per half). Restarted with --dp-chunk 600 (resumes from the saved chunks).
+- Second code source search (user: "yes check this out"; Mac only, nothing on the GPUs): OpenCoder-LLM/opc-sft-stage2
+  educational_instruct (MIT, 118,278 tasks, MBPP-style "Write a function to ...", entry_point + assert tests: our format).
+  Overlap with MBPP (all 974, google-research-datasets/mbpp): 476 exact MBPP texts, 2,285 same function name,
+  240 share an MBPP assert, 85,175 share a 6-gram (mostly the "write a python function to" phrasing). Strict clean
+  (no 6-gram, no name, no assert): 32,613; then MiniLM cosine to the nearest MBPP task: >=0.9 423, >=0.8 5,120,
+  >=0.75 10,567 (0.80 still lets "valid parentheses" paraphrases through: use < 0.75, ~22,000 kept). Task tokens
+  p10-p90 19/25/35/50/71 vs MBPP 12/13/16/18/21 (longer; KodCode slice median 28); solutions 62 vs 44 median.
+  Likely EASY tasks (MBPP-like), so it widens the pool but may not add the hard long-thinking tail; Qwen's answers
+  decide. Not used yet: candidate for dp11 if dp10 still misses on code.
