@@ -2959,3 +2959,15 @@ New answers (seed 7, 200 per part) vs both references (choosing set + questions_
 - ifeval: 48% vs 51%, median 285 vs 316 OK; p75 379 vs 457 (-17%) CHECK. Built 57%/276, built-long 44%/302, real 47%/233.
 Choosing-only reference: more fails (mbpp p75 -36%, simple -10.4 pts, irrelevance 88 vs 77).
 lupinanswers skipped on both GPUs by the gate (as designed). Both plans at end of queue.
+
+### 2026-10-28 — dp7c HELD-OUT CHECK (new answers, seed 7, 200 per part x4): 32/36 vs both, 30/36 choosing, 35/36 q40
+| part | accuracy pool vs ref (both) | median thinking | verdict |
+|---|---|---|---|
+| svamp | 87 vs 88 | 388 vs 366 (p25 304 vs 282, p75 537 vs 585) | OK |
+| mbpp | 56 vs 53 | 954 vs 1054; p75 1847 vs 2220 (-17%, was -31%) | OK (choosing alone: p75 -36% CHECK) |
+| bfcl_simple | **80 vs 88** | 129 vs 143; p75 162 vs 199 (-19%) | CHECK: now slightly too HARD (toolace 76%, glaive 85%) |
+| bfcl_multiple | 74 vs 78 | 159 vs 175 | OK |
+| bfcl_irrelevance | **88 vs 79** | 146 vs 129 | CHECK: still too easy (dp6 91, dp5 96) |
+| ifeval | 48 vs 51 | 285 vs 316; p75 379 vs 457 (-17%) | p75 CHECK |
+Gate: lupinanswers a and b both logged "dp7c's pool check is not ALL OK; no answers generated". Both queues ended; both
+runtimes released. No training. Waiting on the user: accept dp7c (35/36 vs q40) or a dp8 round on no-fit + simple.
