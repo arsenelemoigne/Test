@@ -2922,3 +2922,4 @@ to free quota). Every one is superseded or failed, and its adapter is kept. Rebu
 - mf1-soup-{50,75,100,150} = rc1-rl-40 + mean of adapters/mf1-s{0,1,2}/step-N
 Kept models: rc1-rl-40, rc1-soup-30, ca1-soup-10, stopB3-soup-25, stopB5 soups, sb1-*, drpo3b-*, drpo3d-*, drpo3f-*,
 stopV3-soup-300, mf1-soup-25, drpo1-*. All scores, adapters, lots and answers stay.
+- drop2 done on GPU 2: 37 models removed, freed 44.7 GB (now in the Drive trash: the user empties it). GPU 2 then started dp7c half b (both GPUs on dp7c).
