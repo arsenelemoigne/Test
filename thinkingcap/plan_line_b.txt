@@ -187,7 +187,14 @@
 # Drive full (28 Oct ~03:00): GPU 2 cannot get files, so GPU 1 also does the other half
 # lupinanswers --la-pool dp7c --dp-step b
 # dp8 (28 Oct): 4 more answers per tool / IFEval candidate, selection on 8 answers with quartile thinking bins, check seed 9
-poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step a
-poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step select
-lupinanswers --la-pool dp8 --dp-step a
+# poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step a
+# poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step select
+# lupinanswers --la-pool dp8 --dp-step a
+# dp9 (28 Oct): Glaive no-fit (Haiku-verified, BFCL calculation style) + rest of Glaive simple; then every question 8 answers (dp8's reused), select, check seed 13
+# WAIT: queued only once nofit_glaive_verified.jsonl is committed
+# poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
+# poolfix --name dp9n --dp-reuse dp7c-all --dp-parts bfcl_simple_python,bfcl_irrelevance --dp-sources glaive_tools,glaive_nofit_verified --dp-oversample 3 --data-seed 81 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select --dp-union-only
+# poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step a
+# poolmore --name dp9 --dp-reuse dp9n-all --dp-more-parts svamp,bfcl_simple_python,bfcl_irrelevance,ifeval --dp-more-extra dp8 --dp-more-target 8 --data-seed 81 --dp-check-seed 13 --dp-step select
+# lupinanswers --la-pool dp9 --dp-step a
 end

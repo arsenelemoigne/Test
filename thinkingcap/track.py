@@ -221,6 +221,10 @@ def main():
                         help="poolmore: parts whose candidates get --dp-more-samples more answers")
     parser.add_argument("--dp-more-samples", type=int, default=4, help="poolmore: extra answers per candidate (seed 5)")
     parser.add_argument("--dp-think-bins", type=int, default=4, help="poolmore: select_pool.py --think-bins")
+    parser.add_argument("--dp-union-only", action="store_true", help="poolfix select: build the answered union only, no selection")
+    parser.add_argument("--dp-more-extra", default="", help="poolmore: an earlier poolmore whose answers are merged in (dp9: dp8)")
+    parser.add_argument("--dp-more-target", type=int, default=0,
+                        help="poolmore: answer only questions with fewer than this many answers, up to it (0: all, +samples)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
@@ -2322,6 +2326,9 @@ def poolfix(args):
     answers.parent.mkdir(parents=True, exist_ok=True)
     old_rows = [l for l in old_answers.read_text().splitlines() if l.strip() and json.loads(l)["id"] not in bad]
     answers.write_text("\n".join(old_rows) + "\n" + (probe / "rollouts.jsonl").read_text())
+    if args.dp_union_only:  # dp9: poolmore selects (after more answers), not this stage
+        drive_sync("save")
+        return
     evaluate(ROOT / "v4-base", samples=4, questions=val)
     evaluate(BASE)
     selected = Path(f"data/pool-{name}.jsonl")
@@ -2367,8 +2374,13 @@ def poolmore(args):
         time.sleep(300)
     assert union.exists() and answers.exists(), f"{old}'s answered pool is not here"
     sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools,glaive_tools,ifeval_like,ifeval_built"
+    extra = [BON / f"probe-poolmore-{args.dp_more_extra}-{h}" / "rollouts.jsonl" for h in "ab"] if args.dp_more_extra else []
+    for e in extra:
+        drive_sync("restore", only=[str(e.parent)])
+        assert e.exists(), f"{e} is not here"
+    have = Counter(json.loads(l)["id"] for f in [answers, *extra] for l in f.read_text().splitlines() if l.strip())
     rows = [json.loads(l) for l in union.read_text().splitlines() if l.strip()]
-    more = [r for r in rows if r["part"] in parts]
+    more = [r for r in rows if r["part"] in parts and (not args.dp_more_target or have[r["pool_id"]] < args.dp_more_target)]
     digest = hashlib.sha256("".join(r["pool_id"] for r in more).encode()).hexdigest()[:16]
     halves = []
     for h, parity in (("a", 0), ("b", 1)):  # one half per runtime
@@ -2401,7 +2413,7 @@ def poolmore(args):
         halves.append(target)
     merged = BON / f"probe-poolcand-{name}-all" / "rollouts.jsonl"
     merged.parent.mkdir(parents=True, exist_ok=True)
-    merged.write_text(answers.read_text().rstrip("\n") + "\n" + "".join(t.read_text() for t in halves))
+    merged.write_text("".join(f.read_text().rstrip("\n") + "\n" for f in [answers, *extra, *halves]))
     evaluate(ROOT / "v4-base", samples=4, questions=val)
     evaluate(BASE)
     selected = Path(f"data/pool-{name}.jsonl")
