@@ -2873,3 +2873,4 @@ Math sources now: gsm8k_easy (fixed wording) 88% / 366, gsm8k_easy_test 83% / 34
   chicken" + Search_Chicken_Dishes_by_ID; "oral health status" + getGastroenterologyReport).
 - dp6 widened to BFCL simple: clean Hermes questions (BFCL types, grounded values; locally 115 simple / 161 multiple /
   92 no-fit of 478) added as candidates. Few simple ones: may not be enough to close the simple gap.
+- ~03:00: Google Drive is FULL ('Org storage full', 499.48 GB used). Saves to Drive may silently fail (rsync without check), so GPU 2 waits for dp4-all forever. GPU 1 holds everything on its own disk and runs dp5 a+b+select, dp6 a+b+select and now both lupinanswers halves alone. Needs the user in the morning: free Drive space (old merged models, as drop1 did) or results stay only on GPU 1's disk.

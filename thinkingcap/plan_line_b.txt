@@ -176,4 +176,6 @@ poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_sim
 # LUPIN step 1 (user): 10 answers per question on dp6's pool (4 reused + 6 new). GATED in code: does nothing unless
 # poolcheck-dp6-both says ALL OK. Data only, no training.
 lupinanswers --la-pool dp6 --dp-step a
+# Drive full (28 Oct ~03:00): GPU 2 cannot get files, so GPU 1 also does the other half
+lupinanswers --la-pool dp6 --dp-step b
 end
