@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -217,6 +217,11 @@ def main():
     parser.add_argument("--dp-sources", default="gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,toolace",
                         help="poolfix: prepare_types.py sources of the new candidates (dp5: ifeval_built)")
     parser.add_argument("--dp-ifeval", type=int, default=12000, help="buildpool2: IFEval-like prompts drawn to IFEval's mix")
+    parser.add_argument("--dp-more-parts", default="bfcl_simple_python,bfcl_irrelevance,ifeval",
+                        help="poolmore: parts whose candidates get --dp-more-samples more answers")
+    parser.add_argument("--dp-more-samples", type=int, default=4, help="poolmore: extra answers per candidate (seed 5)")
+    parser.add_argument("--dp-think-bins", type=int, default=4, help="poolmore: select_pool.py --think-bins")
+    parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
     parser.add_argument("--tsk-ratios", type=float, nargs="+", default=[0.5, 0.7, 1.0],
                         help="tokenskip: share of the thinking's words kept, one model per ratio (1.0: same SFT, no compression)")
@@ -2340,6 +2345,87 @@ def poolfix(args):
     drive_sync("save")
 
 
+def poolmore(args):
+    """dp8 (user, 28 Oct): no new candidates; the parts that missed on dp7c's held-out check get more answers per
+    candidate so the selection reads each question better. dp7c's selection answers said no-fit 84% vs 80%, the new
+    answers 88%: questions picked for a lucky 4-answer draw drift back (simple went the other way, 80% vs 88%). Here
+    every --dp-more-parts candidate of --dp-reuse (dp7c-all) is answered --dp-more-samples more times (seed 5), half
+    per runtime, and selection runs on all 8 answers with --dp-think-bins thinking bins (quartiles: p25 and p75 matched,
+    not only the median; IFEval p75 was -17%). The check uses ANOTHER seed (--dp-check-seed 9): dp7c's seed-7 check
+    answers shaped this round's design. Other parts keep their 4 answers and the same selection rules."""
+    import hashlib
+    import time
+    name, old = args.name, args.dp_reuse
+    parts = set(args.dp_more_parts.split(","))
+    val = f"questions_val{VAL_SEED}"
+    union, answers = Path(f"data/poolcand-{old}.jsonl"), BON / f"probe-poolcand-{old}" / "rollouts.jsonl"
+    for _ in range(96):
+        drive_sync("restore", only=[str(union), str(answers.parent), "runs/mvtf/eval-base", "runs/mvtf/v4-base"])
+        if union.exists() and answers.exists():
+            break
+        print(f"waiting for {old}'s answered pool on Drive", flush=True)
+        time.sleep(300)
+    assert union.exists() and answers.exists(), f"{old}'s answered pool is not here"
+    sources = "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,kodcode,toolace,hermes_tools,glaive_tools,ifeval_like,ifeval_built"
+    rows = [json.loads(l) for l in union.read_text().splitlines() if l.strip()]
+    more = [r for r in rows if r["part"] in parts]
+    digest = hashlib.sha256("".join(r["pool_id"] for r in more).encode()).hexdigest()[:16]
+    halves = []
+    for h, parity in (("a", 0), ("b", 1)):  # one half per runtime
+        probe = BON / f"probe-poolmore-{name}-{h}"
+        if args.dp_step not in (h, "select"):
+            continue
+        if args.dp_step == h:
+            data = Path(f"data/poolmore-{name}-{h}.jsonl")
+            half = [r for k, r in enumerate(more) if k % 2 == parity]
+            data.write_text("".join(json.dumps(r) + "\n" for r in half))
+            print(f"{name} half {h}: {len(half)} candidates x{args.dp_more_samples} ({dict(Counter(r['part'] for r in half))})",
+                  flush=True)
+            drive_sync("restore", only=[str(probe)])
+            if not (probe / "rollouts.jsonl").exists() or sum(1 for _ in (probe / "rollouts.jsonl").open()) < args.dp_more_samples * len(half):
+                py("probe_curve.py", "--data", data, "--sources", sources, "--per-source", 1000000,
+                   "--samples", args.dp_more_samples, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype,
+                   "--generate-only", "--chunk", 150, "--max-questions", len(half), "--seed", 5)
+            (probe / "poolcand.sha256").write_text(digest)
+            drive_sync("save")
+            return
+        target, stamp = probe / "rollouts.jsonl", probe / "poolcand.sha256"
+        for _ in range(96):  # the other runtime's half: up to 8 hours
+            if target.exists() and stamp.exists():
+                break
+            drive_sync("restore", only=[str(probe)])
+            if not (target.exists() and stamp.exists()):
+                print(f"waiting for {target} on Drive", flush=True)
+                time.sleep(300)
+        assert target.exists() and stamp.exists() and stamp.read_text() == digest, f"{name} half {h} missing or from another pool"
+        halves.append(target)
+    merged = BON / f"probe-poolcand-{name}-all" / "rollouts.jsonl"
+    merged.parent.mkdir(parents=True, exist_ok=True)
+    merged.write_text(answers.read_text().rstrip("\n") + "\n" + "".join(t.read_text() for t in halves))
+    evaluate(ROOT / "v4-base", samples=4, questions=val)
+    evaluate(BASE)
+    selected = Path(f"data/pool-{name}.jsonl")
+    py("select_pool.py", "--pool", union, "--rollouts", merged, "--reference", ROOT / "v4-base", BASE,
+       "--per-benchmark", args.dp_per_benchmark, "--seed", args.data_seed, "--out", selected,
+       "--think-bins", args.dp_think_bins)
+    rows = [json.loads(l) for l in selected.read_text().splitlines() if l.strip()]
+    random.Random(args.data_seed).shuffle(rows)
+    per = Counter()
+    check = Path(f"data/poolcheck-{name}.jsonl")
+    check.write_text("".join(json.dumps(r) + "\n" for r in rows
+                             if per.update([r["part"]]) or per[r["part"]] <= args.dp_check_per_part))
+    held = BON / f"probe-poolcand-{name}-check"
+    m = sum(1 for l in check.read_text().splitlines() if l.strip())
+    if not (held / "rollouts.jsonl").exists() or sum(1 for _ in (held / "rollouts.jsonl").open()) < 4 * m:
+        py("probe_curve.py", "--data", check, "--sources", sources, "--per-source", 1000000, "--samples", 4,
+           "--model", "Qwen/Qwen3-0.6B", "--out", held, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+           "--max-questions", m, "--seed", args.dp_check_seed)
+    for tag, refs in (("both", [ROOT / "v4-base", BASE]), ("choosing", [ROOT / "v4-base"]), ("q40", [BASE])):
+        py("pool_check.py", "--rollouts", held / "rollouts.jsonl", "--reference", *refs,
+           "--out", BON / f"poolcheck-{name}-{tag}", "--pool", selected)
+    drive_sync("save")
+
+
 def lupinanswers(args):
     """LUPIN step 1: 10 answers per question on the final pool (user, 28 Oct), by the ORIGINAL model. The pool's 4
     selection answers are reused; this answers 6 more (another sampling seed), half the pool per runtime (--dp-step).
@@ -3170,7 +3256,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "lupinanswers", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -5,7 +5,7 @@ right vs 49%, math thinking +40%, ...). Here every candidate (an oversampled bui
 --samples times by the original model; per evaluation part, each question gets two numbers, its solve rate and its median
 thinking tokens, and so does each choosing-set question (the original model's own run on it, v4-base). The two are
 binned the same way (solve rate: never / under half / half or more but not always / always; thinking: the choosing
-set's terciles) and the pool is drawn so each cell holds the choosing set's share of the part (+0.5 smoothing per cell:
+set's terciles, or --think-bins quantiles) and the pool is drawn so each cell holds the choosing set's share of the part (+0.5 smoothing per cell:
 only 40 choosing questions per part). A cell short of candidates borrows from its nearest cells (thinking first, then
 solve rate); every shortfall is reported.
 
@@ -53,6 +53,8 @@ def main():
     parser.add_argument("--reference", nargs="+", required=True,
                         help="the original model's evaluation runs on non-fresh sets (choosing set v4-base, questions_40 eval-base)")
     parser.add_argument("--per-benchmark", type=int, default=3000, help="questions per benchmark (BFCL's 3 parts share one)")
+    parser.add_argument("--think-bins", type=int, default=3,
+                        help="thinking bins per solve bin (dp8: 4, quartiles, so p25 / p75 are matched too)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -80,9 +82,9 @@ def main():
         refs = [features(a) for a in ref[part].values()]
         assert refs, f"no choosing-set answers for {part}"
         medians = sorted(t for _, t in refs)
-        edges = [medians[len(medians) // 3], medians[2 * len(medians) // 3]]
+        edges = [medians[k * len(medians) // args.think_bins] for k in range(1, args.think_bins)]
         cell_ref = Counter((solve_bin(s), think_bin(t, edges)) for s, t in refs)
-        cells = [(a, b) for a in range(4) for b in range(3)]
+        cells = [(a, b) for a in range(4) for b in range(args.think_bins)]
         share = {c: (cell_ref[c] + 0.5) / (len(refs) + 0.5 * len(cells)) for c in cells}
         bins, unanswered = defaultdict(list), 0
         for key, row in rows.get(part, {}).items():
@@ -101,7 +103,7 @@ def main():
             del bins[c][:len(got)]
             picked[c] += len(got)
             # nearest cells: same solve bin first (thinking +-1, +-2), then solve +-1
-            order = sorted((d for d in cells if d != c), key=lambda d: (abs(d[0] - c[0]) * 3 + abs(d[1] - c[1])))
+            order = sorted((d for d in cells if d != c), key=lambda d: (abs(d[0] - c[0]) * args.think_bins + abs(d[1] - c[1])))
             for d in order:
                 if len(got) >= need[c]:
                     break

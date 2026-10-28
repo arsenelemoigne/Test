@@ -149,7 +149,7 @@
 # user, 28 Oct: Drive is full, free ~40 GB: first list what is there (read only)
 # done: drivereport --name dr2
 # user, 28 Oct: free ~45 GB (37 superseded merged models; adapters kept, recipes in EXPERIMENT_LOG)
-dropmodels --name drop2 --drop gold1-step-100=gold1 gold1-step-200=gold1 gold1-step-300=gold1 gold1-step-400=gold1 gold1-step-500=gold1 gold1-step-600=gold1 gold1-step-660=gold1 teach1c-rel0.05=teach1c-teach teach1c-rel0.1=teach1c-teach teach1-rel0.05=teach1-teach teach1-rel0.1=teach1-teach drpo2-5=drpo2-drpo drpo2-10=drpo2-drpo drpo2-15=drpo2-drpo drpo2-20=drpo2-drpo drpo2-25=drpo2-drpo drpo2-30=drpo2-drpo drpo2-40=drpo2-drpo drpo2-50=drpo2-drpo drpo2-60=drpo2-drpo sb2-5=sb2-shorterbetter sb2-10=sb2-shorterbetter stopV2-soup-25=stopV2-s0 stopV2-soup-50=stopV2-s0 stopV2-soup-75=stopV2-s0 stopV2-soup-100=stopV2-s0 stopV2-soup-150=stopV2-s0 stopV3-soup-25=stopV3-s0 stopV3-soup-50=stopV3-s0 stopV3-soup-75=stopV3-s0 stopV3-soup-100=stopV3-s0 stopV3-soup-150=stopV3-s0 stopV3-soup-200=stopV3-s0 mf1-soup-50=mf1-s0 mf1-soup-75=mf1-s0 mf1-soup-100=mf1-s0 mf1-soup-150=mf1-s0
+# dropmodels --name drop2 --drop gold1-step-100=gold1 gold1-step-200=gold1 gold1-step-300=gold1 gold1-step-400=gold1 gold1-step-500=gold1 gold1-step-600=gold1 gold1-step-660=gold1 teach1c-rel0.05=teach1c-teach teach1c-rel0.1=teach1c-teach teach1-rel0.05=teach1-teach teach1-rel0.1=teach1-teach drpo2-5=drpo2-drpo drpo2-10=drpo2-drpo drpo2-15=drpo2-drpo drpo2-20=drpo2-drpo drpo2-25=drpo2-drpo drpo2-30=drpo2-drpo drpo2-40=drpo2-drpo drpo2-50=drpo2-drpo drpo2-60=drpo2-drpo sb2-5=sb2-shorterbetter sb2-10=sb2-shorterbetter stopV2-soup-25=stopV2-s0 stopV2-soup-50=stopV2-s0 stopV2-soup-75=stopV2-s0 stopV2-soup-100=stopV2-s0 stopV2-soup-150=stopV2-s0 stopV3-soup-25=stopV3-s0 stopV3-soup-50=stopV3-s0 stopV3-soup-75=stopV3-s0 stopV3-soup-100=stopV3-s0 stopV3-soup-150=stopV3-s0 stopV3-soup-200=stopV3-s0 mf1-soup-50=mf1-s0 mf1-soup-75=mf1-s0 mf1-soup-100=mf1-s0 mf1-soup-150=mf1-s0
 # obsolete on GPU 2 (GPU 1 did it): buildpool2 --name dp3 --data-seed 73 --dp-step b --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # user away (27 Oct ~16:00): GPU 1 is stuck in dp2's select wait until ~21:30, so GPU 2 also answers half a
 # GPU 1 was unstuck by the user and runs half a itself (27 Oct evening): buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
@@ -170,6 +170,9 @@ dropmodels --name drop2 --drop gold1-step-100=gold1 gold1-step-200=gold1 gold1-s
 # dp7 (28 Oct ~04:00, user asleep; check now compares p25/p75): dp5's code pool lacks the long-thinking tail
 # (p75 thinking 1,446 vs 2,220). New candidates: KodCode-V1 medium+hard, longer tasks; re-selection over dp6's pool.
 # too slow (hard code ~12 h per half), replaced by dp7c: poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
-poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
-lupinanswers --la-pool dp7c --dp-step b
+# poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
+# lupinanswers --la-pool dp7c --dp-step b
+# dp8 (28 Oct): 4 more answers per tool / IFEval candidate, selection on 8 answers with quartile thinking bins, check seed 9
+poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step b
+lupinanswers --la-pool dp8 --dp-step b
 end

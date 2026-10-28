@@ -154,25 +154,25 @@
 # removed (user, 25 Oct: superseded / same aggressive DRPO that overshot): targeted --name stopB4 --start Qwen/Qwen3-0.6B --probe-extra-from plotB plotB2 plotB3 plotB4 --tg-rule question --tg-shorten kodcode,ifeval_like,toolace,hermes_tools,arc_easy,commonsense_qa,gsm_ic,gsm_plus --tg-long none --tg-save-every 10 --dpo-steps 30 60 90 120 --seeds 0 1 2
 # dp3 = dp2 rebuilt (27 Oct ~14:00): dp2 a crashed while answering, IFEval's checker has no language code 'zh' (KeyError);
 # every IFEval row is now tried against the checker when candidates are built. New name: no stale dp2 files reused.
-buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
-buildpool2 --name dp3 --data-seed 73 --dp-step select --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+# buildpool2 --name dp3 --data-seed 73 --dp-step a --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
+# buildpool2 --name dp3 --data-seed 73 --dp-step select --dp-math-mix gsm8k_easy=0.55,gsm8k_matched=0.15,metamath_sv=0.30
 # dp4 (user, 27 Oct night: start fixing right away; refined after dp3's held-out check): new math and no-fit candidates,
 # re-selection over dp3's answered candidates + the new ones, full held-out check.
 # two GPUs (user, 27 Oct night): half a here, half b on GPU 2, select + check here
-poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step a
+# poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step a
 # GPU 2 could not get a GPU (28 Oct): GPU 1 also answers half b (skipped if GPU 2 has it on Drive)
-poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step b
-poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step select
+# poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step b
+# poolfix --name dp4 --dp-reuse dp3 --dp-parts svamp,bfcl_irrelevance --data-seed 74 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step select
 # dp5 (user, 28 Oct): IFEval only. dp3's check: IFEval thinking 246 vs 316 (too short). New candidates: no_robots requests +
 # IFEval's instruction sentences (ifeval_built), 2.5x oversample; re-selection over dp4's answered pool + these; full check.
-poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step a
-poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step b
-poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step select
+# poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step a
+# poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step b
+# poolfix --name dp5 --dp-reuse dp4-all --dp-parts ifeval --dp-sources ifeval_built --dp-ifeval 12000 --dp-oversample 2.5 --data-seed 75 --dp-math-mix gsm8k_easy=0.3,gsm8k_easy_test=0.15,metamath_easy=0.4,gsm8k_matched=0.15 --dp-step select
 # dp6 (user, 28 Oct): harder no-fit questions with Haiku-verified labels (nofit_near_verified.jsonl, made on the Mac)
 # + more short math candidates; re-selection over dp5's answered pool + these; full held-out check (now also p25/p75).
-poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step a
-poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step b
-poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step select
+# poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step a
+# poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step b
+# poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_simple_python --dp-sources toolace_near_verified,hermes_tools,metamath_easy,gsm8k_easy_test --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-oversample 1.6 --data-seed 76 --dp-step select
 # LUPIN step 1 (user): 10 answers per question on dp6's pool (4 reused + 6 new). GATED in code: does nothing unless
 # poolcheck-dp6-both says ALL OK. Data only, no training.
 # dp7 (28 Oct ~04:00, user asleep; check now compares p25/p75): dp5's code pool lacks the long-thinking tail
@@ -180,10 +180,14 @@ poolfix --name dp6 --dp-reuse dp5-all --dp-parts svamp,bfcl_irrelevance,bfcl_sim
 # too slow (hard code ~12 h per half), replaced by dp7c: poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
 # too slow (hard code ~12 h per half), replaced by dp7c: poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
 # too slow (hard code ~12 h per half), replaced by dp7c: poolfix --name dp7 --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-oversample 1.6 --data-seed 77 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select
-poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
-poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
-poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select
-lupinanswers --la-pool dp7c --dp-step a
+# poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step a
+# poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step b
+# poolfix --name dp7c --dp-reuse dp6-all --dp-parts mbpp,bfcl_simple_python,bfcl_irrelevance --dp-sources kodcode,glaive_tools,toolace_near_verified --dp-cap mbpp=1200,bfcl_simple_python=1600 --dp-oversample 1.6 --data-seed 78 --dp-math-mix metamath_easy=0.7,gsm8k_easy_test=0.3 --dp-step select
+# lupinanswers --la-pool dp7c --dp-step a
 # Drive full (28 Oct ~03:00): GPU 2 cannot get files, so GPU 1 also does the other half
-lupinanswers --la-pool dp7c --dp-step b
+# lupinanswers --la-pool dp7c --dp-step b
+# dp8 (28 Oct): 4 more answers per tool / IFEval candidate, selection on 8 answers with quartile thinking bins, check seed 9
+poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step a
+poolmore --name dp8 --dp-reuse dp7c-all --data-seed 80 --dp-step select
+lupinanswers --la-pool dp8 --dp-step a
 end
