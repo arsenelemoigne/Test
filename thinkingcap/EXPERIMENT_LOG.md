@@ -2967,3 +2967,6 @@ every bfcl_simple / bfcl_irrelevance / IFEval candidate of dp7c-all gets 4 more 
 selection reads all 8 answers and uses 4 thinking bins (quartiles) instead of 3, so p25 / p75 are matched, not only the
 median (IFEval and simple p75 were -17/-19%). Held-out check on seed 9 (seed 7 answers informed this design). Gate
 unchanged: lupinanswers dp8 runs only on "verdict: ALL OK". No training.
+- dp8 started on both GPUs (user reconnected both runtimes; scripts at e47cc3b). Half a (GPU 1): 9,044 candidates x4
+  (ifeval 5,299, no-fit 2,033, simple 1,712), seed 5; half b (GPU 2) the other 9,044. Estimate ~2.5 h of answering,
+  then GPU 1 selects on 8 answers (4 thinking bins) and runs the seed-9 held-out check (~45 min). Checks every 30 min.
