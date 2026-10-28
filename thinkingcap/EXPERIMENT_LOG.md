@@ -2909,3 +2909,16 @@ disagree (choosing set: harder and longer; questions_40: the pool passes 35/36),
 dp7 (running) targets code, simple and no-fit; math accuracy is the one gap no stage targets (borderline).
 - ~07:00: dp7 too slow (hard KodCode answers ~25 min per 150-question chunk, ~12 h per half). Replaced by dp7c: same sources, new candidates capped (mbpp 1,200, bfcl_simple 1,600, no-fit all ~1,371); answers gated on poolcheck-dp7c-both. dp7's candidate build showed: mbpp 4,800 (10,327 dropped by the 8-gram check, prompts longer than the choosing set's), Glaive simple 2,286 (12,310 dropped by the 8-gram check), verified no-fit 1,371 (738 dropped).
 - dp7c candidates after caps: 3,868 new (bfcl_simple 1,600 Glaive, mbpp 1,200 KodCode medium/hard, no-fit 1,068 verified near); prompt lengths of the new ones are off (Glaive simple median 391 vs 427 tokens; KodCode medium/hard 139 vs 102): the selection mixes them with dp6's candidates, the held-out check will show whether the selected pool still matches. Half a answering 1,934 questions on GPU 1.
+
+### 2026-10-28 — Drive full: drivereport + drop2 (user: free ~40 GB; user empties the trash afterwards)
+drivereport (GPU 2, read only): models 79.7 GB (66 merged models x 1.21 GB), adapters 28.2 GB, runs 11.0 GB, data 1.1 GB.
+Google account: Drive 217 GB, Photos 270 GB, Gmail 11.6 GB, org limit 540 GB ("Org storage full").
+drop2 removes 37 merged models (~44.8 GB) through the Drive mount (they go to the Drive TRASH; the user must empty it
+to free quota). Every one is superseded or failed, and its adapter is kept. Rebuild recipes (merge.py):
+- gold1-step-{100..600,660} = Qwen3-0.6B + adapters/gold1/step-N (broken run, -63 pts)
+- teach1-rel0.05 / rel0.1, teach1c-rel0.05 / rel0.1 = Qwen3-0.6B + adapters/teach1(-c)-teach/<variant> (broken)
+- drpo2-{5..60} = rc1-rl-40 + adapters/drpo2-drpo/step-N; sb2-{5,10} = rc1-rl-40 + adapters/sb2-shorterbetter/step-N
+- stopV2-soup-{25,50,75,100,150}, stopV3-soup-{25..200} = Qwen3-0.6B + mean of adapters/stopV2|V3-s{0,1,2}/step-N
+- mf1-soup-{50,75,100,150} = rc1-rl-40 + mean of adapters/mf1-s{0,1,2}/step-N
+Kept models: rc1-rl-40, rc1-soup-30, ca1-soup-10, stopB3-soup-25, stopB5 soups, sb1-*, drpo3b-*, drpo3d-*, drpo3f-*,
+stopV3-soup-300, mf1-soup-25, drpo1-*. All scores, adapters, lots and answers stay.
