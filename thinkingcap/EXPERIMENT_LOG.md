@@ -3065,3 +3065,4 @@ so the code part moves by several points and its long tail (hard questions, long
   p10-p90 19/25/35/50/71 vs MBPP 12/13/16/18/21 (longer; KodCode slice median 28); solutions 62 vs 44 median.
   Likely EASY tasks (MBPP-like), so it widens the pool but may not add the hard long-thinking tail; Qwen's answers
   decide. Not used yet: candidate for dp11 if dp10 still misses on code.
+- ~21:20: the user's Mac shut down; both Colab runtimes kept running (Manage sessions: both active). Read through the Drive logs (code/, code-second/track_log.txt, downloaded): at 21:19 each GPU ~36-44% through its first 600-question code chunk after 33 min (~800-900 tokens/s). Bigger chunks did not help much: code answers are long. Estimate ~80-90 min per chunk, 5 chunks per half: answering done ~03:30, select + check ~04:30.
