@@ -2898,3 +2898,4 @@ IFEval by origin: no_robots-built 131 q 52% / 305; Dolly-built 38 q 62% / 278; r
   - glaive_tools (glaiveai/glaive-function-calling-v2, Apache 2.0): clean one-call questions, locally 31,080 simple /
     9,862 multiple, many compute-style like BFCL simple (calculate_loan_payment(principal=50000, interest_rate=5, ...)).
   - dp7 now covers mbpp (KodCode-V1 medium+hard) + bfcl_simple + bfcl_irrelevance.
+- One-function near no-fit run (Haiku x2, ~16,500 candidates): 4,542 kept on NO+NO (report in scratch); 3,672 new appended -> nofit_near_verified.jsonl now 4,598 questions, read by dp7.
