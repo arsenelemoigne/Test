@@ -203,4 +203,8 @@
 poolmore --name dp10 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9 --dp-more-target 8 --data-seed 81 --dp-check-seed 17 --dp-chunk 600 --dp-more-cap 1200 --dp-step a
 poolmore --name dp10 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9 --dp-more-target 8 --data-seed 81 --dp-check-seed 17 --dp-chunk 600 --dp-more-cap 1200 --dp-step select
 lupinanswers --la-pool dp10 --dp-step a
+# dp11 STAGED (user: 'be ready to redo another 1200 if results are poor'): the next 1,200 code questions per half (those still under 8 answers), check seed 19. Uncomment ONLY if dp10's check is poor.
+# poolmore --name dp11 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9,dp10 --dp-more-target 8 --dp-more-cap 1200 --dp-chunk 600 --data-seed 81 --dp-check-seed 19 --dp-step a
+# poolmore --name dp11 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9,dp10 --dp-more-target 8 --dp-more-cap 1200 --dp-chunk 600 --data-seed 81 --dp-check-seed 19 --dp-step select
+# lupinanswers --la-pool dp11 --dp-step a
 end
