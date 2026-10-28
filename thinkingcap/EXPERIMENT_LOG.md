@@ -3077,3 +3077,8 @@ so the code part moves by several points and its long tail (hard questions, long
   gated 10 answers; otherwise dp11 runs (next 1,200 code questions per half to 8 answers, check seed 19; marker
   dp10-superseded, so only dp11 gets the 10 answers, still gated on its check being ALL OK). Tested on dp9's numbers:
   +9.2 pts / -15% / -31% -> runs.
+- ~01:20 (user: "if it's close enough to eval data, don't wait for me and launch next steps directly"): the 10-answers
+  gate (lupinanswers) now also opens when every CHECK line of the pool's check (vs both) misses its 95% interval by at
+  most 1.5 points (accuracy, capped) or 3% of the bound (token counts) (track.py near_misses_only). Tested: dp9 would
+  stay closed (code p75 71 tokens outside = FAR; simple p75 5 tokens = near). Training is NOT automatic: pairs (spec
+  2.0) are built after the answers.

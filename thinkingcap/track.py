@@ -2459,6 +2459,28 @@ def poolmore(args):
     drive_sync("save")
 
 
+def near_misses_only(text):
+    """User, 29 Oct ~01:15: "if it's close enough to the eval data, don't wait for me". A held-out check also opens the
+    answers gate when every CHECK line misses its 95% interval by at most 1.5 points (accuracy, capped: values in %)
+    or 3% of the bound (token counts). Returns (ok, the CHECK lines with their miss)."""
+    import re as _re
+    misses, ok = [], True
+    for line in text.splitlines():
+        if not line.rstrip().endswith("CHECK") or "verdict" in line:
+            continue
+        m = _re.search(r"(\w+) ([\d.]+)(%?) vs [\d.]+%? \[([\d.]+), ([\d.]+)\]", line)
+        if not m:
+            ok = False
+            misses.append(line.strip() + " (unparsed)")
+            continue
+        value, pct, lo, hi = float(m.group(2)), m.group(3), float(m.group(4)), float(m.group(5))
+        gap = lo - value if value < lo else value - hi
+        near = gap <= 1.5 if pct else gap <= 0.03 * (lo if value < lo else hi)
+        ok &= near
+        misses.append(f"{line.strip()} (outside by {gap:.1f}{' pts' if pct else ' tokens'}, {'near' if near else 'FAR'})")
+    return ok, misses
+
+
 def code_close_enough(pool):
     """dp11's rule (user, 28 Oct night): run another 1,200 code questions per half unless the pool's held-out check
     (poolcheck-<pool>-both) has code within 5 accuracy points AND median / p75 thinking within 10%.
@@ -2505,7 +2527,10 @@ def lupinanswers(args):
             break
         print(f"waiting for {report} on Drive", flush=True)
         time.sleep(300)
-    if not report.exists() or "verdict: ALL OK" not in report.read_text():
+    near, misses = near_misses_only(report.read_text()) if report.exists() else (False, [])
+    if report.exists() and "verdict: ALL OK" not in report.read_text() and near:
+        print(f"GATE: {name} not ALL OK but only near misses (user: close enough, go): " + " | ".join(misses), flush=True)
+    elif not report.exists() or "verdict: ALL OK" not in report.read_text():
         print(f"GATE: {name}'s pool check is not ALL OK; no answers generated. {report.read_text()[-300:] if report.exists() else ''}",
               flush=True)
         return
