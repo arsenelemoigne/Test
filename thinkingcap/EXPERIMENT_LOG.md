@@ -2947,3 +2947,15 @@ Infra this night: Drive full (499.5 / 540 GB org) -> drop2 freed 44.7 GB, user e
 question (10 total) -> pairs selected to the evaluation's distribution -> user review -> LUPIN v1.
 - 28 Oct: SPARSE add-on project specified (thinkingcap/SPARSE_SPEC.md): Wanda / Lottery Ticket pruning of Qwen3-0.6B, then LoRA or freed-weight training to think shorter; separate from LUPIN, reuses LUPIN data, pilot ~15-20 GPU-h on the Wanda cut. Nothing built.
 - dp7c selection (selection answers): no-fit 84% vs 80% (dp6 92%), simple median thinking 132 vs 145 (dp6 121; Glaive 666 + ToolACE 759 kept), code borrowed 100 (dp6 231), math 85 vs 87 / 398 vs 384, IFEval 300 vs 290; proportions OK. Held-out check running on GPU 1; GPU 2 waits for its verdict (lupinanswers gate).
+
+## dp7c held-out check (28 Oct 2026): 32/36 OK, gate closed
+
+New answers (seed 7, 200 per part) vs both references (choosing set + questions_40):
+- svamp: 87% vs 88%, thinking 388 vs 366 (p25 304/282, p75 537/585): all OK.
+- mbpp: 56% vs 53%, median thinking 954 vs 1054, p75 1847 vs 2220 (-17%, inside CI): OK.
+- bfcl_multiple: all OK.
+- bfcl_simple: accuracy 80% vs 88% [82,93] CHECK; p75 thinking 162 vs 199 (-19%) CHECK. By source: glaive 85%/147, toolace 76%/160.
+- bfcl_irrelevance: accuracy 88% vs 79% [70,87] CHECK (no-fit still too easy).
+- ifeval: 48% vs 51%, median 285 vs 316 OK; p75 379 vs 457 (-17%) CHECK. Built 57%/276, built-long 44%/302, real 47%/233.
+Choosing-only reference: more fails (mbpp p75 -36%, simple -10.4 pts, irrelevance 88 vs 77).
+lupinanswers skipped on both GPUs by the gate (as designed). Both plans at end of queue.
