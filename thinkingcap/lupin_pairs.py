@@ -67,6 +67,12 @@ def main():
     parser.add_argument("--margin-drop", type=float, default=0.15)
     parser.add_argument("--right-band", type=float, default=0.25)
     parser.add_argument("--min-solve", type=float, default=0.0)
+    parser.add_argument("--easy-ratio", type=float, default=0.0,
+                        help="long2short: on ALWAYS-solved questions a longer right answer counts from this ratio (29 Oct: 1.2; "
+                             "their right answers are close in length, so 1.5x gave few pairs)")
+    parser.add_argument("--shorten-cap", type=float, default=1.0,
+                        help="long2short: shorten pairs per part at most this many times the guard pairs (always-solved "
+                             "questions give no guard pair)")
     parser.add_argument("--drop-similar", type=float, default=0.0)
     parser.add_argument("--add-right", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
@@ -104,7 +110,8 @@ def main():
         if args.recipe == "long2short":
             if rights and wrongs:
                 add("guard", rights[0], max(wrongs, key=lambda r: r["output_tokens"]), q)
-            if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] >= args.long_ratio * rights[0]["output_tokens"]:
+            ratio = args.easy_ratio if args.easy_ratio and len(rights) == len(q) else args.long_ratio
+            if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] >= ratio * rights[0]["output_tokens"]:
                 add("shorten", rights[0], rights[-1], q)
         elif args.recipe == "dast":
             if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] > rights[0]["output_tokens"]:
@@ -132,7 +139,7 @@ def main():
             mine = [p for p in pairs if p["part"] == part]
             short = [p for p in mine if p["kind"] == "shorten"]
             rng.shuffle(short)
-            limit = sum(p["kind"] == "guard" for p in mine)
+            limit = round(args.shorten_cap * sum(p["kind"] == "guard" for p in mine))
             counts[(part, "shorten capped from")] = len(short)
             kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
         pairs = kept

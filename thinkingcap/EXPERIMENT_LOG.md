@@ -3154,3 +3154,4 @@ Plan cells restarted with the finished lines commented out.
 - Fix: lupin_select spreads the reference share of cells with NO pair under the recipe over the cells that have pairs
   (reported per part); part shares still exact. Screen renamed lpb-* (fresh pairs), checkpoints every 25 steps,
   scored at 25/50/75/100/150 where they exist. lp-l2s75's training (a few minutes) discarded.
+- ~13:45 (user: add the 1.2x variant; pairs mixed in one epoch, not ordered; curriculum = spec M11, later on the winner): lupin_pairs.py --easy-ratio (always-solved questions: shorten from 1.2x) + --shorten-cap (shorten per part up to N x guard; always-solved questions give no guard pair, so the 1x cap would discard the extra pairs). Queued on GPU 2 after lpb-adar1: lpb-l2s50e (long2short, protection p<0.5, easy ratio 1.2, cap 2). Tested on synthetic answers. lpb-l2s75 pairs: 1,452 kept (fill 0.45, limited by no-fit's always-solved cells), ~90 steps.

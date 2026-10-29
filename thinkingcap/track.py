@@ -237,6 +237,8 @@ def main():
     parser.add_argument("--lp-min-solve", type=float, default=0.5, help="lupin: difficulty protection (0: none)")
     parser.add_argument("--lp-extra", default="", help="lupin: more lupin_pairs.py flags, e.g. '--add-right'")
     parser.add_argument("--lp-answers", type=int, default=10, help="lupin: answers per question used (newest first)")
+    parser.add_argument("--lp-easy-ratio", type=float, default=0.0, help="lupin: lupin_pairs.py --easy-ratio")
+    parser.add_argument("--lp-shorten-cap", type=float, default=1.0, help="lupin: lupin_pairs.py --shorten-cap")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
     parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
     parser.add_argument("--lp-dpo", default="", help="lupin: more dpo.py flags, e.g. '--nll 0'")
@@ -2598,7 +2600,9 @@ def lupin(args):
     raw, pairs = BON / f"pairs-{name}-raw", BON / f"pairs-{name}"
     if not (raw / "pairs.jsonl").exists():
         py("lupin_pairs.py", "--rollouts", allfile, "--recipe", args.lp_recipe, "--out", raw,
-           *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split())
+           *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split(),
+           *(["--easy-ratio", args.lp_easy_ratio] if args.lp_easy_ratio else []),
+           *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []))
     if not (pairs / "pairs.jsonl").exists():
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", ROOT / "v4-base", BASE,
            "--total", args.lp_total, "--out", pairs)

@@ -194,4 +194,6 @@
 # done: lupinanswers --la-pool dp10 --la-force dp10-35of36-only-simple-p75-11tok-out_dp11-30of36 --la-target 10 --dp-step b
 lupin --name lpb-l2s75 --lp-recipe long2short --lp-min-solve 0.75 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 lupin --name lpb-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# extra variation (user 29 Oct ~13:40): always-solved questions get shorten pairs from 1.2x (not 1.5x), shorten cap 2x guard; pairs mixed in one epoch
+lupin --name lpb-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end
