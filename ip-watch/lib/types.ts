@@ -1,9 +1,9 @@
 export type Role = "avocat" | "client";
 
-export type RightType = "marque" | "dessin";
+export type RightType = "marque" | "dessin" | "brevet" | "certificat_utilite" | "domaine" | "droit_auteur" | "cov" | "ig" | "autre";
 
-// Office that granted the right: INPI (FR), EUIPO (EU) or WIPO international registration (WO).
-export type Office = "FR" | "EU" | "WO";
+// Office or register: INPI (FR), EUIPO (EU), WIPO (WO), European Patent Office (EP), or any other register.
+export type Office = "FR" | "EU" | "WO" | "EP" | "AUTRE";
 
 export type Territory = {
   // ISO 3166-1 alpha-2 code, or "EU" for the whole European Union.
@@ -27,13 +27,17 @@ export type Right = {
   imageUrl?: string | null;
   sourceUrl?: string | null;
   notes?: string;
+  // False for titles held by the client's group (holding, subsidiaries) rather than the client itself.
+  clientOwned?: boolean;
+  // "inpi" for imported titles, "manuel" for titles entered by the lawyer.
+  origin?: "inpi" | "manuel";
 };
 
 export type FieldEdit = { value: unknown; prev: unknown; by: Role; at: string };
 
 export type RunSummary = { id: string; startedAt: string; status: RunStatus; total: number; high: number };
 
-export type Mark = Right & { edits: Record<string, FieldEdit>; lastRun: RunSummary | null };
+export type Mark = Right & { edits: Record<string, FieldEdit>; lastRun: RunSummary | null; favorite: boolean };
 
 export type Company = {
   siren: string;
@@ -90,7 +94,7 @@ export type RunStatus = "running" | "done" | "error";
 
 export type RunStep = { name: string; status: "running" | "done" | "skipped" | "error"; detail?: string };
 
-export type RunStats = { steps: RunStep[]; total: number; high: number; byCountry: Record<string, number> };
+export type RunStats = { steps: RunStep[]; total: number; high: number; byCountry: Record<string, number>; traceId?: string };
 
 export type WatchRun = {
   id: string;

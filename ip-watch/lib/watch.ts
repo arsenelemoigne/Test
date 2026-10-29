@@ -7,6 +7,7 @@ import * as urlscan from "./sources/urlscan";
 import { lookupDomain, registrableDomain } from "./sources/rdap";
 import * as store from "./store";
 import { uploadObject } from "./supabase";
+import { runInTrace, startTrace, traceStep } from "./trace";
 import type { Client, Finding, FindingKind, Mark, RunStats, WatchRun } from "./types";
 
 type Candidate = { kind: FindingKind; source: string; title: string; url: string; seller: string | null; price: number | null; currency: string | null; country: string | null };
@@ -55,20 +56,25 @@ function searchTerm(client: Client, mark: Mark): string {
 
 export async function startWatch(client: Client, mark: Mark, trigger: WatchRun["trigger"]): Promise<WatchRun> {
   const run = await store.createRun(client.id, mark.id, mark.name, trigger);
+  const trace = await startTrace("recherche", `Recherche de contrefaçons — ${mark.name}`, client.id);
   // Runs in the background; the dashboard polls the run for results.
-  void execute(run, client, mark).catch(async (e) => {
-    await store.updateRun(run.id, { status: "error", error: e instanceof Error ? e.message : String(e), finished_at: new Date().toISOString() });
-  });
+  void runInTrace(trace, () => execute(run, client, mark, trace.id))
+    .then(() => trace.finish("done", { runId: run.id }))
+    .catch(async (e) => {
+      await store.updateRun(run.id, { status: "error", error: e instanceof Error ? e.message : String(e), finished_at: new Date().toISOString() });
+      await trace.finish("error", { error: e instanceof Error ? e.message : String(e) });
+    });
   return run;
 }
 
-async function execute(run: WatchRun, client: Client, mark: Mark) {
-  const stats: RunStats = { steps: [], total: 0, high: 0, byCountry: {} };
+async function execute(run: WatchRun, client: Client, mark: Mark, traceId: string) {
+  const stats: RunStats = { steps: [], total: 0, high: 0, byCountry: {}, traceId };
   const findings: Finding[] = [];
   const seen = new Set<string>();
   const brand = client.holderNames[0] ?? client.name.toUpperCase();
   const official = [`${slugify(brand).replace(/-/g, "")}.com`, `${slugify(brand).replace(/-/g, "")}.fr`];
   const term = searchTerm(client, mark);
+  traceStep({ kind: "etape", name: "Paramètres de la recherche", output: { requete: term, marque: mark.name, sites_officiels_exclus: official }, ok: true });
 
   const save = () => store.updateRun(run.id, { stats: { ...stats, total: findings.length, high: findings.filter((f) => (f.confidence ?? 0) >= 70).length, byCountry: countByCountry(findings) } });
 
@@ -189,7 +195,7 @@ async function execute(run: WatchRun, client: Client, mark: Mark) {
     "recherche",
     `Recherche de contrefaçons — ${mark.name}`,
     `${findings.length} résultat(s), dont ${high.length} à forte confiance${countries ? ` (${countries})` : ""}.`,
-    { runId: run.id, markId: mark.id, trigger: run.trigger },
+    { runId: run.id, markId: mark.id, trigger: run.trigger, traceId },
   );
 }
 

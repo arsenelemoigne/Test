@@ -26,6 +26,15 @@ Deadlines: final deliverables 31 Oct 2026; jury pitch 13–20 Nov 2026.
 - Email assistant: Resend webhook `/api/inbound` → intent → onboard / add marks / start search / answer / note → history + reply.
 - Assistant agent (`lib/agent.ts`) with tools; link verification; every tool call logged to `assistant_logs`.
 
+## Added 30 Oct (evening)
+
+- Holders classified as client / group / namesake (strict rule + strong model); dashboard and Marques default to the client's own filings, group titles behind a filter.
+- "Coulisses": `traces` table + AsyncLocalStorage (`lib/trace.ts`); AI calls, API calls and steps record themselves; footer toggle; drawer for imports, searches and history; per-answer steps in the assistant. Imports run in the background and are followed through their trace.
+- Favourites (`marks.favorite`), manual titles (`MAN-` ids: patents, domain names, e-Soleau…, never removed by a refresh), mark detail drawer, deadline timeline.
+- INPI full records requested as XML (they returned 406 as JSON); details already known are reused on refresh to save quota.
+- PISTE: secret in body, then HTTP Basic, then `PISTE_API_KEY` (KeyId header). First real call failed with invalid_client.
+- Two model tiers: `OPENROUTER_MODEL` (strong) and `OPENROUTER_MODEL_FAST`.
+
 ## To check on first real use
 
 - INPI field mapping (`lib/sources/inpi.ts` normalize) against the raw answers stored in `raw_imports`.

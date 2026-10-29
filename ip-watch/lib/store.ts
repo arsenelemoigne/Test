@@ -10,7 +10,7 @@ type ClientRow = {
   id: string; slug: string; name: string; siren: string | null; company: Client["company"]; holder_names: string[];
   status: Client["status"]; error: string | null; data_updated_at: string | null; imported_at: string | null; created_at: string;
 };
-type MarkRow = { client_id: string; id: string; data: Right; raw?: unknown; edits: Record<string, FieldEdit> };
+type MarkRow = { client_id: string; id: string; data: Right; raw?: unknown; edits: Record<string, FieldEdit>; favorite?: boolean };
 type EventRow = { id: number; client_id: string | null; created_at: string; kind: HistoryEvent["kind"]; title: string; summary: string | null; details: Record<string, unknown> | null };
 type RunRow = { id: string; client_id: string; mark_id: string; mark_name: string; trigger: WatchRun["trigger"]; status: WatchRun["status"]; started_at: string; finished_at: string | null; stats: WatchRun["stats"]; error: string | null };
 type FindingRow = {
@@ -121,11 +121,42 @@ export async function listMarks(clientId: string): Promise<Mark[]> {
   const [rows, runs] = memory
     ? [mem.marks.filter((m) => m.client_id === clientId), mem.runs.filter((r) => r.client_id === clientId).sort((a, b) => b.started_at.localeCompare(a.started_at))]
     : await Promise.all([
-        sb.select<MarkRow>("marks", { client_id: `eq.${clientId}`, select: "client_id,id,data,edits" }),
+        sb.select<MarkRow>("marks", { client_id: `eq.${clientId}`, select: "client_id,id,data,edits,favorite" }),
         sb.select<RunRow>("watch_runs", { client_id: `eq.${clientId}`, order: "started_at.desc", limit: "500" }),
       ]);
   const last = summarize(runs);
-  return rows.map((r) => ({ ...r.data, edits: r.edits ?? {}, lastRun: last.get(r.id) ?? null }));
+  return rows.map((r) => ({ ...r.data, edits: r.edits ?? {}, lastRun: last.get(r.id) ?? null, favorite: Boolean(r.favorite) }));
+}
+
+// Data already known for each title (dates, classes, countries), reused so a refresh does not re-read full records.
+export async function knownDetails(clientId: string): Promise<Map<string, Right>> {
+  const rows = memory ? mem.marks.filter((m) => m.client_id === clientId) : await sb.select<MarkRow>("marks", { client_id: `eq.${clientId}`, select: "id,data" });
+  return new Map(rows.map((r) => [r.id, r.data]));
+}
+
+export async function setFavorite(clientId: string, markId: string, favorite: boolean): Promise<void> {
+  if (memory) {
+    const m = mem.marks.find((x) => x.client_id === clientId && x.id === markId);
+    if (m) m.favorite = favorite;
+    return;
+  }
+  await sb.update("marks", { client_id: `eq.${clientId}`, id: `eq.${markId}` }, { favorite });
+}
+
+// Titles entered by hand get a MAN- identifier and are never removed by a registry refresh.
+export async function addManualMark(clientId: string, right: Omit<Right, "id" | "origin">): Promise<Right> {
+  const full: Right = { ...right, id: `MAN-${randomUUID().slice(0, 8).toUpperCase()}`, origin: "manuel", clientOwned: true };
+  if (memory) mem.marks.push({ client_id: clientId, id: full.id, data: full, edits: {} });
+  else await sb.insert("marks", [{ client_id: clientId, id: full.id, data: full }]);
+  return full;
+}
+
+export async function deleteMark(clientId: string, markId: string): Promise<void> {
+  if (memory) {
+    mem.marks = mem.marks.filter((m) => !(m.client_id === clientId && m.id === markId));
+    return;
+  }
+  await sb.remove("marks", { client_id: `eq.${clientId}`, id: `eq.${markId}` });
 }
 
 export async function upsertMarks(clientId: string, items: { right: Right; raw: unknown }[]): Promise<void> {
@@ -153,11 +184,11 @@ export async function removeStaleMarks(clientId: string, keepIds: string[]): Pro
   const keep = new Set(keepIds);
   if (memory) {
     const before = mem.marks.length;
-    mem.marks = mem.marks.filter((m) => m.client_id !== clientId || keep.has(m.id));
+    mem.marks = mem.marks.filter((m) => m.client_id !== clientId || keep.has(m.id) || m.id.startsWith("MAN-"));
     return before - mem.marks.length;
   }
   const existing = await sb.select<{ id: string }>("marks", { client_id: `eq.${clientId}`, select: "id" });
-  const stale = existing.map((m) => m.id).filter((id) => !keep.has(id));
+  const stale = existing.map((m) => m.id).filter((id) => !keep.has(id) && !id.startsWith("MAN-"));
   for (let i = 0; i < stale.length; i += 100) {
     const ids = stale.slice(i, i + 100).map((id) => `"${id.replace(/"/g, "")}"`).join(",");
     await sb.remove("marks", { client_id: `eq.${clientId}`, id: `in.(${ids})` });

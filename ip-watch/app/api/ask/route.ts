@@ -4,6 +4,7 @@ import { currentRole } from "@/lib/auth";
 import { currentClient } from "@/lib/data";
 import { llmConfigured } from "@/lib/llm";
 import * as store from "@/lib/store";
+import { runInTrace, startTrace } from "@/lib/trace";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -19,10 +20,15 @@ export async function POST(request: Request) {
 
   const client = await currentClient();
   const marks = client ? await store.listMarks(client.id) : [];
+  const question = messages[messages.length - 1].content;
+  const trace = await startTrace("assistant", question.slice(0, 120), client?.id ?? null);
   try {
-    const out = await runAgent({ client, marks, messages, focusMarkIds: body?.focusMarkIds ?? [], trigger: "app" });
-    return NextResponse.json(out);
+    const out = await runInTrace(trace, () => runAgent({ client, marks, messages, focusMarkIds: body?.focusMarkIds ?? [], trigger: "app" }));
+    await trace.finish("done", { sources: out.sources });
+    return NextResponse.json({ ...out, traceId: trace.id, steps: trace.steps });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message.slice(0, 200) : "Erreur" }, { status: 502 });
+    const error = e instanceof Error ? e.message.slice(0, 200) : "Erreur";
+    await trace.finish("error", { error });
+    return NextResponse.json({ error, traceId: trace.id, steps: trace.steps }, { status: 502 });
   }
 }

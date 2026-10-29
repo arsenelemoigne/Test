@@ -1,4 +1,5 @@
 import { insert, supabaseConfigured } from "./supabase";
+import { traceStep } from "./trace";
 
 // Best-effort trace of external calls, read back to debug integrations; never blocks the caller.
 export async function logCall(kind: string, name: string, input: unknown, output: unknown, status: number | null, durationMs: number, clientSlug?: string): Promise<void> {
@@ -16,10 +17,14 @@ export async function traced<T>(kind: string, name: string, input: unknown, fn: 
   const started = Date.now();
   try {
     const value = await fn();
-    void logCall(kind, name, input, summarize(value), 200, Date.now() - started);
+    const summary = summarize(value);
+    void logCall(kind, name, input, summary, 200, Date.now() - started);
+    traceStep({ kind: "api", name, input, output: summary, ms: Date.now() - started, ok: true });
     return value;
   } catch (e) {
-    void logCall(kind, name, input, e instanceof Error ? e.message : String(e), 500, Date.now() - started);
+    const message = e instanceof Error ? e.message : String(e);
+    void logCall(kind, name, input, message, 500, Date.now() - started);
+    traceStep({ kind: "api", name, input, output: message, ms: Date.now() - started, ok: false });
     throw e;
   }
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { extractJson } from "./llm";
 import { traced } from "./log";
+import { currentTrace, traceStep } from "./trace";
 import { searchCompanies } from "./sources/entreprises";
 import * as inpi from "./sources/inpi";
 import * as store from "./store";
@@ -10,7 +11,7 @@ import type { Client, Company, Right } from "./types";
 const PAGE_SIZE = 100;
 const MAX_PAGES = 5;
 // Full records cost one INPI call each (quota ≈ 100): only the most useful marks are enriched.
-const MAX_NOTICES = 30;
+const MAX_NOTICES = 20;
 const LEGAL_FORMS = /\b(SASU|SAS|SARL|EURL|SNC|SCA|SA|SE|GMBH|LTD|LIMITED|INC|LLC|SPA|BV)\b\.?/gi;
 
 export function slugify(s: string): string {
@@ -70,43 +71,89 @@ async function importTitles(client: Client, holders: string[], runId: string): P
     }
   }
   const all = Array.from(found.values());
-  const kept = await keepGroupHolders(all, client, holders);
+  traceStep({ kind: "etape", name: "Titres trouvés à l'INPI", output: { marques: all.filter((i) => i.right.type === "marque").length, dessins: all.filter((i) => i.right.type === "dessin").length }, ok: true });
+  const kept = await classifyHolders(all, client, holders);
+
+  // Details read on a previous import are reused, so full records are only fetched for what is still missing.
+  const known = await store.knownDetails(client.id);
+  let reused = 0;
+  for (const { right } of kept) {
+    right.origin = "inpi";
+    const k = known.get(right.id);
+    if (!k) continue;
+    const before = JSON.stringify([right.filingDate, right.expiryDate, right.classes, right.territories]);
+    right.filingDate ??= k.filingDate;
+    right.registrationDate ??= k.registrationDate;
+    right.expiryDate ??= k.expiryDate;
+    if (!right.classes.length) right.classes = k.classes ?? [];
+    if (!right.territories.length) right.territories = k.territories ?? [];
+    if (JSON.stringify([right.filingDate, right.expiryDate, right.classes, right.territories]) !== before) reused++;
+  }
+  if (reused) traceStep({ kind: "etape", name: "Détails déjà connus réutilisés", output: { titres: reused }, ok: true });
   await enrichFromNotices(client, kept, runId);
   return kept;
 }
 
-const CORPORATE_WORDS = new Set(["SA", "SAS", "SASU", "SARL", "SE", "HOLDING", "GROUPE", "GROUP", "PARFUMS", "PARIS", "LES", "MONTRES", "JOAILLERIE", "INTERNATIONAL", "SOCIETE", "ANONYME", "PAR", "ACTIONS", "SIMPLIFIEE", "ET", "CIE", "FRANCE"]);
-const normName = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+const LEGAL_WORDS = new Set(["SA", "SAS", "SASU", "SARL", "EURL", "SE", "SNC", "SOCIETE", "SOCIE", "ANONYME", "PAR", "ACTIONS", "SIMPLIFIEE", "A", "DIRECTOIRE", "ET", "CONSEIL", "DE", "SURVEILLANCE", "STE"]);
+// Dots are dropped first so "S.A." and "S.A.R.L." read as SA and SARL.
+const normName = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\./g, "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+// Words a group company adds to the brand ("BOUCHERON HOLDING", "LES MONTRES BOUCHERON"); anything else suggests a namesake.
+const GROUP_WORDS = new Set(["HOLDING", "PARFUMS", "PARFUM", "LES", "MONTRES", "JOAILLERIE", "BIJOUX", "HORLOGERIE", "INTERNATIONAL", "GROUPE", "GROUP", "PARIS", "FRANCE", "DISTRIBUTION"]);
+// Name without legal-form words: "BOUCHERON, Société par actions simplifiée" and "S.A. BOUCHERON" both give "BOUCHERON".
+const coreName = (s: string) => normName(s).split(" ").filter((w) => w && !LEGAL_WORDS.has(w)).join(" ");
 
-// A holder search also returns namesakes (people or companies sharing the name): keep the client's group only.
-async function keepGroupHolders(items: { right: Right; raw: unknown }[], client: Client, holders: string[]) {
-  const owners = Array.from(new Set(items.map((i) => i.right.owner).filter(Boolean)));
-  if (owners.length === 0) return items;
-  const brands = holders.map(normName);
-  // Strict fallback: besides the brand, only corporate words (legal forms, "holding", "parfums"…).
-  const strict = (o: string) => {
-    const words = normName(o).split(" ");
-    return brands.some((b) => normName(o).includes(b)) && words.every((w) => brands.some((b) => b.split(" ").includes(w)) || CORPORATE_WORDS.has(w));
+type HolderClass = "client" | "groupe" | "homonyme";
+
+// A holder search returns the client, its group (holding, subsidiaries) and namesakes: only the client counts by default.
+export async function classifyHolders(items: { right: Right; raw: unknown }[], client: Client, holders: string[]) {
+  const counts = new Map<string, number>();
+  for (const i of items) counts.set(i.right.owner, (counts.get(i.right.owner) ?? 0) + 1);
+  const owners = Array.from(counts.keys()).filter(Boolean);
+  const target = coreName(client.company?.legalName ?? holders[0] ?? client.name);
+  const brand = coreName(holders[0] ?? client.name);
+  // Strict rule: one of the co-holders is exactly the client's name; otherwise group if the brand appears.
+  const strict = (o: string): HolderClass => {
+    if (/\d{5}/.test(o)) return "homonyme";
+    const parts = o.split(/,|;| et /i).map(coreName).filter(Boolean);
+    if (parts.includes(target)) return "client";
+    const isGroup = parts.some((p) => {
+      const words = p.split(" ");
+      return words.includes(brand) && words.every((w) => w === brand || GROUP_WORDS.has(w));
+    });
+    return isGroup ? "groupe" : "homonyme";
   };
-  const ai = await extractJson<{ retenus?: string[] }>(
+  const decided = new Map<string, HolderClass>(owners.map((o) => [o, strict(o)]));
+
+  const ai = await extractJson<{ client?: string[]; groupe?: string[]; homonymes?: string[] }>(
     [
-      `Société cliente : ${client.name}${client.company ? ` (SIREN ${client.company.siren}, ${client.company.address ?? ""}, activité ${client.company.activity ?? "n.c."})` : ""}.`,
-      "Voici les titulaires trouvés à l'INPI pour une recherche par nom de déposant.",
-      "Retiens uniquement ceux qui appartiennent au groupe du client : la société, ses filiales, ses holdings, ses anciennes dénominations. Écarte les homonymes : personnes physiques, autres sociétés sans lien.",
-      'Réponds en JSON : {"retenus": ["libellé exact", ...]}.',
+      `Société cliente : ${client.company?.legalName ?? client.name}${client.company ? `, SIREN ${client.company.siren}, siège ${client.company.address ?? "n.c."}, activité ${client.company.activity ?? "n.c."}` : ""}.`,
+      "Voici les titulaires (avec leur nombre de titres) trouvés à l'INPI par une recherche sur le nom de déposant.",
+      "Classe chaque libellé : « client » = la société cliente elle-même, quelle que soit la façon d'écrire sa forme juridique, y compris en cotitularité ;",
+      "« groupe » = sa holding, ses filiales ou sociétés sœurs (ex. « … HOLDING », « … PARFUMS ») ; « homonymes » = personnes physiques ou sociétés sans lien (autre adresse, autre forme ancienne sans rapport).",
+      'Réponds en JSON : {"client": ["libellé exact", ...], "groupe": [...], "homonymes": [...]}.',
     ].join("\n"),
-    JSON.stringify(owners),
-    "holder-filter",
+    JSON.stringify(owners.map((o) => ({ titulaire: o, titres: counts.get(o) }))),
+    "classification des titulaires",
+    "strong",
   );
-  const allowed = new Set((ai?.retenus ?? owners.filter(strict)).map(normName));
-  return items.filter((i) => allowed.has(normName(i.right.owner)));
+  if (ai) {
+    for (const o of ai.client ?? []) if (decided.has(o)) decided.set(o, "client");
+    for (const o of ai.groupe ?? []) if (decided.has(o)) decided.set(o, "groupe");
+    for (const o of ai.homonymes ?? []) if (decided.has(o)) decided.set(o, "homonyme");
+  }
+  const by = (c: HolderClass) => owners.filter((o) => decided.get(o) === c).map((o) => `${o} (${counts.get(o)})`);
+  traceStep({ kind: "etape", name: "Classement des titulaires", detail: ai ? "règle stricte puis vérification par l'IA" : "règle stricte (IA indisponible)", output: { client: by("client"), groupe: by("groupe"), homonymes_ecartes: by("homonyme") }, ok: true });
+
+  return items
+    .filter((i) => decided.get(i.right.owner) !== "homonyme")
+    .map((i) => ({ ...i, right: { ...i.right, clientOwned: decided.get(i.right.owner) === "client" } }));
 }
 
 const isActive = (status: string) => !/expir|retir|radi|rejet|refus|abandon|non renouvel|annul|caduc/i.test(status);
 
 // Fills dates, classes and designated countries from full records, active international marks first.
 async function enrichFromNotices(client: Client, items: { right: Right; raw: unknown }[], runId: string) {
-  const missing = items.filter((i) => i.right.type === "marque" && (!i.right.expiryDate || (i.right.office === "WO" && i.right.territories.length === 0)) && isActive(i.right.status));
+  const missing = items.filter((i) => i.right.type === "marque" && i.right.clientOwned !== false && (!i.right.expiryDate || (i.right.office === "WO" && i.right.territories.length === 0)) && isActive(i.right.status));
   const rank = (r: Right) => (r.office === "WO" ? 0 : r.office === "EU" ? 1 : 2);
   const seenNames = new Set<string>();
   const picked = missing
@@ -118,6 +165,7 @@ async function enrichFromNotices(client: Client, items: { right: Right; raw: unk
       return true;
     })
     .slice(0, MAX_NOTICES);
+  traceStep({ kind: "etape", name: "Fiches complètes à lire", detail: `${picked.length} sur ${missing.length} titres incomplets (limite ${MAX_NOTICES}, quota INPI)`, ok: true });
   for (const item of picked) {
     const path = inpi.noticePath(item.raw as Record<string, unknown>);
     if (!path) continue;
@@ -144,7 +192,9 @@ export type OnboardResult = { client: Client; marks: number; designs: number; su
 
 export async function onboard(text: string, trigger: "email" | "app"): Promise<OnboardResult> {
   const { name, siren } = await identify(text);
+  traceStep({ kind: "etape", name: "Client identifié dans le message", output: { societe: name, siren }, ok: true });
   const company = await findCompany(name, siren);
+  traceStep({ kind: "etape", name: "Fiche société", output: company ? { denomination: company.legalName ?? company.name, siren: company.siren, siege: company.address } : "aucune société trouvée", ok: Boolean(company) });
   const brand = holderName(name);
   const holders = Array.from(new Set([brand, company?.legalName ? holderName(company.legalName) : ""].filter(Boolean))).slice(0, 2);
   const client = await store.saveClient({ slug: slugify(brand), name: brand.charAt(0) + brand.slice(1).toLowerCase(), siren: company?.siren ?? siren, company, holderNames: holders, status: "importing" });
@@ -157,14 +207,17 @@ export async function onboard(text: string, trigger: "email" | "app"): Promise<O
     const updatedAt = await inpi.metadata();
     await store.updateClient(client.id, { status: "ready", error: null, imported_at: new Date().toISOString(), data_updated_at: updatedAt, holder_names: holders });
 
-    const marks = items.filter((i) => i.right.type === "marque");
-    const designs = items.length - marks.length;
-    const active = items.filter((i) => isActiveRight(i.right));
+    const own = items.filter((i) => i.right.clientOwned !== false);
+    const marks = own.filter((i) => i.right.type === "marque");
+    const designs = own.length - marks.length;
+    const active = own.filter((i) => isActiveRight(i.right));
+    const group = items.length - own.length;
     const byOffice = (o: string) => marks.filter((m) => m.right.office === o).length;
     const summary =
-      `Recherche INPI au nom de ${holders.join(" et ")}${company ? ` (SIREN ${company.siren})` : ""} : ` +
-      `${marks.length} marques (France ${byOffice("FR")}, UE ${byOffice("EU")}, international ${byOffice("WO")}) et ${designs} dessins & modèles, dont ${active.length} titres en vigueur.`;
-    await store.addEvent(client.id, "import", `Import INPI — ${marks.length} marques, ${designs} dessins`, summary, { runId, holders, trigger, siren: company?.siren ?? siren });
+      `Titres déposés par ${company?.legalName ?? holders[0]}${company ? ` (SIREN ${company.siren})` : ""} : ` +
+      `${marks.length} marques (France ${byOffice("FR")}, UE ${byOffice("EU")}, international ${byOffice("WO")}) et ${designs} dessins & modèles, dont ${active.length} en vigueur.` +
+      (group ? ` ${group} titres de sociétés du groupe (holding, filiales) conservés à part.` : "");
+    await store.addEvent(client.id, "import", `Import INPI — ${marks.length} marques, ${designs} dessins`, summary, { runId, holders, trigger, siren: company?.siren ?? siren, traceId: currentTrace()?.id });
     return { client: (await store.getClientById(client.id))!, marks: marks.length, designs, summary };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

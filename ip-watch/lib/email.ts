@@ -6,6 +6,7 @@ import { toHtml } from "./markdown";
 import { addMarks, onboard } from "./onboard";
 import * as store from "./store";
 import { startWatch } from "./watch";
+import { runInTrace, startTrace, traceStep } from "./trace";
 import type { Client } from "./types";
 
 type Intent = {
@@ -70,6 +71,12 @@ export async function handleInboundEmail(emailId: string): Promise<void> {
     return;
   }
 
+  const trace = await startTrace("email", subject, null);
+  await runInTrace(trace, () => processEmail(emailId, sender, subject, body, email.message_id ?? null, trace.id));
+  await trace.finish("done", null);
+}
+
+async function processEmail(emailId: string, sender: string, subject: string, body: string, messageId: string | null, traceId: string) {
   const clients = await store.listClients();
   const intent =
     (await extractJson<Intent>(
@@ -82,6 +89,7 @@ export async function handleInboundEmail(emailId: string): Promise<void> {
       `Objet : ${subject}\n\n${body}`,
       "email-intent",
     )) ?? { intention: "note", resume: subject };
+  traceStep({ kind: "etape", name: "Intention de l'email", output: intent, ok: true });
 
   let client = matchClient(clients, intent.client);
   let answer: string;
@@ -128,9 +136,9 @@ export async function handleInboundEmail(emailId: string): Promise<void> {
     answer = `Je n'ai pas pu traiter cette demande : ${e instanceof Error ? e.message : String(e)}`;
   }
 
-  await store.addEvent(client?.id ?? null, "email", subject, intent.resume ?? null, { emailId, from: sender, intent: intent.intention, answer: answer.slice(0, 2000) });
+  await store.addEvent(client?.id ?? null, "email", subject, intent.resume ?? null, { emailId, from: sender, intent: intent.intention, answer: answer.slice(0, 2000), traceId });
   try {
-    await reply(sender, subject, answer, email.message_id ?? null);
+    await reply(sender, subject, answer, messageId);
   } catch (e) {
     void logCall("email", "reply", { to: sender }, e instanceof Error ? e.message : String(e), 500, 0);
   }

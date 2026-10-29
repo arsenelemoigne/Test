@@ -1,4 +1,5 @@
 import { logCall } from "./log";
+import { traceStep } from "./trace";
 
 // OpenRouter chat completions (OpenAI-compatible), with tool calls and the web search plugin.
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -49,12 +50,25 @@ export async function chat(opts: {
     }),
   });
   const text = await res.text();
+  const model = modelFor(opts.tier ?? "strong");
+  const last = opts.messages[opts.messages.length - 1];
+  const input = { dernier_message: typeof last?.content === "string" ? last.content.slice(0, 600) : null, outils: opts.tools?.length ?? 0 };
   if (!res.ok) {
     await logCall("llm", opts.label ?? "chat", null, text.slice(0, 2000), res.status, Date.now() - started);
+    traceStep({ kind: "ia", name: opts.label ?? "chat", detail: model, input, output: text.slice(0, 300), ms: Date.now() - started, ok: false });
     throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 200)}`);
   }
-  const json = JSON.parse(text) as { choices?: { message?: { content?: string | null; tool_calls?: ToolCall[]; annotations?: Annotation[] } }[] };
+  const json = JSON.parse(text) as { choices?: { message?: { content?: string | null; tool_calls?: ToolCall[]; annotations?: Annotation[] } }[]; usage?: { total_tokens?: number } };
   const message = json.choices?.[0]?.message ?? {};
+  traceStep({
+    kind: "ia",
+    name: opts.label ?? "chat",
+    detail: `${model}${json.usage?.total_tokens ? ` · ${json.usage.total_tokens} tokens` : ""}`,
+    input,
+    output: message.tool_calls?.length ? { decide_d_appeler: message.tool_calls.map((c) => ({ outil: c.function.name, arguments: c.function.arguments })) } : message.content,
+    ms: Date.now() - started,
+    ok: true,
+  });
   return { message: { content: message.content ?? null, tool_calls: message.tool_calls }, annotations: message.annotations ?? [] };
 }
 

@@ -2,10 +2,30 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "./Markdown";
+import { useApp } from "./AppProvider";
 import { RoughBox } from "./RoughBox";
+import { TraceSteps } from "./Trace";
+import type { TraceStep } from "@/lib/trace";
 import type { Mark } from "@/lib/types";
 
-type Message = { role: "user" | "assistant"; content: string; sources?: { name: string; count: number }[]; marks?: string[] };
+type Message = { role: "user" | "assistant"; content: string; sources?: { name: string; count: number }[]; marks?: string[]; steps?: TraceStep[] };
+
+function StepsToggle({ steps }: { steps: TraceStep[] }) {
+  const [open, setOpen] = useState(false);
+  const total = steps.length > 1 ? (new Date(steps[steps.length - 1].at).getTime() - new Date(steps[0].at).getTime()) / 1000 : 0;
+  return (
+    <div className="mt-1">
+      <button type="button" className="btn-quiet text-[11.5px]" onClick={() => setOpen((o) => !o)}>
+        {open ? "▾" : "▸"} coulisses · {steps.length} étapes · {total.toFixed(1).replace(".", ",")} s
+      </button>
+      {open && (
+        <div className="mt-1 rounded border border-dashed border-[color:var(--line)] p-2">
+          <TraceSteps steps={steps} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Props = { marks: Mark[]; onRunStarted?: (runId: string) => void; className?: string };
 
@@ -26,6 +46,7 @@ function slashQuery(value: string, caret: number): { start: number; query: strin
 }
 
 export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
+  const { coulisses } = useApp();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [focus, setFocus] = useState<Mark[]>([]);
@@ -39,7 +60,8 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
   // One entry per distinct name, marks first.
   const choices = useMemo(() => {
     const byName = new Map<string, Mark>();
-    for (const m of [...marks].sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "marque" ? -1 : 1))) {
+    const own = marks.filter((m) => m.clientOwned !== false);
+    for (const m of [...own].sort((a, b) => Number(b.favorite) - Number(a.favorite) || (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "marque" ? -1 : 1))) {
       if (!byName.has(m.name.toUpperCase())) byName.set(m.name.toUpperCase(), m);
     }
     return Array.from(byName.values());
@@ -84,7 +106,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
-      setMessages([...next, { role: "assistant", content: json.answer, sources: json.sources }]);
+      setMessages([...next, { role: "assistant", content: json.answer, sources: json.sources, steps: json.steps }]);
       if (json.runId) onRunStarted?.(json.runId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -100,7 +122,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
   };
 
   return (
-    <RoughBox seed={7} className={`flex flex-col ${className}`}>
+    <RoughBox seed={7} className={`overflow-hidden ${className}`}>
       <div className="flex h-full min-h-0 flex-col p-4">
         <div className="flex items-baseline justify-between">
           <h2 className="hand text-[17px] font-semibold">Assistant</h2>
@@ -153,6 +175,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
                 {m.sources && m.sources.length > 0 && (
                   <p className="label mt-2">sources consultées : {m.sources.map((s) => (s.count > 1 ? `${s.name} ×${s.count}` : s.name)).join(" · ")}</p>
                 )}
+                {coulisses && m.steps && m.steps.length > 0 && <StepsToggle steps={m.steps} />}
               </div>
             ),
           )}

@@ -1,6 +1,7 @@
 import { currentClient } from "@/lib/data";
 import { listEvents } from "@/lib/store";
 import { formatDate } from "@/lib/format";
+import { TraceLink } from "@/components/Trace";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default async function HistoryPage() {
                   <div className="text-[13.5px]">{e.title}</div>
                   {e.summary && <p className="text-[12.5px] text-[color:var(--pencil)]">{e.summary}</p>}
                   {typeof e.details?.from === "string" && <p className="font-mono text-[10.5px] text-[color:var(--pencil)]">de {e.details.from}</p>}
+                  <TraceLink id={typeof e.details?.traceId === "string" ? e.details.traceId : null} title={e.title} />
                 </div>
               </li>
             ))}

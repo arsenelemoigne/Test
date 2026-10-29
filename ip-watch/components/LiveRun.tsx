@@ -2,6 +2,7 @@
 
 import { countryName } from "@/lib/territories";
 import { formatDateTime, formatPrice } from "@/lib/format";
+import { TraceLink } from "./Trace";
 import type { Finding, RunStep, WatchRun } from "@/lib/types";
 
 const STEP_ICON: Record<RunStep["status"], string> = { running: "…", done: "✓", skipped: "–", error: "×" };
@@ -56,6 +57,7 @@ export function LiveRun({ run, findings, country, onCountry, onClose }: Props) {
           <a href={`${logHref}?format=csv`} className="btn-quiet text-[12px]">
             csv
           </a>
+          <TraceLink id={run.stats?.traceId} title={`Recherche « ${run.markName} »`} />
           <button type="button" onClick={onClose} className="btn-quiet text-[12px]">
             fermer
           </button>

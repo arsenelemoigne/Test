@@ -13,6 +13,8 @@ export const OFFICE_LABELS: Record<Office, string> = {
   FR: "INPI (France)",
   EU: "EUIPO (Union européenne)",
   WO: "OMPI (international)",
+  EP: "OEB (brevet européen)",
+  AUTRE: "Autre registre",
 };
 
 export function countryName(code: string): string {

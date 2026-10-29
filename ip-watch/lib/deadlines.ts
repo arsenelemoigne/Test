@@ -29,20 +29,27 @@ export type Deadline = {
   daysLeft: number | null;
 };
 
-// Trademarks run for 10-year terms; designs for 5-year terms capped at 25 years.
-// Renewal opens 6 months before expiry, with a 6-month grace period after it (FR, EU and WO).
+// Terms: marks 10 years renewable; designs 5-year periods up to 25; patents 20; utility certificates 10;
+// plant variety rights 25; e-Soleau 5. Domain names, geographical indications and others need a date entered by hand.
+const FIXED_TERM: Partial<Record<Right["type"], number>> = { brevet: 20, certificat_utilite: 10, cov: 25, droit_auteur: 5 };
+
 function computedExpiry(right: Right, today: Date): Date | null {
   const start = right.office === "WO" ? right.registrationDate ?? right.filingDate : right.filingDate;
   if (!start) return null;
+  const fixed = FIXED_TERM[right.type];
+  if (fixed) return addYears(start, fixed);
+  if (right.type !== "marque" && right.type !== "dessin") return null;
   const term = right.type === "marque" ? 10 : 5;
-  const max = right.type === "marque" ? Infinity : 25;
+  const max = right.type === "marque" ? 1000 : 25;
   for (let years = term; years <= max; years += term) {
     const end = addYears(start, years);
     if (addMonths(end, 6) >= today) return end;
-    if (years > 200) break;
   }
   return addYears(start, right.type === "marque" ? term : 25);
 }
+
+// Only marks and designs have a renewal window and a 6-month grace period.
+const renewable = (right: Right) => right.type === "marque" || right.type === "dessin";
 
 export function deadlineFor(right: Right, today = new Date()): Deadline {
   const fromRegistry = right.expiryDate ? new Date(right.expiryDate) : null;
@@ -51,7 +58,7 @@ export function deadlineFor(right: Right, today = new Date()): Deadline {
     return { rightId: right.id, expiry: null, computed: false, windowOpens: null, graceEnds: null, reminders: [], state: "inconnu", daysLeft: null };
   }
   const windowOpens = addMonths(expiry, -6);
-  const graceEnds = addMonths(expiry, 6);
+  const graceEnds = renewable(right) ? addMonths(expiry, 6) : expiry;
   const reminders = REMINDER_OFFSETS_DAYS.map((d) => new Date(expiry.getTime() - d * DAY));
   const daysLeft = Math.ceil((expiry.getTime() - today.getTime()) / DAY);
   let state: DeadlineState = "a_venir";

@@ -50,7 +50,7 @@ export function RoughBox({ children, className = "", seed = 1, fill, as: Tag = "
           </svg>
         )}
       </div>
-      <div className="relative">{children}</div>
+      <div className="relative h-full">{children}</div>
     </Tag>
   );
 }

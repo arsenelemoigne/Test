@@ -1,5 +1,6 @@
 import { chat, webSearch, type ChatMessage, type ToolSpec } from "./llm";
 import { logCall } from "./log";
+import { traceStep } from "./trace";
 import { deadlineFor } from "./deadlines";
 import * as legifrance from "./sources/legifrance";
 import * as judilibre from "./sources/judilibre";
@@ -79,7 +80,7 @@ function portfolioContext(client: Client | null, marks: Mark[], focus: string[])
   if (!client) return `Date : ${today}. Aucun client sélectionné.`;
   const line = (m: Mark) => {
     const d = deadlineFor(m);
-    return [m.id, m.type, m.office, m.name, m.classes.length ? `cl. ${m.classes.join(",")}` : "", m.filingDate ? `dépôt ${m.filingDate}` : "", d.expiry ? `exp. ${d.expiry.toISOString().slice(0, 10)}` : "", m.status, `${rightCountries(m).length} pays`, m.lastRun ? `dernière recherche ${m.lastRun.startedAt.slice(0, 10)} (${m.lastRun.total} résultats, ${m.lastRun.high} forte confiance)` : ""].filter(Boolean).join(" | ");
+    return [m.id, m.type, m.office, m.name, m.clientOwned === false ? "titulaire : société du groupe" : "", m.favorite ? "favori" : "", m.classes.length ? `cl. ${m.classes.join(",")}` : "", m.filingDate ? `dépôt ${m.filingDate}` : "", d.expiry ? `exp. ${d.expiry.toISOString().slice(0, 10)}` : "", m.status, `${rightCountries(m).length} pays`, m.lastRun ? `dernière recherche ${m.lastRun.startedAt.slice(0, 10)} (${m.lastRun.total} résultats, ${m.lastRun.high} forte confiance)` : ""].filter(Boolean).join(" | ");
   };
   const focused = marks.filter((m) => focus.includes(m.id));
   return [
@@ -87,7 +88,7 @@ function portfolioContext(client: Client | null, marks: Mark[], focus: string[])
     `Client : ${client.name}${client.company ? ` — ${client.company.name}, SIREN ${client.company.siren}, ${client.company.address ?? ""}` : ""}.`,
     focused.length ? `Marques ciblées par l'utilisateur : ${focused.map((m) => `${m.name} [${m.id}]`).join(", ")}. Concentre la réponse sur elles.` : "",
     `Portefeuille (${marks.length} titres) :`,
-    ...marks.slice(0, 400).map(line),
+    ...[...marks].sort((a, b) => Number(a.clientOwned === false) - Number(b.clientOwned === false)).slice(0, 400).map(line),
   ].filter(Boolean).join("\n");
 }
 
@@ -181,7 +182,10 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
     const { message } = await chat({ messages, tools: TOOLS, label: `agent-${round}` });
     const calls = message.tool_calls ?? [];
     if (calls.length === 0) {
-      const answer = verifyLinks((message.content ?? "").trim(), allowed);
+      const raw = (message.content ?? "").trim();
+      const answer = verifyLinks(raw, allowed);
+      const flagged = (raw.match(/\]\(https?:/g) ?? []).length - (answer.match(/\]\(https?:/g) ?? []).length;
+      traceStep({ kind: "etape", name: "Vérification des liens", detail: flagged ? `${flagged} lien(s) non renvoyé(s) par une source, signalé(s)` : "tous les liens viennent des sources consultées", ok: flagged === 0 });
       void logCall("agent", "answer", { question: input.messages[input.messages.length - 1]?.content, focus: input.focusMarkIds }, answer, 200, 0, client?.slug);
       return { answer: answer || "Je n'ai pas pu formuler de réponse.", sources: Array.from(used.entries()).map(([name, count]) => ({ name, count })), runId };
     }
@@ -199,6 +203,8 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
       collectUrls(output, allowed);
       const label = SOURCE_LABELS[call.function.name] ?? call.function.name;
       used.set(label, (used.get(label) ?? 0) + 1);
+      const failed = Boolean((output as { erreur?: string })?.erreur);
+      traceStep({ kind: "api", name: `outil · ${call.function.name}`, detail: label, input: args, output, ms: Date.now() - started, ok: !failed });
       void logCall("tool", call.function.name, args, output, (output as { erreur?: string })?.erreur ? 500 : 200, Date.now() - started, client?.slug);
       messages.push({ role: "tool", tool_call_id: call.id, content: compact(output) });
     }

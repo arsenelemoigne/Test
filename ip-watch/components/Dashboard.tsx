@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AssistantPanel } from "./AssistantPanel";
 import { ClientActions } from "./ClientActions";
+import { DeadlineTimeline } from "./DeadlineTimeline";
+import { MarkDrawer } from "./MarkDrawer";
 import { LiveRun } from "./LiveRun";
 import { RoughBox } from "./RoughBox";
 import { WorldMap } from "./WorldMap";
@@ -27,13 +29,19 @@ function Stat({ label, value, sub, seed }: { label: string; value: string; sub?:
   );
 }
 
-export function Dashboard({ client, marks, runs, initialRunId }: Props) {
+export function Dashboard({ client, marks: initialMarks, runs, initialRunId }: Props) {
   const router = useRouter();
+  const [marks, setMarks] = useState(initialMarks);
+  const [openMark, setOpenMark] = useState<Mark | null>(null);
+  const favorite = async (m: Mark, value: boolean) => {
+    setMarks((all) => all.map((x) => (x.id === m.id ? { ...x, favorite: value } : x)));
+    setOpenMark((o) => (o && o.id === m.id ? { ...o, favorite: value } : o));
+    await fetch(`/api/marks/${encodeURIComponent(m.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ field: "favorite", value }) });
+  };
   const [runId, setRunId] = useState<string | null>(initialRunId);
   const [live, setLive] = useState<{ run: WatchRun; findings: Finding[] } | null>(null);
   const [view, setView] = useState<"coverage" | "run">(initialRunId ? "run" : "coverage");
   const [country, setCountry] = useState<string | null>(null);
-  const [allDeadlines, setAllDeadlines] = useState(false);
 
   // Follows a search while it runs; stops polling once it is finished.
   useEffect(() => {
@@ -73,15 +81,17 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
     setCountry(null);
   }, []);
 
+  // Dashboard figures cover the titles filed by the client itself (not its group).
+  const own = useMemo(() => marks.filter((m) => m.clientOwned !== false), [marks]);
+  const active = useMemo(() => own.filter((m) => isActiveRight(m)), [own]);
   const deadlines = useMemo(
     () =>
-      marks
+      active
         .map((m) => ({ mark: m, d: deadlineFor(m) }))
         .filter((x) => x.d.expiry && x.d.state !== "expire")
         .sort((a, b) => a.d.expiry!.getTime() - b.d.expiry!.getTime()),
-    [marks],
+    [active],
   );
-  const active = useMemo(() => marks.filter((m) => isActiveRight(m)), [marks]);
   const coverage = useMemo(() => countByCountry(active), [active]);
   const hits = useMemo(() => {
     const m = new Map<string, number>();
@@ -113,7 +123,7 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
         </div>
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat seed={11} label="marques en vigueur" value={String(marksCount)} sub={`${designsCount} dessins & modèles · ${marks.length - active.length} titres expirés`} />
+          <Stat seed={11} label="marques en vigueur" value={String(marksCount)} sub={`${designsCount} autres titres · ${own.length - active.length} expirés`} />
           <Stat seed={12} label="pays couverts" value={String(coverage.size)} sub="UE comptée pays par pays" />
           <Stat seed={13} label="prochaine échéance" value={next ? formatDate(next.d.expiry) : "—"} sub={next ? `${next.mark.name} · ${daysLabel(next.d)}` : undefined} />
           <Stat
@@ -153,31 +163,7 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
         </RoughBox>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section>
-            <div className="mb-1 flex items-baseline justify-between">
-              <h2 className="hand text-[16px]">Prochaines échéances</h2>
-              {deadlines.length > 6 && (
-                <button type="button" className="btn-quiet text-[12px]" onClick={() => setAllDeadlines((v) => !v)}>
-                  {allDeadlines ? "réduire" : `tout voir (${deadlines.length})`}
-                </button>
-              )}
-            </div>
-            <ul className="divide-y divide-dashed divide-[color:var(--line)]">
-              {deadlines.slice(0, allDeadlines ? undefined : 6).map(({ mark, d }) => (
-                <li key={mark.id} className="flex items-center justify-between gap-3 py-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-[13.5px]">{mark.name}</div>
-                    <div className="font-mono text-[10.5px] text-[color:var(--pencil)]">{mark.id}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="hand text-[14px] tabular-nums">{formatDate(d.expiry)}</div>
-                    <div className={d.state === "a_venir" ? "text-[11px] text-[color:var(--pencil)]" : "chip-ink"}>{d.state === "a_venir" ? daysLabel(d) : DEADLINE_LABELS[d.state]}</div>
-                  </div>
-                </li>
-              ))}
-              {deadlines.length === 0 && <li className="py-3 text-[13px] text-[color:var(--pencil)]">Aucune échéance connue.</li>}
-            </ul>
-          </section>
+          <DeadlineTimeline marks={active} onOpen={setOpenMark} />
 
           <section>
             <div className="mb-1 flex items-baseline justify-between">
@@ -209,6 +195,7 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
       </div>
 
       <AssistantPanel marks={marks} onRunStarted={openRun} className="xl:sticky xl:top-4 xl:h-[calc(100vh-2rem)] min-h-[520px]" />
+      {openMark && <MarkDrawer mark={openMark} onClose={() => setOpenMark(null)} onFavorite={favorite} />}
     </div>
   );
 }

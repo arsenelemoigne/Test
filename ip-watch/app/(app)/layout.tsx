@@ -9,6 +9,7 @@ import { Nav } from "@/components/Nav";
 import { ClientSwitcher } from "@/components/ClientSwitcher";
 import { LogoutButton } from "@/components/LogoutButton";
 import { Scribble } from "@/components/RoughBox";
+import { CoulissesToggle } from "@/components/Trace";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/historique" className="btn-quiet text-[12px]">
               historique
             </Link>
+            <CoulissesToggle />
           </span>
         </footer>
       </div>

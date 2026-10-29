@@ -1,3 +1,4 @@
+import { traceStep } from "../trace";
 import type { Office, Right, RightType, Territory } from "../types";
 
 // INPI "API diffusion". Login needs a cookie jar and an anti-CSRF token that changes on each response.
@@ -16,8 +17,8 @@ export class InpiSession {
     }
   }
 
-  private headers(json: boolean): Record<string, string> {
-    const h: Record<string, string> = { Accept: "application/json" };
+  private headers(json: boolean, accept: string): Record<string, string> {
+    const h: Record<string, string> = { Accept: accept };
     if (json) h["Content-Type"] = "application/json";
     if (this.jar.size) h.Cookie = Array.from(this.jar.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
     const xsrf = this.jar.get("XSRF-TOKEN");
@@ -25,8 +26,8 @@ export class InpiSession {
     return h;
   }
 
-  async request(method: "GET" | "POST", path: string, body?: unknown): Promise<{ status: number; data: unknown }> {
-    const res = await fetch(`${BASE}${path}`, { method, headers: this.headers(body !== undefined), body: body === undefined ? undefined : JSON.stringify(body), redirect: "manual" });
+  async request(method: "GET" | "POST", path: string, body?: unknown, accept = "application/json"): Promise<{ status: number; data: unknown }> {
+    const res = await fetch(`${BASE}${path}`, { method, headers: this.headers(body !== undefined, accept), body: body === undefined ? undefined : JSON.stringify(body), redirect: "manual" });
     this.remember(res);
     const text = await res.text();
     let data: unknown = text;
@@ -57,6 +58,7 @@ export async function inpiSession(): Promise<InpiSession> {
   if (!inpiConfigured()) throw new Error("INPI_USERNAME / INPI_PASSWORD manquants");
   const s = new InpiSession();
   const status = await s.login(process.env.INPI_USERNAME!, process.env.INPI_PASSWORD!.trim().replace(/^(["'])(.*)\1$/, "$2"));
+  traceStep({ kind: "api", name: "INPI · connexion", output: { statut: status }, ok: status < 400 });
   if (status >= 400) throw new Error(`Connexion INPI refusée (${status})`);
   shared = s;
   return s;
@@ -89,7 +91,9 @@ export async function search(kind: "marques" | "modeles", query: string, collect
   }
   // An unknown field name is rejected: fall back to the default field set.
   if (res.status >= 400 && fields[0] !== "*") res = await run(["*"]);
-  return { ...res, hits: hitsOf(res.data) };
+  const hits = hitsOf(res.data);
+  traceStep({ kind: "api", name: `INPI · recherche ${kind}`, input: { requete: query, collections, page: position / size + 1, champs: fields.length > 1 ? fields : "défaut" }, output: { statut: res.status, resultats: hits.length }, ok: res.status < 400 });
+  return { ...res, hits };
 }
 
 export type NoticeDetails = { filingDate: string | null; registrationDate: string | null; expiryDate: string | null; classes: number[]; countries: Territory[]; status: string | null };
@@ -123,7 +127,10 @@ export function parseNotice(body: unknown): NoticeDetails {
 
 export async function notice(path: string): Promise<{ status: number; data: unknown }> {
   const s = await inpiSession();
-  return s.request("GET", path);
+  const started = Date.now();
+  const res = await s.request("GET", path, undefined, "application/xml, text/xml;q=0.9, application/json;q=0.8, */*;q=0.5");
+  traceStep({ kind: "api", name: "INPI · fiche complète", input: path, output: { statut: res.status }, ms: Date.now() - started, ok: res.status < 400 });
+  return res;
 }
 
 export async function metadata(): Promise<string | null> {
@@ -174,11 +181,15 @@ function pick(flat: Record<string, unknown>, candidates: string[]): unknown {
   return undefined;
 }
 
+export function decodeEntities(s: string): string {
+  return s.replace(/&apos;|&#0?39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
+}
+
 function str(v: unknown): string | null {
   if (v === undefined || v === null) return null;
   if (Array.isArray(v)) return v.map(str).filter(Boolean).join(", ") || null;
   if (typeof v === "object") return str(Object.values(v as object)[0]);
-  const s = String(v).trim();
+  const s = decodeEntities(String(v)).trim();
   return s || null;
 }
 
