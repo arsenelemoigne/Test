@@ -3100,3 +3100,4 @@ Built and queued after the 10 answers (both GPUs):
   then LUPIN v2 (v1 answers a new matched sample).
 - Red-flag rule (user, 29 Oct ~02:00: 'let it drift to <10% for any one data type'): a screen variation is stopped/flagged only if it loses 10 points or more on any one data type at every checkpoint. Finalist rule unchanged (overall accuracy change better than -1 on the choosing set).
 - 02:10: dp10 code answering done on both GPUs (1,200 x4 per half). GPU 1 -> dp10 select + check (seed 17); GPU 2 in dp11 b waiting for dp10's check (automatic decision).
+- 02:25: dp10 selection: code (mbpp) 56% vs choosing 54%, median thinking 1045 vs 1051 (dp9 55 / 1034), borrowed 68 (dp9 39); other parts as dp9 (simple 83 vs 87, glaive 881 + toolace 546). Held-out check (seed 17) running.
