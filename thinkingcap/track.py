@@ -249,6 +249,7 @@ def main():
     parser.add_argument("--lp-min-solve-part", default="", help="lupin: lupin_pairs.py --min-solve-part, e.g. svamp=0.8")
     parser.add_argument("--lp-right-parts", default="", help="lupin: lupin_pairs.py --right-parts, e.g. svamp")
     parser.add_argument("--dial-weights", type=float, nargs="*", default=[0.5, 0.7], help="dial: strengths of the trained change")
+    parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
     parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
     parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
@@ -2702,7 +2703,8 @@ def lupin(args):
     if not (pairs / "pairs.jsonl").exists():
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", ROOT / "v4-base", BASE,
            "--total", args.lp_total, "--out", pairs,
-           *(["--max-shorten-ratio", args.lp_balance] if args.lp_balance else []))
+           *(["--max-shorten-ratio", args.lp_balance] if args.lp_balance else []),
+           *(["--shorten-ratio-part", args.lp_pressure] if args.lp_pressure else []))
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]

@@ -3238,3 +3238,4 @@ Plan cells restarted with the finished lines commented out.
   codecut); (3) strength dial stage `dial` (soup x0.5 / x0.7, fresh x8): dial-adar1 on lpc-adar1 soup 25 (GPU 2, after its
   cross-check); (4) best dose = the screens' checkpoints; (5) combine the winners into one recipe -> 3-seed fresh
   confirm -> LUPIN v1. Tested on synthetic answers (math: shorten 74 -> 26, right 94 -> 167).
+- ~22:00 (user: 'I don't want to just reproduce bida's work'): lpb-l2s50bal replaced by OUR per-type pressure, lpb-l2s50press: after matching, shorten pairs per be-right pair capped per type from each type's measured accuracy cost (math 1, code 2, instructions 3, tools 2); lupin_select.py --shorten-ratio-part (lupin --lp-pressure). Queued on GPU 1 in the same slot.

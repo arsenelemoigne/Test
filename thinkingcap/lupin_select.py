@@ -34,6 +34,10 @@ def main():
     parser.add_argument("--reference", nargs="+", required=True)
     parser.add_argument("--total", type=int, default=3200, help="pairs wanted in all (200 steps x 16)")
     parser.add_argument("--think-bins", type=int, default=4)
+    parser.add_argument("--shorten-ratio-part", default="",
+                        help="per-part pressure: max shorten pairs per be-right pair, e.g. svamp=1,mbpp=2,ifeval=3,"
+                             "bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 (ours, 29 Oct: from each type's measured "
+                             "accuracy cost); overrides --max-shorten-ratio for the parts it names")
     parser.add_argument("--max-shorten-ratio", type=float, default=0.0,
                         help="after matching, per part at most this many 'shorten' pairs per 'be right' pair (guard + right "
                              "+ hard); michal-bida's 1:1 balance (29 Oct: matching had pushed it to 2-3:1). 0: off")
@@ -112,18 +116,23 @@ def main():
                      f"(spread over the rest); short {sum(short.values())} in "
                      f"{sum(v > 0 for v in short.values())} cells " +
                      ", ".join(f"solve{c[0]}/think{c[1]} -{v}" for c, v in short.items() if v > 0))
-    if args.max_shorten_ratio > 0:  # keep michal-bida's balance AFTER matching (it is per part, like his)
+    ratios = dict((k, float(v)) for k, v in (x.split("=") for x in args.shorten_ratio_part.split(",") if x))
+    if args.max_shorten_ratio > 0 or ratios:  # pressure kept AFTER matching, per part
         balanced = []
         for part in PARTS:
+            ratio = ratios.get(part, args.max_shorten_ratio)
+            if ratio <= 0:
+                balanced += [p for p in chosen if p["part"] == part]
+                continue
             mine = [p for p in chosen if p["part"] == part]
             short = [p for p in mine if p["kind"] == "shorten"]
             rest = [p for p in mine if p["kind"] != "shorten"]
             rng.shuffle(short)
-            limit = round(args.max_shorten_ratio * len(rest))
+            limit = round(ratio * len(rest))
             balanced += rest + short[:limit]
             report[part]["kept"] = len(rest) + min(len(short), limit)
             report[part]["shorten_dropped_for_balance"] = max(0, len(short) - limit)
-        lines.append(f"balance: at most {args.max_shorten_ratio:g} shorten per be-right pair per part; "
+        lines.append(f"pressure: shorten per be-right pair capped per part {ratios or args.max_shorten_ratio}; "
                      f"{len(chosen) - len(balanced)} shorten pairs dropped")
         chosen = balanced
     # part shares stay the evaluation's: a part that filled less of its quota (hard cells give few pairs) sets the
