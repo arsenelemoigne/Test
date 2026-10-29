@@ -210,6 +210,7 @@ def main():
     parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2 / poolfix: answer half a / b, or select")
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
     parser.add_argument("--la-pool", default="dp6", help="lupinanswers: the checked pool to answer")
+    parser.add_argument("--la-target", type=int, default=0, help="lupinanswers: top up to this many answers per question (0: --la-samples new each)")
     parser.add_argument("--la-force", default="", help="lupinanswers: open the gate anyway, with this reason (logged)")
     parser.add_argument("--la-samples", type=int, default=6, help="lupinanswers: new answers per question (4 reused)")
     parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
@@ -2669,6 +2670,50 @@ def lupinanswers(args):
     n = sum(1 for l in data.read_text().splitlines() if l.strip())
     out = BON / f"lupin-answers-{name}-{args.dp_step}"
     drive_sync("restore", only=[str(out)])
+    if args.la_target and not (out / "rollouts.jsonl").exists():
+        # top up to --la-target answers per question (29 Oct: most pool questions already had 8 selection answers, so
+        # 6 more each was ~3x the work needed). Answers already made by the 6-answer run (the .partial file) are kept.
+        sources = [BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl",
+                   *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp8", "dp9", "dp10", "dp11") for h in "ab"]]
+        drive_sync("restore", only=[str(f.parent) for f in sources])
+        mine = [json.loads(l) for l in data.read_text().splitlines() if l.strip()]
+        ids = {r["pool_id"] for r in mine}
+        have = Counter()
+        partial = out / "rollouts.jsonl.partial"
+        for f in [*sources, partial]:
+            if f.exists():
+                for line in open(f):
+                    if line.strip():
+                        i = json.loads(line)["id"]
+                        if i in ids:
+                            have[i] += 1
+        need = {r["pool_id"]: max(0, args.la_target - have[r["pool_id"]]) for r in mine}
+        groups = Counter(need.values())
+        print(f"lupinanswers {name} {args.dp_step}: answers to make per question {dict(sorted(groups.items()))} "
+              f"(target {args.la_target}; {sum(1 for l in open(partial)) if partial.exists() else 0} already in the 6-answer run)", flush=True)
+        made = []
+        for k in sorted(v for v in groups if v > 0):
+            sub = Path(f"data/lupin-ans-{name}-{args.dp_step}-k{k}.jsonl")
+            sub.write_text("".join(json.dumps(r) + "\n" for r in mine if need[r["pool_id"]] == k))
+            m = sum(1 for _ in open(sub))
+            probe = BON / f"lupin-answers-{name}-{args.dp_step}-k{k}"
+            drive_sync("restore", only=[str(probe)])
+            if not (probe / "rollouts.jsonl").exists():
+                py("probe_curve.py", "--data", sub, "--sources", "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,"
+                   "kodcode,toolace,hermes_tools,glaive_tools,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", k,
+                   "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only", "--chunk", 150,
+                   "--max-questions", m, "--seed", 11 + k)
+                drive_sync("save")
+            made.append(probe / "rollouts.jsonl")
+        with open(out / "rollouts.jsonl.tmp", "w") as handle:
+            for f in [partial, *made]:
+                if f.exists():
+                    for line in open(f):
+                        if line.strip():
+                            handle.write(line if line.endswith("\n") else line + "\n")
+        (out / "rollouts.jsonl.tmp").rename(out / "rollouts.jsonl")
+        drive_sync("save")
+        return
     if not (out / "rollouts.jsonl").exists() or sum(1 for _ in (out / "rollouts.jsonl").open()) < args.la_samples * n:
         py("probe_curve.py", "--data", data, "--sources", "gsm8k_easy,gsm8k_easy_test,metamath_easy,gsm8k_matched,metamath_sv,"
            "kodcode,toolace,hermes_tools,glaive_tools,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.la_samples,

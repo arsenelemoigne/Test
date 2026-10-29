@@ -3137,3 +3137,4 @@ and every code measure OK; only miss bfcl_simple p75 160 vs 199, 11 tokens outsi
 lupinanswers --la-force on dp10 (both halves), topic check on dp10, then the LUPIN screen with --lp-pool dp10.
 Plan cells restarted with the finished lines commented out.
 - 07:20: both plan cells restarted on the new plans (GPU 2 needed Runtime > Interrupt + a minute). GPU 1: lupinanswers dp10 a (gate forced), 750/6,000 questions x6 after ~10 min; GPU 2 starting lupinanswers dp10 b. Estimate: 10 answers done ~10:30-11:00, then topic check (GPU 1) and the LUPIN screen.
+- 10:05: the 10 answers were ~3x slower than needed (6 new answers for every question although most already had 8). lupinanswers --la-target 10: tops each question up to 10 (8-answer questions get 2, 4-answer code questions 6), keeping the 6-answer run's finished chunks (GPU 1 1,800 / GPU 2 1,350 questions). Plan cells restarted.

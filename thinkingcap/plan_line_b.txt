@@ -213,7 +213,7 @@
 # done/replaced: lupin --name lp-dast --lp-recipe dast --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200
 # done/replaced: lupin --name lp-right --lp-recipe rightwrong --lp-min-solve 0 --seeds 0 --dpo-steps 50 100 150 200
 # 29 Oct ~07:00: dp11 30/36 (worse than dp10 35/36: the check swings run to run) -> dp10 is the training pool (user: 'if close enough, don't wait')
-lupinanswers --la-pool dp10 --la-force dp10-35of36-only-simple-p75-11tok-out_dp11-30of36 --dp-step a
+lupinanswers --la-pool dp10 --la-force dp10-35of36-only-simple-p75-11tok-out_dp11-30of36 --la-target 10 --dp-step a
 topiccheck --name topic10 --lp-pool dp10
 lupin --name lp-l2s50 --lp-recipe long2short --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200 --lp-pool dp10
 lupin --name lp-dast --lp-recipe dast --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200 --lp-pool dp10
