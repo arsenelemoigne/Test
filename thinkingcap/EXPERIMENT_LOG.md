@@ -3217,3 +3217,8 @@ Plan cells restarted with the finished lines commented out.
   >= -2.5 AND non-code accuracy >= -1 (no spill); otherwise DROPPED and not pursued.
 - 18:20: lpb-right-75: -39.2% saved (thinks 39% LONGER) / +0.9 (simple -56%, ifeval -44%): pure right>wrong pairs inflate thinking more and more. Confirms the length pressure is what saves. GPU 2: lpc-adar1 seed 0 step 140/194.
 - 19:27: lpb-right-100: -51.0% (thinks 51% longer) / +2.1. lpb-right done (screen complete: 6 variations). GPU 1: lpc-l2s50e seed 0 training (step 155/170); GPU 2: lpc-adar1 seed 1 (step 145/194).
+- ~19:45 (user: "confirm them on another 240 eval questions to cross-check accuracy before more training"): stage
+  `crosscheck`: each confirmed soup (lpc-adar1 25/50/75 on GPU 2 after refsets; lpc-l2s50e 50/100/150 on GPU 1 after
+  its confirm), 3 seeds averaged, answers questions_ref20261024 (40 per part, never fresh / choosing / questions_40) x4,
+  scored vs the original Qwen on the same set (refsets). Report only: the fresh set decides v1; a large disagreement
+  between fresh and cross-check is a red flag before round 2.

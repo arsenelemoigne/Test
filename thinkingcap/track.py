@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -235,6 +235,8 @@ def main():
     parser.add_argument("--cc-base", default="lpb-l2s50e", help="codecut: the screened recipe whose matched pairs it builds on")
     parser.add_argument("--cc-questions", type=int, default=600, help="codecut: code questions labelled")
     parser.add_argument("--cc-dose", type=float, default=0.2, help="codecut: share of the code pairs swapped for cut pairs")
+    parser.add_argument("--cx-names", nargs="*", default=[], help="crosscheck: confirmed runs (their --seeds are averaged)")
+    parser.add_argument("--cx-steps", type=int, nargs="*", default=[], help="crosscheck: soup steps")
     parser.add_argument("--rs-model", default="", help="refsets: the model answering (default: the original Qwen)")
     parser.add_argument("--rs-tag", default="base", help="refsets: run name tag (runs/mvtf/v4-<tag>-<seed>)")
     parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
@@ -2549,6 +2551,40 @@ def refsets(args):
         print(f"refsets: {run_dir} done", flush=True)
 
 
+def crosscheck(args):
+    """Second opinion on the confirmed soups (user, 29 Oct: "run them on another 240 questions from the eval, to cross
+    check accuracy before more training"). Each soup of --cx-names at --cx-steps (the --seeds averaged, re-merged on
+    local scratch) answers questions_ref<REF_SEEDS[0]> (40 per part, never fresh / choosing / questions_40) x4, scored
+    against the original Qwen on the same set (refsets). Report only: the fresh set decides v1; a big disagreement
+    between the two is a red flag to look at before round 2."""
+    import time
+    refq = f"questions_ref{REF_SEEDS[0]}"
+    base_run = ROOT / f"v4-base-{REF_SEEDS[0]}"
+    for _ in range(96):  # refsets (GPU 2) writes the set and the original Qwen's run
+        drive_sync("restore", only=[refq, str(base_run)])
+        if (base_run / "results.json").exists():
+            break
+        print(f"crosscheck: waiting for {base_run}", flush=True)
+        time.sleep(300)
+    for name in args.cx_names:
+        for step in args.cx_steps:
+            members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+            drive_sync("restore", only=[str(m.parent) for m in members])
+            members = [m for m in members if (m / "adapter_config.json").exists()]
+            if len(members) < len(args.seeds):
+                print(f"crosscheck: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
+                continue
+            out = ROOT / f"r4-{name}-soup-{step}"
+            if not (out / "results.json").exists():
+                model = Path("/content/lupin-models") / f"{name}-soup-{step}"
+                py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+                   *[f"{m}:{1 / len(members):.6f}" for m in members])
+                evaluate(out, samples=4, questions=refq, model=model)
+                shutil.rmtree(model, ignore_errors=True)
+                drive_sync("save")
+            print(score_line(f"{name}-soup-{step} (cross-check: new 240 x 4)", out, base=base_run), flush=True)
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -3663,13 +3699,13 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/bon/lupin-answers-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "questions_ref*", "runs/mvtf/v4-base-*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/bon/lupin-answers-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "questions_ref*", "runs/mvtf/v4-base-*", "runs/mvtf/r4-*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
                                     "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*", "runs/bon/tskip-*", "adapters/tsk*", "runs/mvtf/f8-tsk*",
                                     *[f"models/{m}" for m in wanted]])
     else:
