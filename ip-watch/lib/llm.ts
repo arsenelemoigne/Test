@@ -7,8 +7,11 @@ const ENDPOINT = `${process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/ap
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
 
 export type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
+// Images go to vision-capable models as URLs or data: URIs.
+export type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 export type ChatMessage =
-  | { role: "system" | "user"; content: string }
+  | { role: "system"; content: string }
+  | { role: "user"; content: string | ContentPart[] }
   | { role: "assistant"; content: string | null; tool_calls?: ToolCall[]; reasoning_details?: unknown[] }
   | { role: "tool"; tool_call_id: string; content: string };
 export type ToolSpec = { type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } };
@@ -106,7 +109,7 @@ export async function chat(opts: {
 }
 
 // Asks for a JSON object; returns null when the model is unavailable or the answer cannot be parsed.
-export async function extractJson<T>(system: string, user: string, label: string, tier: Tier = "fast"): Promise<T | null> {
+export async function extractJson<T>(system: string, user: string | ContentPart[], label: string, tier: Tier = "fast"): Promise<T | null> {
   if (!llmConfigured()) return null;
   try {
     const { message } = await chat({ messages: [{ role: "system", content: system }, { role: "user", content: user }], json: true, temperature: 0, label, tier });
@@ -125,13 +128,13 @@ export async function extractJson<T>(system: string, user: string, label: string
 export type WebResult = { url: string; title: string; snippet: string };
 
 // Fallback search through OpenRouter's web plugin; only the cited URLs are kept.
-export async function webSearch(query: string, label = "web"): Promise<{ summary: string; results: WebResult[] }> {
+export async function webSearch(query: string, label = "web", opts: { system?: string; maxResults?: number } = {}): Promise<{ summary: string; results: WebResult[] }> {
   const { message, annotations } = await chat({
     messages: [
-      { role: "system", content: "Recherche les sources les plus fiables et récentes. Réponds en 3 phrases maximum, en français, sans inventer." },
+      { role: "system", content: opts.system ?? "Recherche les sources les plus fiables et récentes. Réponds en 3 phrases maximum, en français, sans inventer." },
       { role: "user", content: query },
     ],
-    plugins: [{ id: "web", max_results: 6 }],
+    plugins: [{ id: "web", max_results: opts.maxResults ?? 6 }],
     label,
     tier: "fast",
   });

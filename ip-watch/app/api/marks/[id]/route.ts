@@ -5,7 +5,7 @@ import { FIELD_LABELS } from "@/lib/labels";
 import * as store from "@/lib/store";
 import type { Right } from "@/lib/types";
 
-const EDITABLE: (keyof Right)[] = ["name", "owner", "classes", "filingDate", "registrationDate", "expiryDate", "status", "notes"];
+const EDITABLE: (keyof Right)[] = ["name", "owner", "classes", "filingDate", "registrationDate", "expiryDate", "status", "notes", "imageUrl"];
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const role = currentRole();
@@ -19,6 +19,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ ok: true });
   }
   if (!body?.field || !EDITABLE.includes(body.field)) return NextResponse.json({ error: "Champ non modifiable." }, { status: 400 });
+  if (body.field === "imageUrl" && body.value && !/^https:\/\/\S+$/.test(String(body.value))) return NextResponse.json({ error: "Adresse d'image invalide (https://…)." }, { status: 400 });
 
   const r = await store.updateMarkField(client.id, id, body.field, body.value ?? null, role);
   if (!r) return NextResponse.json({ error: "Titre introuvable." }, { status: 404 });

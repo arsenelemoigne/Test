@@ -14,6 +14,18 @@ const WATCHABLE = new Set(["marque", "dessin"]);
 export function MarkDrawer({ mark, onClose, onFavorite, onDeleted }: { mark: Mark; onClose: () => void; onFavorite?: (m: Mark, value: boolean) => void; onDeleted?: (id: string) => void }) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [photo, setPhoto] = useState(mark.imageUrl ?? "");
+  const [photoDraft, setPhotoDraft] = useState(mark.imageUrl ?? "");
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const savePhoto = async () => {
+    setPhotoError(null);
+    const value = photoDraft.trim() || null;
+    const res = await fetch(`/api/marks/${encodeURIComponent(mark.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ field: "imageUrl", value }) });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return setPhotoError(json.error ?? "Enregistrement impossible.");
+    setPhoto(value ?? "");
+  };
   const d = deadlineFor(mark);
   const countries = rightCountries(mark);
   const log = `/api/marks/${encodeURIComponent(mark.id)}/log`;
@@ -77,6 +89,26 @@ export function MarkDrawer({ mark, onClose, onFavorite, onDeleted }: { mark: Mar
           {row("classes", mark.classes.length ? mark.classes.join(", ") : "—")}
           {row("pays", countries.length ? countries.map(countryName).sort((a, b) => a.localeCompare(b)).join(", ") : mark.office === "WO" ? "pays désignés non chargés" : "—")}
           {mark.notes && row("notes", mark.notes)}
+          {WATCHABLE.has(mark.type) &&
+            row(
+              "photo du produit",
+              <div className="space-y-1">
+                {photo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt={`Produit ${mark.name}`} className="max-h-32 rounded border border-[color:var(--line)]" />
+                )}
+                <div className="flex gap-1">
+                  <input value={photoDraft} onChange={(e) => setPhotoDraft(e.target.value)} placeholder="https://… (photo du produit authentique)" className="field w-full py-0.5 text-[12px]" />
+                  {photoDraft.trim() !== photo && (
+                    <button type="button" className="btn py-0.5 text-[12px]" onClick={savePhoto}>
+                      enregistrer
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-[color:var(--pencil)]">Sert de référence pour la recherche visuelle. Sans photo, elle est cherchée sur le site officiel.</p>
+                {photoError && <p className="text-[11px] text-red-700">{photoError}</p>}
+              </div>,
+            )}
           {mark.lastRun && row("dernière veille", `${formatDate(mark.lastRun.startedAt)} · ${mark.lastRun.total} résultats, ${mark.lastRun.high} forts`)}
         </div>
 

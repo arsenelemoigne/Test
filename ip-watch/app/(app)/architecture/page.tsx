@@ -19,6 +19,7 @@ const SOURCES = [
   { name: "RDAP", who: "AFNIC (FR), Verisign", use: "titulaire d'un nom de domaine", access: "libre" },
   { name: "urlscan.io", who: "urlscan GmbH, Aachen (DE)", use: "captures horodatées, domaines similaires", access: "clé API" },
   { name: "Recherche d'annonces et visuelle", who: "API de résultats (Shopping, Lens, Amazon, eBay)", use: "veille des contrefaçons", access: "clé API" },
+  { name: "Recherche par image", who: "Google Cloud Vision (détection web), optionnel", use: "pages montrant le produit ou une copie, à partir d'une photo", access: "clé API" },
 ];
 
 export default function ArchitecturePage() {

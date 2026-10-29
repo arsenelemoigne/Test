@@ -2,7 +2,8 @@
 
 import { countryName } from "@/lib/territories";
 import { formatDateTime, formatPrice } from "@/lib/format";
-import { TraceLink } from "./Trace";
+import { useState } from "react";
+import { DerouleDrawer } from "./Deroule";
 import type { Finding, RunStep, WatchRun } from "@/lib/types";
 
 const STEP_ICON: Record<RunStep["status"], string> = { running: "…", done: "✓", skipped: "–", error: "×" };
@@ -23,8 +24,15 @@ function Confidence({ value }: { value: number | null }) {
 
 type Props = { run: WatchRun; findings: Finding[]; country: string | null; onCountry: (c: string | null) => void; onClose: () => void };
 
+// Below this, the model judged the result official, press or unrelated: hidden unless asked.
+const DISMISSED = 15;
+
 export function LiveRun({ run, findings, country, onCountry, onClose }: Props) {
-  const shown = findings.filter((f) => !country || f.country === country).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+  const [showDismissed, setShowDismissed] = useState(false);
+  const [deroule, setDeroule] = useState(false);
+  const inCountry = findings.filter((f) => !country || f.country === country).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+  const dismissed = inCountry.filter((f) => (f.confidence ?? 0) < DISMISSED).length;
+  const shown = showDismissed ? inCountry : inCountry.filter((f) => (f.confidence ?? 0) >= DISMISSED);
   const steps = run.stats?.steps ?? [];
   const logHref = `/api/marks/${encodeURIComponent(run.markId)}/log`;
 
@@ -57,7 +65,11 @@ export function LiveRun({ run, findings, country, onCountry, onClose }: Props) {
           <a href={`${logHref}?format=csv`} className="btn-quiet text-[12px]">
             csv
           </a>
-          <TraceLink id={run.stats?.traceId} title={`Recherche « ${run.markName} »`} />
+          {run.stats?.traceId && (
+            <button type="button" className="btn-quiet text-[12px]" onClick={() => setDeroule(true)}>
+              déroulé
+            </button>
+          )}
           <button type="button" onClick={onClose} className="btn-quiet text-[12px]">
             fermer
           </button>
@@ -65,15 +77,19 @@ export function LiveRun({ run, findings, country, onCountry, onClose }: Props) {
       </div>
 
       {steps.length > 0 && (
-        <p className="mt-1 text-[12px] text-[color:var(--pencil)]">
-          {steps.map((s, i) => (
-            <span key={s.name} title={s.detail}>
-              {i > 0 && " · "}
-              {s.name} {STEP_ICON[s.status]}
-            </span>
+        <ol className="mt-2 space-y-0.5 text-[12px]">
+          {steps.map((s) => (
+            <li key={s.name} className="flex gap-2">
+              <span className={`w-3 shrink-0 ${s.status === "error" ? "text-red-700" : ""}`}>{STEP_ICON[s.status]}</span>
+              <span className="min-w-0">
+                <span className="hand text-[13px]">{s.name}</span>
+                {s.detail && <span className={s.status === "error" ? "text-red-700" : "text-[color:var(--pencil)]"}> · {s.detail}</span>}
+              </span>
+            </li>
           ))}
-        </p>
+        </ol>
       )}
+      {deroule && run.stats?.traceId && <DerouleDrawer traceId={run.stats.traceId} title={`Recherche « ${run.markName} »`} onClose={() => setDeroule(false)} />}
 
       {country && (
         <p className="mt-2 text-[12px]">
@@ -117,6 +133,11 @@ export function LiveRun({ run, findings, country, onCountry, onClose }: Props) {
         ))}
         {shown.length === 0 && <li className="hand py-4 text-[13px] text-[color:var(--pencil)]">{run.status === "running" ? "les premiers résultats arrivent…" : "aucun résultat"}</li>}
       </ul>
+      {dismissed > 0 && (
+        <button type="button" className="btn-quiet mt-1 text-[12px]" onClick={() => setShowDismissed((v) => !v)}>
+          {showDismissed ? "masquer" : "afficher"} les {dismissed} résultat(s) écarté(s) (officiel, presse, sans rapport)
+        </button>
+      )}
     </div>
   );
 }

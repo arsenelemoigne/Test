@@ -128,6 +128,14 @@ export async function runDiagnostic(): Promise<{ traceId: string; checks: Check[
         const left = acc.remaining_credits ?? acc.searches_left ?? acc.remaining;
         return { ok: true, detail: left != null ? `crédits restants : ${left}` : `compte joignable · ${JSON.stringify(acc).slice(0, 160)}` };
       }),
+      timed("Contrefaçons", "Google Vision (recherche par image)", async () => {
+        const key = process.env.GOOGLE_VISION_API_KEY;
+        if (!key) return { ok: null, detail: "non configuré (GOOGLE_VISION_API_KEY) : la recherche visuelle passe par Google Lens (SearchAPI) et la comparaison des captures" };
+        // An empty request is free and tells whether the key is valid and the API enabled.
+        const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(key)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requests: [] }) });
+        const text = await res.text();
+        return { ok: res.status < 400, detail: res.status < 400 ? "clé valide, API activée" : `${res.status} ${text.replace(/\s+/g, " ").slice(0, 200)}` };
+      }),
       timed("Contrefaçons", "urlscan · quotas", async () => {
         const key = process.env.URLSCAN_API_KEY;
         if (!key) return missing("URLSCAN_API_KEY");

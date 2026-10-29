@@ -32,6 +32,22 @@ function Thinking({ text }: { text: string }) {
   );
 }
 
+function Links({ links }: { links: { url: string; title?: string }[] }) {
+  return (
+    <ul className="mt-1 space-y-0.5 pl-6">
+      {links.map((l) => (
+        <li key={l.url} className="truncate text-[11.5px]">
+          ↳{" "}
+          <a href={l.url} target="_blank" rel="noreferrer" className="underline decoration-[color:var(--line)] underline-offset-2 hover:decoration-[color:var(--ink)]">
+            {l.title || host(l.url)}
+          </a>{" "}
+          <span className="font-mono text-[10px] text-[color:var(--pencil)]">{host(l.url)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function totals(steps: TraceStep[]) {
   const ai = steps.filter((s) => s.kind === "ia" && s.ok);
   const models = Array.from(new Set(ai.map((s) => (s.detail ?? "").split(" · ")[0]).filter(Boolean)));
@@ -78,34 +94,29 @@ export function DerouleView({ steps, live = false }: { steps: TraceStep[]; live?
                   </span>
                 </div>
                 {s.summary && <p className={`mt-0.5 pl-6 text-[12px] ${s.ok ? "text-[color:var(--pencil)]" : "text-red-700"}`}>{s.summary}</p>}
-                {s.links && s.links.length > 0 && (
-                  <ul className="mt-1 space-y-0.5 pl-6">
-                    {s.links.map((l) => (
-                      <li key={l.url} className="truncate text-[11.5px]">
-                        ↳{" "}
-                        <a href={l.url} target="_blank" rel="noreferrer" className="underline decoration-[color:var(--line)] underline-offset-2 hover:decoration-[color:var(--ink)]">
-                          {l.title || host(l.url)}
-                        </a>{" "}
-                        <span className="font-mono text-[10px] text-[color:var(--pencil)]">{host(l.url)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {s.links && s.links.length > 0 && <Links links={s.links} />}
               </li>
             );
           }
           if (s.kind === "etape")
             return (
               <li key={i} className="text-[12px]">
-                <span className={s.ok ? "" : "text-red-700"}>{s.ok ? "✓" : "!"}</span> {s.name}
+                <span className={s.ok ? "" : "text-red-700"}>{s.ok ? "✓" : "!"}</span> <span className="hand text-[13px]">{s.name}</span>
                 {s.detail && <span className="text-[color:var(--pencil)]"> · {s.detail}</span>}
+                {s.summary && <p className="pl-4 text-[12px]">{s.summary}</p>}
+                {s.links && s.links.length > 0 && <Links links={s.links} />}
               </li>
             );
-          // Calls made inside a tool (INPI login, a registry page…), kept discreet.
+          // Calls made inside a tool or a search (registry, page, capture…), kept discreet.
           return (
-            <li key={i} className="pl-6 font-mono text-[10.5px] text-[color:var(--pencil)]">
-              · {s.name}
-              {s.detail && ` · ${s.detail}`} {secs(s.ms)}
+            <li key={i} className="pl-4 text-[11px] text-[color:var(--pencil)]">
+              <span className="font-mono">
+                {s.ok ? "·" : "✗"} {s.name}
+              </span>
+              {s.what && <span> · {s.what}</span>}
+              {s.detail && <span> · {s.detail}</span>} <span className="font-mono">{secs(s.ms)}</span>
+              {!s.ok && s.summary && <p className="pl-3 text-red-700">{s.summary}</p>}
+              {s.links && s.links.length > 0 && <Links links={s.links} />}
             </li>
           );
         })}
@@ -154,6 +165,28 @@ export function DerouleToggle({ steps, traceId }: { steps?: TraceStep[]; traceId
         {open ? "▾" : "▸"} déroulé{t ? ` · ${t.tools} source(s) interrogée(s) · ${secs(t.duration)}` : ""}
       </button>
       {open && <div className="mt-2">{steps?.length ? <DerouleView steps={steps} /> : <Loaded traceId={traceId!} />}</div>}
+    </div>
+  );
+}
+
+// Side panel with the readable déroulé of a long operation (infringement search, import).
+export function DerouleDrawer({ traceId, title, onClose }: { traceId: string; title: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/10" onClick={onClose}>
+      <aside onClick={(e) => e.stopPropagation()} className="flex h-full w-full max-w-[520px] flex-col border-l-[1.5px] border-[color:var(--ink)] bg-[color:var(--paper)] p-5 shadow-xl">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="min-w-0">
+            <div className="label">déroulé</div>
+            <h2 className="hand truncate text-[17px]">{title}</h2>
+          </div>
+          <button type="button" className="btn-quiet text-[12px]" onClick={onClose}>
+            fermer
+          </button>
+        </div>
+        <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
+          <Loaded traceId={traceId} />
+        </div>
+      </aside>
     </div>
   );
 }

@@ -44,4 +44,5 @@ export const FIELD_LABELS: Record<string, string> = {
   expiryDate: "date d'expiration",
   status: "statut",
   notes: "notes",
+  imageUrl: "photo de référence",
 };
