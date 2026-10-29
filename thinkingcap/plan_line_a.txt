@@ -212,4 +212,7 @@ lupin --name lpb-l2s50math --lp-recipe long2short --lp-min-solve 0.5 --lp-min-so
 lupin --name lpx-2stage --lp-init adapters/lpb-right-s0/step-50 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 lupin --name lpx-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 lupin --name lpx-p2math --lp-pressure svamp=1 --lp-right-parts svamp --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# tools top-up (user 29 Oct): 1,500 extra tool questions answered sometimes right, topped up to 10 answers; then l2s50e + them
+tooltopup --name tools1 --tt-questions 1500
+lupin --name lpx-toolsplus --lp-extra-q tools1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end

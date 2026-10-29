@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -249,6 +249,8 @@ def main():
     parser.add_argument("--lp-min-solve-part", default="", help="lupin: lupin_pairs.py --min-solve-part, e.g. svamp=0.8")
     parser.add_argument("--lp-right-parts", default="", help="lupin: lupin_pairs.py --right-parts, e.g. svamp")
     parser.add_argument("--dial-weights", type=float, nargs="*", default=[0.5, 0.7], help="dial: strengths of the trained change")
+    parser.add_argument("--lp-extra-q", default="", help="lupin: add tooltopup <name>'s extra tool questions to the pairs")
+    parser.add_argument("--tt-questions", type=int, default=1500, help="tooltopup: extra tool questions")
     parser.add_argument("--lp-part-share", default="", help="lupin: lupin_select.py --part-share (P1)")
     parser.add_argument("--lp-solve-tilt", default="", help="lupin: lupin_select.py --solve-tilt (P3)")
     parser.add_argument("--lp-think-tilt-bfcl", type=float, default=1.0, help="lupin: lupin_select.py --think-tilt-bfcl (P4)")
@@ -2670,6 +2672,66 @@ def pertype(args):
         print(score_line(f"{name}-{tag} {w} (choosing 240 x 4)", out, base=ROOT / "v4-base"), flush=True)
 
 
+def tooltopup(args):
+    """More "be right" pairs for the tool parts (user, 29 Oct): tool candidates already built and contamination-checked
+    (dp9n-all, not in the training pool) that the original model gets right SOMETIMES (0 < solve rate < 1 on their 4-8
+    answers: only those give right > wrong pairs), --tt-questions of them in BFCL's 400 / 200 / 240 split, each topped up
+    to 10 answers by the original model. lupin --lp-extra-q <name> then adds them to its pairs (same eval matching)."""
+    name, pool_name = args.name, lupin_pool(args)
+    out = BON / f"tooltop-{name}"
+    if (out / "rollouts.jsonl").exists():
+        print(f"tooltopup {name}: done", flush=True)
+        return
+    union = Path("data/poolcand-dp9n-all.jsonl")
+    sources = [BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl",
+               *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp8", "dp9", "dp10", "dp11") for h in "ab"]]
+    drive_sync("restore", only=[str(union), f"data/pool-{pool_name}.jsonl", *[str(f.parent) for f in sources]])
+    used = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
+    rows = {r["pool_id"]: r for r in map(json.loads, filter(str.strip, union.read_text().splitlines()))
+            if r["part"].startswith("bfcl") and r["pool_id"] not in used}
+    have = defaultdict(list)
+    for f in sources:
+        if f.exists():
+            for line in open(f):
+                r = json.loads(line)
+                if r["id"] in rows:
+                    have[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
+    from build_pool import BFCL_SIZES
+    rng = random.Random(args.data_seed)
+    picked = []
+    total = sum(BFCL_SIZES.values())
+    for part, n in BFCL_SIZES.items():
+        mixed = [i for i, v in have.items() if rows[i]["part"] == part and 0 < sum(v) < len(v)]
+        rng.shuffle(mixed)
+        picked += mixed[:round(args.tt_questions * n / total)]
+    need = {i: max(0, 10 - len(have[i])) for i in picked}
+    print(f"tooltopup {name}: {len(picked)} tool questions answered sometimes right "
+          f"({dict(Counter(rows[i]['part'] for i in picked))}); answers to make {dict(Counter(need.values()))}", flush=True)
+    made = []
+    for k in sorted(v for v in set(need.values()) if v > 0):
+        sub = Path(f"data/tooltop-{name}-k{k}.jsonl")
+        sub.write_text("".join(json.dumps(rows[i]) + "\n" for i in picked if need[i] == k))
+        probe = BON / f"tooltop-{name}-k{k}"
+        drive_sync("restore", only=[str(probe)])
+        if not (probe / "rollouts.jsonl").exists():
+            py("probe_curve.py", "--data", sub, "--sources", "toolace,hermes_tools,glaive_tools", "--per-source", 1000000,
+               "--samples", k, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only",
+               "--chunk", 300, "--max-questions", sum(1 for _ in open(sub)), "--seed", 23 + k)
+            drive_sync("save")
+        made.append(probe / "rollouts.jsonl")
+    out.mkdir(parents=True, exist_ok=True)
+    ids = set(picked)
+    with open(out / "rollouts.jsonl.tmp", "w") as handle:  # new answers first, then the earlier ones (lupin keeps 10)
+        for f in [*made, *sources]:
+            if f.exists():
+                for line in open(f):
+                    if line.strip() and json.loads(line)["id"] in ids:
+                        handle.write(line if line.endswith("\n") else line + "\n")
+    (out / "questions.jsonl").write_text("".join(json.dumps(rows[i]) + "\n" for i in picked))
+    (out / "rollouts.jsonl.tmp").rename(out / "rollouts.jsonl")
+    drive_sync("save")
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -2719,14 +2781,19 @@ def lupin(args):
         print(f"lupin {name}: waiting for {pool_name}'s 10 answers on Drive", flush=True)
         time.sleep(300)
     assert all(h.exists() for h in halves), f"{pool_name}'s answers are not on Drive"
-    allfile = BON / f"lupin-all-{pool_name}.jsonl"
+    allfile = BON / f"lupin-all-{pool_name}{'-' + args.lp_extra_q if args.lp_extra_q else ''}.jsonl"
     if not allfile.exists():
         ids = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
+        extra = BON / f"tooltop-{args.lp_extra_q}"
+        if args.lp_extra_q:  # tooltopup's extra tool questions join the pool for pairs (same matching afterwards)
+            drive_sync("restore", only=[str(extra)])
+            ids |= {json.loads(l)["pool_id"] for l in (extra / "questions.jsonl").read_text().splitlines() if l.strip()}
         # at most --lp-answers answers per question, newest first (user, 29 Oct: "14 or 10?"): the 10-answer run, then
         # the extra-answer rounds (newest first), then the 4 selection answers. The pool was CHOSEN on the earliest
         # answers (lucky draws), so those are the biased ones; and an equal count per question keeps every type's
         # pairs equally strong (the shortest right of 14 is shorter than of 10).
-        sources = [*halves, *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp11", "dp10", "dp9", "dp8") for h in "ab"],
+        sources = [*halves, *([extra / "rollouts.jsonl"] if args.lp_extra_q else []),
+                   *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp11", "dp10", "dp9", "dp8") for h in "ab"],
                    BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl"]
         drive_sync("restore", only=[str(f.parent) for f in sources])
         count, taken = Counter(), Counter()
@@ -3797,7 +3864,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

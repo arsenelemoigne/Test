@@ -3262,3 +3262,4 @@ Plan cells restarted with the finished lines commented out.
   / ifeval 1,671 / simple 1,114 / multiple 514 / no-fit 718; guard 660 / 898 / 660 / 270 / 195 / 132; right>wrong
   (rightwrong recipe) 637 / 1,180 / 890 / 317 / 253 / 207. Enough for these experiments; tools' be-right pairs are the
   tightest (top-up with more BFCL-style questions only if the winner is tools-limited).
+- ~23:00 (user): tools top-up added: stage tooltopup (1,500 BFCL-split tool candidates from dp9n-all, not in the pool, answered right only sometimes, topped up to 10 answers, ~2-3 GPU-h) + lpx-toolsplus (l2s50e recipe + those questions via lupin --lp-extra-q; same eval matching), queued at the end of GPU 2.
