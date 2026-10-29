@@ -202,6 +202,10 @@ lupin --name lpc-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 1 2 --lp-f
 refsets --name refs --rs-tag base
 # cross-check (user 29 Oct): confirmed soups on a NEW 240-question eval set x4 vs the original Qwen; report only
 crosscheck --name cx-adar1 --cx-names lpc-adar1 --cx-steps 25 50 75 --seeds 0 1 2
+# strength dial (user 29 Oct: strong v1): Ada-R1 soup 25 (fresh -1.9) at x0.5 / x0.7 on the fresh set
+dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-weights 0.5 0.7
 # OPTIONAL module (user 29 Oct): code-only strict cut pairs on top of lpb-l2s50e; auto-DROPPED if it costs accuracy or spills onto other types
 codecut --name lcc-l2s50e --cc-base lpb-l2s50e --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# math protection (user 29 Oct: strong v1; math lost most, like both competitors): long2short p<0.5, math p<0.8 + math right>wrong pairs
+lupin --name lpb-l2s50math --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part svamp=0.8 --lp-right-parts svamp --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end

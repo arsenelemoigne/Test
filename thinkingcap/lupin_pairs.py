@@ -67,6 +67,12 @@ def main():
     parser.add_argument("--margin-drop", type=float, default=0.15)
     parser.add_argument("--right-band", type=float, default=0.25)
     parser.add_argument("--min-solve", type=float, default=0.0)
+    parser.add_argument("--min-solve-part", default="",
+                        help="per-part protection override, e.g. svamp=0.8 (29 Oct: math lost most; Lightning McQwen3 / "
+                             "michal-bida both lost on SVAMP)")
+    parser.add_argument("--right-parts", default="",
+                        help="parts that also get a similar-length right > wrong pair per question (Lightning McQwen3's "
+                             "math-only correctness DPO), e.g. svamp")
     parser.add_argument("--easy-ratio", type=float, default=0.0,
                         help="long2short: on ALWAYS-solved questions a longer right answer counts from this ratio (29 Oct: 1.2; "
                              "their right answers are close in length, so 1.5x gave few pairs)")
@@ -85,6 +91,8 @@ def main():
             groups[r["id"]].append(r)
 
     pairs, counts = [], Counter()
+    overrides = dict((k, float(v)) for k, v in (x.split("=") for x in args.min_solve_part.split(",") if x))
+    right_parts = set(x for x in args.right_parts.split(",") if x)
 
     def add(kind, chosen, rejected, q):
         pairs.append({"id": q[0]["id"], "source": q[0]["source"], "part": part_of(q[0]), "kind": kind,
@@ -97,7 +105,8 @@ def main():
         rights = sorted((r for r in q if right(r)), key=lambda r: r["output_tokens"])
         wrongs = [r for r in q if not right(r)]  # wrong, capped or unclosed: all score as wrong
         p = len(rights) / len(q)
-        may_shorten = p >= args.min_solve
+        part = part_of(q[0])
+        may_shorten = p >= overrides.get(part, args.min_solve)
         if not may_shorten:  # a hard question: only "be right", never "be shorter" (nor "short right > long wrong")
             if args.recipe in ("long2short", "adar1"):
                 close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rights for w in wrongs if finished(w)
@@ -126,7 +135,7 @@ def main():
                     if right(o) and (not may_shorten or o["output_tokens"] <= rights[0]["output_tokens"]):
                         continue
                     add("shorten" if right(o) else "guard", rights[0], o, q)
-        if args.recipe == "rightwrong" or args.add_right:
+        if args.recipe == "rightwrong" or args.add_right or part in right_parts:
             close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rights for w in wrongs if finished(w)
                      and abs(r["output_tokens"] - w["output_tokens"]) <= args.right_band * max(r["output_tokens"], w["output_tokens"])]
             if close:

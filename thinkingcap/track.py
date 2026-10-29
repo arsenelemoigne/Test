@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -246,6 +246,9 @@ def main():
     parser.add_argument("--lp-answers", type=int, default=10, help="lupin: answers per question used (newest first)")
     parser.add_argument("--lp-easy-ratio", type=float, default=0.0, help="lupin: lupin_pairs.py --easy-ratio")
     parser.add_argument("--lp-shorten-cap", type=float, default=1.0, help="lupin: lupin_pairs.py --shorten-cap")
+    parser.add_argument("--lp-min-solve-part", default="", help="lupin: lupin_pairs.py --min-solve-part, e.g. svamp=0.8")
+    parser.add_argument("--lp-right-parts", default="", help="lupin: lupin_pairs.py --right-parts, e.g. svamp")
+    parser.add_argument("--dial-weights", type=float, nargs="*", default=[0.5, 0.7], help="dial: strengths of the trained change")
     parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
     parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
@@ -2586,6 +2589,32 @@ def crosscheck(args):
             print(score_line(f"{name}-soup-{step} (cross-check: new 240 x 4)", out, base=base_run), flush=True)
 
 
+def dial(args):
+    """Strength dial (LUPIN spec 2.4; user 29 Oct: "build a very strong v1"): the soup of --cx-names at --cx-steps
+    (--seeds averaged), its trained change scaled by each --dial-weights (merge.py adapter weights summing to w), scored
+    on the FRESH set x8 against the original Qwen. No training: one trained model gives a saving-vs-accuracy curve."""
+    fresh_q = f"questions_fresh{FRESH_SEED}"
+    evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
+    for name in args.cx_names:
+        for step in args.cx_steps:
+            members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+            drive_sync("restore", only=[str(m.parent) for m in members])
+            members = [m for m in members if (m / "adapter_config.json").exists()]
+            if not members:
+                continue
+            for w in args.dial_weights:
+                tag = f"{name}-soup-{step}-x{round(w * 100)}"
+                out = ROOT / f"f8-{tag}"
+                if not (out / "results.json").exists():
+                    model = Path("/content/lupin-models") / tag
+                    py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+                       *[f"{m}:{w / len(members):.6f}" for m in members])
+                    evaluate(out, samples=8, questions=fresh_q, model=model)
+                    shutil.rmtree(model, ignore_errors=True)
+                    drive_sync("save")
+                print(score_line(f"{tag} (fresh 240 x 8, strength x{w})", out, base=ROOT / "f8-base"), flush=True)
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -2667,7 +2696,9 @@ def lupin(args):
         py("lupin_pairs.py", "--rollouts", allfile, "--recipe", args.lp_recipe, "--out", raw,
            *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split(),
            *(["--easy-ratio", args.lp_easy_ratio] if args.lp_easy_ratio else []),
-           *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []))
+           *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []),
+           *(["--min-solve-part", args.lp_min_solve_part] if args.lp_min_solve_part else []),
+           *(["--right-parts", args.lp_right_parts] if args.lp_right_parts else []))
     if not (pairs / "pairs.jsonl").exists():
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", ROOT / "v4-base", BASE,
            "--total", args.lp_total, "--out", pairs,
@@ -3701,7 +3732,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

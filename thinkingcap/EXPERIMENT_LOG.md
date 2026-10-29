@@ -3232,3 +3232,9 @@ Plan cells restarted with the finished lines commented out.
   balance 1) on GPU 1 after the l2s50e confirm + cross-check; screened on the choosing set like the others.
   Also learned (their repos): michal-bida did it in ONE round; Lightning McQwen3 = terse-prompt distillation SFT -> cut
   pairs (9k) -> a math-only right>wrong DPO (732 pairs) for accuracy. Both lost on SVAMP (-2.4 / -3.8).
+- ~21:45 (user: "build a very strong competitive v1 first, with the data we have"): v1 levers, no new data:
+  (1) lpb-l2s50bal (michal-bida balance after matching; GPU 1, queued); (2) math protection: lupin_pairs.py
+  --min-solve-part svamp=0.8 + --right-parts svamp (Lightning McQwen3's math-only right>wrong), lpb-l2s50math (GPU 2, after
+  codecut); (3) strength dial stage `dial` (soup x0.5 / x0.7, fresh x8): dial-adar1 on lpc-adar1 soup 25 (GPU 2, after its
+  cross-check); (4) best dose = the screens' checkpoints; (5) combine the winners into one recipe -> 3-seed fresh
+  confirm -> LUPIN v1. Tested on synthetic answers (math: shorten 74 -> 26, right 94 -> 167).
