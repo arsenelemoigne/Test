@@ -6,6 +6,7 @@ import { EditsProvider } from "@/components/EditsProvider";
 import { Nav } from "@/components/Nav";
 import { ClientSwitcher } from "@/components/ClientSwitcher";
 import { ExportButton } from "@/components/ExportButton";
+import { LogoutButton } from "@/components/LogoutButton";
 import { formatDate } from "@/lib/format";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -30,9 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <ClientSwitcher clients={listClients()} current={client.slug} />
             <span className="chip">{role === "avocat" ? "Avocat" : "Client"}</span>
             <ExportButton />
-            <form method="POST" action="/api/logout">
-              <button className="btn">Quitter</button>
-            </form>
+            <LogoutButton />
           </div>
         </header>
 

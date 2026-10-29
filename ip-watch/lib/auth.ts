@@ -4,20 +4,26 @@ import type { Role } from "./types";
 
 export const SESSION_COOKIE = "ipw_session";
 
+// Values pasted into a hosting dashboard sometimes keep their surrounding quotes or spaces.
+function demoPassword(): string | null {
+  const raw = process.env.DEMO_PASSWORD?.trim().replace(/^(["'])(.*)\1$/, "$2");
+  return raw || null;
+}
+
 function secret(): string | null {
-  const password = process.env.DEMO_PASSWORD;
+  const password = demoPassword();
   if (!password) return null;
   return createHash("sha256").update(`ip-watch:${password}`).digest("hex");
 }
 
 export function isConfigured(): boolean {
-  return Boolean(process.env.DEMO_PASSWORD);
+  return Boolean(demoPassword());
 }
 
 export function checkPassword(candidate: string): boolean {
-  const expected = process.env.DEMO_PASSWORD;
+  const expected = demoPassword();
   if (!expected) return false;
-  const a = Buffer.from(candidate);
+  const a = Buffer.from(candidate.trim());
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
 }

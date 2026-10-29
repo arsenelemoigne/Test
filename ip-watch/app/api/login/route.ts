@@ -1,16 +1,16 @@
+import { NextResponse } from "next/server";
 import { checkPassword, SESSION_COOKIE, signSession } from "@/lib/auth";
-import { seeOther } from "@/lib/http";
 
+// Returns JSON and lets the page navigate, so nothing depends on how the hosting proxy rewrites redirects.
 export async function POST(request: Request) {
-  const form = await request.formData();
-  const password = String(form.get("password") ?? "");
-  const role = form.get("role") === "client" ? "client" : "avocat";
+  const body = (await request.json().catch(() => null)) as { password?: string; role?: string } | null;
+  const role = body?.role === "client" ? "client" : "avocat";
 
-  if (!checkPassword(password)) {
-    return seeOther("/login?e=1");
+  if (!checkPassword(String(body?.password ?? ""))) {
+    return NextResponse.json({ ok: false, error: "Mot de passe incorrect." }, { status: 401 });
   }
 
-  const response = seeOther("/");
+  const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION_COOKIE, signSession(role), {
     httpOnly: true,
     sameSite: "lax",

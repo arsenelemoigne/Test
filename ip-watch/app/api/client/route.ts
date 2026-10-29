@@ -1,14 +1,13 @@
+import { NextResponse } from "next/server";
 import { currentRole } from "@/lib/auth";
 import { CLIENT_COOKIE, listClients } from "@/lib/data";
-import { seeOther } from "@/lib/http";
 
 export async function POST(request: Request) {
-  if (!currentRole()) return seeOther("/login");
-  const form = await request.formData();
-  const slug = String(form.get("slug") ?? "");
-  const response = seeOther(String(form.get("back") ?? "/"));
-  if (listClients().some((c) => c.slug === slug)) {
-    response.cookies.set(CLIENT_COOKIE, slug, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 30 });
-  }
+  if (!currentRole()) return NextResponse.json({ ok: false }, { status: 401 });
+  const body = (await request.json().catch(() => null)) as { slug?: string } | null;
+  const slug = String(body?.slug ?? "");
+  if (!listClients().some((c) => c.slug === slug)) return NextResponse.json({ ok: false }, { status: 400 });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(CLIENT_COOKIE, slug, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 30 });
   return response;
 }

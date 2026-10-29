@@ -7,6 +7,8 @@ export function GET() {
   const set = (name: string) => Boolean(process.env[name]);
   return NextResponse.json({
     ok: true,
+    // Railway sets this to the deployed commit; lets us check which version is live.
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
     configured: {
       DEMO_PASSWORD: set("DEMO_PASSWORD"),
       OPENROUTER_API_KEY: set("OPENROUTER_API_KEY"),
