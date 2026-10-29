@@ -3263,3 +3263,14 @@ Plan cells restarted with the finished lines commented out.
   (rightwrong recipe) 637 / 1,180 / 890 / 317 / 253 / 207. Enough for these experiments; tools' be-right pairs are the
   tightest (top-up with more BFCL-style questions only if the winner is tools-limited).
 - ~23:00 (user): tools top-up added: stage tooltopup (1,500 BFCL-split tool candidates from dp9n-all, not in the pool, answered right only sometimes, topped up to 10 answers, ~2-3 GPU-h) + lpx-toolsplus (l2s50e recipe + those questions via lupin --lp-extra-q; same eval matching), queued at the end of GPU 2.
+- ~22:05 (Mac restarted ~21:57; results read from the Drive logs):
+  lpc-l2s50e FRESH CONFIRM (3 seeds, fresh 240 x 8):
+  | soup | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | 50 | +44.1 / -2.7 | +54 / -5.9 | +50 / -1.3 | +37 / -0.3 | +33 / +0.9 | +35 / -4.4 | +32 / -6.6 |
+  | 100 | **+45.8 / -1.3** | +54 / -1.9 | +53 / +0.3 | +41 / -1.6 | +32 / +0.6 | +36 / -2.8 | +34 / -4.4 |
+  | 150 | +45.4 / -3.1 (outside) | +57 / -5.6 | +50 / 0.0 | +39 / -3.4 | +31 / -0.9 | +34 / -4.1 | +34 / -4.7 |
+  Best fresh point so far: lpc-l2s50e-soup-100 +45.8 / -1.3 (michal-bida 47.0 / -0.78). Screen had said +49.3 / 0.0.
+  No-fit tools (-4.4 to -6.6) and math are the weak types.
+  lpc-adar1 CROSS-CHECK (new 240 x 4 vs the original Qwen): soup 25 +48.6 / -3.4; soup 50 +46.5 / -3.4 (fresh: 43.0 / -1.9,
+  44.8 / -2.3): same picture, accuracy -2 to -3.5 on both independent sets.
