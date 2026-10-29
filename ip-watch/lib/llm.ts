@@ -37,20 +37,29 @@ export async function chat(opts: {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY manquant");
   const started = Date.now();
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Registre PI (demo)" },
-    body: JSON.stringify({
-      model: modelFor(opts.tier ?? "strong"),
-      temperature: opts.temperature ?? 0.1,
-      messages: opts.messages,
-      ...(opts.tools?.length ? { tools: opts.tools, tool_choice: "auto" } : {}),
-      ...(opts.json ? { response_format: { type: "json_object" } } : {}),
-      ...(opts.plugins ? { plugins: opts.plugins } : {}),
-    }),
-  });
-  const text = await res.text();
-  const model = modelFor(opts.tier ?? "strong");
+  const post = (model: string) =>
+    fetch(ENDPOINT, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Registre PI (demo)" },
+      body: JSON.stringify({
+        model,
+        temperature: opts.temperature ?? 0.1,
+        messages: opts.messages,
+        ...(opts.tools?.length ? { tools: opts.tools, tool_choice: "auto" } : {}),
+        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+        ...(opts.plugins ? { plugins: opts.plugins } : {}),
+      }),
+    });
+  let model = modelFor(opts.tier ?? "strong");
+  let res = await post(model);
+  let text = await res.text();
+  // A mistyped or retired model id in the variables falls back to the default instead of breaking the demo.
+  if ((res.status === 400 || res.status === 404) && model !== DEFAULT_MODEL && /model/i.test(text)) {
+    traceStep({ kind: "ia", name: opts.label ?? "chat", detail: `${model} refusé, repli sur ${DEFAULT_MODEL}`, output: text.slice(0, 300), ms: Date.now() - started, ok: false });
+    model = DEFAULT_MODEL;
+    res = await post(model);
+    text = await res.text();
+  }
   const last = opts.messages[opts.messages.length - 1];
   const input = { dernier_message: typeof last?.content === "string" ? last.content.slice(0, 600) : null, outils: opts.tools?.length ?? 0 };
   if (!res.ok) {
