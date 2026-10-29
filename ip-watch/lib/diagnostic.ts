@@ -125,8 +125,10 @@ export async function runDiagnostic(): Promise<{ traceId: string; checks: Check[
         const { status, json, text } = await getJson(`https://www.searchapi.io/api/v1/me?${new URLSearchParams({ api_key: key })}`);
         if (status >= 400) return { ok: false, detail: `${status} ${text.slice(0, 200)}` };
         const acc = (json?.account ?? json ?? {}) as Record<string, unknown>;
-        const left = acc.remaining_credits ?? acc.searches_left ?? acc.remaining;
-        return { ok: true, detail: left != null ? `crédits restants : ${left}` : `compte joignable · ${JSON.stringify(acc).slice(0, 160)}` };
+        const left = typeof acc.remaining_credits === "number" ? acc.remaining_credits : null;
+        // Without a subscription the free searches are not reported here (-1); the SearchAPI dashboard shows them.
+        if (left === null || left < 0) return { ok: true, detail: `clé valide · offre gratuite, crédits visibles sur le tableau de bord SearchAPI · ${acc.current_month_usage ?? 0} recherche(s) ce mois-ci` };
+        return { ok: true, detail: `crédits restants : ${left}` };
       }),
       timed("Contrefaçons", "Google Vision (recherche par image)", async () => {
         const key = process.env.GOOGLE_VISION_API_KEY;
