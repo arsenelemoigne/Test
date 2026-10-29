@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { checkPassword, SESSION_COOKIE, signSession } from "@/lib/auth";
+import { seeOther } from "@/lib/http";
 
 export async function POST(request: Request) {
   const form = await request.formData();
@@ -7,10 +7,10 @@ export async function POST(request: Request) {
   const role = form.get("role") === "client" ? "client" : "avocat";
 
   if (!checkPassword(password)) {
-    return NextResponse.redirect(new URL("/login?e=1", request.url), 303);
+    return seeOther("/login?e=1");
   }
 
-  const response = NextResponse.redirect(new URL("/", request.url), 303);
+  const response = seeOther("/");
   response.cookies.set(SESSION_COOKIE, signSession(role), {
     httpOnly: true,
     sameSite: "lax",
