@@ -3163,3 +3163,12 @@ Plan cells restarted with the finished lines commented out.
   | lpb-l2s75-50 | +43.7% / -1.5 | +55 / -5.0 | +53 / -2.5 | +25 / +3.1 | +34 / +1.9 | +37 / -3.1 | +40 / -3.8 |
   (choosing set: 40 questions per part x 4, so one part moves ~2.5 pts per question; per-part noise is large.)
   lpb-l2s50 trained 123 steps, step-25 being scored.
+- ~15:00 screen scores (choosing 240 x 4; saved / accuracy; per part svamp, mbpp, ifeval, simple, multiple, no-fit):
+  | checkpoint | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | lpb-l2s50-25 | +36.3% / -0.9 | +49 / -1.2 | +34 / -2.5 | +31 / +1.3 | +26 / -0.6 | +29 / -1.2 | +34 / -1.9 |
+  | lpb-l2s50-50 | +47.7% / -1.0 | +55 / -3.7 | +53 / -1.9 | +43 / +3.1 | +35 / -0.6 | +39 / -1.2 | +40 / -2.5 |
+  | lpb-l2s50-75 | +47.8% / -1.9 | +51 / -2.5 | +52 / -3.1 | +52 / -0.6 | +31 / -1.9 | +34 / -3.1 | +39 / +0.6 |
+  | lpb-l2s75-75 | +43.8% / -1.1 | +51 / -1.9 | +51 / -3.7 | +37 / +1.9 | +32 / -1.2 | +33 / +1.2 | +39 / -1.9 |
+  lpb-l2s75 done (88 steps; best 75: +43.8 / -1.1). lpb-l2s50-50 is the best so far (+47.7 / -1.0, at the -1 line).
+  GPU 2 now trains lpb-adar1 (194 steps); GPU 1 scoring lpb-l2s50-100.
