@@ -3190,3 +3190,14 @@ Plan cells restarted with the finished lines commented out.
   saving): lpc-adar1 (GPU 2, after lpb-l2s50e) and lpc-l2s50 (GPU 1, after lpb-right), 3 seeds, soups at 25/50/75 on
   the fresh set x8. If lpb-l2s50e beats lpb-l2s50, it replaces lpc-l2s50.
 - ~17:10: lpb-dast-150: +36.3 / -1.7 (dast done; best 50: +34.1 / -0.1). GPU 1 trains lpb-right (121 steps, step 25; right>wrong pairs learn slowly, 44-62% ordered right). GPU 2: lpb-l2s50e at step 160/168, scores next.
+- 17:30 lpb-l2s50e (long2short p<0.5 + always-solved shorten from 1.2x, cap 2x guard): 2,728 pairs (vs 2,012), 168 steps.
+  | checkpoint | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | lpb-l2s50e-25 | +41.0 / -0.9 | +52 / -2.5 | +43 / -0.6 | +33 / -0.6 | +32 / +2.5 | +30 / -1.2 | +38 / -1.3 |
+  | lpb-l2s50e-50 | +46.1 / -0.1 | +54 / -1.2 | +50 / -2.5 | +41 / +3.8 | +34 / +1.2 | +37 / -1.9 | +41 / -0.6 |
+  | lpb-l2s50e-75 | +47.9 / -2.0 | +55 / -2.5 | +50 / -3.7 | +47 / -0.6 | +34 / +1.2 | +38 / -5.0 | +42 / 0.0 |
+  | lpb-l2s50e-100 | +49.3 / -0.0 | +52 / -2.5 | +56 / 0.0 | +50 / +5.0 | +32 / +0.6 | +38 / -8.1 | +42 / 0.0 |
+  | lpb-l2s50e-150 | +50.9 / -0.5 | +58 / -1.2 | +55 / -2.5 | +51 / +3.1 | +34 / -3.1 | +39 / 0.0 | +44 / -1.3 |
+  Best screen so far: +50.9% / -0.5 (step 150), +49.3 / 0.0 (100). More pairs on easy questions helped. It replaces
+  lpb-l2s50 in STEP 8: lpc-l2s50e (GPU 1, after lpb-right), 3 seeds, fresh-set soups at 50/100/150. GPU 2 started
+  lpc-adar1 (3 seeds, soups 25/50/75).
