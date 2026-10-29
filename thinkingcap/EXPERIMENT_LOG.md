@@ -3297,3 +3297,4 @@ Plan cells restarted with the finished lines commented out.
   +2 pts, or (b) saving >= base -2 pts and accuracy >= base +1; otherwise DROP and try another strategy. Winners'
   levers are then combined.
 - ~22:40: lpc-adar1 cross-check soup 75: +48.9 / -3.0 (25: +48.6 / -3.4; 50: +46.5 / -3.4). GPU 2 on dial-adar1; GPU 1 on crosscheck lpc-l2s50e. Both runtimes alive (Drive logs).
+- 23:45: both runtimes had disconnected at ~22:03 (Mac restart); reconnected (L4), Drive mounted (user approved), setup running, plans restart from Drive state (GPU 1: crosscheck cx-l2s50e / tooltopup tools1; GPU 2: dial-adar1 / tooltopup nofit1). ~1.5 h lost.
