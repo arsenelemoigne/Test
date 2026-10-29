@@ -211,6 +211,7 @@ async function score(findings: Finding[], client: Client, mark: Mark): Promise<s
     ].join("\n"),
     JSON.stringify(batch),
     "watch-score",
+    "strong",
   );
   let n = 0;
   for (const s of out?.scores ?? []) {

@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { ClientActions } from "./ClientActions";
 import { EditableCell } from "./EditableCell";
-import { deadlineFor, DEADLINE_LABELS } from "@/lib/deadlines";
+import { deadlineFor, DEADLINE_LABELS, isActiveRight } from "@/lib/deadlines";
 import { formatDate, toIsoDate } from "@/lib/format";
 import { TYPE_LABELS } from "@/lib/labels";
 import { countryName, rightCountries } from "@/lib/territories";
@@ -15,15 +16,16 @@ export function MarksTable({ marks: initial }: { marks: Mark[] }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<RightType | "">("");
   const [office, setOffice] = useState<Office | "">("");
+  const [showInactive, setShowInactive] = useState(false);
+  const inactiveCount = useMemo(() => marks.filter((m) => !isActiveRight(m)).length, [marks]);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return marks
-      .filter((m) => (!type || m.type === type) && (!office || m.office === office) && (!q || `${m.name} ${m.number} ${m.owner} ${m.classes.join(" ")}`.toLowerCase().includes(q)))
+      .filter((m) => (showInactive || isActiveRight(m)) && (!type || m.type === type) && (!office || m.office === office) && (!q || `${m.name} ${m.number} ${m.owner} ${m.classes.join(" ")}`.toLowerCase().includes(q)))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [marks, query, type, office]);
+  }, [marks, query, type, office, showInactive]);
 
   const save = async (m: Mark, field: keyof Right, value: unknown) => {
     const res = await fetch(`/api/marks/${encodeURIComponent(m.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ field, value }) });
@@ -66,10 +68,17 @@ export function MarksTable({ marks: initial }: { marks: Mark[] }) {
         <div>
           <h1 className="hand text-[28px] font-semibold leading-tight">Marques</h1>
           <p className="text-[13px] text-[color:var(--pencil)]">
-            {marks.filter((m) => m.type === "marque").length} marques, {marks.filter((m) => m.type === "dessin").length} dessins & modèles. Cliquez une cellule pour la corriger ; un point signale une valeur modifiée.
+            {filtered.length} titre(s) affiché(s). Cliquez une cellule pour la corriger ; un point signale une valeur modifiée.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ClientActions />
+          {inactiveCount > 0 && (
+            <label className="hand flex items-center gap-1.5 text-[13px]">
+              <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+              titres expirés ({inactiveCount})
+            </label>
+          )}
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="rechercher…" className="field w-48" />
           <select value={type} onChange={(e) => setType(e.target.value as RightType | "")} className="field">
             <option value="">tous types</option>

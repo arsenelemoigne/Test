@@ -32,11 +32,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Nav />
           <div className="flex flex-wrap items-center gap-2">
             <ClientSwitcher clients={clients.map((c) => ({ slug: c.slug, name: c.name }))} current={client?.slug ?? null} />
-            {role === "avocat" && (
-              <Link href="/nouveau" className="btn">
-                + client
-              </Link>
-            )}
             <LogoutButton />
           </div>
         </header>

@@ -67,6 +67,23 @@ export async function update<T>(table: string, filters: Record<string, string>, 
   return (await res.json()) as T[];
 }
 
+export async function remove(table: string, filters: Record<string, string>): Promise<void> {
+  const c = required();
+  const res = await fetch(`${c.url}/rest/v1/${table}?${new URLSearchParams(filters)}`, { method: "DELETE", headers: headers(c.key, { Prefer: "return=minimal" }) });
+  await check(res, `delete ${table}`);
+}
+
+// Deletes every object under a prefix (best effort, one level of folders deep per call).
+export async function removeObjects(bucket: string, prefix: string): Promise<void> {
+  const c = required();
+  const list = await fetch(`${c.url}/storage/v1/object/list/${bucket}`, { method: "POST", headers: headers(c.key), body: JSON.stringify({ prefix, limit: 1000 }) });
+  if (!list.ok) return;
+  const entries = (await list.json()) as { name: string; id: string | null }[];
+  const files = entries.filter((e) => e.id).map((e) => `${prefix}/${e.name}`);
+  for (const folder of entries.filter((e) => !e.id)) await removeObjects(bucket, `${prefix}/${folder.name}`);
+  if (files.length) await fetch(`${c.url}/storage/v1/object/${bucket}`, { method: "DELETE", headers: headers(c.key), body: JSON.stringify({ prefixes: files }) });
+}
+
 export async function uploadObject(bucket: string, path: string, bytes: ArrayBuffer, contentType: string): Promise<void> {
   const c = required();
   const res = await fetch(`${c.url}/storage/v1/object/${bucket}/${path}`, {

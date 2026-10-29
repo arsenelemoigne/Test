@@ -16,8 +16,17 @@ export function llmConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY);
 }
 
+// "strong": legal answers and infringement scoring; "fast": triage, extraction and summaries.
+export type Tier = "strong" | "fast";
+
+function modelFor(tier: Tier): string {
+  const strong = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  return tier === "fast" ? process.env.OPENROUTER_MODEL_FAST || strong : strong;
+}
+
 export async function chat(opts: {
   messages: ChatMessage[];
+  tier?: Tier;
   tools?: ToolSpec[];
   temperature?: number;
   json?: boolean;
@@ -31,7 +40,7 @@ export async function chat(opts: {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Registre PI (demo)" },
     body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
+      model: modelFor(opts.tier ?? "strong"),
       temperature: opts.temperature ?? 0.1,
       messages: opts.messages,
       ...(opts.tools?.length ? { tools: opts.tools, tool_choice: "auto" } : {}),
@@ -50,10 +59,10 @@ export async function chat(opts: {
 }
 
 // Asks for a JSON object; returns null when the model is unavailable or the answer cannot be parsed.
-export async function extractJson<T>(system: string, user: string, label: string): Promise<T | null> {
+export async function extractJson<T>(system: string, user: string, label: string, tier: Tier = "fast"): Promise<T | null> {
   if (!llmConfigured()) return null;
   try {
-    const { message } = await chat({ messages: [{ role: "system", content: system }, { role: "user", content: user }], json: true, temperature: 0, label });
+    const { message } = await chat({ messages: [{ role: "system", content: system }, { role: "user", content: user }], json: true, temperature: 0, label, tier });
     const raw = (message.content ?? "").replace(/^```(?:json)?\s*|\s*```$/g, "");
     return JSON.parse(raw) as T;
   } catch {
@@ -72,6 +81,7 @@ export async function webSearch(query: string, label = "web"): Promise<{ summary
     ],
     plugins: [{ id: "web", max_results: 6 }],
     label,
+    tier: "fast",
   });
   const seen = new Set<string>();
   const results: WebResult[] = [];

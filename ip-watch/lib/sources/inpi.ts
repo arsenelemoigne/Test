@@ -77,15 +77,53 @@ export function hitsOf(data: unknown): Record<string, unknown>[] {
   return best;
 }
 
-export async function search(kind: "marques" | "modeles", query: string, collections: string[], position = 0, size = 100) {
-  const s = await inpiSession();
-  const res = await s.request("POST", `/services/apidiffusion/api/${kind}/search`, { collections, query, fields: ["*"], position, size });
+// Mark searches only return five fields by default; dates and classes have to be asked for.
+export const MARK_FIELDS = ["ApplicationNumber", "Mark", "MarkCurrentStatusCode", "DEPOSANT", "ukey", "ApplicationDate", "RegistrationDate", "ExpiryDate", "ClassNumber", "PublicationDate"];
+
+export async function search(kind: "marques" | "modeles", query: string, collections: string[], position = 0, size = 100, fields: string[] = ["*"]) {
+  const run = async (f: string[]) => (await inpiSession()).request("POST", `/services/apidiffusion/api/${kind}/search`, { collections, query, fields: f, position, size });
+  let res = await run(fields);
   if (res.status === 401 || res.status === 403) {
     shared = null;
-    const retry = await (await inpiSession()).request("POST", `/services/apidiffusion/api/${kind}/search`, { collections, query, fields: ["*"], position, size });
-    return { ...retry, hits: hitsOf(retry.data) };
+    res = await run(fields);
   }
+  // An unknown field name is rejected: fall back to the default field set.
+  if (res.status >= 400 && fields[0] !== "*") res = await run(["*"]);
   return { ...res, hits: hitsOf(res.data) };
+}
+
+export type NoticeDetails = { filingDate: string | null; registrationDate: string | null; expiryDate: string | null; classes: number[]; countries: Territory[]; status: string | null };
+
+// Reads dates, classes and designated countries from a full record, whether it comes back as XML or JSON.
+export function parseNotice(body: unknown): NoticeDetails {
+  const text = typeof body === "string" ? body : JSON.stringify(body ?? "");
+  const one = (names: string[]) => {
+    for (const n of names) {
+      const xml = text.match(new RegExp(`<(?:\\w+:)?${n}[^>]*>\\s*([^<]+?)\\s*</`, "i"));
+      if (xml) return xml[1];
+      const json = text.match(new RegExp(`"${n}"\\s*:\\s*"([^"]+)"`, "i"));
+      if (json) return json[1];
+    }
+    return null;
+  };
+  const all = (names: string[]) =>
+    names.flatMap((n) => [
+      ...Array.from(text.matchAll(new RegExp(`<(?:\\w+:)?${n}[^>]*>\\s*([^<]+?)\\s*</`, "gi"))).map((m) => m[1]),
+      ...Array.from(text.matchAll(new RegExp(`"${n}"\\s*:\\s*"([^"]+)"`, "gi"))).map((m) => m[1]),
+    ]);
+  return {
+    filingDate: parseDate(one(["ApplicationDate", "FilingDate"])),
+    registrationDate: parseDate(one(["RegistrationDate", "PublicationDate"])),
+    expiryDate: parseDate(one(["ExpiryDate", "ExpirationDate", "RenewalDate"])),
+    classes: parseClasses(all(["ClassNumber"])),
+    countries: parseCountries(all(["DesignatedCountryCode", "DesignatedCountry"])),
+    status: one(["MarkCurrentStatusCode", "MarkCurrentStatus"]),
+  };
+}
+
+export async function notice(path: string): Promise<{ status: number; data: unknown }> {
+  const s = await inpiSession();
+  return s.request("GET", path);
 }
 
 export async function metadata(): Promise<string | null> {
@@ -105,11 +143,16 @@ export async function metadata(): Promise<string | null> {
 // Flattens nested objects and {name, value} field lists into one lowercase-keyed map.
 export function flatten(item: unknown): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const isPairs = (a: unknown[]) => a.length > 0 && a.every((x) => x && typeof x === "object" && "name" in (x as object) && "value" in (x as object));
+  const isPairs = (a: unknown[]) => a.length > 0 && a.every((x) => x && typeof x === "object" && "name" in (x as object) && ("value" in (x as object) || "values" in (x as object)));
   const visit = (node: unknown, depth: number) => {
     if (depth > 5 || !node || typeof node !== "object") return;
     if (Array.isArray(node)) {
-      if (isPairs(node)) for (const p of node as { name: string; value: unknown }[]) if (!(p.name.toLowerCase() in out)) out[p.name.toLowerCase()] = p.value;
+      if (isPairs(node)) {
+        for (const p of node as { name: string; value?: unknown; values?: unknown }[]) {
+          const key = p.name.toLowerCase();
+          if (!(key in out)) out[key] = p.value ?? p.values;
+        }
+      }
       return;
     }
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
@@ -184,21 +227,44 @@ function parseCountries(v: unknown): Territory[] {
   return Array.from(out.values());
 }
 
-function officeOf(flat: Record<string, unknown>, number: string | null, fallback: string | undefined): Office {
-  const hint = `${str(pick(flat, ["ukey", "collection", "office", "origin", "source", "registrationofficecode"])) ?? ""} ${number ?? ""} ${fallback ?? ""}`.toUpperCase();
-  if (/\b(EU|EM|EUIPO)/.test(hint) || /^EU/.test(number ?? "")) return "EU";
-  if (/\b(WO|WIPO|OMPI)/.test(hint) || /^WO/.test(number ?? "")) return "WO";
+// ukey collections seen: FMARK (France), CTMARK (EU), TMINT (international), DMF / DMI (French / international designs).
+function officeOf(raw: Record<string, unknown>, flat: Record<string, unknown>, fallback: string | undefined): Office {
+  const href = String((raw.xml as { href?: string } | undefined)?.href ?? "");
+  const prefix = href.match(/notice\/([A-Z]+)/)?.[1] ?? "";
+  const ukey = (str(pick(flat, ["ukey"])) ?? "").split("|")[0].toUpperCase();
+  if (prefix === "EU" || ukey === "CTMARK" || fallback === "EU") return "EU";
+  if (prefix.startsWith("WO") || ukey === "TMINT" || ukey === "DMI" || fallback === "WO") return "WO";
   return "FR";
+}
+
+// Path of the full record for a hit, e.g. /services/apidiffusion/api/marques/notice/WO1921267.
+export function noticePath(raw: Record<string, unknown>): string | null {
+  const href = (raw.xml as { href?: string } | undefined)?.href;
+  if (!href) return null;
+  try {
+    const u = new URL(href);
+    return `${u.pathname}${u.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function designTitle(v: unknown): string | null {
+  const values = (Array.isArray(v) ? v : [v]).map(str).filter((s): s is string => Boolean(s));
+  return values.length ? Array.from(new Set(values)).join(" / ") : null;
 }
 
 export function normalize(raw: Record<string, unknown>, type: RightType, collectionHint?: string): Right | null {
   const flat = flatten(raw);
-  const number = str(pick(flat, ["applicationnumber", "numerodepot", "registrationnumber", "numeroenregistrement", "number", "numero", "st13", "id"]));
+  const number = str(pick(flat, ["applicationnumber", "designapplicationnumber", "numerodepot", "registrationnumber", "numeroenregistrement", "number", "numero", "st13", "documentid", "id"]));
   if (!number) return null;
-  const office = officeOf(flat, number, collectionHint);
-  const cleanNumber = number.replace(/^(FR|EU|EM|WO)/i, "");
+  const office = officeOf(raw, flat, collectionHint);
+  const ref = type === "dessin" ? str(pick(flat, ["designreference"])) : null;
+  const cleanNumber = `${number.replace(/^(FR|EU|EM|WO)/i, "").replace(/[^\w]/g, "")}${ref ? `-${ref}` : ""}`;
   const name =
-    str(pick(flat, type === "marque" ? ["mark", "markverbalelementtext", "verbalelement", "marque", "markexp", "denomination", "title"] : ["title", "titre", "designtitle", "objet", "designation", "productindication", "name"])) ??
+    (type === "marque"
+      ? str(pick(flat, ["mark", "markverbalelementtext", "verbalelement", "marque", "markexp", "denomination", "title"]))
+      : designTitle(pick(flat, ["designtitle", "title", "titre", "objet", "designation", "productindication"]))) ??
     (type === "marque" ? "(marque figurative)" : "(dessin ou modèle)");
   const countries = office === "WO" ? parseCountries(pick(flat, ["designatedcountries", "designatedcountrycode", "designatedcountry", "designations", "countries", "pays"])) : [];
   return {
@@ -208,13 +274,17 @@ export function normalize(raw: Record<string, unknown>, type: RightType, collect
     number: cleanNumber,
     name,
     owner: str(pick(flat, ["applicantname", "applicant", "deposant", "holdername", "holder", "titulaire", "applicants", "ownername"])) ?? "",
-    classes: parseClasses(pick(flat, type === "marque" ? ["classnumber", "classes", "niceclass", "classdescriptiondetails", "nice"] : ["locarnoclass", "locarno", "classnumber", "classes"])),
-    filingDate: parseDate(pick(flat, ["applicationdate", "filingdate", "datedepot", "depositdate"])),
+    classes:
+      type === "marque"
+        ? parseClasses(pick(flat, ["classnumber", "classes", "niceclass", "classdescriptiondetails", "nice"]))
+        : (str(pick(flat, ["classnumber", "locarnoclass", "locarno"])) ?? "").match(/^\d{2}/) ? [Number((str(pick(flat, ["classnumber", "locarnoclass", "locarno"])) ?? "").slice(0, 2))] : [],
+    filingDate: parseDate(pick(flat, ["applicationdate", "designapplicationdate", "filingdate", "datedepot", "depositdate"])),
     registrationDate: parseDate(pick(flat, ["registrationdate", "dateenregistrement", "publicationdate", "datepublication"])),
     expiryDate: parseDate(pick(flat, ["expirydate", "expirationdate", "dateexpiration", "renewaldate", "endofprotectiondate", "expiry"])),
     status: str(pick(flat, ["markcurrentstatuscode", "currentstatus", "status", "statut", "legalstatus", "etat"])) ?? "",
     territories: office === "EU" ? [{ code: "EU" }] : office === "FR" ? [{ code: "FR" }] : countries,
-    imageUrl: str(pick(flat, ["markimageurl", "imageurl", "image", "thumbnail", "imagelink"])),
+    // INPI image links need an authenticated session, so they cannot be passed to public image search.
+    imageUrl: null,
     sourceUrl: `https://data.inpi.fr/${type === "marque" ? "marques" : "dessins_modeles"}/${office}${cleanNumber}`,
   };
 }

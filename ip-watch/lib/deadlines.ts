@@ -61,6 +61,14 @@ export function deadlineFor(right: Right, today = new Date()): Deadline {
   return { rightId: right.id, expiry, computed: !fromRegistry, windowOpens, graceEnds, reminders, state, daysLeft };
 }
 
+const INACTIVE_STATUS = /expir|retir|radi|rejet|refus|abandon|non renouvel|annul|caduc|withdrawn|expired|surrendered|cancel|lapsed/i;
+
+// In force: not marked as ended by the registry and not past its grace period.
+export function isActiveRight(right: Right, today = new Date()): boolean {
+  if (INACTIVE_STATUS.test(right.status ?? "")) return false;
+  return deadlineFor(right, today).state !== "expire";
+}
+
 export function daysLabel(d: Deadline): string {
   if (d.daysLeft === null) return "";
   return d.daysLeft >= 0 ? `J-${d.daysLeft}` : `échu depuis ${-d.daysLeft} j`;

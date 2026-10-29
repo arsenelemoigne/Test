@@ -148,6 +148,37 @@ export async function upsertMarks(clientId: string, items: { right: Right; raw: 
   for (let i = 0; i < rows.length; i += 200) await sb.upsert("marks", rows.slice(i, i + 200), "client_id,id");
 }
 
+// After a full re-import: titles no longer returned by the registry are removed.
+export async function removeStaleMarks(clientId: string, keepIds: string[]): Promise<number> {
+  const keep = new Set(keepIds);
+  if (memory) {
+    const before = mem.marks.length;
+    mem.marks = mem.marks.filter((m) => m.client_id !== clientId || keep.has(m.id));
+    return before - mem.marks.length;
+  }
+  const existing = await sb.select<{ id: string }>("marks", { client_id: `eq.${clientId}`, select: "id" });
+  const stale = existing.map((m) => m.id).filter((id) => !keep.has(id));
+  for (let i = 0; i < stale.length; i += 100) {
+    const ids = stale.slice(i, i + 100).map((id) => `"${id.replace(/"/g, "")}"`).join(",");
+    await sb.remove("marks", { client_id: `eq.${clientId}`, id: `in.(${ids})` });
+  }
+  return stale.length;
+}
+
+// Removes the client with its titles, searches, results and history; screenshots are deleted too.
+export async function deleteClient(id: string): Promise<void> {
+  if (memory) {
+    mem.clients = mem.clients.filter((c) => c.id !== id);
+    mem.marks = mem.marks.filter((m) => m.client_id !== id);
+    mem.runs = mem.runs.filter((r) => r.client_id !== id);
+    mem.findings = mem.findings.filter((f) => f.client_id !== id);
+    mem.events = mem.events.filter((e) => e.client_id !== id);
+    return;
+  }
+  await sb.removeObjects("evidence", id).catch(() => undefined);
+  await sb.remove("clients", { id: `eq.${id}` });
+}
+
 export async function updateMarkField(clientId: string, markId: string, field: keyof Right, value: unknown, role: Role): Promise<{ prev: unknown; mark: Right } | null> {
   const rows = memory
     ? mem.marks.filter((m) => m.client_id === clientId && m.id === markId)

@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AssistantPanel } from "./AssistantPanel";
+import { ClientActions } from "./ClientActions";
 import { LiveRun } from "./LiveRun";
 import { RoughBox } from "./RoughBox";
 import { WorldMap } from "./WorldMap";
-import { daysLabel, deadlineFor, DEADLINE_LABELS } from "@/lib/deadlines";
+import { daysLabel, deadlineFor, DEADLINE_LABELS, isActiveRight } from "@/lib/deadlines";
 import { countByCountry } from "@/lib/territories";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { Client, Finding, Mark, WatchRun } from "@/lib/types";
@@ -18,7 +19,7 @@ function Stat({ label, value, sub, seed }: { label: string; value: string; sub?:
   return (
     <RoughBox seed={seed}>
       <div className="px-4 py-3">
-        <div className="label">{label}</div>
+        <div className="label truncate">{label}</div>
         <div className="hand mt-1 text-[21px] leading-tight tabular-nums sm:text-[26px]">{value}</div>
         {sub && <div className="mt-0.5 truncate text-[12px] text-[color:var(--pencil)]">{sub}</div>}
       </div>
@@ -80,7 +81,8 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
         .sort((a, b) => a.d.expiry!.getTime() - b.d.expiry!.getTime()),
     [marks],
   );
-  const coverage = useMemo(() => countByCountry(marks), [marks]);
+  const active = useMemo(() => marks.filter((m) => isActiveRight(m)), [marks]);
+  const coverage = useMemo(() => countByCountry(active), [active]);
   const hits = useMemo(() => {
     const m = new Map<string, number>();
     for (const f of live?.findings ?? []) if (f.country) m.set(f.country, (m.get(f.country) ?? 0) + 1);
@@ -88,7 +90,8 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
   }, [live]);
 
   const next = deadlines[0];
-  const marksCount = marks.filter((m) => m.type === "marque").length;
+  const marksCount = active.filter((m) => m.type === "marque").length;
+  const designsCount = active.length - marksCount;
   const lastRun = runs[0];
   const showingRun = view === "run" && live;
 
@@ -104,15 +107,18 @@ export function Dashboard({ client, marks, runs, initialRunId }: Props) {
           )}
           {client.status === "importing" && <span className="chip">import INPI en cours…</span>}
           {client.status === "error" && <span className="chip">import échoué : {client.error}</span>}
+          <span className="ml-auto">
+            <ClientActions />
+          </span>
         </div>
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat seed={11} label="marques suivies" value={String(marksCount)} sub={`${marks.length - marksCount} dessins & modèles`} />
+          <Stat seed={11} label="marques en vigueur" value={String(marksCount)} sub={`${designsCount} dessins & modèles · ${marks.length - active.length} titres expirés`} />
           <Stat seed={12} label="pays couverts" value={String(coverage.size)} sub="UE comptée pays par pays" />
           <Stat seed={13} label="prochaine échéance" value={next ? formatDate(next.d.expiry) : "—"} sub={next ? `${next.mark.name} · ${daysLabel(next.d)}` : undefined} />
           <Stat
             seed={14}
-            label="signaux forts, dernière recherche"
+            label="signaux forts (dernière veille)"
             value={lastRun ? String(lastRun.stats?.high ?? 0) : "—"}
             sub={lastRun ? `${lastRun.markName} · ${formatDate(lastRun.startedAt)}` : "depuis Marques ou l'assistant"}
           />
