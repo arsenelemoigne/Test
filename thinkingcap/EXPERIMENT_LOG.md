@@ -3312,3 +3312,4 @@ Plan cells restarted with the finished lines commented out.
   for plots (dashboard).
 - No early stop: every queued experiment runs; v1 is chosen at the end from all results (user). "Combine levers" = a run
   with the flags of two or more experiments that each beat the baseline, then a 3-seed fresh confirm.
+- 00:30: top-ups smaller than planned (few unused candidates are answered right only sometimes): nofit1 = 189 no-fit questions (all available; done, 2 more answers each); tools1 = 724 (simple 667 + multiple 57; running). GPU 2 on dial-adar1. If dp12's check still fails on no-fit / multiple, the next data iteration needs NEW hard candidates (e.g. another Haiku-verified Glaive no-fit batch closer to BFCL).
