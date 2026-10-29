@@ -3215,3 +3215,4 @@ Plan cells restarted with the finished lines commented out.
   swapped for cut pairs, every other type's pairs identical. Same DPO / checkpoints, choosing set x4. Automatic verdict
   vs lpb-l2s50e at the same steps: KEEP only if code thinks >= 3% less AND overall accuracy >= -1 AND code accuracy
   >= -2.5 AND non-code accuracy >= -1 (no spill); otherwise DROPPED and not pursued.
+- 18:20: lpb-right-75: -39.2% saved (thinks 39% LONGER) / +0.9 (simple -56%, ifeval -44%): pure right>wrong pairs inflate thinking more and more. Confirms the length pressure is what saves. GPU 2: lpc-adar1 seed 0 step 140/194.
