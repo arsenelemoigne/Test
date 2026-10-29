@@ -3172,3 +3172,4 @@ Plan cells restarted with the finished lines commented out.
   | lpb-l2s75-75 | +43.8% / -1.1 | +51 / -1.9 | +51 / -3.7 | +37 / +1.9 | +32 / -1.2 | +33 / +1.2 | +39 / -1.9 |
   lpb-l2s75 done (88 steps; best 75: +43.8 / -1.1). lpb-l2s50-50 is the best so far (+47.7 / -1.0, at the -1 line).
   GPU 2 now trains lpb-adar1 (194 steps); GPU 1 scoring lpb-l2s50-100.
+- ~16:00: lpb-l2s50-100: +47.6% / -1.2 (svamp +48/-1.2, mbpp +52/-6.2, ifeval +52/+3.1, simple +34/+1.9, multiple +36/-3.1, no-fit +41/0.0). lpb-l2s50 done (123 steps; best step 50: +47.7 / -1.0). GPU 1 now trains lpb-dast (183 steps, step 40, pairs ordered right 70%); GPU 2 trains lpb-adar1 (step 135/194).
