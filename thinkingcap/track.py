@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -232,6 +232,8 @@ def main():
     parser.add_argument("--dp-more-cap", type=int, default=0, help="poolmore: most questions answered per half (0: all)")
     parser.add_argument("--dp-think-bins-part", default="", help="poolmore select: select_pool.py --think-bins-part")
     parser.add_argument("--dp-if-poor", default="", help="poolmore: run only if this pool's check leaves code off (dp11: dp10)")
+    parser.add_argument("--rs-model", default="", help="refsets: the model answering (default: the original Qwen)")
+    parser.add_argument("--rs-tag", default="base", help="refsets: run name tag (runs/mvtf/v4-<tag>-<seed>)")
     parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
     parser.add_argument("--lp-recipe", default="long2short", help="lupin: lupin_pairs.py recipe")
     parser.add_argument("--lp-min-solve", type=float, default=0.5, help="lupin: difficulty protection (0: none)")
@@ -2521,6 +2523,29 @@ def code_close_enough(pool):
     return close, f"code accuracy {acc:+.1f} pts, median {pct['median_thinking']:+.0f}%, p75 {pct['p75_thinking']:+.0f}%"
 
 
+REF_SEEDS = (20261024, 20261025)  # two more choosing-like sets (user, 29 Oct: "go to ~160 per type for v2's reference")
+
+
+def refsets(args):
+    """A bigger reference for matching (user, 29 Oct): two more random sets of 40 questions per part, never from the
+    fresh set, questions_40 or the choosing set, answered x4 by --rs-model. With the choosing set and questions_40
+    that is 160 per part. Only aggregate behaviour (accuracy, thinking length) is ever read from them, never content;
+    the fresh set stays untouched for scores."""
+    val, fresh_q = f"questions_val{VAL_SEED}", f"questions_fresh{FRESH_SEED}"
+    sets = []
+    for seed in REF_SEEDS:
+        out = f"questions_ref{seed}"
+        if not Path(out, "questions.jsonl").exists():
+            py("subset_questions.py", "--per-dataset", 40, "--seed", seed, "--exclude", QUESTIONS, fresh_q, val, *sets,
+               "--out", out)
+        sets.append(out)
+    for out in sets:
+        run_dir = ROOT / f"v4-{args.rs_tag}-{out.split('ref')[1]}"
+        evaluate(run_dir, samples=4, questions=out, model=args.rs_model or None)
+        drive_sync("save")
+        print(f"refsets: {run_dir} done", flush=True)
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -3531,13 +3556,13 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
                                     "runs/bon/pairs-stop*", "adapters/fresh-stop*", "adapters/stop*", "runs/mvtf/f8-stop*",
                                     "runs/mvtf/f8-base", "runs/mvtf/f8-tg*", "questions_fresh*",
-                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/bon/lupin-answers-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
+                                    "runs/bon/*bench*", "runs/bon/probe-mathmatch", "runs/bon/ps-*", "runs/bon/poolcheck-*", "runs/bon/probe-poolcheck-*", "runs/bon/probe-poolcand-*", "runs/bon/lupin-answers-*", "runs/mvtf/v4-base", "runs/mvtf/eval-base", "questions_40", "questions_val*", "questions_ref*", "runs/mvtf/v4-base-*", "runs/bon/probe-mf*", "runs/bon/pairs-mf*", "adapters/fresh-mf*",
                                     "adapters/mf*", "runs/mvtf/f8-mf*", "adapters/drpo*", "runs/mvtf/f8-drpo*", "adapters/*-shorterbetter", "runs/mvtf/f8-sb*", "adapters/*-teach", "runs/mvtf/f8-*teach*", "runs/bon/tskip-*", "adapters/tsk*", "runs/mvtf/f8-tsk*",
                                     *[f"models/{m}" for m in wanted]])
     else:

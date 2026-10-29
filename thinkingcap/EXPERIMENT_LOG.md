@@ -3202,3 +3202,9 @@ Plan cells restarted with the finished lines commented out.
   lpb-l2s50 in STEP 8: lpc-l2s50e (GPU 1, after lpb-right), 3 seeds, fresh-set soups at 50/100/150. GPU 2 started
   lpc-adar1 (3 seeds, soups 25/50/75).
 - 18:00 lpb-right (right>wrong of similar length only, no protection; the accuracy baseline): step 25 -9.3% saved (LONGER) / -0.5; step 50 -14.6% (longer) / +2.5 (svamp +3.1, mbpp +3.8, no-fit +3.1, ifeval +1.9). Pure right>wrong pairs make the model think ~15% longer and a bit more accurate: the length pressure in the other recipes is what saves tokens. GPU 2: lpc-adar1 seed 0 at step 75/194 (trains the full epoch per seed; only soups 25/50/75 are scored).
+- ~18:30 (user: "yes, go to ~160 per type for v2's reference"): stage `refsets` (queued on GPU 2 after lpc-adar1):
+  two more random sets of 40 questions per part (seeds 20261024 / 20261025; never from the fresh set, questions_40 or
+  the choosing set), answered x4 by the original Qwen -> runs/mvtf/v4-base-20261024 / -20261025. With the choosing set
+  and questions_40: 160 per part. Only aggregate statistics are read; the fresh set stays untouched. In round 2, v1
+  answers the same sets (refsets --rs-model <v1> --rs-tag v1) and select_pool / pool_check / lupin_select take all four
+  as reference.

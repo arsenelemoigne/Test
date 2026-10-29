@@ -198,4 +198,6 @@ lupin --name lpb-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --lp-save 
 lupin --name lpb-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # STEP 8 confirm (screen leaders on the choosing set): 3 seeds, soups at 25/50/75 on the FRESH set x8
 lupin --name lpc-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 1 2 --lp-fresh --lp-save 25 --dpo-steps 25 50 75 --lp-pool dp10
+# bigger reference for v2 (user 29 Oct): 2 more sets of 40 per part, original Qwen x4 (v1 answers them in round 2)
+refsets --name refs --rs-tag base
 end
