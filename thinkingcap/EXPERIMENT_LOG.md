@@ -3140,3 +3140,17 @@ Plan cells restarted with the finished lines commented out.
 - 10:05: the 10 answers were ~3x slower than needed (6 new answers for every question although most already had 8). lupinanswers --la-target 10: tops each question up to 10 (8-answer questions get 2, 4-answer code questions 6), keeping the 6-answer run's finished chunks (GPU 1 1,800 / GPU 2 1,350 questions). Plan cells restarted.
 - 10:30 (user: '14 or 10?'): lupin uses at most 10 answers per question (--lp-answers 10), newest first: the 10-answer run, then the extra-answer rounds dp11->dp8, then the 4 selection answers (the pool was chosen on the earliest answers, so they carry the lucky-draw bias; equal counts keep pair strength equal across types). Pairs and the solve-rate reading for matching use the same capped file.
 - 10:35: top-up running. GPU 1 (half a): 1,950 questions already at 10+, 3,590 need 2, 460 need 6; GPU 2 (half b): 1,650 / 3,883 / 467. Estimate done ~11:45, then topic check (GPU 1) and the screen.
+
+### 2026-10-29 ~13:15 — 10 answers done; topic check dp10; first pairs too thin -> matching fixed
+- Answers: 12,000 pool questions, exactly 10 answers each (newest first: lupin-answers a 21,640 / b 20,468, poolmore
+  dp11 4,932, dp10 4,516, dp9 15,004, dp8 18,144, selection 35,296).
+- Topic check dp10 (report only): eval->eval vs eval->pool median cosine: svamp 0.95 vs 0.65 (meaningless: SVAMP is
+  near-duplicate stories), mbpp 0.75 vs 0.66 (41% missed), simple 0.59 vs 0.38 (57%), multiple 0.51 vs 0.31 (60%),
+  no-fit 0.49 vs 0.33 (52%), ifeval 0.50 vs 0.46 (13%, OK).
+- lp-l2s75 pairs (long2short, protection p<0.75): 5,540 raw (never solved 2,155 questions, always solved 5,967); matched
+  kept only 1,284 of 3,200 (fill 0.40 set by no-fit 92/229): cells with no possible pair (never-solved, and
+  always-solved questions whose right answers are within 1.5x of each other) kept their quota, and every part was
+  trimmed to the weakest part's fill. ~80 DPO steps, one scored checkpoint: too thin.
+- Fix: lupin_select spreads the reference share of cells with NO pair under the recipe over the cells that have pairs
+  (reported per part); part shares still exact. Screen renamed lpb-* (fresh pairs), checkpoints every 25 steps,
+  scored at 25/50/75/100/150 where they exist. lp-l2s75's training (a few minutes) discarded.

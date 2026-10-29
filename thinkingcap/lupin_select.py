@@ -75,6 +75,13 @@ def main():
                 continue
             s, t = features(answers[p["id"]])
             per_cell[(solve_bin(s), think_bin(t, edges))][p["id"]].append(p)
+        # cells where this recipe gives NO pair at all (mostly never-solved questions: nothing right to prefer) cannot
+        # be trained on; their reference share is spread over the cells that have pairs (29 Oct: keeping their quota
+        # and trimming every part to the weakest part's fill left 1,284 of 3,200 pairs). Reported, not hidden.
+        empty = [c for c in cells if not per_cell[c]]
+        live = sum(cell_share[c] for c in cells if per_cell[c]) or 1
+        excluded = 1 - live
+        cell_share = {c: (cell_share[c] / live if per_cell[c] else 0.0) for c in cells}
         got, short = Counter(), Counter()
         kinds = Counter()
         for c in cells:
@@ -95,9 +102,11 @@ def main():
             chosen += taken
         n = sum(got.values())
         report[part] = {"wanted": want, "kept": n, "short_cells": {str(c): v for c, v in short.items() if v > 0},
+                        "cells_without_pairs": [str(c) for c in empty], "reference_share_without_pairs": excluded,
                         "kinds": dict(kinds), "pairs_without_answers": no_answers,
                         "reference_cells": {str(c): cell_ref[c] for c in cells}, "kept_cells": {str(c): got[c] for c in cells}}
-        lines.append(f"  {part}: {n}/{want} pairs; kinds {dict(kinds)}; short {sum(short.values())} in "
+        lines.append(f"  {part}: {n}/{want} pairs; kinds {dict(kinds)}; {excluded:.0%} of the reference in cells with no pair "
+                     f"(spread over the rest); short {sum(short.values())} in "
                      f"{sum(v > 0 for v in short.values())} cells " +
                      ", ".join(f"solve{c[0]}/think{c[1]} -{v}" for c, v in short.items() if v > 0))
     # part shares stay the evaluation's: a part that filled less of its quota (hard cells give few pairs) sets the
