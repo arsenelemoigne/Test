@@ -3189,3 +3189,4 @@ Plan cells restarted with the finished lines commented out.
   STEP 8 queued (rule: best saved with accuracy better than -1 -> adar1; second l2s50, on the -1 line, near-identical
   saving): lpc-adar1 (GPU 2, after lpb-l2s50e) and lpc-l2s50 (GPU 1, after lpb-right), 3 seeds, soups at 25/50/75 on
   the fresh set x8. If lpb-l2s50e beats lpb-l2s50, it replaces lpc-l2s50.
+- ~17:10: lpb-dast-150: +36.3 / -1.7 (dast done; best 50: +34.1 / -0.1). GPU 1 trains lpb-right (121 steps, step 25; right>wrong pairs learn slowly, 44-62% ordered right). GPU 2: lpb-l2s50e at step 160/168, scores next.
