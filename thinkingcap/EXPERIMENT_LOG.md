@@ -3201,3 +3201,4 @@ Plan cells restarted with the finished lines commented out.
   Best screen so far: +50.9% / -0.5 (step 150), +49.3 / 0.0 (100). More pairs on easy questions helped. It replaces
   lpb-l2s50 in STEP 8: lpc-l2s50e (GPU 1, after lpb-right), 3 seeds, fresh-set soups at 50/100/150. GPU 2 started
   lpc-adar1 (3 seeds, soups 25/50/75).
+- 18:00 lpb-right (right>wrong of similar length only, no protection; the accuracy baseline): step 25 -9.3% saved (LONGER) / -0.5; step 50 -14.6% (longer) / +2.5 (svamp +3.1, mbpp +3.8, no-fit +3.1, ifeval +1.9). Pure right>wrong pairs make the model think ~15% longer and a bit more accurate: the length pressure in the other recipes is what saves tokens. GPU 2: lpc-adar1 seed 0 at step 75/194 (trains the full epoch per seed; only soups 25/50/75 are scored).
