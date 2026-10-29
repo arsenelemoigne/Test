@@ -117,3 +117,15 @@ export type HistoryEvent = {
   summary: string | null;
   details?: Record<string, unknown> | null;
 };
+
+// A saved assistant conversation; each one is answered on its own, never from the others.
+export type ConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
+  marks?: string[];
+  sources?: { name: string; count: number }[];
+  traceId?: string | null;
+  at: string;
+};
+
+export type Conversation = { id: string; title: string; messages: ConversationMessage[]; createdAt: string; updatedAt: string };

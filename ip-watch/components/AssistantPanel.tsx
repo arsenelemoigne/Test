@@ -1,28 +1,91 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "./Markdown";
 import { useApp } from "./AppProvider";
 import { RoughBox } from "./RoughBox";
-import { TraceSteps } from "./Trace";
+import { CopyButton, DerouleToggle, DerouleView } from "./Deroule";
+import { useTrace } from "./Trace";
 import type { TraceStep } from "@/lib/trace";
-import type { Mark } from "@/lib/types";
+import type { ConversationMessage, Mark } from "@/lib/types";
 
-type Message = { role: "user" | "assistant"; content: string; sources?: { name: string; count: number }[]; marks?: string[]; steps?: TraceStep[] };
+type Message = { role: "user" | "assistant"; content: string; sources?: { name: string; count: number }[]; marks?: string[]; steps?: TraceStep[]; traceId?: string | null };
+type Saved = { id: string; title: string; updatedAt: string; count: number };
 
-function StepsToggle({ steps }: { steps: TraceStep[] }) {
-  const [open, setOpen] = useState(false);
-  const total = steps.length > 1 ? (new Date(steps[steps.length - 1].at).getTime() - new Date(steps[0].at).getTime()) / 1000 : 0;
+const storageKey = (clientId: string | undefined) => `ipw-conversation-${clientId ?? "aucun"}`;
+const remember = (key: string, id: string | null) => {
+  try {
+    if (id) localStorage.setItem(key, id);
+    else localStorage.removeItem(key);
+  } catch {
+    // private browsing: the conversation is still saved server-side
+  }
+};
+
+function AssistantMessage({ m }: { m: Message }) {
+  const ref = useRef<HTMLDivElement>(null);
   return (
-    <div className="mt-1">
-      <button type="button" className="btn-quiet text-[11.5px]" onClick={() => setOpen((o) => !o)}>
-        {open ? "▾" : "▸"} coulisses · {steps.length} étapes · {total.toFixed(1).replace(".", ",")} s
-      </button>
-      {open && (
-        <div className="mt-1 rounded border border-dashed border-[color:var(--line)] p-2">
-          <TraceSteps steps={steps} />
-        </div>
+    <div>
+      <div ref={ref}>
+        <Markdown text={m.content} />
+      </div>
+      {m.sources && m.sources.length > 0 && (
+        <p className="label mt-2">sources consultées : {m.sources.map((s) => (s.count > 1 ? `${s.name} ×${s.count}` : s.name)).join(" · ")}</p>
       )}
+      <div className="mt-1 flex flex-wrap items-start gap-x-3">
+        <CopyButton getHtml={() => ref.current?.innerHTML ?? ""} text={m.content} />
+        <DerouleToggle steps={m.steps} traceId={m.traceId} />
+      </div>
+    </div>
+  );
+}
+
+function ConversationList({ currentId, onOpen, onClose }: { currentId: string | null; onOpen: (id: string) => void; onClose: () => void }) {
+  const [items, setItems] = useState<Saved[] | null>(null);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    fetch("/api/conversations", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setItems(j.conversations ?? []))
+      .catch(() => setItems([]));
+  }, []);
+  const shown = (items ?? []).filter((c) => !query.trim() || c.title.toLowerCase().includes(query.trim().toLowerCase()));
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col bg-[color:var(--paper)] p-4">
+      <div className="flex items-baseline justify-between">
+        <h3 className="hand text-[16px]">Conversations enregistrées</h3>
+        <button type="button" className="btn-quiet text-[12px]" onClick={onClose}>
+          fermer
+        </button>
+      </div>
+      <p className="mt-0.5 text-[11.5px] text-[color:var(--pencil)]">Chaque conversation repart de zéro : les autres ne servent jamais à répondre.</p>
+      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="filtrer…" className="field mt-2 py-1 text-[13px]" />
+      <ul className="mt-2 min-h-0 flex-1 divide-y divide-dashed divide-[color:var(--line)] overflow-y-auto">
+        {items === null && <li className="hand py-2 text-[13px] text-[color:var(--pencil)]">chargement…</li>}
+        {items !== null && shown.length === 0 && <li className="hand py-2 text-[13px] text-[color:var(--pencil)]">Aucune conversation.</li>}
+        {shown.map((c) => (
+          <li key={c.id} className="flex items-baseline gap-2 py-2">
+            <button type="button" onClick={() => onOpen(c.id)} className="min-w-0 flex-1 text-left hover:underline">
+              <span className={`block truncate text-[13px] ${c.id === currentId ? "font-semibold" : ""}`}>{c.title}</span>
+              <span className="font-mono text-[10.5px] text-[color:var(--pencil)]">
+                {new Date(c.updatedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })} · {c.count} question(s)
+              </span>
+            </button>
+            <button
+              type="button"
+              className="btn-quiet shrink-0 text-[11px]"
+              title="Supprimer"
+              onClick={async () => {
+                if (!window.confirm(`Supprimer « ${c.title} » ?`)) return;
+                await fetch(`/api/conversations/${c.id}`, { method: "DELETE" });
+                setItems((all) => (all ?? []).filter((x) => x.id !== c.id));
+              }}
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -46,8 +109,13 @@ function slashQuery(value: string, caret: number): { start: number; query: strin
 }
 
 export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
-  const { coulisses } = useApp();
+  const { client } = useApp();
+  const key = storageKey(client?.id);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [pendingTrace, setPendingTrace] = useState<string | null>(null);
+  const live = useTrace(pendingTrace);
   const [input, setInput] = useState("");
   const [focus, setFocus] = useState<Mark[]>([]);
   const [busy, setBusy] = useState(false);
@@ -75,7 +143,43 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" });
-  }, [messages, busy]);
+  }, [messages, busy, live?.steps.length]);
+
+  const open = useCallback(
+    async (id: string) => {
+      const res = await fetch(`/api/conversations/${id}`, { cache: "no-store" }).catch(() => null);
+      if (!res?.ok) {
+        remember(key, null);
+        return;
+      }
+      const c = (await res.json()) as { id: string; messages: ConversationMessage[] };
+      setMessages(c.messages.map((m) => ({ role: m.role, content: m.content, marks: m.marks, sources: m.sources, traceId: m.traceId })));
+      setConversationId(c.id);
+      setFocus([]);
+      setListOpen(false);
+      remember(key, c.id);
+    },
+    [key],
+  );
+
+  // Picks up the last conversation after a reload.
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(key);
+    } catch {
+      saved = null;
+    }
+    if (saved) void open(saved);
+  }, [key, open]);
+
+  const startNew = () => {
+    setMessages([]);
+    setConversationId(null);
+    setFocus([]);
+    setError(null);
+    remember(key, null);
+  };
 
   const pick = (m: Mark) => {
     if (!slash) return;
@@ -91,10 +195,12 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
     if (!content || busy) return;
     const tags = focus.map((m) => m.name);
     const next: Message[] = [...messages, { role: "user", content, marks: tags }];
+    const traceId = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : null;
     setMessages(next);
     setInput("");
     setBusy(true);
     setError(null);
+    setPendingTrace(traceId);
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
@@ -102,16 +208,24 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
         body: JSON.stringify({
           messages: next.map((m) => ({ role: m.role, content: m.marks?.length ? `${m.marks.map((t) => `/${t}`).join(" ")} ${m.content}` : m.content })),
           focusMarkIds: focus.map((m) => m.id),
+          conversationId,
+          display: { content, marks: tags },
+          traceId,
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
-      setMessages([...next, { role: "assistant", content: json.answer, sources: json.sources, steps: json.steps }]);
+      setMessages([...next, { role: "assistant", content: json.answer, sources: json.sources, steps: json.steps, traceId: json.traceId }]);
+      if (json.conversationId) {
+        setConversationId(json.conversationId);
+        remember(key, json.conversationId);
+      }
       if (json.runId) onRunStarted?.(json.runId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
       setBusy(false);
+      setPendingTrace(null);
     }
   };
 
@@ -123,14 +237,20 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
 
   return (
     <RoughBox seed={7} className={`overflow-hidden ${className}`}>
-      <div className="flex h-full min-h-0 flex-col p-4">
+      <div className="relative flex h-full min-h-0 flex-col p-4">
+        {listOpen && <ConversationList currentId={conversationId} onOpen={open} onClose={() => setListOpen(false)} />}
         <div className="flex items-baseline justify-between">
           <h2 className="hand text-[17px] font-semibold">Assistant</h2>
-          {messages.length > 0 && (
-            <button type="button" className="btn-quiet text-[12px]" onClick={() => setMessages([])}>
-              effacer
+          <span className="flex gap-3">
+            <button type="button" className="btn-quiet text-[12px]" onClick={() => setListOpen(true)}>
+              conversations
             </button>
-          )}
+            {messages.length > 0 && (
+              <button type="button" className="btn-quiet text-[12px]" onClick={startNew} disabled={busy}>
+                + nouvelle
+              </button>
+            )}
+          </span>
         </div>
         <p className="label">registre · Légifrance · Judilibre · INPI · annuaire · BODACC</p>
 
@@ -170,25 +290,25 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
                 {m.content}
               </div>
             ) : (
-              <div key={i}>
-                <Markdown text={m.content} />
-                {m.sources && m.sources.length > 0 && (
-                  <p className="label mt-2">sources consultées : {m.sources.map((s) => (s.count > 1 ? `${s.name} ×${s.count}` : s.name)).join(" · ")}</p>
-                )}
-                {coulisses && m.steps && m.steps.length > 0 && <StepsToggle steps={m.steps} />}
-              </div>
+              <AssistantMessage key={i} m={m} />
             ),
           )}
-          {busy && (
-            <p className="hand text-[13px] text-[color:var(--pencil)]">
-              je cherche dans les sources
-              <span className="dots">
-                <span>.</span>
-                <span>.</span>
-                <span>.</span>
-              </span>
-            </p>
-          )}
+          {busy &&
+            (live && live.id === pendingTrace && live.steps.length > 0 ? (
+              <div className="rounded-md border border-dashed border-[color:var(--line)] p-2">
+                <p className="label mb-1">déroulé en direct</p>
+                <DerouleView steps={live.steps} live />
+              </div>
+            ) : (
+              <p className="hand text-[13px] text-[color:var(--pencil)]">
+                je cherche dans les sources
+                <span className="dots">
+                  <span>.</span>
+                  <span>.</span>
+                  <span>.</span>
+                </span>
+              </p>
+            ))}
           {error && <p className="hand text-[13px] text-red-700">{error}</p>}
           <div ref={endRef} />
         </div>

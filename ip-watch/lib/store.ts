@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import * as sb from "./supabase";
-import type { Client, FieldEdit, Finding, HistoryEvent, Mark, Right, Role, RunSummary, WatchRun } from "./types";
+import type { Client, Conversation, ConversationMessage, FieldEdit, Finding, HistoryEvent, Mark, Right, Role, RunSummary, WatchRun } from "./types";
 import fixture from "@/data/dev-fixture.json";
 
 // Supabase in production; an in-memory store seeded with a fictitious client only for local development.
@@ -20,14 +20,20 @@ type FindingRow = {
   scan_url: string | null; captured_at: string | null; status: string; comment: string | null;
 };
 
-const mem = {
+type ConversationRow = { id: string; client_id: string | null; title: string; messages: ConversationMessage[]; created_at: string; updated_at: string };
+
+// Kept on globalThis so every route of the dev server sees the same local data.
+const g = globalThis as unknown as { __ipwStore?: typeof initial };
+const initial = {
   clients: [] as ClientRow[],
   marks: [] as MarkRow[],
   events: [] as EventRow[],
   runs: [] as RunRow[],
   findings: [] as FindingRow[],
+  conversations: [] as ConversationRow[],
   seq: 1,
 };
+const mem = (g.__ipwStore ??= initial);
 
 if (memory && mem.clients.length === 0) {
   const id = randomUUID();
@@ -316,4 +322,48 @@ export async function markFindings(clientId: string, markId: string): Promise<{ 
 export async function saveRawImport(row: { run_id: string; client_id: string | null; kind: string; query?: string; position?: number; http_status: number | null; payload: unknown; error?: string | null }): Promise<void> {
   if (memory) return;
   await sb.insert("raw_imports", [{ source: "inpi", query: null, position: null, error: null, ...row }]);
+}
+
+// ---------- Assistant conversations
+
+const toConversation = (r: ConversationRow): Conversation => ({ id: r.id, title: r.title, messages: r.messages ?? [], createdAt: r.created_at, updatedAt: r.updated_at });
+
+export async function listConversations(clientId: string | null, limit = 60): Promise<Conversation[]> {
+  const rows = memory
+    ? mem.conversations.filter((c) => c.client_id === clientId).sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, limit)
+    : await sb.select<ConversationRow>("conversations", { client_id: clientId ? `eq.${clientId}` : "is.null", order: "updated_at.desc", limit: String(limit) });
+  return rows.map(toConversation);
+}
+
+export async function getConversation(id: string): Promise<Conversation | null> {
+  const rows = memory ? mem.conversations.filter((c) => c.id === id) : await sb.select<ConversationRow>("conversations", { id: `eq.${id}` });
+  return rows[0] ? toConversation(rows[0]) : null;
+}
+
+// Appends messages to a conversation, creating it when the id is unknown.
+export async function appendConversation(clientId: string | null, id: string | null, title: string, added: ConversationMessage[]): Promise<string> {
+  const existing = id ? await getConversation(id).catch(() => null) : null;
+  const now = new Date().toISOString();
+  if (existing) {
+    const messages = [...existing.messages, ...added];
+    if (memory) Object.assign(mem.conversations.find((c) => c.id === existing.id) ?? {}, { messages, updated_at: now });
+    else await sb.update("conversations", { id: `eq.${existing.id}` }, { messages, updated_at: now });
+    return existing.id;
+  }
+  const row = { client_id: clientId, title: title.slice(0, 120), messages: added };
+  if (memory) {
+    const full = { ...row, id: randomUUID(), created_at: now, updated_at: now };
+    mem.conversations.push(full);
+    return full.id;
+  }
+  const [created] = await sb.insert<ConversationRow>("conversations", [row]);
+  return created.id;
+}
+
+export async function deleteConversation(id: string): Promise<void> {
+  if (memory) {
+    mem.conversations = mem.conversations.filter((c) => c.id !== id);
+    return;
+  }
+  await sb.remove("conversations", { id: `eq.${id}` });
 }

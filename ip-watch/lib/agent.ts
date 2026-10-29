@@ -15,6 +15,8 @@ import type { Client, Mark } from "./types";
 
 const MAX_ROUNDS = 6;
 const MAX_TOOL_CHARS = 6000;
+// Thinking budget per round (0 turns it off); the reasoning appears in the déroulé.
+const REASONING_TOKENS = Number(process.env.OPENROUTER_REASONING_TOKENS ?? 1024);
 
 const SYSTEM = `Tu es l'assistant juridique d'un cabinet d'avocats en propriété intellectuelle (droit français et de l'Union européenne). Tu réponds à des avocats : va droit au but.
 
@@ -23,6 +25,9 @@ Sources
 - La recherche web est un dernier recours : marque toute source web « (source web) ».
 - N'invente aucun article, décision, date ou lien. Ne cite que des liens renvoyés par les outils.
 - Avant de citer un article, récupère son texte avec legifrance_article. Si le résultat porte un champ « via », reprends cette mention entre parenthèses.
+
+Déroulé
+- Avant chaque appel d'outil, écris une phrase courte : ce que tu cherches et pourquoi. L'avocat la lit dans le déroulé.
 
 Forme
 - Français, phrases courtes. Pas de formule de politesse, pas de récapitulatif final.
@@ -36,7 +41,7 @@ Forme
   **Limites** — ce qui reste incertain ou à vérifier.
   **Jurisprudence** — seulement si une décision pertinente a été trouvée (une ou deux).
 - Question sur le portefeuille : réponse directe, identifiants entre crochets, par exemple [FR4012345].
-- Recherche de contrefaçons : lance l'outil uniquement si on te le demande, puis indique que les résultats arrivent sur le tableau de bord.
+- Recherche de contrefaçons : lance l'outil uniquement si on te le demande, puis confirme en une phrase (« Recherche lancée sur QUATRE. »), sans identifiant ni autre mention.
 - Pas de conseil définitif : l'avocat décide.`;
 
 const fn = (name: string, description: string, properties: Record<string, unknown>, required: string[]): ToolSpec => ({
@@ -111,6 +116,54 @@ function collectUrls(value: unknown, out: Set<string>) {
   else if (value && typeof value === "object") Object.values(value).forEach((v) => collectUrls(v, out));
 }
 
+// One readable line per tool call for the déroulé.
+function describeCall(name: string, a: Record<string, unknown>, markById: (id: string) => Mark | undefined): string {
+  const s = (k: string) => String(a[k] ?? "").trim();
+  switch (name) {
+    case "legifrance_article":
+      return `article ${s("numero")} · ${s("code")}`;
+    case "legifrance_recherche":
+      return `« ${s("requete")} »${a.code ? ` dans le ${s("code")}` : ""}`;
+    case "judilibre_recherche":
+      return `« ${s("requete")} »${a.juridiction === "cc" ? " · Cour de cassation" : a.juridiction === "ca" ? " · cours d'appel" : ""}`;
+    case "judilibre_decision":
+      return `décision ${s("id")}`;
+    case "inpi_marques":
+      return `signe « ${s("signe")} »${Array.isArray(a.classes) && a.classes.length ? ` · classes ${a.classes.join(", ")}` : ""}`;
+    case "lancer_recherche_contrefacon":
+    case "resultats_recherche":
+      return `marque ${markById(s("marque_id"))?.name ?? s("marque_id")}`;
+    default:
+      return s("requete") ? `« ${s("requete")} »` : JSON.stringify(a).slice(0, 120);
+  }
+}
+
+// What a tool sent back, in one sentence, plus the pages it pointed to.
+function describeResult(output: unknown): { summary: string; links: { url: string; title?: string }[] } {
+  const links: { url: string; title?: string }[] = [];
+  const seen = new Set<string>();
+  const walk = (v: unknown, depth: number) => {
+    if (depth > 4 || links.length >= 8 || !v || typeof v !== "object") return;
+    if (Array.isArray(v)) return v.forEach((x) => walk(x, depth + 1));
+    const o = v as Record<string, unknown>;
+    if (typeof o.url === "string" && !seen.has(o.url)) {
+      seen.add(o.url);
+      const title = [o.title, o.titre, o.name, o.num ? `art. ${o.num}` : null, o.number, o.company].find((x) => typeof x === "string" && x.trim());
+      links.push({ url: o.url, title: typeof title === "string" ? title.slice(0, 120) : undefined });
+    }
+    Object.values(o).forEach((x) => walk(x, depth + 1));
+  };
+  walk(output, 0);
+  if (!output || typeof output !== "object") return { summary: String(output ?? "aucune réponse"), links };
+  const o = output as Record<string, unknown>;
+  if (typeof o.erreur === "string") return { summary: `échec : ${o.erreur.slice(0, 200)}`, links };
+  if (typeof o.text === "string") return { summary: `texte obtenu${o.via ? ` (${o.via})` : ""} : « ${o.text.replace(/\s+/g, " ").slice(0, 180)}… »`, links };
+  if (o.lancee) return { summary: "recherche lancée, résultats sur le tableau de bord", links };
+  const list = Array.isArray(output) ? output : Object.values(o).find(Array.isArray);
+  if (list) return { summary: `${typeof o.total === "number" ? o.total : list.length} résultat(s)${list.length === 0 ? " : rien trouvé" : ""}`, links };
+  return { summary: "réponse reçue", links };
+}
+
 export async function runAgent(input: AgentInput): Promise<AgentOutput> {
   const { client, marks } = input;
   const allowed = new Set<string>();
@@ -158,7 +211,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
         if (!client || !mark) return { erreur: "Marque introuvable dans le portefeuille" };
         const run = await startWatch(client, mark, input.trigger === "email" ? "email" : "assistant");
         runId = run.id;
-        return { lancee: true, marque: mark.name, recherche: run.id, note: "Résultats en direct sur le tableau de bord ; ajoutés au journal de la marque." };
+        return { lancee: true, marque: mark.name };
       }
       case "resultats_recherche": {
         const mark = markById(String(args.marque_id));
@@ -179,7 +232,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
   ];
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
-    const { message } = await chat({ messages, tools: TOOLS, label: `agent-${round}` });
+    const { message } = await chat({ messages, tools: TOOLS, label: `agent-${round}`, reasoning: REASONING_TOKENS > 0 ? REASONING_TOKENS : undefined });
     const calls = message.tool_calls ?? [];
     if (calls.length === 0) {
       const raw = (message.content ?? "").trim();
@@ -189,7 +242,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
       void logCall("agent", "answer", { question: input.messages[input.messages.length - 1]?.content, focus: input.focusMarkIds }, answer, 200, 0, client?.slug);
       return { answer: answer || "Je n'ai pas pu formuler de réponse.", sources: Array.from(used.entries()).map(([name, count]) => ({ name, count })), runId };
     }
-    messages.push({ role: "assistant", content: message.content ?? null, tool_calls: calls });
+    messages.push({ role: "assistant", content: message.content ?? null, tool_calls: calls, ...(message.reasoning_details ? { reasoning_details: message.reasoning_details } : {}) });
     for (const call of calls) {
       const started = Date.now();
       let output: unknown;
@@ -204,7 +257,7 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
       const label = SOURCE_LABELS[call.function.name] ?? call.function.name;
       used.set(label, (used.get(label) ?? 0) + 1);
       const failed = Boolean((output as { erreur?: string })?.erreur);
-      traceStep({ kind: "api", name: `outil · ${call.function.name}`, detail: label, input: args, output, ms: Date.now() - started, ok: !failed });
+      traceStep({ kind: "api", name: `outil · ${call.function.name}`, detail: label, input: args, output, ms: Date.now() - started, ok: !failed, what: describeCall(call.function.name, args, markById), ...describeResult(output) });
       void logCall("tool", call.function.name, args, output, (output as { erreur?: string })?.erreur ? 500 : 200, Date.now() - started, client?.slug);
       messages.push({ role: "tool", tool_call_id: call.id, content: compact(output) });
     }

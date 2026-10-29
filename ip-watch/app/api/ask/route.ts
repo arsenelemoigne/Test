@@ -9,7 +9,14 @@ import { runInTrace, startTrace } from "@/lib/trace";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-type Body = { messages?: { role: "user" | "assistant"; content: string }[]; focusMarkIds?: string[] };
+type Body = {
+  messages?: { role: "user" | "assistant"; content: string }[];
+  focusMarkIds?: string[];
+  // Saving: the conversation to append to, and the question as shown in the panel.
+  conversationId?: string | null;
+  display?: { content: string; marks?: string[] };
+  traceId?: string;
+};
 
 export async function POST(request: Request) {
   if (!currentRole()) return NextResponse.json({ error: "Non connecté." }, { status: 401 });
@@ -21,11 +28,19 @@ export async function POST(request: Request) {
   const client = await currentClient();
   const marks = client ? await store.listMarks(client.id) : [];
   const question = messages[messages.length - 1].content;
-  const trace = await startTrace("assistant", question.slice(0, 120), client?.id ?? null);
+  const trace = await startTrace("assistant", question.slice(0, 120), client?.id ?? null, body?.traceId);
   try {
     const out = await runInTrace(trace, () => runAgent({ client, marks, messages, focusMarkIds: body?.focusMarkIds ?? [], trigger: "app" }));
     await trace.finish("done", { sources: out.sources });
-    return NextResponse.json({ ...out, traceId: trace.id, steps: trace.steps });
+    const shown = body?.display?.content?.trim() || question;
+    const at = new Date().toISOString();
+    const conversationId = await store
+      .appendConversation(client?.id ?? null, body?.conversationId ?? null, shown, [
+        { role: "user", content: shown, marks: body?.display?.marks ?? [], at },
+        { role: "assistant", content: out.answer, sources: out.sources, traceId: trace.id, at: new Date().toISOString() },
+      ])
+      .catch(() => body?.conversationId ?? null);
+    return NextResponse.json({ ...out, traceId: trace.id, steps: trace.steps, conversationId });
   } catch (e) {
     const error = e instanceof Error ? e.message.slice(0, 200) : "Erreur";
     await trace.finish("error", { error });
