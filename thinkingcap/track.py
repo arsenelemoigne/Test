@@ -250,6 +250,8 @@ def main():
     parser.add_argument("--lp-right-parts", default="", help="lupin: lupin_pairs.py --right-parts, e.g. svamp")
     parser.add_argument("--dial-weights", type=float, nargs="*", default=[0.5, 0.7], help="dial: strengths of the trained change")
     parser.add_argument("--lp-extra-q", default="", help="lupin: add tooltopup <name>'s extra tool questions to the pairs")
+    parser.add_argument("--tt-parts", default="", help="tooltopup: BFCL parts (default all three)")
+    parser.add_argument("--tt-hard", action="store_true", help="tooltopup: hardest candidates first")
     parser.add_argument("--tt-questions", type=int, default=1500, help="tooltopup: extra tool questions")
     parser.add_argument("--lp-part-share", default="", help="lupin: lupin_select.py --part-share (P1)")
     parser.add_argument("--lp-solve-tilt", default="", help="lupin: lupin_select.py --solve-tilt (P3)")
@@ -2700,10 +2702,16 @@ def tooltopup(args):
     rng = random.Random(args.data_seed)
     picked = []
     total = sum(BFCL_SIZES.values())
-    for part, n in BFCL_SIZES.items():
+    parts = [x for x in args.tt_parts.split(",") if x] or list(BFCL_SIZES)
+    total = sum(BFCL_SIZES[x] for x in parts)
+    for part in parts:
+        n = BFCL_SIZES[part]
         mixed = [i for i, v in have.items() if rows[i]["part"] == part and 0 < sum(v) < len(v)]
         rng.shuffle(mixed)
+        if args.tt_hard:  # hardest first (lowest solve rate): closer to BFCL's no-fit (eval 79% vs our pool 88%)
+            mixed.sort(key=lambda i: sum(have[i]) / len(have[i]))
         picked += mixed[:round(args.tt_questions * n / total)]
+        print(f"tooltopup {name}: {part}: {len(mixed)} sometimes-right candidates, {min(len(mixed), round(args.tt_questions * n / total))} kept", flush=True)
     need = {i: max(0, 10 - len(have[i])) for i in picked}
     print(f"tooltopup {name}: {len(picked)} tool questions answered sometimes right "
           f"({dict(Counter(rows[i]['part'] for i in picked))}); answers to make {dict(Counter(need.values()))}", flush=True)

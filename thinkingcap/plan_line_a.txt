@@ -204,6 +204,10 @@ refsets --name refs --rs-tag base
 crosscheck --name cx-adar1 --cx-names lpc-adar1 --cx-steps 25 50 75 --seeds 0 1 2
 # strength dial (user 29 Oct: strong v1): Ada-R1 soup 25 (fresh -1.9) at x0.5 / x0.7 on the fresh set
 dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-weights 0.5 0.7
+# NO-FIT FIX (user 29 Oct ~22:30: no-fit lost -4 to -7 on every fresh result; our no-fit training questions were easier than BFCL's, 88% vs 79%):
+# harder no-fit questions (verified candidates not in the pool, hardest first, topped up to 10 answers) + no-fit protection like math's (no shortening below 80% solved, + right>wrong pairs)
+tooltopup --name nofit1 --tt-parts bfcl_irrelevance --tt-hard --tt-questions 800
+lupin --name lpx-nofit --lp-extra-q nofit1 --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # OPTIONAL module (user 29 Oct): code-only strict cut pairs on top of lpb-l2s50e; auto-DROPPED if it costs accuracy or spills onto other types
 codecut --name lcc-l2s50e --cc-base lpb-l2s50e --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # math protection (user 29 Oct: strong v1; math lost most, like both competitors): long2short p<0.5, math p<0.8 + math right>wrong pairs

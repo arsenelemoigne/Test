@@ -3274,3 +3274,11 @@ Plan cells restarted with the finished lines commented out.
   No-fit tools (-4.4 to -6.6) and math are the weak types.
   lpc-adar1 CROSS-CHECK (new 240 x 4 vs the original Qwen): soup 25 +48.6 / -3.4; soup 50 +46.5 / -3.4 (fresh: 43.0 / -1.9,
   44.8 / -2.3): same picture, accuracy -2 to -3.5 on both independent sets.
+- ~22:30 NO-FIT FIX (user: "fix no-fit at the data level, no probe"): no-fit lost -4.4 to -6.6 (l2s50e) and -3.1 to -3.7
+  (Ada-R1) on every fresh result; the pool's no-fit questions were easier than BFCL's (88% vs 79%) and the farthest in
+  topic. (1) tooltopup --tt-parts bfcl_irrelevance --tt-hard: up to 800 verified no-fit candidates not in the pool that
+  the original model gets right only sometimes, HARDEST first (lowest solve rate), topped up to 10 answers (nofit1);
+  (2) lpx-nofit: l2s50e recipe + those questions (--lp-extra-q nofit1, same eval matching, so harder no-fit fill the
+  eval's harder cells) + no-fit protection like math's: --lp-min-solve-part bfcl_irrelevance=0.8 (no shortening on no-fit
+  questions solved < 80%) + --lp-right-parts bfcl_irrelevance (right > wrong pairs). Queued on GPU 2 right after the dial
+  (before codecut).
