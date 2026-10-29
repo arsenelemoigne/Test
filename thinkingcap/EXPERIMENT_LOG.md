@@ -3223,3 +3223,4 @@ Plan cells restarted with the finished lines commented out.
   scored vs the original Qwen on the same set (refsets). Report only: the fresh set decides v1; a large disagreement
   between fresh and cross-check is a red flag before round 2.
 - 20:30 (user): deployment added to the roadmap (LUPIN_SPEC.md 'Deployment'): after the final model, serve it with vLLM on a hosted L4 (HF Inference Endpoint / RunPod / Modal, ~$0.5-1/h, user approves spending), monitor /metrics, side-by-side demo vs the original Qwen.
+- 21:00 FIRST FRESH CONFIRM: lpc-adar1-soup-25 (3 seeds, fresh 240 x 8): +43.0% saved / -1.9 (svamp +62/-4.4, mbpp +45/-1.3, ifeval +26/+0.6, simple +30/-2.2, multiple +34/-2.5, no-fit +30/-3.1). The screen's +48.5 / +0.4 (1 seed, choosing set) did not hold: winner's curse + set difference. Soups 50 / 75 next; lpc-l2s50e seed 1 at step 85/170 on GPU 1.
