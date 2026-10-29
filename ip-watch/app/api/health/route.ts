@@ -18,6 +18,8 @@ export function GET() {
       SEARCHAPI_API_KEY: set("SEARCHAPI_API_KEY"),
       URLSCAN_API_KEY: set("URLSCAN_API_KEY"),
       RESEND_API_KEY: set("RESEND_API_KEY"),
+      SUPABASE_URL: set("SUPABASE_URL"),
+      SUPABASE_SERVICE_ROLE_KEY: set("SUPABASE_SERVICE_ROLE_KEY"),
     },
   });
 }

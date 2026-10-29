@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useData } from "@/components/EditsProvider";
 import { EditableCell } from "@/components/EditableCell";
@@ -50,6 +51,11 @@ export default function PortfolioPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {role === "avocat" && (
+            <Link href="/import" className="btn">
+              Importer depuis l&apos;INPI
+            </Link>
+          )}
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher…" className="border border-black px-2 py-1.5 font-mono text-xs" />
           <select value={type} onChange={(e) => setType(e.target.value as RightType | "")} className="border border-black bg-white px-2 py-1.5 font-mono text-xs">
             <option value="">Tous types</option>
