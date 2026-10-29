@@ -2684,13 +2684,15 @@ def tooltopup(args):
     if (out / "rollouts.jsonl").exists():
         print(f"tooltopup {name}: done", flush=True)
         return
+    from build_pool import BFCL_SIZES
     union = Path("data/poolcand-dp9n-all.jsonl")
     sources = [BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl",
                *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp8", "dp9", "dp10", "dp11") for h in "ab"]]
     drive_sync("restore", only=[str(union), f"data/pool-{pool_name}.jsonl", *[str(f.parent) for f in sources]])
     used = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
+    wanted_parts = [x for x in args.tt_parts.split(",") if x] or list(BFCL_SIZES)
     rows = {r["pool_id"]: r for r in map(json.loads, filter(str.strip, union.read_text().splitlines()))
-            if r["part"].startswith("bfcl") and r["pool_id"] not in used}
+            if r["part"] in wanted_parts and r["pool_id"] not in used}
     have = defaultdict(list)
     for f in sources:
         if f.exists():
@@ -2698,14 +2700,14 @@ def tooltopup(args):
                 r = json.loads(line)
                 if r["id"] in rows:
                     have[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
-    from build_pool import BFCL_SIZES
     rng = random.Random(args.data_seed)
     picked = []
     total = sum(BFCL_SIZES.values())
-    parts = [x for x in args.tt_parts.split(",") if x] or list(BFCL_SIZES)
-    total = sum(BFCL_SIZES[x] for x in parts)
+    sizes = BFCL_SIZES | {"mbpp": sum(BFCL_SIZES.values())}  # code alone takes --tt-questions
+    parts = wanted_parts
+    total = sum(sizes[x] for x in parts)
     for part in parts:
-        n = BFCL_SIZES[part]
+        n = sizes[part]
         mixed = [i for i, v in have.items() if rows[i]["part"] == part and 0 < sum(v) < len(v)]
         rng.shuffle(mixed)
         if args.tt_hard:  # hardest first (lowest solve rate): closer to BFCL's no-fit (eval 79% vs our pool 88%)
@@ -2722,9 +2724,9 @@ def tooltopup(args):
         probe = BON / f"tooltop-{name}-k{k}"
         drive_sync("restore", only=[str(probe)])
         if not (probe / "rollouts.jsonl").exists():
-            py("probe_curve.py", "--data", sub, "--sources", "toolace,hermes_tools,glaive_tools", "--per-source", 1000000,
+            py("probe_curve.py", "--data", sub, "--sources", "toolace,hermes_tools,glaive_tools,kodcode", "--per-source", 1000000,
                "--samples", k, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only",
-               "--chunk", 300, "--max-questions", sum(1 for _ in open(sub)), "--seed", 23 + k)
+               "--chunk", 300 if "mbpp" not in parts else 150, "--max-questions", sum(1 for _ in open(sub)), "--seed", 23 + k)
             drive_sync("save")
         made.append(probe / "rollouts.jsonl")
     out.mkdir(parents=True, exist_ok=True)
@@ -2789,18 +2791,23 @@ def lupin(args):
         print(f"lupin {name}: waiting for {pool_name}'s 10 answers on Drive", flush=True)
         time.sleep(300)
     assert all(h.exists() for h in halves), f"{pool_name}'s answers are not on Drive"
-    allfile = BON / f"lupin-all-{pool_name}{'-' + args.lp_extra_q if args.lp_extra_q else ''}.jsonl"
+    extras = [BON / f"tooltop-{x}" for x in args.lp_extra_q.split(",") if x]
+    allfile = BON / f"lupin-all-{pool_name}{''.join('-' + x for x in args.lp_extra_q.split(',') if x)}.jsonl"
     if not allfile.exists():
         ids = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
-        extra = BON / f"tooltop-{args.lp_extra_q}"
-        if args.lp_extra_q:  # tooltopup's extra tool questions join the pool for pairs (same matching afterwards)
-            drive_sync("restore", only=[str(extra)])
+        for extra in extras:  # top-up questions (harder no-fit / tools / code) join the pool for pairs; same matching
+            for _ in range(288):  # another runtime may still be answering them: wait up to 24 h
+                drive_sync("restore", only=[str(extra)])
+                if (extra / "rollouts.jsonl").exists():
+                    break
+                print(f"lupin {name}: waiting for {extra} on Drive", flush=True)
+                time.sleep(300)
             ids |= {json.loads(l)["pool_id"] for l in (extra / "questions.jsonl").read_text().splitlines() if l.strip()}
         # at most --lp-answers answers per question, newest first (user, 29 Oct: "14 or 10?"): the 10-answer run, then
         # the extra-answer rounds (newest first), then the 4 selection answers. The pool was CHOSEN on the earliest
         # answers (lucky draws), so those are the biased ones; and an equal count per question keeps every type's
         # pairs equally strong (the shortest right of 14 is shorter than of 10).
-        sources = [*halves, *([extra / "rollouts.jsonl"] if args.lp_extra_q else []),
+        sources = [*halves, *[extra / "rollouts.jsonl" for extra in extras],
                    *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp11", "dp10", "dp9", "dp8") for h in "ab"],
                    BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl"]
         drive_sync("restore", only=[str(f.parent) for f in sources])

@@ -3282,3 +3282,17 @@ Plan cells restarted with the finished lines commented out.
   eval's harder cells) + no-fit protection like math's: --lp-min-solve-part bfcl_irrelevance=0.8 (no shortening on no-fit
   questions solved < 80%) + --lp-right-parts bfcl_irrelevance (right > wrong pairs). Queued on GPU 2 right after the dial
   (before codecut).
+
+### 2026-10-29 ~22:45 — user: data upgrade first, then iterate (rules x proportions x pairs), soup only the strong ones
+- DATA UPGRADE (parts the pool made too easy): nofit1 = up to 800 hardest sometimes-right no-fit candidates; tools1 =
+  1,000 hardest sometimes-right one-function / multiple candidates (2:1); code1 = 800 hardest sometimes-right code
+  candidates (pool code was 60% vs MBPP 53%); each topped up to 10 answers by the original Qwen (tooltopup, --tt-hard).
+  lupin --lp-extra-q takes a list and waits for each top-up on Drive.
+- NEW BASELINE lpu-base = l2s50e recipe on pool + nofit1 + tools1 + code1, with no-fit protection (p < 0.8 no shortening
+  + right>wrong pairs). Every experiment after it uses the upgraded data (lpu-*): per-type adapters, P1 tilt, gentle DPO,
+  P4 tools tilt (GPU 1); two-stage, per-type pressure, math+no-fit protection, P3 medium tilt, codecut (GPU 2).
+  Older queued runs on the old data (lpb-l2s50press, lpx-*, lpb-l2s50math, tools-plus, codecut on l2s50e) superseded.
+- DECISION RULE per screen (choosing x4, 1 seed), vs lpu-base at the same checkpoints, averaging each run's two best
+  neighbouring checkpoints (less luck): WORTH 3 seeds + soup on the fresh set if (a) accuracy >= base and saving >= base
+  +2 pts, or (b) saving >= base -2 pts and accuracy >= base +1; otherwise DROP and try another strategy. Winners'
+  levers are then combined.

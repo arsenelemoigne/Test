@@ -192,12 +192,12 @@
 # done/replaced: lupin --name lp-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200
 # 29 Oct ~07:00: dp11 30/36 (worse than dp10 35/36: the check swings run to run) -> dp10 is the training pool (user: 'if close enough, don't wait')
 # done: lupinanswers --la-pool dp10 --la-force dp10-35of36-only-simple-p75-11tok-out_dp11-30of36 --la-target 10 --dp-step b
-lupin --name lpb-l2s75 --lp-recipe long2short --lp-min-solve 0.75 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
-lupin --name lpb-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpb-l2s75 --lp-recipe long2short --lp-min-solve 0.75 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpb-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # extra variation (user 29 Oct ~13:40): always-solved questions get shorten pairs from 1.2x (not 1.5x), shorten cap 2x guard; pairs mixed in one epoch
-lupin --name lpb-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpb-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # STEP 8 confirm (screen leaders on the choosing set): 3 seeds, soups at 25/50/75 on the FRESH set x8
-lupin --name lpc-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 1 2 --lp-fresh --lp-save 25 --dpo-steps 25 50 75 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpc-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 1 2 --lp-fresh --lp-save 25 --dpo-steps 25 50 75 --lp-pool dp10
 # bigger reference for v2 (user 29 Oct): 2 more sets of 40 per part, original Qwen x4 (v1 answers them in round 2)
 refsets --name refs --rs-tag base
 # cross-check (user 29 Oct): confirmed soups on a NEW 240-question eval set x4 vs the original Qwen; report only
@@ -206,17 +206,25 @@ crosscheck --name cx-adar1 --cx-names lpc-adar1 --cx-steps 25 50 75 --seeds 0 1 
 dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-weights 0.5 0.7
 # NO-FIT FIX (user 29 Oct ~22:30: no-fit lost -4 to -7 on every fresh result; our no-fit training questions were easier than BFCL's, 88% vs 79%):
 # harder no-fit questions (verified candidates not in the pool, hardest first, topped up to 10 answers) + no-fit protection like math's (no shortening below 80% solved, + right>wrong pairs)
-tooltopup --name nofit1 --tt-parts bfcl_irrelevance --tt-hard --tt-questions 800
-lupin --name lpx-nofit --lp-extra-q nofit1 --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): tooltopup --name nofit1 --tt-parts bfcl_irrelevance --tt-hard --tt-questions 800
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-nofit --lp-extra-q nofit1 --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # OPTIONAL module (user 29 Oct): code-only strict cut pairs on top of lpb-l2s50e; auto-DROPPED if it costs accuracy or spills onto other types
-codecut --name lcc-l2s50e --cc-base lpb-l2s50e --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): codecut --name lcc-l2s50e --cc-base lpb-l2s50e --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # math protection (user 29 Oct: strong v1; math lost most, like both competitors): long2short p<0.5, math p<0.8 + math right>wrong pairs
-lupin --name lpb-l2s50math --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part svamp=0.8 --lp-right-parts svamp --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpb-l2s50math --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part svamp=0.8 --lp-right-parts svamp --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # v1 experiments (user 29 Oct ~22:30), base = l2s50e recipe
-lupin --name lpx-2stage --lp-init adapters/lpb-right-s0/step-50 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
-lupin --name lpx-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
-lupin --name lpx-p2math --lp-pressure svamp=1 --lp-right-parts svamp --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-2stage --lp-init adapters/lpb-right-s0/step-50 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-p2math --lp-pressure svamp=1 --lp-right-parts svamp --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # tools top-up (user 29 Oct): 1,500 extra tool questions answered sometimes right, topped up to 10 answers; then l2s50e + them
-tooltopup --name tools1 --tt-questions 1500
-lupin --name lpx-toolsplus --lp-extra-q tools1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# superseded by the data upgrade (29 Oct ~22:45): tooltopup --name tools1 --tt-questions 1500
+# superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-toolsplus --lp-extra-q tools1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# === 29 Oct ~22:45 (user): DATA UPGRADE FIRST (harder no-fit, tools, code), then iterate on the upgraded data
+tooltopup --name nofit1 --tt-parts bfcl_irrelevance --tt-hard --tt-questions 800
+tooltopup --name code1 --tt-parts mbpp --tt-hard --tt-questions 800
+lupin --name lpu-2stage --lp-init adapters/lpb-right-s0/step-50 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+lupin --name lpu-press --lp-pressure svamp=1,mbpp=2,ifeval=3,bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+lupin --name lpu-math --lp-min-solve-part bfcl_irrelevance=0.8,svamp=0.8 --lp-right-parts bfcl_irrelevance,svamp --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+lupin --name lpu-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+codecut --name lcc-lpu --cc-base lpu-base --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end
