@@ -208,6 +208,7 @@ poolmore --name dp11 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp
 lupinanswers --la-pool dp10 --dp-step a
 lupinanswers --la-pool dp11 --dp-step a
 # LUPIN round 1 screen (user 29 Oct: run all steps): pairs from the 10 answers, matched to the eval (lupin_select.py), DPO 1 seed, checkpoints 50-200 scored on the choosing set x4
+topiccheck --name topic
 lupin --name lp-l2s50 --lp-recipe long2short --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200
 lupin --name lp-dast --lp-recipe dast --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200
 lupin --name lp-right --lp-recipe rightwrong --lp-min-solve 0 --seeds 0 --dpo-steps 50 100 150 200

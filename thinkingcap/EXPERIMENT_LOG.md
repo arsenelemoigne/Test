@@ -3116,3 +3116,8 @@ Code rule (user): accuracy +7.0 pts (> 5) and median -17% (> 10%) -> dp11 RUNS (
 Simple's long tail missed in dp8/dp9/dp10 (157 / 166 / 160 vs 199): a selection blind spot (quartile bins: our
 top-quartile simple questions think less than the eval's). dp11's selection now uses 8 thinking bins for bfcl_simple
 only (select_pool.py --think-bins-part; tested on synthetic data), so its tail is matched more finely. Other parts unchanged.
+- ~04:40: topic_check.py + stage `topiccheck` (GPU 1, before the screen; report only, never a gate): per part,
+  MiniLM nearest-neighbour cosine eval->rest-of-eval vs eval->pool (pool subsampled to the evaluation part's size),
+  pool->eval, and the share of evaluation questions whose closest pool question is below the evaluation's own 10th
+  percentile (missed subjects); template lines (>30% of a part's questions) removed; fresh set excluded. Logic tested
+  with a stub encoder (the Mac's scratch venv was wiped by the shutdown).
