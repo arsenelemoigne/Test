@@ -222,7 +222,7 @@
 # replaced (lpb-l2s50e beat lpb-l2s50): lupin --name lpc-l2s50 --lp-recipe long2short --lp-min-solve 0.5 --seeds 0 1 2 --lp-fresh --lp-save 25 --dpo-steps 25 50 75 --lp-pool dp10
 # superseded by the data upgrade (29 Oct ~22:45): lupin --name lpc-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 1 2 --lp-fresh --lp-save 25 --dpo-steps 50 100 150 --lp-pool dp10
 # cross-check (user 29 Oct): confirmed soups on a NEW 240-question eval set x4 vs the original Qwen; report only
-crosscheck --name cx-l2s50e --cx-names lpc-l2s50e --cx-steps 50 100 150 --seeds 0 1 2
+# moved to GPU 2's end (data first): crosscheck --name cx-l2s50e --cx-names lpc-l2s50e --cx-steps 50 100 150 --seeds 0 1 2
 # OUR per-type pressure (user 29 Oct: 'not just reproduce bida'): shorten per be-right pair math 1, code 2, instructions 3, tools 2, from each type's measured accuracy cost
 # superseded by the data upgrade (29 Oct ~22:45): lupin --name lpb-l2s50press --lp-recipe long2short --lp-min-solve 0.5 --lp-pressure svamp=1,mbpp=2,ifeval=3,bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # v1 experiments (user 29 Oct ~22:30), base = l2s50e recipe; order P1, two-stage, per-type, P3, gentle, P2, P4 split over both GPUs
@@ -232,6 +232,7 @@ crosscheck --name cx-l2s50e --cx-names lpc-l2s50e --cx-steps 50 100 150 --seeds 
 # superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-p4tools --lp-think-tilt-bfcl 2 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # === 29 Oct ~22:45 (user): DATA UPGRADE FIRST, then iterate on the upgraded data (baseline lpu-base); each screen -> 3-seed soup only if it beats the baseline
 tooltopup --name tools1 --tt-parts bfcl_simple_python,bfcl_multiple --tt-hard --tt-questions 1000
+tooltopup --name code1 --tt-parts mbpp --tt-hard --tt-questions 800
 lupin --name lpu-base --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 pertype --name lpu-pertype --cc-base lpu-base --pt-weights svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8
 lupin --name lpu-p1tilt --lp-part-share svamp=0.15,mbpp=0.25,ifeval=0.35,bfcl=0.25 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10

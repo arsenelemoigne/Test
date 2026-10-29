@@ -203,7 +203,6 @@ refsets --name refs --rs-tag base
 # cross-check (user 29 Oct): confirmed soups on a NEW 240-question eval set x4 vs the original Qwen; report only
 crosscheck --name cx-adar1 --cx-names lpc-adar1 --cx-steps 25 50 75 --seeds 0 1 2
 # strength dial (user 29 Oct: strong v1): Ada-R1 soup 25 (fresh -1.9) at x0.5 / x0.7 on the fresh set
-dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-weights 0.5 0.7
 # NO-FIT FIX (user 29 Oct ~22:30: no-fit lost -4 to -7 on every fresh result; our no-fit training questions were easier than BFCL's, 88% vs 79%):
 # harder no-fit questions (verified candidates not in the pool, hardest first, topped up to 10 answers) + no-fit protection like math's (no shortening below 80% solved, + right>wrong pairs)
 # superseded by the data upgrade (29 Oct ~22:45): tooltopup --name nofit1 --tt-parts bfcl_irrelevance --tt-hard --tt-questions 800
@@ -220,11 +219,13 @@ dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-w
 # superseded by the data upgrade (29 Oct ~22:45): tooltopup --name tools1 --tt-questions 1500
 # superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-toolsplus --lp-extra-q tools1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # === 29 Oct ~22:45 (user): DATA UPGRADE FIRST (harder no-fit, tools, code), then iterate on the upgraded data
+# moved to GPU 1 (data first): tooltopup --name code1 --tt-parts mbpp --tt-hard --tt-questions 800
 tooltopup --name nofit1 --tt-parts bfcl_irrelevance --tt-hard --tt-questions 800
-tooltopup --name code1 --tt-parts mbpp --tt-hard --tt-questions 800
+dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-weights 0.5 0.7
 lupin --name lpu-2stage --lp-init adapters/lpb-right-s0/step-50 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 lupin --name lpu-press --lp-pressure svamp=1,mbpp=2,ifeval=3,bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 lupin --name lpu-math --lp-min-solve-part bfcl_irrelevance=0.8,svamp=0.8 --lp-right-parts bfcl_irrelevance,svamp --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 lupin --name lpu-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-extra-q nofit1,tools1,code1 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 codecut --name lcc-lpu --cc-base lpu-base --dpo-steps 25 50 75 100 150 --lp-pool dp10
+crosscheck --name cx-l2s50e --cx-names lpc-l2s50e --cx-steps 50 100 150 --seeds 0 1 2
 end
