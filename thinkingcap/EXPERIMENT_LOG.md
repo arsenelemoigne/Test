@@ -3296,3 +3296,4 @@ Plan cells restarted with the finished lines commented out.
   neighbouring checkpoints (less luck): WORTH 3 seeds + soup on the fresh set if (a) accuracy >= base and saving >= base
   +2 pts, or (b) saving >= base -2 pts and accuracy >= base +1; otherwise DROP and try another strategy. Winners'
   levers are then combined.
+- ~22:40: lpc-adar1 cross-check soup 75: +48.9 / -3.0 (25: +48.6 / -3.4; 50: +46.5 / -3.4). GPU 2 on dial-adar1; GPU 1 on crosscheck lpc-l2s50e. Both runtimes alive (Drive logs).
