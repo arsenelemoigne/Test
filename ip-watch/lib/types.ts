@@ -1,3 +1,5 @@
+export type Role = "avocat" | "client";
+
 export type RightType = "marque" | "dessin";
 
 // Office that granted the right: INPI (FR), EUIPO (EU) or WIPO international registration (WO).
@@ -27,48 +29,87 @@ export type Right = {
   notes?: string;
 };
 
-export type FindingKind = "marketplace" | "site" | "domaine" | "depot";
+export type FieldEdit = { value: unknown; prev: unknown; by: Role; at: string };
 
-export type FindingStatus = "nouveau" | "a_verifier" | "constat_demande" | "action_engagee" | "ecarte";
+export type RunSummary = { id: string; startedAt: string; status: RunStatus; total: number; high: number };
 
-export type Evidence = {
-  capturedAt: string;
-  screenshotUrl: string | null;
-  sha256: string | null;
-  scanUrl?: string | null;
+export type Mark = Right & { edits: Record<string, FieldEdit>; lastRun: RunSummary | null };
+
+export type Company = {
+  siren: string;
+  name: string;
+  legalName?: string;
+  address?: string;
+  createdOn?: string;
+  activity?: string;
+  category?: string;
+  officers?: string[];
+  url: string;
 };
 
-export type Finding = {
+export type Client = {
   id: string;
+  slug: string;
+  name: string;
+  status: "pending" | "importing" | "ready" | "error";
+  company: Company | null;
+  holderNames: string[];
+  dataUpdatedAt: string | null;
+  importedAt: string | null;
+  error: string | null;
+};
+
+export type FindingKind = "annonce" | "image" | "domaine" | "web";
+
+export type Finding = {
+  id: number;
+  runId: string;
+  markId: string;
   foundAt: string;
   kind: FindingKind;
-  platform: string;
+  source: string;
+  platform: string | null;
   url: string;
-  title: string;
+  title: string | null;
   price: number | null;
   currency: string | null;
   country: string | null;
   seller: string | null;
-  company: { name: string; id?: string; address?: string; source?: string } | null;
-  matchedRightIds: string[];
-  relevance: 1 | 2 | 3 | 4 | 5;
-  status: FindingStatus;
-  constatRecommended: boolean;
-  comment: string;
-  evidence: Evidence | null;
+  company: { name: string; source?: string; id?: string } | null;
+  confidence: number | null;
+  reason: string | null;
+  screenshotPath: string | null;
+  sha256: string | null;
+  scanUrl: string | null;
+  capturedAt: string | null;
+  status: string;
+  comment: string | null;
 };
 
-export type ClientData = {
-  slug: string;
-  name: string;
-  // True for the fictitious test company, false for data imported from public registries.
-  fictitious: boolean;
-  disclaimer: string;
-  sources: { name: string; updatedAt: string | null; note?: string }[];
-  importedAt: string;
-  rights: Right[];
-  findings: Finding[];
-  lastWatchAt: string | null;
+export type RunStatus = "running" | "done" | "error";
+
+export type RunStep = { name: string; status: "running" | "done" | "skipped" | "error"; detail?: string };
+
+export type RunStats = { steps: RunStep[]; total: number; high: number; byCountry: Record<string, number> };
+
+export type WatchRun = {
+  id: string;
+  clientId: string;
+  markId: string;
+  markName: string;
+  trigger: "bouton" | "assistant" | "email";
+  status: RunStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  stats: RunStats | null;
+  error: string | null;
 };
 
-export type Role = "avocat" | "client";
+export type HistoryEvent = {
+  id: number;
+  createdAt: string;
+  kind: "email" | "import" | "recherche" | "modification" | "note" | "question";
+  title: string;
+  summary: string | null;
+  details?: Record<string, unknown> | null;
+};

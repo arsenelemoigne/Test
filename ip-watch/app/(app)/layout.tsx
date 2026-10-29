@@ -1,68 +1,64 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentRole } from "@/lib/auth";
-import { currentClient, listClients } from "@/lib/data";
-import { APP_NAME, assistantEmail, FIRM_NAME, lawyerEmail, PRODUCTION_HOSTING_NOTE } from "@/lib/config";
-import { EditsProvider } from "@/components/EditsProvider";
+import { currentClient } from "@/lib/data";
+import { APP_NAME, assistantEmail, FIRM_NAME, PRODUCTION_HOSTING_NOTE } from "@/lib/config";
+import { listClients, storeReady } from "@/lib/store";
+import { AppProvider } from "@/components/AppProvider";
 import { Nav } from "@/components/Nav";
 import { ClientSwitcher } from "@/components/ClientSwitcher";
-import { ExportButton } from "@/components/ExportButton";
 import { LogoutButton } from "@/components/LogoutButton";
+import { Scribble } from "@/components/RoughBox";
 import { formatDate } from "@/lib/format";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const role = currentRole();
   if (!role) redirect("/login");
-  const client = currentClient();
-  const settings = {
-    lawyerEmail: lawyerEmail(),
-    assistantEmail: assistantEmail(),
-    assistantEnabled: Boolean(process.env.OPENROUTER_API_KEY),
-  };
+  if (!storeReady()) {
+    return <p className="hand p-8">Base de données non configurée : ajoutez SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans Railway.</p>;
+  }
+  const [clients, client] = await Promise.all([listClients(), currentClient()]);
 
   return (
-    <EditsProvider client={client} role={role} settings={settings}>
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 sm:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black py-4">
-          <div className="flex items-baseline gap-3">
-            <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
-            <span className="label hidden sm:inline">{FIRM_NAME}</span>
-          </div>
+    <AppProvider value={{ role, client, assistantEmail: assistantEmail() }}>
+      <div className="mx-auto flex min-h-screen max-w-[1400px] flex-col px-4 sm:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3 pb-2 pt-5">
+          <Link href="/" className="flex flex-col">
+            <span className="hand text-[22px] font-semibold leading-none tracking-tight">{APP_NAME}</span>
+            <Scribble width={104} className="mt-0.5" />
+          </Link>
+          <Nav />
           <div className="flex flex-wrap items-center gap-2">
-            <ClientSwitcher clients={listClients()} current={client.slug} />
-            <span className="chip">{role === "avocat" ? "Avocat" : "Client"}</span>
-            <ExportButton />
+            <ClientSwitcher clients={clients.map((c) => ({ slug: c.slug, name: c.name }))} current={client?.slug ?? null} />
+            {role === "avocat" && (
+              <Link href="/nouveau" className="btn">
+                + client
+              </Link>
+            )}
             <LogoutButton />
           </div>
         </header>
 
-        <Nav />
+        <main className="flex-1 py-5">{children}</main>
 
-        {client.fictitious && (
-          <div className="mt-4 border border-dashed border-black px-3 py-2 font-mono text-xs">
-            DONNÉES FICTIVES — {client.disclaimer}
-          </div>
-        )}
-
-        <main className="flex-1 py-6">{children}</main>
-
-        <footer className="space-y-1 border-t border-black py-4 text-[11px] leading-relaxed text-neutral-500">
-          <p>
-            Démo pédagogique — Projet LAB, École de formation professionnelle des barreaux de Paris. {client.disclaimer}
-          </p>
-          <p>
-            Sources :{" "}
-            {client.sources.map((s, i) => (
-              <span key={s.name}>
-                {i > 0 && " · "}
-                {s.name}
-                {s.updatedAt && ` (mise à jour du ${formatDate(s.updatedAt)})`}
-              </span>
-            ))}
-            . Import du {formatDate(client.importedAt)}.
-          </p>
-          <p>{PRODUCTION_HOSTING_NOTE}</p>
+        <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:var(--line)] py-4 text-[11px] text-[color:var(--pencil)]">
+          <span>
+            {FIRM_NAME} · {role === "avocat" ? "avocat" : "client"}
+            {client?.importedAt && ` · registre INPI importé le ${formatDate(client.importedAt)}`}
+            {client?.dataUpdatedAt && ` (données INPI du ${client.dataUpdatedAt})`}
+          </span>
+          <span className="flex items-center gap-4">
+            <Link href="/architecture" className="btn-quiet hidden text-[12px] md:inline">
+              {PRODUCTION_HOSTING_NOTE}
+            </Link>
+            <Link href="/historique" className="btn-quiet text-[12px]">
+              historique
+            </Link>
+          </span>
         </footer>
       </div>
-    </EditsProvider>
+    </AppProvider>
   );
 }

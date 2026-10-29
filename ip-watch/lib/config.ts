@@ -3,8 +3,7 @@ export const APP_NAME = "Registre PI";
 
 export const FIRM_NAME = "Cabinet fictif — Projet LAB EFB";
 
-export const PRODUCTION_HOSTING_NOTE =
-  "En production : hébergement des données et inférence IA dans l'Union européenne (Scaleway). La démo actuelle n'est pas encore hébergée ainsi.";
+export const PRODUCTION_HOSTING_NOTE = "Architecture cible : application (Scaleway, Paris) et inférence (Mistral AI) hébergées dans l'UE";
 
 export const REMINDER_OFFSETS_DAYS = [180, 90, 30];
 

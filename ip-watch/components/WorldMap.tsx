@@ -29,13 +29,14 @@ const HEIGHT = 470;
 
 type Props = {
   counts: Map<string, number>;
+  // "coverage": countries where the marks apply (hatched); "hits": countries of search results (inked).
+  mode: "coverage" | "hits";
   selected?: string | null;
   onSelect?: (code: string | null) => void;
-  // Wording for the tooltip, e.g. "titre(s)" or "signalement(s)".
   unit: string;
 };
 
-export function WorldMap({ counts, selected, onSelect, unit }: Props) {
+export function WorldMap({ counts, mode, selected, onSelect, unit }: Props) {
   const [features, setFeatures] = useState<CountryFeature[] | null>(null);
 
   useEffect(() => {
@@ -52,38 +53,52 @@ export function WorldMap({ counts, selected, onSelect, unit }: Props) {
     });
   }, [features, counts]);
 
-  const max = Math.max(1, ...Array.from(counts.values()));
-  // Countries above half the maximum are black, the others dark grey.
-  const half = Math.floor(max / 2);
+  const fillFor = (n: number) => {
+    if (n === 0) return "#ebe6dc";
+    return mode === "coverage" ? "url(#ipw-hatch)" : "#1c1c1a";
+  };
 
   return (
     <div className="relative w-full">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-auto w-full" role="img" aria-label="Carte du monde">
+        <defs>
+          <pattern id="ipw-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
+            <rect width="5" height="5" fill="#d8d1c3" />
+            <line x1="0" y1="0" x2="0" y2="5" stroke="#1c1c1a" strokeWidth="1.6" />
+          </pattern>
+        </defs>
         {paths.map((p, i) => {
-          const active = p.n > 0;
           const isSelected = selected && p.code === selected;
-          // Two shades only: covered countries in grey to black by count, others in light grey.
-          const fill = active ? (p.n > half ? "#000" : "#555") : "#e8e8e8";
           return (
             <path
               key={`${p.code}-${i}`}
               d={p.d}
-              fill={fill}
-              stroke={isSelected ? "#000" : "#fff"}
-              strokeWidth={isSelected ? 1.6 : 0.4}
-              className={onSelect && p.code ? "cursor-pointer hover:opacity-80" : undefined}
+              fill={fillFor(p.n)}
+              stroke={isSelected ? "#1c1c1a" : p.n ? "#1c1c1a" : "#faf8f4"}
+              strokeWidth={isSelected ? 1.8 : p.n ? 0.5 : 0.6}
+              strokeLinejoin="round"
+              className={onSelect && p.code ? "cursor-pointer transition-opacity hover:opacity-75" : undefined}
               onClick={() => onSelect?.(p.code && p.code !== selected ? p.code : null)}
             >
-              <title>{p.code ? `${countryName(p.code)} — ${p.n} ${unit}` : ""}</title>
+              <title>{p.code ? `${countryName(p.code)}${p.n ? ` — ${p.n} ${unit}` : ""}` : ""}</title>
             </path>
           );
         })}
       </svg>
-      {!features && <div className="absolute inset-0 grid place-items-center font-mono text-xs text-neutral-500">Chargement de la carte…</div>}
-      <div className="mt-2 flex items-center gap-4 font-mono text-[11px] text-neutral-600">
-        <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 bg-black" /> {half + 1} {unit} ou plus</span>
-        {half >= 1 && <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 bg-[#555]" /> {half === 1 ? "1" : `1 à ${half}`}</span>}
-        <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 bg-[#e8e8e8]" /> aucun</span>
+      {!features && <div className="hand absolute inset-0 grid place-items-center text-sm text-[color:var(--pencil)]">la carte se dessine…</div>}
+      <div className="label mt-1 flex items-center gap-4">
+        <span className="flex items-center gap-1.5">
+          <svg width="14" height="10" aria-hidden>
+            <rect width="14" height="10" fill={mode === "coverage" ? "url(#ipw-hatch)" : "#1c1c1a"} stroke="#1c1c1a" strokeWidth="1" />
+          </svg>
+          {mode === "coverage" ? "protégé" : unit}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <svg width="14" height="10" aria-hidden>
+            <rect width="14" height="10" fill="#ebe6dc" />
+          </svg>
+          {mode === "coverage" ? "non couvert" : "aucun"}
+        </span>
       </div>
     </div>
   );

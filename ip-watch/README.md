@@ -13,17 +13,14 @@ DEMO_PASSWORD=choisir-un-mot-de-passe npm run dev
 
 ## Variables d'environnement
 
-| Variable | Obligatoire | Rôle |
-|---|---|---|
-| `DEMO_PASSWORD` | oui | Mot de passe partagé de la démo (choix Avocat ou Client à la connexion) |
-| `OPENROUTER_API_KEY` | non | Active l'assistant |
-| `OPENROUTER_MODEL` | non | Modèle OpenRouter, `google/gemini-2.5-flash` par défaut |
-| `LAWYER_EMAIL` | non | Destinataire des rappels d'échéance |
-| `ASSISTANT_EMAIL` | non | Adresse à laquelle les clients écrivent l'assistant |
+Voir `.env.example`. `/api/health` indique lesquelles sont définies (jamais leur valeur).
 
-## Données
+## Fonctionnement
 
-Chaque client est un fichier JSON dans `data/clients/`, déclaré dans `data/clients/index.ts`. Les modifications faites dans l'interface sont, à ce stade, enregistrées dans le navigateur de chaque utilisateur.
+- **Email → registre** : un email reçu par l'assistant (webhook Resend sur `/api/inbound`) est classé (nouveau client, mise à jour, ajout de marque, recherche, question, note), traité, résumé dans l'historique, puis l'assistant répond par email. Seuls `LAWYER_EMAIL` et `ALLOWED_SENDERS` sont servis.
+- **Nouveau client** : société identifiée dans l'annuaire officiel, marques et dessins importés de l'INPI (réponses brutes conservées dans `raw_imports`).
+- **Assistant** : outils Légifrance, Judilibre, INPI, annuaire, BODACC, droit de l'UE, recherche web en repli ; les liens non renvoyés par un outil sont signalés.
+- **Recherche de contrefaçons** : à la demande (bouton ou assistant) ; résultats en direct sur le tableau de bord, ajoutés au journal de la marque (Excel ou CSV).
 
 ## Déploiement (Railway)
 

@@ -16,22 +16,18 @@ Deadlines: final deliverables 31 Oct 2026; jury pitch 13–20 Nov 2026.
 - AI via OpenRouter for the demo. The site only states EU hosting (Scaleway) as the production target, never as current fact.
 - Evidence pack = screenshot + page copy + URL + timestamp + SHA-256; it does not replace a commissaire de justice internet constat (NF Z67-147). The UI says so.
 - Demo behind one shared password (Avocat / Client roles), noindex.
-- Never invent Boucheron records. Until real data is imported, only the clearly fictitious "Maison Exemple" client is shown.
+- Never invent Boucheron records. The fictitious "Maison Exemple" client exists only in local development (IPW_DEV_MEMORY=1), never in production.
 - Keys never go in the repo or the chat; they live in Railway variables.
 
-## Done (step 1)
+## Done
 
-Login, overview, editable portfolio with edit history (browser storage), deadlines (renewal window −6 months, grace +6 months, reminders D-180/90/30), black-and-white map (world-atlas 50m, EU expanded, lapsed designations excluded), watch log with evidence pack, Excel export (exceljs), assistant grounded in the client JSON (`/api/ask`).
+- Step 1 UI, then rebuilt (30 Oct): dashboard (key figures, coverage / search map, live search results, deadlines, assistant), Marques (DB-backed edits, per-mark search button, per-mark log xlsx/csv), discreet Historique, Architecture cible page, hand-drawn look (roughjs, Shantell Sans).
+- Supabase tables: clients, marks, events, watch_runs, findings, raw_imports, assistant_logs; private storage bucket `evidence`.
+- Email assistant: Resend webhook `/api/inbound` → intent → onboard / add marks / start search / answer / note → history + reply.
+- Assistant agent (`lib/agent.ts`) with tools; link verification; every tool call logged to `assistant_logs`.
 
-## Next steps
+## To check on first real use
 
-1. INPI import for Boucheron (marks FR/EU/WO, designs FR/WO) → `data/clients/boucheron.json` + register in `data/clients/index.ts`. API notes (from the user's earlier pilot):
-   - Base `https://api-gateway.inpi.fr`. `GET /services/uaa/api/authenticate` (401 expected, sets `XSRF-TOKEN` cookie), then `POST /auth/login {username, password, rememberMe:true}` with header `X-XSRF-TOKEN`. Session ≈ 5 min; quota ≈ 100 calls (429).
-   - Marks: `POST /services/apidiffusion/api/marques/search {collections:['FR','EU','WO'], query:'[DEPOSANT=BOUCHERON]', fields:['*'], position:0, size:200}`. Also `[Mark_Exp=...]`, `[ClassNumber=(14 OU 3)]`, combinable with ET / OU.
-   - Designs: `POST /services/apidiffusion/api/modeles/search {collections:['FR','WO'], query:'[DEPOSANT=...]'}` (a query without `[FIELD=...]` returns 500). No EU designs, no patents.
-   - Notice: `GET /services/apidiffusion/api/marques/notice/FR1234567` (classes, dates, opposition deadline, designated countries with decisions).
-   - Data date (licence condition, must be cited): `GET /services/apidiffusion/api/marques/metadata`.
-   - The holder may appear under several entity names; check variants.
-2. Shared edits in Supabase instead of browser storage.
-3. Resend: deadline reminder emails to `LAWYER_EMAIL`; inbound assistant address (`.resend.app`), allow-listed senders only.
-4. Watch (monthly + on demand): SearchAPI (`google_lens` visual matches on the ring photo, `google_shopping`, `amazon_search`, `ebay`), urlscan (scan + screenshot + SHA-256, search for lookalike domains), RDAP (`rdap.nic.fr`, `rdap.verisign.com`), `recherche-entreprises.api.gouv.fr` for French sellers.
+- INPI field mapping (`lib/sources/inpi.ts` normalize) against the raw answers stored in `raw_imports`.
+- Légifrance search body and Judilibre parameters against `assistant_logs`.
+- SearchAPI result keys for each engine.

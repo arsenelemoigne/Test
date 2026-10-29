@@ -1,4 +1,4 @@
-import type { FindingKind, FindingStatus, RightType } from "./types";
+import type { FindingKind, RightType } from "./types";
 
 export const TYPE_LABELS: Record<RightType, string> = {
   marque: "Marque",
@@ -6,33 +6,20 @@ export const TYPE_LABELS: Record<RightType, string> = {
 };
 
 export const KIND_LABELS: Record<FindingKind, string> = {
-  marketplace: "Place de marché",
-  site: "Site marchand",
+  annonce: "Annonce",
+  image: "Image similaire",
   domaine: "Nom de domaine",
-  depot: "Dépôt concurrent",
+  web: "Page web",
 };
-
-export const STATUS_LABELS: Record<FindingStatus, string> = {
-  nouveau: "Nouveau",
-  a_verifier: "À vérifier",
-  constat_demande: "Constat demandé",
-  action_engagee: "Action engagée",
-  ecarte: "Écarté",
-};
-
-export const OPEN_STATUSES: FindingStatus[] = ["nouveau", "a_verifier"];
 
 export const FIELD_LABELS: Record<string, string> = {
-  name: "Nom",
-  number: "Numéro",
-  owner: "Titulaire",
-  classes: "Classes",
-  filingDate: "Date de dépôt",
-  registrationDate: "Date d'enregistrement",
-  expiryDate: "Date d'expiration",
-  status: "Statut",
-  notes: "Notes",
-  relevance: "Pertinence",
-  comment: "Commentaire",
-  constatRecommended: "Constat recommandé",
+  name: "nom",
+  number: "numéro",
+  owner: "titulaire",
+  classes: "classes",
+  filingDate: "date de dépôt",
+  registrationDate: "date d'enregistrement",
+  expiryDate: "date d'expiration",
+  status: "statut",
+  notes: "notes",
 };

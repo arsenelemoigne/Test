@@ -1,15 +1,13 @@
 "use client";
 
-type Props = { clients: { slug: string; name: string; fictitious: boolean }[]; current: string };
+type Props = { clients: { slug: string; name: string }[]; current: string | null };
 
 export function ClientSwitcher({ clients, current }: Props) {
-  if (clients.length < 2) {
-    const only = clients[0];
-    return <span className="font-mono text-xs">{only?.name}</span>;
-  }
+  if (clients.length === 0) return null;
+  if (clients.length === 1) return <span className="hand text-[14px]">{clients[0].name}</span>;
   return (
     <select
-      defaultValue={current}
+      defaultValue={current ?? undefined}
       onChange={async (e) => {
         await fetch("/api/client", {
           method: "POST",
@@ -18,13 +16,12 @@ export function ClientSwitcher({ clients, current }: Props) {
         }).catch(() => null);
         window.location.reload();
       }}
-      className="border border-black bg-white px-2 py-1.5 font-mono text-xs"
+      className="field hand py-1 text-[13px]"
       aria-label="Client"
     >
       {clients.map((c) => (
         <option key={c.slug} value={c.slug}>
           {c.name}
-          {c.fictitious ? " (fictif)" : ""}
         </option>
       ))}
     </select>

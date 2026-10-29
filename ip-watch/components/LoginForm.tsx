@@ -46,15 +46,15 @@ export function LoginForm() {
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full border border-black px-2 py-1.5 font-mono text-sm"
+          className="field mt-1 w-full font-mono"
         />
       </label>
-      {error && <p className="font-mono text-xs text-red-600">{error}</p>}
+      {error && <p className="hand text-[13px] text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
-        <button type="submit" disabled={busy} className="btn-solid justify-center">
+        <button type="submit" disabled={busy} className="btn-ink">
           Avocat
         </button>
-        <button type="button" disabled={busy} onClick={() => submit("client")} className="btn justify-center">
+        <button type="button" disabled={busy} onClick={() => submit("client")} className="btn">
           Client
         </button>
       </div>

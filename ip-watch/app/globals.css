@@ -4,41 +4,77 @@
 
 :root {
   color-scheme: light;
+  --paper: #faf8f4;
+  --ink: #1c1c1a;
+  --pencil: #6e6a63;
+  --line: #d9d4c9;
+  --faint: #efebe3;
 }
 
 body {
-  background: #fff;
-  color: #000;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.label {
-  @apply font-mono text-[11px] uppercase tracking-wider text-neutral-500;
+@layer components {
+  .hand {
+    font-family: "Shantell Sans", ui-rounded, system-ui, sans-serif;
+  }
+
+  .label {
+    @apply hand text-[12px] text-[color:var(--pencil)];
+  }
+
+  /* Irregular radius: reads as drawn by hand without any script. */
+  .wobble {
+    border: 1.5px solid var(--ink);
+    border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px;
+  }
+
+  .btn {
+    @apply wobble hand inline-flex items-center justify-center gap-1.5 bg-transparent px-3 py-1 text-[13px] transition-colors hover:bg-[color:var(--ink)] hover:text-[color:var(--paper)] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[color:var(--ink)];
+  }
+
+  .btn-ink {
+    @apply wobble hand inline-flex items-center justify-center gap-1.5 bg-[color:var(--ink)] px-3 py-1 text-[13px] text-[color:var(--paper)] transition-opacity hover:opacity-85 disabled:opacity-40;
+  }
+
+  .btn-quiet {
+    @apply hand text-[13px] underline decoration-[color:var(--line)] decoration-2 underline-offset-4 hover:decoration-[color:var(--ink)];
+  }
+
+  .field {
+    @apply wobble bg-[color:var(--paper)] px-2.5 py-1.5 text-sm outline-none focus:bg-white;
+  }
+
+  .chip {
+    @apply hand inline-flex items-center gap-1 rounded-full border border-[color:var(--ink)] px-2 py-px text-[12px] leading-5;
+  }
+
+  .chip-ink {
+    @apply hand inline-flex items-center gap-1 rounded-full bg-[color:var(--ink)] px-2 py-px text-[12px] leading-5 text-[color:var(--paper)];
+  }
+
+  .table-base {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .table-base th {
+    @apply hand border-b-[1.5px] border-[color:var(--ink)] px-2 py-2 text-left text-[12px] font-normal text-[color:var(--pencil)];
+  }
+
+  .table-base td {
+    @apply border-b border-dashed border-[color:var(--line)] px-2 py-2 align-top;
+  }
 }
 
-.table-base {
-  @apply w-full border-collapse text-sm;
+@keyframes ipw-blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
 }
 
-.table-base th {
-  @apply border-b border-black px-2 py-2 text-left font-mono text-[11px] font-normal uppercase tracking-wider text-neutral-500;
+.dots span {
+  animation: ipw-blink 1.2s infinite both;
 }
-
-.table-base td {
-  @apply border-b border-neutral-200 px-2 py-1.5 align-top;
-}
-
-.chip {
-  @apply inline-block border border-black px-1.5 py-px font-mono text-[11px] leading-4;
-}
-
-.chip-solid {
-  @apply inline-block border border-black bg-black px-1.5 py-px font-mono text-[11px] leading-4 text-white;
-}
-
-.btn {
-  @apply inline-flex items-center gap-2 border border-black px-3 py-1.5 font-mono text-xs uppercase tracking-wider hover:bg-black hover:text-white disabled:opacity-40;
-}
-
-.btn-solid {
-  @apply inline-flex items-center gap-2 border border-black bg-black px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-white hover:bg-white hover:text-black disabled:opacity-40;
-}
+.dots span:nth-child(2) { animation-delay: 0.2s; }
+.dots span:nth-child(3) { animation-delay: 0.4s; }
