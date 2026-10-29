@@ -3173,3 +3173,4 @@ Plan cells restarted with the finished lines commented out.
   lpb-l2s75 done (88 steps; best 75: +43.8 / -1.1). lpb-l2s50-50 is the best so far (+47.7 / -1.0, at the -1 line).
   GPU 2 now trains lpb-adar1 (194 steps); GPU 1 scoring lpb-l2s50-100.
 - ~16:00: lpb-l2s50-100: +47.6% / -1.2 (svamp +48/-1.2, mbpp +52/-6.2, ifeval +52/+3.1, simple +34/+1.9, multiple +36/-3.1, no-fit +41/0.0). lpb-l2s50 done (123 steps; best step 50: +47.7 / -1.0). GPU 1 now trains lpb-dast (183 steps, step 40, pairs ordered right 70%); GPU 2 trains lpb-adar1 (step 135/194).
+- 15:27: lpb-adar1-25 (Ada-R1: shortest right > the 2 longest answers, protection p<0.5): +48.5% / +0.4 (svamp +61/-3.1, mbpp +52/+5.0, ifeval +42/+1.9, simple +33/-3.1, multiple +36/-3.7, no-fit +40/0.0). Best so far. lpb-adar1 trained 194 steps; 50-150 being scored. lpb-dast at step 130/183 (pairs ordered right ~70-80%: DAST's 'longer wrong > shorter wrong' pairs are harder to learn).
