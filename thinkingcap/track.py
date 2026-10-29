@@ -228,6 +228,7 @@ def main():
     parser.add_argument("--dp-chunk", type=int, default=150, help="poolmore: questions per generation chunk (dp10, code only: "
                         "600, so a few very long answers do not leave the GPU nearly idle at the end of every chunk)")
     parser.add_argument("--dp-more-cap", type=int, default=0, help="poolmore: most questions answered per half (0: all)")
+    parser.add_argument("--dp-think-bins-part", default="", help="poolmore select: select_pool.py --think-bins-part")
     parser.add_argument("--dp-if-poor", default="", help="poolmore: run only if this pool's check leaves code off (dp11: dp10)")
     parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
     parser.add_argument("--lp-recipe", default="long2short", help="lupin: lupin_pairs.py recipe")
@@ -2448,7 +2449,7 @@ def poolmore(args):
     selected = Path(f"data/pool-{name}.jsonl")
     py("select_pool.py", "--pool", union, "--rollouts", merged, "--reference", ROOT / "v4-base", BASE,
        "--per-benchmark", args.dp_per_benchmark, "--seed", args.data_seed, "--out", selected,
-       "--think-bins", args.dp_think_bins)
+       "--think-bins", args.dp_think_bins, *(["--think-bins-part", args.dp_think_bins_part] if args.dp_think_bins_part else []))
     rows = [json.loads(l) for l in selected.read_text().splitlines() if l.strip()]
     random.Random(args.data_seed).shuffle(rows)
     per = Counter()

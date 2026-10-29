@@ -55,6 +55,8 @@ def main():
     parser.add_argument("--per-benchmark", type=int, default=3000, help="questions per benchmark (BFCL's 3 parts share one)")
     parser.add_argument("--think-bins", type=int, default=3,
                         help="thinking bins per solve bin (dp8: 4, quartiles, so p25 / p75 are matched too)")
+    parser.add_argument("--think-bins-part", default="",
+                        help="per-part override, e.g. bfcl_simple_python=8 (dp11: simple's long tail kept missing)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -77,14 +79,16 @@ def main():
     total = sum(BFCL_SIZES.values())
     targets |= {p: round(args.per_benchmark * n / total) for p, n in BFCL_SIZES.items()}
     pool, report, lines = [], {}, ["part: kept/wanted; cells (solve bin x thinking bin) choosing share vs kept share"]
+    overrides = dict((k, int(v)) for k, v in (x.split("=") for x in args.think_bins_part.split(",") if x))
     for part in PARTS:
         want = targets[part]
+        nbins = overrides.get(part, args.think_bins)
         refs = [features(a) for a in ref[part].values()]
         assert refs, f"no choosing-set answers for {part}"
         medians = sorted(t for _, t in refs)
-        edges = [medians[k * len(medians) // args.think_bins] for k in range(1, args.think_bins)]
+        edges = [medians[k * len(medians) // nbins] for k in range(1, nbins)]
         cell_ref = Counter((solve_bin(s), think_bin(t, edges)) for s, t in refs)
-        cells = [(a, b) for a in range(4) for b in range(args.think_bins)]
+        cells = [(a, b) for a in range(4) for b in range(nbins)]
         share = {c: (cell_ref[c] + 0.5) / (len(refs) + 0.5 * len(cells)) for c in cells}
         bins, unanswered = defaultdict(list), 0
         for key, row in rows.get(part, {}).items():
@@ -103,7 +107,7 @@ def main():
             del bins[c][:len(got)]
             picked[c] += len(got)
             # nearest cells: same solve bin first (thinking +-1, +-2), then solve +-1
-            order = sorted((d for d in cells if d != c), key=lambda d: (abs(d[0] - c[0]) * args.think_bins + abs(d[1] - c[1])))
+            order = sorted((d for d in cells if d != c), key=lambda d: (abs(d[0] - c[0]) * nbins + abs(d[1] - c[1])))
             for d in order:
                 if len(got) >= need[c]:
                     break

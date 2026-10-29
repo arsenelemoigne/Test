@@ -3101,3 +3101,18 @@ Built and queued after the 10 answers (both GPUs):
 - Red-flag rule (user, 29 Oct ~02:00: 'let it drift to <10% for any one data type'): a screen variation is stopped/flagged only if it loses 10 points or more on any one data type at every checkpoint. Finalist rule unchanged (overall accuracy change better than -1 on the choosing set).
 - 02:10: dp10 code answering done on both GPUs (1,200 x4 per half). GPU 1 -> dp10 select + check (seed 17); GPU 2 in dp11 b waiting for dp10's check (automatic decision).
 - 02:25: dp10 selection: code (mbpp) 56% vs choosing 54%, median thinking 1045 vs 1051 (dp9 55 / 1034), borrowed 68 (dp9 39); other parts as dp9 (simple 83 vs 87, glaive 881 + toolace 546). Held-out check (seed 17) running.
+
+### 2026-10-29 ~03:15 — dp10 HELD-OUT CHECK (seed 17): 35/36 vs both
+| part | accuracy (both) | median thinking | verdict |
+|---|---|---|---|
+| svamp | 87 vs 88 | 418 vs 366 (+14%); p75 593 vs 585 | OK |
+| mbpp | 60 vs 53 [44,64] (+7.0) | 879 vs 1054 (-17%); **p75 1790 vs 2220 (-19%, inside [1612,3289])** | OK (dp9 p75 1541 CHECK): 8 answers on 2,400 code questions fixed the tail |
+| bfcl_simple | 84 vs 88 | 132 vs 143; **p75 160 vs 199 [171,221] -20%** | p75 CHECK (11 tokens = 6.4% outside: not a near miss) |
+| bfcl_multiple | 78 vs 78 | 157 vs 175 | OK |
+| bfcl_irrelevance | 85 vs 79 | 140 vs 129 | OK |
+| ifeval | 60 vs 51 [41,61] | 288 vs 316; p75 395 vs 457 | OK |
+Choosing-only: also mbpp p75 -38%, simple accuracy -7.1, simple p75 -23%.
+Code rule (user): accuracy +7.0 pts (> 5) and median -17% (> 10%) -> dp11 RUNS (next 1,200 code questions per half).
+Simple's long tail missed in dp8/dp9/dp10 (157 / 166 / 160 vs 199): a selection blind spot (quartile bins: our
+top-quartile simple questions think less than the eval's). dp11's selection now uses 8 thinking bins for bfcl_simple
+only (select_pool.py --think-bins-part; tested on synthetic data), so its tail is matched more finely. Other parts unchanged.
