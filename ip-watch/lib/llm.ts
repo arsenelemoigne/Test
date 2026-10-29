@@ -87,7 +87,12 @@ export async function extractJson<T>(system: string, user: string, label: string
   try {
     const { message } = await chat({ messages: [{ role: "system", content: system }, { role: "user", content: user }], json: true, temperature: 0, label, tier });
     const raw = (message.content ?? "").replace(/^```(?:json)?\s*|\s*```$/g, "");
-    return JSON.parse(raw) as T;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      // Some models wrap the object in a sentence; keep the outermost braces.
+      return JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) as T;
+    }
   } catch {
     return null;
   }
