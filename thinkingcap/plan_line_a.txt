@@ -182,12 +182,16 @@
 # drop3 (user 28 Oct: delete some, keep the strong candidates of methods A-H; runs on BOTH runtimes so no local copy is re-uploaded; drop2's names re-listed to clear their local copies)
 # dp10 (user: option A): code candidates brought to 8 answers (dp8+dp9 answers reused for the rest), same selection seed so only code changes, check seed 17
 # done: dropmodels --name drop3 --drop ca1-soup-10=ca1-s0 sb1-10=sb1-shorterbetter sb1-20=sb1-shorterbetter stopB5-soup-10=stopB5-s0 stopB5-soup-15=stopB5-s0 stopB5-soup-20=stopB5-s0 stopB5-soup-25=stopB5-s0 stopB5-soup-30=stopB5-s0 drpo3b-5=drpo3b-drpo drpo3b-10=drpo3b-drpo drpo3b-15=drpo3b-drpo drpo3d-5=drpo3d-drpo drpo3d-10=drpo3d-drpo drpo3d-15=drpo3d-drpo drpo3d-20=drpo3d-drpo drpo3f-5=drpo3f-drpo drpo1-20=drpo1-drpo drpo1-40=drpo1-drpo drpo1-60=drpo1-drpo stopV2-soup-25=stopV2-s0 stopV2-soup-50=stopV2-s0 stopV2-soup-75=stopV2-s0 stopV2-soup-100=stopV2-s0 stopV3-soup-25=stopV3-s0 stopV3-soup-50=stopV3-s0 stopV3-soup-75=stopV3-s0 stopV3-soup-100=stopV3-s0 stopV3-soup-150=stopV3-s0 stopV3-soup-200=stopV3-s0 gold1-step-100=gold1 gold1-step-200=gold1 gold1-step-300=gold1 gold1-step-400=gold1 gold1-step-500=gold1 gold1-step-600=gold1 gold1-step-660=gold1 teach1c-rel0.05=teach1c-teach teach1c-rel0.1=teach1c-teach teach1-rel0.05=teach1-teach teach1-rel0.1=teach1-teach drpo2-5=drpo2-drpo drpo2-10=drpo2-drpo drpo2-15=drpo2-drpo drpo2-20=drpo2-drpo drpo2-25=drpo2-drpo drpo2-30=drpo2-drpo drpo2-40=drpo2-drpo drpo2-50=drpo2-drpo drpo2-60=drpo2-drpo sb2-5=sb2-shorterbetter sb2-10=sb2-shorterbetter mf1-soup-50=mf1-s0 mf1-soup-75=mf1-s0 mf1-soup-100=mf1-s0 mf1-soup-150=mf1-s0
-poolmore --name dp10 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9 --dp-more-target 8 --data-seed 81 --dp-check-seed 17 --dp-chunk 600 --dp-more-cap 1200 --dp-step b
+# done/replaced: poolmore --name dp10 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9 --dp-more-target 8 --data-seed 81 --dp-check-seed 17 --dp-chunk 600 --dp-more-cap 1200 --dp-step b
 # dp11 (user 29 Oct ~01:00: run 1,200 more code questions per half unless dp10's code is within 5 accuracy points and 10% median / p75 thinking; decided by code_close_enough)
-poolmore --name dp11 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9,dp10 --dp-more-target 8 --dp-more-cap 1200 --dp-chunk 600 --data-seed 81 --dp-check-seed 19 --dp-if-poor dp10 --dp-step b
-lupinanswers --la-pool dp10 --dp-step b
-lupinanswers --la-pool dp11 --dp-step b
+# done/replaced: poolmore --name dp11 --dp-reuse dp9n-all --dp-more-parts mbpp --dp-more-extra dp8,dp9,dp10 --dp-more-target 8 --dp-more-cap 1200 --dp-chunk 600 --data-seed 81 --dp-check-seed 19 --dp-if-poor dp10 --dp-step b
+# done/replaced: lupinanswers --la-pool dp10 --dp-step b
+# done/replaced: lupinanswers --la-pool dp11 --dp-step b
 # LUPIN round 1 screen (user 29 Oct: run all steps): pairs from the 10 answers, matched to the eval (lupin_select.py), DPO 1 seed, checkpoints 50-200 scored on the choosing set x4
-lupin --name lp-l2s75 --lp-recipe long2short --lp-min-solve 0.75 --seeds 0 --dpo-steps 50 100 150 200
-lupin --name lp-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200
+# done/replaced: lupin --name lp-l2s75 --lp-recipe long2short --lp-min-solve 0.75 --seeds 0 --dpo-steps 50 100 150 200
+# done/replaced: lupin --name lp-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200
+# 29 Oct ~07:00: dp11 30/36 (worse than dp10 35/36: the check swings run to run) -> dp10 is the training pool (user: 'if close enough, don't wait')
+lupinanswers --la-pool dp10 --la-force dp10-35of36-only-simple-p75-11tok-out_dp11-30of36 --dp-step b
+lupin --name lp-l2s75 --lp-recipe long2short --lp-min-solve 0.75 --seeds 0 --dpo-steps 50 100 150 200 --lp-pool dp10
+lupin --name lp-adar1 --lp-recipe adar1 --lp-min-solve 0.5 --seeds 0 --dpo-steps 50 100 150 200 --lp-pool dp10
 end

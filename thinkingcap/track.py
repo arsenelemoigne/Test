@@ -210,6 +210,7 @@ def main():
     parser.add_argument("--dp-step", default="a", choices=("a", "b", "select"), help="buildpool2 / poolfix: answer half a / b, or select")
     parser.add_argument("--dp-oversample", type=float, default=1.6, help="buildpool2: candidates per kept question")
     parser.add_argument("--la-pool", default="dp6", help="lupinanswers: the checked pool to answer")
+    parser.add_argument("--la-force", default="", help="lupinanswers: open the gate anyway, with this reason (logged)")
     parser.add_argument("--la-samples", type=int, default=6, help="lupinanswers: new answers per question (4 reused)")
     parser.add_argument("--dp-reuse", default="dp3", help="poolfix: the answered pool whose other parts are reused")
     parser.add_argument("--dp-parts", default="svamp,bfcl_irrelevance", help="poolfix: parts given new candidates")
@@ -2639,7 +2640,7 @@ def lupinanswers(args):
     "verdict: ALL OK"; otherwise it says so and does nothing. Data only: no training here."""
     import time
     name = args.la_pool
-    for marker in (f"{name}-skipped", f"{name}-superseded"):  # dp10 / dp11: only the pool that is used gets answers
+    for marker in ((f"{name}-skipped", f"{name}-superseded") if not args.la_force else ()):  # dp10 / dp11: only the pool that is used gets answers
         drive_sync("restore", only=[str(BON / marker)])
         if (BON / marker).exists():
             print(f"lupinanswers: {name} {marker.split('-')[-1]} ({(BON / marker).read_text().strip()}); nothing to do", flush=True)
@@ -2653,7 +2654,9 @@ def lupinanswers(args):
         print(f"waiting for {report} on Drive", flush=True)
         time.sleep(300)
     near, misses = near_misses_only(report.read_text()) if report.exists() else (False, [])
-    if report.exists() and "verdict: ALL OK" not in report.read_text() and near:
+    if args.la_force:  # an explicit decision, logged (29 Oct: dp10 35/36 chosen over dp11 30/36)
+        print(f"GATE: {name} forced open: {args.la_force}", flush=True)
+    elif report.exists() and "verdict: ALL OK" not in report.read_text() and near:
         print(f"GATE: {name} not ALL OK but only near misses (user: close enough, go): " + " | ".join(misses), flush=True)
     elif not report.exists() or "verdict: ALL OK" not in report.read_text():
         print(f"GATE: {name}'s pool check is not ALL OK; no answers generated. {report.read_text()[-300:] if report.exists() else ''}",

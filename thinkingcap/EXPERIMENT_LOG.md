@@ -3121,3 +3121,18 @@ only (select_pool.py --think-bins-part; tested on synthetic data), so its tail i
   pool->eval, and the share of evaluation questions whose closest pool question is below the evaluation's own 10th
   percentile (missed subjects); template lines (>30% of a part's questions) removed; fresh set excluded. Logic tested
   with a stub encoder (the Mac's scratch venv was wiped by the shutdown).
+
+### 2026-10-29 ~07:00 — dp11 HELD-OUT CHECK (seed 19): 30/36 vs both, 26/36 choosing, 36/36 q40 -> dp10 chosen
+dp11 CHECK lines (both): svamp median reply +15% / thinking 421 vs 366 (+15%); bfcl_simple accuracy 78 vs 88 (-9.7)
+and p75 166 vs 199 (-17%); no-fit accuracy 88 vs 79 (+8.3); ifeval accuracy 65 vs 51 (+13.6). Code itself passed.
+dp11 changed only code's answers and simple's bins, yet math, IFEval and no-fit moved by several points: the 8-bin change
+shifted the selection's random draws for the later parts, and the check (200 questions x 4) swings run to run
+(IFEval 60 -> 65, simple 84 -> 78). Iterating further would chase noise. Gate closed for dp11 (as designed).
+Topic check on dp11's pool (report only; eval questions share their authors' style): eval->eval vs eval->pool median
+cosine: svamp 0.95 vs 0.65 (SVAMP is near-duplicate stories: the metric is meaningless there), mbpp 0.75 vs 0.66 (41%
+of MBPP questions below MBPP's own 10th percentile), simple 0.59 vs 0.37 (63%), multiple 0.51 vs 0.31 (59%), no-fit
+0.49 vs 0.35 (46%), ifeval 0.50 vs 0.47 (13%, OK). BFCL's science/math-calculation questions are the farthest from ours.
+DECISION (user: "if close enough to eval data, don't wait for me and launch next steps"): dp10 (35/36; every accuracy
+and every code measure OK; only miss bfcl_simple p75 160 vs 199, 11 tokens outside its interval) is the training pool.
+lupinanswers --la-force on dp10 (both halves), topic check on dp10, then the LUPIN screen with --lp-pool dp10.
+Plan cells restarted with the finished lines commented out.
