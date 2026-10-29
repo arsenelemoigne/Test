@@ -16,10 +16,13 @@ const SOURCES = [
   { name: "Annuaire des entreprises", who: "DINUM (FR)", use: "SIREN, dirigeants, siège", access: "libre" },
   { name: "BODACC", who: "DILA (FR)", use: "annonces légales", access: "libre" },
   { name: "EUR-Lex · CURIA", who: "Office des publications de l'UE (LU) · CJUE", use: "droit et jurisprudence de l'UE", access: "libre" },
-  { name: "RDAP", who: "AFNIC (FR), Verisign", use: "titulaire d'un nom de domaine", access: "libre" },
-  { name: "urlscan.io", who: "urlscan GmbH, Aachen (DE)", use: "captures horodatées, domaines similaires", access: "clé API" },
-  { name: "Recherche d'annonces et visuelle", who: "API de résultats (Shopping, Lens, Amazon, eBay)", use: "veille des contrefaçons", access: "clé API" },
-  { name: "Recherche par image", who: "Google Cloud Vision (détection web), optionnel", use: "pages montrant le produit ou une copie, à partir d'une photo", access: "clé API" },
+  { name: "RDAP", who: "AFNIC (FR), Verisign, rdap.org", use: "titulaire et bureau d'enregistrement d'un domaine ; domaines détenus par la marque écartés", access: "libre" },
+  { name: "Recherche web", who: "connecteur de recherche de l'inférence", use: "repli de l'assistant ; requêtes ciblées sur les copies (dupe, réplique, places de marché)", access: "inclus" },
+  { name: "Google Lens · Google Shopping", who: "SearchApi LLC, New York (US)", use: "produits visuellement proches de la photo ; annonces avec prix et vendeur", access: "clé API" },
+  { name: "Amazon · eBay", who: "SearchApi LLC, New York (US)", use: "annonces sur les places de marché", access: "clé API" },
+  { name: "Google Cloud Vision", who: "Google, point d'accès UE (détection web)", use: "pages qui reprennent la photo du produit, à l'identique ou en partie", access: "clé API" },
+  { name: "Pages officielles du titulaire", who: "site de la marque", use: "photo de référence du produit authentique", access: "libre" },
+  { name: "urlscan.io", who: "urlscan GmbH, Aachen (DE)", use: "captures horodatées non publiques, domaines similaires", access: "clé API" },
 ];
 
 export default function ArchitecturePage() {
@@ -69,8 +72,8 @@ export default function ArchitecturePage() {
       <section>
         <h2 className="hand text-[18px]">Sources et API interrogées</h2>
         <p className="text-[13px] text-[color:var(--pencil)]">
-          Ce ne sont pas des sous-traitants : l&apos;application leur adresse des requêtes portant sur des informations publiques (nom d&apos;une marque, d&apos;une société, URL publique), sans
-          transmettre de données confidentielles du client.
+          Ce ne sont pas des sous-traitants : l&apos;application leur adresse des requêtes portant sur des informations publiques (nom d&apos;une marque ou d&apos;une société, description et
+          photo publiques d&apos;un produit, URL publique), sans transmettre de données confidentielles du client.
         </p>
         <div className="mt-2 overflow-x-auto">
           <table className="table-base min-w-[720px]">
@@ -101,7 +104,11 @@ export default function ArchitecturePage() {
           <h2 className="hand text-[16px]">Règles</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>Secret professionnel : les échanges avec le client et le registre restent dans l&apos;application et chez ses sous-traitants européens.</li>
-            <li>Ce qui sort vers les sources : uniquement le nom d&apos;une marque, d&apos;une société ou une URL publique.</li>
+            <li>Ce qui sort vers les sources : uniquement le nom d&apos;une marque ou d&apos;une société, la description publique d&apos;un produit, une URL ou une photo publique (site officiel, registre).</li>
+            <li>
+              Recherche de contrefaçons : le modèle identifie d&apos;abord le produit protégé, puis interroge le web, les places de marché et la recherche par image ; les sites officiels et les
+              domaines du titulaire sont écartés, et chaque page retenue est comparée visuellement au produit authentique. Les résultats restent « à vérifier » par l&apos;avocat.
+            </li>
             <li>Chaque réponse de l&apos;assistant cite ses sources ; un lien qui n&apos;a pas été renvoyé par une source est signalé comme non vérifié.</li>
             <li>Les captures sont horodatées et identifiées par leur empreinte SHA-256 ; elles ne remplacent pas un constat de commissaire de justice.</li>
           </ul>

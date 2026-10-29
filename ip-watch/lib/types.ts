@@ -125,6 +125,7 @@ export type ConversationMessage = {
   marks?: string[];
   sources?: { name: string; count: number }[];
   traceId?: string | null;
+  runId?: string | null;
   at: string;
 };
 

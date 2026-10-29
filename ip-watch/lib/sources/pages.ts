@@ -7,7 +7,8 @@ export async function pageImages(url: string, hint: string, limit = 4): Promise<
   const html = (await res.text()).slice(0, 800_000);
   const abs = (src: string) => {
     try {
-      return new URL(src.replace(/&amp;/g, "&"), res.url || url).toString();
+      const decoded = src.replace(/&#x2F;|&#47;/gi, "/").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+      return new URL(decoded, res.url || url).toString();
     } catch {
       return null;
     }

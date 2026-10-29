@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const conversationId = await store
       .appendConversation(client?.id ?? null, body?.conversationId ?? null, shown, [
         { role: "user", content: shown, marks: body?.display?.marks ?? [], at },
-        { role: "assistant", content: out.answer, sources: out.sources, traceId: trace.id, at: new Date().toISOString() },
+        { role: "assistant", content: out.answer, sources: out.sources, traceId: trace.id, runId: out.runId, at: new Date().toISOString() },
       ])
       .catch(() => body?.conversationId ?? null);
     return NextResponse.json({ ...out, traceId: trace.id, steps: trace.steps, conversationId });

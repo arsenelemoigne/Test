@@ -9,7 +9,7 @@ import { useTrace } from "./Trace";
 import type { TraceStep } from "@/lib/trace";
 import type { ConversationMessage, Mark } from "@/lib/types";
 
-type Message = { role: "user" | "assistant"; content: string; sources?: { name: string; count: number }[]; marks?: string[]; steps?: TraceStep[]; traceId?: string | null };
+type Message = { role: "user" | "assistant"; content: string; sources?: { name: string; count: number }[]; marks?: string[]; steps?: TraceStep[]; traceId?: string | null; runId?: string | null };
 type Saved = { id: string; title: string; updatedAt: string; count: number };
 
 const storageKey = (clientId: string | undefined) => `ipw-conversation-${clientId ?? "aucun"}`;
@@ -22,7 +22,7 @@ const remember = (key: string, id: string | null) => {
   }
 };
 
-function AssistantMessage({ m }: { m: Message }) {
+function AssistantMessage({ m, onRun }: { m: Message; onRun?: (runId: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div>
@@ -31,6 +31,11 @@ function AssistantMessage({ m }: { m: Message }) {
       </div>
       {m.sources && m.sources.length > 0 && (
         <p className="label mt-2">sources consultées : {m.sources.map((s) => (s.count > 1 ? `${s.name} ×${s.count}` : s.name)).join(" · ")}</p>
+      )}
+      {m.runId && onRun && (
+        <button type="button" className="btn mt-2 py-0.5 text-[12px]" onClick={() => onRun(m.runId!)}>
+          suivre la recherche : étapes, résultats, captures →
+        </button>
       )}
       <div className="mt-1 flex flex-wrap items-start gap-x-3">
         <CopyButton getHtml={() => ref.current?.innerHTML ?? ""} text={m.content} />
@@ -153,7 +158,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
         return;
       }
       const c = (await res.json()) as { id: string; messages: ConversationMessage[] };
-      setMessages(c.messages.map((m) => ({ role: m.role, content: m.content, marks: m.marks, sources: m.sources, traceId: m.traceId })));
+      setMessages(c.messages.map((m) => ({ role: m.role, content: m.content, marks: m.marks, sources: m.sources, traceId: m.traceId, runId: m.runId })));
       setConversationId(c.id);
       setFocus([]);
       setListOpen(false);
@@ -215,7 +220,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
-      setMessages([...next, { role: "assistant", content: json.answer, sources: json.sources, steps: json.steps, traceId: json.traceId }]);
+      setMessages([...next, { role: "assistant", content: json.answer, sources: json.sources, steps: json.steps, traceId: json.traceId, runId: json.runId }]);
       if (json.conversationId) {
         setConversationId(json.conversationId);
         remember(key, json.conversationId);
@@ -290,7 +295,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
                 {m.content}
               </div>
             ) : (
-              <AssistantMessage key={i} m={m} />
+              <AssistantMessage key={i} m={m} onRun={onRunStarted} />
             ),
           )}
           {busy &&

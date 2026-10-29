@@ -402,8 +402,21 @@ function countByCountry(findings: Finding[]): Record<string, number> {
   return out;
 }
 
+const SCORE_BATCH = 50;
+const MAX_SCORED = 200;
+
+// Every result is judged by the model, in parallel batches.
 async function score(findings: Finding[], extra: Map<number, { snippet: string | null; thumbnail: string | null }>, client: Client, mark: Mark, plan: Plan | null): Promise<string> {
-  const batch = findings.slice(0, 80).map((f, i) => ({ i, titre: f.title, site: hostOf(f.url), url: f.url.slice(0, 160), extrait: extra.get(f.id)?.snippet?.slice(0, 240) ?? null, prix: f.price, devise: f.currency, vendeur: f.seller, source: f.source }));
+  const chunks: Finding[][] = [];
+  for (let i = 0; i < Math.min(findings.length, MAX_SCORED); i += SCORE_BATCH) chunks.push(findings.slice(i, i + SCORE_BATCH));
+  const results = await Promise.all(chunks.map((chunk, k) => scoreBatch(chunk, extra, client, mark, plan, `watch-score-${k + 1}`)));
+  const n = results.reduce((a, r) => a + r.n, 0);
+  const dismissed = results.reduce((a, r) => a + r.dismissed, 0);
+  return `${n} résultat(s) évalué(s), ${dismissed} écarté(s) (officiel, presse, sans rapport)`;
+}
+
+async function scoreBatch(findings: Finding[], extra: Map<number, { snippet: string | null; thumbnail: string | null }>, client: Client, mark: Mark, plan: Plan | null, label: string): Promise<{ n: number; dismissed: number }> {
+  const batch = findings.map((f, i) => ({ i, titre: f.title, site: hostOf(f.url), url: f.url.slice(0, 160), extrait: extra.get(f.id)?.snippet?.slice(0, 240) ?? null, prix: f.price, devise: f.currency, vendeur: f.seller, source: f.source }));
   const out = await extractJson<{ scores?: { i: number; confiance: number; categorie?: string; motif: string }[] }>(
     [
       `Tu assistes un avocat en propriété intellectuelle. Marque surveillée : « ${mark.name} » (${mark.type}, classes ${mark.classes.join(", ") || "n.c."}), titulaire ${client.name}.`,
@@ -411,10 +424,11 @@ async function score(findings: Finding[], extra: Map<number, { snippet: string |
       "Pour chaque résultat, donne une catégorie et la probabilité (0-100) qu'il s'agisse d'une atteinte à vérifier.",
       "Catégories : copie (imitation, « dupe », « inspired », réplique), usage_du_signe (le signe utilisé par un tiers pour vendre), revente (occasion d'un produit authentique, épuisement des droits), officiel (titulaire ou revendeur agréé), presse, sans_rapport.",
       "Élevée : copie explicite, prix très inférieur au prix officiel, place de marché ou boutique inconnue. Mets 10 au plus pour officiel, presse et sans_rapport.",
+      "Un produit d'une autre catégorie que le produit protégé (par exemple un parfum du même nom quand il s'agit d'un bijou) est sans_rapport.",
       'Réponds en JSON : {"scores":[{"i":0,"confiance":80,"categorie":"copie","motif":"12 mots maximum"}]}.',
     ].filter(Boolean).join("\n"),
     JSON.stringify(batch),
-    "watch-score",
+    label,
     "strong",
   );
   let n = 0;
@@ -431,5 +445,5 @@ async function score(findings: Finding[], extra: Map<number, { snippet: string |
     f.reason = reason;
     n++;
   }
-  return `${n} résultat(s) évalué(s), ${dismissed} écarté(s) (officiel, presse, sans rapport)`;
+  return { n, dismissed };
 }
