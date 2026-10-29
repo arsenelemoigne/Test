@@ -3222,3 +3222,4 @@ Plan cells restarted with the finished lines commented out.
   its confirm), 3 seeds averaged, answers questions_ref20261024 (40 per part, never fresh / choosing / questions_40) x4,
   scored vs the original Qwen on the same set (refsets). Report only: the fresh set decides v1; a large disagreement
   between fresh and cross-check is a red flag before round 2.
+- 20:30 (user): deployment added to the roadmap (LUPIN_SPEC.md 'Deployment'): after the final model, serve it with vLLM on a hosted L4 (HF Inference Endpoint / RunPod / Modal, ~$0.5-1/h, user approves spending), monitor /metrics, side-by-side demo vs the original Qwen.
