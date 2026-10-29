@@ -52,6 +52,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/historique" className="btn-quiet text-[12px]">
               historique
             </Link>
+            {role === "avocat" && (
+              <Link href="/diagnostic" className="btn-quiet text-[12px]">
+                diagnostic
+              </Link>
+            )}
             <CoulissesToggle />
           </span>
         </footer>
