@@ -3298,3 +3298,17 @@ Plan cells restarted with the finished lines commented out.
   levers are then combined.
 - ~22:40: lpc-adar1 cross-check soup 75: +48.9 / -3.0 (25: +48.6 / -3.4; 50: +46.5 / -3.4). GPU 2 on dial-adar1; GPU 1 on crosscheck lpc-l2s50e. Both runtimes alive (Drive logs).
 - 23:45: both runtimes had disconnected at ~22:03 (Mac restart); reconnected (L4), Drive mounted (user approved), setup running, plans restart from Drive state (GPU 1: crosscheck cx-l2s50e / tooltopup tools1; GPU 2: dial-adar1 / tooltopup nofit1). ~1.5 h lost.
+
+### 2026-10-30 ~00:15 — user: representative of the WHOLE eval (iterate the data step), log + plot every result, let all run
+- Matching reference widened: references() = the original Qwen on choosing + questions_40 + refsets 20261024/20261025
+  (160 questions per part, never the fresh set; aggregate statistics only); used by poolup's select/check and by
+  lupin_select for every new run.
+- DATA LOOP: stage `poolup dp12` (GPU 1 after tools1 + code1; waits for nofit1 from GPU 2): candidate set = pool dp10 +
+  the three top-ups, each question's 10 newest answers; select_pool.py against the 160-per-part references (4 thinking
+  bins, 8 for simple); held-out check on new answers (seed 29, 200 per part x4) with pool_check.py against the same
+  references. All lpu-* runs now train on dp12 (--lp-pool dp12 --lp-answers-pool dp10) and only if its check passes
+  (--lp-gate: ALL OK or near misses). If it fails, the data step is iterated (dp13...) before any training.
+- Results table: every score line also appends a row to runs/bon/results.csv (name, run, base, saved, accuracy, per part),
+  for plots (dashboard).
+- No early stop: every queued experiment runs; v1 is chosen at the end from all results (user). "Combine levers" = a run
+  with the flags of two or more experiments that each beat the baseline, then a 3-seed fresh confirm.
