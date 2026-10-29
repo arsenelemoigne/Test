@@ -3156,3 +3156,10 @@ Plan cells restarted with the finished lines commented out.
   scored at 25/50/75/100/150 where they exist. lp-l2s75's training (a few minutes) discarded.
 - ~13:45 (user: add the 1.2x variant; pairs mixed in one epoch, not ordered; curriculum = spec M11, later on the winner): lupin_pairs.py --easy-ratio (always-solved questions: shorten from 1.2x) + --shorten-cap (shorten per part up to N x guard; always-solved questions give no guard pair, so the 1x cap would discard the extra pairs). Queued on GPU 2 after lpb-adar1: lpb-l2s50e (long2short, protection p<0.5, easy ratio 1.2, cap 2). Tested on synthetic answers. lpb-l2s75 pairs: 1,452 kept (fill 0.45, limited by no-fit's always-solved cells), ~90 steps.
 - ~14:15: lpb-l2s50 pairs 2,012 kept (fill 0.63; guard 492, shorten 1,382, right 138), 123 DPO steps, training (GPU 1, step 10). lpb-l2s75 1,452 pairs, 88 steps, training (GPU 2, step 25; pairs ordered right 78-90%, tripwire 0).
+- ~14:05 FIRST LUPIN SCREEN SCORES (choosing 240 x 4 vs v4-base; tokens saved / accuracy change):
+  | checkpoint | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | lpb-l2s75-25 | +37.5% / -1.5 | +52 / 0.0 | +44 / -5.0 | +15 / -1.3 | +31 / -0.6 | +31 / +1.9 | +37 / -0.6 |
+  | lpb-l2s75-50 | +43.7% / -1.5 | +55 / -5.0 | +53 / -2.5 | +25 / +3.1 | +34 / +1.9 | +37 / -3.1 | +40 / -3.8 |
+  (choosing set: 40 questions per part x 4, so one part moves ~2.5 pts per question; per-part noise is large.)
+  lpb-l2s50 trained 123 steps, step-25 being scored.
