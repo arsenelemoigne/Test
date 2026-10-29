@@ -3208,3 +3208,10 @@ Plan cells restarted with the finished lines commented out.
   and questions_40: 160 per part. Only aggregate statistics are read; the fresh set stays untouched. In round 2, v1
   answers the same sets (refsets --rs-model <v1> --rs-tag v1) and select_pool / pool_check / lupin_select take all four
   as reference.
+- ~19:00 OPTIONAL module `codecut` (user: "add it as an optional module, make sure it doesn't spill on the others; if it
+  takes accuracy down, don't pursue it"), queued on GPU 2 after refsets: code questions of the pool solved >= half the
+  time (600), label_cuts.py on each one's longest right answer (6 paragraph-end cuts x 4 answers), targeted_pairs.py
+  code-only with --safe 1.0 (all 4 answers from the cut pass) and >= 25% shorter; 20% of lpb-l2s50e's code pairs
+  swapped for cut pairs, every other type's pairs identical. Same DPO / checkpoints, choosing set x4. Automatic verdict
+  vs lpb-l2s50e at the same steps: KEEP only if code thinks >= 3% less AND overall accuracy >= -1 AND code accuracy
+  >= -2.5 AND non-code accuracy >= -1 (no spill); otherwise DROPPED and not pursued.

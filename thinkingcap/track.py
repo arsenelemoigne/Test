@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -232,6 +232,9 @@ def main():
     parser.add_argument("--dp-more-cap", type=int, default=0, help="poolmore: most questions answered per half (0: all)")
     parser.add_argument("--dp-think-bins-part", default="", help="poolmore select: select_pool.py --think-bins-part")
     parser.add_argument("--dp-if-poor", default="", help="poolmore: run only if this pool's check leaves code off (dp11: dp10)")
+    parser.add_argument("--cc-base", default="lpb-l2s50e", help="codecut: the screened recipe whose matched pairs it builds on")
+    parser.add_argument("--cc-questions", type=int, default=600, help="codecut: code questions labelled")
+    parser.add_argument("--cc-dose", type=float, default=0.2, help="codecut: share of the code pairs swapped for cut pairs")
     parser.add_argument("--rs-model", default="", help="refsets: the model answering (default: the original Qwen)")
     parser.add_argument("--rs-tag", default="base", help="refsets: run name tag (runs/mvtf/v4-<tag>-<seed>)")
     parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
@@ -2672,6 +2675,110 @@ def lupin(args):
         print(score_line(f"{tag} ({'fresh 240 x 8' if args.lp_fresh else 'choosing 240 x 4'})", out, base=ref), flush=True)
 
 
+def codecut(args):
+    """OPTIONAL module (user, 29 Oct): code-only cut pairs, strict labels, small dose, on top of a screened recipe, and
+    dropped automatically if it costs accuracy or spills onto other types.
+    1. Code questions of the pool solved >= half the time (the protected ones never get length pressure), up to
+       --cc-questions: label_cuts.py on each one's longest right answer (thinking cut at up to 6 paragraph ends, the
+       model answers 4 times from each cut).
+    2. targeted_pairs.py, code only, --safe 1.0: a cut is safe only if ALL 4 answers from it pass the tests; pair =
+       earliest safe cut + a passing answer > the full answer, kept when >= 25% shorter.
+    3. The base recipe's matched pairs (--cc-base) with --cc-dose of its code pairs swapped for cut pairs: every
+       other type's pairs are byte-identical to the base run's, and code keeps its share.
+    4. Same DPO (seed 0) and checkpoints as the screen, scored on the choosing set x4.
+    5. Verdict against the base run at the same checkpoints (mean over the steps both have): KEEP only if code thinks
+       >= 3% less AND overall accuracy >= base - 1 AND code accuracy >= base - 2.5 AND non-code accuracy >= base - 1
+       (no spill); else DROPPED, and the module is not pursued."""
+    import statistics
+    name, base, pool_name = args.name, args.cc_base, lupin_pool(args)
+    allfile = BON / f"lupin-all-{pool_name}.jsonl"
+    drive_sync("restore", only=[str(allfile), str(BON / f"pairs-{base}"), f"data/pool-{pool_name}.jsonl",
+                                f"runs/mvtf/v4-{base}-*", "runs/mvtf/v4-base"])
+    keep = Path(f"data/{name}-keep.jsonl")
+    if not keep.exists():
+        code = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines()
+                if l.strip() and json.loads(l)["part"] == "mbpp"}
+        rate = defaultdict(list)
+        for line in open(allfile):
+            r = json.loads(line)
+            if r["id"] in code:
+                rate[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
+        ok = sorted(i for i, v in rate.items() if sum(v) / len(v) >= 0.5)
+        random.Random(args.data_seed).shuffle(ok)
+        keep.write_text("".join(json.dumps({"id": i}) + "\n" for i in ok[:args.cc_questions]))
+    cal, cut = BON / f"cuts-{name}", BON / f"pairs-{name}-cut"
+    if not (cal / "verdicts.jsonl").exists():
+        py("label_cuts.py", "--rollouts", allfile, "--keep", keep, "--out", cal, "--max-cuts", 6, "--samples", 4,
+           "--dtype", args.dtype)
+        drive_sync("save")
+    if not (cut / "pairs.jsonl").exists():
+        py("targeted_pairs.py", "--cal", cal, "--rollouts", allfile, "--keep", keep, "--out", cut,
+           "--shorten-sources", "kodcode", "--long-sources", "none", "--guard-sources", "none", "--safe", 1.0,
+           "--min-save", 0.25)
+    pairs = BON / f"pairs-{name}"
+    if not (pairs / "pairs.jsonl").exists():
+        rng = random.Random(args.data_seed)
+        rows = [json.loads(l) for l in (BON / f"pairs-{base}" / "pairs.jsonl").read_text().splitlines() if l.strip()]
+        cuts = [json.loads(l) | {"part": "mbpp", "kind": "shorten"} for l in (cut / "pairs.jsonl").read_text().splitlines()
+                if l.strip() and json.loads(l)["kind"] == "shorten"]
+        code_short = [k for k, r in enumerate(rows) if r["part"] == "mbpp" and r["kind"] == "shorten"]
+        n = min(len(cuts), round(args.cc_dose * sum(r["part"] == "mbpp" for r in rows)), len(code_short))
+        rng.shuffle(code_short)
+        rng.shuffle(cuts)
+        drop = set(code_short[:n])
+        mixed = [r for k, r in enumerate(rows) if k not in drop] + cuts[:n]
+        rng.shuffle(mixed)
+        pairs.mkdir(parents=True, exist_ok=True)
+        (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in mixed))
+        (pairs / "summary.txt").write_text(f"{name}: {base}'s {len(rows)} matched pairs with {n} code shorten pairs "
+                                           f"swapped for strict cut pairs ({len(cuts)} available); other types unchanged\n")
+        drive_sync("save")
+    print((pairs / "summary.txt").read_text(), flush=True)
+    rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
+    counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
+    start = Path("adapters") / f"fresh-{name}"
+    if not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
+    adapter = Path("adapters") / f"{name}-s0"
+    if not (adapter / "adapter_config.json").exists():
+        py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out",
+           adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 25,
+           "--epochs", 1, "--dtype", args.dtype, "--seed", 0)
+        drive_sync("save")
+    val = f"questions_val{VAL_SEED}"
+    diffs = []
+    for step in args.dpo_steps:
+        member = adapter / f"step-{step}"
+        theirs = ROOT / f"v4-{base}-{step}"
+        if not (member / "adapter_config.json").exists() or not (theirs / "records.jsonl").exists():
+            continue
+        out = ROOT / f"v4-{name}-{step}"
+        if not (out / "results.json").exists():
+            model = Path("/content/lupin-models") / f"{name}-{step}"
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters", f"{member}:1.0")
+            evaluate(out, samples=4, questions=val, model=model)
+            shutil.rmtree(model, ignore_errors=True)
+            drive_sync("save")
+        print(score_line(f"{name}-{step} (choosing 240 x 4)", out, base=ROOT / "v4-base"), flush=True)
+        mine, ref = compare(out, ROOT / "v4-base")["results"], compare(theirs, ROOT / "v4-base")["results"]
+        acc = lambda res, parts: statistics.fmean(res[p]["accuracy_delta"] for p in parts) * 100  # noqa: E731
+        others = [p for p in mine if p != "mbpp"]
+        diffs.append({"step": step,
+                      "code_saved": 100 * ((mine["mbpp"]["token_reduction"] or 0) - (ref["mbpp"]["token_reduction"] or 0)),
+                      "overall_acc": acc(mine, list(mine)) - acc(ref, list(ref)),
+                      "code_acc": 100 * (mine["mbpp"]["accuracy_delta"] - ref["mbpp"]["accuracy_delta"]),
+                      "other_acc": acc(mine, others) - acc(ref, others)})
+    if diffs:
+        m = {k: statistics.fmean(d[k] for d in diffs) for k in ("code_saved", "overall_acc", "code_acc", "other_acc")}
+        keep_it = m["code_saved"] >= 3 and m["overall_acc"] >= -1 and m["code_acc"] >= -2.5 and m["other_acc"] >= -1
+        text = (f"codecut {name} vs {base} (mean over steps {[d['step'] for d in diffs]}): code saving "
+                f"{m['code_saved']:+.1f} pts, overall accuracy {m['overall_acc']:+.1f}, code accuracy {m['code_acc']:+.1f}, "
+                f"other types {m['other_acc']:+.1f} -> {'KEEP (optional add to the recipe)' if keep_it else 'DROPPED (not pursued)'}")
+        (BON / f"{name}-verdict.txt").write_text(text + "\n" + json.dumps(diffs) + "\n")
+        drive_sync("save")
+        print(text, flush=True)
+
+
 def lupinanswers(args):
     """LUPIN step 1: 10 answers per question on the final pool (user, 28 Oct), by the ORIGINAL model. The pool's 4
     selection answers are reused; this answers 6 more (another sampling seed), half the pool per runtime (--dp-step).
@@ -3556,7 +3663,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
