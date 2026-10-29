@@ -246,6 +246,7 @@ def main():
     parser.add_argument("--lp-answers", type=int, default=10, help="lupin: answers per question used (newest first)")
     parser.add_argument("--lp-easy-ratio", type=float, default=0.0, help="lupin: lupin_pairs.py --easy-ratio")
     parser.add_argument("--lp-shorten-cap", type=float, default=1.0, help="lupin: lupin_pairs.py --shorten-cap")
+    parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
     parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
     parser.add_argument("--lp-dpo", default="", help="lupin: more dpo.py flags, e.g. '--nll 0'")
@@ -2669,7 +2670,8 @@ def lupin(args):
            *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []))
     if not (pairs / "pairs.jsonl").exists():
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", ROOT / "v4-base", BASE,
-           "--total", args.lp_total, "--out", pairs)
+           "--total", args.lp_total, "--out", pairs,
+           *(["--max-shorten-ratio", args.lp_balance] if args.lp_balance else []))
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]

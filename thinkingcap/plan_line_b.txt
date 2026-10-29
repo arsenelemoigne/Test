@@ -223,4 +223,6 @@ lupin --name lpb-right --lp-recipe rightwrong --lp-min-solve 0 --seeds 0 --lp-sa
 lupin --name lpc-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 1 2 --lp-fresh --lp-save 25 --dpo-steps 50 100 150 --lp-pool dp10
 # cross-check (user 29 Oct): confirmed soups on a NEW 240-question eval set x4 vs the original Qwen; report only
 crosscheck --name cx-l2s50e --cx-names lpc-l2s50e --cx-steps 50 100 150 --seeds 0 1 2
+# michal-bida's 1:1 balance kept AFTER matching (user 29 Oct ~21:30): long2short p<0.5, at most 1 shorten per be-right pair per part
+lupin --name lpb-l2s50bal --lp-recipe long2short --lp-min-solve 0.5 --lp-balance 1 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end
