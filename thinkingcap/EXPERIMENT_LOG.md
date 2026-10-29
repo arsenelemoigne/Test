@@ -3136,3 +3136,4 @@ DECISION (user: "if close enough to eval data, don't wait for me and launch next
 and every code measure OK; only miss bfcl_simple p75 160 vs 199, 11 tokens outside its interval) is the training pool.
 lupinanswers --la-force on dp10 (both halves), topic check on dp10, then the LUPIN screen with --lp-pool dp10.
 Plan cells restarted with the finished lines commented out.
+- 07:20: both plan cells restarted on the new plans (GPU 2 needed Runtime > Interrupt + a minute). GPU 1: lupinanswers dp10 a (gate forced), 750/6,000 questions x6 after ~10 min; GPU 2 starting lupinanswers dp10 b. Estimate: 10 answers done ~10:30-11:00, then topic check (GPU 1) and the LUPIN screen.
