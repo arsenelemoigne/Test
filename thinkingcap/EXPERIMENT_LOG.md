@@ -3174,3 +3174,18 @@ Plan cells restarted with the finished lines commented out.
   GPU 2 now trains lpb-adar1 (194 steps); GPU 1 scoring lpb-l2s50-100.
 - ~16:00: lpb-l2s50-100: +47.6% / -1.2 (svamp +48/-1.2, mbpp +52/-6.2, ifeval +52/+3.1, simple +34/+1.9, multiple +36/-3.1, no-fit +41/0.0). lpb-l2s50 done (123 steps; best step 50: +47.7 / -1.0). GPU 1 now trains lpb-dast (183 steps, step 40, pairs ordered right 70%); GPU 2 trains lpb-adar1 (step 135/194).
 - 15:27: lpb-adar1-25 (Ada-R1: shortest right > the 2 longest answers, protection p<0.5): +48.5% / +0.4 (svamp +61/-3.1, mbpp +52/+5.0, ifeval +42/+1.9, simple +33/-3.1, multiple +36/-3.7, no-fit +40/0.0). Best so far. lpb-adar1 trained 194 steps; 50-150 being scored. lpb-dast at step 130/183 (pairs ordered right ~70-80%: DAST's 'longer wrong > shorter wrong' pairs are harder to learn).
+- 16:30 screen (choosing 240 x 4; saved / accuracy):
+  | checkpoint | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | lpb-adar1-50 | +43.2 / +0.3 | +54 / +1.9 | +48 / -0.6 | +31 / +3.8 | +33 / -4.4 | +36 / -5.6 | +43 / -1.3 |
+  | lpb-adar1-75 | +47.1 / -1.4 | +53 / -0.6 | +55 / -1.9 | +42 / 0.0 | +31 / -1.9 | +35 / -5.6 | +42 / -1.9 |
+  | lpb-adar1-100 | +45.0 / -1.0 | +52 / +1.9 | +45 / -2.5 | +46 / -1.9 | +31 / -1.9 | +35 / -3.1 | +41 / 0.0 |
+  | lpb-adar1-150 | +51.4 / -1.7 | +55 / -1.9 | +62 / -4.4 | +49 / +1.3 | +30 / -1.2 | +36 / -2.5 | +41 / -1.3 |
+  | lpb-dast-50 | +34.1 / -0.1 | +49 / -0.6 | +36 / -2.5 | +22 / +3.8 | +22 / +1.2 | +24 / -2.5 | +31 / -1.3 |
+  | lpb-dast-75 | +30.5 / -0.7 | +49 / +1.3 | +37 / -5.6 | +2 / +3.1 | +23 / 0.0 | +25 / -6.2 | +30 / +1.2 |
+  | lpb-dast-100 | +37.7 / -0.8 | +54 / 0.0 | +40 / -5.0 | +21 / +3.1 | +29 / -1.2 | +29 / -1.9 | +33 / -1.3 |
+  Reading: Ada-R1 leads (step 25 +48.5 / +0.4; saving keeps rising to +51.4 at 150 for -1.7); long2short p<0.5 close
+  (+47.7 / -1.0 at 50); DAST is the most accurate but saves least (30-38%); stronger protection (p<0.75) saves less.
+  STEP 8 queued (rule: best saved with accuracy better than -1 -> adar1; second l2s50, on the -1 line, near-identical
+  saving): lpc-adar1 (GPU 2, after lpb-l2s50e) and lpc-l2s50 (GPU 1, after lpb-right), 3 seeds, soups at 25/50/75 on
+  the fresh set x8. If lpb-l2s50e beats lpb-l2s50, it replaces lpc-l2s50.
