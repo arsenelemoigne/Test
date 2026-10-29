@@ -3248,3 +3248,17 @@ Plan cells restarted with the finished lines commented out.
   Ada-R1 on fresh: ~44% saved at -2 to -3.5; the screen (+48.5 / +0.4) was optimistic. Saving plateaus after step 25
   while accuracy keeps dropping: step 25 is its best point. Losses are broad (math, tools, no-fit), not one type.
   Dial (x0.5 / x0.7 on soup 25) queued. lpc-l2s50e finished its 3 trainings; its fresh soups (50/100/150) next on GPU 1.
+- ~22:45 v1 experiment set built and queued (user: "build all, order P1, two-stage, per-type adapters, P3, gentle, P2, P4"),
+  all on the l2s50e recipe, screened on the choosing set x4 (1 seed, checkpoints 25-150):
+  GPU 1 (after lpc-l2s50e fresh + cross-check + lpb-l2s50press): lpx-p1tilt (benchmark shares math 15 / code 25 /
+  instructions 35 / tools 25), lpt-l2s50e (stage `pertype`: one LoRA per benchmark on its own l2s50e pairs, merged as
+  the plain sum and with per-type strengths math 0.5 / code 0.8 / instructions 1 / tools 0.8), lpx-gentle (beta 0.3,
+  NLL 2, lr 1e-5), lpx-p4tools (BFCL longest-thinking cells x2).
+  GPU 2 (after dial, codecut, lpb-l2s50math): lpx-2stage (starts from lpb-right step 50, the "be right" round, +2.5 acc),
+  lpx-p3medium (solve bins: medium x2, always-solved x0.5), lpx-p2math (math pressure 1:1 + math right>wrong pairs).
+  New options: lupin_select.py --part-share / --solve-tilt / --think-tilt-bfcl; lupin --lp-init / --lp-beta / --lp-nll /
+  --lp-lr / --lp-epochs; stage pertype. Selection options tested on synthetic answers (shares exact).
+  Pair inventory (12,000 questions x 10 answers, long2short p<0.5, before matching): be-shorter svamp 2,587 / mbpp 1,744
+  / ifeval 1,671 / simple 1,114 / multiple 514 / no-fit 718; guard 660 / 898 / 660 / 270 / 195 / 132; right>wrong
+  (rightwrong recipe) 637 / 1,180 / 890 / 317 / 253 / 207. Enough for these experiments; tools' be-right pairs are the
+  tightest (top-up with more BFCL-style questions only if the winner is tools-limited).

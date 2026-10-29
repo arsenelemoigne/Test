@@ -225,4 +225,9 @@ lupin --name lpc-l2s50e --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-rati
 crosscheck --name cx-l2s50e --cx-names lpc-l2s50e --cx-steps 50 100 150 --seeds 0 1 2
 # OUR per-type pressure (user 29 Oct: 'not just reproduce bida'): shorten per be-right pair math 1, code 2, instructions 3, tools 2, from each type's measured accuracy cost
 lupin --name lpb-l2s50press --lp-recipe long2short --lp-min-solve 0.5 --lp-pressure svamp=1,mbpp=2,ifeval=3,bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# v1 experiments (user 29 Oct ~22:30), base = l2s50e recipe; order P1, two-stage, per-type, P3, gentle, P2, P4 split over both GPUs
+lupin --name lpx-p1tilt --lp-part-share svamp=0.15,mbpp=0.25,ifeval=0.35,bfcl=0.25 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+pertype --name lpt-l2s50e --cc-base lpb-l2s50e --pt-weights svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8
+lupin --name lpx-gentle --lp-beta 0.3 --lp-nll 2 --lp-lr 1e-5 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+lupin --name lpx-p4tools --lp-think-tilt-bfcl 2 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end

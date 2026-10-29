@@ -34,6 +34,14 @@ def main():
     parser.add_argument("--reference", nargs="+", required=True)
     parser.add_argument("--total", type=int, default=3200, help="pairs wanted in all (200 steps x 16)")
     parser.add_argument("--think-bins", type=int, default=4)
+    parser.add_argument("--part-share", default="",
+                        help="P1 (29 Oct): benchmark shares instead of 25%% each, e.g. svamp=0.15,mbpp=0.25,ifeval=0.35,bfcl=0.25 "
+                             "(bfcl split 400/200/240 inside)")
+    parser.add_argument("--solve-tilt", default="",
+                        help="P3: multiply the reference share of solve bins, e.g. 2=2,3=0.5 (more medium-difficulty, "
+                             "fewer always-solved questions)")
+    parser.add_argument("--think-tilt-bfcl", type=float, default=1.0,
+                        help="P4: multiply the share of the longest-thinking bin in the BFCL parts by this")
     parser.add_argument("--shorten-ratio-part", default="",
                         help="per-part pressure: max shorten pairs per be-right pair, e.g. svamp=1,mbpp=2,ifeval=3,"
                              "bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 (ours, 29 Oct: from each type's measured "
@@ -64,7 +72,12 @@ def main():
         by_part[p["part"]].append(p)
 
     bfcl = sum(BFCL_SIZES.values())
-    share = {"svamp": 0.25, "mbpp": 0.25, "ifeval": 0.25} | {p: 0.25 * n / bfcl for p, n in BFCL_SIZES.items()}
+    shares = {"svamp": 0.25, "mbpp": 0.25, "ifeval": 0.25, "bfcl": 0.25}
+    shares |= dict((k, float(v)) for k, v in (x.split("=") for x in args.part_share.split(",") if x))
+    total_share = sum(shares.values())
+    share = {k: shares[k] / total_share for k in ("svamp", "mbpp", "ifeval")}
+    share |= {p: shares["bfcl"] / total_share * n / bfcl for p, n in BFCL_SIZES.items()}
+    solve_tilt = dict((int(k), float(v)) for k, v in (x.split("=") for x in args.solve_tilt.split(",") if x))
     chosen, report, lines = [], {}, [f"pairs matched to the evaluation: wanted {args.total}"]
     for part in PARTS:
         want = round(args.total * share[part])
@@ -74,6 +87,12 @@ def main():
         cells = [(a, b) for a in range(4) for b in range(args.think_bins)]
         cell_ref = Counter((solve_bin(s), think_bin(t, edges)) for s, t in refs)
         cell_share = {c: (cell_ref[c] + 0.5) / (len(refs) + 0.5 * len(cells)) for c in cells}
+        tilt = {c: solve_tilt.get(c[0], 1.0) * (args.think_tilt_bfcl if part.startswith("bfcl") and c[1] == args.think_bins - 1
+                                                 else 1.0) for c in cells}
+        if any(v != 1.0 for v in tilt.values()):
+            cell_share = {c: cell_share[c] * tilt[c] for c in cells}
+            norm = sum(cell_share.values())
+            cell_share = {c: v / norm for c, v in cell_share.items()}
         per_cell = defaultdict(lambda: defaultdict(list))  # cell -> question -> its pairs
         no_answers = 0
         for p in by_part.get(part, []):

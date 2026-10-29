@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -249,6 +249,15 @@ def main():
     parser.add_argument("--lp-min-solve-part", default="", help="lupin: lupin_pairs.py --min-solve-part, e.g. svamp=0.8")
     parser.add_argument("--lp-right-parts", default="", help="lupin: lupin_pairs.py --right-parts, e.g. svamp")
     parser.add_argument("--dial-weights", type=float, nargs="*", default=[0.5, 0.7], help="dial: strengths of the trained change")
+    parser.add_argument("--lp-part-share", default="", help="lupin: lupin_select.py --part-share (P1)")
+    parser.add_argument("--lp-solve-tilt", default="", help="lupin: lupin_select.py --solve-tilt (P3)")
+    parser.add_argument("--lp-think-tilt-bfcl", type=float, default=1.0, help="lupin: lupin_select.py --think-tilt-bfcl (P4)")
+    parser.add_argument("--lp-init", default="", help="lupin: start adapter (two-stage), default a fresh LoRA")
+    parser.add_argument("--lp-beta", type=float, default=0.0, help="lupin: dpo.py --beta (0: dpo.py default 0.1)")
+    parser.add_argument("--lp-nll", type=float, default=None, help="lupin: dpo.py --nll (default 1.0)")
+    parser.add_argument("--lp-lr", type=float, default=0.0, help="lupin: dpo.py --lr (0: default 2e-5)")
+    parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
+    parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
     parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
@@ -2616,6 +2625,51 @@ def dial(args):
                 print(score_line(f"{tag} (fresh 240 x 8, strength x{w})", out, base=ROOT / "f8-base"), flush=True)
 
 
+PT_GROUPS = {"svamp": ("svamp",), "mbpp": ("mbpp",), "ifeval": ("ifeval",),
+             "bfcl": ("bfcl_simple_python", "bfcl_multiple", "bfcl_irrelevance")}
+
+
+def pertype(args):
+    """Per-type adapters (user, 29 Oct: "build a strong v1"): one LoRA per benchmark, each trained on ITS type's pairs only
+    (from --cc-base's matched pairs, the l2s50e recipe), then merged with per-type strengths (--pt-weights; e.g. math 0.5
+    to protect it, instructions 1.0), plus the plain sum (all 1.0) as the control. One adapter per type means the type
+    losing accuracy can be turned down without retraining the others. Scored on the choosing set x4."""
+    name, base_pairs = args.name, BON / f"pairs-{args.cc_base}" / "pairs.jsonl"
+    drive_sync("restore", only=[str(base_pairs.parent), "runs/mvtf/v4-base"])
+    rows = [json.loads(l) for l in base_pairs.read_text().splitlines() if l.strip()]
+    finals = {}
+    for group, parts in PT_GROUPS.items():
+        mine = [r for r in rows if r["part"] in parts]
+        pairs = BON / f"pairs-{name}-{group}"
+        if not (pairs / "pairs.jsonl").exists():
+            pairs.mkdir(parents=True, exist_ok=True)
+            (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in mine))
+        counts = [sum(r["kind"] == k for r in mine) for k in ("shorten", "guard", "hard", "right")]
+        start = Path("adapters") / f"fresh-{name}-{group}"
+        if not (start / "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
+        adapter = Path("adapters") / f"{name}-{group}"
+        if not (adapter / "adapter_config.json").exists():
+            py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out",
+               adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 25,
+               "--epochs", 1, "--dtype", args.dtype, "--seed", 0)
+            drive_sync("save")
+        finals[group] = adapter
+        print(f"pertype {name}: {group} adapter on {len(mine)} pairs", flush=True)
+    weights = dict((k, float(v)) for k, v in (x.split("=") for x in args.pt_weights.split(",") if x))
+    val = f"questions_val{VAL_SEED}"
+    for tag, w in (("sum", {g: 1.0 for g in PT_GROUPS}), ("tuned", weights)):
+        out = ROOT / f"v4-{name}-{tag}"
+        if not (out / "results.json").exists():
+            model = Path("/content/lupin-models") / f"{name}-{tag}"
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+               *[f"{finals[g]}:{w.get(g, 1.0)}" for g in PT_GROUPS])
+            evaluate(out, samples=4, questions=val, model=model)
+            shutil.rmtree(model, ignore_errors=True)
+            drive_sync("save")
+        print(score_line(f"{name}-{tag} {w} (choosing 240 x 4)", out, base=ROOT / "v4-base"), flush=True)
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -2704,20 +2758,29 @@ def lupin(args):
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", ROOT / "v4-base", BASE,
            "--total", args.lp_total, "--out", pairs,
            *(["--max-shorten-ratio", args.lp_balance] if args.lp_balance else []),
-           *(["--shorten-ratio-part", args.lp_pressure] if args.lp_pressure else []))
+           *(["--shorten-ratio-part", args.lp_pressure] if args.lp_pressure else []),
+           *(["--part-share", args.lp_part_share] if args.lp_part_share else []),
+           *(["--solve-tilt", args.lp_solve_tilt] if args.lp_solve_tilt else []),
+           *(["--think-tilt-bfcl", args.lp_think_tilt_bfcl] if args.lp_think_tilt_bfcl != 1.0 else []))
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
     start = Path("adapters") / f"fresh-{name}"
-    if not (start / "adapter_config.json").exists():
+    if args.lp_init:  # two-stage (29 Oct): start from an earlier adapter (policy AND DPO reference), e.g. the "be right" round
+        start = Path(args.lp_init)
+        drive_sync("restore", only=[str(start)])
+        assert (start / "adapter_config.json").exists(), f"{start} not found"
+    elif not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", base, "--out", start)
+    gentle = [*(["--beta", args.lp_beta] if args.lp_beta else []), *(["--nll", args.lp_nll] if args.lp_nll is not None else []),
+              *(["--lr", args.lp_lr] if args.lp_lr else [])]
     for seed in args.seeds:
         adapter = Path("adapters") / f"{name}-s{seed}"
         if not (adapter / "adapter_config.json").exists():
             py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
                "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.lp_save,
-               "--epochs", 1, "--dtype", args.dtype, "--seed", seed, *args.lp_dpo.split())
+               "--epochs", args.lp_epochs, "--dtype", args.dtype, "--seed", seed, *args.lp_dpo.split(), *gentle)
             drive_sync("save")
     val, fresh_q = f"questions_val{VAL_SEED}", f"questions_fresh{FRESH_SEED}"
     scratch = Path("/content/lupin-models")
@@ -3734,7 +3797,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

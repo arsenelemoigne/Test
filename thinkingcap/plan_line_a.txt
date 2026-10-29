@@ -208,4 +208,8 @@ dial --name dial-adar1 --cx-names lpc-adar1 --cx-steps 25 --seeds 0 1 2 --dial-w
 codecut --name lcc-l2s50e --cc-base lpb-l2s50e --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # math protection (user 29 Oct: strong v1; math lost most, like both competitors): long2short p<0.5, math p<0.8 + math right>wrong pairs
 lupin --name lpb-l2s50math --lp-recipe long2short --lp-min-solve 0.5 --lp-min-solve-part svamp=0.8 --lp-right-parts svamp --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+# v1 experiments (user 29 Oct ~22:30), base = l2s50e recipe
+lupin --name lpx-2stage --lp-init adapters/lpb-right-s0/step-50 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+lupin --name lpx-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
+lupin --name lpx-p2math --lp-pressure svamp=1 --lp-right-parts svamp --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 end
