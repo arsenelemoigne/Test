@@ -1,7 +1,7 @@
 // SearchAPI.io: Google Shopping, Google Lens, Amazon, eBay, Google web results as JSON.
 const BASE = "https://www.searchapi.io/api/v1/search";
 
-export const QUOTA_MESSAGE = "quota SearchAPI du mois épuisé";
+export const QUOTA_MESSAGE = "plus de crédit SearchAPI ce mois-ci";
 
 export function searchApiConfigured(): boolean {
   return Boolean(process.env.SEARCHAPI_API_KEY);
@@ -14,7 +14,8 @@ async function call(params: Record<string, string>): Promise<Record<string, unkn
   if (!key) throw new Error("SEARCHAPI_API_KEY manquant");
   const res = await fetch(`${BASE}?${new URLSearchParams({ ...params, api_key: key })}`, { headers: { Accept: "application/json" } });
   const text = await res.text();
-  if (res.status === 429 && /used all of the searches/i.test(text)) throw new Error(QUOTA_MESSAGE);
+  // No credits left, or none granted to the account: stop calling for this run.
+  if ((res.status === 429 || res.status === 402 || res.status === 403) && /used all of the searches|upgrade your plan|credits?|allowance|subscription/i.test(text)) throw new Error(QUOTA_MESSAGE);
   if (!res.ok) throw new Error(`SearchAPI ${params.engine} ${res.status}: ${text.slice(0, 200)}`);
   return JSON.parse(text);
 }
