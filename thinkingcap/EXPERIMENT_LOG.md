@@ -3239,3 +3239,12 @@ Plan cells restarted with the finished lines commented out.
   cross-check); (4) best dose = the screens' checkpoints; (5) combine the winners into one recipe -> 3-seed fresh
   confirm -> LUPIN v1. Tested on synthetic answers (math: shorten 74 -> 26, right 94 -> 167).
 - ~22:00 (user: 'I don't want to just reproduce bida's work'): lpb-l2s50bal replaced by OUR per-type pressure, lpb-l2s50press: after matching, shorten pairs per be-right pair capped per type from each type's measured accuracy cost (math 1, code 2, instructions 3, tools 2); lupin_select.py --shorten-ratio-part (lupin --lp-pressure). Queued on GPU 1 in the same slot.
+- ~22:15 lpc-adar1 FRESH CONFIRM complete (3 seeds, fresh 240 x 8):
+  | soup | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | 25 | +43.0 / -1.9 | +62 / -4.4 | +45 / -1.3 | +26 / +0.6 | +30 / -2.2 | +34 / -2.5 | +30 / -3.1 |
+  | 50 | +44.8 / -2.3 | +57 / -3.1 | +52 / -1.3 | +32 / -2.2 | +32 / -2.2 | +36 / -2.5 | +34 / -3.7 |
+  | 75 | +44.6 / -3.5 (outside) | +55 / -4.7 | +48 / -0.9 | +38 / -5.6 | +32 / -0.6 | +36 / -4.1 | +36 / -3.1 |
+  Ada-R1 on fresh: ~44% saved at -2 to -3.5; the screen (+48.5 / +0.4) was optimistic. Saving plateaus after step 25
+  while accuracy keeps dropping: step 25 is its best point. Losses are broad (math, tools, no-fit), not one type.
+  Dial (x0.5 / x0.7 on soup 25) queued. lpc-l2s50e finished its 3 trainings; its fresh soups (50/100/150) next on GPU 1.
