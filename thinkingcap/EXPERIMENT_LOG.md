@@ -3216,3 +3216,4 @@ Plan cells restarted with the finished lines commented out.
   vs lpb-l2s50e at the same steps: KEEP only if code thinks >= 3% less AND overall accuracy >= -1 AND code accuracy
   >= -2.5 AND non-code accuracy >= -1 (no spill); otherwise DROPPED and not pursued.
 - 18:20: lpb-right-75: -39.2% saved (thinks 39% LONGER) / +0.9 (simple -56%, ifeval -44%): pure right>wrong pairs inflate thinking more and more. Confirms the length pressure is what saves. GPU 2: lpc-adar1 seed 0 step 140/194.
+- 19:27: lpb-right-100: -51.0% (thinks 51% longer) / +2.1. lpb-right done (screen complete: 6 variations). GPU 1: lpc-l2s50e seed 0 training (step 155/170); GPU 2: lpc-adar1 seed 1 (step 145/194).
