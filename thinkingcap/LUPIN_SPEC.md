@@ -244,7 +244,7 @@ submission.
 - Credits.
 
 ## Deployment (user, 29 Oct: "once we have the final model")
-After the final model (best of v1 / v2, full evaluation done): merge it into one model (merge.py), upload it, and
+After the final model (best of v1 / v2, full evaluation done): merge it into one model (merge.py), upload it as Arsenefirst/Lupin-Qwen3-0.6B (user, 29 Oct; private first; model card base_model: Qwen/Qwen3-0.6B), and
 serve it with vLLM (OpenAI-compatible API) on a hosted L4 GPU with a public URL: Hugging Face Inference Endpoint,
 RunPod or Modal (~$0.5-1 per hour while running; the user approves any spending first). Monitor vLLM's /metrics (time
 to first token, inter-token latency, throughput, requests, tokens generated), e.g. with Grafana. Demo: the original
