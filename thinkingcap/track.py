@@ -236,6 +236,7 @@ def main():
     parser.add_argument("--lp-recipe", default="long2short", help="lupin: lupin_pairs.py recipe")
     parser.add_argument("--lp-min-solve", type=float, default=0.5, help="lupin: difficulty protection (0: none)")
     parser.add_argument("--lp-extra", default="", help="lupin: more lupin_pairs.py flags, e.g. '--add-right'")
+    parser.add_argument("--lp-answers", type=int, default=10, help="lupin: answers per question used (newest first)")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
     parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
     parser.add_argument("--lp-dpo", default="", help="lupin: more dpo.py flags, e.g. '--nll 0'")
@@ -2570,16 +2571,24 @@ def lupin(args):
     allfile = BON / f"lupin-all-{pool_name}.jsonl"
     if not allfile.exists():
         ids = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
-        sources = [BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl", *halves,
-                   *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp8", "dp9", "dp10", "dp11") for h in "ab"]]
+        # at most --lp-answers answers per question, newest first (user, 29 Oct: "14 or 10?"): the 10-answer run, then
+        # the extra-answer rounds (newest first), then the 4 selection answers. The pool was CHOSEN on the earliest
+        # answers (lucky draws), so those are the biased ones; and an equal count per question keeps every type's
+        # pairs equally strong (the shortest right of 14 is shorter than of 10).
+        sources = [*halves, *[BON / f"probe-poolmore-{x}-{h}" / "rollouts.jsonl" for x in ("dp11", "dp10", "dp9", "dp8") for h in "ab"],
+                   BON / "probe-poolcand-dp9n-all" / "rollouts.jsonl"]
         drive_sync("restore", only=[str(f.parent) for f in sources])
-        count = Counter()
+        count, taken = Counter(), Counter()
         with open(allfile, "w") as out:
             for f in sources:
                 if not f.exists():
                     continue
                 for line in open(f):
-                    if line.strip() and json.loads(line)["id"] in ids:
+                    if not line.strip():
+                        continue
+                    i = json.loads(line)["id"]
+                    if i in ids and taken[i] < args.lp_answers:
+                        taken[i] += 1
                         out.write(line if line.endswith("\n") else line + "\n")
                         count[f.parent.name] += 1
         per_q = Counter(json.loads(l)["id"] for l in open(allfile))
