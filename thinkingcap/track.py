@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -252,6 +252,9 @@ def main():
     parser.add_argument("--lp-answers-pool", default="", help="lupin: whose 10-answer files to use (dp12: dp10)")
     parser.add_argument("--lp-gate", action="store_true", help="lupin: refuse unless the pool's check is ALL OK or near misses")
     parser.add_argument("--lp-extra-q", default="", help="lupin: add tooltopup <name>'s extra tool questions to the pairs")
+    parser.add_argument("--pu-extras", default="nofit1,tools1,code1", help="poolup: top-up sets added to the candidates")
+    parser.add_argument("--nt-sources", default="glaive_nofit_hard", help="newtop: prepare_types.py sources")
+    parser.add_argument("--nt-parts", default="bfcl_irrelevance", help="newtop: build_pool.py parts")
     parser.add_argument("--tt-parts", default="", help="tooltopup: BFCL parts (default all three)")
     parser.add_argument("--tt-hard", action="store_true", help="tooltopup: hardest candidates first")
     parser.add_argument("--tt-questions", type=int, default=1500, help="tooltopup: extra tool questions")
@@ -2761,7 +2764,7 @@ def poolup(args):
     (--dp-check-seed), pool_check.py against the same references. lupin --lp-gate trains only on a passing pool."""
     import time
     name, old = args.name, args.dp_reuse
-    extras = [BON / f"tooltop-{x}" for x in ("nofit1", "tools1", "code1")]
+    extras = [BON / f"tooltop-{x}" for x in args.pu_extras.split(",") if x]
     for extra in extras:
         for _ in range(288):
             drive_sync("restore", only=[str(extra)])
@@ -2820,6 +2823,55 @@ def poolup(args):
            "--max-questions", m, "--seed", args.dp_check_seed)
     py("pool_check.py", "--rollouts", held / "rollouts.jsonl", "--reference", *refs, "--out", BON / f"poolcheck-{name}-both",
        "--pool", selected)
+    drive_sync("save")
+
+
+def newtop(args):
+    """New top-up candidates built from scratch (30 Oct, data loop): prepare_types.py --sources --nt-sources, build_pool.py
+    on --nt-parts (the choosing set's prompt-length bins, 8-word contamination check against every evaluation question),
+    up to --tt-questions kept, each answered 10 times by the original Qwen (seed 41). Written like a tooltopup
+    (runs/bon/tooltop-<name>/questions.jsonl + rollouts.jsonl) so poolup --pu-extras can add it."""
+    name = args.name
+    out = BON / f"tooltop-{name}"
+    drive_sync("restore", only=[str(out)])
+    if (out / "rollouts.jsonl").exists():
+        print(f"newtop {name}: done", flush=True)
+        return
+    val = f"questions_val{VAL_SEED}"
+    cand, pool = Path(f"data/cand-{name}.jsonl"), Path(f"data/poolcand-{name}.jsonl")
+    if not cand.exists():
+        py("prepare_types.py", "--sources", args.nt_sources, "--per-source", 1000000, "--seed", args.data_seed, "--out", cand,
+           "--tool-clean")
+    if not pool.exists():
+        py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", args.nt_parts,
+           "--tool-sources", "toolace,hermes_tools,glaive_tools", "--per-benchmark", args.tt_questions * 4,
+           "--seed", args.data_seed, "--out", pool)
+        rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+        random.Random(args.data_seed).shuffle(rows)
+        rows = rows[:args.tt_questions]
+        for k, r in enumerate(rows):
+            r["pool_id"] = f"{name}-{r['part']}-{k}"
+        pool.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        drive_sync("save")
+    n = sum(1 for _ in open(pool))
+    probe = BON / f"tooltop-{name}-k10"
+    drive_sync("restore", only=[str(probe)])
+    if not (probe / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", pool, "--sources", "toolace,hermes_tools,glaive_tools,kodcode", "--per-source", 1000000,
+           "--samples", 10, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only",
+           "--chunk", 300, "--max-questions", n, "--seed", 41)
+        drive_sync("save")
+    out.mkdir(parents=True, exist_ok=True)
+    rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+    rate = defaultdict(list)
+    for line in open(probe / "rollouts.jsonl"):
+        r = json.loads(line)
+        rate[r["id"]].append(bool(r["correct"]))
+    solve = [sum(v) / len(v) for v in rate.values()]
+    print(f"newtop {name}: {n} questions x10; mean solve rate {statistics.fmean(solve):.0%}, "
+          f"sometimes right {sum(0 < s < 1 for s in solve)}, always {sum(s == 1 for s in solve)}, never {sum(s == 0 for s in solve)}", flush=True)
+    (out / "questions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    shutil.copy(probe / "rollouts.jsonl", out / "rollouts.jsonl")
     drive_sync("save")
 
 
@@ -3990,7 +4042,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

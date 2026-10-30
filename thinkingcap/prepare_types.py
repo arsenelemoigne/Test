@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -537,6 +537,24 @@ def glaive_nofit_verified(args, rng):
     for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
         yield {"source": "glaive_tools", "origin": "near-verified-glaive", "task": "tool", "answer": "", "grader": "bfcl",
                "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nv-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
+                          {"role": "user", "content": r["question"]}]}
+
+
+def glaive_nofit_hard(args, rng):
+    """dp13 (30 Oct): HARDER no-fit questions: a Glaive question offered ONE Glaive function ranked 4th-15th closest in
+    meaning (past the exact synonyms, but same family: a tip request offered calculate_tax, Fahrenheit-to-Celsius offered
+    get_temperature), kept only on Haiku's NO + NO (nofit_verify.py --rank 4,15). The first batch (ranks 15-60) stayed
+    too easy: only 189 of its pool candidates were ever answered wrong."""
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    path = next((p for p in (Path("/content/T/thinkingcap/nofit_glaive_hard.jsonl"),
+                             Path(__file__).with_name("nofit_glaive_hard.jsonl")) if p.exists()), None)
+    assert path, "nofit_glaive_hard.jsonl not found"
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        yield {"source": "glaive_tools", "origin": "near-hard-glaive", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nh-{k}",
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
                           {"role": "user", "content": r["question"]}]}
 
