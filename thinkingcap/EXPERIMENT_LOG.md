@@ -3321,3 +3321,16 @@ Plan cells restarted with the finished lines commented out.
   + tools1 + code1 + nofit2 vs the 160-per-part references; held-out check seed 31). All lpu-* runs now target dp13
   (gated). dp12's check (GPU 1) still runs, for comparison.
 - ~02:20: dial lpc-adar1-soup-25 x0.7 (fresh): +31.3% / -1.6 (x0.5 +23.1 / +0.3; x1 +43.0 / -1.9): the dial trades saving for accuracy roughly linearly; Ada-R1 does not reach the target at any strength. GPU 2 restarted on the updated plan (it had started lpu-2stage on the old dp12 line): now newtop nofit2 -> poolup dp13. GPU 1: code1 nearly done, then poolup dp12.
+
+### 2026-10-30 ~02:45 — SPARSE arm C (Wanda) on the Mac (user: "run it on CPU in the meantime", "only if done properly")
+- wanda_prune.py: Wanda (|W| x input-feature norm, lowest share zeroed per output row), block by block IN ORDER on the
+  outputs of the already-pruned blocks, the 7 linear layers of the 28 blocks only; calibration = 128 of Qwen's own right
+  answers (dp11 check, mixed types, prompt + reply, <= 1,024 tokens); fp32 on the M3 GPU (MPS). Sanity: block-by-block
+  pass == full model (max difference 0.0). Damage check (proxy, no generation): reply NLL of held-out right answers
+  per type + right>wrong preference on held-out pairs; output layer computed in chunks (the full 151k-vocab logits
+  swapped the 8 GB Mac). Smoke test (4 calib, 50%): 50.0% of block weights zero; right answers 2-4x less likely.
+- Full run started: levels 10/20/30/40/50%, 80 right answers + 30 pairs per type, pruned models saved (bf16).
+- Real eval on the Mac: MLX speed test, Qwen3-0.6B: 1 answer 50 tok/s, 4 in parallel 156, 8 in parallel 209 tok/s
+  (16+ out of memory: the KV cache is ~0.11 MB per token). An eval of 240 x 4 (~700k tokens) ~ 1 h per model. Next:
+  the competition's own code (ThinkingCap-Test: recipe + graders) + the choosing-set questions locally, the harness
+  checked against the GPU on the original Qwen, then original + the 2-3 best Wanda levels.
