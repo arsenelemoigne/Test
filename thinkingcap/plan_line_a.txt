@@ -264,4 +264,7 @@ rescreen --name rs-runb --cx-names lpc-runb --cx-steps 100 150 200 250 270 --see
 # > longest right if >= 1.5x), shorten capped at guard per part (1:1), no difficulty rule, NO matching to the eval
 lupin --name lpc-bida --lp-recipe long2short --lp-no-match --seeds 0 1 2 --lp-fresh --lp-save 10 --dpo-steps 100 150 200 250 300 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
 rescreen --name rs-bida --cx-names lpc-bida --cx-steps 100 150 200 250 300 --seeds 0 1 2
+# the two older ideas, kept (user, 30 Oct 22:30): after the michal-bida control
+lupin --name lpw-pressmath --lp-pressure svamp=1,mbpp=2,ifeval=3,bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 --lp-min-solve-part bfcl_irrelevance=0.8,svamp=0.8 --lp-right-parts bfcl_irrelevance,svamp --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
+lupin --name lpw-p4tools --lp-think-tilt-bfcl 2 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
 end
