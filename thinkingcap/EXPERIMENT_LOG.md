@@ -3561,3 +3561,6 @@ The five sets do not overlap. Visual: new artboard "The full evaluation" in the 
   settings (LoRA r32, beta 0.1, lr 2e-5 constant, NLL 1.0, 1 epoch), 3 seeds, fresh soups + 720 rescreen at
   100-300. Replaces lpw-pressmath / lpw-p4tools on GPU 2 (after Run B). Not reproduced from his side: his own data mix
   (GSM8K 70 / MetaMath SV 15 / FOBAR 15 for math) and his training settings.
+- 22:35 (user): the control keeps the eval's difficulty mix: lpc-bida now uses lupin_select matching (160-per-part
+  references, cells solve x thinking), then michal-bida's 1:1 balance re-imposed per part after matching (--lp-balance 1:
+  at most one shorten pair per be-right pair), no-fit loose, target 4,800 pairs; still no min-solve rule.
