@@ -3504,3 +3504,12 @@ svamp) SVAMP still saves ~60% (shorten pairs remain on questions solved >= 8/10)
   1e-5. Both queued on GPU 1 after Run A, before lpw-pressmath / lpw-p4tools. Run C not built (user).
 - Decision rule from now on: runs compared by accuracy at the same tokens saved (soups at 100-300 steps give each run a
   saved-vs-accuracy curve), not at the same step.
+
+### 2026-10-30 ~16:10 — lpc-math soups 60/70; Run A stopped and restarted as lpc-runa2
+- lpc-math fresh x8: soup-60 +40.1 / -3.5 (svamp +56/-5.9, multiple +35/-5.9, no-fit +33/-4.4); soup-70 +43.7 / -3.1
+  (svamp +59/-5.6, multiple +35/-3.7, no-fit +33/-3.1, mbpp +46/-2.5, ifeval +33/-1.6, simple +33/-0.9).
+- lpc-runa pair selection kept 2,070 of 4,800 pairs (127 steps): no-fit had 148 of its 343 (guard 78, right 70); the
+  fill-ratio trim then cut every part to 43%. Other parts were 94-98% filled (svamp 678/720, mbpp 1,389/1,440, ifeval
+  1,354/1,440, simple 560/571, multiple 268/286). Stopped at seed 0 step 25.
+- Fix: lupin_select.py --loose-parts (track --lp-loose): a listed part takes its pairs without cell matching and does
+  not set the fill ratio. Restarted as lpc-runa2 with --lp-loose bfcl_irrelevance; Runs B and D get the same flag.
