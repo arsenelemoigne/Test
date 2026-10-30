@@ -111,7 +111,8 @@ def main():
     parser.add_argument("--per-part", type=int, default=100, help="held-out right answers per part for the damage check")
     parser.add_argument("--pairs-per-part", type=int, default=40)
     parser.add_argument("--max-len", type=int, default=1536)
-    parser.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    parser.add_argument("--mask-compare", default="", help="a saved mask (mask-30.pt): share of pruned weights in common")
     parser.add_argument("--save", action="store_true", help="also save each pruned model (for the GPU eval)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
@@ -184,6 +185,19 @@ def main():
         results[str(s)] = damage(model, right, pairs, args.device, args.max_len)
         print(f"sparsity {s:.0%} (measured {zero / total:.1%} of block weights zero, {time.time() - t:.0f}s): "
               f"nll {results[str(s)][0]}  right>wrong {results[str(s)][1]}", flush=True)
+        mask = {f"{li}.{n}": (get(l, n).weight == 0).cpu() for li, l in enumerate(model.model.layers) for n in LINEARS}
+        torch.save(mask, out / f"mask-{round(s * 100)}.pt")
+        if args.mask_compare and Path(args.mask_compare).exists():
+            other = torch.load(args.mask_compare)
+            same = defaultdict(lambda: [0, 0])
+            for key, m in mask.items():
+                kind = key.split(".", 1)[1]
+                same[kind][0] += (m & other[key]).sum().item()
+                same[kind][1] += m.sum().item()
+            text = "mask overlap with " + args.mask_compare + ": " + ", ".join(
+                f"{k} {100 * a / max(1, b):.1f}%" for k, (a, b) in same.items())
+            print(text, flush=True)
+            (out / "mask_overlap.txt").write_text(text + "\n")
         if args.save:
             model.to(torch.bfloat16).save_pretrained(out / f"wanda-{round(s * 100)}")
         (out / "results.json").write_text(json.dumps(results, indent=1))
@@ -196,6 +210,8 @@ def main():
         lines.append(f"{float(key):.0%} | " + " | ".join(
             f"+{100 * (nll[p] / base_nll[p] - 1):.0f}% nll, {100 * pref.get(p, 0):.0f}% vs {100 * base_pref.get(p, 0):.0f}%"
             for p in PARTS if p in nll))
+    if (out / "mask_overlap.txt").exists():
+        lines.append((out / "mask_overlap.txt").read_text().strip())
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
     print("\n".join(lines), flush=True)
 

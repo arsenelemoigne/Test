@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -252,6 +252,8 @@ def main():
     parser.add_argument("--lp-answers-pool", default="", help="lupin: whose 10-answer files to use (dp12: dp10)")
     parser.add_argument("--lp-gate", action="store_true", help="lupin: refuse unless the pool's check is ALL OK or near misses")
     parser.add_argument("--lp-extra-q", default="", help="lupin: add tooltopup <name>'s extra tool questions to the pairs")
+    parser.add_argument("--wd-sparsity", type=float, nargs="*", default=[0.1, 0.2, 0.3, 0.4, 0.5], help="wanda: levels")
+    parser.add_argument("--pu-drop", default="", help="poolup: part:source pairs left out, e.g. bfcl_simple_python:toolace")
     parser.add_argument("--pu-extras", default="nofit1,tools1,code1", help="poolup: top-up sets added to the candidates")
     parser.add_argument("--nt-sources", default="glaive_nofit_hard", help="newtop: prepare_types.py sources")
     parser.add_argument("--nt-parts", default="bfcl_irrelevance", help="newtop: build_pool.py parts")
@@ -2783,6 +2785,8 @@ def poolup(args):
         rows = [json.loads(l) for l in Path(f"data/pool-{old}.jsonl").read_text().splitlines() if l.strip()]
         for e in extras:
             rows += [json.loads(l) for l in (e / "questions.jsonl").read_text().splitlines() if l.strip()]
+        drop = [tuple(x.split(":")) for x in args.pu_drop.split(",") if x]  # e.g. bfcl_simple_python:toolace
+        rows = [r for r in rows if (r["part"], r["source"]) not in drop]
         seen, uniq = set(), []
         for r in rows:
             if r["pool_id"] not in seen:
@@ -2874,6 +2878,26 @@ def newtop(args):
     (out / "questions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     shutil.copy(probe / "rollouts.jsonl", out / "rollouts.jsonl")
     drive_sync("save")
+
+
+def wanda(args):
+    """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
+    (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
+    real eval; then the coverage check at 30% with 384 calibration answers (user: is 128 enough?)."""
+    data = BON / "probe-poolcand-dp11-check" / "rollouts.jsonl"
+    drive_sync("restore", only=[str(data.parent)])
+    out = Path("runs/sparse") / args.name
+    if not (out / "summary.txt").exists():
+        py("wanda_prune.py", "--rollouts", data, "--calib", 128, "--per-part", 80, "--pairs-per-part", 30, "--sparsity",
+           *args.wd_sparsity, "--device", "cuda", "--out", out)
+        drive_sync("save")
+    print((out / "summary.txt").read_text(), flush=True)
+    cover = Path("runs/sparse") / f"{args.name}-c384"
+    if not (cover / "summary.txt").exists():
+        py("wanda_prune.py", "--rollouts", data, "--calib", 384, "--per-part", 80, "--pairs-per-part", 30, "--sparsity", 0.3,
+           "--device", "cuda", "--out", cover, "--mask-compare", out / "mask-30.pt")
+        drive_sync("save")
+    print((cover / "summary.txt").read_text(), flush=True)
 
 
 def lupin_pool(args):
@@ -4043,7 +4067,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

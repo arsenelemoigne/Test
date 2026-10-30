@@ -3335,3 +3335,16 @@ Plan cells restarted with the finished lines commented out.
   the competition's own code (ThinkingCap-Test: recipe + graders) + the choosing-set questions locally, the harness
   checked against the GPU on the original Qwen, then original + the 2-3 best Wanda levels.
 - ~03:20: newtop nofit2 crashed at its last line (missing import; my bug) after answering its 552 questions x10 (saved). 552 of the 2,441 Haiku-verified hard no-fit passed BFCL's prompt-length bins + 8-gram check (1,333 dropped: Glaive prompts are shorter than BFCL's). Fixed; newtop nofit2 re-queued on GPU 1 right after code1 (resumes from the saved answers); GPU 2's poolup dp13 waits for it.
+
+### 2026-10-30 ~04:00 — data loop results (160-per-part references) + Mac Wanda stopped
+- poolcheck-dp12 (dp10 + nofit1 + tools1 + code1): 33/36. Fails all on no-fit THINKING too long: median 156 vs 128
+  [122,133] +22%, p75 215 vs 173 +24%, reply +18% (accuracy fine 85 vs 87). Note: with 160 reference questions BFCL
+  no-fit accuracy is 87%, not the 79% the 80-question reference suggested: part of the earlier "too easy" was reference noise.
+- poolcheck-dp13 (+ nofit2: 552 hard Haiku-verified no-fit after BFCL length bins / 8-gram): 33/36, no-fit ALL OK.
+  Misses: bfcl_simple accuracy 78 vs 85 [80,89] (2 pts outside; ToolACE simple 76%, Glaive 84%), svamp p75 578 vs 759
+  [591,976] (2% outside, near), ifeval accuracy 59 vs 52 [45,58] (1 pt outside, near). Gate closed: the lpu-* runs skipped.
+- Iteration 3: poolup dp14 = dp13 without ToolACE one-function questions (poolup --pu-drop), check seed 33; all lpu-* runs
+  re-pointed to dp14 (gated). GPU 1's plan cell restarted (its queue had ended).
+- Mac Wanda (full run) STOPPED after 2 h: the 8 GB Mac swapped (7.9 GB swap, ~80 MB free RAM): the fp32 model + MPS
+  caches + 128 calibration hidden states did not fit with the browser running. Moved to a GPU stage `wanda` (end of
+  GPU 1's queue): Wanda 10-50% + damage check + the 384-calibration coverage check (mask overlap per layer type at 30%).
