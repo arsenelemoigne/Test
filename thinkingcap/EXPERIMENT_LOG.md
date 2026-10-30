@@ -3439,3 +3439,4 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   (tokens weighted by each part's base mean), then averaged over the 4 benchmarks as compare.py does (track.py
   full_weighted). Re-weighted key results (from the logged per-part numbers): lpc-l2s50e-soup-100 fresh +45.8 / -1.3 ->
   +46.1 / -1.2; lpw-press-50 choosing +43.0 / +0.4 -> +42.9 / +0.5; lpv-base-50 choosing +43.0 / -1.9 -> +42.5 / -1.7.
+- ~13:00 lpw-press finished at 2 checkpoints (25 +37.1/-1.0, 50 +43.0/+0.4); judgment call (logged): it passes rule (b) at checkpoint 50 (same saving as the baseline at 50, +2.3 accuracy), the two-checkpoint average fails only because step 25 is early. CONFIRM queued on GPU 2 after lpw-math: lpc-press, 3 seeds, fresh soups at 50 / 75. lpw-p3medium 25: +34.7 / -1.7 (50, 75 pending).
