@@ -3320,3 +3320,4 @@ Plan cells restarted with the finished lines commented out.
   newtop nofit2 (up to 1,500 after the BFCL length bins + 8-gram check, 10 answers each), then poolup dp13 (dp10 + nofit1
   + tools1 + code1 + nofit2 vs the 160-per-part references; held-out check seed 31). All lpu-* runs now target dp13
   (gated). dp12's check (GPU 1) still runs, for comparison.
+- ~02:20: dial lpc-adar1-soup-25 x0.7 (fresh): +31.3% / -1.6 (x0.5 +23.1 / +0.3; x1 +43.0 / -1.9): the dial trades saving for accuracy roughly linearly; Ada-R1 does not reach the target at any strength. GPU 2 restarted on the updated plan (it had started lpu-2stage on the old dp12 line): now newtop nofit2 -> poolup dp13. GPU 1: code1 nearly done, then poolup dp12.
