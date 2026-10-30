@@ -3579,3 +3579,7 @@ The five sets do not overlap. Visual: new artboard "The full evaluation" in the 
 Repeated-text replies (same short token repeated 40+ times at the end): ifeval 10 (original Qwen: 13), mbpp 1 (1), others 0,
 so the degenerate replies seen in the log are not new with training. Capped replies: svamp 139 -> 1, mbpp 236 -> 28, ifeval
 156 -> 52. Visual: canvas section "Trained models, measured without the noise".
+- 23:16: lpc-runa2-soup-100 on questions_screen720 x 4: +33.5 / +0.5 (full-eval weighting +33.4 / +0.4); svamp +33/-1.5,
+  mbpp +32/+1.9, ifeval +36/+0.4, simple +31/+1.3, multiple +34/+2.9, no-fit +33/-1.2. (Fresh x8 had said +31.0 / -0.5.)
+  Canvas page rebuilt simply ("Are our tests like the real test?": the sets, one set vs the full test, training data vs
+  the full test, trained models measured on the full test or the 720 only).
