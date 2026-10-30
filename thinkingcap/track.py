@@ -2639,6 +2639,14 @@ def fullsoup(args):
                 shutil.rmtree(model, ignore_errors=True)
                 drive_sync("save")
             print(score_line(f"{name}-soup-{step} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
+    # how representative each of our small sets is (subset_check.py), on every full run so far
+    sets = ["questions_val20261023", "questions_40", f"questions_ref{REF_SEEDS[0]}", f"questions_ref{REF_SEEDS[1]}",
+            f"questions_fresh{FRESH_SEED}"]
+    drive_sync("restore", only=sets)
+    cands = sorted(str(p) for p in ROOT.glob("full-*-soup-*") if (p / "results.json").exists())
+    py("subset_check.py", "--base", base, "--cands", *cands, "--sets", *[s for s in sets if Path(s).exists()],
+       "--out", ROOT / "full-subsets")
+    drive_sync("save")
 
 
 def dial(args):
