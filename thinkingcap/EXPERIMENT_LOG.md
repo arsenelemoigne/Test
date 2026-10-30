@@ -3395,3 +3395,11 @@ Next (queued at the end of GPU 1, after LUPIN): wandaeval: real eval of 10 / 20 
   (screen noise +-1.5 overall). Fewer pairs (86 steps vs 168): the matching against 160 references fills less.
 - wandaeval crashed: the pruned model folders had no tokenizer files (my bug). Fixed (wanda_prune.py --save also saves
   the tokenizer) and re-queued on GPU 1.
+
+### 2026-10-30 ~08:15 — USER DECISION: accept dp13 (option A)
+dp13 = pool dp10 + top-ups nofit1 / tools1 / code1 / nofit2, re-picked against the 160-per-part references; check 33/36
+(no-fit fixed; simple accuracy 2 pts outside its interval; svamp p75 and ifeval accuracy near misses). Gate overridden by
+the user. Baseline = lpv-base (already screened: +46.3 / -1.7 at 25, +43.0 / -1.9 at 50, +43.2 / +0.2 at 75).
+Experiments queued on dp13, each vs lpv-base with the decision rule (WORTH 3 seeds + fresh soup if acc >= base and saving
+>= base +2, or saving >= base -2 and acc >= base +1): GPU 2: lpw-p1tilt, lpw-2stage, lpw-press, lpw-math; GPU 1 (after
+wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
