@@ -3385,3 +3385,13 @@ Next (queued at the end of GPU 1, after LUPIN): wandaeval: real eval of 10 / 20 
   dp13 with a bigger, less noisy check (400 questions per part) before deciding; (c) keep iterating.
 - Meanwhile (GPUs otherwise idle): GPU 2 runs lpv-base = the baseline recipe on dp13, UNGATED and labelled provisional;
   GPU 1 skips its gated lpu-* lines and goes to wandaeval (Wanda 10/20/30% real eval).
+- ~07:45 lpv-base (PROVISIONAL baseline on dp13: l2s50e recipe + no-fit protection; 86 DPO steps) on the choosing set x4:
+  | step | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | 25 | +46.3 / -1.7 | +58 / -5.0 | +47 / -3.7 | +43 / +3.1 | +31 / -1.2 | +33 / -1.9 | +39 / 0.0 |
+  | 50 | +43.0 / -1.9 | +52 / -0.6 | +47 / -4.4 | +34 / 0.0 | +32 / +0.6 | +36 / -6.2 | +39 / -1.9 |
+  | 75 | +43.2 / +0.2 | +50 / -1.2 | +51 / +0.6 | +34 / +3.1 | +32 / +2.5 | +38 / -3.7 | +39 / -3.8 |
+  Same range as lpb-l2s50e's screen on dp10 (+41-51% / -2 to 0): the upgraded pool did not change the screen picture
+  (screen noise +-1.5 overall). Fewer pairs (86 steps vs 168): the matching against 160 references fills less.
+- wandaeval crashed: the pruned model folders had no tokenizer files (my bug). Fixed (wanda_prune.py --save also saves
+  the tokenizer) and re-queued on GPU 1.

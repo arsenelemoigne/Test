@@ -198,8 +198,10 @@ def main():
                 f"{k} {100 * a / max(1, b):.1f}%" for k, (a, b) in same.items())
             print(text, flush=True)
             (out / "mask_overlap.txt").write_text(text + "\n")
-        if args.save:
+        if args.save:  # weights + tokenizer, so evaluate.py can load the folder as a model
             model.to(torch.bfloat16).save_pretrained(out / f"wanda-{round(s * 100)}")
+            from transformers import AutoTokenizer
+            AutoTokenizer.from_pretrained(args.model).save_pretrained(out / f"wanda-{round(s * 100)}")
         (out / "results.json").write_text(json.dumps(results, indent=1))
     base_nll, base_pref = results["0.0"]
     lines = ["Wanda damage check (proxy, no generation): reply NLL increase vs original (%), and right>wrong preference",

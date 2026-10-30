@@ -247,4 +247,5 @@ lupin --name lpu-p4tools --lp-think-tilt-bfcl 2 --lp-min-solve-part bfcl_irrelev
 wanda --name wanda-c1
 # SPARSE arm C real test (after LUPIN's screens): Wanda 10/20/30% on the choosing set x4 (accuracy + thinking per type)
 wandaeval --name wanda --wd-sparsity 0.1 0.2 0.3
+wandaeval --name wanda --wd-sparsity 0.1 0.2 0.3 --dp-step a
 end
