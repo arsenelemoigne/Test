@@ -3334,3 +3334,4 @@ Plan cells restarted with the finished lines commented out.
   (16+ out of memory: the KV cache is ~0.11 MB per token). An eval of 240 x 4 (~700k tokens) ~ 1 h per model. Next:
   the competition's own code (ThinkingCap-Test: recipe + graders) + the choosing-set questions locally, the harness
   checked against the GPU on the original Qwen, then original + the 2-3 best Wanda levels.
+- ~03:20: newtop nofit2 crashed at its last line (missing import; my bug) after answering its 552 questions x10 (saved). 552 of the 2,441 Haiku-verified hard no-fit passed BFCL's prompt-length bins + 8-gram check (1,333 dropped: Glaive prompts are shorter than BFCL's). Fixed; newtop nofit2 re-queued on GPU 1 right after code1 (resumes from the saved answers); GPU 2's poolup dp13 waits for it.

@@ -2831,6 +2831,7 @@ def newtop(args):
     on --nt-parts (the choosing set's prompt-length bins, 8-word contamination check against every evaluation question),
     up to --tt-questions kept, each answered 10 times by the original Qwen (seed 41). Written like a tooltopup
     (runs/bon/tooltop-<name>/questions.jsonl + rollouts.jsonl) so poolup --pu-extras can add it."""
+    import statistics
     name = args.name
     out = BON / f"tooltop-{name}"
     drive_sync("restore", only=[str(out)])
