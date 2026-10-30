@@ -3465,3 +3465,21 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
 - lpc-math: seed 0 trained (86 steps), seed 1 training.
 - User asked for neutral dossiers for an external researcher: LUPIN_ROUND1_DOSSIER.md (LUPIN only) and
   THINKINGCAP_FULL_DOSSIER.md (every track from the start, compiled from this log, the per-type clone, specs and handoffs).
+
+### 2026-10-30 ~15:00 — full evaluation speed; build spec Run A built and queued (user)
+- Full evaluation of the original Qwen (GPU 2) started ~14:10: 512 of 22,072 answers by 14:34 (chunks of 256 answers,
+  ~10 min each). If that pace holds, ~18 h per model, not the ~2.5 h estimated; re-measured over the next hours.
+- External build spec (THINKINGCAP_BUILD_SPEC.md, user's Downloads) reviewed. User decisions: build the per-type pair mix
+  and the decaying learning rate, test small, run Run A with 3 seeds after lpc-math; Run C (math cut pairs) NOT built.
+- Code: lupin_select.py --kind-share-part (per part, each pair kind its own share, each kind cell-matched on its own);
+  dpo.py --lr-schedule cosine (--warmup 10, --lr-min 2e-6; set per step, so a resumed run keeps the schedule);
+  track.py --lp-kind-share / --lp-lr-schedule. Synthetic test: part shares exact (15/30/30/11.9/5.9/7.1%), kinds per part
+  as asked where pairs exist; a kind short of pairs lowers that part's fill, and the existing fill-ratio trim then
+  scales every part down (real fill printed in the run's summary).
+- Run A = lpc-runa (GPU 1 after lpc-math): part shares svamp 15 / mbpp 30 / ifeval 30 / bfcl 25 (400/200/240 inside);
+  kinds svamp guard 40 right 60; mbpp & ifeval shorten 70 guard 15 right 15; simple shorten 60 guard 20 right 20;
+  multiple shorten 30 guard 30 right 40; no-fit guard 40 right 60. min-solve for shorten: mbpp/ifeval 0.3, simple 0.5,
+  multiple 0.8, svamp/no-fit 0 (guard on every solved question; the existing rule also limits guard by min-solve, so
+  multiple's guard pairs are only on questions solved >= 0.8 — a small difference from the spec). Right pairs on all
+  parts; easy-ratio 1.2; shorten cap off; 4,800 pairs; cosine lr; 3 seeds; checkpoints every 10; fresh soups at
+  100/150/200/250/300.

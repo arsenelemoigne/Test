@@ -271,6 +271,8 @@ def main():
     parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
+    parser.add_argument("--lp-kind-share", default="", help="lupin: lupin_select.py --kind-share-part (Run A pair mix)")
+    parser.add_argument("--lp-lr-schedule", default="", help="lupin: dpo.py --lr-schedule (cosine: warm-up 10, down to 2e-6)")
     parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
     parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
@@ -3132,6 +3134,7 @@ def lupin(args):
            "--total", args.lp_total, "--out", pairs,
            *(["--max-shorten-ratio", args.lp_balance] if args.lp_balance else []),
            *(["--shorten-ratio-part", args.lp_pressure] if args.lp_pressure else []),
+           *(["--kind-share-part", args.lp_kind_share] if args.lp_kind_share else []),
            *(["--part-share", args.lp_part_share] if args.lp_part_share else []),
            *(["--solve-tilt", args.lp_solve_tilt] if args.lp_solve_tilt else []),
            *(["--think-tilt-bfcl", args.lp_think_tilt_bfcl] if args.lp_think_tilt_bfcl != 1.0 else []))
@@ -3147,7 +3150,8 @@ def lupin(args):
     elif not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", base, "--out", start)
     gentle = [*(["--beta", args.lp_beta] if args.lp_beta else []), *(["--nll", args.lp_nll] if args.lp_nll is not None else []),
-              *(["--lr", args.lp_lr] if args.lp_lr else [])]
+              *(["--lr", args.lp_lr] if args.lp_lr else []),
+              *(["--lr-schedule", args.lp_lr_schedule] if args.lp_lr_schedule else [])]
     for seed in args.seeds:
         adapter = Path("adapters") / f"{name}-s{seed}"
         if not (adapter / "adapter_config.json").exists():

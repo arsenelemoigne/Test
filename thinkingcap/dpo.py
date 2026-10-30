@@ -142,6 +142,14 @@ def main():
         stats.append((float(loss), float(margin) > 0))
         if position % args.batch == 0 or position == len(order):  # the last, partial batch too
             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            if args.lr_schedule == "cosine":  # warm-up, then cosine down to --lr-min at the last step (30 Oct build spec)
+                if step < args.warmup:
+                    lr = args.lr * (step + 1) / args.warmup
+                else:
+                    lr = args.lr_min + 0.5 * (args.lr - args.lr_min) * (
+                        1 + math.cos(math.pi * (step - args.warmup) / max(1, steps - 1 - args.warmup)))
+                for group in optimizer.param_groups:
+                    group["lr"] = lr
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
             step += 1
@@ -197,6 +205,9 @@ def parse_arguments():
     parser.add_argument("--beta", type=float, default=0.1)
     parser.add_argument("--nll", type=float, default=1.0, help="weight of the NLL anchor on the chosen reply")
     parser.add_argument("--lr", type=float, default=2e-5)
+    parser.add_argument("--lr-schedule", choices=("constant", "cosine"), default="constant")
+    parser.add_argument("--warmup", type=int, default=10, help="cosine: linear warm-up steps")
+    parser.add_argument("--lr-min", type=float, default=2e-6, help="cosine: learning rate at the last step")
     parser.add_argument("--batch", type=int, default=16, help="pairs per optimizer step")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=0, help="stop early (0: the whole epoch)")

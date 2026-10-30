@@ -49,6 +49,10 @@ def main():
     parser.add_argument("--max-shorten-ratio", type=float, default=0.0,
                         help="after matching, per part at most this many 'shorten' pairs per 'be right' pair (guard + right "
                              "+ hard); michal-bida's 1:1 balance (29 Oct: matching had pushed it to 2-3:1). 0: off")
+    parser.add_argument("--kind-share-part", default="",
+                        help="Run A (30 Oct build spec): per part, the share of each pair kind, e.g. "
+                             "'svamp=guard:0.4,right:0.6;mbpp=shorten:0.7,guard:0.15,right:0.15'; a kind not named gets "
+                             "none; parts not named keep the recipe's own mix")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -77,6 +81,10 @@ def main():
     total_share = sum(shares.values())
     share = {k: shares[k] / total_share for k in ("svamp", "mbpp", "ifeval")}
     share |= {p: shares["bfcl"] / total_share * n / bfcl for p, n in BFCL_SIZES.items()}
+    kind_share = {}
+    for item in (x for x in args.kind_share_part.split(";") if x):
+        part, spec = item.split("=", 1)
+        kind_share[part] = {k: float(v) for k, v in (kv.split(":") for kv in spec.split(","))}
     solve_tilt = dict((int(k), float(v)) for k, v in (x.split("=") for x in args.solve_tilt.split(",") if x))
     chosen, report, lines = [], {}, [f"pairs matched to the evaluation: wanted {args.total}"]
     for part in PARTS:
@@ -93,39 +101,40 @@ def main():
             cell_share = {c: cell_share[c] * tilt[c] for c in cells}
             norm = sum(cell_share.values())
             cell_share = {c: v / norm for c, v in cell_share.items()}
-        per_cell = defaultdict(lambda: defaultdict(list))  # cell -> question -> its pairs
-        no_answers = 0
-        for p in by_part.get(part, []):
-            if p["id"] not in answers:
-                no_answers += 1
-                continue
-            s, t = features(answers[p["id"]])
-            per_cell[(solve_bin(s), think_bin(t, edges))][p["id"]].append(p)
-        # cells where this recipe gives NO pair at all (mostly never-solved questions: nothing right to prefer) cannot
-        # be trained on; their reference share is spread over the cells that have pairs (29 Oct: keeping their quota
-        # and trimming every part to the weakest part's fill left 1,284 of 3,200 pairs). Reported, not hidden.
-        empty = [c for c in cells if not per_cell[c]]
-        live = sum(cell_share[c] for c in cells if per_cell[c]) or 1
-        excluded = 1 - live
-        cell_share = {c: (cell_share[c] / live if per_cell[c] else 0.0) for c in cells}
-        got, short = Counter(), Counter()
-        kinds = Counter()
-        for c in cells:
-            need = round(want * cell_share[c])
-            questions = list(per_cell[c].values())
-            rng.shuffle(questions)
-            for q in questions:
-                rng.shuffle(q)
-            taken, depth = [], 0
-            while len(taken) < need and any(len(q) > depth for q in questions):
+        no_answers = sum(p["id"] not in answers for p in by_part.get(part, []))
+        # Run A (30 Oct build spec): a part's pairs split by kind at fixed shares, each kind cell-matched on its own
+        mix = kind_share.get(part) or {None: 1.0}
+        got, short, kinds = Counter(), Counter(), Counter()
+        empty, excluded = [], 0.0
+        for kind, k_share in mix.items():
+            per_cell = defaultdict(lambda: defaultdict(list))  # cell -> question -> its pairs
+            for p in by_part.get(part, []):
+                if p["id"] in answers and (kind is None or p["kind"] == kind):
+                    s, t = features(answers[p["id"]])
+                    per_cell[(solve_bin(s), think_bin(t, edges))][p["id"]].append(p)
+            # cells where this recipe gives NO pair at all (mostly never-solved questions: nothing right to prefer)
+            # cannot be trained on; their reference share is spread over the cells that have pairs (29 Oct: keeping
+            # their quota and trimming every part to the weakest part's fill left 1,284 of 3,200 pairs). Reported.
+            empty += [f"{kind or ''}{c}" for c in cells if not per_cell[c]]
+            live = sum(cell_share[c] for c in cells if per_cell[c]) or 1
+            excluded = max(excluded, 1 - live)
+            share_k = {c: (cell_share[c] / live if per_cell[c] else 0.0) for c in cells}
+            for c in cells:
+                need = round(want * k_share * share_k[c])
+                questions = list(per_cell[c].values())
+                rng.shuffle(questions)
                 for q in questions:
-                    if len(q) > depth and len(taken) < need:
-                        taken.append(q[depth])
-                depth += 1
-            got[c] = len(taken)
-            short[c] = need - len(taken)
-            kinds.update(p["kind"] for p in taken)
-            chosen += taken
+                    rng.shuffle(q)
+                taken, depth = [], 0
+                while len(taken) < need and any(len(q) > depth for q in questions):
+                    for q in questions:
+                        if len(q) > depth and len(taken) < need:
+                            taken.append(q[depth])
+                    depth += 1
+                got[c] += len(taken)
+                short[c] += need - len(taken)
+                kinds.update(p["kind"] for p in taken)
+                chosen += taken
         n = sum(got.values())
         report[part] = {"wanted": want, "kept": n, "short_cells": {str(c): v for c, v in short.items() if v > 0},
                         "cells_without_pairs": [str(c) for c in empty], "reference_share_without_pairs": excluded,
