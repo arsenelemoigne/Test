@@ -3449,3 +3449,10 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   accuracy -> WORTH (rule a). Confirm lpc-math queued on GPU 1 (3 seeds, fresh soups 40/50/60/70), then lpw-pressmath
   (combined: per-type pressure + math/no-fit protection) screen.
   lpw-p3medium (medium-difficulty tilt): 50 +39.4/-2.7, 75 +41.1/-1.9, 100 +43.4/-0.8 -> DROP.
+- ~15:50 lpw-press6k (per-type pressure, ~1,700 distinct pairs, 107 steps; choosing x4): 50 +44.6/-1.7, 75 +44.7/+0.7,
+  100 +39.4/-1.7 (full-eval weighting within 0.2): more distinct pairs did NOT raise the saving above ~45%; accuracy
+  wobbles +-1.5 around -0.5 -> no better than lpw-press; per-type pressure seems to plateau at ~44-45% saved.
+- FIRST FRESH CONFIRM POINT of per-type pressure: lpc-press-soup-40 (3 seeds, fresh 240 x 8): +45.5% / **-5.2** (svamp
+  -8.1, ifeval -5.6, multiple -4.7, mbpp -3.8): far below its screen (+43.0 / +0.4 at step 50, 1 seed, choosing set). A
+  ~5-pt screen-to-fresh gap (l2s50e's was ~1.3): the screen's +0.4 was likely a lucky single run on the choosing set.
+  Waiting for soups 50/60/70 before concluding. Red flag watch: math -8.1 at this checkpoint.
