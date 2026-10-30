@@ -3564,3 +3564,5 @@ The five sets do not overlap. Visual: new artboard "The full evaluation" in the 
 - 22:35 (user): the control keeps the eval's difficulty mix: lpc-bida now uses lupin_select matching (160-per-part
   references, cells solve x thinking), then michal-bida's 1:1 balance re-imposed per part after matching (--lp-balance 1:
   at most one shorten pair per be-right pair), no-fit loose, target 4,800 pairs; still no min-solve rule.
+- 22:59: lpc-runa2 fresh x8 soups: 100 +31.0 / -0.5; 150 +28.7 / -1.5; 200 +27.9 / -0.2; 250 +23.3 / -0.9. Saving FALLS
+  with more steps (cosine lr; 26% right + 23% guard pairs). 720 rescreen started (soup-100 first).
