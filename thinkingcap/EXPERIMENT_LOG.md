@@ -3583,3 +3583,5 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   mbpp +32/+1.9, ifeval +36/+0.4, simple +31/+1.3, multiple +34/+2.9, no-fit +33/-1.2. (Fresh x8 had said +31.0 / -0.5.)
   Canvas page rebuilt simply ("Are our tests like the real test?": the sets, one set vs the full test, training data vs
   the full test, trained models measured on the full test or the 720 only).
+- 00:41 (31 Oct): lpc-runa2-soup-150 on the 720 x 4: +32.4 / -0.1 (full-eval weighting +32.3 / -0.1); svamp +24/+1.0,
+  mbpp +37/-0.4, ifeval +34/-1.5, simple +33/+0.2, multiple +36/+2.7, no-fit +33/-1.5.
