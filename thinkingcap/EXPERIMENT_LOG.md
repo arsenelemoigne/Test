@@ -3566,3 +3566,16 @@ The five sets do not overlap. Visual: new artboard "The full evaluation" in the 
   at most one shorten pair per be-right pair), no-fit loose, target 4,800 pairs; still no min-solve rule.
 - 22:59: lpc-runa2 fresh x8 soups: 100 +31.0 / -0.5; 150 +28.7 / -1.5; 200 +27.9 / -0.2; 250 +23.3 / -0.9. Saving FALLS
   with more steps (cosine lr; 26% right + 23% guard pairs). 720 rescreen started (soup-100 first).
+
+### 2026-10-30 ~23:40 — lpc-l2s50e-soup-100 full evaluation per type (computed from both full runs' records)
+| part | n | saved | acc | broke / fixed (>=6 -> <=2 of 8) | by thinking fifth (saved / acc), shortest -> longest |
+|---|---|---|---|---|---|
+| svamp | 1000 | 55.9 | -3.2 | 14 / 3 | 30/+0.1, 34/-0.9, 40/-4.2, 52/-6.7, 69/-4.4 |
+| mbpp | 378 | 51.9 | -2.2 | 1 / 1 | 35/-2.7, 41/-2.3, 49/-3.8, 59/-4.1, 53/+2.0 |
+| ifeval | 541 | 45.8 | -1.6 | 6 / 3 | 33/+1.0, 39/-0.3, 36/-4.4, 45/-2.9, 53/-1.4 |
+| simple | 400 | 33.4 | -0.8 | 6 / 3 | 16/+0.5, 20/-0.9, 25/-1.2, 33/-3.9, 51/+1.9 |
+| multiple | 200 | 36.6 | -0.2 | 3 / 3 | 21/+3.4, 30/+0.9, 32/-1.6, 36/-1.6, 50/-2.2 |
+| no-fit | 240 | 40.9 | -3.3 | 3 / 0 | 16/0.0, 20/-0.5, 30/-1.3, 39/-3.1, 61/-11.5 |
+Repeated-text replies (same short token repeated 40+ times at the end): ifeval 10 (original Qwen: 13), mbpp 1 (1), others 0,
+so the degenerate replies seen in the log are not new with training. Capped replies: svamp 139 -> 1, mbpp 236 -> 28, ifeval
+156 -> 52. Visual: canvas section "Trained models, measured without the noise".
