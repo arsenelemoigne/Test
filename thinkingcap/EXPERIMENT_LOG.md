@@ -3373,3 +3373,15 @@ COVERAGE CHECK (user: is 128 calibration enough?): Wanda at 30% with 384 calibra
 are the same for 99.7% (q/k/v/gate/up), 99.1% (o_proj), 98.2% (down_proj): 128 is enough.
 Next (queued at the end of GPU 1, after LUPIN): wandaeval: real eval of 10 / 20 / 30% pruned on the choosing set x4
 (accuracy and thinking length per type).
+
+### 2026-10-30 ~06:30 — data loop: dp15 33/36; loop stopped (check noise), decision left to the user
+- poolcheck-dp15 (dp13 candidates minus ToolACE one-call solved < 50%): 33/36: svamp accuracy 81 vs 88 [84,92] (-6.8),
+  bfcl_simple p75 156 vs 190 (-18%), ifeval p75 366 vs 435 (-16%).
+- Pattern over dp12-dp15 (160-per-part references): every pool lands at 33-34/36 and the misses MOVE between parts from
+  one check to the next; math was not changed at all between dp12 and dp15 yet its check accuracy went 84 -> 81. A 200-
+  question x4 check swings +-3-7 pts per part: further re-picking would chase noise.
+- Closest pools: dp13 (no-fit fixed; misses simple accuracy 2 pts outside, svamp p75 and ifeval accuracy near misses)
+  and dp14 (34/36). Options for the user: (a) accept dp13 as the training pool (gate overridden, logged); (b) re-check
+  dp13 with a bigger, less noisy check (400 questions per part) before deciding; (c) keep iterating.
+- Meanwhile (GPUs otherwise idle): GPU 2 runs lpv-base = the baseline recipe on dp13, UNGATED and labelled provisional;
+  GPU 1 skips its gated lpu-* lines and goes to wandaeval (Wanda 10/20/30% real eval).
