@@ -253,4 +253,6 @@ pertype --name lpw-pertype --cc-base lpv-base --pt-weights svamp=0.5,mbpp=0.8,if
 lupin --name lpw-gentle --lp-beta 0.3 --lp-nll 2 --lp-lr 1e-5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
 lupin --name lpw-p3medium --lp-solve-tilt 2=2,3=0.5 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
 lupin --name lpw-p4tools --lp-think-tilt-bfcl 2 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
+# per-type merge, softer (the sum overshot +77/-9.2, tuned +70.5/-6.5): same adapters, re-merged only
+pertype --name lpw-pertype --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
 end

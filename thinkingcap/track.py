@@ -269,6 +269,7 @@ def main():
     parser.add_argument("--lp-nll", type=float, default=None, help="lupin: dpo.py --nll (default 1.0)")
     parser.add_argument("--lp-lr", type=float, default=0.0, help="lupin: dpo.py --lr (0: default 2e-5)")
     parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
+    parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
     parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
@@ -2670,7 +2671,7 @@ def pertype(args):
         print(f"pertype {name}: {group} adapter on {len(mine)} pairs", flush=True)
     weights = dict((k, float(v)) for k, v in (x.split("=") for x in args.pt_weights.split(",") if x))
     val = f"questions_val{VAL_SEED}"
-    for tag, w in (("sum", {g: 1.0 for g in PT_GROUPS}), ("tuned", weights)):
+    for tag, w in ((("sum", {g: 1.0 for g in PT_GROUPS}),) if not args.pt_tag else ()) + ((args.pt_tag or "tuned", weights),):
         out = ROOT / f"v4-{name}-{tag}"
         if not (out / "results.json").exists():
             model = Path("/content/lupin-models") / f"{name}-{tag}"

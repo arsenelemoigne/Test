@@ -3419,3 +3419,13 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   lpw-pertype-sum (4 per-type adapters, each trained on its own type's pairs, simply added): +77.2% / -9.2 (svamp -21.3,
   no-fit -13.8): adding four full-strength adapters stacks four pushes; far too strong. The tuned merge (math 0.5, code
   0.8, instructions 1, tools 0.8) is being scored; a weaker merge (e.g. all x0.3-0.5) would be the natural next try.
+- ~11:20 experiment scores (choosing x4; baseline lpv-base 25 +46.3/-1.7, 50 +43.0/-1.9, 75 +43.2/+0.2):
+  lpw-p1tilt: 25 +41.7/-1.0, 50 +45.6/-2.9, 75 +48.7/-1.8 (best two 50-75 avg +47.2/-2.4 vs base +43.1/-0.9: +4 saved for
+  -1.5 accuracy) -> DROP by the rule (trades accuracy for saving, no better trade-off).
+  lpw-pertype-tuned (math 0.5, code 0.8, instr 1, tools 0.8): +70.5 / -6.5 (svamp -13.7, multiple -10.6): still too
+  strong; a soft merge (0.25 / 0.35 / 0.45 / 0.35, no retraining) queued on GPU 1.
+  lpw-gentle (beta 0.3, NLL 2, lr 1e-5): 25 +14.4/+0.1, 50 +29.1/-1.7 (slower, 75 pending).
+  lpw-2stage (from the "be right" round): 25 +22.4/+1.9, 50 +24.3/+1.2: more accurate than the original but saves half
+  as much (75 pending).
+  Reading so far: every variant sits near the same saving-vs-accuracy line (~1 pt of accuracy per ~3-4 pts of saving);
+  none moves off it yet.
