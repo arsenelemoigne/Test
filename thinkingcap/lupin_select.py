@@ -53,6 +53,10 @@ def main():
                         help="Run A (30 Oct build spec): per part, the share of each pair kind, e.g. "
                              "'svamp=guard:0.4,right:0.6;mbpp=shorten:0.7,guard:0.15,right:0.15'; a kind not named gets "
                              "none; parts not named keep the recipe's own mix")
+    parser.add_argument("--loose-parts", default="",
+                        help="parts short of pairs (30 Oct, Run A: no-fit 148 of 343) whose pairs are taken WITHOUT cell matching "
+                             "and which do not set the fill ratio: they keep what they have (up to their quota), the other "
+                             "parts are not trimmed down to them. Comma list, e.g. bfcl_irrelevance")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -104,6 +108,7 @@ def main():
         no_answers = sum(p["id"] not in answers for p in by_part.get(part, []))
         # Run A (30 Oct build spec): a part's pairs split by kind at fixed shares, each kind cell-matched on its own
         mix = kind_share.get(part) or {None: 1.0}
+        loose = part in set(x for x in args.loose_parts.split(",") if x)
         got, short, kinds = Counter(), Counter(), Counter()
         empty, excluded = [], 0.0
         for kind, k_share in mix.items():
@@ -111,7 +116,7 @@ def main():
             for p in by_part.get(part, []):
                 if p["id"] in answers and (kind is None or p["kind"] == kind):
                     s, t = features(answers[p["id"]])
-                    per_cell[(solve_bin(s), think_bin(t, edges))][p["id"]].append(p)
+                    per_cell[cells[0] if loose else (solve_bin(s), think_bin(t, edges))][p["id"]].append(p)
             # cells where this recipe gives NO pair at all (mostly never-solved questions: nothing right to prefer)
             # cannot be trained on; their reference share is spread over the cells that have pairs (29 Oct: keeping
             # their quota and trimming every part to the weakest part's fill left 1,284 of 3,200 pairs). Reported.
@@ -119,6 +124,8 @@ def main():
             live = sum(cell_share[c] for c in cells if per_cell[c]) or 1
             excluded = max(excluded, 1 - live)
             share_k = {c: (cell_share[c] / live if per_cell[c] else 0.0) for c in cells}
+            if loose:  # one pool for the whole part: every pair of this kind counts, whatever its cell
+                share_k = {c: (1.0 if c == cells[0] else 0.0) for c in cells}
             for c in cells:
                 need = round(want * k_share * share_k[c])
                 questions = list(per_cell[c].values())
@@ -165,7 +172,8 @@ def main():
         chosen = balanced
     # part shares stay the evaluation's: a part that filled less of its quota (hard cells give few pairs) sets the
     # fill ratio, the other parts are trimmed to it at random (which keeps their cell mix)
-    fill = min(report[part]["kept"] / max(1, report[part]["wanted"]) for part in PARTS)
+    loose_parts = set(x for x in args.loose_parts.split(",") if x)
+    fill = min([report[part]["kept"] / max(1, report[part]["wanted"]) for part in PARTS if part not in loose_parts] or [1.0])
     trimmed = []
     for part in PARTS:
         mine = [p for p in chosen if p["part"] == part]

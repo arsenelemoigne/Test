@@ -272,6 +272,7 @@ def main():
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
+    parser.add_argument("--lp-loose", default="", help="lupin: lupin_select.py --loose-parts (parts short of pairs)")
     parser.add_argument("--lp-kind-share", default="", help="lupin: lupin_select.py --kind-share-part (Run A pair mix)")
     parser.add_argument("--lp-lr-schedule", default="", help="lupin: dpo.py --lr-schedule (cosine: warm-up 10, down to 2e-6)")
     parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
@@ -3137,6 +3138,7 @@ def lupin(args):
            *(["--max-shorten-ratio", args.lp_balance] if args.lp_balance else []),
            *(["--shorten-ratio-part", args.lp_pressure] if args.lp_pressure else []),
            *(["--kind-share-part", args.lp_kind_share] if args.lp_kind_share else []),
+           *(["--loose-parts", args.lp_loose] if args.lp_loose else []),
            *(["--part-share", args.lp_part_share] if args.lp_part_share else []),
            *(["--solve-tilt", args.lp_solve_tilt] if args.lp_solve_tilt else []),
            *(["--think-tilt-bfcl", args.lp_think_tilt_bfcl] if args.lp_think_tilt_bfcl != 1.0 else []))
