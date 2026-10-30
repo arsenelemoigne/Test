@@ -3513,3 +3513,6 @@ svamp) SVAMP still saves ~60% (shorten pairs remain on questions solved >= 8/10)
   1,354/1,440, simple 560/571, multiple 268/286). Stopped at seed 0 step 25.
 - Fix: lupin_select.py --loose-parts (track --lp-loose): a listed part takes its pairs without cell matching and does
   not set the fill ratio. Restarted as lpc-runa2 with --lp-loose bfcl_irrelevance; Runs B and D get the same flag.
+- 16:20: lpc-runa2 pairs: 4,442 kept (shorten 2,265, guard 1,017, right 1,160), fill ratio 0.94; no-fit 266/343
+  (guard 137, right 129), part shares 15.2 / 30.4 / 30.x / 12.0 / ~6 / ~6%. ~275 steps per seed.
+  Full evaluation of the original Qwen: 2,560 / 22,072 at 16:20 (~20 answers/min; ETA ~08:45 on 31 Oct).
