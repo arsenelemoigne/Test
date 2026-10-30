@@ -3516,3 +3516,20 @@ svamp) SVAMP still saves ~60% (shorten pairs remain on questions solved >= 8/10)
 - 16:20: lpc-runa2 pairs: 4,442 kept (shorten 2,265, guard 1,017, right 1,160), fill ratio 0.94; no-fit 266/343
   (guard 137, right 129), part shares 15.2 / 30.4 / 30.x / 12.0 / ~6 / ~6%. ~275 steps per seed.
   Full evaluation of the original Qwen: 2,560 / 22,072 at 16:20 (~20 answers/min; ETA ~08:45 on 31 Oct).
+
+### 2026-10-30 ~19:15 — original Qwen full evaluation done (full-base, 2,759 x 8); our small sets vs the full evaluation
+Full evaluation sizes: svamp 1,000, mbpp 378, ifeval 541, simple 400, multiple 200, no-fit 240. Original Qwen: svamp
+88.7% / 677 thinking tokens, mbpp 52.4 / 2,079, ifeval 58.7 / 433, simple 82.2 / 171, multiple 76.1 / 192, no-fit 83.4 /
+186 (accuracy over 8 samples, mean thinking tokens per answer). Random draws of 40 questions per part (4,000 draws),
+5-95% range of the original's accuracy: svamp 82-94, mbpp 42-63, ifeval 49-68, simple 74-90, multiple 68-84, no-fit 75-91.
+Each of our sets, original's accuracy (percentile among random draws) / thinking (percentile):
+| set | svamp | mbpp | ifeval | simple | multiple | no-fit |
+|---|---|---|---|---|---|---|
+| fresh | 88 (p47) / 614 (p27) | 45 (p13) / 2112 (p57) | 69 (p97) / 447 (p63) | 88 (p91) / 169 (p47) | 75 (p41) / 180 (p17) | 79 (p17) / 168 (p16) |
+| choosing | 92 (p84) / 589 (p19) | 48 (p21) / 2175 (p64) | 51 (p10) / 522 (p92) | 90 (p96) / 167 (p42) | 78 (p61) / 200 (p74) | 76 (p8) / 173 (p25) |
+| questions_40 | 82 (p5) / 789 (p85) | 55 (p67) / 2163 (p63) | 53 (p19) / 468 (p75) | 82 (p50) / 160 (p19) | 81 (p83) / 194 (p59) | 85 (p65) / 180 (p38) |
+| ref20261024 | 82 (p5) / 952 (p99) | 57 (p80) / 1933 (p33) | 48 (p4) / 408 (p36) | 82 (p53) / 163 (p29) | 79 (p75) / 202 (p79) | 95 (p100) / 169 (p17) |
+| ref20261025 | 92 (p82) / 657 (p43) | 52 (p52) / 1938 (p33) | 60 (p59) / 374 (p15) | 79 (p28) / 176 (p68) | 68 (p5) / 186 (p35) | 86 (p70) / 199 (p78) |
+The five sets do not overlap. Visual: new artboard "The full evaluation" in the Where We Shaved canvas
+(https://claude.ai/artifact/GsnLfifSWasQh2DRZMY9eW). lpc-l2s50e-soup-100 full evaluation running on GPU 2 (5,376 /
+22,072 at 18:58).
