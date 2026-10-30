@@ -3429,3 +3429,9 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   as much (75 pending).
   Reading so far: every variant sits near the same saving-vs-accuracy line (~1 pt of accuracy per ~3-4 pts of saving);
   none moves off it yet.
+- ~12:30 (choosing x4; baseline lpv-base 25 +46.3/-1.7, 50 +43.0/-1.9, 75 +43.2/+0.2):
+  lpw-gentle: 25 +14.4/+0.1, 50 +29.1/-1.7, 75 +25.7/-0.9 -> DROP (saves ~half as much, accuracy not better).
+  lpw-2stage: 25 +22.4/+1.9, 50 +24.3/+1.2, 75 +29.2/-0.8 -> DROP by the rule (saving -20 pts); note: starting from the
+  "be right" round banks ~+2 accuracy, but 86 shortening steps are not enough to reach the baseline's saving.
+  lpw-press (per-type pressure: math 1:1, code/tools 2:1, instructions 3:1): 25 +37.1/-1.0, 50 **+43.0/+0.4** (same
+  saving as the baseline at 50, +2.3 accuracy); 75 pending: candidate for WORTH if 50-75 holds vs the baseline's 50-75.
