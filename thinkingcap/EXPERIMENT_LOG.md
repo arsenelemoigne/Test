@@ -3414,3 +3414,8 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   models. Consistent with the damage map (10% ~free, 30% clearly felt). Next SPARSE step (not queued, user decides):
   E = pruned model + the LUPIN pairs (does an emptier model learn short thinking?), or finer levels 10-20%.
 - GPU 1's queue had ended right after wandaeval without seeing the lpw-* lines (pushed meanwhile); cell restarted.
+- ~10:20 first experiment scores (choosing x4; vs lpv-base 25 +46.3/-1.7, 50 +43.0/-1.9, 75 +43.2/+0.2):
+  lpw-p1tilt (math 15 / code 25 / instructions 35 / tools 25): 25 +41.7 / -1.0; 50 +45.6 / -2.9 (mbpp -7.5): no better yet (75 pending).
+  lpw-pertype-sum (4 per-type adapters, each trained on its own type's pairs, simply added): +77.2% / -9.2 (svamp -21.3,
+  no-fit -13.8): adding four full-strength adapters stacks four pushes; far too strong. The tuned merge (math 0.5, code
+  0.8, instructions 1, tools 0.8) is being scored; a weaker merge (e.g. all x0.3-0.5) would be the natural next try.
