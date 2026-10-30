@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -2612,6 +2612,49 @@ def crosscheck(args):
             print(score_line(f"{name}-soup-{step} (cross-check: new 240 x 4)", out, base=base_run), flush=True)
 
 
+SCREEN = "questions_screen720"  # 120 per part matched to the full evaluation (screen_set.py), from 30 Oct
+
+
+def screenset(args):
+    """The screen set matched to the full evaluation (user, 30 Oct): built from the original Qwen's full run, the fresh set
+    left out; then the original Qwen on it x4 (s4-base), the reference every later screen is scored against."""
+    base = ROOT / "full-base"
+    drive_sync("restore", only=[str(base), SCREEN, f"questions_fresh{FRESH_SEED}"])
+    if not (base / "results.json").exists():
+        print("screenset: no full-base yet, skipped", flush=True)
+        return
+    if not Path(SCREEN, "questions.jsonl").exists():
+        py("screen_set.py", "--full-base", base, "--questions", "questions", "--exclude", f"questions_fresh{FRESH_SEED}",
+           "--per-part", 120, "--out", SCREEN)
+    evaluate(ROOT / "s4-base", samples=4, questions=SCREEN)
+    drive_sync("save")
+
+
+def rescreen(args):
+    """Score saved checkpoints on the matched screen set x4 (questions_screen720) against s4-base: one seed = that
+    checkpoint, several seeds = their soup. For re-reading earlier screens and choosing steps on less noise."""
+    drive_sync("restore", only=[SCREEN, str(ROOT / "s4-base")])
+    for name in args.cx_names:
+        for step in args.cx_steps:
+            members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+            drive_sync("restore", only=[str(m.parent) for m in members])
+            members = [m for m in members if (m / "adapter_config.json").exists()]
+            if len(members) < len(args.seeds):
+                print(f"rescreen: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
+                continue
+            tag = f"{name}-{'s' + str(args.seeds[0]) if len(members) == 1 else 'soup'}-{step}"
+            out = ROOT / f"s4-{tag}"
+            drive_sync("restore", only=[str(out)])
+            if not (out / "results.json").exists():
+                model = Path("/content/lupin-models") / tag
+                py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+                   *[f"{m}:{1 / len(members):.6f}" for m in members])
+                evaluate(out, samples=4, questions=SCREEN, model=model)
+                shutil.rmtree(model, ignore_errors=True)
+                drive_sync("save")
+            print(score_line(f"{tag} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
+
+
 def fullsoup(args):
     """The official full evaluation on confirmed soups (user, 30 Oct: "the obvious next step"): every question (2,759)
     x8, the original Qwen first (full-base, kept for every later model), then each soup of --cx-names at --cx-steps (the
@@ -4172,7 +4215,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
