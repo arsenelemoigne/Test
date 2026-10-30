@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -2659,6 +2659,33 @@ def rescreen(args):
             print(score_line(f"{tag} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
 
 
+def fullmodel(args):
+    """The full evaluation (2,759 x 8) and the 720 screen (x4) of saved MERGED models (user, 30 Oct: "eval rc1-rl-40, see
+    how far off we were"), e.g. --nothink-models models/rc1-rl-40; then the representativeness check on every full run."""
+    base = ROOT / "full-base"
+    drive_sync("restore", only=[str(base), SCREEN, str(ROOT / "s4-base")])
+    for model in args.nothink_models:
+        name = Path(model).name
+        drive_sync("restore", only=[model])
+        assert (Path(model) / "config.json").exists(), f"{model} not found"
+        out, screen = ROOT / f"full-{name}", ROOT / f"s4-{name}"
+        drive_sync("restore", only=[str(out), str(screen)])
+        evaluate(out, samples=8, questions="questions", model=model)
+        drive_sync("save")
+        print(score_line(f"{name} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
+        evaluate(screen, samples=4, questions=SCREEN, model=model)
+        drive_sync("save")
+        print(score_line(f"{name} (screen 720 x 4)", screen, base=ROOT / "s4-base"), flush=True)
+    sets = ["questions_val20261023", "questions_40", f"questions_ref{REF_SEEDS[0]}", f"questions_ref{REF_SEEDS[1]}",
+            f"questions_fresh{FRESH_SEED}", SCREEN]
+    drive_sync("restore", only=sets)
+    cands = sorted(str(p) for p in ROOT.glob("full-*") if p.name != "full-base" and p.name != "full-subsets"
+                   and (p / "results.json").exists())
+    py("subset_check.py", "--base", base, "--cands", *cands, "--sets", *[s for s in sets if Path(s).exists()],
+       "--out", ROOT / "full-subsets")
+    drive_sync("save")
+
+
 def fullsoup(args):
     """The official full evaluation on confirmed soups (user, 30 Oct: "the obvious next step"): every question (2,759)
     x8, the original Qwen first (full-base, kept for every later model), then each soup of --cx-names at --cx-steps (the
@@ -4223,7 +4250,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
