@@ -272,6 +272,7 @@ def main():
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
+    parser.add_argument("--lp-no-match", action="store_true", help="lupin: train on the raw pairs, no lupin_select matching (michal-bida control)")
     parser.add_argument("--lp-loose", default="", help="lupin: lupin_select.py --loose-parts (parts short of pairs)")
     parser.add_argument("--lp-kind-share", default="", help="lupin: lupin_select.py --kind-share-part (Run A pair mix)")
     parser.add_argument("--lp-lr-schedule", default="", help="lupin: dpo.py --lr-schedule (cosine: warm-up 10, down to 2e-6)")
@@ -3159,6 +3160,12 @@ def lupin(args):
            *(["--min-solve-part", args.lp_min_solve_part] if args.lp_min_solve_part else []),
            *(["--right-parts", args.lp_right_parts] if args.lp_right_parts else []),
            *(["--median-shorten-part", args.lp_median_part] if args.lp_median_part else []))
+    if args.lp_no_match and not (pairs / "pairs.jsonl").exists():  # michal-bida control (30 Oct): his pairs as they come
+        pairs.mkdir(parents=True, exist_ok=True)
+        shutil.copy(raw / "pairs.jsonl", pairs / "pairs.jsonl")
+        kept = Counter((json.loads(l)["part"], json.loads(l)["kind"]) for l in open(pairs / "pairs.jsonl"))
+        (pairs / "summary.txt").write_text("no matching (raw pairs): " + ", ".join(f"{p}/{k} {n}" for (p, k), n in sorted(kept.items())) + "\n")
+        drive_sync("save")
     if not (pairs / "pairs.jsonl").exists():
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", *references(),
            "--total", args.lp_total, "--out", pairs,

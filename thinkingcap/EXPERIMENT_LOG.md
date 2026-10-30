@@ -3552,3 +3552,12 @@ The five sets do not overlap. Visual: new artboard "The full evaluation" in the 
 - GPU 2 queue ended. Run B moved to GPU 2 (with its 720 rescreen); GPU 1: Run A2 -> rescreen 720 -> Run D -> rescreen.
 - 21:51: lpc-runa2 3 seeds trained (275 steps each). Fresh x8 soup-100: +31.0 / -0.5 (svamp +34/-0.3, mbpp +33/+0.9,
   ifeval +30/-1.6, simple +27/-1.9, multiple +28/-1.9, no-fit +25/+0.3). SVAMP saves 34% with no math shorten pairs.
+
+### 2026-10-30 ~22:25 — michal-bida control queued (user)
+- Question: is the gap to michal-bida (full eval 47.0 / -0.78 vs our lpc-l2s50e 48.0 / -2.08) the recipe or the data?
+  lpc-bida = his recipe on our pool dp13 (10 answers per question): long2short (guard = shortest right > longest wrong or
+  capped; shorten = shortest right > longest right if >= 1.5x), shorten capped at the guard count per part (1:1), no
+  min-solve rule, no easy-ratio, NO lupin_select matching (track --lp-no-match: the raw pairs as they come). Our training
+  settings (LoRA r32, beta 0.1, lr 2e-5 constant, NLL 1.0, 1 epoch), 3 seeds, fresh soups + 720 rescreen at
+  100-300. Replaces lpw-pressmath / lpw-p4tools on GPU 2 (after Run B). Not reproduced from his side: his own data mix
+  (GSM8K 70 / MetaMath SV 15 / FOBAR 15 for math) and his training settings.
