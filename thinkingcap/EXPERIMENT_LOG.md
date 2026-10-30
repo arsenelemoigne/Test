@@ -3456,3 +3456,12 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   -8.1, ifeval -5.6, multiple -4.7, mbpp -3.8): far below its screen (+43.0 / +0.4 at step 50, 1 seed, choosing set). A
   ~5-pt screen-to-fresh gap (l2s50e's was ~1.3): the screen's +0.4 was likely a lucky single run on the choosing set.
   Waiting for soups 50/60/70 before concluding. Red flag watch: math -8.1 at this checkpoint.
+
+### 2026-10-30 ~14:00 — lpc-press cross-check; researcher dossiers written (user)
+- lpc-press cross-check (refs 20261024, 240 x 4): soup-40 +51.0% / -2.1 (full-eval weighting +50.8 / -2.2); soup-50 +48.9% / -2.8
+  (+48.8 / -2.7). Same soups on the fresh set x8: -5.2 and -2.9. The same model differs by 3.1 pts between two 240-question
+  sets: question-draw noise at 40 per part is larger than the ~0.8 sampling noise measured earlier.
+- Timing (GPU 2 log): fresh 240 x 8 ~13 min, 240 x 4 ~5 min; the official full evaluation (2,759 x 8) is estimated ~2.5 h.
+- lpc-math: seed 0 trained (86 steps), seed 1 training.
+- User asked for neutral dossiers for an external researcher: LUPIN_ROUND1_DOSSIER.md (LUPIN only) and
+  THINKINGCAP_FULL_DOSSIER.md (every track from the start, compiled from this log, the per-type clone, specs and handoffs).
