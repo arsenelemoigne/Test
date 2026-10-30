@@ -3483,3 +3483,12 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   multiple's guard pairs are only on questions solved >= 0.8 — a small difference from the spec). Right pairs on all
   parts; easy-ratio 1.2; shorten cap off; 4,800 pairs; cosine lr; 3 seeds; checkpoints every 10; fresh soups at
   100/150/200/250/300.
+
+### 2026-10-30 ~15:20 — lpc-math fresh soups 40/50 (3 seeds, fresh 240 x 8)
+| soup | overall | svamp | mbpp | ifeval | simple | multiple | no-fit | full-eval weighting |
+|---|---|---|---|---|---|---|---|---|
+| 40 | +45.6 / -3.6 | +60 / -5.6 | +51 / -2.8 | +32 / -2.5 | +33 / -2.8 | +36 / -4.4 | +33 / -3.4 | +45.5 / -3.6 |
+| 50 | +43.8 / -3.5 | +59 / -4.7 | +43 / -3.4 | +36 / -3.7 | +32 / -1.2 | +35 / -2.8 | +33 / -2.8 | +43.7 / -3.5 |
+Screen (choosing x4, 1 seed) had shown +50.9 / -0.6 at step 50. With math protection (min-solve 0.8 + right pairs on
+svamp) SVAMP still saves ~60% (shorten pairs remain on questions solved >= 8/10). Full evaluation (GPU 2): 1,280 of
+22,072 answers at 15:17 (~19 answers/min, ~19 h per model at this pace).
