@@ -3533,3 +3533,20 @@ Each of our sets, original's accuracy (percentile among random draws) / thinking
 The five sets do not overlap. Visual: new artboard "The full evaluation" in the Where We Shaved canvas
 (https://claude.ai/artifact/GsnLfifSWasQh2DRZMY9eW). lpc-l2s50e-soup-100 full evaluation running on GPU 2 (5,376 /
 22,072 at 18:58).
+
+### 2026-10-30 ~20:25 — FULL evaluation of lpc-l2s50e-soup-100; 720 screen set built and checked
+- lpc-l2s50e-soup-100, full evaluation 2,759 x 8 vs full-base: tokens saved +48.0%, accuracy -2.08 pts (full-eval
+  weighting identical: +48.0 / -2.1). Same soup measured earlier: fresh 240 x 8 (own run) +45.8 / -1.3; cross-check
+  (ref20261024, 240 x 4) +50.5 / -2.7.
+- Recomputed from the full run's answers on each set's questions (subset_check.py): choosing +47.7 / -1.17, questions_40
+  +50.7 / -2.11, ref24 +51.3 / -1.51, ref25 +47.3 / -3.80, fresh +44.7 / -2.73, screen720 +49.9 / -2.29.
+  Random 240-question draws (5,000, 40 per part): saved 5-95% [+44.7, +51.3], accuracy [-4.09, -0.18], sd 1.19 pts.
+  The fresh set's own run (-1.3) and the fresh questions taken from the full run (-2.73) differ by 1.4 pts: sampling
+  noise of the answers on top of the question-draw noise (the evaluation's 256-batching changes generations).
+- questions_screen720 (screen_set.py, fresh set excluded; multiple has 119 because one cell lacked a free question):
+  original Qwen on it vs full: svamp 89.1 / 88.7, mbpp 52.7 / 52.4, ifeval 58.8 / 58.7, simple 82.4 / 82.2, multiple
+  76.4 / 76.1, no-fit 83.2 / 83.4; output tokens within +-3% except mbpp -4.8%. For lpc-l2s50e: +49.9 / -2.29 on the
+  720 vs +48.0 / -2.08 full (saving +1.9 high, accuracy -0.2).
+- Seen in the soup's full-run output: some replies degenerate into repeated "1. 1. 1. ..." and text in another script
+  (to be counted per part).
+- GPU 2 queue ended. Run B moved to GPU 2 (with its 720 rescreen); GPU 1: Run A2 -> rescreen 720 -> Run D -> rescreen.
