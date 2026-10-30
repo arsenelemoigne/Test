@@ -253,6 +253,7 @@ def main():
     parser.add_argument("--lp-gate", action="store_true", help="lupin: refuse unless the pool's check is ALL OK or near misses")
     parser.add_argument("--lp-extra-q", default="", help="lupin: add tooltopup <name>'s extra tool questions to the pairs")
     parser.add_argument("--wd-sparsity", type=float, nargs="*", default=[0.1, 0.2, 0.3, 0.4, 0.5], help="wanda: levels")
+    parser.add_argument("--pu-drop-hard", default="", help="poolup: part:source:min_solve, drop questions solved below it")
     parser.add_argument("--pu-drop", default="", help="poolup: part:source pairs left out, e.g. bfcl_simple_python:toolace")
     parser.add_argument("--pu-extras", default="nofit1,tools1,code1", help="poolup: top-up sets added to the candidates")
     parser.add_argument("--nt-sources", default="glaive_nofit_hard", help="newtop: prepare_types.py sources")
@@ -2804,6 +2805,18 @@ def poolup(args):
                             if i in seen and taken[i] < 10:
                                 taken[i] += 1
                                 out.write(line if line.endswith("\n") else line + "\n")
+        hard = [x.split(":") for x in args.pu_drop_hard.split(",") if x]  # e.g. bfcl_simple_python:toolace:0.5
+        if hard:  # drop the hardest questions of a part/source (solve rate below a threshold on their 10 answers)
+            rate = defaultdict(list)
+            for line in open(answers):
+                r = json.loads(line)
+                rate[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
+            low = {r["pool_id"] for r in uniq for part, src, thr in hard
+                   if r["part"] == part and r["source"] == src and rate[r["pool_id"]]
+                   and sum(rate[r["pool_id"]]) / len(rate[r["pool_id"]]) < float(thr)}
+            uniq = [r for r in uniq if r["pool_id"] not in low]
+            union.write_text("".join(json.dumps(r) + "\n" for r in uniq))
+            print(f"poolup {name}: dropped {len(low)} hard questions ({args.pu_drop_hard})", flush=True)
         print(f"poolup {name}: {len(uniq)} candidate questions ({dict(Counter(r['part'] for r in uniq))})", flush=True)
         drive_sync("save")
     refs = references()

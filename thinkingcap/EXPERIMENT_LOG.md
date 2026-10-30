@@ -3348,3 +3348,10 @@ Plan cells restarted with the finished lines commented out.
 - Mac Wanda (full run) STOPPED after 2 h: the 8 GB Mac swapped (7.9 GB swap, ~80 MB free RAM): the fp32 model + MPS
   caches + 128 calibration hidden states did not fit with the browser running. Moved to a GPU stage `wanda` (end of
   GPU 1's queue): Wanda 10-50% + damage check + the 384-calibration coverage check (mask overlap per layer type at 30%).
+- ~05:00 poolcheck-dp14 (no ToolACE simple): 34/36: simple accuracy now OK but its thinking too short (median 120 vs 142
+  [136,150] -16%, p75 142 vs 190 [177,208] -25%): Glaive one-call questions are easier AND shorter than BFCL's, ToolACE's
+  harder and longer. Iteration 4: dp15 = dp13's candidates keeping ToolACE simple except its hardest (solved < 50% on
+  10 answers; poolup --pu-drop-hard), check seed 35, on GPU 2 (now first in its queue); every lpu-* run re-pointed to
+  dp15 (gated). GPU 1 runs the Wanda stage meanwhile.
+- lpc-l2s50e cross-check (new 240 x 4 vs the original Qwen): soup 100 +50.5 / -2.7; soup 150 +52.5 / -1.5 (fresh: 45.8 /
+  -1.3 and 45.4 / -3.1).
