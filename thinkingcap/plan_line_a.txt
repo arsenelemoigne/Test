@@ -249,5 +249,5 @@
 fullsoup --name full1 --cx-names lpc-l2s50e --cx-steps 100 --seeds 0 1 2
 # user, 30 Oct: screen set of 120 per part matched to the full evaluation (needs full-base), + the original Qwen on it x4
 screenset --name screen720
-fullsoup --name full2 --cx-names lpc-press --cx-steps 40 --seeds 0 1 2
+# dropped (user, 30 Oct: only one model full eval): fullsoup --name full2 --cx-names lpc-press --cx-steps 40 --seeds 0 1 2
 end
