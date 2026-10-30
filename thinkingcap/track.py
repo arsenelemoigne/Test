@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -2913,6 +2913,28 @@ def wanda(args):
     print((cover / "summary.txt").read_text(), flush=True)
 
 
+def wandaeval(args):
+    """SPARSE arm C, the real test (user, 30 Oct): rebuild the Wanda models at --wd-sparsity (same calibration, so the
+    same masks as wanda-c1: Wanda is deterministic), on local scratch (never on Drive), and score each on the choosing
+    set x4 against the original Qwen (v4-base): accuracy AND thinking length per type (does pruning make it think
+    longer?)."""
+    data = BON / "probe-poolcand-dp11-check" / "rollouts.jsonl"
+    drive_sync("restore", only=[str(data.parent), "runs/mvtf/v4-base"])
+    scratch = Path("/content/wanda-models") / args.name
+    val = f"questions_val{VAL_SEED}"
+    todo = [s_ for s_ in args.wd_sparsity if not (ROOT / f"v4-{args.name}-{round(s_ * 100)}" / "results.json").exists()]
+    if todo:
+        py("wanda_prune.py", "--rollouts", data, "--calib", 128, "--per-part", 5, "--pairs-per-part", 2, "--sparsity", *todo,
+           "--device", "cuda", "--save", "--out", scratch)
+    for s_ in args.wd_sparsity:
+        out = ROOT / f"v4-{args.name}-{round(s_ * 100)}"
+        if not (out / "results.json").exists():
+            evaluate(out, samples=4, questions=val, model=scratch / f"wanda-{round(s_ * 100)}")
+            drive_sync("save")
+        print(score_line(f"{args.name}-{round(s_ * 100)}% pruned (choosing 240 x 4)", out, base=ROOT / "v4-base"), flush=True)
+    shutil.rmtree(scratch, ignore_errors=True)
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -4080,7 +4102,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

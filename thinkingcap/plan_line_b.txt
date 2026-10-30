@@ -245,4 +245,6 @@ lupin --name lpu-gentle --lp-beta 0.3 --lp-nll 2 --lp-lr 1e-5 --lp-min-solve-par
 lupin --name lpu-p4tools --lp-think-tilt-bfcl 2 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp15 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10 --lp-gate
 # SPARSE arm C on GPU (the 8 GB Mac swapped): Wanda 10-50% + damage check + 384-calibration coverage check
 wanda --name wanda-c1
+# SPARSE arm C real test (after LUPIN's screens): Wanda 10/20/30% on the choosing set x4 (accuracy + thinking per type)
+wandaeval --name wanda --wd-sparsity 0.1 0.2 0.3
 end

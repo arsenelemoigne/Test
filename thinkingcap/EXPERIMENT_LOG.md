@@ -3355,3 +3355,21 @@ Plan cells restarted with the finished lines commented out.
   dp15 (gated). GPU 1 runs the Wanda stage meanwhile.
 - lpc-l2s50e cross-check (new 240 x 4 vs the original Qwen): soup 100 +50.5 / -2.7; soup 150 +52.5 / -1.5 (fresh: 45.8 /
   -1.3 and 45.4 / -3.1).
+
+### 2026-10-30 ~05:40 — SPARSE arm C (Wanda) on GPU 1: damage map + coverage check
+Damage check (proxy, no generation; 128 calibration answers = Qwen's own right answers; held-out 80 right answers per
+type): increase of the per-token surprise (NLL) of Qwen's own right answers vs the unpruned model:
+| pruned | svamp | mbpp | ifeval | simple | multiple | no-fit |
+|---|---|---|---|---|---|---|
+| 10% | +2% | +1% | +1% | +2% | +2% | +2% |
+| 20% | +9% | +7% | +7% | +14% | +14% | +12% |
+| 30% | +33% | +23% | +27% | +50% | +55% | +44% |
+| 40% | +90% | +65% | +70% | +131% | +132% | +121% |
+| 50% | +217% | +149% | +156% | +306% | +321% | +281% |
+Reading: 10% is almost free, 20% mild, 30% clearly felt, 40-50% heavy; the TOOLS parts are the most fragile, code the
+least. The right>wrong preference proxy is uninformative (the unpruned model itself prefers the right answer only 41-60%
+of the time by mean surprise: right and wrong answers of the same question are about equally "natural"); ignore it.
+COVERAGE CHECK (user: is 128 calibration enough?): Wanda at 30% with 384 calibration answers vs 128: the pruned weights
+are the same for 99.7% (q/k/v/gate/up), 99.1% (o_proj), 98.2% (down_proj): 128 is enough.
+Next (queued at the end of GPU 1, after LUPIN): wandaeval: real eval of 10 / 20 / 30% pruned on the choosing set x4
+(accuracy and thinking length per type).
