@@ -271,6 +271,7 @@ def main():
     parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
+    parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
     parser.add_argument("--lp-kind-share", default="", help="lupin: lupin_select.py --kind-share-part (Run A pair mix)")
     parser.add_argument("--lp-lr-schedule", default="", help="lupin: dpo.py --lr-schedule (cosine: warm-up 10, down to 2e-6)")
     parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
@@ -2686,7 +2687,7 @@ def fullsoup(args):
             print(score_line(f"{name}-soup-{step} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
     # how representative each of our small sets is (subset_check.py), on every full run so far
     sets = ["questions_val20261023", "questions_40", f"questions_ref{REF_SEEDS[0]}", f"questions_ref{REF_SEEDS[1]}",
-            f"questions_fresh{FRESH_SEED}"]
+            f"questions_fresh{FRESH_SEED}", SCREEN]
     drive_sync("restore", only=sets)
     cands = sorted(str(p) for p in ROOT.glob("full-*-soup-*") if (p / "results.json").exists())
     py("subset_check.py", "--base", base, "--cands", *cands, "--sets", *[s for s in sets if Path(s).exists()],
@@ -3128,7 +3129,8 @@ def lupin(args):
            *(["--easy-ratio", args.lp_easy_ratio] if args.lp_easy_ratio else []),
            *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []),
            *(["--min-solve-part", args.lp_min_solve_part] if args.lp_min_solve_part else []),
-           *(["--right-parts", args.lp_right_parts] if args.lp_right_parts else []))
+           *(["--right-parts", args.lp_right_parts] if args.lp_right_parts else []),
+           *(["--median-shorten-part", args.lp_median_part] if args.lp_median_part else []))
     if not (pairs / "pairs.jsonl").exists():
         py("lupin_select.py", "--pairs", raw / "pairs.jsonl", "--rollouts", allfile, "--reference", *references(),
            "--total", args.lp_total, "--out", pairs,

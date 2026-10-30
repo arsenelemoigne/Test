@@ -79,6 +79,10 @@ def main():
     parser.add_argument("--shorten-cap", type=float, default=1.0,
                         help="long2short: shorten pairs per part at most this many times the guard pairs (always-solved "
                              "questions give no guard pair)")
+    parser.add_argument("--median-shorten-part", default="",
+                        help="Run B (30 Oct build spec): per part, PART=P: the shorten pair becomes the MEDIAN-length right "
+                             "answer > the longest right one (>= --long-ratio x), only on questions solved >= P "
+                             "(teaches 'drop the runaway tail', not 'skip the re-read'), e.g. svamp=0.8")
     parser.add_argument("--drop-similar", type=float, default=0.0)
     parser.add_argument("--add-right", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
@@ -93,6 +97,7 @@ def main():
     pairs, counts = [], Counter()
     overrides = dict((k, float(v)) for k, v in (x.split("=") for x in args.min_solve_part.split(",") if x))
     right_parts = set(x for x in args.right_parts.split(",") if x)
+    median_parts = dict((k, float(v)) for k, v in (x.split("=") for x in args.median_shorten_part.split(",") if x))
 
     def add(kind, chosen, rejected, q):
         pairs.append({"id": q[0]["id"], "source": q[0]["source"], "part": part_of(q[0]), "kind": kind,
@@ -120,7 +125,11 @@ def main():
             if rights and wrongs:
                 add("guard", rights[0], max(wrongs, key=lambda r: r["output_tokens"]), q)
             ratio = args.easy_ratio if args.easy_ratio and len(rights) == len(q) else args.long_ratio
-            if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] >= ratio * rights[0]["output_tokens"]:
+            if part in median_parts:  # Run B: median right > longest right, on questions solved >= the part's P
+                mid = rights[(len(rights) - 1) // 2] if rights else None
+                if p >= median_parts[part] and len(rights) > 2 and rights[-1]["output_tokens"] >= args.long_ratio * mid["output_tokens"]:
+                    add("shorten", mid, rights[-1], q)
+            elif may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] >= ratio * rights[0]["output_tokens"]:
                 add("shorten", rights[0], rights[-1], q)
         elif args.recipe == "dast":
             if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] > rights[0]["output_tokens"]:

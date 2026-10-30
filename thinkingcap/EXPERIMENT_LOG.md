@@ -3492,3 +3492,15 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
 Screen (choosing x4, 1 seed) had shown +50.9 / -0.6 at step 50. With math protection (min-solve 0.8 + right pairs on
 svamp) SVAMP still saves ~60% (shorten pairs remain on questions solved >= 8/10). Full evaluation (GPU 2): 1,280 of
 22,072 answers at 15:17 (~19 answers/min, ~19 h per model at this pace).
+
+### 2026-10-30 ~16:00 — user: train the spec's runs, compare at matched saving, check the 720 screen set's bias
+- Full evaluation of a second soup (lpc-press) dropped; only the original Qwen + lpc-l2s50e-soup-100 get one.
+- The 720 screen set is matched on the ORIGINAL Qwen's full run, so its match for the original is true by construction;
+  the real bias test is a TRAINED model: lpc-l2s50e-soup-100's score on the 720 vs on the full evaluation. GPU 2:
+  full-base -> l2s50e full -> subset check -> screenset -> subset check again with questions_screen720 included.
+- Run B (lpc-runb): Run A + svamp kinds shorten 30 / guard 30 / right 40, the shorten pair = MEDIAN-length right >
+  longest right (>= 1.5x) on questions solved >= 0.8 (lupin_pairs.py --median-shorten-part; synthetic test: chosen
+  ~850 tokens vs rejected ~1,800, i.e. the median, not the shortest). Run D (lpc-rund): Run A's pairs, beta 0.2, lr
+  1e-5. Both queued on GPU 1 after Run A, before lpw-pressmath / lpw-p4tools. Run C not built (user).
+- Decision rule from now on: runs compared by accuracy at the same tokens saved (soups at 100-300 steps give each run a
+  saved-vs-accuracy curve), not at the same step.
