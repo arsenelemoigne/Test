@@ -3550,3 +3550,5 @@ The five sets do not overlap. Visual: new artboard "The full evaluation" in the 
 - Seen in the soup's full-run output: some replies degenerate into repeated "1. 1. 1. ..." and text in another script
   (to be counted per part).
 - GPU 2 queue ended. Run B moved to GPU 2 (with its 720 rescreen); GPU 1: Run A2 -> rescreen 720 -> Run D -> rescreen.
+- 21:51: lpc-runa2 3 seeds trained (275 steps each). Fresh x8 soup-100: +31.0 / -0.5 (svamp +34/-0.3, mbpp +33/+0.9,
+  ifeval +30/-1.6, simple +27/-1.9, multiple +28/-1.9, no-fit +25/+0.3). SVAMP saves 34% with no math shorten pairs.
