@@ -231,11 +231,11 @@
 # superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-gentle --lp-beta 0.3 --lp-nll 2 --lp-lr 1e-5 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # superseded by the data upgrade (29 Oct ~22:45): lupin --name lpx-p4tools --lp-think-tilt-bfcl 2 --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp10
 # === 29 Oct ~22:45 (user): DATA UPGRADE FIRST, then iterate on the upgraded data (baseline lpu-base); each screen -> 3-seed soup only if it beats the baseline
-tooltopup --name tools1 --tt-parts bfcl_simple_python,bfcl_multiple --tt-hard --tt-questions 1000
-tooltopup --name code1 --tt-parts mbpp --tt-hard --tt-questions 800
-newtop --name nofit2 --nt-sources glaive_nofit_hard --nt-parts bfcl_irrelevance --tt-questions 1500 --data-seed 92 --dp-step a
+# done: tooltopup --name tools1 --tt-parts bfcl_simple_python,bfcl_multiple --tt-hard --tt-questions 1000
+# done: tooltopup --name code1 --tt-parts mbpp --tt-hard --tt-questions 800
+# done: newtop --name nofit2 --nt-sources glaive_nofit_hard --nt-parts bfcl_irrelevance --tt-questions 1500 --data-seed 92 --dp-step a
 # DATA LOOP (user 29 Oct ~00:10): re-pick the pool from dp10 + top-ups against ALL references (160 per part), held-out check; lpu-* train only if it passes (--lp-gate)
-poolup --name dp12 --dp-reuse dp10 --data-seed 90 --dp-check-seed 29
+# done: poolup --name dp12 --dp-reuse dp10 --data-seed 90 --dp-check-seed 29
 # DATA LOOP iteration 3 (30 Oct ~04:00): dp13 33/36 (no-fit now OK; misses: simple accuracy 78 vs 85 [80,89] (ToolACE simple 76% drags), svamp p75 -24% and ifeval accuracy +7.8 just outside); dp14 = dp13 without ToolACE one-function questions
 poolup --name dp14 --dp-reuse dp10 --pu-extras nofit1,tools1,code1,nofit2 --pu-drop bfcl_simple_python:toolace --data-seed 93 --dp-check-seed 33
 lupin --name lpu-base --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-save 25 --dpo-steps 25 50 75 100 150 --lp-pool dp14 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10 --lp-gate
