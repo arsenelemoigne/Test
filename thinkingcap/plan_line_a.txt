@@ -244,4 +244,8 @@ lupin --name lpw-math --lp-min-solve-part bfcl_irrelevance=0.8,svamp=0.8 --lp-ri
 lupin --name lpc-press --lp-pressure svamp=1,mbpp=2,ifeval=3,bfcl_simple_python=2,bfcl_multiple=2,bfcl_irrelevance=2 --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 1 2 --lp-fresh --lp-save 10 --dpo-steps 40 50 60 70 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
 # v1 GATE check 2/2 (user 30 Oct ~13:40): the confirmed soups on a SECOND independent eval set (refs 20261024, 240 x 4)
 crosscheck --name cx-press --cx-names lpc-press --cx-steps 40 50 60 70 --seeds 0 1 2
+# user, 30 Oct: official full evaluation (2,759 x 8) of two confirmed soups, to measure how far our 240-question sets are
+# from the real score (~2.5 h each, original Qwen first, ~7.5 h in all)
+fullsoup --name full1 --cx-names lpc-l2s50e --cx-steps 100 --seeds 0 1 2
+fullsoup --name full2 --cx-names lpc-press --cx-steps 40 --seeds 0 1 2
 end

@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -2612,6 +2612,35 @@ def crosscheck(args):
             print(score_line(f"{name}-soup-{step} (cross-check: new 240 x 4)", out, base=base_run), flush=True)
 
 
+def fullsoup(args):
+    """The official full evaluation on confirmed soups (user, 30 Oct: "the obvious next step"): every question (2,759)
+    x8, the original Qwen first (full-base, kept for every later model), then each soup of --cx-names at --cx-steps (the
+    --seeds averaged). Our 240-question sets are subsets of these questions, so the per-question records also tell how
+    far any 240 draw lands from the full score."""
+    base = ROOT / "full-base"
+    drive_sync("restore", only=[str(base)])
+    evaluate(base, samples=8, questions="questions")
+    drive_sync("save")
+    for name in args.cx_names:
+        for step in args.cx_steps:
+            members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
+            drive_sync("restore", only=[str(m.parent) for m in members])
+            members = [m for m in members if (m / "adapter_config.json").exists()]
+            if len(members) < len(args.seeds):
+                print(f"fullsoup: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
+                continue
+            out = ROOT / f"full-{name}-soup-{step}"
+            drive_sync("restore", only=[str(out)])
+            if not (out / "results.json").exists():
+                model = Path("/content/lupin-models") / f"{name}-soup-{step}"
+                py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+                   *[f"{m}:{1 / len(members):.6f}" for m in members])
+                evaluate(out, samples=8, questions="questions", model=model)
+                shutil.rmtree(model, ignore_errors=True)
+                drive_sync("save")
+            print(score_line(f"{name}-soup-{step} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
+
+
 def dial(args):
     """Strength dial (LUPIN spec 2.4; user 29 Oct: "build a very strong v1"): the soup of --cx-names at --cx-steps
     (--seeds averaged), its trained change scaled by each --dial-weights (merge.py adapter weights summing to w), scored
@@ -4135,7 +4164,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
