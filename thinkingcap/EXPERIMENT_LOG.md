@@ -3443,3 +3443,9 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
 - ~13:10 (user: more steps of per-type pressure?): lpw-press had ~72 steps (the pressure cap removes many shorten pairs), so only checkpoints 25/50. Queued: lpw-press2ep (2 epochs ~145 steps, checkpoints 25-125, GPU 1 next) to see whether saving keeps growing with accuracy held; the lpc-press confirm now saves every 10 steps and scores soups at 40/50/60/70.
 - ~13:20 (user: 'won't 2 rounds over the same pairs overfit?'): lpw-press2ep replaced by lpw-press6k: 1 epoch over up to 6,400 DISTINCT matched pairs (lp-total 6400 instead of 3,200; the pool's raw pairs are 4-5x what a run keeps), checkpoints 25-125; no pair repeated. Truly new data comes with round 2 (v1's own answers on new questions).
 - ~13:40 (user): v1 GATE written into LUPIN_SPEC.md (fresh: better than -0.8 at >= 45% saved, full-eval weighting; second-set cross-check within ~1 pt; no type below -3 on both; saving agrees within ~3 pts). No v2 before a v1 passes. Cross-check cx-press queued after lpc-press (GPU 2).
+- ~14:40 (choosing x4; baseline 25 +46.3/-1.7, 50 +43.0/-1.9, 75 +43.2/+0.2):
+  lpw-math (math + no-fit protection: no shortening below 80% solved + right>wrong pairs on both): 25 +40.8/-0.1,
+  **50 +50.9/-0.6**, 75 +48.3/-0.9 -> best two (50-75) avg +49.6/-0.75 vs baseline +43.1/-0.85: +6.5 saved at equal
+  accuracy -> WORTH (rule a). Confirm lpc-math queued on GPU 1 (3 seeds, fresh soups 40/50/60/70), then lpw-pressmath
+  (combined: per-type pressure + math/no-fit protection) screen.
+  lpw-p3medium (medium-difficulty tilt): 50 +39.4/-2.7, 75 +41.1/-1.9, 100 +43.4/-0.8 -> DROP.
