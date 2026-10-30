@@ -3403,3 +3403,14 @@ the user. Baseline = lpv-base (already screened: +46.3 / -1.7 at 25, +43.0 / -1.
 Experiments queued on dp13, each vs lpv-base with the decision rule (WORTH 3 seeds + fresh soup if acc >= base and saving
 >= base +2, or saving >= base -2 and acc >= base +1): GPU 2: lpw-p1tilt, lpw-2stage, lpw-press, lpw-math; GPU 1 (after
 wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
+- ~08:50 SPARSE arm C REAL EVAL (wandaeval; choosing set x4 vs the unpruned Qwen; "saved" negative = thinks LONGER):
+  | pruned | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|---|
+  | 10% | +1.8% / +0.2 | +11 / -0.6 | +10 / +1.9 | -17 / -0.6 | +3 / +1.9 | -1 / -1.9 | +1 / 0.0 |
+  | 20% | -7.7% / -2.0 | -5 / +1.3 | -5 / -5.6 | -21 / -2.5 | -3 / -3.1 | -10 / -0.6 | +9 / 0.0 |
+  | 30% | -8.9% / -1.9 | +2 / +1.3 | -10 / -5.6 | -17 / -1.9 | -5 / -2.5 | -15 / -1.2 | -14 / -0.6 |
+  Reading: 10% of the block weights go for free (accuracy +0.2, thinking unchanged); at 20-30% accuracy drops ~2 pts
+  (code -5.6 the most) and the model THINKS ~8-9% LONGER (instructions ~20% longer), as published for pruned reasoning
+  models. Consistent with the damage map (10% ~free, 30% clearly felt). Next SPARSE step (not queued, user decides):
+  E = pruned model + the LUPIN pairs (does an emptier model learn short thinking?), or finer levels 10-20%.
+- GPU 1's queue had ended right after wandaeval without seeing the lpw-* lines (pushed meanwhile); cell restarted.
