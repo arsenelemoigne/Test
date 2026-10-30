@@ -3435,3 +3435,7 @@ wandaeval): lpw-pertype, lpw-gentle, lpw-p3medium, lpw-p4tools.
   "be right" round banks ~+2 accuracy, but 86 shortening steps are not enough to reach the baseline's saving.
   lpw-press (per-type pressure: math 1:1, code/tools 2:1, instructions 3:1): 25 +37.1/-1.0, 50 **+43.0/+0.4** (same
   saving as the baseline at 50, +2.3 accuracy); 75 pending: candidate for WORTH if 50-75 holds vs the baseline's 50-75.
+- ~12:45 (user): every score line now also prints the FULL-EVAL weighting: inside BFCL the parts re-pooled 400 / 200 / 240
+  (tokens weighted by each part's base mean), then averaged over the 4 benchmarks as compare.py does (track.py
+  full_weighted). Re-weighted key results (from the logged per-part numbers): lpc-l2s50e-soup-100 fresh +45.8 / -1.3 ->
+  +46.1 / -1.2; lpw-press-50 choosing +43.0 / +0.4 -> +42.9 / +0.5; lpv-base-50 choosing +43.0 / -1.9 -> +42.5 / -1.7.

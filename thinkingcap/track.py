@@ -4041,6 +4041,35 @@ def compare(out, base=BASE):
     return json.loads(json_path.read_text())
 
 
+FULL_BFCL = {"bfcl_simple_python": 400, "bfcl_multiple": 200, "bfcl_irrelevance": 240}  # the full evaluation's sizes
+
+
+def full_weighted(result):
+    """The average as the FULL evaluation would weight it (user, 30 Oct): our subsets hold 40 questions per BFCL part,
+    the full evaluation 400 / 200 / 240, so inside BFCL one-call counts twice as much as multiple. BFCL's accuracy change
+    and token ratio are re-pooled with those weights (tokens weighted by each part's base mean), then averaged over the 4
+    benchmarks exactly as compare.py does (mean of accuracy changes; 1 - geometric mean of token ratios)."""
+    import math
+    res = result["results"]
+    deltas, ratios = [], []
+    for d in ("svamp", "mbpp", "ifeval"):
+        if d in res and res[d]["token_reduction"] is not None:
+            deltas.append(res[d]["accuracy_delta"])
+            ratios.append(1 - res[d]["token_reduction"])
+    parts = [d for d in FULL_BFCL if d in res and res[d]["token_reduction"] is not None]
+    if parts:
+        w = {d: FULL_BFCL[d] for d in parts}
+        deltas.append(sum(w[d] * res[d]["accuracy_delta"] for d in parts) / sum(w.values()))
+        base_tok = {d: res[d]["base"].get("mean_output_tokens") or 1.0 for d in parts}
+        before = sum(w[d] * base_tok[d] for d in parts)
+        after = sum(w[d] * base_tok[d] * (1 - res[d]["token_reduction"]) for d in parts)
+        ratios.append(after / before)
+    if len(deltas) < 2:
+        return None, None
+    saved = 1 - math.exp(sum(math.log(r) for r in ratios) / len(ratios))
+    return saved, sum(deltas) / len(deltas)
+
+
 def score_line(name, out, with_delta=False, base=BASE):
     result = compare(out, base)
     parts = []
@@ -4052,6 +4081,9 @@ def score_line(name, out, with_delta=False, base=BASE):
     line = (f"== {name}: tokens saved {'n/a' if saved is None else f'{saved:+.1%}'}, "
             f"accuracy {delta:+.1f} pts ({'within' if delta >= LIMIT else 'OUTSIDE'} the limit)\n   "
             + "; ".join(parts))
+    fw_saved, fw_delta = full_weighted(result)
+    if fw_saved is not None:
+        line += f"\n   full-eval weighting (BFCL 400/200/240): tokens saved {fw_saved:+.1%}, accuracy {100 * fw_delta:+.1f} pts"
     try:  # one table of every score (user, 29 Oct: "log the results and be able to plot them")
         table = BON / "results.csv"
         table.parent.mkdir(parents=True, exist_ok=True)
