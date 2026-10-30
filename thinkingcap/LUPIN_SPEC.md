@@ -250,3 +250,13 @@ RunPod or Modal (~$0.5-1 per hour while running; the user approves any spending 
 to first token, inter-token latency, throughput, requests, tokens generated), e.g. with Grafana. Demo: the original
 Qwen3-0.6B and the final model served side by side on the same questions: thinking tokens per answer, seconds per
 full answer, cost per 1,000 requests.
+
+## v1 gate (user, 30 Oct: "first a good v1; if accuracy goes down at v1, v2 will be worse")
+No round 2 (v2) starts before a v1 candidate passes ALL of:
+1. Fresh set (240 x 8, 3 seeds averaged), full-eval weighting (BFCL 400/200/240): accuracy change better than -0.8 pts
+   at a saving of at least 45%.
+2. Cross-check on a second independent eval set (refs 20261024, 240 x 4): accuracy within ~1 pt of the fresh result.
+3. No single type worse than -3 pts on both sets.
+4. Saving agrees within ~3 pts on both sets.
+If it fails: improve v1 (strength dial, more protection on the losing type, combining winning experiments) and re-check.
+The final model also gets the full official evaluation (2,759 x 8) before any submission.
