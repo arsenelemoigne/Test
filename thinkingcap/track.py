@@ -272,6 +272,7 @@ def main():
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
+    parser.add_argument("--lp-reset-seeds", nargs="*", type=int, default=[], help="lupin: delete these seeds' adapters (local and Drive) and train them again")
     parser.add_argument("--lp-no-match", action="store_true", help="lupin: train on the raw pairs, no lupin_select matching (michal-bida control)")
     parser.add_argument("--lp-loose", default="", help="lupin: lupin_select.py --loose-parts (parts short of pairs)")
     parser.add_argument("--lp-kind-share", default="", help="lupin: lupin_select.py --kind-share-part (Run A pair mix)")
@@ -3152,6 +3153,7 @@ def lupin(args):
               f"{statistics.median(per_q.values())}; from {dict(count)}", flush=True)
         drive_sync("save")
     raw, pairs = BON / f"pairs-{name}-raw", BON / f"pairs-{name}"
+    drive_sync("restore", only=[str(raw), str(pairs)])  # the SAME pair files as before a lost runtime (31 Oct)
     if not (raw / "pairs.jsonl").exists():
         py("lupin_pairs.py", "--rollouts", allfile, "--recipe", args.lp_recipe, "--out", raw,
            *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split(),
@@ -3194,6 +3196,17 @@ def lupin(args):
               *(["--lr-schedule", args.lp_lr_schedule] if args.lp_lr_schedule else [])]
     # a fresh runtime has an empty disk (31 Oct: both runtimes retrained finished seeds from scratch): bring back every
     # seed's adapter and checkpoints from Drive first, so a finished seed is skipped and an unfinished one resumes
+    for seed in args.lp_reset_seeds:  # a damaged seed (31 Oct, lpc-runb-s1): start it over, here and on Drive, ONCE
+        marker = BON / f"reset-{name}-s{seed}.done"
+        drive_sync("restore", only=[str(marker)])
+        if marker.exists():
+            continue
+        for d in (Path("adapters") / f"{name}-s{seed}", DRIVE / "adapters" / f"{name}-s{seed}"):
+            shutil.rmtree(d, ignore_errors=True)
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("reset\n")
+        drive_sync("save")
+        print(f"lupin: seed {seed} reset", flush=True)
     drive_sync("restore", only=[str(Path("adapters") / f"{name}-s{seed}") for seed in args.seeds])
     for seed in args.seeds:
         adapter = Path("adapters") / f"{name}-s{seed}"

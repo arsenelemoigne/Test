@@ -3601,3 +3601,11 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   skipped the 720 rescreen (no adapters), fullmodel failed (models/rc1-rl-40 not found) and lpc-rund was starting; GPU 2
   started lpc-runb locally. Both interrupted before any training; cells 1 (drive.mount), 3-6 re-queued; the user
   approves the Drive popups.
+- ~14:30: lpc-runb seed 1 resumed after step 190 with loss 8-10 (was ~0.6) and 56-62% pairs ordered right. Cause: the
+  restarted stage rebuilt the pair files (raw + matched) instead of restoring them; the rebuilt file's rows came out in
+  another order, and dpo.py reused the seed's saved reference scores (ref.json, matched by position) on the new rows.
+  Interrupted at step ~230. Fixes: (1) the lupin stage restores pairs-<name>-raw and pairs-<name> from Drive before
+  building; (2) dpo.py fingerprints the pair rows into ref.json and refuses to resume on a mismatch (old-style ref files
+  with a resume point also refuse); (3) track --lp-reset-seeds: delete a damaged seed (local + Drive) once, with a marker.
+  lpc-runb seed 1 is retrained from scratch (seed 0 trained before the restart, unaffected). GPU 1 (720 rescreen of
+  lpc-runa2) uses finished adapters only: unaffected.

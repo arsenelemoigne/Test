@@ -79,15 +79,27 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     ref_path, latest, state_path = out / "ref.json", out / "latest", out / "resume.pt"
     model.eval()
-    if ref_path.exists():  # a lost runtime: the reference scores are kept (rows are the same for the same seed)
-        for r, (c, rj) in zip(rows, json.loads(ref_path.read_text())):
+    # the saved reference scores belong to ONE pair file: fingerprint the rows (31 Oct: a rebuilt pair file in another
+    # order was matched to the old scores on resume, and the loss jumped from 0.6 to 8)
+    import hashlib
+    finger = hashlib.sha256(json.dumps([[r["prompt_ids"][:8], r["chosen_ids"][:8], len(r["chosen_ids"]),
+                                         len(r["rejected_ids"])] for r in rows]).encode()).hexdigest()
+    saved = json.loads(ref_path.read_text()) if ref_path.exists() else None
+    if isinstance(saved, dict) and saved.get("rows") != finger:
+        raise SystemExit(f"{out}: the pair file changed since this run started (fingerprint mismatch); "
+                         "resuming would pair old reference scores with new pairs. Start the seed over.")
+    if isinstance(saved, list) and state_path.exists():
+        raise SystemExit(f"{out}: old-style reference file without a fingerprint and a resume point; cannot check the "
+                         "pairs are the same. Start the seed over.")
+    if isinstance(saved, dict):  # a lost runtime: the reference scores are kept (same rows, checked)
+        for r, (c, rj) in zip(rows, saved["ref"]):
             r["ref_c"], r["ref_r"] = c, rj
     else:
         with torch.no_grad():  # the reference: the starting adapter, scored once
             for r in rows:
                 r["ref_c"] = float(logps(r["prompt_ids"], r["chosen_ids"], False))
                 r["ref_r"] = float(logps(r["prompt_ids"], r["rejected_ids"], False))
-        ref_path.write_text(json.dumps([[r["ref_c"], r["ref_r"]] for r in rows]))
+        ref_path.write_text(json.dumps({"rows": finger, "ref": [[r["ref_c"], r["ref_r"]] for r in rows]}))
     print("reference scored", flush=True)
 
     def tripwire():
