@@ -3656,3 +3656,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   -0.9, 250 +19.5 / -0.8 (svamp 19 -> 4 -> 1%; mbpp 23 -> 20 -> 17%). Pattern: every run trained AFTER the 31 Oct restart
   (B, A-constant) saves less than lpc-runa2 (trained before it). Queued on GPU 1: lpc-runa2r = exact replay of lpc-runa2
   (same flags, 1 seed, current pair draw and code), scored at step 200 on the 720.
+- 00:44 (1 Nov), 720 x 4 (full-eval weighting): lpc-runac 100 +29.3 / -0.7; 150 +34.3 / -0.9 (ifeval +44/-3.7); 200
+  +29.2 / -0.4 (mbpp 19, svamp 19). Clean lpc-runb 100 +29.8 / -0.6; 150 +29.0 / -0.6. (lpc-runa2 on the 720: 32-33 at
+  every step, accuracy -1.0..+0.4.) Added to the canvas.
