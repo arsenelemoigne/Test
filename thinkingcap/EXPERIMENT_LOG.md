@@ -3619,3 +3619,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 16:00 (user): Run D replaced by lpc-runac = Run A's pairs and kind mix, constant lr 2e-5 (no cosine decay), beta 0.1 (no
   stronger tie to the original); 3 seeds, fresh soups + 720 rescreen. Single change vs lpc-runa2: the learning-rate
   schedule. The michal-bida 1:1 control (lpc-bida) stays queued on GPU 2 after Run B.
+- 16:44: rc1-rl-40 FULL evaluation (2,759 x 8): +55.4 / -2.6 (fresh x8 had said +53.9 / -2.1); svamp +65/-4.5, mbpp
+  +60/-3.0, ifeval +49/-2.3, simple +41/-0.6, multiple +43/-1.2, no-fit +52/-0.2. Its 720 screen is next on GPU 1.
+  GPU 2: lpc-runb seed 1 done (retrained), seed 2 at step 10.
