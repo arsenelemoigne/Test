@@ -3589,3 +3589,8 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   on the 720, 256 / 2,876 answers); GPU 2 page no longer answers scripts (Run B seed 1 at step ~205 / 275, last Drive log
   step 195). Not reconnected (standing rule: ask the user before opening or reconnecting a Colab runtime). On reconnect:
   run cells 1-6; dpo.py resumes after its last checkpoint (every 10 steps), finished evaluations are skipped.
+- ~11:00-12:45 (31 Oct): runtimes reconnected by the user. Both restarted plans began RETRAINING lpc-runa2-s0 and
+  lpc-runb-s0 from scratch (the lupin stage checked the local disk, empty on a fresh runtime, before restoring adapters
+  from Drive). Stopped at step 75: only checkpoints step-10..70 (and the resume state) of those two seeds were
+  overwritten on Drive; the final adapters and steps 80+ are intact. Fix: the lupin stage light-restores every seed's
+  adapter folder before checking. GPU 1 plan: lpc-runa2 line commented (done), so it starts with the 720 rescreen.
