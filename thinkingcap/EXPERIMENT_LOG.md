@@ -3616,3 +3616,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   +32.5 / +0.4 (svamp +16/+1.0, mbpp +33/+1.0, ifeval +46/-1.0, simple +32/-0.2, multiple +34/+3.4, no-fit +30/-1.0).
   All five Run A2 soups sit at 32-33% saved, accuracy -1.0..+0.4: math saving falls with steps (33 -> 16%), IFEval rises
   (36 -> 46%). GPU 1 now on the rc1-rl-40 full evaluation; GPU 2 lpc-runb seed 1 step 160/275 (loss 0.56, healthy).
+- 16:00 (user): Run D replaced by lpc-runac = Run A's pairs and kind mix, constant lr 2e-5 (no cosine decay), beta 0.1 (no
+  stronger tie to the original); 3 seeds, fresh soups + 720 rescreen. Single change vs lpc-runa2: the learning-rate
+  schedule. The michal-bida 1:1 control (lpc-bida) stays queued on GPU 2 after Run B.
