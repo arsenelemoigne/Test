@@ -3640,3 +3640,7 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   MORE). 2,272 identical pairs (normal for two draws). merge.py averages per-adapter updates (B_i A_i), so different
   LoRA inits do not cancel. Pairs cannot explain B's lower saving. Queued on GPU 2 before the seed-0 retrain: single
   seeds on the 720 at step 200 (lpc-runb s0, s1; lpc-runa2 s0).
+- 20:44: GPU 2 picked the lpc-runb seed-0 reset line (commit 52d4d6f) before the single-seed check lines were pushed:
+  the pre-restart seed 0 is already deleted (step 185/275 of its retrain on the current draw). The single-seed lines
+  stay and will score the NEW seed 0, seed 1 (both on the current draw) and lpc-runa2 seed 0 at step 200 on the 720.
+  lpc-runb fresh soup-250: +23.3 / -0.8 (lpc-runa2 fresh soup-250: +23.3 / -0.9). GPU 1: lpc-runac seed 2 started.
