@@ -3647,3 +3647,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 21:44: clean lpc-runb (all 3 seeds on the current draw) fresh x8 soup-100: +24.0 / -0.5 (svamp +26/-0.3, mbpp +19/-0.9,
   ifeval +28/-1.6, simple +25/+1.3, multiple +27/0.0, no-fit +14/+1.6) — same as the mixed-draw soup (+23.8 / -0.4): the
   restart / mixed draws were NOT the cause of B's lower step-100 saving. GPU 1: lpc-runac seed 2 step 195/275.
+- 22:44: lpc-runac (Run A pairs, constant lr) fresh x8 soup-100: +26.2 / -1.3 (svamp +28/-1.9, mbpp +26/+1.6, ifeval
+  +25/-3.1, simple +26/-2.5, multiple +29/-3.4, no-fit +22/+0.9); lpc-runa2 soup-100 was +31.0 / -0.5 on the same set.
+  Clean lpc-runb fresh soup-250: +24.7 / +0.1 (full-eval weighting). GPU 2 on the single-seed 720 checks.
