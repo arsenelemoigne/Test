@@ -3203,6 +3203,10 @@ def lupin(args):
             continue
         for d in (Path("adapters") / f"{name}-s{seed}", DRIVE / "adapters" / f"{name}-s{seed}"):
             shutil.rmtree(d, ignore_errors=True)
+        # the soups had this seed in them: drop their scores so they are scored again (here and on Drive)
+        for base_dir in (ROOT, DRIVE / ROOT):
+            for d in [*base_dir.glob(f"f8-{name}-soup-*"), *base_dir.glob(f"s4-{name}-soup-*"), *base_dir.glob(f"r4-{name}-soup-*")]:
+                shutil.rmtree(d, ignore_errors=True)
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text("reset\n")
         drive_sync("save")

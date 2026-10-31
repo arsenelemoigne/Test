@@ -3628,3 +3628,8 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 18:44: lpc-runb 3 seeds trained; fresh x8 soup-100 +23.8 / -0.4 (svamp +24/-1.9, mbpp +19/+1.2, ifeval +29/-0.9, simple
   +23/0.0, multiple +26/-2.8, no-fit +20/+2.5) — lower saving than lpc-runa2's fresh soup-100 (+31.0 / -0.5); 720
   rescreen after the fresh soups. GPU 1: lpc-runac seed 0 done, seed 1 training.
+- ~19:30 (user): lpc-runb seeds are not on one pair draw (seed 0: the pre-restart lupin_select draw; seeds 1-2: the draw
+  rebuilt at the restart; same counts and kind mix, different questions picked). Queued: lpc-runb --lp-reset-seeds 0
+  (seed 0 retrained on the current draw; the run's fresh / 720 / cross-check soup scores are deleted and re-scored), then
+  its 720 rescreen. lpc-runa2's three seeds share one (pre-restart) draw; lpc-runac's three seeds share its own draw.
+  Fresh x8 lpc-runb (mixed draws) soups: 100 +23.8 / -0.4; 150 +24.5 / +0.3; 200 +26.5 / +0.2.
