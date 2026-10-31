@@ -3612,3 +3612,7 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 14:44: lpc-runa2-soup-200 on the 720 x 4: +33.0 / -0.3 (full-eval weighting +32.9 / -0.4); svamp +21/-0.2, mbpp
   +34/-0.4, ifeval +43/-1.0, simple +32/-1.2, multiple +35/+3.6, no-fit +32/-0.4. GPU 2: lpc-runb seed 1 reset (marker
   written), retraining from scratch.
+- 15:44: lpc-runa2 on the 720 x 4 (full-eval weighting): soup-250 +32.3 / -1.0 (svamp +17/0.0, ifeval +45/-3.5); soup-270
+  +32.5 / +0.4 (svamp +16/+1.0, mbpp +33/+1.0, ifeval +46/-1.0, simple +32/-0.2, multiple +34/+3.4, no-fit +30/-1.0).
+  All five Run A2 soups sit at 32-33% saved, accuracy -1.0..+0.4: math saving falls with steps (33 -> 16%), IFEval rises
+  (36 -> 46%). GPU 1 now on the rc1-rl-40 full evaluation; GPU 2 lpc-runb seed 1 step 160/275 (loss 0.56, healthy).
