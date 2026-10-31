@@ -3633,3 +3633,10 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   (seed 0 retrained on the current draw; the run's fresh / 720 / cross-check soup scores are deleted and re-scored), then
   its 720 rescreen. lpc-runa2's three seeds share one (pre-restart) draw; lpc-runac's three seeds share its own draw.
   Fresh x8 lpc-runb (mixed draws) soups: 100 +23.8 / -0.4; 150 +24.5 / +0.3; 200 +26.5 / +0.2.
+- ~19:45 pair-file check (user: "dig into the pairs"; files downloaded from Drive): pairs-lpc-runb vs pairs-lpc-runa2 (the
+  current draws): both 4,442 pairs; per part and kind counts equal except svamp (A2: guard 285 / right 390; B: shorten 199
+  median-vs-longest / guard 203 / right 273); median chosen vs rejected lengths equal on every other part; summed length
+  push (sum of log(rejected/chosen) over shorten + guard) per part equal except svamp (B 375 vs A2 298, i.e. B pushes math
+  MORE). 2,272 identical pairs (normal for two draws). merge.py averages per-adapter updates (B_i A_i), so different
+  LoRA inits do not cancel. Pairs cannot explain B's lower saving. Queued on GPU 2 before the seed-0 retrain: single
+  seeds on the 720 at step 200 (lpc-runb s0, s1; lpc-runa2 s0).
