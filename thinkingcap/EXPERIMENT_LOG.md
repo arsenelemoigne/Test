@@ -3597,3 +3597,7 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - ~13:05: fix 155fc81 (seed adapters and the fresh start restored from Drive before the check). Both runtimes re-cloned it
   and are re-running setup; then GPU 1 starts the 720 rescreen of lpc-runa2 (soups 200/250/270 left), GPU 2 lpc-runb
   (seed 0 done, seed 1 resumes from its Drive checkpoint ~step 200).
+- ~13:25: after the interrupt + cell re-run, both runners started with "drive: NOT mounted" (the mount was gone): GPU 1
+  skipped the 720 rescreen (no adapters), fullmodel failed (models/rc1-rl-40 not found) and lpc-rund was starting; GPU 2
+  started lpc-runb locally. Both interrupted before any training; cells 1 (drive.mount), 3-6 re-queued; the user
+  approves the Drive popups.
