@@ -3644,3 +3644,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   the pre-restart seed 0 is already deleted (step 185/275 of its retrain on the current draw). The single-seed lines
   stay and will score the NEW seed 0, seed 1 (both on the current draw) and lpc-runa2 seed 0 at step 200 on the 720.
   lpc-runb fresh soup-250: +23.3 / -0.8 (lpc-runa2 fresh soup-250: +23.3 / -0.9). GPU 1: lpc-runac seed 2 started.
+- 21:44: clean lpc-runb (all 3 seeds on the current draw) fresh x8 soup-100: +24.0 / -0.5 (svamp +26/-0.3, mbpp +19/-0.9,
+  ifeval +28/-1.6, simple +25/+1.3, multiple +27/0.0, no-fit +14/+1.6) — same as the mixed-draw soup (+23.8 / -0.4): the
+  restart / mixed draws were NOT the cause of B's lower step-100 saving. GPU 1: lpc-runac seed 2 step 195/275.
