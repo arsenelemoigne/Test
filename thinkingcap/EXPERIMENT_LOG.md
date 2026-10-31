@@ -3594,3 +3594,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   from Drive). Stopped at step 75: only checkpoints step-10..70 (and the resume state) of those two seeds were
   overwritten on Drive; the final adapters and steps 80+ are intact. Fix: the lupin stage light-restores every seed's
   adapter folder before checking. GPU 1 plan: lpc-runa2 line commented (done), so it starts with the 720 rescreen.
+- ~13:05: fix 155fc81 (seed adapters and the fresh start restored from Drive before the check). Both runtimes re-cloned it
+  and are re-running setup; then GPU 1 starts the 720 rescreen of lpc-runa2 (soups 200/250/270 left), GPU 2 lpc-runb
+  (seed 0 done, seed 1 resumes from its Drive checkpoint ~step 200).
