@@ -3585,3 +3585,7 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   the full test, trained models measured on the full test or the 720 only).
 - 00:41 (31 Oct): lpc-runa2-soup-150 on the 720 x 4: +32.4 / -0.1 (full-eval weighting +32.3 / -0.1); svamp +24/+1.0,
   mbpp +37/-0.4, ifeval +34/-1.5, simple +33/+0.2, multiple +36/+2.7, no-fit +33/-1.5.
+- ~00:45 (31 Oct): both runtimes stopped progressing. GPU 1 page shows "Reconnect L4" (it was scoring lpc-runa2-soup-200
+  on the 720, 256 / 2,876 answers); GPU 2 page no longer answers scripts (Run B seed 1 at step ~205 / 275, last Drive log
+  step 195). Not reconnected (standing rule: ask the user before opening or reconnecting a Colab runtime). On reconnect:
+  run cells 1-6; dpo.py resumes after its last checkpoint (every 10 steps), finished evaluations are skipped.
