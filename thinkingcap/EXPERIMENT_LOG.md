@@ -3625,3 +3625,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 17:44: rc1-rl-40 on the 720 x 4: +55.2 / -3.7 (full-eval weighting) vs its FULL +55.4 / -2.6: the 720 read accuracy 1.1
   pts low for this model (0.2 low for lpc-l2s50e); saving exact. So a 720 score carries about +-1 pt of accuracy error.
   GPU 1: lpc-runac seed 0 step 105/275. GPU 2: lpc-runb seed 2 step 200/275.
+- 18:44: lpc-runb 3 seeds trained; fresh x8 soup-100 +23.8 / -0.4 (svamp +24/-1.9, mbpp +19/+1.2, ifeval +29/-0.9, simple
+  +23/0.0, multiple +26/-2.8, no-fit +20/+2.5) — lower saving than lpc-runa2's fresh soup-100 (+31.0 / -0.5); 720
+  rescreen after the fresh soups. GPU 1: lpc-runac seed 0 done, seed 1 training.
