@@ -3650,3 +3650,9 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 22:44: lpc-runac (Run A pairs, constant lr) fresh x8 soup-100: +26.2 / -1.3 (svamp +28/-1.9, mbpp +26/+1.6, ifeval
   +25/-3.1, simple +26/-2.5, multiple +29/-3.4, no-fit +22/+0.9); lpc-runa2 soup-100 was +31.0 / -0.5 on the same set.
   Clean lpc-runb fresh soup-250: +24.7 / +0.1 (full-eval weighting). GPU 2 on the single-seed 720 checks.
+- 23:44: single seeds on the 720 x 4 at step 200 (full-eval weighting): lpc-runb s0 +27.6 / -0.3 (mbpp +17), lpc-runb s1
+  +26.6 / +1.0 (mbpp +18), lpc-runa2 s0 +33.9 / -0.3 (mbpp +33). B's seeds agree with each other and are ~6-7 pts below
+  A2's seed, mostly on code, whose pairs are the same in both runs. lpc-runac fresh x8: 150 +24.9 / -0.6, 200 +22.0 /
+  -0.9, 250 +19.5 / -0.8 (svamp 19 -> 4 -> 1%; mbpp 23 -> 20 -> 17%). Pattern: every run trained AFTER the 31 Oct restart
+  (B, A-constant) saves less than lpc-runa2 (trained before it). Queued on GPU 1: lpc-runa2r = exact replay of lpc-runa2
+  (same flags, 1 seed, current pair draw and code), scored at step 200 on the 720.
