@@ -3609,3 +3609,6 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   with a resume point also refuse); (3) track --lp-reset-seeds: delete a damaged seed (local + Drive) once, with a marker.
   lpc-runb seed 1 is retrained from scratch (seed 0 trained before the restart, unaffected). GPU 1 (720 rescreen of
   lpc-runa2) uses finished adapters only: unaffected.
+- 14:44: lpc-runa2-soup-200 on the 720 x 4: +33.0 / -0.3 (full-eval weighting +32.9 / -0.4); svamp +21/-0.2, mbpp
+  +34/-0.4, ifeval +43/-1.0, simple +32/-1.2, multiple +35/+3.6, no-fit +32/-0.4. GPU 2: lpc-runb seed 1 reset (marker
+  written), retraining from scratch.
