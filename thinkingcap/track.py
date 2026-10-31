@@ -3185,11 +3185,16 @@ def lupin(args):
         start = Path(args.lp_init)
         drive_sync("restore", only=[str(start)])
         assert (start / "adapter_config.json").exists(), f"{start} not found"
-    elif not (start / "adapter_config.json").exists():
-        py("sft.py", "--init-only", "--model", base, "--out", start)
+    else:  # the same fresh (zero) LoRA start every seed used before, if it is on Drive
+        drive_sync("restore", only=[str(start)])
+        if not (start / "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--model", base, "--out", start)
     gentle = [*(["--beta", args.lp_beta] if args.lp_beta else []), *(["--nll", args.lp_nll] if args.lp_nll is not None else []),
               *(["--lr", args.lp_lr] if args.lp_lr else []),
               *(["--lr-schedule", args.lp_lr_schedule] if args.lp_lr_schedule else [])]
+    # a fresh runtime has an empty disk (31 Oct: both runtimes retrained finished seeds from scratch): bring back every
+    # seed's adapter and checkpoints from Drive first, so a finished seed is skipped and an unfinished one resumes
+    drive_sync("restore", only=[str(Path("adapters") / f"{name}-s{seed}") for seed in args.seeds])
     for seed in args.seeds:
         adapter = Path("adapters") / f"{name}-s{seed}"
         if not (adapter / "adapter_config.json").exists():
