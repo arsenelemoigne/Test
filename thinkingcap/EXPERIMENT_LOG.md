@@ -3719,3 +3719,6 @@ own answers file (it would have overwritten the 10-answer one).
   +43/-2.5, no-fit +35/-1.9). GPU 1 idle (queue ended), waiting on the user for the no-fit data step. GPU 2: lpw-p4tools.
 - 08:44: lpw-p4tools (1 seed, choosing x4): 25 +41.9 / -0.1; 50 +37.6 / -0.3; 75 +45.9 / -0.6 (svamp +55/-0.6, mbpp
   +48/-3.1, no-fit +39/-0.6). Both queues ended; 720 checks queued: p4tools 75/50 (GPU 2), pressmath 50 (GPU 1).
+- 09:44: lpw-p4tools on the 720 x 4 (full-eval weighting): step 75 +48.4 / -2.6 (ifeval +43/-6.0, svamp +57/-4.0);
+  step 50 +42.2 / -2.2 — the choosing set had shown -0.6 / -0.3. GPU 1's runner had not started (cwd lost after the
+  queue end + restart: "can't open /content/track.py"); cells 1, 3-6 re-run.
