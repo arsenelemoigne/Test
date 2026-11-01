@@ -3659,3 +3659,5 @@ so the degenerate replies seen in the log are not new with training. Capped repl
 - 00:44 (1 Nov), 720 x 4 (full-eval weighting): lpc-runac 100 +29.3 / -0.7; 150 +34.3 / -0.9 (ifeval +44/-3.7); 200
   +29.2 / -0.4 (mbpp 19, svamp 19). Clean lpc-runb 100 +29.8 / -0.6; 150 +29.0 / -0.6. (lpc-runa2 on the 720: 32-33 at
   every step, accuracy -1.0..+0.4.) Added to the canvas.
+- 01:01: 720 x 4 (full-eval weighting): lpc-runac 250 +26.3 / -1.2 (svamp +7, mbpp +17, ifeval +43/-3.5); clean lpc-runb
+  200 +30.0 / -0.1 (ifeval +42/-1.9, mbpp +22). Proposed to the user: blends of lpc-l2s50e-soup-100 and lpc-runa2 soups.
