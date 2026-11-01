@@ -3722,3 +3722,5 @@ own answers file (it would have overwritten the 10-answer one).
 - 09:44: lpw-p4tools on the 720 x 4 (full-eval weighting): step 75 +48.4 / -2.6 (ifeval +43/-6.0, svamp +57/-4.0);
   step 50 +42.2 / -2.2 — the choosing set had shown -0.6 / -0.3. GPU 1's runner had not started (cwd lost after the
   queue end + restart: "can't open /content/track.py"); cells 1, 3-6 re-run.
+- 10:44: GPU 1's runtime disconnected "due to inactivity" (idle after its queue ended and the cwd restart); a Drive
+  access dialog is pending. Not reconnected (rule: ask the user first). GPU 2 idle (queue ended after the p4tools check).
