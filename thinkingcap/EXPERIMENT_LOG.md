@@ -3754,3 +3754,6 @@ own answers file (it would have overwritten the 10-answer one).
   only): 100 +52.4 / -3.9 (bidax2 s0: +54.7 / -4.6); 200 +56.3 / -4.2 (bidax2 s0: +49.1 / -3.1); 300 +54.8 / -3.7
   (bidax2 s0: +51.1 / -2.6). lpc-bidax4 (own no-fit added) step 100: +57.1 / -5.1 (svamp +69/-8.8, mbpp +57/-9.0,
   no-fit +49/-4.0, ifeval +53/-0.4).
+- 18:04: lpc-bidax3 (same-seed repeat) FINAL +54.5 / -3.9 (no-fit +47/-7.3, svamp +66/-6.5). lpc-bidax4 (own no-fit)
+  step 200 +54.6 / -3.7: no-fit +50/-1.9 (repeat at step 200: -6.2; bidax2 s0: -3.3), ifeval -0.2, but svamp +67/-8.3,
+  mbpp +51/-5.0. newtop math1: 3,722 candidates already in the pool / top-ups dropped; answering 3,000 x... (in progress).
