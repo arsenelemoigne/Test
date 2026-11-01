@@ -3761,3 +3761,13 @@ own answers file (it would have overwritten the 10-answer one).
   ifeval +50/-2.3, multiple +47/0.0). Final being scored. GPU 2: math1 answers in progress.
 - 18:40: lpc-bidax4 FINAL on the 720 (full-eval weighting): +52.7 / -3.5 (no-fit +50/-1.2, svamp +66/-5.4, mbpp +45/-4.2,
   ifeval +51/-2.7, simple +43/-2.7, multiple +47/-0.2). GPU 1 queue ended -> lpc-bidax5 seed 1 queued (waits for math1).
+
+### 1 Nov 2026 — section 5 of the visual + a 600-step check queued
+- Visual section 5 "Where the cut happens" (720 set, against the original Qwen): per type thinking, accuracy, thinking per
+  right answer, wrong answers' share of thinking; 5 length bands per type. Now has bidax4 and the bida copy (bidax2 s0) at
+  steps 100/200/300/final. The math 4th length band (original thinks 471-905 tokens) loses 12.5-17.7 pts at EVERY step
+  of both runs; bidax4 math/code recover 100->300 then flat (overall 100: 57.1/-5.1, 200: 54.6/-3.7, 300: 53.2/-3.3,
+  final 52.7/-3.5): the later steps trade saving for accuracy along the same curve.
+- User asked to check more steps anyway: GPU 1 queue, after bidax5 seed 1: lpc-bidax4l = the bidax4 line unchanged but
+  2 passes over the pairs (one pass = ~336 steps), stopped at 600 (cosine over the 600), then rs-bidax4l on the 720 at
+  300/400/500/600.

@@ -302,4 +302,8 @@
 # 1 Nov 18:40: GPU 1 free -> a second seed of lpc-bidax5 (waits for math1 on Drive), for a 2-seed soup
 lupin --name lpc-bidax5 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1 --lp-add-q nofit4,math1 --lp-answers-pool dp10
 rescreen --name rs-bidax5-s1 --cx-names lpc-bidax5 --cx-steps 0 --seeds 1
+# 1 Nov, user: is 600 steps better than one pass? bidax4 recipe unchanged, 2 passes over the pairs, stopped at 600 steps
+# (cosine learning rate spread over the 600), scored on the 720 at 300/400/500/600 (0 = the final adapter = step 600)
+lupin --name lpc-bidax4l --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-epochs 2 --lp-dpo=--max-steps=600
+rescreen --name rs-bidax4l --cx-names lpc-bidax4l --cx-steps 300 400 500 0 --seeds 0
 end
