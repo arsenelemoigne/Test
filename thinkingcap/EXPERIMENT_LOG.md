@@ -3750,3 +3750,7 @@ own answers file (it would have overwritten the 10-answer one).
 - ~15:50 (user): math data step queued on GPU 2 after the bidax3 repeat: prepare_types gsm8k_std (GSM8K train+test in
   SVAMP wording, labelled gsm8k_matched); newtop now answers math sources too. newtop math1 = 2,000 questions from
   gsm8k_std + metamath_sv (dedup vs pool), x10; lpc-bidax5 = michal-bida recipe + nofit4 + math1 (--lp-add-q); 720.
+- 17:44, 720 x 4 (full-eval weighting): lpc-bidax3 = SAME pairs and SAME seed as lpc-bidax2 s0 (GPU non-determinism
+  only): 100 +52.4 / -3.9 (bidax2 s0: +54.7 / -4.6); 200 +56.3 / -4.2 (bidax2 s0: +49.1 / -3.1); 300 +54.8 / -3.7
+  (bidax2 s0: +51.1 / -2.6). lpc-bidax4 (own no-fit added) step 100: +57.1 / -5.1 (svamp +69/-8.8, mbpp +57/-9.0,
+  no-fit +49/-4.0, ifeval +53/-0.4).
