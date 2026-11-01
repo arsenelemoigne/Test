@@ -3685,3 +3685,8 @@ Differences from all our LUPIN runs: our NLL anchor (weight 1.0), 10 answers per
 chosen), matching to eval cells, difficulty rule, similar-length right pairs, 3-seed soups, checkpoint picking, and
 his tools domain being ~45% no-fit (ours ~29% of BFCL pairs). track.py: an --lp-answers other than 10 now writes its
 own answers file (it would have overwritten the 10-answer one).
+- ~01:45 (user): the michal-bida control is now an EXACT copy, lpc-bidax: long2short (his two pair kinds), shorten
+  capped at the guard count per part (lupin_pairs default --shorten-cap 1 = his --balance), no min-solve, no right pairs,
+  --lp-no-match, --lp-nll 0, --lp-answers 4 (the 4 newest of each question's 10 answers; own answers file), cosine lr 2e-5
+  (warm-up 10 steps vs his 5%; floor 2e-6 vs 0), beta 0.1, LoRA r32, 16 pairs/step, 1 epoch, 1 seed. rescreen step 0 =
+  the final adapter. Scored on the 720 at steps 100 / 200 / 300 / final. Our pool dp13 (12,000 questions) is the data.

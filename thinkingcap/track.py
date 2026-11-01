@@ -2642,13 +2642,14 @@ def rescreen(args):
     drive_sync("restore", only=[SCREEN, str(ROOT / "s4-base")])
     for name in args.cx_names:
         for step in args.cx_steps:
-            members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
-            drive_sync("restore", only=[str(m.parent) for m in members])
+            # step 0 = the FINAL adapter, as trained to the end (michal-bida scores only that one)
+            members = [Path("adapters") / f"{name}-s{seed}" / (f"step-{step}" if step else "") for seed in args.seeds]
+            drive_sync("restore", only=[str(Path("adapters") / f"{name}-s{seed}") for seed in args.seeds])
             members = [m for m in members if (m / "adapter_config.json").exists()]
             if len(members) < len(args.seeds):
                 print(f"rescreen: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
                 continue
-            tag = f"{name}-{'s' + str(args.seeds[0]) if len(members) == 1 else 'soup'}-{step}"
+            tag = f"{name}-{'s' + str(args.seeds[0]) if len(members) == 1 else 'soup'}-{step or 'final'}"
             out = ROOT / f"s4-{tag}"
             drive_sync("restore", only=[str(out)])
             if not (out / "results.json").exists():
