@@ -3731,3 +3731,9 @@ own answers file (it would have overwritten the 10-answer one).
   pool-dp*.jsonl or an earlier top-up; answered x10 by the original Qwen. Then lpc-bidax3 = lpc-bidax2's exact
   michal-bida recipe with nofit3 added to the extra questions; 720 at 100 / 200 / 300 / final.
 - GPU 1: lpc-bidax2 seed 1 (same pairs file as seed 0) -> how far one seed's final score moves by training randomness.
+- 14:44: newtop nofit3: 888 candidates already in the pool / top-ups dropped; 958 new no-fit questions x10: mean solve
+  rate 98% (always right 886, sometimes 72, never 0) -> almost no wrong answers, so almost no guard ("right > wrong")
+  pairs. AND lpc-bidax3 did not include them: with --lp-answers-pool dp10 the stage takes only the pool's own question
+  ids (top-ups must already be selected into the pool), so its pairs equal lpc-bidax2's (5,026; no-fit 92 / 92). Left
+  running as a SAME-SEED repeat of lpc-bidax2 (pure GPU non-determinism measure). GPU 1: lpc-bidax2 seed 1 on the 720.
+  Next (proposed): michal-bida's own no-fit source (xLAM irrelevance) if the base model gets it wrong often enough.
