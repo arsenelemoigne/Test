@@ -3798,3 +3798,9 @@ own answers file (it would have overwritten the 10-answer one).
   246 -> 319). Gate 500 not met on math1 alone -> math2 + om2 (GPU 1), then lpc-bidax5m seed 0 there; lupin
   --lp-min-overcut 500 refuses to train under the gate. GPU 2 meanwhile: the 600-step check (lpc-bidax4l), then
   bidax5m seed 1.
+- 2 Nov ~00:10: GATE PASSED. lpc-bidax5m pairs (math1 + math2 + om1 + om2): svamp in band 2,955 questions; overcut
+  622 trained + 121 natural = 743; band shorten dropped 1,559; svamp shorten left 1,510 (easy + hard questions only),
+  svamp guard 2,387 (incl. the 743). Other parts = bidax4's exactly (no-fit 260/260, multiple 174/174, simple 229/229,
+  ifeval 681/681, mbpp 886/886). 8,308 pairs (bidax4 5,362): math is now ~47% of pairs (bidax4 ~18%); one pass = ~519
+  steps, so the other types get the same pairs spread over a longer cosine. Training seed 0 on GPU 1; 720 at
+  100/200/300/400/final.
