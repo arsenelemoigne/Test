@@ -3759,3 +3759,5 @@ own answers file (it would have overwritten the 10-answer one).
   mbpp +51/-5.0. newtop math1: 3,722 candidates already in the pool / top-ups dropped; answering 3,000 x... (in progress).
 - 18:23: lpc-bidax4 step 300 on the 720: +53.2 / -3.3 (no-fit +49/-0.6, svamp +67/-6.0, simple +44/-3.5, mbpp +46/-2.9,
   ifeval +50/-2.3, multiple +47/0.0). Final being scored. GPU 2: math1 answers in progress.
+- 18:40: lpc-bidax4 FINAL on the 720 (full-eval weighting): +52.7 / -3.5 (no-fit +50/-1.2, svamp +66/-5.4, mbpp +45/-4.2,
+  ifeval +51/-2.7, simple +43/-2.7, multiple +47/-0.2). GPU 1 queue ended -> lpc-bidax5 seed 1 queued (waits for math1).

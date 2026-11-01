@@ -290,13 +290,16 @@
 # 1 Nov 08:45: the choosing-set screens looked good (p4tools-75 +45.9 / -0.6, pressmath-50 +42.0 / -0.8): check on the 720
 # done: rescreen --name rs-pressmath --cx-names lpw-pressmath --cx-steps 50 --seeds 0
 # user, 1 Nov ~11:00: training randomness check: the same exact michal-bida copy, seed 1 (seed 0 final +51.8 / -2.7)
-lupin --name lpc-bidax2 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
-rescreen --name rs-bidax2-s1 --cx-names lpc-bidax2 --cx-steps 0 --seeds 1
+# done: lupin --name lpc-bidax2 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
+# done: rescreen --name rs-bidax2-s1 --cx-names lpc-bidax2 --cx-steps 0 --seeds 1
 # user, 1 Nov ~15:00: OUR OWN no-fit set, built to be hard: candidates from xLAM irrelevance (michal-bida's source,
 # new prepare_types builder), Glaive hard and ToolACE near-verified no-fit; none already in the pool; answered x10;
 # only questions the model sometimes gets wrong can give pairs, so easy ones simply add nothing. Then the exact
 # michal-bida recipe with them ADDED (--lp-add-q: the bug that left nofit3 out)
-newtop --name nofit4 --nt-sources xlam_irrelevance,glaive_nofit_hard,toolace_near_verified --nt-parts bfcl_irrelevance --tt-questions 3000 --data-seed 111
-lupin --name lpc-bidax4 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10
-rescreen --name rs-bidax4 --cx-names lpc-bidax4 --cx-steps 100 200 300 0 --seeds 0
+# done: newtop --name nofit4 --nt-sources xlam_irrelevance,glaive_nofit_hard,toolace_near_verified --nt-parts bfcl_irrelevance --tt-questions 3000 --data-seed 111
+# done: lupin --name lpc-bidax4 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10
+# done: rescreen --name rs-bidax4 --cx-names lpc-bidax4 --cx-steps 100 200 300 0 --seeds 0
+# 1 Nov 18:40: GPU 1 free -> a second seed of lpc-bidax5 (waits for math1 on Drive), for a 2-seed soup
+lupin --name lpc-bidax5 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1 --lp-add-q nofit4,math1 --lp-answers-pool dp10
+rescreen --name rs-bidax5-s1 --cx-names lpc-bidax5 --cx-steps 0 --seeds 1
 end
