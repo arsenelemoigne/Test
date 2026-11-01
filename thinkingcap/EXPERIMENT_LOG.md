@@ -3690,3 +3690,5 @@ own answers file (it would have overwritten the 10-answer one).
   --lp-no-match, --lp-nll 0, --lp-answers 4 (the 4 newest of each question's 10 answers; own answers file), cosine lr 2e-5
   (warm-up 10 steps vs his 5%; floor 2e-6 vs 0), beta 0.1, LoRA r32, 16 pairs/step, 1 epoch, 1 seed. rescreen step 0 =
   the final adapter. Scored on the 720 at steps 100 / 200 / 300 / final. Our pool dp13 (12,000 questions) is the data.
+- 01:44: 720 x 4 (full-eval weighting): lpc-runac 270 +23.4 / -0.1 (svamp 0%, mbpp 11%); clean lpc-runb 250 +31.0 / +0.1,
+  270 +28.4 / +0.1. GPU 1: lpc-runa2r (exact one-seed replay of lpc-runa2) training; GPU 2: lpc-bidax starting.
