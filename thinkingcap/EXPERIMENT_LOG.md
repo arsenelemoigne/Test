@@ -3715,3 +3715,5 @@ own answers file (it would have overwritten the 10-answer one).
   +51.8 / -2.7 (svamp +65/-5.4, no-fit +46/-4.6, ifeval +50/-2.3, simple +41/-1.7, multiple +46/-1.7, mbpp +45/-0.4) vs
   michal-bida's own full-eval +47.0 / -0.78 (no-fit +6.0, svamp -2.4): his recipe on our pool does not reproduce his
   result; the gap is concentrated on no-fit and math.
+- 07:44: lpw-pressmath (1 seed, choosing x4, noisy): step 25 +34.7 / -0.2, step 50 +42.0 / -0.8 (svamp +53/0.0, mbpp
+  +43/-2.5, no-fit +35/-1.9). GPU 1 idle (queue ended), waiting on the user for the no-fit data step. GPU 2: lpw-p4tools.
