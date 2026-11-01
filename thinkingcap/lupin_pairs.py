@@ -24,6 +24,13 @@ Modifiers, any recipe:
     --drop-similar J  drop pairs whose two answers share more than J of their token 4-grams (near-identical pairs push
                     probability onto unintended outputs: likelihood displacement, 2410.08847).
     --add-right     add the similar-length right > wrong pairs to any recipe.
+    --band PART:LO:HI  (1 Nov, math hole) on PART's questions whose answers think LO-HI tokens on average (mean thinking
+                    length of the answers given), no shorten pair: the trained models over-cut exactly there (SVAMP
+                    470-905: -13.5 pts) while the cut is free above it. Guard pairs stay.
+    --overcut FILE  ("don't over-cut") a trained model's answers to banded questions (track.py onpolicy): per question its
+                    shortest finished WRONG answer that thinks < --overcut-ratio x the winner loses to the original's
+                    median-length right answer (kind guard, tagged overcut; added after the shorten cap). The original's
+                    own answers give the same pair where one of its wrong answers is that short ("natural" cases).
 Never-solved questions give no pair except hard (DAST); always-solved ones no guard / right pair.
 
     python lupin_pairs.py --rollouts runs/bon/probe-ans-dp1/rollouts.jsonl --recipe long2short --out runs/bon/pairs-L0
@@ -83,6 +90,9 @@ def main():
                         help="Run B (30 Oct build spec): per part, PART=P: the shorten pair becomes the MEDIAN-length right "
                              "answer > the longest right one (>= --long-ratio x), only on questions solved >= P "
                              "(teaches 'drop the runaway tail', not 'skip the re-read'), e.g. svamp=0.8")
+    parser.add_argument("--band", default="", help="PART:LO:HI, no shorten pair on PART's questions thinking LO-HI")
+    parser.add_argument("--overcut", nargs="*", default=[], help="trained models' rollouts on banded questions (losers)")
+    parser.add_argument("--overcut-ratio", type=float, default=0.75)
     parser.add_argument("--drop-similar", type=float, default=0.0)
     parser.add_argument("--add-right", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
@@ -95,6 +105,14 @@ def main():
             groups[r["id"]].append(r)
 
     pairs, counts = [], Counter()
+    band_part, band_lo, band_hi = (args.band.split(":") + ["", "0", "0"])[:3] if args.band else ("", 0, 0)
+    band_lo, band_hi = float(band_lo), float(band_hi)
+
+    def think(r):
+        return len(r.get("thinking_ids") or r["output_ids"])
+
+    def in_band(q):
+        return part_of(q[0]) == band_part and band_lo <= sum(think(r) for r in q) / len(q) < band_hi
     overrides = dict((k, float(v)) for k, v in (x.split("=") for x in args.min_solve_part.split(",") if x))
     right_parts = set(x for x in args.right_parts.split(",") if x)
     median_parts = dict((k, float(v)) for k, v in (x.split("=") for x in args.median_shorten_part.split(",") if x))
@@ -112,6 +130,9 @@ def main():
         p = len(rights) / len(q)
         part = part_of(q[0])
         may_shorten = p >= overrides.get(part, args.min_solve)
+        banded = in_band(q)
+        if banded:
+            counts[(part, "in band")] += 1
         if not may_shorten:  # a hard question: only "be right", never "be shorter" (nor "short right > long wrong")
             if args.recipe in ("long2short", "adar1"):
                 close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rights for w in wrongs if finished(w)
@@ -130,7 +151,10 @@ def main():
                 if p >= median_parts[part] and len(rights) > 2 and rights[-1]["output_tokens"] >= args.long_ratio * mid["output_tokens"]:
                     add("shorten", mid, rights[-1], q)
             elif may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] >= ratio * rights[0]["output_tokens"]:
-                add("shorten", rights[0], rights[-1], q)
+                if banded:
+                    counts[(part, "shorten dropped (band)")] += 1
+                else:
+                    add("shorten", rights[0], rights[-1], q)
         elif args.recipe == "dast":
             if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] > rights[0]["output_tokens"]:
                 add("shorten", rights[0], rights[-1], q)
@@ -161,6 +185,27 @@ def main():
             counts[(part, "shorten capped from")] = len(short)
             kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
         pairs = kept
+    if args.band:  # "don't over-cut": a too-short wrong answer loses to a normal right one
+        trained = defaultdict(list)
+        for path in args.overcut:
+            for r in read(path):
+                trained[r["id"]].append(r)
+        for q in groups.values():
+            if not in_band(q):
+                continue
+            rights = sorted((r for r in q if right(r)), key=lambda r: r["output_tokens"])
+            if not rights:
+                continue
+            win = rights[(len(rights) - 1) // 2]
+            for who, answers in (("trained", trained.get(q[0]["id"], [])), ("natural", q)):
+                short = sorted((r for r in answers if finished(r) and not right(r)
+                                and think(r) < args.overcut_ratio * think(win)), key=think)
+                if short:
+                    pairs.append({"id": q[0]["id"], "source": q[0]["source"], "part": part_of(q[0]), "kind": "guard",
+                                  "overcut": who, "prompt_ids": win["prompt_ids"], "chosen_ids": win["output_ids"],
+                                  "rejected_ids": short[0]["output_ids"], "margin": 0.0})
+                    counts[(part_of(q[0]), f"overcut ({who})")] += 1
+        counts[("all", "overcut questions with trained answers")] = len(trained)
     if args.recipe == "dast" and args.margin_drop > 0:  # DAST: the narrowest pairs of each kind carry little signal
         kept = []
         for kind in {p["kind"] for p in pairs}:
@@ -174,6 +219,7 @@ def main():
     for p in pairs:
         counts[(p["part"], p["kind"])] += 1
         p.pop("margin")
+        p.pop("overcut", None)
     rng.shuffle(pairs)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

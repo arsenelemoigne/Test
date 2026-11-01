@@ -3778,3 +3778,16 @@ own answers file (it would have overwritten the 10-answer one).
   only 41 point longer. So math1 under bida's rule adds ~660 "cut more" pairs exactly where we over-cut: bidax5 is not
   expected to close the hole. Natural "too-short answer was wrong" examples are rare (88 questions in that band; the
   original seldom thinks that short: answers at 150-299 tokens are 73% right vs 92% at 450-599).
+- 21:20 (user): bidax5 STOPPED on both GPUs before its first DPO step (pairs had svamp guard 1,085 / shorten 1,085).
+  New math recipe, data checked before any training (user: "make sure we have the correct math training data,
+  targeting exactly where the model is failing BEFORE starting; if not enough, keep answering more questions"):
+  - lupin_pairs.py --band svamp:470:905: no shorten pair on math questions whose original answers think 470-905 tokens
+    on average (guard pairs stay; cut pairs above 905 stay, the cut is free there: +2.1).
+  - --overcut: "don't over-cut" pairs, the original's median-length right answer > a finished wrong answer thinking
+    < 0.75x it; losers from bidax4's own answers (track.py onpolicy: lpc-bidax4-s0 x4 on the band questions) plus the
+    original's own short wrong answers ("natural"). Kind guard (tagged), added after the 1:1 shorten cap.
+  - local test on math1 (4 answers, the original's other 6 answers as a stand-in loser set): band 919 questions, 500
+    shorten pairs dropped, 44 natural + 46 stand-in overcut pairs (the original rarely thinks short: real bidax4 answers
+    are the point).
+  - Gate before training: >= 500 overcut pairs from the trained model. GPU 2: onpolicy om1 (math1 band); GPU 1: newtop
+    math2 (2,000 more questions) + onpolicy om2, in case the gate needs them; then the 600-step check.

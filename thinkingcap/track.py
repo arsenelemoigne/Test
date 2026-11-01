@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -273,6 +273,12 @@ def main():
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
+    parser.add_argument("--op-from", default="math1", help="onpolicy: the top-up whose questions are answered")
+    parser.add_argument("--op-adapter", default="lpc-bidax4-s0", help="onpolicy: the trained adapter that answers")
+    parser.add_argument("--op-band", default="470,905", help="onpolicy: original-Qwen mean thinking band, tokens")
+    parser.add_argument("--op-samples", type=int, default=4, help="onpolicy: answers per question")
+    parser.add_argument("--lp-band", default="", help="lupin: lupin_pairs.py --band, e.g. svamp:470:905")
+    parser.add_argument("--lp-overcut", default="", help="lupin: onpolicy run names, comma-separated: their answers are lupin_pairs.py --overcut")
     parser.add_argument("--lp-reset-seeds", nargs="*", type=int, default=[], help="lupin: delete these seeds' adapters (local and Drive) and train them again")
     parser.add_argument("--lp-no-match", action="store_true", help="lupin: train on the raw pairs, no lupin_select matching (michal-bida control)")
     parser.add_argument("--lp-loose", default="", help="lupin: lupin_select.py --loose-parts (parts short of pairs)")
@@ -3024,6 +3030,43 @@ def newtop(args):
     drive_sync("save")
 
 
+def onpolicy(args):
+    """A trained model's own answers on a top-up's questions in one thinking band (1 Nov, math hole): the questions of
+    runs/bon/tooltop-<--op-from> whose original-Qwen answers think --op-band tokens on average (mean thinking length),
+    answered --op-samples times by adapters/<--op-adapter> (seed 43) -> runs/bon/onp-<name>/rollouts.jsonl. These are
+    the losers of lupin_pairs.py --overcut ("cut too short, got it wrong")."""
+    import statistics
+    name, src = args.name, BON / f"tooltop-{args.op_from}"
+    out, adapter = BON / f"onp-{name}", Path("adapters") / args.op_adapter
+    drive_sync("restore", only=[str(out), str(src), str(adapter)])
+    if (out / "rollouts.jsonl").exists():
+        print(f"onpolicy {name}: done", flush=True)
+        return
+    lo, hi = (float(x) for x in args.op_band.split(","))
+    think = defaultdict(list)
+    for line in open(src / "rollouts.jsonl"):
+        if line.strip():
+            r = json.loads(line)
+            think[r["id"]].append(len(r["thinking_ids"]))
+    keep = {i for i, v in think.items() if lo <= statistics.fmean(v) < hi}
+    rows = [json.loads(l) for l in (src / "questions.jsonl").read_text().splitlines() if l.strip()]
+    rows = [r for r in rows if r.get("pool_id", r.get("id")) in keep]
+    data = Path(f"data/onp-{name}.jsonl")
+    data.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    print(f"onpolicy {name}: {len(rows)} questions of {src.name} in the {lo:.0f}-{hi:.0f} band", flush=True)
+    py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv",
+       "--per-source", 1000000, "--samples", args.op_samples, "--model", "Qwen/Qwen3-0.6B", "--adapter", adapter,
+       "--out", out, "--dtype", args.dtype, "--generate-only", "--chunk", 300, "--max-questions", len(rows), "--seed", 43)
+    rate = defaultdict(list)
+    for line in open(out / "rollouts.jsonl"):
+        r = json.loads(line)
+        rate[r["id"]].append((bool(r["correct"]) and not r["truncated"], len(r["thinking_ids"])))
+    allv = [a for v in rate.values() for a in v]
+    print(f"onpolicy {name}: {len(rate)} questions x{args.op_samples}; right {statistics.fmean(c for c, _ in allv):.1%}, "
+          f"mean thinking {statistics.fmean(t for _, t in allv):.0f}; wrong answers {sum(not c for c, _ in allv)}", flush=True)
+    drive_sync("save")
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -3174,6 +3217,9 @@ def lupin(args):
         drive_sync("save")
     raw, pairs = BON / f"pairs-{name}-raw", BON / f"pairs-{name}"
     drive_sync("restore", only=[str(raw), str(pairs)])  # the SAME pair files as before a lost runtime (31 Oct)
+    for x in filter(None, args.lp_overcut.split(",")):
+        drive_sync("restore", only=[str(BON / f"onp-{x}")])
+        assert (BON / f"onp-{x}" / "rollouts.jsonl").exists(), f"onp-{x} is not on Drive"
     if not (raw / "pairs.jsonl").exists():
         py("lupin_pairs.py", "--rollouts", allfile, "--recipe", args.lp_recipe, "--out", raw,
            *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split(),
@@ -3181,7 +3227,9 @@ def lupin(args):
            *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []),
            *(["--min-solve-part", args.lp_min_solve_part] if args.lp_min_solve_part else []),
            *(["--right-parts", args.lp_right_parts] if args.lp_right_parts else []),
-           *(["--median-shorten-part", args.lp_median_part] if args.lp_median_part else []))
+           *(["--median-shorten-part", args.lp_median_part] if args.lp_median_part else []),
+           *(["--band", args.lp_band] if args.lp_band else []),
+           *(["--overcut", *[BON / f"onp-{x}" / "rollouts.jsonl" for x in args.lp_overcut.split(",")]] if args.lp_overcut else []))
     if args.lp_no_match and not (pairs / "pairs.jsonl").exists():  # michal-bida control (30 Oct): his pairs as they come
         pairs.mkdir(parents=True, exist_ok=True)
         shutil.copy(raw / "pairs.jsonl", pairs / "pairs.jsonl")
