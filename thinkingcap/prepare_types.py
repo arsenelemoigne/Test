@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -539,6 +539,40 @@ def glaive_nofit_verified(args, rng):
                "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nv-{k}",
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
                           {"role": "user", "content": r["question"]}]}
+
+
+def xlam_irrelevance(args, rng):
+    """1 Nov: michal-bida's no-fit source (MadeAgents/xlam-irrelevance-7.5k: a question with xLAM tools of which none
+    fits; the right answer calls nothing). Our Glaive no-fit questions were 98% solved by the original Qwen (almost no
+    "right > wrong" pairs); his tool domain was ~45% xLAM irrelevance and his no-fit accuracy rose 6 pts. xLAM parameter
+    specs {name: {description, type, default}} -> BFCL dicts; a parameter without a default is required."""
+    from datasets import load_dataset
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    for k, row in enumerate(load_dataset("MadeAgents/xlam-irrelevance-7.5k", split="train")):
+        try:
+            tools = json.loads(row["tools"])
+            functions = []
+            for tool in tools:
+                props, required = {}, []
+                for pname, spec in (tool.get("parameters") or {}).items():
+                    kind = str(spec.get("type", "str")).split(",")[0].strip().lower()
+                    kind = "array" if kind.startswith(("list", "array")) else "dict" if kind.startswith(("dict", "object")) else kind
+                    props[pname] = {"type": kind, "description": spec.get("description", "")}
+                    if "optional" not in str(spec.get("type", "")).lower() and "default" not in spec:
+                        required.append(pname)
+                functions.append({"name": tool["name"], "description": tool.get("description", ""),
+                                  "parameters": {"type": "dict", "properties": props, "required": required}})
+        except (ValueError, TypeError, KeyError, AttributeError):
+            continue
+        if not functions or json.loads(row["answers"] or "[]") or not bfcl_types(functions) \
+                or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in functions):
+            continue
+        yield {"source": "glaive_tools", "origin": "xlam-irrelevance", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "irrelevance", "function": functions, "reference": None, "id": f"xlam_irr-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
+                          {"role": "user", "content": row["query"]}]}
 
 
 def glaive_nofit_hard(args, rng):

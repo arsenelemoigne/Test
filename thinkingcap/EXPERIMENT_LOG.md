@@ -3737,3 +3737,8 @@ own answers file (it would have overwritten the 10-answer one).
   ids (top-ups must already be selected into the pool), so its pairs equal lpc-bidax2's (5,026; no-fit 92 / 92). Left
   running as a SAME-SEED repeat of lpc-bidax2 (pure GPU non-determinism measure). GPU 1: lpc-bidax2 seed 1 on the 720.
   Next (proposed): michal-bida's own no-fit source (xLAM irrelevance) if the base model gets it wrong often enough.
+- ~15:00 (user: "the training data must include the right data"; "better to create our own dataset"): prepare_types
+  xlam_irrelevance (MadeAgents/xlam-irrelevance-7.5k -> BFCL functions; 75 of 100 sample rows convert); track
+  --lp-add-q (top-up sets that join the pool even with --lp-answers-pool). Queued on GPU 1: newtop nofit4 = 3,000
+  questions from xLAM irrelevance + Glaive hard + ToolACE near-verified no-fit (dedup vs pool), x10 answers; then
+  lpc-bidax4 = exact michal-bida recipe + nofit4 added; 720 at 100/200/300/final.

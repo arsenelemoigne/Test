@@ -276,6 +276,7 @@ def main():
     parser.add_argument("--lp-reset-seeds", nargs="*", type=int, default=[], help="lupin: delete these seeds' adapters (local and Drive) and train them again")
     parser.add_argument("--lp-no-match", action="store_true", help="lupin: train on the raw pairs, no lupin_select matching (michal-bida control)")
     parser.add_argument("--lp-loose", default="", help="lupin: lupin_select.py --loose-parts (parts short of pairs)")
+    parser.add_argument("--lp-add-q", default="", help="lupin: top-up sets (in --lp-extra-q) whose questions all join the pool")
     parser.add_argument("--lp-kind-share", default="", help="lupin: lupin_select.py --kind-share-part (Run A pair mix)")
     parser.add_argument("--lp-lr-schedule", default="", help="lupin: dpo.py --lr-schedule (cosine: warm-up 10, down to 2e-6)")
     parser.add_argument("--lp-pressure", default="", help="lupin: lupin_select.py --shorten-ratio-part (per-type pressure)")
@@ -3142,7 +3143,9 @@ def lupin(args):
                     break
                 print(f"lupin {name}: waiting for {extra} on Drive", flush=True)
                 time.sleep(300)
-            if not args.lp_answers_pool:  # unselected top-up questions join; a selected pool (dp12) already lists its own
+            # unselected top-up questions join; a selected pool (dp12) already lists its own, EXCEPT the sets named in
+            # --lp-add-q (1 Nov: nofit3 was silently left out because of --lp-answers-pool)
+            if not args.lp_answers_pool or extra.name.removeprefix("tooltop-") in args.lp_add_q.split(","):
                 ids |= {json.loads(l)["pool_id"] for l in (extra / "questions.jsonl").read_text().splitlines() if l.strip()}
         # at most --lp-answers answers per question, newest first (user, 29 Oct: "14 or 10?"): the 10-answer run, then
         # the extra-answer rounds (newest first), then the 4 selection answers. The pool was CHOSEN on the earliest
