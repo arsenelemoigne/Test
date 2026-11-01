@@ -3696,3 +3696,11 @@ own answers file (it would have overwritten the 10-answer one).
   162, mbpp 147, ...) because track.py's --lp-min-solve defaults to 0.5. Restarted as lpc-bidax2 with --lp-min-solve 0
   (no difficulty rule, as michal-bida). bidax pairs before the fix: 4,247 (guard = shorten per part, e.g. mbpp 674/674,
   ifeval 472/472, svamp 405/...).
+- 04:44: lpc-runa2r (exact replay of lpc-runa2, seed 0) on the 720 x 4 at step 200: +26.0 / -0.8 (svamp +14/-0.8, mbpp
+  +17/-1.7, ifeval +38/-1.5, simple +31/-1.0, multiple +34/+1.5, no-fit +33/+3.1) vs the original lpc-runa2 seed 0 at
+  step 200 +33.9 / -0.3 (scored after the restart, so scoring is not the difference). Checked identical: the answers
+  file (11,999 questions x 10, same sources and counts), the pair selection (kept 4,442: shorten 2,265 / guard 1,017 /
+  right 1,160; fill 0.94; mix 0.5099,0.2290,0,0.2611), the training code (dpo.py's only change adds a resume check),
+  vLLM 0.23.0 before and after (transformers / peft pinned). Same seed, same flags. Remaining explanation: training
+  run-to-run randomness (GPU non-determinism) large enough to move saving by ~8 pts for one seed; lpc-runa2's three
+  seeds all landed high (soups 32-33), the post-restart runs (B seeds 27.6 / 26.6, A-constant, replay) at 26-30.
