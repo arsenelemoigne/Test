@@ -3709,3 +3709,9 @@ own answers file (it would have overwritten the 10-answer one).
   no-fit +43/-3.3, mbpp +35/-2.5). Steps 300 and final next. GPU 1 queue ended with lpw-pertype soft (choosing x4):
   +44.6 / -1.3 (svamp +51/+0.6, mbpp +53/-3.7, ifeval +41/-0.6, simple +29/+0.6, multiple +32/0.0, no-fit +36/-5.0).
   Queued on GPU 1: per-type merges on the 720 (pertype --pt-screen) at soft / softer / mid strengths (no training).
+- 06:44, 720 x 4 (full-eval weighting): per-type merges (lpw-pertype, 4 adapters trained on lpv-base pairs): softer
+  (0.2/0.25/0.35/0.25) +39.2 / -0.8; soft (0.25/0.35/0.45/0.35) +48.4 / -1.9; mid (0.3/0.45/0.6/0.45) +55.0 / -2.6. Each
+  loses most on no-fit (-4.8 / -6.9 / -7.1) and math (-2.1 / -4.0 / -5.6). lpc-bidax2: step 300 +51.1 / -2.6; FINAL
+  +51.8 / -2.7 (svamp +65/-5.4, no-fit +46/-4.6, ifeval +50/-2.3, simple +41/-1.7, multiple +46/-1.7, mbpp +45/-0.4) vs
+  michal-bida's own full-eval +47.0 / -0.78 (no-fit +6.0, svamp -2.4): his recipe on our pool does not reproduce his
+  result; the gap is concentrated on no-fit and math.
