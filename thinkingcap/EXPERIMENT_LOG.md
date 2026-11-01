@@ -3757,3 +3757,5 @@ own answers file (it would have overwritten the 10-answer one).
 - 18:04: lpc-bidax3 (same-seed repeat) FINAL +54.5 / -3.9 (no-fit +47/-7.3, svamp +66/-6.5). lpc-bidax4 (own no-fit)
   step 200 +54.6 / -3.7: no-fit +50/-1.9 (repeat at step 200: -6.2; bidax2 s0: -3.3), ifeval -0.2, but svamp +67/-8.3,
   mbpp +51/-5.0. newtop math1: 3,722 candidates already in the pool / top-ups dropped; answering 3,000 x... (in progress).
+- 18:23: lpc-bidax4 step 300 on the 720: +53.2 / -3.3 (no-fit +49/-0.6, svamp +67/-6.0, simple +44/-3.5, mbpp +46/-2.9,
+  ifeval +50/-2.3, multiple +47/0.0). Final being scored. GPU 2: math1 answers in progress.
