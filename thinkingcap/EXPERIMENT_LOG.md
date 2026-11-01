@@ -3747,3 +3747,6 @@ own answers file (it would have overwritten the 10-answer one).
   ~1.2 pts accuracy. newtop nofit4: 1,308 candidates dropped as already in pool/top-ups; 1,871 questions x10, mean solve
   rate 94% (always 1,580, sometimes 257, never 34). lpc-bidax4 pool 13,870 questions; pairs 5,362 (no-fit 260 guard /
   260 shorten vs 92 / 92 before; tools now 39% no-fit pairs). Training on GPU 1.
+- ~15:50 (user): math data step queued on GPU 2 after the bidax3 repeat: prepare_types gsm8k_std (GSM8K train+test in
+  SVAMP wording, labelled gsm8k_matched); newtop now answers math sources too. newtop math1 = 2,000 questions from
+  gsm8k_std + metamath_sv (dedup vs pool), x10; lpc-bidax5 = michal-bida recipe + nofit4 + math1 (--lp-add-q); 720.

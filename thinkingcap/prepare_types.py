@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     rows = []
-    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
+    builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
@@ -122,6 +122,18 @@ def svamp_row(question, answer, source):
     out = row(question.strip() + "\n\n" + SVAMP_LAST_LINE, "", answer, "math", source)
     out["prompt"][0]["content"] = out["prompt"][0]["content"].rstrip()
     return out
+
+
+def gsm8k_std(args, rng):
+    """1 Nov: standard GSM8K train + test (michal-bida's main math source; harder for Qwen3-0.6B than our SVAMP-matched
+    math, so more questions it sometimes gets wrong -> more "right > wrong" pairs), in SVAMP's wording. Labelled
+    gsm8k_matched so build_pool / select_pool treat it as math; questions already in the pool are dropped by newtop."""
+    from datasets import load_dataset
+
+    for split in ("train", "test"):
+        for r in load_dataset("openai/gsm8k", "main", split=split):
+            answer = r["answer"].split("####")[-1].strip().replace(",", "")
+            yield svamp_row(r["question"], answer, "gsm8k_matched")
 
 
 def gsm8k_easy_test(args, rng):

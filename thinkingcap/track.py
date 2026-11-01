@@ -3006,7 +3006,7 @@ def newtop(args):
     probe = BON / f"tooltop-{name}-k10"
     drive_sync("restore", only=[str(probe)])
     if not (probe / "rollouts.jsonl").exists():
-        py("probe_curve.py", "--data", pool, "--sources", "toolace,hermes_tools,glaive_tools,kodcode", "--per-source", 1000000,
+        py("probe_curve.py", "--data", pool, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv", "--per-source", 1000000,
            "--samples", 10, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only",
            "--chunk", 300, "--max-questions", n, "--seed", 41)
         drive_sync("save")
