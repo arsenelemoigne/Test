@@ -3771,3 +3771,10 @@ own answers file (it would have overwritten the 10-answer one).
 - User asked to check more steps anyway: GPU 1 queue, after bidax5 seed 1: lpc-bidax4l = the bidax4 line unchanged but
   2 passes over the pairs (one pass = ~336 steps), stopped at 600 (cosine over the 600), then rs-bidax4l on the 720 at
   300/400/500/600.
+- 21:10: math1 analysed (2,000 GSM8K/MetaMath questions x10 on the original; solve 80%; sometimes 930 / always 964 / never 106).
+  By the original's mean thinking: <350 tok 60 q, 350-470 353 q, 470-905 (the band bidax4 loses -13.5 on) 934 q
+  (560 always / 356 sometimes), >905 653 q. Pairs the bida rule makes from math1 with 4 answers: band 470-905 =
+  485 shorter-right>longer-right + 216 right>wrong, of which 175 also point SHORTER (shortest right < longest wrong) and
+  only 41 point longer. So math1 under bida's rule adds ~660 "cut more" pairs exactly where we over-cut: bidax5 is not
+  expected to close the hole. Natural "too-short answer was wrong" examples are rare (88 questions in that band; the
+  original seldom thinks that short: answers at 150-299 tokens are 73% right vs 92% at 450-599).
