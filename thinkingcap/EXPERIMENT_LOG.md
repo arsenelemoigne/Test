@@ -3724,3 +3724,10 @@ own answers file (it would have overwritten the 10-answer one).
   queue end + restart: "can't open /content/track.py"); cells 1, 3-6 re-run.
 - 10:44: GPU 1's runtime disconnected "due to inactivity" (idle after its queue ended and the cwd restart); a Drive
   access dialog is pending. Not reconnected (rule: ask the user first). GPU 2 idle (queue ended after the p4tools check).
+
+### 2026-11-01 ~11:00 — no-fit data step (user: yes)
+- GPU 2: newtop nofit3 = up to 2,000 new no-fit questions from nofit_glaive_hard + nofit_glaive_verified (Haiku-verified
+  NO+NO), prompt-length bins of the choosing set, 8-gram decontamination, and (new) none whose prompt is already in a
+  pool-dp*.jsonl or an earlier top-up; answered x10 by the original Qwen. Then lpc-bidax3 = lpc-bidax2's exact
+  michal-bida recipe with nofit3 added to the extra questions; 720 at 100 / 200 / 300 / final.
+- GPU 1: lpc-bidax2 seed 1 (same pairs file as seed 0) -> how far one seed's final score moves by training randomness.

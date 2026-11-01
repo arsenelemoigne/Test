@@ -288,5 +288,8 @@
 # done: pertype --name lpw-pertype --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
 
 # 1 Nov 08:45: the choosing-set screens looked good (p4tools-75 +45.9 / -0.6, pressmath-50 +42.0 / -0.8): check on the 720
-rescreen --name rs-pressmath --cx-names lpw-pressmath --cx-steps 50 --seeds 0
+# done: rescreen --name rs-pressmath --cx-names lpw-pressmath --cx-steps 50 --seeds 0
+# user, 1 Nov ~11:00: training randomness check: the same exact michal-bida copy, seed 1 (seed 0 final +51.8 / -2.7)
+lupin --name lpc-bidax2 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2 --lp-answers-pool dp10
+rescreen --name rs-bidax2-s1 --cx-names lpc-bidax2 --cx-steps 0 --seeds 1
 end

@@ -2986,6 +2986,15 @@ def newtop(args):
            "--tool-sources", "toolace,hermes_tools,glaive_tools", "--per-benchmark", args.tt_questions * 4,
            "--seed", args.data_seed, "--out", pool)
         rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+        # never a question already in the training pool or an earlier top-up (1 Nov: no-fit sources overlap)
+        seen = set()
+        for f in [*Path("data").glob("pool-dp*.jsonl"), *BON.glob("tooltop-*/questions.jsonl")]:
+            for line in open(f):
+                if line.strip():
+                    seen.add(json.dumps(json.loads(line).get("messages") or json.loads(line).get("prompt"), sort_keys=True))
+        before = len(rows)
+        rows = [r for r in rows if json.dumps(r.get("messages") or r.get("prompt"), sort_keys=True) not in seen]
+        print(f"newtop {name}: {before - len(rows)} candidates already in the pool or a top-up, dropped", flush=True)
         random.Random(args.data_seed).shuffle(rows)
         rows = rows[:args.tt_questions]
         for k, r in enumerate(rows):
