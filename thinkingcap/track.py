@@ -269,6 +269,7 @@ def main():
     parser.add_argument("--lp-nll", type=float, default=None, help="lupin: dpo.py --nll (default 1.0)")
     parser.add_argument("--lp-lr", type=float, default=0.0, help="lupin: dpo.py --lr (0: default 2e-5)")
     parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
+    parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
@@ -2784,9 +2785,14 @@ def pertype(args):
         finals[group] = adapter
         print(f"pertype {name}: {group} adapter on {len(mine)} pairs", flush=True)
     weights = dict((k, float(v)) for k, v in (x.split("=") for x in args.pt_weights.split(",") if x))
-    val = f"questions_val{VAL_SEED}"
+    # --pt-screen (1 Nov): score on the 720 screen set x4 against s4-base instead of the choosing set
+    val = SCREEN if args.pt_screen else f"questions_val{VAL_SEED}"
+    pre, ref, label = ("s4", ROOT / "s4-base", "screen 720 x 4") if args.pt_screen else ("v4", ROOT / "v4-base", "choosing 240 x 4")
+    if args.pt_screen:
+        drive_sync("restore", only=[SCREEN, str(ROOT / "s4-base")])
     for tag, w in ((("sum", {g: 1.0 for g in PT_GROUPS}),) if not args.pt_tag else ()) + ((args.pt_tag or "tuned", weights),):
-        out = ROOT / f"v4-{name}-{tag}"
+        out = ROOT / f"{pre}-{name}-{tag}"
+        drive_sync("restore", only=[str(out)])
         if not (out / "results.json").exists():
             model = Path("/content/lupin-models") / f"{name}-{tag}"
             py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
@@ -2794,7 +2800,7 @@ def pertype(args):
             evaluate(out, samples=4, questions=val, model=model)
             shutil.rmtree(model, ignore_errors=True)
             drive_sync("save")
-        print(score_line(f"{name}-{tag} {w} (choosing 240 x 4)", out, base=ROOT / "v4-base"), flush=True)
+        print(score_line(f"{name}-{tag} {w} ({label})", out, base=ref), flush=True)
 
 
 def tooltopup(args):

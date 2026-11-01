@@ -3704,3 +3704,8 @@ own answers file (it would have overwritten the 10-answer one).
   vLLM 0.23.0 before and after (transformers / peft pinned). Same seed, same flags. Remaining explanation: training
   run-to-run randomness (GPU non-determinism) large enough to move saving by ~8 pts for one seed; lpc-runa2's three
   seeds all landed high (soups 32-33), the post-restart runs (B seeds 27.6 / 26.6, A-constant, replay) at 26-30.
+- 05:44: lpc-bidax2 (exact michal-bida copy, 5,026 pairs, 315 steps) on the 720 x 4 (full-eval weighting): step 100
+  +54.7 / -4.6 (svamp +69/-6.9, no-fit +46/-6.5, mbpp +51/-4.8, ifeval +51/-3.5); step 200 +49.1 / -3.1 (svamp +63/-5.2,
+  no-fit +43/-3.3, mbpp +35/-2.5). Steps 300 and final next. GPU 1 queue ended with lpw-pertype soft (choosing x4):
+  +44.6 / -1.3 (svamp +51/+0.6, mbpp +53/-3.7, ifeval +41/-0.6, simple +29/+0.6, multiple +32/0.0, no-fit +36/-5.0).
+  Queued on GPU 1: per-type merges on the 720 (pertype --pt-screen) at soft / softer / mid strengths (no training).
