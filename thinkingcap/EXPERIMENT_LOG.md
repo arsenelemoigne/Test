@@ -3717,3 +3717,5 @@ own answers file (it would have overwritten the 10-answer one).
   result; the gap is concentrated on no-fit and math.
 - 07:44: lpw-pressmath (1 seed, choosing x4, noisy): step 25 +34.7 / -0.2, step 50 +42.0 / -0.8 (svamp +53/0.0, mbpp
   +43/-2.5, no-fit +35/-1.9). GPU 1 idle (queue ended), waiting on the user for the no-fit data step. GPU 2: lpw-p4tools.
+- 08:44: lpw-p4tools (1 seed, choosing x4): 25 +41.9 / -0.1; 50 +37.6 / -0.3; 75 +45.9 / -0.6 (svamp +55/-0.6, mbpp
+  +48/-3.1, no-fit +39/-0.6). Both queues ended; 720 checks queued: p4tools 75/50 (GPU 2), pressmath 50 (GPU 1).

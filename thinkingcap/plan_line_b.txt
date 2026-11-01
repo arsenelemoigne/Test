@@ -283,7 +283,10 @@
 # done: pertype --name lpw-pertype --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
 # user, 1 Nov ~05:50: GPU 1 idle; the soft per-type merge gave +44.6 / -1.3 on the noisy choosing set -> score merges
 # on the 720 (no training: the 4 per-type adapters exist), at 3 strengths around the soft one
-pertype --name lpw-pertype --pt-screen --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
-pertype --name lpw-pertype --pt-screen --pt-tag softer --pt-weights svamp=0.2,mbpp=0.25,ifeval=0.35,bfcl=0.25
-pertype --name lpw-pertype --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
+# done: pertype --name lpw-pertype --pt-screen --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
+# done: pertype --name lpw-pertype --pt-screen --pt-tag softer --pt-weights svamp=0.2,mbpp=0.25,ifeval=0.35,bfcl=0.25
+# done: pertype --name lpw-pertype --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
+
+# 1 Nov 08:45: the choosing-set screens looked good (p4tools-75 +45.9 / -0.6, pressmath-50 +42.0 / -0.8): check on the 720
+rescreen --name rs-pressmath --cx-names lpw-pressmath --cx-steps 50 --seeds 0
 end
