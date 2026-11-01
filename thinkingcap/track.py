@@ -278,6 +278,7 @@ def main():
     parser.add_argument("--op-band", default="470,905", help="onpolicy: original-Qwen mean thinking band, tokens")
     parser.add_argument("--op-samples", type=int, default=4, help="onpolicy: answers per question")
     parser.add_argument("--lp-band", default="", help="lupin: lupin_pairs.py --band, e.g. svamp:470:905")
+    parser.add_argument("--lp-min-overcut", type=int, default=0, help="lupin: gate, at least this many trained overcut pairs or no training")
     parser.add_argument("--lp-overcut", default="", help="lupin: onpolicy run names, comma-separated: their answers are lupin_pairs.py --overcut")
     parser.add_argument("--lp-reset-seeds", nargs="*", type=int, default=[], help="lupin: delete these seeds' adapters (local and Drive) and train them again")
     parser.add_argument("--lp-no-match", action="store_true", help="lupin: train on the raw pairs, no lupin_select matching (michal-bida control)")
@@ -3230,6 +3231,13 @@ def lupin(args):
            *(["--median-shorten-part", args.lp_median_part] if args.lp_median_part else []),
            *(["--band", args.lp_band] if args.lp_band else []),
            *(["--overcut", *[BON / f"onp-{x}" / "rollouts.jsonl" for x in args.lp_overcut.split(",")]] if args.lp_overcut else []))
+    if args.lp_min_overcut:  # 1 Nov (user): the math data is checked BEFORE any training
+        got = sum(int(l.rsplit(":", 1)[1]) for l in (raw / "summary.txt").read_text().splitlines() if "overcut (trained)" in l)
+        print(f"lupin {name}: {got} trained overcut pairs (gate {args.lp_min_overcut})", flush=True)
+        if got < args.lp_min_overcut:
+            shutil.rmtree(raw, ignore_errors=True)  # rebuilt next time, with more onpolicy answers
+            print(f"lupin {name}: GATE NOT MET, no training", flush=True)
+            return
     if args.lp_no_match and not (pairs / "pairs.jsonl").exists():  # michal-bida control (30 Oct): his pairs as they come
         pairs.mkdir(parents=True, exist_ok=True)
         shutil.copy(raw / "pairs.jsonl", pairs / "pairs.jsonl")

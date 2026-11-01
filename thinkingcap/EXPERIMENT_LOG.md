@@ -3791,3 +3791,10 @@ own answers file (it would have overwritten the 10-answer one).
     are the point).
   - Gate before training: >= 500 overcut pairs from the trained model. GPU 2: onpolicy om1 (math1 band); GPU 1: newtop
     math2 (2,000 more questions) + onpolicy om2, in case the gate needs them; then the 600-step check.
+- 22:30: onpolicy om1 (lpc-bidax4-s0 x4 on math1's 934 band questions, 470-905 by the original's 10 answers): right
+  80.5%, mean thinking 291 (the original ~600), 730 wrong answers (median thinking 231) on 375 questions. Pairs from math1
+  (4 answers): 319 trained + 50 natural overcut (winner median 594 tokens, loser 251), band shorten pairs dropped 574,
+  shorten left 380, guard 979. Fix: a question onpolicy chose stays in the band (the 4 kept answers measure it less well;
+  246 -> 319). Gate 500 not met on math1 alone -> math2 + om2 (GPU 1), then lpc-bidax5m seed 0 there; lupin
+  --lp-min-overcut 500 refuses to train under the gate. GPU 2 meanwhile: the 600-step check (lpc-bidax4l), then
+  bidax5m seed 1.

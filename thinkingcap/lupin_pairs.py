@@ -111,8 +111,13 @@ def main():
     def think(r):
         return len(r.get("thinking_ids") or r["output_ids"])
 
-    def in_band(q):
-        return part_of(q[0]) == band_part and band_lo <= sum(think(r) for r in q) / len(q) < band_hi
+    trained = defaultdict(list)  # --overcut answers: their questions were chosen on 10 original answers (onpolicy)
+    for path in args.overcut:
+        for r in read(path):
+            trained[r["id"]].append(r)
+
+    def in_band(q):  # the 4 answers kept here measure the band less well: a question onpolicy chose stays in it
+        return part_of(q[0]) == band_part and (q[0]["id"] in trained or band_lo <= sum(think(r) for r in q) / len(q) < band_hi)
     overrides = dict((k, float(v)) for k, v in (x.split("=") for x in args.min_solve_part.split(",") if x))
     right_parts = set(x for x in args.right_parts.split(",") if x)
     median_parts = dict((k, float(v)) for k, v in (x.split("=") for x in args.median_shorten_part.split(",") if x))
@@ -186,10 +191,6 @@ def main():
             kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
         pairs = kept
     if args.band:  # "don't over-cut": a too-short wrong answer loses to a normal right one
-        trained = defaultdict(list)
-        for path in args.overcut:
-            for r in read(path):
-                trained[r["id"]].append(r)
         for q in groups.values():
             if not in_band(q):
                 continue

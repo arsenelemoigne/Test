@@ -301,5 +301,12 @@ newtop --name math1 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-que
 # 1 Nov ~21:20, user: bidax5 STOPPED before training (math1 under bida's rule = ~660 "cut more" pairs exactly in the
 # over-cut band). Math data first, checked BEFORE any training: bidax4's own answers on math1's 470-905 band questions
 # (the "cut too short, got it wrong" losers of lupin_pairs.py --overcut). Gate: >= 500 such pairs, else more questions.
-onpolicy --name om1 --op-from math1 --op-adapter lpc-bidax4-s0 --op-band 470,905 --op-samples 4
+# done: onpolicy --name om1 --op-from math1 --op-adapter lpc-bidax4-s0 --op-band 470,905 --op-samples 4
+# 1 Nov, user: is 600 steps better than one pass? bidax4 recipe unchanged, 2 passes over the pairs, stopped at 600 steps
+# (cosine learning rate spread over the 600), scored on the 720 at 300/400/500/600 (0 = the final adapter = step 600)
+lupin --name lpc-bidax4l --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-epochs 2 --lp-dpo=--max-steps=600
+rescreen --name rs-bidax4l --cx-names lpc-bidax4l --cx-steps 300 400 500 0 --seeds 0
+# then bidax5m's second seed (waits for om2 on Drive)
+lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500
+rescreen --name rs-bidax5m-s1 --cx-names lpc-bidax5m --cx-steps 0 --seeds 1
 end
