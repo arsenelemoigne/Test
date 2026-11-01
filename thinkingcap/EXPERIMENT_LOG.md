@@ -3661,3 +3661,27 @@ so the degenerate replies seen in the log are not new with training. Capped repl
   every step, accuracy -1.0..+0.4.) Added to the canvas.
 - 01:01: 720 x 4 (full-eval weighting): lpc-runac 250 +26.3 / -1.2 (svamp +7, mbpp +17, ifeval +43/-3.5); clean lpc-runb
   200 +30.0 / -0.1 (ifeval +42/-1.9, mbpp +22). Proposed to the user: blends of lpc-l2s50e-soup-100 and lpc-runa2 soups.
+
+### 2026-11-01 ~01:30 — michal-bida's repo read in full (user: "double check")
+Source: github.com/michal-bida/ThinkingCap-Test, branch thinking-compression (train_dpo_offline.py, queue/a10-train-Db.sh,
+reports/FINDINGS.md sections 17-20, reports/compare_Db-s8.txt). His submitted model is arm Db:
+- Data: 11,327 prompts in 4 domains (~3,000 each): code KodCode 2,989; tools 2,986 = ToolACE simple 641 / multiple
+  1,004 / decline 365 + xlam irrelevance 976 (45% of tools are "no function fits"); IFEval-style 2,385; math GSM8K
+  2,152 + MetaMath SV 614 / FOBAR 201. Prompt length matched per decile to each benchmark; 8-gram decontamination;
+  base behaviour checked against the benchmarks (accuracy code 53.8 vs 51.5, ifeval 63.7 vs 58.1, math 85.6 vs 88.5,
+  tools 78.9 vs 81.2). 4 samples per prompt (45,308 samples, ~25 h); 9,337 prompts with a right sample.
+- Pairs: per prompt, chosen = shortest right sample (of 4); rejected = the longest wrong/truncated sample, and the
+  longest right sample if >= 1.5x the chosen (at most 2 pairs per prompt). Db: per domain, long pairs capped at the
+  number of wrong pairs -> 5,862 pairs (code 941 / ifeval 724 / math 696 / tools 570 of each kind). No matching to
+  benchmark cells, no difficulty rule, no similar-length right>wrong pairs.
+- Training: standard DPO, beta 0.1, NO SFT/NLL term ("RPO" listed as not run), reference = base (adapter off), LoRA
+  r32 alpha 64 all linear, lr 2e-5 with cosine schedule and 5% warmup, 16 pairs per step, 1 epoch (~366 steps), fp16
+  autocast, max length 8,704, ONE seed, the final adapter evaluated (no checkpoint picking).
+- Full eval x8: +47.0 / -0.78; per benchmark: no-fit +46% / +6.04 (the model declines more), multiple +42 / -1.12,
+  simple +35 / -1.41, ifeval +55 / -0.28, mbpp +33 / -1.22, svamp +56 / -2.41. His ablations: wrong pairs only
+  +23.0 / +0.81; long pairs only +83.6 / -13.0; both (D, unbalanced) +50.2 / -0.41 (2 samples). Not run by him: RPO,
+  iterative second round.
+Differences from all our LUPIN runs: our NLL anchor (weight 1.0), 10 answers per question (more extreme shortest
+chosen), matching to eval cells, difficulty rule, similar-length right pairs, 3-seed soups, checkpoint picking, and
+his tools domain being ~45% no-fit (ours ~29% of BFCL pairs). track.py: an --lp-answers other than 10 now writes its
+own answers file (it would have overwritten the 10-answer one).

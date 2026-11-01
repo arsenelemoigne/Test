@@ -3115,7 +3115,8 @@ def lupin(args):
         time.sleep(300)
     assert all(h.exists() for h in halves), f"{pool_name}'s answers are not on Drive"
     extras = [BON / f"tooltop-{x}" for x in args.lp_extra_q.split(",") if x]
-    allfile = BON / f"lupin-all-{pool_name}{''.join('-' + x for x in args.lp_extra_q.split(',') if x)}.jsonl"
+    allfile = BON / (f"lupin-all-{pool_name}{''.join('-' + x for x in args.lp_extra_q.split(',') if x)}"
+                     + (f"-a{args.lp_answers}" if args.lp_answers != 10 else "") + ".jsonl")  # 4 answers: its own file
     if not allfile.exists():
         ids = {json.loads(l)["pool_id"] for l in Path(f"data/pool-{pool_name}.jsonl").read_text().splitlines() if l.strip()}
         for extra in extras:  # top-up questions (harder no-fit / tools / code) join the pool for pairs; same matching
