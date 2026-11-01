@@ -3742,3 +3742,8 @@ own answers file (it would have overwritten the 10-answer one).
   --lp-add-q (top-up sets that join the pool even with --lp-answers-pool). Queued on GPU 1: newtop nofit4 = 3,000
   questions from xLAM irrelevance + Glaive hard + ToolACE near-verified no-fit (dedup vs pool), x10 answers; then
   lpc-bidax4 = exact michal-bida recipe + nofit4 added; 720 at 100/200/300/final.
+- 15:17: lpc-bidax2 SEED 1 final on the 720 x 4: +51.0 / -3.9 (svamp +61/-6.5, no-fit +46/-5.4, mbpp +49/-3.7, ifeval
+  +49/-3.3, simple +42/-0.4, multiple +47/-1.1) vs seed 0 +51.8 / -2.7: same pairs, seed-to-seed spread ~1 pt saving,
+  ~1.2 pts accuracy. newtop nofit4: 1,308 candidates dropped as already in pool/top-ups; 1,871 questions x10, mean solve
+  rate 94% (always 1,580, sometimes 257, never 34). lpc-bidax4 pool 13,870 questions; pairs 5,362 (no-fit 260 guard /
+  260 shorten vs 92 / 92 before; tools now 39% no-fit pairs). Training on GPU 1.
