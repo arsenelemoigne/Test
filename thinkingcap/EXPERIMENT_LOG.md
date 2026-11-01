@@ -3692,3 +3692,7 @@ own answers file (it would have overwritten the 10-answer one).
   the final adapter. Scored on the 720 at steps 100 / 200 / 300 / final. Our pool dp13 (12,000 questions) is the data.
 - 01:44: 720 x 4 (full-eval weighting): lpc-runac 270 +23.4 / -0.1 (svamp 0%, mbpp 11%); clean lpc-runb 250 +31.0 / +0.1,
   270 +28.4 / +0.1. GPU 1: lpc-runa2r (exact one-seed replay of lpc-runa2) training; GPU 2: lpc-bidax starting.
+- 02:45: lpc-bidax stopped at step 140/266: its raw pairs held "right" pairs (no-fit 28, multiple 31, simple 38, ifeval
+  162, mbpp 147, ...) because track.py's --lp-min-solve defaults to 0.5. Restarted as lpc-bidax2 with --lp-min-solve 0
+  (no difficulty rule, as michal-bida). bidax pairs before the fix: 4,247 (guard = shorten per part, e.g. mbpp 674/674,
+  ifeval 472/472, svamp 405/...).
