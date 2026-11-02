@@ -322,14 +322,14 @@
 # don't-over-cut pairs mix two models' texts); the math adapter waits for fixed math pairs.
 # done: typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance
 rescreen --name rs-lpt6 --cx-names lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
-rescreen --name rs-lpt6-mid --cx-names lpt6-mbpp lpt6-ifeval --cx-steps 50 --seeds 0 1
+# dropped (user, 2 Nov: per-type direction dropped, spill-over is total): rescreen --name rs-lpt6-mid --cx-names lpt6-mbpp lpt6-ifeval --cx-steps 50 --seeds 0 1
 # 2 Nov ~19:40 (user): ThinkPrune-style RL, SMOKE TEST first (5 steps, 16 questions x 8, from the original; timed;
 # prints the per-type caps and how many questions keep a right answer under them). The real runs are decided after it.
 thinkprune --name tp0 --tp-start raw --tp-smoke
 # 2 Nov ~15:40 (user): the per-type study again with michal-bida's settings (bidax6 cut less and lost far less than
 # bidax4 on the same pairs). Math still left out until its pairs are fixed.
-# paused (user, 2 Nov: on-policy round first): typeonly --name lpt6b --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance --lp-dpo=--bida-exact
-# paused (user, 2 Nov: on-policy round first): rescreen --name rs-lpt6b --cx-names lpt6b-mbpp lpt6b-ifeval lpt6b-bfcl_simple_python lpt6b-bfcl_multiple lpt6b-bfcl_irrelevance --cx-steps 0 --seeds 0 1
+# dropped (user, 2 Nov: per-type direction dropped): typeonly --name lpt6b --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance --lp-dpo=--bida-exact
+# dropped (user, 2 Nov: per-type direction dropped): rescreen --name rs-lpt6b --cx-names lpt6b-mbpp lpt6b-ifeval lpt6b-bfcl_simple_python lpt6b-bfcl_multiple lpt6b-bfcl_irrelevance --cx-steps 0 --seeds 0 1
 # 2 Nov (user): his schedule only (warm-up 5% of steps, cosine to 0) on bidax4's pairs; lpc-bidax6p (precision only) on GPU 2.
 # 2 Nov ~18:30 (user): THE ON-POLICY ROUND. bidax6 (bida settings, 41.7 / -1.0 at step 300) answers the training pool
 # (dp13 + nofit4) 8 times, half a here, half b on GPU 2; then lpc-bidax8 = four separate signals (lupin_pairs --recipe four:

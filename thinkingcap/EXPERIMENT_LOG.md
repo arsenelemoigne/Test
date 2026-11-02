@@ -4012,3 +4012,9 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   +18/-1.5, no-fit +18/-2.9, ifeval +9/0.0). Code-only checked on the records: code thinking unchanged (median 966 vs
   994, capped 9.4% vs 8.5%, accuracy 51.2 vs 50.8) although it ordered 86% of held-out code pairs right: the code pairs
   teach content, not length; in mixed runs code's cut comes from the other types' spill-over.
+- ~16:00 (user): PER-TYPE DIRECTION DROPPED. Every one-type adapter sits below the reference curve (instructions only
+  -2.4, several functions -1.7, one function -1.2, code only no effect): "think less" is learned as one shared habit,
+  and a type trained alone loses the other types' right-beats-wrong protection, so the spill-over lands unopposed on
+  math and no-fit. Dial-mixing per-type adapters would only mix general pushes. lpt6b and the step-50 screens dropped.
+  Effort goes to: michal-bida's settings (bidax6), his data (bidax5q tonight, bidax7 tomorrow), then the on-policy
+  four-signal round (its same-model be-right pairs for every type are the protection this showed is needed).
