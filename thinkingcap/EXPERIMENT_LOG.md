@@ -3978,3 +3978,24 @@ ifeval_bida (his instruction sources) and kodcode_full (his code selection); bui
   fails = every checkpoint on or below the curve after ~300 steps. Smoke test (tp0) queued on GPU 1 after the per-type
   screens. Notes: IFEval's langdetect is already seeded by the official grader; equivalent tool values ("km" /
   "kilometers") are NOT handled yet (references hold one value).
+
+### 2 Nov ~14:15 — back-filled: the ps1 prompt search results (27 Oct; only its queueing had been logged)
+ps1 (prompt_search.py, candidates in prompt_candidates.py) on the ORIGINAL Qwen3-0.6B, training questions, 50 per type x
+4 answers (a quick screen, not a full score). The "prefill" text forced at the start of the thinking was
+"Okay, I'll solve this efficiently and only check what I'm unsure about." (Lightning McQwen3's opening).
+| prompt | tokens saved | accuracy |
+|---|---|---|
+| prefill alone | -4.3% (4% longer) | -1.0 |
+| "no re-check" instruction + prefill | +0.2% | +0.9 |
+| worked examples ("exdraft") | +24.8% | -2.3 |
+| worked examples + prefill | +24.8% | -1.9 |
+Forcing the opening did nothing for length. The opening was not chosen the cue way (searching the model's own likely
+first tokens and keeping the one whose answers agree most). Test-time prefilling is now ruled out anyway (rule 3).
+Thinking ON vs OFF (25-26 Oct, nt1 / nt2, fresh x8) IS in this log (~line 1822-1895): original SVAMP 89.7 -> 17.5,
+MBPP+ 46.2 -> 37.2, IFEval 65.6 -> 60.6, BFCL one fn 88.1 -> 76.6, several 75.9 -> 58.8, none fits 80.9 -> 87.2;
+rc1-rl-40 the same pattern. Read on the old fresh-240 set.
+- ~14:10: Chrome restarted and both Colab pages reloaded; queues restarted (user OK); caffeinate restarted.
+- sophielwang.com/cues read (arXiv 2610.06851, "Base Models Can Reason By Taking a Cue From Training Data"): prefilling
+  an opening cue (".\n\nOkay") lifts Olmo-3-7B base on MATH-500 from 41.5% to 76.9%; RL's biggest probability change is
+  at the first two tokens. About eliciting reasoning in base models, no token-saving figures; test-time prefilling is
+  ruled out for us; our ps1 prefill made answers 4% longer.
