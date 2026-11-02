@@ -3844,3 +3844,7 @@ own answers file (it would have overwritten the 10-answer one).
   2-seed soup scored on the whole 720 (final; step 50 too for the three big parts): own cut + spill-over on the other
   five. Next: per-type length-band breakdowns, then dial mixes of the 6 soups. Earlier evidence of spill-over: Run A2
   (no math / no-fit shorten pairs) still cut math and no-fit 33%; the old 4-adapter sum at full strength 77% / -9.2.
+- ~04:40 (user) PLANNED, not queued: on-policy round. The best v1 answers the ~14k training questions x10 (~6 h on both
+  GPUs), pairs rebuilt from its own answers (bida 1:1, math band + don't-over-cut from its own mistakes), round 2 from
+  v1 (v1 = reference), kept only if it beats v1 at the same saving on the 720. Decide 3 Nov against the per-type study
+  and the bida runs (bidax5s, bidax6, bida copy full test).
