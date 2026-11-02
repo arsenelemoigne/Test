@@ -3848,3 +3848,9 @@ own answers file (it would have overwritten the 10-answer one).
   GPUs), pairs rebuilt from its own answers (bida 1:1, math band + don't-over-cut from its own mistakes), round 2 from
   v1 (v1 = reference), kept only if it beats v1 at the same saving on the 720. Decide 3 Nov against the per-type study
   and the bida runs (bidax5s, bidax6, bida copy full test).
+- ~09:00: FULL TEST of lpc-bidax2 s0 final (exact michal-bida recipe on our data), 2,759 x 8: +51.2 / -3.0
+  (no-fit +44/-3.5, multiple +43/-2.0, simple +40/-2.2, ifeval +53/-1.1, mbpp +42/-2.4, svamp +64/-6.0). The 720 had
+  read it +51.8 / -2.7: the 720 is accurate (saving 0.6 high, accuracy 0.3 low, as with l2s50e). So the gap to his
+  47.0 / -0.78 is real, not our measurement: his recipe on our data loses 2.2 pts more at 4 pts more saving; math
+  (-6.0 vs his -2.4) and no-fit (-3.5 vs +6.0) carry most of it. Left to test: settings (bidax6) and data (bidax5s).
+  bidax5s at step 230/333.
