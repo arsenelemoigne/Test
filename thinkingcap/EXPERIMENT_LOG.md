@@ -3877,3 +3877,9 @@ own answers file (it would have overwritten the 10-answer one).
   MetaMath, michal-bida's math sources) added, no band rule, no don't-over-cut pairs, one pass held at ~333 steps
   (dpo.py --target-steps: pairs per step set from the pair count). The clean test of whether his harder, more numerous
   math questions are what keeps his math at -2.4. (Was the original lpc-bidax5, stopped 1 Nov before training.)
+- ~15:20: lpc-bidax6 (bidax4's pairs, --bida-exact settings) on the 720: step 100 +44.4 / -2.2 (svamp +53/-3.5, mbpp
+  +40/-5.0, ifeval +41/+0.8, simple +39/-4.2, multiple +42/+0.2, no-fit +44/+1.2); step 200 +40.1 / -0.9 (svamp +45/-2.3,
+  mbpp +27/-0.8, ifeval +45/0.0, simple +40/-2.3, multiple +42/-1.1, no-fit +44/+2.1). vs bidax4 (same pairs, our
+  settings) 100: 57.1/-5.1, 200: 54.6/-3.7: his settings cut ~13-15 pts less and lose ~2.8 pts less; math -2.3 at
+  45% (bida full: 56/-2.4) and no-fit positive. On or slightly above our curve (~40% / -0.9 vs pt-softer 39.2 / -0.8,
+  600-step 41.8 / -1.7). Steps 300 and final next. typeonly: code, instructions, one function, several, no-fit trained.
