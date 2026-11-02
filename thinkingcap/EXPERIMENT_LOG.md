@@ -4063,3 +4063,6 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   dpo.py resumes from the last one); GPU 2 newtop instr2 DONE (michal-bida's instruction sources: 2,000 questions x4,
   mean solve 65%, always 1,016 / sometimes 528 / never 456: harder than our pool's instructions), then code2 had built
   33,401 usable KodCode-V1 candidates (1,747 dropped as already used) and was answering. Waiting for the user's OK.
+- 3 Nov ~00:40: lpc-bidax5q SEED 1 step 100: +42.8 / -1.9 (svamp +52/-3.7, mbpp +40/-1.9, ifeval +39/-1.5, simple
+  +36/-2.7, multiple +40/+0.6, no-fit +41/+1.0): on the curve (-0.2), vs seed 0 step 100 +41.8 / +0.2 (+1.7). Seed
+  spread at step 100 ~2 pts of accuracy; steps 200/300/final decide. code2 answering: 300/1,500 done (~1 h per chunk).
