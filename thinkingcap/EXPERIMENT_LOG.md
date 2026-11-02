@@ -4051,3 +4051,6 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
 - ~18:45: lpc-bidax5q step 300 +47.9 / -1.5 (svamp +60/-4.8, mbpp +38/-1.7, ifeval +47/-0.6, simple +41/-1.2, multiple
   +44/+1.5, no-fit +47/+3.5): +1.0 vs the curve; step 200 (+48.5 / -0.9, +1.7) stays its best point. Final screening.
   GPU 1 still disconnected (waiting for the user).
+- ~19:10: both runtimes were reconnected by the user (GPU 1 had hung on "Reconnecting"; GPU 2's bidax5q final screen
+  was lost and re-runs). GPU 1 queue: bidax5q SEED 1 (same recipe) -> its 720 at 100/200/300/final -> stopB3 / lpw
+  re-scores -> bidax6s. Full test of the best bidax5q step only after seed 1 confirms, and with the user's OK.
