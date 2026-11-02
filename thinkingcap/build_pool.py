@@ -74,6 +74,9 @@ def main():
     parser.add_argument("--bins", type=int, default=5, help="prompt-length quantile bins per part (40 questions -> 5)")
     parser.add_argument("--model", default="Qwen/Qwen3-0.6B", help="tokenizer for prompt lengths")
     parser.add_argument("--parts", default="", help="only these evaluation parts (dp4 rebuilds math and no-fit only)")
+    parser.add_argument("--no-match", action="store_true",
+                        help="no prompt-length matching to the choosing set: questions as they come (michal-bida's way), "
+                             "still deduplicated and contamination-checked")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -122,6 +125,17 @@ def main():
     for part, want in targets.items():
         ref = sorted(choosing.get(part, []))
         assert ref, f"no choosing-set questions for {part}"
+        if args.no_match:  # every source's rows as they come, a random draw of the wanted count
+            picked = [r for rows in by_part[part].values() for r in rows]
+            rng.shuffle(picked)
+            picked = picked[:want]
+            report[part] = {"wanted": want, "kept": len(picked), "short": max(0, want - len(picked)), "topped_up_by": {},
+                            "sources": dict(Counter(r["source"] for r in picked)),
+                            "available": {s: len(v) for s, v in by_part[part].items()},
+                            "contamination_dropped": {s: n for (p, s), n in dropped.items() if p == part},
+                            "prompt_tokens_choosing": [], "prompt_tokens_pool": []}
+            pool += [r | {"part": part} for r in picked]
+            continue
         edges = [ref[min(len(ref) - 1, round(len(ref) * k / args.bins))] for k in range(1, args.bins)]
         shares = math_mix if part == "svamp" else {s: 1.0 / len(by_part[part]) for s in by_part[part]}
         bins = {}

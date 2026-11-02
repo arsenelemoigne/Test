@@ -258,6 +258,8 @@ def main():
     parser.add_argument("--pu-extras", default="nofit1,tools1,code1", help="poolup: top-up sets added to the candidates")
     parser.add_argument("--nt-sources", default="glaive_nofit_hard", help="newtop: prepare_types.py sources")
     parser.add_argument("--nt-parts", default="bfcl_irrelevance", help="newtop: build_pool.py parts")
+    parser.add_argument("--nt-raw", action="store_true", help="newtop: no prompt-length matching (build_pool --no-match)")
+    parser.add_argument("--nt-samples", type=int, default=10, help="newtop: answers per question by the original Qwen")
     parser.add_argument("--tt-parts", default="", help="tooltopup: BFCL parts (default all three)")
     parser.add_argument("--tt-hard", action="store_true", help="tooltopup: hardest candidates first")
     parser.add_argument("--tt-questions", type=int, default=1500, help="tooltopup: extra tool questions")
@@ -2994,7 +2996,7 @@ def newtop(args):
     if not pool.exists():
         py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", args.nt_parts,
            "--tool-sources", "toolace,hermes_tools,glaive_tools", "--per-benchmark", args.tt_questions * 4,
-           "--seed", args.data_seed, "--out", pool)
+           "--seed", args.data_seed, "--out", pool, *(["--no-match"] if args.nt_raw else []))
         rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
         # never a question already in the training pool or an earlier top-up (1 Nov: no-fit sources overlap)
         seen = set()
@@ -3015,9 +3017,9 @@ def newtop(args):
     probe = BON / f"tooltop-{name}-k10"
     drive_sync("restore", only=[str(probe)])
     if not (probe / "rollouts.jsonl").exists():
-        py("probe_curve.py", "--data", pool, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv", "--per-source", 1000000,
-           "--samples", 10, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype, "--generate-only",
-           "--chunk", 300, "--max-questions", n, "--seed", 41)
+        py("probe_curve.py", "--data", pool, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,ifeval_like", "--per-source", 1000000,
+           "--samples", args.nt_samples, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype,
+           "--generate-only", "--chunk", 300, "--max-questions", n, "--seed", 41)
         drive_sync("save")
     out.mkdir(parents=True, exist_ok=True)
     rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
@@ -3026,7 +3028,7 @@ def newtop(args):
         r = json.loads(line)
         rate[r["id"]].append(bool(r["correct"]))
     solve = [sum(v) / len(v) for v in rate.values()]
-    print(f"newtop {name}: {n} questions x10; mean solve rate {statistics.fmean(solve):.0%}, "
+    print(f"newtop {name}: {n} questions x{args.nt_samples}; mean solve rate {statistics.fmean(solve):.0%}, "
           f"sometimes right {sum(0 < s < 1 for s in solve)}, always {sum(s == 1 for s in solve)}, never {sum(s == 0 for s in solve)}", flush=True)
     (out / "questions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     shutil.copy(probe / "rollouts.jsonl", out / "rollouts.jsonl")

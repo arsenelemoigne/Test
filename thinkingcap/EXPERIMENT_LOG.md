@@ -3890,3 +3890,50 @@ own answers file (it would have overwritten the 10-answer one).
 - ~16:30: lpc-bidax6 step 300 on the 720: +41.7 / -1.0 (svamp +50/-2.7, mbpp +25/-0.6, ifeval +47/-1.3, simple +38/-2.3,
   multiple +41/-0.4, no-fit +45/+4.6). Then BOTH runtimes disconnected ("Reconnect L4"): bidax6 final screen and the
   lpt6 per-type screens were in progress; waiting for the user's OK to reconnect (Colab rule).
+
+### 2 Nov 2026, ~16:30 — summary of the day: runs, settings, queues
+
+**Results (720 set unless FULL; tokens saved / accuracy change; all lpc-* runs on pool dp13 + top-ups)**
+
+| run | what changed vs bidax4 | result | verdict |
+|---|---|---|---|
+| lpc-bidax2 s0 final, FULL test | (exact michal-bida recipe on our data, our settings) | 51.2 / -3.0 (720 read 51.8 / -2.7) | the 720 measures right; the gap to his 47.0 / -0.78 is real |
+| lpc-bidax4l (600-step check) | lr cosine over 600 steps, 2 passes | 300: 38.4/-1.1, 400: 38.8/-1.8, 500: 41.8/-1.7 | no gain; schedule alone flips code (barely cut) and tools (refuses calls 5-6%) |
+| lpc-bidax5m (math fix, 16/step, 520 steps) | + math1/math2, no shorten on svamp 470-905, 743 don't-over-cut pairs | final 11.3 / -3.6 (svamp -56% / -19.2) | math rambles: longer AND worse |
+| lpc-bidax5s (same data, 25/step, 333 steps) | as bidax5m, bidax4's schedule | 100: 21.6/+1.2, 200: 20.1/-0.2, 300: 21.8/+0.1, final 23.6/+1.3 (svamp -22%/+1.0; no-fit 42/+3.3) | math longer than the original: the mixed-model don't-over-cut pairs (winner = original text, loser = bidax4 text) teach "write like the original" |
+| **lpc-bidax6** (bida-exact settings) | dpo.py --bida-exact | 100: 44.4/-2.2, 200: 40.1/-0.9, 300: 41.7/-1.0 (final pending) | his settings remove most of the accuracy gap (same pairs: bidax4 at 200 was 54.6/-3.7); vs bida full 47.0/-0.78 it cuts ~5 pts less, mostly instructions (47 vs 55) and code (25 vs 33) |
+
+**Settings: ours vs michal-bida's (read from his train_dpo_offline.py; dpo.py --bida-exact copies his)**
+
+| | ours (bidax4) | his (bidax6) |
+|---|---|---|
+| precision | bfloat16 base + bf16 autocast (LoRA weights fp32) | float32 base + float16 autocast + GradScaler |
+| lr at the end | cosine to 2e-6 | cosine to 0 (transformers get_cosine_schedule_with_warmup) |
+| warm-up | 10 steps | steps // 20 (~17) |
+| held-out pairs | 48 | 0 |
+| long pairs skipped | > 9,000 tokens | > 8,704 tokens |
+| same | DPO beta 0.1, LoRA r32 alpha 64 dropout 0 all 7 projections, AdamW 2e-5 wd 0, 16 pairs/step, 1 pass, no NLL | |
+Which of the four differences matters is not isolated yet (precision-only / schedule-only runs proposed, not queued).
+
+**Data: ours vs his (his prepare_domains.py)**: math GSM8K + MetaMath (his 1,392 pairs vs our 950 SVAMP-matched);
+code all of KodCode-V1 Filter/Prefill/Leetcode/Evol easy+medium, questions <= 700 chars (ours: the KodCode-Light slice,
+tasks <= 45 tokens, to look like MBPP+); instructions allenai IF_multi_constraints_upto5 + RLVR-IFeval (ours: argilla
+ifeval-like + built); tools ToolACE + xLAM, ~45% no-fit (ours ToolACE/Hermes/Glaive + own no-fit, ~39%). We matched
+questions to the test's prompt lengths; he took them as they come (8-gram contamination filter only). His evaluation
+code = the official one (+ a GPU-memory flag and a Triton fallback); his own caveat: Db was chosen after seeing earlier
+variants on the same test questions ("slightly optimistic").
+
+**Code changes today**: dpo.py --bida-exact, --target-steps (pairs per step set so one pass = N steps); track.py
+typeonly (one adapter per type/subtype), --to-parts, --lp-dpo comma-joined flags (also for typeonly), fullsoup step 0 =
+final adapter, onpolicy light stage fix; lupin_pairs.py --band / --overcut (+ same-question band fix); prepare_types.py
+ifeval_bida (his instruction sources) and kodcode_full (his code selection); build_pool.py --no-match; newtop --nt-raw,
+--nt-samples. Not tested locally (no torch / datasets on the Mac): the GPU runs are the first test.
+
+**Queues now**
+- GPU 2: bidax6 final screen -> lpc-bidax5q (bida settings + math1/math2 plain: his math questions vs bidax6) -> newtop
+  instr2 (his instruction sources, raw, x4) -> newtop code2 (his KodCode selection, raw, x4, 1,500 q) -> lpc-bidax7
+  (bidax6 + instr2 + code2, his settings, 339 steps) -> 720 at 100/200/300/final -> bidax5s seed 1 (proposed to drop).
+- GPU 1: per-type study lpt6 (our settings, no math) 720 screens -> lpt6b (same, his settings) -> screens. Math adapter
+  waits for fixed pairs (option A: same-model don't-over-cut pairs from bidax4 only), user decision pending.
+- Planned for 3 Nov (memory): on-policy round (best v1 answers the training questions x10).
+- Runtimes disconnected ~16:30 and were reconnected by the user.

@@ -55,7 +55,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
     for source in args.sources.split(","):
         build = builders[source]
@@ -444,6 +444,154 @@ def kodcode(args, rng):
         content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"
         yield {"source": "kodcode", "task": "code", "answer": "", "grader": "code", "entry_point": name,
                "tests": [body, *[f"{f}()" for f in functions]], "setup": "",
+               "prompt": [{"role": "user", "content": content}]}
+
+
+# michal-bida's instruction sources (2 Nov, user: "an instructions top-up built from his two sources"), after his
+# prepare_domains.py: allenai/IF_multi_constraints_upto5 (1-3 IFEval-checkable constraints, no math/code/safety/table/
+# science base request) and allenai/RLVR-IFeval (one constraint, mapped to the IFEval checker with the same meaning).
+# Rows keep our ifeval_like format (source ifeval_like, origin if_multi / rlvr) so the pool treats them as instructions.
+IF_EXCLUDED_KEYS = ("math", "jailbreak", "wildguard", "table_gpt", "science", "codealpaca", "code")
+RLVR_TO_IFEVAL = {
+    "validate_lowercase": ("change_case:english_lowercase", {}),
+    "validate_uppercase": ("change_case:english_capital", {}),
+    "validate_frequency_capital_words": ("change_case:capital_word_frequency",
+                                         {"N": "capital_frequency", "quantifier": "capital_relation"}),
+    "validate_end": ("startend:end_checker", {"end_phrase": "end_phrase"}),
+    "validate_quotation": ("startend:quotation", {}),
+    "validate_sections": ("detectable_format:multiple_sections", {"N": "num_sections", "section_splitter": "section_spliter"}),
+    "validate_word_constraint": ("length_constraints:number_words", {"N": "num_words", "quantifier": "relation"}),
+    "verify_sentence_constraint": ("length_constraints:number_sentences", {"N": "num_sentences", "quantifier": "relation"}),
+    "validate_placeholders": ("detectable_content:number_placeholders", {"N": "num_placeholders"}),
+    "validate_two_responses": ("combination:two_responses", {}),
+    "validate_highlighted_sections": ("detectable_format:number_highlighted_sections", {"N": "num_highlights"}),
+    "validate_json_format": ("detectable_format:json_format", {}),
+    "validate_paragraphs": ("length_constraints:nth_paragraph_first_word",
+                            {"N": "num_paragraphs", "i": "nth_paragraph", "first_word": "first_word"}),
+    "verify_paragraph_count": ("length_constraints:number_paragraphs", {"N": "num_paragraphs"}),
+    "verify_postscript": ("detectable_content:postscript", {"postscript_marker": "postscript_marker"}),
+    "validate_no_commas": ("punctuation:no_comma", {}),
+    "validate_forbidden_words": ("keywords:forbidden_words", {"forbidden_words": "forbidden_words"}),
+    "verify_keywords": ("keywords:existence", {"keyword_list": "keywords"}),
+    "validate_title": ("detectable_format:title", {}),
+    "verify_bullet_points": ("detectable_format:number_bullet_lists", {"N": "num_bullets"}),
+}
+
+
+def _if_base_ok(base):
+    letters = [c for c in base if c.isalpha()]
+    if not letters or sum(c.isascii() for c in letters) / len(letters) <= 0.97 or "<unk>" in base:
+        return False
+    if re.search(r"(?i)\b(python|javascript|sql|java|c\+\+) (function|code|program|script)|write a function", base):
+        return False
+    return not re.search(r"\\\(|\\\[|\$[^$]+\$|\\frac|\^\d", base)
+
+
+def ifeval_bida(args, rng):
+    """michal-bida's two instruction sources, as IFEval-graded rows (see the comment above)."""
+    from collections import defaultdict
+    from datasets import load_dataset
+    from utils.eval.benchmarks import paths
+    from utils.eval.graders import importable
+
+    lines = [json.loads(l) for l in (paths(args.questions)["ifeval"] / "data/input_data.jsonl").read_text().splitlines()
+             if l.strip()]
+    evaluated = {r["prompt"] for r in lines}
+    limits = defaultdict(int)  # largest count IFEval itself asks for (e.g. num_paragraphs 5)
+    for r in lines:
+        for kw in r["kwargs"]:
+            for k, v in (kw or {}).items():
+                if isinstance(v, int) and not isinstance(v, bool):
+                    limits[k] = max(limits[k], v)
+    with importable(Path(paths(args.questions)["ifeval"]).parent):
+        from instruction_following_eval import instructions_registry as registry
+    allowed = set(registry.INSTRUCTION_DICT)
+
+    def row(content, ids, kwargs, key, origin):
+        if content in evaluated or not ifeval_buildable(registry, ids, kwargs, content):
+            return None
+        return {"source": "ifeval_like", "origin": origin, "task": "instructions", "answer": "", "grader": "ifeval",
+                "id": f"ifeval_bida-{origin}-{key}", "instruction_id_list": ids, "kwargs": kwargs,
+                "original_prompt": content, "prompt": [{"role": "user", "content": content}]}
+
+    for k, r in enumerate(load_dataset("allenai/IF_multi_constraints_upto5", split="train")):
+        truth = r["ground_truth"]
+        truth = (ast.literal_eval(truth) if isinstance(truth, str) else truth)[0]
+        ids = truth["instruction_id"]
+        if not set(ids) <= allowed or len(ids) > 3 or any(w in r["key"] for w in IF_EXCLUDED_KEYS):
+            continue
+        messages = r["messages"]
+        content = (ast.literal_eval(messages) if isinstance(messages, str) else messages)[0]["content"]
+        base = content
+        for constraint in r["constraint"].split("\t"):
+            base = base.replace(constraint.strip(), " ")
+        if not _if_base_ok(base):
+            continue
+        kwargs = [{a: b for a, b in (kw or {}).items() if b is not None} for kw in truth["kwargs"]]
+        out = row(content, ids, kwargs, f"m{k}", "if_multi")
+        if out:
+            yield out
+    for k, r in enumerate(load_dataset("allenai/RLVR-IFeval", split="train")):
+        truth = json.loads(r["ground_truth"])
+        if truth["func_name"] not in RLVR_TO_IFEVAL:
+            continue
+        instruction, names = RLVR_TO_IFEVAL[truth["func_name"]]
+        kwargs = {ours: truth[theirs] for theirs, ours in names.items()}
+        for key in ("capital_relation", "relation"):
+            if key in kwargs and kwargs is not None:
+                if kwargs[key] == "around":
+                    kwargs = None
+                    break
+                if kwargs[key] == "at most":
+                    count = {"capital_relation": "capital_frequency",
+                             "relation": "num_words" if "num_words" in kwargs else "num_sentences"}[key]
+                    kwargs[count] += 1
+                    kwargs[key] = "less than"
+        if kwargs is None or any(isinstance(v, int) and v > limits.get(a, 0) for a, v in kwargs.items()):
+            continue
+        messages = r["messages"]
+        content = (ast.literal_eval(messages) if isinstance(messages, str) else messages)[0]["content"]
+        if not _if_base_ok(content.replace(r["constraint"].strip(), " ")):
+            continue
+        out = row(content, [instruction], [kwargs], f"r{k}", "rlvr")
+        if out:
+            yield out
+
+
+KOD_IMPERATIVE = re.compile(r"^(?:Please )?(?:Write|Create|Implement|Design|Develop|Define|Construct|Generate|Build|Devise|"
+                            r"Given|You are given)\b")
+
+
+def kodcode_full(args, rng):
+    """michal-bida's code selection (2 Nov): all of KodCode-V1's Filter / Prefill / Leetcode / Evol tasks, easy and
+    medium, questions up to 700 characters phrased as an instruction to write code; NO length cap to look like MBPP+
+    (our kodcode keeps tasks <= 45 tokens). Same MBPP-format conversion and test handling as kodcode()."""
+    import copy
+    from datasets import load_dataset
+    from utils.eval.benchmarks import MBPP_INSTRUCTION, MBPP_NAME_REMINDER
+
+    for task in load_dataset("KodCode/KodCode-V1", split="train"):
+        if task["subset"] not in ("Filter", "Prefill", "Leetcode", "Evol") or task["gpt_difficulty"] == "hard":
+            continue
+        question = task["question"].strip()
+        if len(question) > 700 or "```" in question or not KOD_IMPERATIVE.match(question):
+            continue
+        info = task["test_info"] or []
+        info = ast.literal_eval(info) if isinstance(info, str) else info
+        if len(info) != 1 or not info[0].get("function_name"):
+            continue
+        name, test = info[0]["function_name"], task["test"]
+        if "pytest" in test or "@" in test or "solution" not in test.split("\n", 1)[0]:
+            continue
+        body = "\n".join(l for l in test.splitlines() if not re.match(r"\s*(from solution import|import solution)", l))
+        functions = TEST_FUNCTION.findall(body)
+        example = next((l.strip() for l in body.splitlines() if l.strip().startswith("assert") and f"{name}(" in l), None)
+        if not functions or not example or len(functions) != body.count("def test_"):
+            continue
+        prompt = f'"""\n{question}\n{example}\n"""\n'
+        content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"
+        yield {"source": "kodcode", "origin": f"kodcode_v1/{task['subset']}", "task": "code", "answer": "",
+               "grader": "code", "entry_point": name, "tests": [body, *[f"{f}()" for f in functions]], "setup": "",
                "prompt": [{"role": "user", "content": content}]}
 
 

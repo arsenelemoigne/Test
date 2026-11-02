@@ -326,6 +326,15 @@ rescreen --name rs-bidax6 --cx-names lpc-bidax6 --cx-steps 100 200 300 0 --seeds
 # as bidax6, so it isolates his math questions against bidax6.
 lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax5q --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 0
+# 2 Nov ~16:30 (user): instructions and code, the two types bida cuts 8 pts more. His sources, his selection:
+# instr2 = allenai/IF_multi_constraints_upto5 + allenai/RLVR-IFeval (prepare_types ifeval_bida; ours were argilla
+# ifeval-like + built); code2 = all of KodCode-V1 Filter/Prefill/Leetcode/Evol easy+medium, questions <= 700 chars
+# (prepare_types kodcode_full; ours: the KodCode-Light slice <= 45 tokens). Both with NO prompt-length matching
+# (--nt-raw), 4 answers each (what bida's recipe uses). Then lpc-bidax7 = bidax6 + instr2 + code2, his settings.
+newtop --name instr2 --nt-sources ifeval_bida --nt-parts ifeval --tt-questions 2000 --nt-raw --nt-samples 4 --data-seed 131
+newtop --name code2 --nt-sources kodcode_full --nt-parts mbpp --tt-questions 1500 --nt-raw --nt-samples 4 --data-seed 132
+lupin --name lpc-bidax7 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,instr2,code2 --lp-add-q nofit4,instr2,code2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-bidax7 --cx-names lpc-bidax7 --cx-steps 100 200 300 0 --seeds 0
 lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
 rescreen --name rs-bidax5s-s1 --cx-names lpc-bidax5s --cx-steps 0 --seeds 1
 end
