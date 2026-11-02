@@ -304,9 +304,17 @@ newtop --name math1 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-que
 # done: onpolicy --name om1 --op-from math1 --op-adapter lpc-bidax4-s0 --op-band 470,905 --op-samples 4
 # 1 Nov, user: is 600 steps better than one pass? bidax4 recipe unchanged, 2 passes over the pairs, stopped at 600 steps
 # (cosine learning rate spread over the 600), scored on the 720 at 300/400/500/600 (0 = the final adapter = step 600)
-lupin --name lpc-bidax4l --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-epochs 2 --lp-dpo=--max-steps=600
-rescreen --name rs-bidax4l --cx-names lpc-bidax4l --cx-steps 300 400 500 0 --seeds 0
+# done: lupin --name lpc-bidax4l --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-epochs 2 --lp-dpo=--max-steps=600
+# stopped before step 600 (2 Nov ~03:30: the question was answered at 300-500)
+# done: rescreen --name rs-bidax4l --cx-names lpc-bidax4l --cx-steps 300 400 500 0 --seeds 0
 # then bidax5m's second seed (waits for om2 on Drive)
-lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500
-rescreen --name rs-bidax5m-s1 --cx-names lpc-bidax5m --cx-steps 0 --seeds 1
+# replaced by lpc-bidax5s: lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500
+# replaced by lpc-bidax5s: rescreen --name rs-bidax5m-s1 --cx-names lpc-bidax5m --cx-steps 0 --seeds 1
+# 2 Nov ~03:30 (user: fix the schedule): bidax5m's 8,308 pairs at 16 per step = ~520 steps, so its cosine decays over
+# 520 steps, not bidax4's ~333 (and the 600-step check showed the schedule alone moves code/tools a lot). lpc-bidax5s =
+# the SAME pairs at 25 per step: (8,308 - 48 held out) / 25 = ~331 steps, bidax4's schedule step for step.
+lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
+rescreen --name rs-bidax5s --cx-names lpc-bidax5s --cx-steps 100 200 300 0 --seeds 0
+lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
+rescreen --name rs-bidax5s-s1 --cx-names lpc-bidax5s --cx-steps 0 --seeds 1
 end

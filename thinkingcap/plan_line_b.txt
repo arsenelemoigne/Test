@@ -310,5 +310,6 @@ onpolicy --name om2 --op-from math2 --op-adapter lpc-bidax4-s0 --op-band 470,905
 # lpc-bidax5m = bidax4's recipe + math1 + math2, svamp 470-905 band: no shorten pairs, + don't-over-cut pairs (om1, om2).
 # The lupin stage refuses to train under 500 trained overcut pairs.
 lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500
-rescreen --name rs-bidax5m --cx-names lpc-bidax5m --cx-steps 100 200 300 400 0 --seeds 0
+# 2 Nov: stretched-schedule reference only, final scored
+rescreen --name rs-bidax5m --cx-names lpc-bidax5m --cx-steps 0 --seeds 0
 end

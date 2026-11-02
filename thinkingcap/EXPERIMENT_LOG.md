@@ -3812,3 +3812,13 @@ own answers file (it would have overwritten the 10-answer one).
   saves 15 pts less (mbpp barely cut: 7-12% vs 45%) and the tools behaviour flipped (no-fit +11-12, one-function -9 to
   -11: it answers "no function fits" far more often). On the curve, ~40% / -1.7 is below the usual ~40% / -0.8: no gain
   from more steps. Step 600 still scoring. Added to the visual, with bidax4 final (missing until now).
+- ~03:30 (user: fix the schedule): bidax5m's 8,308 pairs at 16/step stretch its cosine over ~520 steps (bidax4 ~333),
+  and the 600-step check showed the schedule alone shifts code and tools a lot. lpc-bidax5s = the same pairs at 25 per
+  step (~331 steps): bidax4's schedule step for step, so the math data is the only change. GPU 2 (step-600 screen of
+  bidax4l stopped, the question answered): bidax5s seed 0 -> 720 at 100/200/300/final -> seed 1. GPU 1: bidax5m
+  (stretched) finishes as a reference, final scored only.
+  bida's published branch (michal-bida/ThinkingCap-Test@thinking-compression, 9e997bd) read: evaluate.py = the official
+  one except a --gpu-memory-utilization flag and a Triton attention fallback; compare.py and utils identical; his final
+  Db = train_dpo_offline.py samples/domains.graded.jsonl --balance, scored with the official 8-sample full evaluation
+  (reports/compare_Db-s8.txt: 47.0 / -0.78; svamp 56.4/-2.41, mbpp 33.0/-1.22, ifeval 54.7/-0.28, simple 35.3/-1.41,
+  multiple 41.9/-1.12, no-fit 46.1/+6.04).
