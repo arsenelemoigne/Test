@@ -313,7 +313,7 @@ newtop --name math1 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-que
 # 2 Nov ~03:30 (user: fix the schedule): bidax5m's 8,308 pairs at 16 per step = ~520 steps, so its cosine decays over
 # 520 steps, not bidax4's ~333 (and the 600-step check showed the schedule alone moves code/tools a lot). lpc-bidax5s =
 # the SAME pairs at 25 per step: (8,308 - 48 held out) / 25 = ~331 steps, bidax4's schedule step for step.
-lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
+# dropped (user, 2 Nov): lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
 rescreen --name rs-bidax5s --cx-names lpc-bidax5s --cx-steps 100 200 300 0 --seeds 0
 # 2 Nov (user): lpc-bidax6 = bidax4's data and pairs, trained with michal-bida's EXACT settings (dpo.py --bida-exact:
 # float32 base + float16 autocast with a loss scaler, warm-up 5% of steps then cosine to 0, pairs > 8,704 tokens
@@ -335,6 +335,10 @@ newtop --name instr2 --nt-sources ifeval_bida --nt-parts ifeval --tt-questions 2
 newtop --name code2 --nt-sources kodcode_full --nt-parts mbpp --tt-questions 1500 --nt-raw --nt-samples 4 --data-seed 132
 lupin --name lpc-bidax7 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,instr2,code2 --lp-add-q nofit4,instr2,code2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax7 --cx-names lpc-bidax7 --cx-steps 100 200 300 0 --seeds 0
-lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
-rescreen --name rs-bidax5s-s1 --cx-names lpc-bidax5s --cx-steps 0 --seeds 1
+# dropped (user, 2 Nov): lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
+# dropped (user, 2 Nov): rescreen --name rs-bidax5s-s1 --cx-names lpc-bidax5s --cx-steps 0 --seeds 1
+# 2 Nov (user): which of bida's settings matters? bidax4's pairs with ONE change each (bidax6 had all four):
+# lpc-bidax6p = his precision only (float32 base + float16 autocast + loss scaler); lpc-bidax6s on GPU 1 = his schedule only.
+lupin --name lpc-bidax6p --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-precision
+rescreen --name rs-bidax6p --cx-names lpc-bidax6p --cx-steps 100 200 300 0 --seeds 0
 end

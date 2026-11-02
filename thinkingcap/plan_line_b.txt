@@ -327,4 +327,7 @@ rescreen --name rs-lpt6-mid --cx-names lpt6-mbpp lpt6-ifeval --cx-steps 50 --see
 # bidax4 on the same pairs). Math still left out until its pairs are fixed.
 typeonly --name lpt6b --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance --lp-dpo=--bida-exact
 rescreen --name rs-lpt6b --cx-names lpt6b-mbpp lpt6b-ifeval lpt6b-bfcl_simple_python lpt6b-bfcl_multiple lpt6b-bfcl_irrelevance --cx-steps 0 --seeds 0 1
+# 2 Nov (user): his schedule only (warm-up 5% of steps, cosine to 0) on bidax4's pairs; lpc-bidax6p (precision only) on GPU 2.
+lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
+rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
 end

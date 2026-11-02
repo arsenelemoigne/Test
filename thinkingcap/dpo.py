@@ -57,10 +57,11 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
     # --bida-exact: the base model in float32, float16 autocast with a loss scaler, as michal-bida trains
-    load_dtype = torch.float32 if args.bida_exact else dtype
-    if args.bida_exact and device == "cuda":
+    bida_precision = args.bida_exact or args.bida_precision
+    load_dtype = torch.float32 if bida_precision else dtype
+    if bida_precision and device == "cuda":
         dtype = torch.float16
-    scaler = torch.amp.GradScaler("cuda") if args.bida_exact and device == "cuda" else None
+    scaler = torch.amp.GradScaler("cuda") if bida_precision and device == "cuda" else None
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     close = tokenizer.convert_tokens_to_ids("</think>")
     ends = {tokenizer.convert_tokens_to_ids("<|im_end|>"), tokenizer.convert_tokens_to_ids("<|endoftext|>")}
@@ -165,7 +166,7 @@ def main():
             if scaler:
                 scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
-            if args.bida_exact:  # transformers' get_cosine_schedule_with_warmup(warm-up = steps // 20), his schedule
+            if args.bida_exact or args.bida_schedule:  # transformers' get_cosine_schedule_with_warmup(warm-up = steps // 20)
                 warm = max(1, steps // 20)
                 lr = args.lr * (step / warm if step < warm else
                                 max(0.0, 0.5 * (1 + math.cos(math.pi * (step - warm) / max(1, steps - warm)))))
@@ -251,6 +252,10 @@ def parse_arguments():
     parser.add_argument("--tripwire", type=float, default=0.2)
     parser.add_argument("--max-len", type=int, default=9000)
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--bida-precision", action="store_true",
+                        help="only michal-bida's precision: float32 base + float16 autocast with a loss scaler")
+    parser.add_argument("--bida-schedule", action="store_true",
+                        help="only michal-bida's schedule: warm-up 5%% of steps, then cosine down to 0")
     parser.add_argument("--bida-exact", action="store_true",
                         help="michal-bida's training settings: float32 base + float16 autocast with a loss scaler, cosine "
                              "warm-up 5%% of steps then down to 0, pairs over 8,704 tokens skipped, no held-out pairs")

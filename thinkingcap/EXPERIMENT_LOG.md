@@ -3937,3 +3937,6 @@ ifeval_bida (his instruction sources) and kodcode_full (his code selection); bui
   waits for fixed pairs (option A: same-model don't-over-cut pairs from bidax4 only), user decision pending.
 - Planned for 3 Nov (memory): on-policy round (best v1 answers the training questions x10).
 - Runtimes disconnected ~16:30 and were reconnected by the user.
+- ~16:50 (user): bidax5s seed 1 dropped. Queued the one-change tests on bidax4's pairs: lpc-bidax6p = his precision only
+  (dpo.py --bida-precision) at the end of GPU 2's queue; lpc-bidax6s = his schedule only (--bida-schedule: warm-up
+  steps//20, cosine to 0) at the end of GPU 1's. Both 720 at 100/200/300/final vs bidax4 (ours) and bidax6 (all four).
