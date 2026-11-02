@@ -3887,3 +3887,6 @@ own answers file (it would have overwritten the 10-answer one).
   --bida-exact, 339 steps like bidax6: isolates his math questions against bidax6); per-type study again as lpt6b with
   --bida-exact (typeonly now passes --lp-dpo), queued on GPU 1 after lpt6's screens. --lp-dpo takes several dpo flags
   comma-joined (plan lines split on spaces). If bidax6's final disappoints, revert.
+- ~16:30: lpc-bidax6 step 300 on the 720: +41.7 / -1.0 (svamp +50/-2.7, mbpp +25/-0.6, ifeval +47/-1.3, simple +38/-2.3,
+  multiple +41/-0.4, no-fit +45/+4.6). Then BOTH runtimes disconnected ("Reconnect L4"): bidax6 final screen and the
+  lpt6 per-type screens were in progress; waiting for the user's OK to reconnect (Colab rule).
