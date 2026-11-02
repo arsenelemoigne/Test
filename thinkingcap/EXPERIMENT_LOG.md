@@ -3832,3 +3832,9 @@ own answers file (it would have overwritten the 10-answer one).
   caveat: Db was designed after seeing D's scores on the same questions ("slightly optimistic").
   dpo.py --bida-exact = all of those; lpc-bidax6 = bidax4's pairs with --bida-exact, GPU 2 after bidax5s seed 0's
   screen. Not tested locally (no torch/peft on the Mac): the first GPU steps are the test.
+- ~03:55 status before the night: GPU 1 lpc-bidax5m (stretched schedule) step 455/520 -> full test of lpc-bidax2 s0
+  final -> bidax5m final on the 720. GPU 2 lpc-bidax5s (bidax4 schedule, gate 622 trained overcut pairs passed)
+  training -> 720 at 100/200/300/final -> lpc-bidax6 (bida-exact settings) -> 720 -> bidax5s seed 1.
+  Visuals (user): only models trained on the current data (dp13 + top-ups) and scored on the 720 set or the full test
+  are shown. Removed: l2s50e (older dp10 pool) and the Fresh 240 set from "Where We Shaved"; "ThinkingCap Model
+  Tree" rebuilt as a per-type table of those models only (older rounds, measured on small tilted sets, dropped).
