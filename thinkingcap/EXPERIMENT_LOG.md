@@ -3968,3 +3968,13 @@ ifeval_bida (his instruction sources) and kodcode_full (his code selection); bui
   own 47.0 / -0.78 is +1.6 above it (about +1.3 after the 720's bias). Column "vs curve" added to the Model Tree.
 - ~19:00 (user): the on-policy round (polans pa6 a/b + lpc-bidax8) PAUSED until the bida rounds report (bidax6 final,
   bidax5q, bidax7, bidax6p/6s); then choose its starting model. Everything stays built and queued as comments.
+- ~19:40 (user): ThinkPrune-style RL plan adopted, smoke test first. rl_train.py --reward cap: 1 if right AND finished
+  under the question's own token cap, else 0; per-question max_tokens = its cap; group advantages; KL anchor. track.py
+  thinkprune: caps per part from the original's right answers in the 4-answer pool file (math q0.95, others q0.70),
+  printed with the share of questions keeping a right answer under the cap; questions right > half the time, mixed like
+  the test (25% each, BFCL 400/200/240), prostring rows dropped; start raw or a merged adapter; 10-step blocks; the 720
+  every 40 steps. Pass/fail bar fixed BEFORE running (the yardstick): works = a checkpoint >= 1 pt above the reference
+  curve at the same saving on the 720, confirmed by a second seed, then the full test; target = > 50% at better than -1;
+  fails = every checkpoint on or below the curve after ~300 steps. Smoke test (tp0) queued on GPU 1 after the per-type
+  screens. Notes: IFEval's langdetect is already seeded by the official grader; equivalent tool values ("km" /
+  "kilometers") are NOT handled yet (references hold one value).

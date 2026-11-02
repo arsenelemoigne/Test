@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -282,6 +282,16 @@ def main():
     parser.add_argument("--op-band", default="470,905", help="onpolicy: original-Qwen mean thinking band, tokens")
     parser.add_argument("--op-samples", type=int, default=4, help="onpolicy: answers per question")
     parser.add_argument("--lp-band", default="", help="lupin: lupin_pairs.py --band, e.g. svamp:470:905")
+    parser.add_argument("--tp-start", default="raw", help="thinkprune: 'raw' or an adapter name (merged first)")
+    parser.add_argument("--tp-steps", type=int, default=300)
+    parser.add_argument("--tp-questions", type=int, default=64)
+    parser.add_argument("--tp-group", type=int, default=16)
+    parser.add_argument("--tp-lr", type=float, default=5e-6)
+    parser.add_argument("--tp-kl", type=float, default=1e-3)
+    parser.add_argument("--tp-cap-math", type=float, default=0.95)
+    parser.add_argument("--tp-cap-other", type=float, default=0.70)
+    parser.add_argument("--tp-score-every", type=int, default=40)
+    parser.add_argument("--tp-smoke", action="store_true")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
     parser.add_argument("--lp-trained", default="", help="lupin: onpolicy/polans run names (comma-separated): lupin_pairs.py --trained")
     parser.add_argument("--lp-min-overcut", type=int, default=0, help="lupin: gate, at least this many trained overcut pairs or no training")
@@ -3139,6 +3149,94 @@ def polans(args):
     drive_sync("save")
 
 
+def thinkprune(args):
+    """ThinkPrune-style RL (2 Nov, user): reward = 1 if right AND finished under the question's own token cap, else 0
+    (rl_train.py --reward cap), group advantages, a small KL anchor, nothing else. Caps per test part from the ORIGINAL
+    model's right answers in the pool (math generous: --tp-cap-math quantile; the rest --tp-cap-other), printed with the
+    share of questions keeping a right answer under the cap. Questions the original gets right > half the time, mixed
+    like the test (25% each; BFCL 400/200/240). Starts from --tp-start ("raw" or an adapter, merged first). 10-step
+    blocks (resumable), the 720 every --tp-score-every steps. --tp-smoke: 5 steps, small batch, no scoring, timed."""
+    import statistics
+    import time
+    name = args.name
+    answers = BON / "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-a4.jsonl"
+    drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", str(BON / "tooltop-nofit4"), SCREEN,
+                                str(ROOT / "s4-base")])
+    rows = {}
+    for f in (Path("data/pool-dp13.jsonl"), BON / "tooltop-nofit4" / "questions.jsonl"):
+        for line in f.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if not re.search(r"prostring|stringname|stringName", line):  # the "file" -> "string" corruption
+                    rows[r["pool_id"]] = r
+    by_q = defaultdict(list)
+    for line in open(answers):
+        r = json.loads(line)
+        by_q[r["id"]].append((bool(r["correct"]) and r["closed_thinking"] and not r["truncated"], r["output_tokens"]))
+    from build_pool import part_of
+    caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
+    eligible = defaultdict(list)
+    for qid, got in by_q.items():
+        if qid in rows and sum(ok for ok, _ in got) / len(got) > 0.5:
+            eligible[rows[qid]["part"]].append(qid)
+    for part, ids in sorted(eligible.items()):
+        lens = sorted(n for q in ids for ok, n in by_q[q] if ok)
+        cap = lens[min(len(lens) - 1, int(len(lens) * (args.tp_cap_math if part == "svamp" else args.tp_cap_other)))]
+        caps[part] = cap
+        keep = statistics.fmean(any(ok and n < cap for ok, n in by_q[q]) for q in ids)
+        lines.append(f"  {part}: cap {cap} tokens; {len(ids)} questions right > half the time; {keep:.0%} keep a right answer under the cap")
+    print("\n".join(lines), flush=True)
+    weights = {"svamp": 1, "mbpp": 1, "ifeval": 1, "bfcl_simple_python": 400 / 840, "bfcl_multiple": 200 / 840,
+               "bfcl_irrelevance": 240 / 840}
+    rng = random.Random(args.data_seed)
+    for ids in eligible.values():
+        rng.shuffle(ids)
+    pool, credit = [], defaultdict(float)  # interleaved by the test's shares
+    while any(eligible.values()):
+        for part, w in weights.items():
+            credit[part] += w
+            while credit[part] >= 1 and eligible.get(part):
+                credit[part] -= 1
+                q = rows[eligible[part].pop()]
+                pool.append(q | {"id": q["pool_id"], "cap": caps[part]})
+    data = Path(f"data/tp-{name}.jsonl")
+    data.write_text("".join(json.dumps(r) + "\n" for r in pool))
+    base = "Qwen/Qwen3-0.6B"
+    if args.tp_start != "raw":  # the trained start merged into the weights; RL trains a new LoRA on top
+        base = str(Path("models") / f"{args.tp_start}-merged")
+        drive_sync("restore", only=[base, str(Path("adapters") / args.tp_start)])
+        if not (Path(base) / "config.json").exists():
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", base, "--adapters", f"adapters/{args.tp_start}:1")
+            drive_sync("save")
+    steps, questions, group = (5, 16, 8) if args.tp_smoke else (args.tp_steps, args.tp_questions, args.tp_group)
+    rl = Path("adapters") / f"{name}-rl"
+    drive_sync("restore", only=[str(rl)])
+    previous = None
+    for done in range(10 if not args.tp_smoke else steps, steps + 1, 10 if not args.tp_smoke else steps):
+        ckpt = rl / f"step-{done}"
+        if not (ckpt / "adapter_config.json").exists():
+            began = time.time()
+            py("rl_train.py", "--model", base, "--data", data, "--sources", "all", "--out", ckpt,
+               "--steps", 10 if not args.tp_smoke else steps, "--offset", done - (10 if not args.tp_smoke else steps),
+               *(["--init-adapter", previous] if previous else []), "--questions", questions, "--group", group,
+               "--max-tokens", max(caps.values()), "--reward", "cap", "--advantage", "group", "--kl-coef", args.tp_kl,
+               "--grader", "typed", "--redundant", "none", "--lr", args.tp_lr, "--dtype", args.dtype)
+            print(f"thinkprune {name}: steps to {done} took {(time.time() - began) / 60:.1f} min", flush=True)
+            drive_sync("save")
+        print((ckpt / "rl_log.jsonl").read_text()[-3000:], flush=True)
+        previous = ckpt
+        if not args.tp_smoke and done % args.tp_score_every == 0:
+            out = ROOT / f"s4-{name}-{done}"
+            drive_sync("restore", only=[str(out)])
+            if not (out / "results.json").exists():
+                model = Path("/content/lupin-models") / f"{name}-{done}"
+                py("merge.py", "--model", base, "--out", model, "--adapters", f"{ckpt}:1")
+                evaluate(out, samples=4, questions=SCREEN, model=model)
+                shutil.rmtree(model, ignore_errors=True)
+                drive_sync("save")
+            print(score_line(f"{name}-{done} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -4432,7 +4530,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -115,7 +115,7 @@ def parse_arguments():
     parser.add_argument("--sb-beta", type=float, default=0.005,
                         help="shorterbetter: per-token weight of |len - SOL| (paper 0.001 on 5-11k-token replies; ours are"
                              " ~5-10x shorter, so 0.005 keeps a similar pressure)")
-    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter"], default="shorter",
+    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap"], default="shorter",
                         help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
                              "standardized among the group's correct replies; wrong or cut off = 0")
     parser.add_argument("--adaptive", action="store_true",
@@ -426,7 +426,7 @@ class Sampler:
                               max_lora_rank=64, gpu_memory_utilization=args.gpu_memory,
                               max_model_len=args.max_tokens + 1024, generation_config="vllm", **extra)
 
-    def sample(self, prompts, adapter_dir, step, model=None, no_think=0):
+    def sample(self, prompts, adapter_dir, step, model=None, no_think=0, caps=None):
         """--group replies per prompt; the last `no_think` of each group start with an empty
         thinking block, which is returned as part of the reply."""
         eos = self.tokenizer.convert_tokens_to_ids("<|im_end|>")
@@ -440,9 +440,10 @@ class Sampler:
             for n, start in counts:
                 if n:
                     requests += [{"prompt_token_ids": p + start} for p in prompts]
-                    params += [SamplingParams(n=n, max_tokens=self.args.max_tokens - len(start),
+                    # --reward cap (ThinkPrune, 2 Nov): each question's own token cap; generation stops there
+                    params += [SamplingParams(n=n, max_tokens=(caps[k] if caps else self.args.max_tokens) - len(start),
                                               seed=self.args.seed + step, stop_token_ids=[eos],
-                                              **SAMPLING)] * len(prompts)
+                                              **SAMPLING) for k in range(len(prompts))]
             outputs = self.engine.generate(requests, params, lora_request=lora)
             replies = [[] for _ in prompts]
             for index, out in enumerate(outputs):
@@ -579,7 +580,8 @@ def main():
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
         no_think = round(args.group * args.no_think_share)
-        replies = sampler.sample(prompts, current, args.offset + step, model, no_think)
+        caps = [int(q["cap"]) for q in questions] if args.reward == "cap" else None
+        replies = sampler.sample(prompts, current, args.offset + step, model, no_think, caps)
 
         by_type = {}
         protect = set(filter(None, args.protect_sources.split(",")))
@@ -593,7 +595,10 @@ def main():
             questions, prompts, replies, grades = ([xs[k] for k in keep] for xs in (questions, prompts, replies, grades))
         groups = []
         for question, prompt, group, correct in zip(questions, prompts, replies, grades):
-            if args.reward == "arora":
+            if args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
+                cap = int(question["cap"])
+                rewards = [1.0 if ok and len(r) < cap - 1 else 0.0 for r, ok in zip(group, correct)]  # cut at the cap = 0
+            elif args.reward == "arora":
                 thinking = [r.index(close_id) if close_id in r else len(r) for r in group]
                 alpha = args.alpha * (sum(correct) / len(correct) if args.adaptive else 1.0)
                 rewards = arora_rewards(thinking, correct, alpha)
