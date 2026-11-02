@@ -3804,3 +3804,11 @@ own answers file (it would have overwritten the 10-answer one).
   ifeval 681/681, mbpp 886/886). 8,308 pairs (bidax4 5,362): math is now ~47% of pairs (bidax4 ~18%); one pass = ~519
   steps, so the other types get the same pairs spread over a longer cosine. Training seed 0 on GPU 1; 720 at
   100/200/300/400/final.
+- 2 Nov ~03:00: lpc-bidax4l (bidax4's exact 5,362 pairs, 2 passes cut at 600 steps, cosine over 600) on the 720:
+  300: +38.4 / -1.1 (no-fit +48/+12.1, multiple +37/-3.6, simple +37/-9.0, ifeval +48/-2.1, mbpp +12/-0.6, svamp +47/-1.5)
+  400: +38.8 / -1.8 (no-fit +50/+11.9, multiple +39/-4.8, simple +39/-10.2, ifeval +47/-3.3, mbpp +8/-1.7, svamp +49/-1.0)
+  500: +41.8 / -1.7 (no-fit +50/+10.8, multiple +39/-6.1, simple +37/-11.2, ifeval +53/-0.2, mbpp +7/-1.9, svamp +54/-2.7)
+  NOT bidax4 continued: same pairs and (first pass) same order, only the slower lr decay differs, yet at step 300 it
+  saves 15 pts less (mbpp barely cut: 7-12% vs 45%) and the tools behaviour flipped (no-fit +11-12, one-function -9 to
+  -11: it answers "no function fits" far more often). On the curve, ~40% / -1.7 is below the usual ~40% / -0.8: no gain
+  from more steps. Step 600 still scoring. Added to the visual, with bidax4 final (missing until now).
