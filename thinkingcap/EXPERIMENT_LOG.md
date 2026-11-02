@@ -4008,3 +4008,7 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   code +41/-0.8, math +34/-4.2, no-fit +35/-7.3). Spill-over is nearly total: a tools-only or instructions-only adapter
   cuts math and code about as much as its own type, and the cost lands on math and no-fit. Code-only pairs do not cut
   code at all. Multiple-only and no-fit-only screens next. GPU 2: bidax5q training (step 105/337).
+- ~15:55: lpt6 several-functions only: +18.3 / -1.4 (multiple +26/0.0; spill: code +24/-2.5, simple +21/-1.5, math
+  +18/-1.5, no-fit +18/-2.9, ifeval +9/0.0). Code-only checked on the records: code thinking unchanged (median 966 vs
+  994, capped 9.4% vs 8.5%, accuracy 51.2 vs 50.8) although it ordered 86% of held-out code pairs right: the code pairs
+  teach content, not length; in mixed runs code's cut comes from the other types' spill-over.
