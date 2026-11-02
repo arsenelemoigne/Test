@@ -4054,3 +4054,8 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
 - ~19:10: both runtimes were reconnected by the user (GPU 1 had hung on "Reconnecting"; GPU 2's bidax5q final screen
   was lost and re-runs). GPU 1 queue: bidax5q SEED 1 (same recipe) -> its 720 at 100/200/300/final -> stopB3 / lpw
   re-scores -> bidax6s. Full test of the best bidax5q step only after seed 1 confirms, and with the user's OK.
+- ~19:45 **lpc-bidax5q FINAL** (seed 0) on the 720: **+46.7 / -0.5** (svamp +58/-1.9, mbpp +37/+0.4, ifeval +45/-0.8,
+  simple +41/-2.3, multiple +44/+0.6, no-fit +47/+3.1): **+1.8 vs the reference curve**, our best point; at
+  michal-bida's saving (47.0) with better accuracy than his -0.78 on the 720 (which reads accuracy ~0.3 low, saving ~0.6
+  high). The final adapter is what bida scores. Seed 1 training on GPU 1 (the confirmation); full test after it, with
+  the user's OK. GPU 2: newtop instr2 (his instruction sources) started.
