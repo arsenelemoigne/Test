@@ -3999,3 +3999,12 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   an opening cue (".\n\nOkay") lifts Olmo-3-7B base on MATH-500 from 41.5% to 76.9%; RL's biggest probability change is
   at the first two tokens. About eliciting reasoning in base models, no token-saving figures; test-time prefilling is
   ruled out for us; our ps1 prefill made answers 4% longer.
+- ~15:45: runners back on their queues after a ~1.5 h first copy from Drive on fresh machines.
+  lpc-bidax6 FINAL on the 720: +37.8 / -1.7 (svamp +48/-3.7, mbpp +18/-2.5, ifeval +41/-1.0, simple +38/-3.1, multiple
+  +40/+0.2, no-fit +44/+4.6): about 0.7 below the reference curve; step 300 (41.7 / -1.0, +0.5) stays its best point.
+  Per-type study lpt6 (ONE type's pairs each, our settings, 2-seed soups, final) on the 720, own type in brackets:
+  code only -3.2 / -1.0 (code -5% LONGER / +0.4; instructions -9% / -3.1); instructions only +32.6 / -2.8 (ifeval
+  +43/-4.4; spill: math +27/-3.5, code +32/-1.9, tools +26-28); one function only +33.7 / -1.7 (simple +34/-1.2; spill:
+  code +41/-0.8, math +34/-4.2, no-fit +35/-7.3). Spill-over is nearly total: a tools-only or instructions-only adapter
+  cuts math and code about as much as its own type, and the cost lands on math and no-fit. Code-only pairs do not cut
+  code at all. Multiple-only and no-fit-only screens next. GPU 2: bidax5q training (step 105/337).
