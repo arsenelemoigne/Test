@@ -291,7 +291,7 @@ def main():
     parser.add_argument("--lp-balance", type=float, default=0.0, help="lupin: lupin_select.py --max-shorten-ratio")
     parser.add_argument("--lp-total", type=int, default=3200, help="lupin: pairs after matching (200 steps x 16)")
     parser.add_argument("--lp-save", type=int, default=50, help="lupin: DPO checkpoint interval")
-    parser.add_argument("--lp-dpo", default="", help="lupin: more dpo.py flags, e.g. '--nll 0'")
+    parser.add_argument("--lp-dpo", default="", help="lupin / typeonly: more dpo.py flags, e.g. '--nll 0'; comma-joined in a plan line")
     parser.add_argument("--lp-fresh", action="store_true", help="lupin: score soups on the fresh set x8 (finalists)")
     parser.add_argument("--dp-check-seed", type=int, default=9, help="poolmore: sampling seed of the held-out check")
     parser.add_argument("--dp-kod", type=int, default=40000, help="buildpool2: KodCode-V1 candidates")
@@ -3100,7 +3100,7 @@ def typeonly(args):
                 py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start,
                    "--out", adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts),
                    "--save-every", 10, "--epochs", 1, "--dtype", args.dtype, "--seed", seed, "--nll", 0.0,
-                   "--lr-schedule", "cosine")
+                   "--lr-schedule", "cosine", *args.lp_dpo.replace(",", " ").split())
                 drive_sync("save")
 
 
@@ -3329,7 +3329,7 @@ def lupin(args):
         if not (adapter / "adapter_config.json").exists():
             py("dpo.py", "--model", base, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
                "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.lp_save,
-               "--epochs", args.lp_epochs, "--dtype", args.dtype, "--seed", seed, *args.lp_dpo.split(), *gentle)
+               "--epochs", args.lp_epochs, "--dtype", args.dtype, "--seed", seed, *args.lp_dpo.replace(",", " ").split(), *gentle)
             drive_sync("save")
     val, fresh_q = f"questions_val{VAL_SEED}", f"questions_fresh{FRESH_SEED}"
     scratch = Path("/content/lupin-models")

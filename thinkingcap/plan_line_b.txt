@@ -323,4 +323,8 @@ rescreen --name rs-bidax5m --cx-names lpc-bidax5m --cx-steps 0 --seeds 0
 typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance
 rescreen --name rs-lpt6 --cx-names lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
 rescreen --name rs-lpt6-mid --cx-names lpt6-mbpp lpt6-ifeval --cx-steps 50 --seeds 0 1
+# 2 Nov ~15:40 (user): the per-type study again with michal-bida's settings (bidax6 cut less and lost far less than
+# bidax4 on the same pairs). Math still left out until its pairs are fixed.
+typeonly --name lpt6b --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance --lp-dpo=--bida-exact
+rescreen --name rs-lpt6b --cx-names lpt6b-mbpp lpt6b-ifeval lpt6b-bfcl_simple_python lpt6b-bfcl_multiple lpt6b-bfcl_irrelevance --cx-steps 0 --seeds 0 1
 end

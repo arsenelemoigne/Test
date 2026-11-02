@@ -3883,3 +3883,7 @@ own answers file (it would have overwritten the 10-answer one).
   settings) 100: 57.1/-5.1, 200: 54.6/-3.7: his settings cut ~13-15 pts less and lose ~2.8 pts less; math -2.3 at
   45% (bida full: 56/-2.4) and no-fit positive. On or slightly above our curve (~40% / -0.9 vs pt-softer 39.2 / -0.8,
   600-step 41.8 / -1.7). Steps 300 and final next. typeonly: code, instructions, one function, several, no-fit trained.
+- ~15:40 (user): next runs switched to michal-bida's settings: lpc-bidax5p -> lpc-bidax5q (plain bida + math1/math2,
+  --bida-exact, 339 steps like bidax6: isolates his math questions against bidax6); per-type study again as lpt6b with
+  --bida-exact (typeonly now passes --lp-dpo), queued on GPU 1 after lpt6's screens. --lp-dpo takes several dpo flags
+  comma-joined (plan lines split on spaces). If bidax6's final disappoints, revert.
