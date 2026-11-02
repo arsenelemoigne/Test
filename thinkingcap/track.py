@@ -273,6 +273,7 @@ def main():
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
+    parser.add_argument("--to-parts", default=",".join(("svamp", "mbpp", "ifeval", "bfcl_simple_python", "bfcl_multiple", "bfcl_irrelevance")), help="typeonly: parts to train")
     parser.add_argument("--op-from", default="math1", help="onpolicy: the top-up whose questions are answered")
     parser.add_argument("--op-adapter", default="lpc-bidax4-s0", help="onpolicy: the trained adapter that answers")
     parser.add_argument("--op-band", default="470,905", help="onpolicy: original-Qwen mean thinking band, tokens")
@@ -3080,7 +3081,7 @@ def typeonly(args):
     base = BON / f"pairs-{args.cc_base}"
     drive_sync("restore", only=[str(base)])
     rows = [json.loads(l) for l in (base / "pairs.jsonl").read_text().splitlines() if l.strip()]
-    for part in TYPE_PARTS:
+    for part in [p for p in TYPE_PARTS if p in args.to_parts.split(",")]:
         mine = [r for r in rows if r["part"] == part]
         pairs = BON / f"pairs-{args.name}-{part}"
         drive_sync("restore", only=[str(pairs)])

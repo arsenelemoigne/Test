@@ -3862,3 +3862,9 @@ own answers file (it would have overwritten the 10-answer one).
   Likely cause on math: the don't-over-cut pairs mix two models (winner = original Qwen text, loser = bidax4 text), so
   DPO can learn "write like the original, not like bidax4" instead of "think enough"; with no copying term this pulled
   math back past the original into rambling. bidax5s (same data, bidax4 schedule) will separate schedule from data.
+- ~11:30: lpc-bidax5s (same data as bidax5m, bidax4's 333-step schedule) on the 720: step 100 +21.6 / +1.2 (svamp -13% /
+  +0.2, mbpp +25/+4.8, ifeval +33/-1.5, simple +30/-1.0, multiple +34/+2.7, no-fit +36/+1.7); step 200 +20.1 / -0.2
+  (svamp -36% / -1.0, mbpp +19/+3.3, ifeval +40/-3.1, simple +34/-2.9, multiple +38/+1.3, no-fit +42/+2.1).
+  => math thinks LONGER than the original with the bidax4 schedule too: the math DATA (don't-over-cut pairs, winner =
+  original text vs loser = bidax4 text) drives it, not the schedule. Tools stay sane here (no refusal flip). typeonly
+  math adapter stopped before training; the other five parts train first; math waits for fixed pairs.
