@@ -4039,3 +4039,12 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   (svamp +28/-0.2, mbpp +25/+0.2, ifeval +10/-2.1, simple +17/-0.4, multiple +23/+1.5, no-fit +26/+0.8): about 0.6
   BELOW the reference curve (its old fresh-240 reading was +21.2 / +0.2). Not on the visuals (older data, user rule).
   drpo3f-15, stopB3-soup-25, lpw-2stage next. bidax5q training done (335/337), its 720 screens starting.
+- ~18:30 **lpc-bidax5q** (bida-exact settings + math1/math2 = michal-bida's GSM8K/MetaMath math, plain bida pairs, 339
+  steps) on the 720: step 100 **+41.8 / +0.2** (svamp +47/-1.5, mbpp +36/+1.3, ifeval +43/+0.2, simple +37/-2.5, multiple
+  +40/+1.7, no-fit +42/+3.1); step 200 **+48.5 / -0.9** (svamp +61/-3.5, mbpp +39/+0.6, ifeval +45/-1.0, simple +41/-1.7,
+  multiple +46/+0.4, no-fit +47/+2.1). Both about **+1.7 above the reference curve**: the first run past the 1-point bar
+  (needs a second seed, then the full test). Step 200 is at michal-bida's own level (47.0 / -0.78 full; the 720 reads
+  saving ~0.6 high, accuracy ~0.3 low). His math data + his settings together close the gap that neither closed alone
+  (bidax6 = settings only: 41.7 / -1.0; bidax5m/s = our math fix: math rambled).
+  drpo3f-15 re-scored: +26.5 / +0.1 (on the curve, +0.1). GPU 1 DISCONNECTED (Reconnect) during the re-scores; waiting
+  for the user's OK.
