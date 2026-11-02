@@ -4035,3 +4035,7 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   bidax6's own curve is nearly flat: from 22% to 42% saved it costs only ~0.2 points, so full strength is its best
   point (+0.5 vs the reference curve; 0.75 -0.4; 0.5 -1.0). The ~-0.7 floor is mostly math (-2.1 to -2.7 at every
   strength): math loses accuracy as soon as it is touched at all. bidax5q (his math questions) at step 310/337.
+- ~17:50: old-run re-score on the 720 (yardstick): drpo3d-23 (gentle DRPO RL from raw, old RL pool, 26 Oct) +21.7 / -0.4
+  (svamp +28/-0.2, mbpp +25/+0.2, ifeval +10/-2.1, simple +17/-0.4, multiple +23/+1.5, no-fit +26/+0.8): about 0.6
+  BELOW the reference curve (its old fresh-240 reading was +21.2 / +0.2). Not on the visuals (older data, user rule).
+  drpo3f-15, stopB3-soup-25, lpw-2stage next. bidax5q training done (335/337), its 720 screens starting.
