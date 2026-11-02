@@ -340,7 +340,7 @@ thinkprune --name tp0 --tp-start raw --tp-smoke
 # paused (user, 2 Nov: wait for the bida rounds first): lupin --name lpc-bidax8 --lp-recipe four --lp-min-solve 0 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-trained pa6-a,pa6-b --lp-init adapters/lpc-bidax6-s0 --lp-extra=--drop-pattern=prostring|stringname|stringName,--tool-near=0.9 --lp-dpo=--bida-exact,--target-steps=339
 # paused (user, 2 Nov: wait for the bida rounds first): rescreen --name rs-bidax8 --cx-names lpc-bidax8 --cx-steps 100 200 300 0 --seeds 0
 # the yardstick's dial: bidax6 final at 0.5 / 0.75 strength (1.0 = its normal screen)
-rescreen --name rs-bidax6-dial --cx-names lpc-bidax6 --cx-steps 0 --cx-scale 0.5 0.75 --seeds 0
+rescreen --name rs-bidax6-dial --cx-names lpc-bidax6 --cx-steps 300 --cx-scale 0.5 0.75 --seeds 0
 # old runs re-scored on the 720 (they were measured on the small tilted sets)
 fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 models/stopB3-soup-25 --fm-screen-only
 rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
