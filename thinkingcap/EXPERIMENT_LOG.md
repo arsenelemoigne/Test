@@ -4030,3 +4030,8 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   Sizing: the planned 64 x 16 = 1,024 answers per step would be ~8-10 min per step, ~45-50 h for 300 steps per run.
   32 x 8 with dynamic sampling (draw 2x, keep informative groups) ~3-4 min per step, ~15-20 h per run incl. the 720
   every 40 steps. Decision (size, start model, which GPU) pending with the user.
+- ~17:20: bidax6 step 300 DIAL on the 720 (merge strength): 0.5 +22.5 / -0.8 (svamp +24/-2.1, ifeval +19/-0.8, no-fit
+  +29/+1.7); 0.75 +30.9 / -0.7 (svamp +39/-2.5, mbpp +15/-2.1, ifeval +33/+1.5, no-fit +37/+2.7); 1.0 = +41.7 / -1.0.
+  bidax6's own curve is nearly flat: from 22% to 42% saved it costs only ~0.2 points, so full strength is its best
+  point (+0.5 vs the reference curve; 0.75 -0.4; 0.5 -1.0). The ~-0.7 floor is mostly math (-2.1 to -2.7 at every
+  strength): math loses accuracy as soon as it is touched at all. bidax5q (his math questions) at step 310/337.
