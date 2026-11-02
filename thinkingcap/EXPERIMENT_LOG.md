@@ -3868,3 +3868,8 @@ own answers file (it would have overwritten the 10-answer one).
   => math thinks LONGER than the original with the bidax4 schedule too: the math DATA (don't-over-cut pairs, winner =
   original text vs loser = bidax4 text) drives it, not the schedule. Tools stay sane here (no refusal flip). typeonly
   math adapter stopped before training; the other five parts train first; math waits for fixed pairs.
+- ~12:40: lpc-bidax5s step 300 +21.8 / +0.1 (svamp -26%/+0.6, mbpp +19/+2.9, ifeval +41/-4.2, simple +33/-2.5,
+  multiple +39/+2.5, no-fit +41/+3.3); FINAL +23.6 / +1.3 (svamp -22% / +1.0, mbpp +21/+3.5, ifeval +41/-0.6, simple
+  +36/-2.5, multiple +40/+2.5, no-fit +42/+3.3). Math stays ~22-36% LONGER than the original but accurate; the other
+  types are healthy (no-fit +3.3 is our best no-fit yet on bidax4's schedule). On the curve overall (~24% / +1.3), not
+  above it. lpc-bidax6 (bida-exact) training on GPU 2: 339 steps of 16 (no held-out). GPU 1: typeonly code done-ish.
