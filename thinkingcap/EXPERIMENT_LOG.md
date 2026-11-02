@@ -4059,3 +4059,7 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   michal-bida's saving (47.0) with better accuracy than his -0.78 on the 720 (which reads accuracy ~0.3 low, saving ~0.6
   high). The final adapter is what bida scores. Seed 1 training on GPU 1 (the confirmation); full test after it, with
   the user's OK. GPU 2: newtop instr2 (his instruction sources) started.
+- ~22:05: BOTH runtimes disconnected again. Before: GPU 1 bidax5q seed 1 at step 150/337 (checkpoint every 10 steps,
+  dpo.py resumes from the last one); GPU 2 newtop instr2 DONE (michal-bida's instruction sources: 2,000 questions x4,
+  mean solve 65%, always 1,016 / sometimes 528 / never 456: harder than our pool's instructions), then code2 had built
+  33,401 usable KodCode-V1 candidates (1,747 dropped as already used) and was answering. Waiting for the user's OK.
