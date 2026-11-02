@@ -289,13 +289,13 @@
 # user, 1 Nov ~11:00: the gap to michal-bida is no-fit (his tools ~45% no-fit, +6.0; ours -5). Up to 2,000 NEW no-fit
 # questions (Glaive, Haiku-verified, hard + verified files, none already in the pool), answered x10 by the original Qwen;
 # then the exact michal-bida recipe on pool + them; final + steps on the 720
-newtop --name nofit3 --nt-sources glaive_nofit_hard,glaive_nofit_verified --nt-parts bfcl_irrelevance --tt-questions 2000 --data-seed 101
-lupin --name lpc-bidax3 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit3 --lp-answers-pool dp10
-rescreen --name rs-bidax3 --cx-names lpc-bidax3 --cx-steps 100 200 300 0 --seeds 0
+# done: newtop --name nofit3 --nt-sources glaive_nofit_hard,glaive_nofit_verified --nt-parts bfcl_irrelevance --tt-questions 2000 --data-seed 101
+# done: lupin --name lpc-bidax3 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit3 --lp-answers-pool dp10
+# done: rescreen --name rs-bidax3 --cx-names lpc-bidax3 --cx-steps 100 200 300 0 --seeds 0
 # user, 1 Nov ~15:50: the same move for math: ~2,000 harder math questions (standard GSM8K in SVAMP wording +
 # MetaMath SV/FOBAR rewrites; none already in the pool), answered x10; then the michal-bida recipe with the own no-fit
 # set (nofit4) AND these added -> compare with lpc-bidax4 (no-fit only)
-newtop --name math1 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-questions 2000 --data-seed 121
+# done: newtop --name math1 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-questions 2000 --data-seed 121
 # stopped (user, 1 Nov): lupin --name lpc-bidax5 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1 --lp-add-q nofit4,math1 --lp-answers-pool dp10
 # stopped (user, 1 Nov): rescreen --name rs-bidax5 --cx-names lpc-bidax5 --cx-steps 100 200 300 0 --seeds 0
 # 1 Nov ~21:20, user: bidax5 STOPPED before training (math1 under bida's rule = ~660 "cut more" pairs exactly in the
@@ -314,11 +314,11 @@ newtop --name math1 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-que
 # 520 steps, not bidax4's ~333 (and the 600-step check showed the schedule alone moves code/tools a lot). lpc-bidax5s =
 # the SAME pairs at 25 per step: (8,308 - 48 held out) / 25 = ~331 steps, bidax4's schedule step for step.
 # dropped (user, 2 Nov): lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
-rescreen --name rs-bidax5s --cx-names lpc-bidax5s --cx-steps 100 200 300 0 --seeds 0
+# done: rescreen --name rs-bidax5s --cx-names lpc-bidax5s --cx-steps 100 200 300 0 --seeds 0
 # 2 Nov (user): lpc-bidax6 = bidax4's data and pairs, trained with michal-bida's EXACT settings (dpo.py --bida-exact:
 # float32 base + float16 autocast with a loss scaler, warm-up 5% of steps then cosine to 0, pairs > 8,704 tokens
 # skipped, no held-out pairs). Tells whether our gap to his 47.0 / -0.78 is the training settings or the data.
-lupin --name lpc-bidax6 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-exact
+# done: lupin --name lpc-bidax6 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-exact
 rescreen --name rs-bidax6 --cx-names lpc-bidax6 --cx-steps 100 200 300 0 --seeds 0
 # 2 Nov (user): the clean test of bida's harder math questions: lpc-bidax5p = bidax4's plain recipe + math1 + math2
 # (GSM8K / MetaMath, his sources) added, NO band rule, NO don't-over-cut pairs, one pass held to ~333 steps (bidax4's

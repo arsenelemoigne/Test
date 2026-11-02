@@ -304,23 +304,23 @@
 # stopped (user, 1 Nov): rescreen --name rs-bidax5-s1 --cx-names lpc-bidax5 --cx-steps 0 --seeds 1
 # 1 Nov ~21:20: bidax5 stopped (see plan_line_a). More math questions in case the gate needs them: 2,000 new
 # GSM8K/MetaMath questions x10 on the original (math2), then bidax4 on its 470-905 band (om2). The 600-step check after.
-newtop --name math2 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-questions 2000 --data-seed 122
-onpolicy --name om2 --op-from math2 --op-adapter lpc-bidax4-s0 --op-band 470,905 --op-samples 4
+# done: newtop --name math2 --nt-sources gsm8k_std,metamath_sv --nt-parts svamp --tt-questions 2000 --data-seed 122
+# done: onpolicy --name om2 --op-from math2 --op-adapter lpc-bidax4-s0 --op-band 470,905 --op-samples 4
 # 1 Nov ~22:30: om1 gave 319 trained + 50 natural overcut pairs (math1 alone, short of the 500 gate); om2 adds the rest.
 # lpc-bidax5m = bidax4's recipe + math1 + math2, svamp 470-905 band: no shorten pairs, + don't-over-cut pairs (om1, om2).
 # The lupin stage refuses to train under 500 trained overcut pairs.
-lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500
+# done: lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500
 # 2 Nov (user): the exact michal-bida copy on our data (lpc-bidax2 seed 0 FINAL, 720: +51.8 / -2.7) on the FULL test,
 # to tell whether our gap to his 47.0 / -0.78 is the data or the 720 measurement
-fullsoup --name full-bidax2 --cx-names lpc-bidax2 --cx-steps 0 --seeds 0
+# done: fullsoup --name full-bidax2 --cx-names lpc-bidax2 --cx-steps 0 --seeds 0
 # 2 Nov: stretched-schedule reference only, final scored
-rescreen --name rs-bidax5m --cx-names lpc-bidax5m --cx-steps 0 --seeds 0
+# done: rescreen --name rs-bidax5m --cx-names lpc-bidax5m --cx-steps 0 --seeds 0
 # 2 Nov (user): per-type spill-over study. One adapter per type AND subtype, each trained ALONE on its own pairs from
 # lpc-bidax5s's pair set (math fix + own no-fit, bida 1:1), bidax4 settings, 2 seeds. Every soup (2 seeds averaged) is
 # scored on the whole 720: its own type's cut + the spill-over on the 5 others. Then dial mixes of the 6 soups.
 # 2 Nov ~11:30: math LEFT OUT for now: bidax5m and bidax5s both made math think LONGER than the original (the
 # don't-over-cut pairs mix two models' texts); the math adapter waits for fixed math pairs.
-typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance
+# done: typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts mbpp,ifeval,bfcl_simple_python,bfcl_multiple,bfcl_irrelevance
 rescreen --name rs-lpt6 --cx-names lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
 rescreen --name rs-lpt6-mid --cx-names lpt6-mbpp lpt6-ifeval --cx-steps 50 --seeds 0 1
 # 2 Nov ~15:40 (user): the per-type study again with michal-bida's settings (bidax6 cut less and lost far less than
