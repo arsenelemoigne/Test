@@ -3824,3 +3824,11 @@ own answers file (it would have overwritten the 10-answer one).
   multiple 41.9/-1.12, no-fit 46.1/+6.04).
 - ~03:20 (user): full test of the exact bida copy, lpc-bidax2 seed 0 final (720: +51.8 / -2.7), queued on GPU 1 after
   bidax5m's training (fullsoup step 0 = the final adapter, now supported).
+- ~03:40 (user): michal-bida's train_dpo_offline.py read for settings. Same as ours: DPO beta 0.1, LoRA r32 alpha 64
+  dropout 0 on all 7 projections, AdamW 2e-5 no weight decay, 16 pairs/step, 1 epoch, final model. Different: float32
+  base + float16 autocast + GradScaler (ours: bfloat16 base and autocast, LoRA weights float32), warm-up steps//20 and
+  cosine to 0 (ours: 10 steps, to 2e-6), pairs over 8,704 tokens skipped (ours 9,000), no held-out pairs (ours 48).
+  His Db pairs: 5,862 (wrong pairs 941 code / 724 ifeval / 696 math / 570 tools, long pairs capped to match). His own
+  caveat: Db was designed after seeing D's scores on the same questions ("slightly optimistic").
+  dpo.py --bida-exact = all of those; lpc-bidax6 = bidax4's pairs with --bida-exact, GPU 2 after bidax5s seed 0's
+  screen. Not tested locally (no torch/peft on the Mac): the first GPU steps are the test.

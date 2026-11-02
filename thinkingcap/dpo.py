@@ -35,6 +35,8 @@ def main():
     torch.manual_seed(args.seed)
     rng = random.Random(args.seed)
     rows = [json.loads(l) for l in Path(args.pairs).read_text().splitlines() if l.strip()]
+    if args.bida_exact:  # michal-bida's train_dpo_offline.py (2 Nov): his pair-length cap, no held-out pairs, cosine to 0
+        args.max_len, args.held_out, args.lr_schedule, args.lr_min = 8704, 0, "cosine", 0.0
     rows = [r for r in rows if len(r["prompt_ids"]) + max(len(r["chosen_ids"]), len(r["rejected_ids"])) <= args.max_len]
     if args.mix != "all":
         rows = mix(rows, [float(x) for x in args.mix.split(",")], rng)
@@ -52,10 +54,15 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
+    # --bida-exact: the base model in float32, float16 autocast with a loss scaler, as michal-bida trains
+    load_dtype = torch.float32 if args.bida_exact else dtype
+    if args.bida_exact and device == "cuda":
+        dtype = torch.float16
+    scaler = torch.amp.GradScaler("cuda") if args.bida_exact and device == "cuda" else None
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     close = tokenizer.convert_tokens_to_ids("</think>")
     ends = {tokenizer.convert_tokens_to_ids("<|im_end|>"), tokenizer.convert_tokens_to_ids("<|endoftext|>")}
-    model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to(device)
+    model = AutoModelForCausalLM.from_pretrained(args.model, dtype=load_dtype).to(device)
     model.gradient_checkpointing_enable()
     model.enable_input_require_grads()
     model = PeftModel.from_pretrained(model, args.init_adapter, is_trainable=True)
@@ -150,11 +157,19 @@ def main():
             check_nll = -logps(c["prompt_ids"], c["target_ids"], True) / len(c["target_ids"])
             loss = loss + args.checker_weight * check_nll
             check_stats.append(float(check_nll))
-        (loss / args.batch).backward()
+        (scaler.scale(loss / args.batch) if scaler else loss / args.batch).backward()
         stats.append((float(loss), float(margin) > 0))
         if position % args.batch == 0 or position == len(order):  # the last, partial batch too
+            if scaler:
+                scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
-            if args.lr_schedule == "cosine":  # warm-up, then cosine down to --lr-min at the last step (30 Oct build spec)
+            if args.bida_exact:  # transformers' get_cosine_schedule_with_warmup(warm-up = steps // 20), his schedule
+                warm = max(1, steps // 20)
+                lr = args.lr * (step / warm if step < warm else
+                                max(0.0, 0.5 * (1 + math.cos(math.pi * (step - warm) / max(1, steps - warm)))))
+                for group in optimizer.param_groups:
+                    group["lr"] = lr
+            elif args.lr_schedule == "cosine":  # warm-up, then cosine down to --lr-min at the last step (30 Oct build spec)
                 if step < args.warmup:
                     lr = args.lr * (step + 1) / args.warmup
                 else:
@@ -162,7 +177,11 @@ def main():
                         1 + math.cos(math.pi * (step - args.warmup) / max(1, steps - 1 - args.warmup)))
                 for group in optimizer.param_groups:
                     group["lr"] = lr
-            optimizer.step()
+            if scaler:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
             optimizer.zero_grad(set_to_none=True)
             step += 1
             if step % args.log_every == 0:
@@ -229,6 +248,9 @@ def parse_arguments():
     parser.add_argument("--tripwire", type=float, default=0.2)
     parser.add_argument("--max-len", type=int, default=9000)
     parser.add_argument("--dtype", default="bfloat16")
+    parser.add_argument("--bida-exact", action="store_true",
+                        help="michal-bida's training settings: float32 base + float16 autocast with a loss scaler, cosine "
+                             "warm-up 5%% of steps then down to 0, pairs over 8,704 tokens skipped, no held-out pairs")
     parser.add_argument("--seed", type=int, default=0)
     return parser.parse_args()
 
