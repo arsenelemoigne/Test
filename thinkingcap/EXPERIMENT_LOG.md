@@ -4066,3 +4066,6 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
 - 3 Nov ~00:40: lpc-bidax5q SEED 1 step 100: +42.8 / -1.9 (svamp +52/-3.7, mbpp +40/-1.9, ifeval +39/-1.5, simple
   +36/-2.7, multiple +40/+0.6, no-fit +41/+1.0): on the curve (-0.2), vs seed 0 step 100 +41.8 / +0.2 (+1.7). Seed
   spread at step 100 ~2 pts of accuracy; steps 200/300/final decide. code2 answering: 300/1,500 done (~1 h per chunk).
+- ~00:45: bidax5q SEED 1 step 200: +51.8 / -1.9 (svamp +62/-5.2, mbpp +48/-0.2, ifeval +51/-1.9, simple +40/-2.3,
+  multiple +43/+0.4, no-fit +47/+1.0): +1.3 vs the curve (seed 0 step 200: +48.5 / -0.9, +1.7). Both seeds clear the
+  1-point bar at step 200; seed 1 cuts ~3 pts more and loses ~1 more (math -5.2). Steps 300 / final next.
