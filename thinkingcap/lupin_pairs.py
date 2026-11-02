@@ -16,6 +16,15 @@ Recipes (--recipe), each from the literature pass of 27 Oct (EXPERIMENT_LOG):
                 the widest pair of each kind per question, the narrowest --margin-drop share of each kind dropped.
     adar1       Ada-R1 (2504.21659): shortest right > each of the 2 longest answers of any outcome.
     rightwrong  only similar-length right > wrong pairs (within --right-band).
+    four        (2 Nov, user) four separate signals, so that only one of them pushes length:
+                  loop    the shortest right answer > a capped / unclosed one (the original's answers): "don't loop";
+                  right   a right answer > a FINISHED wrong one by the SAME model (original, or --trained), the longer one
+                          winning about half the time: "be right" with no length push;
+                  shorten shortest right > longest right (>= --long-ratio), only on questions solved >= --four-min-solve,
+                          per part at most --four-dose x its right pairs: "think less", the dose;
+                  enough  a --trained right answer > its OWN shorter finished wrong answer (thinks < --enough-ratio x):
+                          "think enough", both sides by the trained model.
+                Kinds for dpo.py's --mix: loop -> guard, right -> right, shorten -> shorten, enough -> hard.
 Modifiers, any recipe:
     --min-solve P   difficulty rule (user, 27 Oct; ALP 2506.05256 / DAST budget / Difficulty-Aware DLER): on questions
                     solved >= P of the time the recipe runs as usual ("be shorter"); below P the question gets NO length
@@ -32,12 +41,18 @@ Modifiers, any recipe:
                     median-length right answer (kind guard, tagged overcut; added after the shorten cap). The original's
                     own answers give the same pair where one of its wrong answers is that short ("natural" cases).
 Never-solved questions give no pair except hard (DAST); always-solved ones no guard / right pair.
+Filters, any recipe: --drop-pattern REGEX drops questions whose text or functions match (2 Nov: ToolACE rows where
+"file" became "string" inside words, "LinkedIn prostring"); --tool-near R drops BFCL pairs whose two answers (after the
+thinking) are more than R alike (a free-text value differs, e.g. "km" vs "kilometers": BFCL accepts several values, our
+references hold one).
 
     python lupin_pairs.py --rollouts runs/bon/probe-ans-dp1/rollouts.jsonl --recipe long2short --out runs/bon/pairs-L0
 """
 
 import argparse
+import difflib
 import json
+import re
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -69,7 +84,13 @@ def similar(a, b):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--rollouts", nargs="+", required=True)
-    parser.add_argument("--recipe", required=True, choices=("long2short", "dast", "adar1", "rightwrong"))
+    parser.add_argument("--recipe", required=True, choices=("long2short", "dast", "adar1", "rightwrong", "four"))
+    parser.add_argument("--trained", nargs="*", default=[], help="four: a trained model's answers to the same questions")
+    parser.add_argument("--four-min-solve", type=float, default=0.8)
+    parser.add_argument("--four-dose", type=float, default=1.0)
+    parser.add_argument("--enough-ratio", type=float, default=0.8)
+    parser.add_argument("--drop-pattern", default="")
+    parser.add_argument("--tool-near", type=float, default=0.0)
     parser.add_argument("--long-ratio", type=float, default=1.5)
     parser.add_argument("--margin-drop", type=float, default=0.15)
     parser.add_argument("--right-band", type=float, default=0.25)
@@ -100,9 +121,19 @@ def main():
     args = parser.parse_args()
     rng = random.Random(args.seed)
     groups = defaultdict(list)
+    drop = re.compile(args.drop_pattern) if args.drop_pattern else None
+    dropped_q = set()
     for path in args.rollouts:
         for r in read(path):
+            if drop and drop.search(r.get("question", "") + json.dumps(r.get("function", ""))):
+                dropped_q.add(r["id"])
+                continue
             groups[r["id"]].append(r)
+    trained_by_q = defaultdict(list)
+    for path in args.trained:
+        for r in read(path):
+            if r["id"] in groups:
+                trained_by_q[r["id"]].append(r)
 
     pairs, counts = [], Counter()
     band_part, band_lo, band_hi = (args.band.split(":") + ["", "0", "0"])[:3] if args.band else ("", 0, 0)
@@ -122,14 +153,59 @@ def main():
     right_parts = set(x for x in args.right_parts.split(",") if x)
     median_parts = dict((k, float(v)) for k, v in (x.split("=") for x in args.median_shorten_part.split(",") if x))
 
-    def add(kind, chosen, rejected, q):
+    def answer_ids(r):
+        return r["output_ids"][len(r.get("thinking_ids") or []):]
+
+    def add(kind, chosen, rejected, q, signal=None):
+        if args.tool_near and part_of(q[0]).startswith("bfcl") and kind != "shorten" and difflib.SequenceMatcher(
+                None, answer_ids(chosen), answer_ids(rejected), autojunk=False).ratio() > args.tool_near:
+            counts[(part_of(q[0]), "dropped: answers nearly alike")] += 1
+            return
+        if signal:
+            counts[(part_of(q[0]), f"signal {signal}")] += 1
         pairs.append({"id": q[0]["id"], "source": q[0]["source"], "part": part_of(q[0]), "kind": kind,
                       "prompt_ids": chosen["prompt_ids"], "chosen_ids": chosen["output_ids"],
                       "rejected_ids": rejected["output_ids"],
                       "margin": abs(len(rejected["output_ids"]) - len(chosen["output_ids"])) /
                                 max(len(chosen["output_ids"]), len(rejected["output_ids"]))})
 
+    balance = Counter()  # four/right: how often the longer answer won so far
+
+    def right_pair(answers, q):
+        """four: one right > finished-wrong pair from ONE model's answers, the longer side winning about half the time."""
+        rs = [r for r in answers if right(r)]
+        ws = [w for w in answers if finished(w) and not right(w)]
+        if not rs or not ws:
+            return
+        longer = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rs for w in ws if r["output_tokens"] >= w["output_tokens"]]
+        shorter = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rs for w in ws if r["output_tokens"] < w["output_tokens"]]
+        want_longer = balance["longer"] <= balance["shorter"]
+        pool = (longer or shorter) if want_longer else (shorter or longer)
+        _, r, w = min(pool, key=lambda x: x[0])
+        balance["longer" if r["output_tokens"] >= w["output_tokens"] else "shorter"] += 1
+        add("right", r, w, q, "right")
+
     for q in groups.values():
+        if args.recipe == "four":
+            rights = sorted((r for r in q if right(r)), key=lambda r: r["output_tokens"])
+            loops = [r for r in q if not finished(r)]
+            if rights and loops:
+                add("guard", rights[0], max(loops, key=lambda r: r["output_tokens"]), q, "loop")
+            right_pair(q, q)
+            mine = trained_by_q.get(q[0]["id"], [])
+            right_pair(mine, q)
+            p = len(rights) / len(q)
+            if p >= args.four_min_solve and len(rights) > 1 and rights[-1]["output_tokens"] >= args.long_ratio * rights[0]["output_tokens"]:
+                add("shorten", rights[0], rights[-1], q, "shorten")
+            t_rights = sorted((r for r in mine if right(r)), key=lambda r: len(r.get("thinking_ids") or r["output_ids"]))
+            t_wrongs = sorted((w for w in mine if finished(w) and not right(w)), key=lambda r: len(r.get("thinking_ids") or r["output_ids"]))
+            if t_rights and t_wrongs:
+                w = t_wrongs[0]
+                tw = len(w.get("thinking_ids") or w["output_ids"])
+                longer = [r for r in t_rights if tw < args.enough_ratio * len(r.get("thinking_ids") or r["output_ids"])]
+                if longer:
+                    add("hard", longer[(len(longer) - 1) // 2], w, q, "enough")
+            continue
         rights = sorted((r for r in q if right(r)), key=lambda r: r["output_tokens"])
         wrongs = [r for r in q if not right(r)]  # wrong, capped or unclosed: all score as wrong
         p = len(rights) / len(q)
@@ -190,6 +266,19 @@ def main():
             counts[(part, "shorten capped from")] = len(short)
             kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
         pairs = kept
+    if args.recipe == "four":  # the dose: per part, shorten pairs at most --four-dose x its "be right" pairs
+        kept = []
+        for part in {p["part"] for p in pairs}:
+            mine = [p for p in pairs if p["part"] == part]
+            short = [p for p in mine if p["kind"] == "shorten"]
+            rng.shuffle(short)
+            limit = round(args.four_dose * sum(p["kind"] == "right" for p in mine))
+            counts[(part, "shorten before the dose")] = len(short)
+            kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
+        pairs = kept
+        counts[("all", "right pairs: longer won / shorter won")] = f"{balance['longer']} / {balance['shorter']}"
+    if dropped_q:
+        counts[("all", "questions dropped by --drop-pattern")] = len(dropped_q)
     if args.band:  # "don't over-cut": a too-short wrong answer loses to a normal right one
         for q in groups.values():
             if not in_band(q):

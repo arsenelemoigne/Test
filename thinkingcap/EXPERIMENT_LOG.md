@@ -3946,3 +3946,23 @@ ifeval_bida (his instruction sources) and kodcode_full (his code selection); bui
   larger math loss; lpc-bidax5q (his math sources on his settings) tests it. Pending results: bidax6 final (re-running
   after the disconnect), lpt6 per-type screens, bidax5q. Open user decisions: math fix option A; on-policy round from
   bidax6 (when, and what gives way).
+- ~18:40 (user): analysis of the "four signals" critique (checked against our files): right-beats-wrong pairs push
+  shorter too (shortest right vs longest wrong; math1 band 175 of 216); the original's mistakes are not the trained
+  model's (too short); mixed-model "think enough" pairs failed. Tool references hold ONE accepted value per argument
+  ("km" vs "kilometers" can lose). IFEval langdetect coin-flip claim REFUTED: the official grader sets
+  DetectorFactory.seed = 0. "prostring" bug CONFIRMED: 99 ToolACE rows in dp13 contain prostring / stringname /
+  stringName ("file" -> "string" inside words; not from our type clean-up, which renames types only; source not yet traced).
+  Built: lupin_pairs.py --recipe four (loop -> guard kind, length-balanced same-model right, shorten only on >= 80%
+  solved with a per-part dose, think-enough from --trained answers -> hard kind), --drop-pattern, --tool-near (BFCL pairs
+  whose answers are > R alike dropped). Local test on math1 (original x4 + bidax4 x4 as stand-in): 1,865 pairs; right
+  863 (longer won 428 / 863), loop 143, shorten 680, enough 179 (winner 319 / loser 205 tokens).
+  track.py polans (a trained adapter answers the whole pool, half per runtime), --lp-trained (waits for both halves),
+  rescreen --cx-scale (the strength dial), fullmodel --fm-screen-only.
+  Queued: GPU 1 polans pa6-a (bidax6 x8 on half of dp13 + nofit4) -> lpc-bidax8 (four signals, from bidax6, bida
+  settings, 339 steps, --tool-near 0.9, prostring dropped) -> 720 at 100/200/300/final -> bidax6 dial 0.5 / 0.75 ->
+  re-score on the 720: drpo3d-23, drpo3f-15, stopB3-soup-25, lpw-2stage step 50 -> lpc-bidax6s. GPU 2 adds polans
+  pa6-b after bidax5q. lpt6b paused. The fair stop re-test is not built yet (after the main bet).
+  YARDSTICK: reference curve = quadratic fit to the 43 Screen-720 points above 15% saved: acc = -0.388 + 0.0899 s -
+  0.0028 s^2 (about 0 at 20%, -1.3 at 40%, -2.35 at 47%, -2.9 at 50%). Distance above the curve: per-type merge mid
+  +1.3, bidax5s final +1.1, Run A2 +0.8/+0.9, per-type soft +0.7, bida copy +0.5, bidax6 step 300 +0.5. michal-bida's
+  own 47.0 / -0.78 is +1.6 above it (about +1.3 after the 720's bias). Column "vs curve" added to the Model Tree.

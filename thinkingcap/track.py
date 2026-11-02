@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -237,6 +237,7 @@ def main():
     parser.add_argument("--cc-dose", type=float, default=0.2, help="codecut: share of the code pairs swapped for cut pairs")
     parser.add_argument("--cx-names", nargs="*", default=[], help="crosscheck: confirmed runs (their --seeds are averaged)")
     parser.add_argument("--cx-steps", type=int, nargs="*", default=[], help="crosscheck: soup steps")
+    parser.add_argument("--cx-scale", type=float, nargs="*", default=[1.0], help="rescreen: merge strengths (the dial)")
     parser.add_argument("--rs-model", default="", help="refsets: the model answering (default: the original Qwen)")
     parser.add_argument("--rs-tag", default="base", help="refsets: run name tag (runs/mvtf/v4-<tag>-<seed>)")
     parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
@@ -281,6 +282,8 @@ def main():
     parser.add_argument("--op-band", default="470,905", help="onpolicy: original-Qwen mean thinking band, tokens")
     parser.add_argument("--op-samples", type=int, default=4, help="onpolicy: answers per question")
     parser.add_argument("--lp-band", default="", help="lupin: lupin_pairs.py --band, e.g. svamp:470:905")
+    parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
+    parser.add_argument("--lp-trained", default="", help="lupin: onpolicy/polans run names (comma-separated): lupin_pairs.py --trained")
     parser.add_argument("--lp-min-overcut", type=int, default=0, help="lupin: gate, at least this many trained overcut pairs or no training")
     parser.add_argument("--lp-overcut", default="", help="lupin: onpolicy run names, comma-separated: their answers are lupin_pairs.py --overcut")
     parser.add_argument("--lp-reset-seeds", nargs="*", type=int, default=[], help="lupin: delete these seeds' adapters (local and Drive) and train them again")
@@ -2652,22 +2655,23 @@ def rescreen(args):
     """Score saved checkpoints on the matched screen set x4 (questions_screen720) against s4-base: one seed = that
     checkpoint, several seeds = their soup. For re-reading earlier screens and choosing steps on less noise."""
     drive_sync("restore", only=[SCREEN, str(ROOT / "s4-base")])
-    for name in args.cx_names:
-        for step in args.cx_steps:
-            # step 0 = the FINAL adapter, as trained to the end (michal-bida scores only that one)
+    for name, step, scale in [(n, s, x) for n in args.cx_names for s in args.cx_steps for x in args.cx_scale]:
+        if True:  # (one level of the old nested loop kept, so the body below is unchanged)
+            # step 0 = the FINAL adapter, as trained to the end (michal-bida scores only that one); --cx-scale < 1 = the
+            # strength dial (2 Nov yardstick: one training traced as a curve, merge weight 0.5 / 0.75 / 1.0)
             members = [Path("adapters") / f"{name}-s{seed}" / (f"step-{step}" if step else "") for seed in args.seeds]
             drive_sync("restore", only=[str(Path("adapters") / f"{name}-s{seed}") for seed in args.seeds])
             members = [m for m in members if (m / "adapter_config.json").exists()]
             if len(members) < len(args.seeds):
                 print(f"rescreen: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
                 continue
-            tag = f"{name}-{'s' + str(args.seeds[0]) if len(members) == 1 else 'soup'}-{step or 'final'}"
+            tag = f"{name}-{'s' + str(args.seeds[0]) if len(members) == 1 else 'soup'}-{step or 'final'}" + (f"-x{scale:g}" if scale != 1 else "")
             out = ROOT / f"s4-{tag}"
             drive_sync("restore", only=[str(out)])
             if not (out / "results.json").exists():
                 model = Path("/content/lupin-models") / tag
                 py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
-                   *[f"{m}:{1 / len(members):.6f}" for m in members])
+                   *[f"{m}:{scale / len(members):.6f}" for m in members])
                 evaluate(out, samples=4, questions=SCREEN, model=model)
                 shutil.rmtree(model, ignore_errors=True)
                 drive_sync("save")
@@ -2685,9 +2689,10 @@ def fullmodel(args):
         assert (Path(model) / "config.json").exists(), f"{model} not found"
         out, screen = ROOT / f"full-{name}", ROOT / f"s4-{name}"
         drive_sync("restore", only=[str(out), str(screen)])
-        evaluate(out, samples=8, questions="questions", model=model)
-        drive_sync("save")
-        print(score_line(f"{name} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
+        if not args.fm_screen_only:
+            evaluate(out, samples=8, questions="questions", model=model)
+            drive_sync("save")
+            print(score_line(f"{name} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
         evaluate(screen, samples=4, questions=SCREEN, model=model)
         drive_sync("save")
         print(score_line(f"{name} (screen 720 x 4)", screen, base=ROOT / "s4-base"), flush=True)
@@ -3106,6 +3111,34 @@ def typeonly(args):
                 drive_sync("save")
 
 
+def polans(args):
+    """On-policy answers on the WHOLE training pool (2 Nov, user: the on-policy round): adapters/<--op-adapter> answers
+    every question of data/pool-<--lp-pool>.jsonl plus the --lp-add-q top-ups, --op-samples times (seed 47), half the
+    questions per runtime (--dp-step a / b) -> runs/bon/onp-<name>-<half>/rollouts.jsonl. lupin_pairs.py --recipe four
+    takes them as --trained (lupin --lp-trained <name>-a,<name>-b)."""
+    name, adapter = args.name, Path("adapters") / args.op_adapter
+    out = BON / f"onp-{name}-{args.dp_step}"
+    pool = Path(f"data/pool-{args.lp_pool}.jsonl")
+    extras = [BON / f"tooltop-{x}" for x in args.lp_add_q.split(",") if x]
+    drive_sync("restore", only=[str(out), str(adapter), str(pool), *[str(e) for e in extras]])
+    if (out / "rollouts.jsonl").exists():
+        print(f"polans {name}-{args.dp_step}: done", flush=True)
+        return
+    rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+    for e in extras:
+        rows += [json.loads(l) for l in (e / "questions.jsonl").read_text().splitlines() if l.strip()]
+    parity = 0 if args.dp_step == "a" else 1
+    data = Path(f"data/polans-{name}-{args.dp_step}.jsonl")
+    data.write_text("".join(json.dumps(r) + "\n" for k, r in enumerate(rows) if k % 2 == parity))
+    n = sum(1 for _ in open(data))
+    print(f"polans {name}-{args.dp_step}: {n} questions x{args.op_samples} by {adapter}", flush=True)
+    py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
+       "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000,
+       "--samples", args.op_samples, "--model", "Qwen/Qwen3-0.6B", "--adapter", adapter, "--out", out, "--dtype", args.dtype,
+       "--generate-only", "--chunk", 300, "--max-questions", n, "--seed", 47)
+    drive_sync("save")
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -3256,19 +3289,25 @@ def lupin(args):
         drive_sync("save")
     raw, pairs = BON / f"pairs-{name}-raw", BON / f"pairs-{name}"
     drive_sync("restore", only=[str(raw), str(pairs)])  # the SAME pair files as before a lost runtime (31 Oct)
-    for x in filter(None, args.lp_overcut.split(",")):
-        drive_sync("restore", only=[str(BON / f"onp-{x}")])
+    for x in filter(None, (args.lp_overcut + "," + args.lp_trained).split(",")):
+        for _ in range(288):  # the other runtime may still be answering its half: wait up to 24 h
+            drive_sync("restore", only=[str(BON / f"onp-{x}")])
+            if (BON / f"onp-{x}" / "rollouts.jsonl").exists():
+                break
+            print(f"lupin {name}: waiting for onp-{x} on Drive", flush=True)
+            time.sleep(300)
         assert (BON / f"onp-{x}" / "rollouts.jsonl").exists(), f"onp-{x} is not on Drive"
     if not (raw / "pairs.jsonl").exists():
         py("lupin_pairs.py", "--rollouts", allfile, "--recipe", args.lp_recipe, "--out", raw,
-           *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.split(),
+           *(["--min-solve", args.lp_min_solve] if args.lp_min_solve else []), *args.lp_extra.replace(",", " ").split(),
            *(["--easy-ratio", args.lp_easy_ratio] if args.lp_easy_ratio else []),
            *(["--shorten-cap", args.lp_shorten_cap] if args.lp_shorten_cap != 1.0 else []),
            *(["--min-solve-part", args.lp_min_solve_part] if args.lp_min_solve_part else []),
            *(["--right-parts", args.lp_right_parts] if args.lp_right_parts else []),
            *(["--median-shorten-part", args.lp_median_part] if args.lp_median_part else []),
            *(["--band", args.lp_band] if args.lp_band else []),
-           *(["--overcut", *[BON / f"onp-{x}" / "rollouts.jsonl" for x in args.lp_overcut.split(",")]] if args.lp_overcut else []))
+           *(["--overcut", *[BON / f"onp-{x}" / "rollouts.jsonl" for x in args.lp_overcut.split(",")]] if args.lp_overcut else []),
+           *(["--trained", *[BON / f"onp-{x}" / "rollouts.jsonl" for x in args.lp_trained.split(",")]] if args.lp_trained else []))
     if args.lp_min_overcut:  # 1 Nov (user): the math data is checked BEFORE any training
         got = sum(int(l.rsplit(":", 1)[1]) for l in (raw / "summary.txt").read_text().splitlines() if "overcut (trained)" in l)
         print(f"lupin {name}: {got} trained overcut pairs (gate {args.lp_min_overcut})", flush=True)
@@ -4393,7 +4432,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",
