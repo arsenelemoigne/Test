@@ -4048,3 +4048,6 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   (bidax6 = settings only: 41.7 / -1.0; bidax5m/s = our math fix: math rambled).
   drpo3f-15 re-scored: +26.5 / +0.1 (on the curve, +0.1). GPU 1 DISCONNECTED (Reconnect) during the re-scores; waiting
   for the user's OK.
+- ~18:45: lpc-bidax5q step 300 +47.9 / -1.5 (svamp +60/-4.8, mbpp +38/-1.7, ifeval +47/-0.6, simple +41/-1.2, multiple
+  +44/+1.5, no-fit +47/+3.5): +1.0 vs the curve; step 200 (+48.5 / -0.9, +1.7) stays its best point. Final screening.
+  GPU 1 still disconnected (waiting for the user).
