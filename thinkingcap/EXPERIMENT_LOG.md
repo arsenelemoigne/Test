@@ -3822,3 +3822,5 @@ own answers file (it would have overwritten the 10-answer one).
   Db = train_dpo_offline.py samples/domains.graded.jsonl --balance, scored with the official 8-sample full evaluation
   (reports/compare_Db-s8.txt: 47.0 / -0.78; svamp 56.4/-2.41, mbpp 33.0/-1.22, ifeval 54.7/-0.28, simple 35.3/-1.41,
   multiple 41.9/-1.12, no-fit 46.1/+6.04).
+- ~03:20 (user): full test of the exact bida copy, lpc-bidax2 seed 0 final (720: +51.8 / -2.7), queued on GPU 1 after
+  bidax5m's training (fullsoup step 0 = the final adapter, now supported).

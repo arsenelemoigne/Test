@@ -2709,8 +2709,9 @@ def fullsoup(args):
     drive_sync("save")
     for name in args.cx_names:
         for step in args.cx_steps:
-            members = [Path("adapters") / f"{name}-s{seed}" / f"step-{step}" for seed in args.seeds]
-            drive_sync("restore", only=[str(m.parent) for m in members])
+            # step 0 = the FINAL adapter (michal-bida scores only that one), as in rescreen
+            members = [Path("adapters") / f"{name}-s{seed}" / (f"step-{step}" if step else "") for seed in args.seeds]
+            drive_sync("restore", only=[str(Path("adapters") / f"{name}-s{seed}") for seed in args.seeds])
             members = [m for m in members if (m / "adapter_config.json").exists()]
             if len(members) < len(args.seeds):
                 print(f"fullsoup: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
