@@ -327,7 +327,7 @@ rescreen --name rs-bidax6 --cx-names lpc-bidax6 --cx-steps 100 200 300 0 --seeds
 lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax5q --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 0
 # 2 Nov (user): the on-policy round's half b (half a + lpc-bidax8 on GPU 1)
-polans --name pa6 --op-adapter lpc-bidax6-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4 --dp-step b
+# paused (user, 2 Nov: wait for the bida rounds first): polans --name pa6 --op-adapter lpc-bidax6-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4 --dp-step b
 # 2 Nov ~16:30 (user): instructions and code, the two types bida cuts 8 pts more. His sources, his selection:
 # instr2 = allenai/IF_multi_constraints_upto5 + allenai/RLVR-IFeval (prepare_types ifeval_bida; ours were argilla
 # ifeval-like + built); code2 = all of KodCode-V1 Filter/Prefill/Leetcode/Evol easy+medium, questions <= 700 chars

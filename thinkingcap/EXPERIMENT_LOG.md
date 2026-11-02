@@ -3966,3 +3966,5 @@ ifeval_bida (his instruction sources) and kodcode_full (his code selection); bui
   0.0028 s^2 (about 0 at 20%, -1.3 at 40%, -2.35 at 47%, -2.9 at 50%). Distance above the curve: per-type merge mid
   +1.3, bidax5s final +1.1, Run A2 +0.8/+0.9, per-type soft +0.7, bida copy +0.5, bidax6 step 300 +0.5. michal-bida's
   own 47.0 / -0.78 is +1.6 above it (about +1.3 after the 720's bias). Column "vs curve" added to the Model Tree.
+- ~19:00 (user): the on-policy round (polans pa6 a/b + lpc-bidax8) PAUSED until the bida rounds report (bidax6 final,
+  bidax5q, bidax7, bidax6p/6s); then choose its starting model. Everything stays built and queued as comments.

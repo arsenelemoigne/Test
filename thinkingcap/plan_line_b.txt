@@ -333,9 +333,9 @@ rescreen --name rs-lpt6-mid --cx-names lpt6-mbpp lpt6-ifeval --cx-steps 50 --see
 # don't loop / be right length-balanced, same model / shorten dose on >= 80% solved / think enough = bidax6's right >
 # its own shorter wrong), from bidax6 (policy and reference), his settings, ~339 steps; prostring rows dropped; tool pairs
 # whose answers are > 90% alike dropped.
-polans --name pa6 --op-adapter lpc-bidax6-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4 --dp-step a
-lupin --name lpc-bidax8 --lp-recipe four --lp-min-solve 0 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-trained pa6-a,pa6-b --lp-init adapters/lpc-bidax6-s0 --lp-extra=--drop-pattern=prostring|stringname|stringName,--tool-near=0.9 --lp-dpo=--bida-exact,--target-steps=339
-rescreen --name rs-bidax8 --cx-names lpc-bidax8 --cx-steps 100 200 300 0 --seeds 0
+# paused (user, 2 Nov: wait for the bida rounds first): polans --name pa6 --op-adapter lpc-bidax6-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4 --dp-step a
+# paused (user, 2 Nov: wait for the bida rounds first): lupin --name lpc-bidax8 --lp-recipe four --lp-min-solve 0 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-trained pa6-a,pa6-b --lp-init adapters/lpc-bidax6-s0 --lp-extra=--drop-pattern=prostring|stringname|stringName,--tool-near=0.9 --lp-dpo=--bida-exact,--target-steps=339
+# paused (user, 2 Nov: wait for the bida rounds first): rescreen --name rs-bidax8 --cx-names lpc-bidax8 --cx-steps 100 200 300 0 --seeds 0
 # the yardstick's dial: bidax6 final at 0.5 / 0.75 strength (1.0 = its normal screen)
 rescreen --name rs-bidax6-dial --cx-names lpc-bidax6 --cx-steps 0 --cx-scale 0.5 0.75 --seeds 0
 # old runs re-scored on the 720 (they were measured on the small tilted sets)
