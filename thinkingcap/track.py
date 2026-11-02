@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -3069,6 +3069,40 @@ def onpolicy(args):
     drive_sync("save")
 
 
+TYPE_PARTS = ("svamp", "mbpp", "ifeval", "bfcl_simple_python", "bfcl_multiple", "bfcl_irrelevance")
+
+
+def typeonly(args):
+    """One adapter per type AND subtype (user, 2 Nov: "build per type data only shorten and hold accuracy, see how much
+    it spills over"): from --cc-base's pairs (runs/bon/pairs-<cc_base>), each of the 6 parts trained alone on its own
+    pairs, bidax4's settings (cosine, no NLL, 16 pairs/step, 1 pass), --seeds each, adapters/<name>-<part>-s<seed>.
+    Scored afterwards with rescreen --cx-names <name>-<part> (every part's score = its own effect + its spill-over)."""
+    base = BON / f"pairs-{args.cc_base}"
+    drive_sync("restore", only=[str(base)])
+    rows = [json.loads(l) for l in (base / "pairs.jsonl").read_text().splitlines() if l.strip()]
+    for part in TYPE_PARTS:
+        mine = [r for r in rows if r["part"] == part]
+        pairs = BON / f"pairs-{args.name}-{part}"
+        drive_sync("restore", only=[str(pairs)])
+        if not (pairs / "pairs.jsonl").exists():
+            pairs.mkdir(parents=True, exist_ok=True)
+            (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in mine))
+        counts = [sum(r["kind"] == k for r in mine) for k in ("shorten", "guard", "hard", "right")]
+        print(f"typeonly {args.name}: {part} {len(mine)} pairs (shorten {counts[0]}, guard {counts[1]})", flush=True)
+        start = Path("adapters") / f"fresh-{args.name}-{part}"
+        drive_sync("restore", only=[str(start)] + [str(Path("adapters") / f"{args.name}-{part}-s{s}") for s in args.seeds])
+        if not (start / "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
+        for seed in args.seeds:
+            adapter = Path("adapters") / f"{args.name}-{part}-s{seed}"
+            if not (adapter / "adapter_config.json").exists():
+                py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start,
+                   "--out", adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts),
+                   "--save-every", 10, "--epochs", 1, "--dtype", args.dtype, "--seed", seed, "--nll", 0.0,
+                   "--lr-schedule", "cosine")
+                drive_sync("save")
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -4356,7 +4390,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -315,4 +315,10 @@ lupin --name lpc-bidax5m --lp-min-solve 0 --lp-recipe long2short --lp-no-match -
 fullsoup --name full-bidax2 --cx-names lpc-bidax2 --cx-steps 0 --seeds 0
 # 2 Nov: stretched-schedule reference only, final scored
 rescreen --name rs-bidax5m --cx-names lpc-bidax5m --cx-steps 0 --seeds 0
+# 2 Nov (user): per-type spill-over study. One adapter per type AND subtype, each trained ALONE on its own pairs from
+# lpc-bidax5s's pair set (math fix + own no-fit, bida 1:1), bidax4 settings, 2 seeds. Every soup (2 seeds averaged) is
+# scored on the whole 720: its own type's cut + the spill-over on the 5 others. Then dial mixes of the 6 soups.
+typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1
+rescreen --name rs-lpt6 --cx-names lpt6-svamp lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
+rescreen --name rs-lpt6-mid --cx-names lpt6-svamp lpt6-mbpp lpt6-ifeval --cx-steps 50 --seeds 0 1
 end

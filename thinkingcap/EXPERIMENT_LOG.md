@@ -3838,3 +3838,9 @@ own answers file (it would have overwritten the 10-answer one).
   Visuals (user): only models trained on the current data (dp13 + top-ups) and scored on the 720 set or the full test
   are shown. Removed: l2s50e (older dp10 pool) and the Fresh 240 set from "Where We Shaved"; "ThinkingCap Model
   Tree" rebuilt as a per-type table of those models only (older rounds, measured on small tilted sets, dropped).
+- ~04:20 (user): per-type spill-over study queued on GPU 1 after its current queue. track.py typeonly: 6 adapters (math,
+  code, instructions, tools one function / several / no-fit), each trained ALONE on its own part of lpc-bidax5s's pairs
+  (svamp 3,897, mbpp 1,772, ifeval 1,362, simple 458, multiple 348, no-fit 520), bidax4 settings, seeds 0 and 1. Each
+  2-seed soup scored on the whole 720 (final; step 50 too for the three big parts): own cut + spill-over on the other
+  five. Next: per-type length-band breakdowns, then dial mixes of the 6 soups. Earlier evidence of spill-over: Run A2
+  (no math / no-fit shorten pairs) still cut math and no-fit 33%; the old 4-adapter sum at full strength 77% / -9.2.
