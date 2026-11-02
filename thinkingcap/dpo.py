@@ -50,6 +50,8 @@ def main():
         print(f"checker practice: {len(checks)} examples, one every {args.checker_every} pairs, weight {args.checker_weight}",
               flush=True)
     held_out, rows = rows[:args.held_out], rows[args.held_out:]
+    if args.target_steps:  # 2 Nov: keep a set step count (bidax4's ~333) whatever the pair count, so the schedule matches
+        args.batch = max(1, math.ceil(len(rows) * args.epochs / args.target_steps))
     print(f"training on {len(rows)} pairs, {len(held_out)} held out", flush=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -240,6 +242,7 @@ def parse_arguments():
     parser.add_argument("--warmup", type=int, default=10, help="cosine: linear warm-up steps")
     parser.add_argument("--lr-min", type=float, default=2e-6, help="cosine: learning rate at the last step")
     parser.add_argument("--batch", type=int, default=16, help="pairs per optimizer step")
+    parser.add_argument("--target-steps", type=int, default=0, help="pairs per step set so one pass takes this many steps")
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=0, help="stop early (0: the whole epoch)")
     parser.add_argument("--save-every", type=int, default=25)

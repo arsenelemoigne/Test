@@ -320,6 +320,11 @@ rescreen --name rs-bidax5s --cx-names lpc-bidax5s --cx-steps 100 200 300 0 --see
 # skipped, no held-out pairs). Tells whether our gap to his 47.0 / -0.78 is the training settings or the data.
 lupin --name lpc-bidax6 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-exact
 rescreen --name rs-bidax6 --cx-names lpc-bidax6 --cx-steps 100 200 300 0 --seeds 0
+# 2 Nov (user): the clean test of bida's harder math questions: lpc-bidax5p = bidax4's plain recipe + math1 + math2
+# (GSM8K / MetaMath, his sources) added, NO band rule, NO don't-over-cut pairs, one pass held to ~333 steps (bidax4's
+# schedule; --target-steps sets the pairs per step).
+lupin --name lpc-bidax5p --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--target-steps=333
+rescreen --name rs-bidax5p --cx-names lpc-bidax5p --cx-steps 100 200 300 0 --seeds 0
 lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
 rescreen --name rs-bidax5s-s1 --cx-names lpc-bidax5s --cx-steps 0 --seeds 1
 end

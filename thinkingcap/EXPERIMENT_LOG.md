@@ -3873,3 +3873,7 @@ own answers file (it would have overwritten the 10-answer one).
   +36/-2.5, multiple +40/+2.5, no-fit +42/+3.3). Math stays ~22-36% LONGER than the original but accurate; the other
   types are healthy (no-fit +3.3 is our best no-fit yet on bidax4's schedule). On the curve overall (~24% / +1.3), not
   above it. lpc-bidax6 (bida-exact) training on GPU 2: 339 steps of 16 (no held-out). GPU 1: typeonly code done-ish.
+- ~15:00 (user): queued lpc-bidax5p on GPU 2 after bidax6's screens: bidax4's plain bida recipe + math1 + math2 (GSM8K /
+  MetaMath, michal-bida's math sources) added, no band rule, no don't-over-cut pairs, one pass held at ~333 steps
+  (dpo.py --target-steps: pairs per step set from the pair count). The clean test of whether his harder, more numerous
+  math questions are what keeps his math at -2.4. (Was the original lpc-bidax5, stopped 1 Nov before training.)
