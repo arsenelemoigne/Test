@@ -3854,3 +3854,11 @@ own answers file (it would have overwritten the 10-answer one).
   47.0 / -0.78 is real, not our measurement: his recipe on our data loses 2.2 pts more at 4 pts more saving; math
   (-6.0 vs his -2.4) and no-fit (-3.5 vs +6.0) carry most of it. Left to test: settings (bidax6) and data (bidax5s).
   bidax5s at step 230/333.
+- ~10:30: lpc-bidax5m s0 FINAL (math fix data, stretched 520-step schedule) on the 720: +11.3 / -3.6. svamp -56% (thinks
+  56% LONGER) / -19.2; mbpp +1/+4.6; ifeval +38/-0.8; simple +31/-6.0; multiple +35/-1.3; no-fit +41/+10.2. Math from
+  the records: mean thinking 1,053 (original 685, bidax4 232), capped 4.6% (hardest fifth 22%), and LESS accurate at
+  every length fifth (86/84/75/62/46% vs original 99/99/93/95/65): longer AND worse, not "longer and right". Tools show
+  the same refusal pattern as the 600-step check (no-fit up, one-function down): the stretched schedule's signature.
+  Likely cause on math: the don't-over-cut pairs mix two models (winner = original Qwen text, loser = bidax4 text), so
+  DPO can learn "write like the original, not like bidax4" instead of "think enough"; with no copying term this pulled
+  math back past the original into rambling. bidax5s (same data, bidax4 schedule) will separate schedule from data.
