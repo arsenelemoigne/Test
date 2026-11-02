@@ -3940,3 +3940,9 @@ ifeval_bida (his instruction sources) and kodcode_full (his code selection); bui
 - ~16:50 (user): bidax5s seed 1 dropped. Queued the one-change tests on bidax4's pairs: lpc-bidax6p = his precision only
   (dpo.py --bida-precision) at the end of GPU 2's queue; lpc-bidax6s = his schedule only (--bida-schedule: warm-up
   steps//20, cosine to 0) at the end of GPU 1's. Both 720 at 100/200/300/final vs bidax4 (ours) and bidax6 (all four).
+- ~17:30: DATASET.md written (sources, selection, answers, pair rules, counts, settings, decoded example pairs per type).
+  Found while writing it: our dp13 math is mostly EASY (of 2,999: metamath_easy 1,865 + gsm8k_easy 420 = 1-2 calculation
+  problems; metamath_sv 473; gsm8k_matched 241); michal-bida's math is GSM8K + MetaMath at all difficulties. Fits our
+  larger math loss; lpc-bidax5q (his math sources on his settings) tests it. Pending results: bidax6 final (re-running
+  after the disconnect), lpt6 per-type screens, bidax5q. Open user decisions: math fix option A; on-policy round from
+  bidax6 (when, and what gives way).
