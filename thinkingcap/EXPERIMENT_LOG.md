@@ -4018,3 +4018,15 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   math and no-fit. Dial-mixing per-type adapters would only mix general pushes. lpt6b and the step-50 screens dropped.
   Effort goes to: michal-bida's settings (bidax6), his data (bidax5q tonight, bidax7 tomorrow), then the on-policy
   four-signal round (its same-model be-right pairs for every type are the protection this showed is needed).
+- ~16:40: per-type no-fit only: +11.9 / -1.9 (no-fit +36/+11.7 but multiple +17/-16.6, simple +18/-20.6: it learned to
+  refuse calls; spill on math/code/ifeval small). Per-type study complete; direction dropped (see 16:00).
+- RL SMOKE TEST tp0 (thinkprune, from the original, 5 steps x 16 questions x 8 answers, lr 5e-6, KL 1e-3): ran clean,
+  6.6 min for the 5 steps (~80 s per 128-answer step incl. loading). Caps (original's right answers; share of questions
+  right > half the time that keep a right answer under the cap): math 1,147 tokens 99%; code 1,022 84%; instructions
+  528 84%; tools one fn 171 89%, several 196 91%, none fits 223 88%. Per step: batch accuracy 62-84%, thinking 302-415
+  tokens, entropy 0.47-0.58 (stable), only 6-9 of 16 questions had both right and wrong answers (the rest teach
+  nothing: dynamic sampling needed). "Gradients will be None" warning checked: the step-5 LoRA's B matrices are all
+  non-zero (196/196, norm ~0.002), so the adapter trains.
+  Sizing: the planned 64 x 16 = 1,024 answers per step would be ~8-10 min per step, ~45-50 h for 300 steps per run.
+  32 x 8 with dynamic sampling (draw 2x, keep informative groups) ~3-4 min per step, ~15-20 h per run incl. the 720
+  every 40 steps. Decision (size, start model, which GPU) pending with the user.
