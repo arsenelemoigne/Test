@@ -152,8 +152,9 @@ def mine(args, tok, part_of):
             if r.get("truncated") and repeat_share(thinking) >= args.min_repeat:
                 s = loop_start(thinking)
                 if s is not None and s >= args.branch and s + args.branch <= len(thinking):
+                    # the last --context tokens before the loop (the start of an 8k-token answer adds read time, not signal)
                     loops.append({"id": qid, "part": part_of(rows[qid]), "prompt_ids": r["prompt_ids"],
-                                  "prefix": thinking[:s], "loop": thinking[s:s + args.branch]})
+                                  "prefix": thinking[max(0, s - args.context):s], "loop": thinking[s:s + args.branch]})
             elif r.get("correct") and not r.get("truncated") and close_id in ids:
                 normal.append({"id": qid, "part": part_of(rows[qid]), "prompt_ids": r["prompt_ids"], "output_ids": ids})
     rng.shuffle(loops)
@@ -535,6 +536,7 @@ def main():
     p.add_argument("--phases", default="mine,probe,mech,gen")
     p.add_argument("--min-repeat", type=float, default=0.3)
     p.add_argument("--branch", type=int, default=48)
+    p.add_argument("--context", type=int, default=1536, help="thinking tokens kept before the loop")
     p.add_argument("--alternatives", type=int, default=8)
     p.add_argument("--min-novelty", type=float, default=0.8)
     p.add_argument("--pairs", type=int, default=600)
@@ -548,7 +550,7 @@ def main():
     p.add_argument("--layers", type=int, default=2)
     p.add_argument("--columns", type=int, default=64)
     p.add_argument("--doses", type=float, nargs="+", default=[1, 2, 4, 6])
-    p.add_argument("--check-pairs", type=int, default=200)
+    p.add_argument("--check-pairs", type=int, default=150)
     p.add_argument("--check-normal", type=int, default=150)
     p.add_argument("--normal-len", type=int, default=512)
     p.add_argument("--max-tokens", type=int, default=8192)

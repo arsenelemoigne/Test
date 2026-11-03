@@ -362,6 +362,10 @@ rescreen --name rs-push2 --cx-names lpd-push2 --cx-steps 100 200 0 --seeds 0
 thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # grB: 4x stronger penalty (up to 0.2)
 thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.2
+# 3 Nov ~12:00 (user): CHIRURGICAL inserted here (between grB and D1): replicate 'Sparks of Weight-Space
+# Programming' Exp 8 on the raw Qwen (loops: 2.3% of its 720 answers hold 22% of its thinking). Smoke, then the run.
+chirurgical --name chs0 --ch-smoke
+chirurgical --name ch1
 # D1 DAST (2503.04472): think less (shortest > longest right) + keep trying (longest > shortest wrong), weakest 15% dropped, no right>wrong
 lupin --name lpd-dast --lp-min-solve 0 --lp-recipe dast --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 0 --seeds 0
@@ -403,9 +407,4 @@ fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 
 rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
 lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
 rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
-# 3 Nov (user): CHIRURGICAL edits, after the DPO / GRPO screens: replicate 'Sparks of Weight-Space Programming' Exp 8
-# on the raw Qwen (loops: 2.3% of its 720 answers hold 22% of its thinking): copying heads + loop direction, checked,
-# paired dev generation, holdout, then the 720. Smoke first (tiny, every phase). v1 next, then a subtler habit.
-chirurgical --name chs0 --ch-smoke
-chirurgical --name ch1
 end
