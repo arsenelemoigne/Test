@@ -115,7 +115,7 @@ def parse_arguments():
     parser.add_argument("--sb-beta", type=float, default=0.005,
                         help="shorterbetter: per-token weight of |len - SOL| (paper 0.001 on 5-11k-token replies; ours are"
                              " ~5-10x shorter, so 0.005 keeps a similar pressure)")
-    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap"], default="shorter",
+    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen"], default="shorter",
                         help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
                              "standardized among the group's correct replies; wrong or cut off = 0")
     parser.add_argument("--adaptive", action="store_true",
@@ -123,6 +123,19 @@ def parse_arguments():
     parser.add_argument("--advantage", choices=["group", "batch"], default="group",
                         help="batch: reward minus the group mean, over the whole batch's spread (DLER), not each group's")
     parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
+    # --reward lenpen (3 Nov; khudgins' ThinkingCap reproduction): right = 1 - lam_t * min(1, thinking / --lp-norm), wrong = 0,
+    # + --format-bonus for a closed thinking block with an answer after it; lam_t ramps --lp-lam-start -> --lp-lam-max over
+    # --lp-ramp steps (counted with --offset); --lp-gate G (GRPO-lambda, 2505.18086): no length penalty in a group whose
+    # share of right answers is below G
+    parser.add_argument("--lp-lam-start", type=float, default=1e-3)
+    parser.add_argument("--lp-lam-max", type=float, default=5e-2)
+    parser.add_argument("--lp-ramp", type=int, default=300)
+    parser.add_argument("--lp-norm", type=int, default=2048)
+    parser.add_argument("--lp-gate", type=float, default=0.0)
+    parser.add_argument("--format-bonus", type=float, default=0.1)
+    parser.add_argument("--dr-grpo", action="store_true",
+                        help="Dr. GRPO (2503.20783): advantages not divided by the group's spread, and the loss divided by a "
+                             "constant (replies x --max-tokens) instead of the chunk's token count")
     parser.add_argument("--dynamic-sampling", type=float, default=0.0,
                         help="DLER's dynamic sampling: draw this many times --questions per step and train only on groups "
                              "with at least one right reply (an all-wrong group carries no correctness signal), keeping "
@@ -227,11 +240,14 @@ def split_groups(jobs, parts, rng):
     return [[j for g in order[i::parts] for j in g] for i in range(parts) if order[i::parts]]
 
 
-def group_advantages(rewards):
-    """GRPO: reward minus the group mean, over the group's standard deviation (0 if all equal)."""
+def group_advantages(rewards, scale=True):
+    """GRPO: reward minus the group mean, over the group's standard deviation (0 if all equal); scale=False (Dr. GRPO) keeps
+    the plain difference to the mean."""
     mean = sum(rewards) / len(rewards)
     spread = statistics.pstdev(rewards)
-    return [0.0 if spread < 1e-8 else (r - mean) / spread for r in rewards]
+    if spread < 1e-8:
+        return [0.0] * len(rewards)
+    return [(r - mean) / spread if scale else r - mean for r in rewards]
 
 
 def confidence_redundant(logps, thinking_len, quantile):
@@ -595,7 +611,15 @@ def main():
             questions, prompts, replies, grades = ([xs[k] for k in keep] for xs in (questions, prompts, replies, grades))
         groups = []
         for question, prompt, group, correct in zip(questions, prompts, replies, grades):
-            if args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
+            if args.reward == "lenpen":
+                lam = args.lp_lam_start + (args.lp_lam_max - args.lp_lam_start) * min(1.0, (args.offset + step) / max(1, args.lp_ramp))
+                if sum(correct) / len(correct) < args.lp_gate:
+                    lam = 0.0
+                think = [r.index(close_id) if close_id in r else len(r) for r in group]
+                formed = [close_id in r and len(r) > r.index(close_id) + 2 for r in group]
+                rewards = [(1.0 - lam * min(1.0, n / args.lp_norm) if ok else 0.0) + (args.format_bonus if fm else 0.0)
+                           for n, ok, fm in zip(think, correct, formed)]
+            elif args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
                 cap = int(question["cap"])
                 rewards = [1.0 if ok and len(r) < cap - 1 else 0.0 for r, ok in zip(group, correct)]  # cut at the cap = 0
             elif args.reward == "arora":
@@ -610,7 +634,7 @@ def main():
             skipped = [i >= len(group) - no_think for i in range(len(group))]
             rewards = [r + (args.no_think_bonus if ok and skip else 0.0)
                        for r, ok, skip in zip(rewards, correct, skipped)]
-            advantages = group_advantages(rewards) if args.advantage == "group" else None
+            advantages = group_advantages(rewards, scale=not args.dr_grpo) if args.advantage == "group" else None
             groups.append(rewards)
             stats["no_think_correct"] += sum(ok for ok, skip in zip(correct, skipped) if skip)
             stats["no_think_replies"] += sum(skipped)
@@ -671,6 +695,8 @@ def main():
         active = [j for j in jobs if j[1] and not (j[3] == 0 and not j[2])]
         for chunk in split_groups(active, args.updates, rng):
             total_tokens = max(1, sum(len(j[1]) for j in chunk))
+            if args.dr_grpo:  # a constant denominator: long wrong answers no longer get a smaller per-token push
+                total_tokens = max(1, len(chunk) * args.max_tokens)
             n_questions = max(1, len({id(j[5]) for j in chunk}))
             if args.objective == "drpo":
                 kl_sum, kl_terms = 0.0, []

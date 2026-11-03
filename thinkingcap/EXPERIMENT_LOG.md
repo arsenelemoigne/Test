@@ -4083,3 +4083,14 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   solved), lpc-b5cap2 (up to 2 shorten per guard). GPU 2: lpc-bidax7 widened to bidax5q + instr2 + code2 (all of his
   sources) after the code top-up. BottleCap's own ThinkingCap method is not public (third-party pages guess RL with a
   length-aware reward); their "collapse of self-trained LMs" paper warns about repeated self-training.
+- ~02:00 (user): three tasks. (1) a stronger v1 from pair techniques compared at equal accuracy (pending the user's
+  list); (2) GRPO from the raw Qwen to learn how it behaves vs DPO; (3) RL on v1 with the winning reward.
+  Built for (2): rl_train.py --reward lenpen (khudgins' ThinkingCap reproduction, read from github.com/khudgins/
+  ornith-thinking-cap: right = 1 - lam * min(1, thinking / 2048), wrong = 0, + 0.1 format bonus; lam ramps 1e-3 ->
+  lam_max), --lp-gate (GRPO-lambda: no length penalty where a group is right < G of the time), --dr-grpo (advantages not
+  divided by the group spread; loss divided by replies x max tokens). His settings: G 8, 12 prompts, lr 2e-6, KL 0.04,
+  temperature 0.9 (we keep the evaluation's sampling), LoRA r32 a64, 500-1000 steps. Papers: lr ~1e-6 typical at
+  0.5-1.5B full fine-tune (LoRA usually higher); KL 0 (TRL default, Dr. GRPO / DAPO) to 0.04; GRPO-lambda reports a
+  uniform length penalty losing accuracy after ~40 steps.
+  Queued: GPU 1 after bidax5q seed 1: gr0 smoke, grA (his recipe), grB (penalty up to 0.2); GPU 2 after bidax7: grC (no
+  KL), grD (gate 0.5). All from raw, 150 steps, the 720 at 50/100/150, ~4-4.5 h each.

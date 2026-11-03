@@ -345,6 +345,14 @@
 # 2 Nov ~19:10: bidax5q (seed 0: +1.7 above the curve at steps 100 and 200) needs a SECOND SEED before the full test.
 lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax5q-s1 --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 1
+# 3 Nov ~02:00 (user, task 2): GRPO from the RAW Qwen, khudgins' ThinkingCap reward (right = 1 - lam * thinking/2048,
+# wrong = 0, + 0.1 format bonus, lam ramped up), Dr. GRPO normalization, LoRA r32, 12 questions x 8 answers, lr 2e-6,
+# 150-step screens (lam ramp over 100 steps), the 720 at 50/100/150. A smoke test first. A/B here, C/D on GPU 2.
+thinkprune --name gr0 --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-lr 2e-6 --tp-dr-grpo --tp-smoke
+# grA: his recipe (leash 0.04, penalty up to 0.05)
+thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
+# grB: 4x stronger penalty (up to 0.2)
+thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.2
 # 3 Nov ~01:20 (user): get a really good v1 first: pair combinations on bidax5q's data, michal-bida's settings,
 # 339 steps each, 720 at 100/200/300/final; the yardstick decides.
 # lpc-b5four: four signals from the ORIGINAL's answers (loop / length-balanced be-right / shorten dose on >= 80% solved)

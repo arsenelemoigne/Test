@@ -292,6 +292,13 @@ def main():
     parser.add_argument("--tp-cap-other", type=float, default=0.70)
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
+    parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen"), help="thinkprune: rl_train.py --reward")
+    parser.add_argument("--tp-min-solve", type=float, default=0.5, help="thinkprune: questions the original gets right > this share")
+    parser.add_argument("--tp-rank", type=int, default=32)
+    parser.add_argument("--tp-lam-max", type=float, default=0.05)
+    parser.add_argument("--tp-ramp", type=int, default=300)
+    parser.add_argument("--tp-gate", type=float, default=0.0)
+    parser.add_argument("--tp-dr-grpo", action="store_true")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
     parser.add_argument("--lp-trained", default="", help="lupin: onpolicy/polans run names (comma-separated): lupin_pairs.py --trained")
     parser.add_argument("--lp-min-overcut", type=int, default=0, help="lupin: gate, at least this many trained overcut pairs or no training")
@@ -3178,7 +3185,7 @@ def thinkprune(args):
     caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
     eligible = defaultdict(list)
     for qid, got in by_q.items():
-        if qid in rows and sum(ok for ok, _ in got) / len(got) > 0.5:
+        if qid in rows and sum(ok for ok, _ in got) / len(got) > args.tp_min_solve:
             eligible[rows[qid]["part"]].append(qid)
     for part, ids in sorted(eligible.items()):
         lens = sorted(n for q in ids for ok, n in by_q[q] if ok)
@@ -3220,8 +3227,11 @@ def thinkprune(args):
             py("rl_train.py", "--model", base, "--data", data, "--sources", "all", "--out", ckpt,
                "--steps", 10 if not args.tp_smoke else steps, "--offset", done - (10 if not args.tp_smoke else steps),
                *(["--init-adapter", previous] if previous else []), "--questions", questions, "--group", group,
-               "--max-tokens", max(caps.values()), "--reward", "cap", "--advantage", "group", "--kl-coef", args.tp_kl,
-               "--grader", "typed", "--redundant", "none", "--lr", args.tp_lr, "--dtype", args.dtype)
+               "--max-tokens", max(caps.values()) if args.tp_reward == "cap" else 4096, "--reward", args.tp_reward,
+               "--advantage", "group", "--kl-coef", args.tp_kl, "--grader", "typed", "--redundant", "none", "--lr", args.tp_lr,
+               "--dtype", args.dtype, "--rank", args.tp_rank,
+               *(["--lp-lam-max", args.tp_lam_max, "--lp-ramp", args.tp_ramp, "--lp-gate", args.tp_gate]
+                 if args.tp_reward == "lenpen" else []), *(["--dr-grpo"] if args.tp_dr_grpo else []))
             print(f"thinkprune {name}: steps to {done} took {(time.time() - began) / 60:.1f} min", flush=True)
             drive_sync("save")
         print((ckpt / "rl_log.jsonl").read_text()[-3000:], flush=True)
