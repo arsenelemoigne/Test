@@ -398,7 +398,8 @@ def update(restart=True):
         print(f"clone at {got[:7]} but the branch is at {head[0][:7]}; retrying", flush=True)
         time.sleep(30)
     changed = False
-    for source in [*(clone / "thinkingcap").glob("*.py"), *(clone / "thinkingcap").glob("plan*.txt")]:
+    for source in [*(clone / "thinkingcap").glob("*.py"), *(clone / "thinkingcap").glob("plan*.txt"),
+                   *(clone / "thinkingcap").glob("astra_*.txt"), *(clone / "thinkingcap").glob("astra_*.md")]:  # Astra's prompts / card
         if not Path(source.name).exists() or not filecmp.cmp(source, source.name, shallow=False):
             shutil.copy(source, source.name)
             changed |= source.name == "track.py"
@@ -3435,7 +3436,7 @@ def astradata(args):
     raw_files = [BON / f for f in args.ad_raw.split(",") if f] or [BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"]
     v1_files = [BON / f"onp-{x}-{h}" / "rollouts.jsonl" for x in args.ad_v1.split(",") if x for h in "ab"]
     drive_sync("restore", only=[*map(str, raw_files), *[str(f.parent) for f in v1_files], "data/pool-dp13.jsonl",
-                                *[str(BON / f"tooltop-{x}") for x in extra]])
+                                *[str(BON / f"tooltop-{x}") for x in extra], SCREEN, str(ROOT / "s4-base")])
     rows = {}
     for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
         for line in f.read_text().splitlines():
@@ -3514,8 +3515,85 @@ def astradata(args):
             "adapter_config.json + adapter_model.safetensors, lora_A / lora_B per projection); a forward pass can run any of "
             "them with \"model\": \"checkpoint:step-N\" or \"checkpoint:final\".\n\n" + recipe)
         print(f"astradata {name}: v1 training: {len(decoded)} pairs, {len(steps)} checkpoints", flush=True)
+    card_stats(out, rows, holdout, raw_files, tok)
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
     drive_sync("save")
+
+
+def card_stats(out, rows, holdout, raw_files, tok):
+    """test_card.md for Astra (user, 4 Nov): the test described in detail WITHOUT its questions. Per test part, side by
+    side for the test (the 720 screen: the raw Qwen's 4 answers a question, s4-base) and for our training data (the raw
+    Qwen's answers to the practice questions): question length, the raw model's accuracy, the spread of per-question solve
+    rates (difficulty), the thinking-length distribution and the share cut at the limit. Only aggregates leave the test."""
+    import statistics
+    from build_pool import part_of
+
+    def q(xs, f):
+        xs = sorted(xs)
+        return xs[min(len(xs) - 1, int(f * len(xs)))] if xs else 0
+
+    def describe(qlen, groups):
+        right = [a for g in groups.values() for a in g]
+        rates = [sum(r for r, _, _ in g) / len(g) for g in groups.values() if g]
+        think = [t for _, t, _ in right]
+        return {"questions": len(groups), "q_len_p50": q(qlen, .5), "q_len_p90": q(qlen, .9),
+                "accuracy": round(100 * sum(r for r, _, _ in right) / max(1, len(right)), 1),
+                "always_right": round(100 * sum(x == 1 for x in rates) / max(1, len(rates))),
+                "sometimes": round(100 * sum(0 < x < 1 for x in rates) / max(1, len(rates))),
+                "never_right": round(100 * sum(x == 0 for x in rates) / max(1, len(rates))),
+                "think_p25": q(think, .25), "think_p50": q(think, .5), "think_p75": q(think, .75), "think_p90": q(think, .9),
+                "cut_pct": round(100 * sum(c for _, _, c in right) / max(1, len(right)), 1)}
+    close_id = tok.convert_tokens_to_ids("</think>")
+    stats = {"test": {}, "train": {}}
+    base = ROOT / "s4-base" / "records.jsonl"
+    qfile = Path(SCREEN) / "questions.jsonl"
+    if base.exists() and qfile.exists():
+        qrows = {}
+        for line in open(qfile):
+            r = json.loads(line)
+            qrows[r["id"]] = r
+        by = defaultdict(lambda: defaultdict(list))
+        for line in open(base):
+            r = json.loads(line)
+            ds = r["dataset"] if r["dataset"] != "bfcl" else r.get("subset", "bfcl")
+            think = int(r.get("reasoning_tokens") or 0)
+            by[ds][r["id"]].append((str(r["correct"]) == "True", think, str(r["truncated"]) == "True"))
+        for ds, groups in by.items():
+            qlen = [len(tok.encode(json.dumps(qrows[i].get("messages") or qrows[i].get("prompt") or qrows[i].get("question", "")),
+                                   add_special_tokens=False)) for i in groups if i in qrows]
+            stats["test"][ds] = describe(qlen, groups)
+    tby = defaultdict(lambda: defaultdict(list))
+    seen = set()
+    for f in raw_files:
+        covered = set(seen)
+        for line in open(f):
+            r = json.loads(line)
+            if r["id"] not in rows or r["id"] in holdout or r["id"] in covered:
+                continue
+            seen.add(r["id"])
+            ids_ = r["output_ids"]
+            tby[part_of(rows[r["id"]])][r["id"]].append((bool(r.get("correct")) and not r.get("truncated"),
+                                                        ids_.index(close_id) if close_id in ids_ else len(ids_), bool(r.get("truncated"))))
+    for part, groups in tby.items():
+        qlen = [len(tok.encode(json.dumps(rows[i]["prompt"]), add_special_tokens=False)) for i in groups]
+        stats["train"][part] = describe(qlen, groups)
+    (out / "card_stats.json").write_text(json.dumps(stats, indent=1))
+    cols = ["questions", "q_len_p50", "q_len_p90", "accuracy", "always_right", "sometimes", "never_right",
+            "think_p25", "think_p50", "think_p75", "think_p90", "cut_pct"]
+    lines = ["", "## The test vs our training data, in numbers (no question shown)",
+             "The raw Qwen3-0.6B on each. Test: the 720-question screen of the test (4 answers a question). Train: the raw",
+             "model's answers to the practice questions. q_len = question tokens; always / sometimes / never = % of questions",
+             "the raw model gets right in every / some / none of its answers (difficulty); think = thinking tokens per answer",
+             "(quantiles); cut = % of answers cut at the limit.", "",
+             "| part | set | " + " | ".join(cols) + " |", "|" + "---|" * (len(cols) + 2)]
+    for part in sorted(set(stats["test"]) | set(stats["train"])):
+        for which in ("test", "train"):
+            if part in stats[which]:
+                d = stats[which][part]
+                lines.append(f"| {part} | {which} | " + " | ".join(str(d[c]) for c in cols) + " |")
+    card = Path("astra_test_card.md").read_text() + "\n".join(lines) + "\n"
+    (out / "test_card.md").write_text(card)
+    print(f"astradata: test card with stats for {len(stats['test'])} test parts and {len(stats['train'])} training parts", flush=True)
 
 
 def wanda(args):

@@ -1,0 +1,25 @@
+
+
+RESEARCH MODE: YOU MAY ALSO TRAIN. Besides editing weights, you may run preference training (DPO) with the project's own training code, choosing everything from a fixed menu, with a budget of {TRAIN_HOURS} GPU-hours of training in total (used: {TRAIN_USED}). Your goal is the objective above: the final model (a trained one, an edited one, or a trained one you then edit) must think more than 50% fewer tokens than the RAW model at less than 1 point of accuracy lost against the RAW model.
+
+What you can read first, in {DATA}:
+- test_card.md: the test you will be scored on (composition, protocol, scoring, rules), without its questions;
+- history/history.jsonl: every training run the project already made, one line per scored checkpoint: the run's exact settings line, the training step, and its result per test part (tokens saved %, accuracy change in points) on a 720-question screen of the test. history/README.md explains the fields. Use it to learn what each setting does before spending your budget;
+- v1_training/: how v1 (today's best) was made: its recipe, its pairs and its checkpoints.
+
+The TRAIN tool. Reply with a ```forward block (it counts as one forward pass AND uses training hours):
+ {"type": "train", "name": "<short new name>", "start": "raw" or "v1", "recipe": one of {RECIPES},
+  "pairs": {pair options, any of: {PAIR_KEYS}},
+  "dpo": {training options, any of: {DPO_KEYS}}}
+It builds the pairs from the RAW model's own answers to the practice questions with the recipe and options you chose,
+trains a LoRA adapter with DPO (michal-bida's exact settings unless you change them), and replies with the pair counts
+by kind and part, the training log (loss and the share of pairs ordered right, every few steps) and the hours used. One
+pass over the pairs takes "target_steps" steps (at most 339; about 3 GPU-hours at 339, about 1 hour at 100). The model
+is then available as "trained:<name>" in every forward pass, and its checkpoints as "trained:<name>:step-N" (every 10
+steps). To compare two models on the same practice problems with the same seeds, use a generation pass with
+ {"type": "generate", "compare": ["<model a>", "<model b>"], "problems": [...], "n": 1}
+where a model is "original", "edited", "checkpoint:step-N" (v1's training), "trained:<name>" or "trained:<name>:step-N";
+it returns both models' accuracy, thinking and cut share by type and the paired difference b - a.
+Keep in mind: the test counts the four benchmarks equally; screen on enough problems of every type (the standard error
+of an accuracy difference is about 50/sqrt(n) points); a trained model that saves more but loses accuracy is a failure.
+A training request that fails (bad option, budget exceeded) does not count.

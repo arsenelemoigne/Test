@@ -204,6 +204,81 @@ def edited_model_dir(args):
     return out
 
 
+# The TRAIN tool's menu (user, 4 Nov: every knob we have; 15 GPU-hours): name -> (track.py lupin flag, type, allowed)
+RECIPES = ("long2short", "dast", "adar1", "rightwrong", "four", "simright")
+PAIR_MENU = {
+    "min_solve": ("--lp-min-solve", float, (0.0, 1.0)), "easy_ratio": ("--lp-easy-ratio", float, (0.0, 5.0)),
+    "shorten_cap": ("--lp-shorten-cap", float, (0.0, 5.0)), "answers": ("--lp-answers", int, (2, 10)),
+    "long_ratio": ("--long-ratio", float, (1.0, 5.0)), "add_hard": ("--add-hard", float, (0.0, 1.0)),
+    "add_right_below": ("--add-right-below", float, (0.0, 1.0)), "right_band": ("--right-band", float, (0.0, 1.0)),
+    "margin_drop": ("--margin-drop", float, (0.0, 0.9)), "drop_similar": ("--drop-similar", float, (0.0, 1.0)),
+    "budget": ("--budget", bool, None), "margin_any": ("--margin-any", bool, None), "add_right": ("--add-right", bool, None),
+}
+DPO_MENU = {
+    "target_steps": ("--target-steps", int, (10, 339)), "lr": ("--lp-lr", float, (1e-7, 1e-3)),
+    "beta": ("--lp-beta", float, (0.01, 2.0)), "nll": ("--lp-nll", float, (0.0, 5.0)),
+    "schedule": ("--lp-lr-schedule", str, ("cosine", "constant", "linear")), "bida_exact": (None, bool, None),
+}
+SECONDS_PER_STEP = 33.0  # bidax5q: 339 steps in ~3.1 h on an L4 (the budget check before a run)
+
+
+def lupin_command(req):
+    """The track.py lupin command for a train request (validated against the menu), its steps and adapter name."""
+    name = str(req.get("name", ""))
+    if not re.fullmatch(r"[a-z0-9]{2,16}", name):
+        raise ValueError('"name": 2-16 lowercase letters or digits')
+    recipe = req.get("recipe", "long2short")
+    if recipe not in RECIPES:
+        raise ValueError(f'"recipe" must be one of {RECIPES}')
+    start = req.get("start", "raw")
+    if start not in ("raw", "v1"):
+        raise ValueError('"start" must be "raw" or "v1"')
+    lupin, extra = [], []
+    for key, value in (req.get("pairs") or {}).items():
+        if key not in PAIR_MENU:
+            raise ValueError(f"unknown pair option {key!r}; allowed: {sorted(PAIR_MENU)}")
+        flag, kind, allowed = PAIR_MENU[key]
+        if kind is bool:
+            if value:
+                extra.append(flag)
+            continue
+        value = kind(value)
+        if allowed and not allowed[0] <= value <= allowed[1]:
+            raise ValueError(f"{key} must be in {allowed}")
+        (lupin if flag.startswith("--lp-") else extra).extend([flag, value])
+    dpo, steps, exact = [], 339, True
+    for key, value in (req.get("dpo") or {}).items():
+        if key not in DPO_MENU:
+            raise ValueError(f"unknown dpo option {key!r}; allowed: {sorted(DPO_MENU)}")
+        flag, kind, allowed = DPO_MENU[key]
+        if key == "bida_exact":
+            exact = bool(value)
+            continue
+        value = kind(value)
+        if (kind is str and value not in allowed) or (kind is not str and allowed and not allowed[0] <= value <= allowed[1]):
+            raise ValueError(f"{key} must be in {allowed}")
+        if key == "target_steps":
+            steps = value
+        else:
+            dpo.extend([flag, value])
+    cmd = ["lupin", "--name", f"astra-{name}", "--lp-recipe", recipe, "--lp-no-match", "--seeds", 0, "--lp-save", 10,
+           "--dpo-steps", 9999, "--lp-pool", "dp13", "--lp-extra-q", "nofit1,tools1,code1,nofit2,nofit4,math1,math2",
+           "--lp-add-q", "nofit4,math1,math2", "--lp-answers-pool", "dp10"]
+    for flag, default in (("--lp-min-solve", 0), ("--lp-answers", 4)):
+        if flag not in lupin:
+            cmd += [flag, default]
+    for flag, default in (("--lp-nll", 0), ("--lp-lr-schedule", "cosine")):
+        if flag not in dpo:
+            cmd += [flag, default]
+    cmd += lupin + dpo
+    if extra:
+        cmd.append("--lp-extra=" + ",".join(str(x) for x in extra))
+    cmd.append("--lp-dpo=" + ",".join((["--bida-exact"] if exact else []) + [f"--target-steps={steps}"]))
+    if start == "v1":
+        cmd += ["--lp-init", "adapters/lpc-bidax5q-s0"]
+    return [str(c) for c in cmd], steps, f"astra-{name}"
+
+
 def model_for(args, label):
     """The weights a forward pass runs: original (the start: raw or v1), edited (+ the kernel's edits), or
     checkpoint:<step-N|final> = one of v1's training checkpoints (data/v1_training/checkpoints), merged on the RAW Qwen."""
@@ -224,7 +299,23 @@ def model_for(args, label):
             PeftModel.from_pretrained(base, str(ck)).merge_and_unload().to(torch.bfloat16).save_pretrained(out)
             AutoTokenizer.from_pretrained(args.raw_model).save_pretrained(out)
         return str(out)
-    raise ValueError('"model" must be "original", "edited", "both" or "checkpoint:<step-N|final>"')
+    if label.startswith("trained:"):  # an adapter the TRAIN tool made (merged on the raw Qwen; a v1 start is in the adapter)
+        bits = label.split(":")
+        ad = Path(getattr(args, "repo", ".")) / "adapters" / f"astra-{bits[1]}-s0"
+        if len(bits) > 2:
+            ad = ad / bits[2]
+        if not (ad / "adapter_config.json").exists():
+            raise ValueError(f"no trained model {label}")
+        out = Path(args.scratch) / ("trained-" + "-".join(bits[1:]))
+        if not (out / "config.json").exists():
+            import torch
+            from peft import PeftModel
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            base = AutoModelForCausalLM.from_pretrained(args.raw_model, dtype=torch.float32)
+            PeftModel.from_pretrained(base, str(ad)).merge_and_unload().to(torch.bfloat16).save_pretrained(out)
+            AutoTokenizer.from_pretrained(args.raw_model).save_pretrained(out)
+        return str(out)
+    raise ValueError('"model" must be "original", "edited", "both", "checkpoint:<step-N|final>" or "trained:<name>[:step-N]"')
 
 
 def forward_main(args):
@@ -258,14 +349,18 @@ def run_generate(args, req, k, work):
         raise ValueError(f"unknown practice ids: {bad[:5]}")
     n = int(req.get("n", 1))
     which = req.get("model", "original")
-    limit = 256 if which == "both" else 512
+    if isinstance(req.get("compare"), list):
+        if len(req["compare"]) != 2:
+            raise ValueError('"compare" takes exactly two models')
+        which = "compare"
+    limit = 512 if which not in ("both", "compare") else 256
     if not items or len(items) * n > limit:
         raise ValueError(f"items x n must be 1..{limit}")
     cap = int(req.get("max_tokens", 8192))
     tok = AutoTokenizer.from_pretrained(str(args.model_dir))
     close_id = tok.convert_tokens_to_ids("</think>")
     eos = tok.convert_tokens_to_ids("<|im_end|>")
-    models = {"both": ["original", "edited"]}.get(which, [which])
+    models = {"both": ["original", "edited"], "compare": list(req.get("compare") or [])}.get(which, [which])
     results = {}
     for label in models:
         path = model_for(args, label)
@@ -297,7 +392,7 @@ def run_generate(args, req, k, work):
             fail = "right" if right else "cut_at_max_tokens" if cut else "no_finished_thinking" if close_id not in ids else "wrong_answer"
             recs.append({"id": p, "sample": s, "type": rows[p]["type"], "right": right, "thinking_tokens": think,
                          "tokens": len(ids), "cut": cut, "failure": fail, "text": text})
-        name = f"gen_{k}.jsonl" if which != "both" else f"gen_{k}_{label}.jsonl"
+        name = f"gen_{k}.jsonl" if which not in ("both", "compare") else f"gen_{k}_{label}.jsonl"
         name = name.replace(":", "-")
         (work / name).write_text("".join(json.dumps(r) + "\n" for r in recs))
         results[label] = recs
@@ -317,8 +412,8 @@ def run_generate(args, req, k, work):
                 "mean_tokens": round(statistics.fmean(r["tokens"] for r in recs), 1),
                 "cut_share": round(sum(r["cut"] for r in recs) / len(recs), 4), "failures": fails, "by_type": by}
     summary = {label: describe(recs) for label, recs in results.items()}
-    if which == "both":
-        a, b = results["original"], results["edited"]
+    if which in ("both", "compare"):
+        a, b = results[models[0]], results[models[1]]
         d = [int(y["right"]) - int(x["right"]) for x, y in zip(a, b)]
         mean = sum(d) / len(d)
         sd = statistics.pstdev(d) if len(d) > 1 else 0.0
@@ -327,8 +422,8 @@ def run_generate(args, req, k, work):
             "accuracy_diff_pp": round(100 * mean, 2), "se_pp": round(100 * sd / math.sqrt(len(d)), 2),
             "wrong_to_right": sum(x == 0 and y == 1 for x, y in zip([r["right"] for r in a], [r["right"] for r in b])),
             "right_to_wrong": sum(x == 1 and y == 0 for x, y in zip([r["right"] for r in a], [r["right"] for r in b])),
-            "thinking_saved_pct": round(100 * (1 - summary["edited"]["mean_thinking_tokens"] /
-                                               max(1e-9, summary["original"]["mean_thinking_tokens"])), 2),
+            "thinking_saved_pct": round(100 * (1 - summary[models[1]]["mean_thinking_tokens"] /
+                                               max(1e-9, summary[models[0]]["mean_thinking_tokens"])), 2),
             "thinking_saved_pct_on_answers_both_finished": round(100 * (1 - statistics.fmean(y["thinking_tokens"] for _, y in both_done) /
                                                                         max(1e-9, statistics.fmean(x["thinking_tokens"] for x, _ in both_done))), 2) if both_done else None}
     return summary
@@ -401,6 +496,12 @@ def task_prompt(args):
         extra = (Path(__file__).parent / "astra_prompt_data.txt").read_text()
         start = " (in this run you edit v1's weights, not these)" if args.goal == "on-top" else " (the weights you edit)"
         for k, v in {"{DATA}": args.data, "{PRACTICE}": args.practice, "{GOAL}": GOALS[args.goal], "{START_NOTE}": start}.items():
+            extra = extra.replace(k, str(v))
+        text += extra
+    if getattr(args, "train_hours", 0):
+        extra = (Path(__file__).parent / "astra_prompt_research.txt").read_text()
+        for k, v in {"{TRAIN_HOURS}": args.train_hours, "{TRAIN_USED}": "0 h at the start", "{DATA}": args.data,
+                     "{RECIPES}": list(RECIPES), "{PAIR_KEYS}": sorted(PAIR_MENU), "{DPO_KEYS}": sorted(DPO_MENU)}.items():
             extra = extra.replace(k, str(v))
         text += extra
     return text + note
@@ -652,7 +753,13 @@ def run_main(args, llm=None, forward=None):
             else:
                 k = st["passes"] + 1
                 try:
-                    summary = forward(json.loads(blocks[0][1]), k)
+                    req = json.loads(blocks[0][1])
+                    if req.get("type") == "train":
+                        if not getattr(args, "train_hours", 0):
+                            raise ValueError("training is not available in this session (weight edits only)")
+                        summary = run_train(args, req, st)
+                    else:
+                        summary = forward(req, k)
                     st["passes"] = k
                     reply = f"Forward pass {k}/{args.passes} done:\n" + json.dumps(summary, indent=1)[:getattr(args, "out_chars", 10000)]
                 except Exception as e:  # noqa: BLE001  (a failed request does not count)
@@ -729,6 +836,29 @@ def cpu_forward(args, request, k):
     return summary
 
 
+def run_train(args, request, st):
+    """A TRAIN request: track.py lupin with the validated options, timed against the GPU-hour budget."""
+    cmd, steps, adapter = lupin_command(request)
+    left = args.train_hours * 3600 - st.get("train_seconds", 0.0)
+    need = steps * SECONDS_PER_STEP
+    if need > left:
+        raise ValueError(f"not enough training budget: this run needs ~{need / 3600:.1f} h, {left / 3600:.1f} h left")
+    env = {k: v for k, v in os.environ.items() if "KEY" not in k and "TOKEN" not in k}
+    began = time.time()
+    p = subprocess.run([sys.executable, "track.py", *cmd], cwd=str(getattr(args, "repo", ".")), env=env,
+                       capture_output=True, text=True, timeout=8 * 3600)
+    st["train_seconds"] = st.get("train_seconds", 0.0) + (time.time() - began)
+    out = p.stdout + p.stderr
+    if p.returncode != 0:
+        raise RuntimeError("training failed: " + out[-1500:])
+    pairs = [l for l in out.splitlines() if re.match(r"\s*\d+ pairs, recipe|\s+\w+ / \w+: ", l)][:40]
+    log = [l for l in out.splitlines() if l.startswith("step ") and "pairs ordered right" in l]
+    return {"trained": adapter.replace("astra-", "trained:", 1), "steps": steps,
+            "hours_used_total": round(st["train_seconds"] / 3600, 2),
+            "hours_left": round(args.train_hours - st["train_seconds"] / 3600, 2),
+            "pairs": pairs, "training_log": log[::max(1, len(log) // 20)] + log[-1:]}
+
+
 def run_forward_process(args, request, k):
     if getattr(args, "cpu", False):
         return cpu_forward(args, request, k)
@@ -766,6 +896,8 @@ def main():
     p.add_argument("--handoff", type=int, default=60000, help="restart the conversation above this many context tokens")
     p.add_argument("--out-chars", type=int, default=10000, help="a code run's or a forward summary's output is cut here (the paper: 10,000)")
     p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--train-hours", type=float, default=0.0, help="research mode: the TRAIN tool's GPU-hour budget (0 = off)")
+    p.add_argument("--repo", default=".", help="where track.py and adapters/ live (the TRAIN tool)")
     p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))

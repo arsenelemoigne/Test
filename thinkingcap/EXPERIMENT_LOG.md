@@ -4436,3 +4436,16 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   parked at the end of GPU 1's queue). DPO screen rebalanced: GPU 1 = D1 dast (running), D2 hard, D3 route, D4 budget,
   D5 margin, D10 l2s50e (~26 h); GPU 2 = D9 adar1 (running), D7 st1 + 2stage, D8 math, D6 simright, bidax6p, re-scores,
   bidax6s (~27 h).
+- ~02:30 **Experiment B (Astra as training researcher) built but NOT scheduled** (user: keep A, decide B later): the
+  TRAIN tool (forward type "train": recipe + every pair option + DPO options from a validated menu -> track.py lupin; start
+  raw or v1; GPU-hour budget --train-hours, 15 h agreed; the result is "trained:<name>[:step-N]"), "compare" generation
+  (any two models paired: original / edited / checkpoint:step-N / trained:...), research prompt
+  (astra_prompt_research.txt). Menu validation tested (bad name, recipe, option, range refused). The run history for B
+  (every run's settings + results) is still to be built when B is chosen. User's honest question: B overlaps with asking
+  Claude to plan the strategy; its value is a second independent mind + a closed autonomous loop + a measurable result.
+- **Test card for Astra with numbers** (user: describe the test in detail, never show it): astradata now writes
+  test_card.md = astra_test_card.md (composition, protocol, scoring, rules, source -> part map, invented examples) + a
+  table per part, test (the 720 screen, raw Qwen x4) vs training data (raw answers): question length p50 / p90, accuracy,
+  % always / sometimes / never right, thinking p25 / p50 / p75 / p90, % cut. Aggregates only.
+- **Bug caught before any run:** the runner refreshed only *.py and plan*.txt each stage, so astra_prompt*.txt and the card
+  would have been missing on Colab (the Argon run would have crashed at start). It now also copies astra_*.txt and astra_*.md.
