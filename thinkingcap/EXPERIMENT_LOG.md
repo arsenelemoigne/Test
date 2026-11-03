@@ -4354,3 +4354,6 @@ identical harness, for the comparison. Driver: --provider google (Google's OpenA
 one test call answered 391; Argon's thinking tokens are only in total_tokens (223 vs 58 + 7) and billed as output, so the
 count takes output = total - prompt. Cap $15 counted. Key only via Colab Secrets GOOGLE_API_KEY (cell 5). Queued commented
 at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
+- ~13:40 **grC step 50** (GRPO, no leash: KL 0): **-0.3% / +0.4** (svamp +2 / -0.2, mbpp +3 / +3.5, ifeval -8 / -1.3, one
+  function -1 / +0.6, several +4 / -2.1, no fit -1 / -0.2). Like grA / grB at step 50: unchanged from the raw Qwen. Both
+  runtimes resumed after the ~12:40 reconnect (grA from step 50 on GPU 1, grC from its last block on GPU 2).
