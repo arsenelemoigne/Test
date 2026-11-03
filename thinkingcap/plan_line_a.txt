@@ -340,7 +340,7 @@
 # done: rescreen --name rs-bidax7 --cx-names lpc-bidax7 --cx-steps 100 200 300 0 --seeds 0
 # 3 Nov (user, task 2): GRPO screens C/D from the raw Qwen (A/B on GPU 1)
 # grC: no leash (KL 0)
-thinkprune --name grC --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0 --tp-lam-max 0.05
+# done: thinkprune --name grC --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0 --tp-lam-max 0.05
 # 3 Nov ~02:00 (user: only 2 GPUs on the account): the DPO pair screen (D1-D11, everything = bidax5q s0, only the pairs
 # change; 720 x4 at steps 100 / 200 / final) shares the two GPUs, alternating with the GRPO screens.
 # (GPU 2)
