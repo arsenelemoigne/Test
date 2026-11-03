@@ -383,15 +383,22 @@
 # D1 DAST (2503.04472): think less (shortest > longest right) + keep trying (longest > shortest wrong), weakest 15% dropped, no right>wrong
 lupin --name lpd-dast --lp-min-solve 0 --lp-recipe dast --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 0 --seeds 0
+# 4 Nov (user: let all the DPO runs finish before Astra): D2, D3, D4 back on GPU 1
+lupin --name lpd-hard --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.5 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-hard --cx-names lpd-hard --cx-steps 100 200 0 --seeds 0
+lupin --name lpd-route --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.75,--add-right-below,0.75 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-route --cx-names lpd-route --cx-steps 100 200 0 --seeds 0
+lupin --name lpd-budget --lp-min-solve 0 --lp-recipe long2short --lp-extra=--budget --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-budget --cx-names lpd-budget --cx-steps 100 200 0 --seeds 0
 # ===== 3 Nov ~24:00 (user): ASTRA (A) ON v1 NOW, with Gemini 4 Argon on the user's Google key, EUR 15 (cap $16) =====
 # v1 = lpc-bidax5q-s0 (best so far). 1) v1 answers every training question x4 (both halves here); 2) the data folder:
 # the raw Qwen's 10-answer file first, the 4-answer top-ups after, + v1's answers, our holdout removed; 3) Argon edits
 # v1's own weights (objective: > 50% fewer thinking tokens than the RAW model at < 1 point lost), 50 passes like the
 # paper's best run; 4) judged: paired holdout 512 + the 720 x4. The GPU 1 DPO runs moved to GPU 2 meanwhile.
-polans --name pv1 --op-adapter lpc-bidax5q-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step a
-polans --name pv1 --op-adapter lpc-bidax5q-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
-astradata --name dv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --ad-raw lupin-all-dp13-nofit1-tools1-code1-nofit2.jsonl,lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2-a4.jsonl --ad-v1 pv1 --ad-v1-train lpc-bidax5q --ad-v1-seed 0
-astra --name gv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --as-data dv1 --as-goal on-top --as-start lpc-bidax5q-s0 --as-provider google --as-llm gemini-4-argon --as-passes 50 --as-cap-usd 16 --as-extra=--handoff,872000
+# after ALL the DPO runs (user, 4 Nov): polans --name pv1 --op-adapter lpc-bidax5q-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step a
+# after ALL the DPO runs (user, 4 Nov): polans --name pv1 --op-adapter lpc-bidax5q-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
+# after ALL the DPO runs (user, 4 Nov): astradata --name dv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --ad-raw lupin-all-dp13-nofit1-tools1-code1-nofit2.jsonl,lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2-a4.jsonl --ad-v1 pv1 --ad-v1-train lpc-bidax5q --ad-v1-seed 0
+# after ALL the DPO runs (user, 4 Nov): astra --name gv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --as-data dv1 --as-goal on-top --as-start lpc-bidax5q-s0 --as-provider google --as-llm gemini-4-argon --as-passes 50 --as-cap-usd 16 --as-extra=--handoff,872000
 # grE: learning rate 5e-6 (2.5x; everything else = grA)
 # replaced (weak signal): thinkprune --name grE --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 5e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # 3 Nov ~15:45 (user): grE (lr x2.5, same weak penalty) replaced by grP: standard GRPO scaling + 10x penalty (0.5,
