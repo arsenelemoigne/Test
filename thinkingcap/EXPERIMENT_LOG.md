@@ -4284,3 +4284,7 @@ loops and pairs come from those fresh answers. Inserted on GPU 1 between grB and
 helpers, probe / candidates / mech on a tiny Qwen3, and mine's selection with a stand-in generator all pass.
 **~12:40 (user: "it's ok if it takes more time"):** sizes raised toward the paper's: 3,000 fresh practice answers, dev 512
 (paired SE ~+-1.8 pts), holdout 1,024 (the paper confirmed on 1,152), 200 held-out pairs and 400 normal answers for the checks.
+- ~11:25 **grB step 50** (GRPO, 4x length penalty: λ ramping to 0.2 over 100 steps, ~0.1 at step 50): **-2.0% / -0.5**
+  (thinks 2% LONGER; below the yardstick's range): svamp -2 / -1.0, mbpp 0 / +2.9, ifeval -8 / -2.5, one function +1 / -1.7,
+  several +4 / -0.6, no fit 0 / -1.5. Like grA at step 50 (+1.5 / -1.0): 50 GRPO steps at 12 questions x 8 answers move
+  nothing yet, even at 4x the penalty. Steps 100 / 150 next. GPU 2: grC at step 50, scoring.
