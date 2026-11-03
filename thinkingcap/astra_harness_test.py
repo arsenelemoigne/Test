@@ -24,7 +24,7 @@ def tiny_model(d):
 
 
 def make_args(tmp, **kw):
-    a = dict(out=str(tmp / "run"), work=str(tmp / "work"), model_dir=str(tmp / "model"), practice=str(tmp / "practice.jsonl"),
+    a = dict(provider="openrouter", worker="", out=str(tmp / "run"), work=str(tmp / "work"), model_dir=str(tmp / "model"), practice=str(tmp / "practice.jsonl"),
              practice_n=3, passes=2, code_runs=6, cap_usd=1.0, max_reply=1000, handoff=100000, timeout=60, scratch=str(tmp / "s"))
     a.update(kw)
     return SimpleNamespace(**a)
@@ -100,7 +100,14 @@ def test_key_is_never_passed_on():
     print("key ok: removed from the environment, never in a log or a reply")
 
 
+def test_token_cost():
+    assert abs(ah.token_cost({"prompt_tokens": 100000, "completion_tokens": 4000}) - (1.0 + 0.2)) < 1e-9
+    assert ah.token_cost({"prompt_tokens": 300000, "completion_tokens": 0}) == 300000 * 20e-6
+    print("token cost ok")
+
+
 if __name__ == "__main__":
+    test_token_cost()
     test_session()
     test_spending_stop()
     test_key_is_never_passed_on()

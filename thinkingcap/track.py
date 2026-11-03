@@ -306,6 +306,8 @@ def main():
     parser.add_argument("--as-extra", default="", help="astra: more astra_harness.py flags, comma-joined")
     parser.add_argument("--as-holdout", type=int, default=512, help="astra: our own paired check of the final edit")
     parser.add_argument("--as-smoke", action="store_true", help="astra: the GPU tools only (no API call, no key needed)")
+    parser.add_argument("--as-provider", default="openrouter", choices=("openrouter", "delos"))
+    parser.add_argument("--as-worker", default="", help="astra --as-provider delos: the worker id")
     parser.add_argument("--tp-lam-max", type=float, default=0.05)
     parser.add_argument("--tp-ramp", type=int, default=300)
     parser.add_argument("--tp-gate", type=float, default=0.0)
@@ -3308,8 +3310,9 @@ def astra(args):
     seeds) and the 720 x4 screen (s4-astra-NAME)."""
     import random
     name = args.name
-    if not os.environ.get("OPENROUTER_API_KEY") and not args.as_smoke:
-        print("astra: OPENROUTER_API_KEY is not set in this runtime (Colab Secrets + the key cell); skipped, nothing sent", flush=True)
+    key_var = {"openrouter": "OPENROUTER_API_KEY", "delos": "DELOS_API_KEY"}[args.as_provider]
+    if not os.environ.get(key_var) and not args.as_smoke:
+        print(f"astra: {key_var} is not set in this runtime (Colab Secrets + the key cell); skipped, nothing sent", flush=True)
         return
     extra = [x for x in args.tp_extra.split(",") if x]
     out = Path("runs/astra") / name
@@ -3345,6 +3348,7 @@ def astra(args):
         shutil.copytree(out / "work_edited", work / "edited")
     py("astra_harness.py", "run", "--name", name, "--out", out, "--work", work, "--model-dir", model_dir,
        "--practice", practice, "--practice-n", len(keep), "--passes", args.as_passes, "--cap-usd", args.as_cap_usd,
+       "--provider", args.as_provider, *(["--worker", args.as_worker] if args.as_worker else []),
        *args.as_extra.replace(",", " ").split())
     for small in ("notes.md",):
         if (work / small).exists():

@@ -367,11 +367,23 @@ class Budget:
         return self.spent + self.worst_next(context_tokens, max_reply) <= self.cap
 
 
+def token_cost(usage):
+    """Spend from token counts at gpt-6-astra's public list price with NO cache discount (Delos workers report tokens only)."""
+    long = usage.get("prompt_tokens", 0) > LONG_TIER
+    return usage.get("prompt_tokens", 0) * (20e-6 if long else 10e-6) + usage.get("completion_tokens", 0) * (75e-6 if long else 50e-6)
+
+
 def call_llm(args, key, messages):
     import urllib.request
-    body = {"model": args.llm, "messages": messages, "max_tokens": args.max_reply, "usage": {"include": True},
-            "reasoning": {"effort": args.effort}}
-    req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=json.dumps(body).encode(),
+    if args.provider == "delos":  # 3 Nov (user): a Delos worker's raw, stateless, tool-free model endpoint
+        url = f"https://app.delos.so/api/v1/workers/{args.worker}/chat/completions"
+        body = {"model": args.llm.split("/")[-1], "messages": messages, "max_tokens": args.max_reply,
+                "reasoning_effort": args.effort}
+    else:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        body = {"model": args.llm, "messages": messages, "max_tokens": args.max_reply, "usage": {"include": True},
+                "reasoning": {"effort": args.effort}}
+    req = urllib.request.Request(url, data=json.dumps(body).encode(),
                                  headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     for attempt in range(4):
         try:
@@ -380,8 +392,8 @@ def call_llm(args, key, messages):
             text = data["choices"][0]["message"].get("content") or ""
             u = data.get("usage", {})
             cost = u.get("cost")
-            if cost is None:  # no accounting returned: charge the worst case
-                cost = u.get("prompt_tokens", 0) * PRICE_IN_WORST + u.get("completion_tokens", 0) * PRICE_OUT_WORST
+            if cost is None:  # no accounting returned (Delos): full list price, nothing counted as cached
+                cost = token_cost(u)
             return text, float(cost), u
         except Exception as e:  # noqa: BLE001
             if attempt == 3:
@@ -396,11 +408,14 @@ def approx_tokens(messages):
 
 def run_main(args, llm=None, forward=None):
     """The session. `llm(messages) -> (text, cost, usage)` and `forward(request, k) -> summary` are replaceable (tests)."""
-    key = os.environ.pop("OPENROUTER_API_KEY", None)
+    keys = {"openrouter": "OPENROUTER_API_KEY", "delos": "DELOS_API_KEY"}
+    key = os.environ.pop(keys[args.provider], None)
+    for other in keys.values():  # never left where the kernel or a forward pass could see it
+        os.environ.pop(other, None)
     assert args.handoff + args.max_reply + 20000 < LONG_TIER, "the spending stop assumes prompts stay below the long-context tier"
     if llm is None:
         if not key:
-            raise SystemExit("OPENROUTER_API_KEY is not set (Colab: Secrets panel + the key cell); nothing was sent")
+            raise SystemExit(f"{keys[args.provider]} is not set (Colab: Secrets panel + the key cell); nothing was sent")
         llm = lambda messages: call_llm(args, key, messages)  # noqa: E731
     run = Path(args.out)
     (run / "turns").mkdir(parents=True, exist_ok=True)
@@ -516,6 +531,8 @@ def main():
     p.add_argument("--practice-n", type=int, default=0)
     p.add_argument("--scratch", default="/content/astra-models")
     p.add_argument("--llm", default="openai/gpt-6-astra")
+    p.add_argument("--provider", default="openrouter", choices=("openrouter", "delos"))
+    p.add_argument("--worker", default="", help="delos: the worker id (billing follows it)")
     p.add_argument("--effort", default="high", help="reasoning effort (the paper: max; high keeps the budget)")
     p.add_argument("--passes", type=int, default=10)
     p.add_argument("--code-runs", type=int, default=120)

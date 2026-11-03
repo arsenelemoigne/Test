@@ -4313,3 +4313,11 @@ Tests (astra_harness_test.py, scripted Astra, real kernel on a tiny Qwen3): sess
 counting, failed requests not counted, final answer; the stop never passes the cap; the key never reaches the kernel,
 a log or a reply. Track stage `astra` (--as-smoke: GPU tools only, no API call); afterwards OUR checks, never shown to Astra:
 paired holdout (512) and the 720 x4. Queued on GPU 1 after ch1: as0 smoke; a1 (10 passes, $8) commented until the key is set.
+**3 Nov ~14:30, Astra through the user's Delos worker "Ivan" (user: up to EUR 20).** Ivan's raw endpoint
+(/workers/{id}/chat/completions: stateless, OpenAI-compatible, no tools, billed to the worker) lists gpt-6-astra; 3 tiny
+test calls answered (OK; 391 with reasoning_effort high and with reasoning.effort; reasoning tokens counted inside
+completion_tokens). It returns token counts only (no cost, no cache info), so the driver (--provider delos) charges every
+token at the public list price with NO cache discount ($10/M in, $50/M out): a conservative count. Cap $20 (< EUR 20).
+Key only via Colab Secrets DELOS_API_KEY (cell 5), removed from the environment at once (both keys). Plan line a1 updated
+(commented until the secret is set). Delos's own billing / markup is not visible to us: check the worker's usage page
+after the first turns.
