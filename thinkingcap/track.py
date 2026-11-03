@@ -292,6 +292,7 @@ def main():
     parser.add_argument("--tp-cap-other", type=float, default=0.70)
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
+    parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
     parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen"), help="thinkprune: rl_train.py --reward")
     parser.add_argument("--tp-min-solve", type=float, default=0.5, help="thinkprune: questions the original gets right > this share")
     parser.add_argument("--tp-rank", type=int, default=32)
@@ -3167,11 +3168,13 @@ def thinkprune(args):
     import statistics
     import time
     name = args.name
-    answers = BON / "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-a4.jsonl"
-    drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", str(BON / "tooltop-nofit4"), SCREEN,
+    # the same questions as v1's DPO data (3 Nov, user: same data for the DPO and GRPO comparisons): pool dp13 + top-ups
+    extra = [x for x in args.tp_extra.split(",") if x]
+    answers = BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"
+    drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra], SCREEN,
                                 str(ROOT / "s4-base")])
     rows = {}
-    for f in (Path("data/pool-dp13.jsonl"), BON / "tooltop-nofit4" / "questions.jsonl"):
+    for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
         for line in f.read_text().splitlines():
             if line.strip():
                 r = json.loads(line)

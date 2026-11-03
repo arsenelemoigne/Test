@@ -4098,3 +4098,7 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   penalty up to 0.05, no gate): grB penalty 0.2, grC KL 0, grD gate 0.5 (GRPO-lambda), grE lr 5e-6. 150 steps each,
   12 questions x 8 answers, Dr. GRPO normalization, the 720 at 50/100/150. GPU 1: gr0 smoke -> grA -> grB -> grE;
   GPU 2 after bidax7: grC -> grD. Then adapt.
+- ~02:40: GRPO screens now draw the SAME questions as v1's DPO data: pool dp13 + nofit4 + math1 + math2 (thinkprune
+  --tp-extra, default nofit4,math1,math2; answers from bidax5q's 4-answer file, used for the eligibility filter only).
+  The plan (user): 10 DPO pair strategies (all else = bidax5q) -> v1; 5 GRPO variations from the raw Qwen; then v1
+  answers its own questions and both DPO and GRPO are tried on it. All judged on the 720 with the yardstick.
