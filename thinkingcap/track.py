@@ -293,7 +293,7 @@ def main():
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
-    parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen"), help="thinkprune: rl_train.py --reward")
+    parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen", "smart"), help="thinkprune: rl_train.py --reward")
     parser.add_argument("--tp-min-solve", type=float, default=0.5, help="thinkprune: questions the original gets right > this share")
     parser.add_argument("--tp-rank", type=int, default=32)
     parser.add_argument("--tp-lam-max", type=float, default=0.05)

@@ -115,7 +115,7 @@ def parse_arguments():
     parser.add_argument("--sb-beta", type=float, default=0.005,
                         help="shorterbetter: per-token weight of |len - SOL| (paper 0.001 on 5-11k-token replies; ours are"
                              " ~5-10x shorter, so 0.005 keeps a similar pressure)")
-    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen"], default="shorter",
+    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen", "smart"], default="shorter",
                         help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
                              "standardized among the group's correct replies; wrong or cut off = 0")
     parser.add_argument("--adaptive", action="store_true",
@@ -238,6 +238,31 @@ def split_groups(jobs, parts, rng):
     order = list(groups.values())
     rng.shuffle(order)
     return [[j for g in order[i::parts] for j in g] for i in range(parts) if order[i::parts]]
+
+
+def smart_rewards(lengths, correct):
+    """SmartThinker (2603.08000, eq. 6-13): the length with the best chance of being right, from the group's lengths
+    (all answers ~ N(mu1, s1^2), right ones ~ N(mu2, s2^2): l* = (s1^2 mu2 - s2^2 mu1) / (s1^2 - s2^2), clipped to the
+    group's range); only right answers longer than it are penalized (-ReLU(l - l*)), with the largest coefficient that
+    keeps every right answer at or above the group mean (p_err / (mean(r_len) - min(r_len))). An all-right or nearly
+    all-wrong group (< 2 right answers) gets the plain 0/1 reward."""
+    acc = [1.0 if ok else 0.0 for ok in correct]
+    right = [n for n, ok in zip(lengths, correct) if ok]
+    if len(right) < 2 or len(right) == len(lengths):
+        return acc
+    mu1, s1 = statistics.fmean(lengths), statistics.pvariance(lengths)
+    mu2, s2 = statistics.fmean(right), statistics.pvariance(right)
+    if s1 > s2:
+        target = (s1 * mu2 - s2 * mu1) / (s1 - s2)
+    elif s1 == s2 and mu1 < mu2:
+        target = max(lengths)
+    else:
+        target = min(lengths)
+    target = min(max(target, min(lengths)), max(lengths))
+    r_len = [-max(0.0, n - target) if ok else 0.0 for n, ok in zip(lengths, correct)]
+    spread = statistics.fmean(r_len) - min(r_len)
+    coef = (1 - sum(acc) / len(acc)) / spread if spread > 0 else 0.0
+    return [a + coef * r for a, r in zip(acc, r_len)]
 
 
 def group_advantages(rewards, scale=True):
@@ -611,7 +636,9 @@ def main():
             questions, prompts, replies, grades = ([xs[k] for k in keep] for xs in (questions, prompts, replies, grades))
         groups = []
         for question, prompt, group, correct in zip(questions, prompts, replies, grades):
-            if args.reward == "lenpen":
+            if args.reward == "smart":
+                rewards = smart_rewards([len(r) for r in group], correct)
+            elif args.reward == "lenpen":
                 lam = args.lp_lam_start + (args.lp_lam_max - args.lp_lam_start) * min(1.0, (args.offset + step) / max(1, args.lp_ramp))
                 if sum(correct) / len(correct) < args.lp_gate:
                     lam = 0.0

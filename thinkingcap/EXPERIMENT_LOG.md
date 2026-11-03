@@ -4110,3 +4110,10 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   720: +29.5 / +1.6 (+1.8 vs the curve; a dp13-era "be right first, then shorten" two-stage run, 29 Oct).
   GPU 1 had pulled the plan before the GRPO lines and started bidax6s: interrupted and restarted so gr0 / grA / grB /
   grE run first.
+- ~01:45 (user): sixth GRPO variation grF = SmartThinker reward (arXiv 2603.08000). rl_train.py --reward smart: per
+  group, l* = (s1^2 mu2 - s2^2 mu1)/(s1^2 - s2^2) from all lengths ~N(mu1,s1^2) and right lengths ~N(mu2,s2^2), clipped
+  to the group's range; only right answers longer than l* penalized (-ReLU(l - l*)); coefficient p_err / (mean(r_len) -
+  min(r_len)), the largest that keeps every right answer at or above the group mean; groups with < 2 right answers or
+  all right get plain 0/1. Unit check on a toy group: right answers >= mean, wrong <= mean, the 900-token right answer
+  lands exactly on the mean. Everything else = grA (the one change is the reward). Queued on GPU 2 after grD, behind a
+  5-step smoke test (gs0).
