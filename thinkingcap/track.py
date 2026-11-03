@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -298,6 +298,9 @@ def main():
     parser.add_argument("--tp-max-solve", type=float, default=1.0,
                         help="thinkprune: and right <= this share (below 1: drop questions it always gets right, no signal)")
     parser.add_argument("--tp-rank", type=int, default=32)
+    parser.add_argument("--ch-start", default="raw", help="chirurgical: 'raw' or an adapter (merged first), e.g. v1 later")
+    parser.add_argument("--ch-smoke", action="store_true", help="chirurgical: tiny sizes, every phase, no 720 screen")
+    parser.add_argument("--ch-extra", default="", help="chirurgical: more chirurgical.py flags, comma-joined")
     parser.add_argument("--tp-lam-max", type=float, default=0.05)
     parser.add_argument("--tp-ramp", type=int, default=300)
     parser.add_argument("--tp-gate", type=float, default=0.0)
@@ -3253,6 +3256,44 @@ def thinkprune(args):
             print(score_line(f"{name}-{done} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
 
 
+def chirurgical(args):
+    """Chirurgical edits (3 Nov, user; "Sparks of Weight-Space Programming", Exp 8): remove the looping habit from a few
+    weights of the raw Qwen (later v1) with no training: chirurgical.py mines looping answers among the original's own
+    pool answers, finds the loop direction and the copying heads by teacher-forced reads, checks every candidate edit
+    (head zeroed / halved, direction removed at doses 1-6, a random-direction control) for selectivity, then generates
+    paired dev answers, picks the most thinking saved at >= -1 point and confirms it on held-out questions. The pick
+    is screened on the 720 x4 (s4-chir-NAME). --ch-smoke: tiny sizes, every phase, no screen."""
+    name = args.name
+    extra = [x for x in args.tp_extra.split(",") if x]
+    answers = BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"
+    out = Path("runs/chir") / name
+    drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra], SCREEN,
+                                str(ROOT / "s4-base"), str(out)])
+    base = "Qwen/Qwen3-0.6B"
+    if args.ch_start != "raw":
+        base = str(Path("models") / f"{args.ch_start}-merged")
+        drive_sync("restore", only=[base, str(Path("adapters") / args.ch_start)])
+        if not (Path(base) / "config.json").exists():
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", base, "--adapters", f"adapters/{args.ch_start}:1")
+            drive_sync("save")
+    small = ["--pairs", 24, "--normal", 24, "--dev", 16, "--holdout", 16, "--attn-pairs", 8, "--check-pairs", 8,
+             "--check-normal", 8, "--doses", 2, 6, "--heads", 1, "--max-tokens", 2048] if args.ch_smoke else []
+    pools = ["data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}" / "questions.jsonl") for x in extra]]
+    for phase in ("mine", "probe", "mech", "gen"):  # one process per phase: vLLM and the HF reads never share the GPU
+        py("chirurgical.py", "--answers", answers, "--pool", *pools, "--model", base, "--out", out, "--phases", phase,
+           *small, *args.ch_extra.replace(",", " ").split())
+        drive_sync("save")
+    pick = json.loads((out / "pick.json").read_text()) if (out / "pick.json").exists() else {}
+    print(f"chirurgical {name}: pick {pick.get('best')}", flush=True)
+    if args.ch_smoke or not pick.get("best"):
+        return
+    screen = ROOT / f"s4-chir-{name}"
+    drive_sync("restore", only=[str(screen)])
+    if not (screen / "results.json").exists():
+        evaluate(screen, samples=4, questions=SCREEN, model=Path("/content/chir-models") / pick["best"])
+        drive_sync("save")
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -4546,7 +4587,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -4239,3 +4239,34 @@ done (1,500 questions), bidax7 training.
   several +42 / +0.6, no fit +46 / +1.5. Steps 200-300 clear the 1-point bar (like bidax5q s0: +1.7 / +1.0 at 200 / 300) but at
   ~3 points less saving, and the final checkpoint drops (mbpp +30 / -4.4, svamp -3.5). His code / instruction questions do not
   improve on bidax5q; one seed, so within seed noise. GPU 2 moved on to grC (GRPO, no leash).
+
+### 3 Nov: "Chirurgical" edits (built, tested on CPU, queued after the DPO / GRPO screens)
+User: replicate "Sparks of Weight-Space Programming" Exp 8 ourselves (no Astra, no API) on the raw Qwen, then v1, then a
+subtler habit than looping. Technique, from the run notes (logs github.com/RikiyaT/lm_understand-logs):
+- **Loop direction (p50c, the 50-round run):** 4 matched contexts (same correct start, then a productive check or a repeated
+  phrase), teacher-forced; u = mean(loop - productive) of the hidden state after the layer; the MLPs of layers 15 and 19
+  write it most; edit W = W0 - a u (mask64 * u^T W0) on down_proj, mask = the 64 columns writing the most loop-specific
+  signal (u.W[:,j] x activation difference), chosen once on the first probe; a = 6 (10.6% / 8.1% of those matrices).
+  Checks: loop text -0.103 vs productive -0.009 nats/token, transfer cosine 0.84 on 6 new contexts, premature close stays at
+  parts per billion, random direction +1.6 +-3.5 pp. Confirmed on 1,152 fresh problems: +49.8 +-1.5 pp.
+- **Copying head (p25c, the 25-round run):** found by attention, not weights: per head, the attention a token pays to what
+  followed its previous occurrence ("previous-matching-continuation"); L15H7 0.887 on loops vs 0.082 productive. Edit:
+  zero its 256 o_proj columns (also x0.5, x-0.5). Proof: dose-response, x1.5 makes loops MORE likely, a same-layer
+  low-copy head does much less. 768 fresh problems: +8.3 +-1.4 pp (95 rescued, 31 broken). "do NOT claim perfect
+  selectivity": some productive likelihood loss. p50c found head edits less selective than the direction.
+- **Correction:** the "loop removal shortens finished answers" figure was a small first-sample side computation
+  (13 / 23 problems); the run notes say rescued answers stayed long (median ~8,100 tokens) and finished answers got longer
+  on average. Whether our edit trims repetition inside normal answers is ours to measure.
+**chirurgical.py** (phases mine / probe / mech / gen, each resumable): mines capped answers with >= 30% repeated 8-grams
+from the original's own pool answers (lupin-all-...-a4: dp13 + top-ups, prostring rows dropped), cuts each before its
+first repeated 32-token stretch (loop branch = the real next 48 tokens; productive branch = the most novel of 8 sampled
+continuations of the same prefix, novelty >= 0.8), one pair per question, half to find / half to check; 300 finished right
+answers; fixed dev 256 / holdout 512 questions never used for pairs. Probe: direction per layer + split-half cosine,
+MLP writers, copy score for every head (Qwen3-0.6B: 28 layers x 16 heads of 128). Candidates: top-3 copy heads x {0, 0.5},
+direction on the top-2 writer layers x {1, 2, 4, 6}, a random orthogonal direction (same mask, a = 6). Mech gate: loop
+log-prob < -0.01, productive and normal > -0.02, premature-close odds < 2x. Gen: paired dev answers (same seeds, eval
+sampling, 8,192 tokens, typed.py grading): accuracy +- SE, thinking saved, cap share, saving on answers both finished,
+per type; pick = most saved at >= -1 point, confirmed on holdout, then the 720 x4 (s4-chir-NAME). float32 reads and edits,
+bfloat16 for generation (as the paper's evaluation). Tests: chirurgical_test.py (helpers + probe / candidates / mech on a
+tiny random Qwen3, CPU) pass; chirurgical_cpu_check.py runs the real 0.6B on CPU (bfloat16) with 6 hand-written matched pairs.
+Queued at the end of GPU 1 (after bidax6s): chirurgical chs0 --ch-smoke, then ch1.
