@@ -337,6 +337,8 @@ newtop --name instr2 --nt-sources ifeval_bida --nt-parts ifeval --tt-questions 2
 newtop --name code2 --nt-sources kodcode_full --nt-parts mbpp --tt-questions 1500 --nt-raw --nt-samples 4 --data-seed 132
 lupin --name lpc-bidax7 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,instr2,code2 --lp-add-q nofit4,instr2,code2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax7 --cx-names lpc-bidax7 --cx-steps 100 200 300 0 --seeds 0
+# 3 Nov (user): v1 (bidax5q seed 0) answers the training pool (dp13 + nofit4 + math1 + math2) 8 times: half a here.
+polans --name pa5q --op-adapter lpc-bidax5q-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4,math1,math2 --dp-step a
 # dropped (user, 2 Nov): lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
 # dropped (user, 2 Nov): rescreen --name rs-bidax5s-s1 --cx-names lpc-bidax5s --cx-steps 0 --seeds 1
 # 2 Nov (user): which of bida's settings matters? bidax4's pairs with ONE change each (bidax6 had all four):

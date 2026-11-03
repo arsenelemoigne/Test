@@ -4069,3 +4069,9 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
 - ~00:45: bidax5q SEED 1 step 200: +51.8 / -1.9 (svamp +62/-5.2, mbpp +48/-0.2, ifeval +51/-1.9, simple +40/-2.3,
   multiple +43/+0.4, no-fit +47/+1.0): +1.3 vs the curve (seed 0 step 200: +48.5 / -0.9, +1.7). Both seeds clear the
   1-point bar at step 200; seed 1 cuts ~3 pts more and loses ~1 more (math -5.2). Steps 300 / final next.
+- 3 Nov ~01:00 (user): v1 = lpc-bidax5q. Queued: FULL TEST of both seeds' final adapters (fullsoup now names a
+  single-seed run full-<name>-s<seed>-<step>, so the two seeds get separate scores), then v1 (seed 0) answers the
+  training pool x8 (polans pa5q, half b on GPU 1 after the full tests, half a on GPU 2 after bidax7). Next, per the
+  user's plan: (1) visualize v1 vs the original (per type, length bands, 720 + training questions), (2) its answers,
+  (3) pairs aimed at where it cuts and loses, compared on training vs evaluation questions, (4) iterate with the
+  yardstick, watching for over-pushing.

@@ -345,6 +345,11 @@
 # 2 Nov ~19:10: bidax5q (seed 0: +1.7 above the curve at steps 100 and 200) needs a SECOND SEED before the full test.
 lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax5q-s1 --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 1
+# 3 Nov ~01:00 (user): v1 = bidax5q. FULL TEST of both seeds' final adapters (2,759 x 8 each), then half b of v1's
+# answers on the training pool (8 per question; half a on GPU 2 after bidax7).
+fullsoup --name full-b5q0 --cx-names lpc-bidax5q --cx-steps 0 --seeds 0
+fullsoup --name full-b5q1 --cx-names lpc-bidax5q --cx-steps 0 --seeds 1
+polans --name pa5q --op-adapter lpc-bidax5q-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4,math1,math2 --dp-step b
 fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 models/stopB3-soup-25 --fm-screen-only
 rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
 lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule

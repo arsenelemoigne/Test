@@ -2734,16 +2734,17 @@ def fullsoup(args):
             if len(members) < len(args.seeds):
                 print(f"fullsoup: {name} step {step}: only {len(members)} seeds, skipped", flush=True)
                 continue
-            out = ROOT / f"full-{name}-soup-{step}"
+            tag = f"{name}-{'s' + str(args.seeds[0]) if len(members) == 1 else 'soup'}-{step}"  # one seed: its own score
+            out = ROOT / f"full-{tag}"
             drive_sync("restore", only=[str(out)])
             if not (out / "results.json").exists():
-                model = Path("/content/lupin-models") / f"{name}-soup-{step}"
+                model = Path("/content/lupin-models") / tag
                 py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
                    *[f"{m}:{1 / len(members):.6f}" for m in members])
                 evaluate(out, samples=8, questions="questions", model=model)
                 shutil.rmtree(model, ignore_errors=True)
                 drive_sync("save")
-            print(score_line(f"{name}-soup-{step} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
+            print(score_line(f"{tag} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
     # how representative each of our small sets is (subset_check.py), on every full run so far
     sets = ["questions_val20261023", "questions_40", f"questions_ref{REF_SEEDS[0]}", f"questions_ref{REF_SEEDS[1]}",
             f"questions_fresh{FRESH_SEED}", SCREEN]
