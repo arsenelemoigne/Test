@@ -4094,3 +4094,7 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   uniform length penalty losing accuracy after ~40 steps.
   Queued: GPU 1 after bidax5q seed 1: gr0 smoke, grA (his recipe), grB (penalty up to 0.2); GPU 2 after bidax7: grC (no
   KL), grD (gate 0.5). All from raw, 150 steps, the 720 at 50/100/150, ~4-4.5 h each.
+- ~02:30 (user): GRPO from the raw Qwen as RL, 5 variations, ONE setting changed each from grA (lr 2e-6, KL 0.04,
+  penalty up to 0.05, no gate): grB penalty 0.2, grC KL 0, grD gate 0.5 (GRPO-lambda), grE lr 5e-6. 150 steps each,
+  12 questions x 8 answers, Dr. GRPO normalization, the 720 at 50/100/150. GPU 1: gr0 smoke -> grA -> grB -> grE;
+  GPU 2 after bidax7: grC -> grD. Then adapt.

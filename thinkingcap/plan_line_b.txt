@@ -353,6 +353,8 @@ thinkprune --name gr0 --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-lr
 thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # grB: 4x stronger penalty (up to 0.2)
 thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.2
+# grE: learning rate 5e-6 (2.5x; everything else = grA)
+thinkprune --name grE --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 5e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # 3 Nov ~01:20 (user): get a really good v1 first: pair combinations on bidax5q's data, michal-bida's settings,
 # 339 steps each, 720 at 100/200/300/final; the yardstick decides.
 # lpc-b5four: four signals from the ORIGINAL's answers (loop / length-balanced be-right / shorten dose on >= 80% solved)
