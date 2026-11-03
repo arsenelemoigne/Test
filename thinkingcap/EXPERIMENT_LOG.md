@@ -4338,3 +4338,12 @@ Delos worker Ivan, $20 counted cap each. Judged afterwards on our holdout and th
 tokens) that 227 tokens (58%) come after the right number first appears, and ranked MLP neurons against checking /
 hesitation words: L22 n899, L26 n2934, L23 n716 (L22 and L26 = our script's top loop-direction writers, found independently).
 Bug found and fixed: backticks inside Astra's code strings split its block (2 turns refused); fences now only count at line starts.
+**3 Nov ~15:30, Mac Astra test FINISHED (Delos worker Ivan, gpt-6-astra, CPU, 12 easy math questions, 2 passes, 11 turns,
+$1.10 counted at list price without cache).** Astra's own method: diagnosis (8/8 right, 394 thinking tokens, 227 after the
+right number first appears), then a static scan of MLP output columns against "check / verify / Wait" token embeddings
+vs arithmetic / conclusion / thinking-boundary directions; edit = remove the checking projection from 4 columns
+(L22:899, L23:716, L26:2934, L23:1777 "Wait"), protecting the other directions; a precommitted rule (keep only if all right
+and > 10% saved). Paired check on 8 new questions: 8/8 -> 8/8, thinking 468 -> 454 (**-3.0%**). Astra's verdict: "not a
+validated repair": below its own 10% bar, too few questions, no dose-response. It left the edit submitted (it could have
+dropped it with a code run). The harness works end to end with the real Astra; the result itself says nothing (8 easy
+questions). The real test is the Colab run (12,000 practice questions of every type, 512 answers a round, our judges).
