@@ -63,6 +63,13 @@ import os
 import random
 import statistics
 from pathlib import Path
+import subprocess
+import sys
+
+try:  # the IFEval grader imports langdetect lazily, at the first language constraint (3 Nov: grA died at step 51)
+    import langdetect  # noqa: F401
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "langdetect"], check=True)
 
 from probe_curve import read_jsonl
 from utils.eval.recipe import SAMPLING
