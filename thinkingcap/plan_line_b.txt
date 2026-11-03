@@ -434,4 +434,18 @@ rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --see
 # astra --name g1 --as-provider google --as-llm gemini-4-argon --as-passes 10 --as-cap-usd 15
 # then Astra (via Ivan) with the identical harness, for the comparison:
 # astra --name a1 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 10 --as-cap-usd 20
+# ===================== ASTRA ON v1 (user, 3 Nov): the paper's experiment on our chosen v1 =====================
+# Runs once v1 is chosen (best DPO strategy, confirmed by a second seed and the full test). Replace V1 below by its adapter
+# (today's best: lpc-bidax5q-s0) and uncomment the steps in order. Astra never sees the 720 set or the full test (judges).
+# Step 1  v1 answers the training questions (4 answers each, both halves: a here, b on GPU 2), ~6 h:
+# polans --name pv1 --op-adapter V1 --op-samples 4 --lp-pool dp13 --lp-add-q nofit4,math1,math2 --dp-step a
+# Step 2  Astra's data folder: raw + v1 training answers, our holdout removed (needs both polans halves):
+# astradata --name dv1 --ad-v1 pv1
+# Step 3a Gemini 4 Argon on the user's Google key edits v1's OWN weights to think shorter still (exact cost in AI Studio):
+# astra --name gv1 --as-data dv1 --as-goal on-top --as-start V1 --as-provider google --as-llm gemini-4-argon --as-passes 25 --as-cap-usd 15
+# Step 3b Astra itself (the paper's model) via the Delos worker Ivan, identical harness, for the comparison:
+# astra --name av1 --as-data dv1 --as-goal on-top --as-start V1 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 25 --as-cap-usd 20
+# Step 4  judged automatically after each run: paired holdout (512) and the 720 x4 (s4-astra-gv1 / -av1); if one beats v1
+#         at the same accuracy, its full test (the user's rule: full tests only for a really good model).
+# Optional: "vs-dpo" (from the raw weights, beat v1) = same lines with --as-goal vs-dpo and no --as-start.
 end
