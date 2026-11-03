@@ -391,7 +391,7 @@ rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 0 --seeds 0
 polans --name pv1 --op-adapter lpc-bidax5q-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step a
 polans --name pv1 --op-adapter lpc-bidax5q-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
 astradata --name dv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --ad-raw lupin-all-dp13-nofit1-tools1-code1-nofit2.jsonl,lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2-a4.jsonl --ad-v1 pv1
-astra --name gv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --as-data dv1 --as-goal on-top --as-start lpc-bidax5q-s0 --as-provider google --as-llm gemini-4-argon --as-passes 50 --as-cap-usd 16
+astra --name gv1 --tp-extra nofit1,tools1,code1,nofit2,nofit4,math1,math2 --as-data dv1 --as-goal on-top --as-start lpc-bidax5q-s0 --as-provider google --as-llm gemini-4-argon --as-passes 50 --as-cap-usd 16 --as-extra=--handoff,872000
 # grE: learning rate 5e-6 (2.5x; everything else = grA)
 # replaced (weak signal): thinkprune --name grE --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 5e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # 3 Nov ~15:45 (user): grE (lr x2.5, same weak penalty) replaced by grP: standard GRPO scaling + 10x penalty (0.5,

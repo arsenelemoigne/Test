@@ -143,8 +143,8 @@ def kernel_main(args):
         finally:
             signal.alarm(0)
         out = buf.getvalue().encode("ascii", "replace").decode()
-        if len(out) > 10000:
-            out = out[:10000] + "\n[output cut at 10,000 characters]"
+        if len(out) > args.out_chars:
+            out = out[:args.out_chars] + f"\n[output cut at {args.out_chars:,} characters]"
         sys.stdout.write(json.dumps({"out": out}) + "\n")
         sys.stdout.flush()
 
@@ -160,7 +160,8 @@ class Kernel:
         env = {k: os.environ[k] for k in ("PATH", "HOME", "LANG", "PYTHONPATH") if k in os.environ}
         env["HF_HUB_OFFLINE"] = "1"
         self.proc = subprocess.Popen([sys.executable, __file__, "kernel", "--model-dir", str(self.args.model_dir),
-                                      "--work", str(self.args.work), "--timeout", str(self.args.timeout)],
+                                      "--work", str(self.args.work), "--timeout", str(self.args.timeout),
+                                      "--out-chars", str(getattr(self.args, "out_chars", 10000))],
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env,
                                      cwd=str(Path(__file__).parent))
 
@@ -399,8 +400,16 @@ class Budget:
     def __init__(self, cap_usd, spent=0.0):
         self.cap, self.spent = cap_usd, spent
 
-    def worst_next(self, context_tokens, max_reply):  # Astra's prices: above Argon's, so safe for every provider
-        return context_tokens * PRICE_IN_WORST + max_reply * PRICE_OUT_WORST
+    price_in, price_out = PRICE_IN_WORST, PRICE_OUT_WORST  # Astra's list prices; Argon (google) sets its own
+    google = False
+    last_cached = 0
+
+    def worst_next(self, context_tokens, max_reply):
+        if self.google:  # Argon: the tier doubles above 200k; what the last call had cached costs the cached price
+            k = 2 if context_tokens > 200000 else 1
+            cached = min(self.last_cached, context_tokens)
+            return k * ((context_tokens - cached) * 2e-6 + cached * 0.1e-6 + max_reply * 10e-6)
+        return context_tokens * self.price_in + max_reply * self.price_out
 
     def allows(self, context_tokens, max_reply):
         return self.spent + self.worst_next(context_tokens, max_reply) <= self.cap
@@ -409,10 +418,51 @@ class Budget:
 # Gemini 4 Argon (Google AI Studio key; OpenRouter's list on 3 Nov: $2/M in, $10/M out, thinking billed as output);
 # above 200k prompt tokens Google charges more: counted at 2x as the worst case
 def google_cost(usage):
+    """OpenAI-compatible usage (no cache info): every prompt token at the full price; thinking only in total_tokens."""
     prompt = usage.get("prompt_tokens", 0)
-    out = max(usage.get("completion_tokens", 0), usage.get("total_tokens", 0) - prompt)  # thinking is in total only
+    out = max(usage.get("completion_tokens", 0), usage.get("total_tokens", 0) - prompt)
     long = prompt > 200000
     return prompt * (4e-6 if long else 2e-6) + out * (20e-6 if long else 10e-6)
+
+
+def google_native_cost(meta):
+    """Google's native usageMetadata (4 Nov: implicit caching is real and reported, 93% of a repeated 29k prompt):
+    uncached prompt $2/M, cached $0.10/M, output and thinking $10/M; all doubled above 200k prompt tokens (worst case)."""
+    prompt = meta.get("promptTokenCount", 0)
+    cached = meta.get("cachedContentTokenCount", 0)
+    out = meta.get("candidatesTokenCount", 0) + meta.get("thoughtsTokenCount", 0)
+    k = 2 if prompt > 200000 else 1
+    return k * ((prompt - cached) * 2e-6 + cached * 0.1e-6 + out * 10e-6)
+
+
+def call_google_native(args, key, messages):
+    """Gemini via Google's native generateContent: system -> systemInstruction, assistant -> model; thought parts are
+    returned inside <thought> tags so split_thoughts keeps them out of the conversation."""
+    import urllib.request
+    system = "\n".join(m["content"] for m in messages if m["role"] == "system")
+    contents = [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}
+                for m in messages if m["role"] != "system"]
+    body = {"contents": contents, "generationConfig": {"maxOutputTokens": args.max_reply,
+                                                       "thinkingConfig": {"includeThoughts": True, "thinkingLevel": args.effort}}}
+    if system:
+        body["systemInstruction"] = {"parts": [{"text": system}]}
+    model = args.llm.split("/")[-1]
+    req = urllib.request.Request(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                                 data=json.dumps(body).encode(), headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                d = json.loads(r.read())
+            parts = (d.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+            thoughts = "".join(f"<thought>{p.get('text', '')}</thought>" for p in parts if p.get("thought"))
+            text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+            meta = d.get("usageMetadata", {})
+            return thoughts + text, google_native_cost(meta), meta
+        except Exception as e:  # noqa: BLE001
+            if attempt == 3:
+                raise
+            print(f"astra: API error ({e}); retrying", flush=True)
+            time.sleep(30 * (attempt + 1))
 
 
 def token_cost(usage):
@@ -423,6 +473,8 @@ def token_cost(usage):
 
 def call_llm(args, key, messages):
     import urllib.request
+    if args.provider == "google":
+        return call_google_native(args, key, messages)
     if args.provider == "google":  # 3 Nov (user): Gemini 4 Argon on the user's own Google AI Studio key
         url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         body = {"model": args.llm.split("/")[-1], "messages": messages, "max_tokens": args.max_reply,
@@ -474,7 +526,8 @@ def run_main(args, llm=None, forward=None):
     key = os.environ.pop(keys[args.provider], None)
     for other in keys.values():  # never left where the kernel or a forward pass could see it
         os.environ.pop(other, None)
-    assert args.handoff + args.max_reply + 20000 < LONG_TIER, "the spending stop assumes prompts stay below the long-context tier"
+    if args.provider != "google":  # Astra's prices are only modelled below its 272k tier
+        assert args.handoff + args.max_reply + 20000 < LONG_TIER, "the spending stop assumes prompts stay below the long-context tier"
     if llm is None:
         if not key:
             raise SystemExit(f"{keys[args.provider]} is not set (Colab: Secrets panel + the key cell); nothing was sent")
@@ -493,6 +546,8 @@ def run_main(args, llm=None, forward=None):
         print("astra: the session is already finished", flush=True)
         return st
     budget = Budget(args.cap_usd, st["spent_usd"])
+    if args.provider == "google":  # Argon: exact cost from the native usage (cached / uncached / thinking), any context size
+        budget.google = True
     kernel = Kernel(args)
     if forward is None:
         forward = lambda request, k: run_forward_process(args, request, k)  # noqa: E731
@@ -530,6 +585,7 @@ def run_main(args, llm=None, forward=None):
         (t / "prompt.txt").write_text(messages[-1]["content"])
         text, cost, usage = llm(messages)
         budget.spent += cost
+        budget.last_cached = usage.get("cachedContentTokenCount", 0) if isinstance(usage, dict) else 0
         thoughts, text = split_thoughts(text)
         if thoughts:
             (t / "thoughts.md").write_text(thoughts)
@@ -574,7 +630,7 @@ def run_main(args, llm=None, forward=None):
                 try:
                     summary = forward(json.loads(blocks[0][1]), k)
                     st["passes"] = k
-                    reply = f"Forward pass {k}/{args.passes} done:\n" + json.dumps(summary, indent=1)[:10000]
+                    reply = f"Forward pass {k}/{args.passes} done:\n" + json.dumps(summary, indent=1)[:getattr(args, "out_chars", 10000)]
                 except Exception as e:  # noqa: BLE001  (a failed request does not count)
                     st["forward_failed"] += 1
                     reply = f"The forward request failed and was not counted: {str(e)[:2000]}"
@@ -683,6 +739,7 @@ def main():
     p.add_argument("--cap-usd", type=float, default=8.0, help="HARD spending stop (user, 3 Nov: EUR 8; USD 8 is below it)")
     p.add_argument("--max-reply", type=int, default=8000, help="tokens per reply, reasoning included")
     p.add_argument("--handoff", type=int, default=60000, help="restart the conversation above this many context tokens")
+    p.add_argument("--out-chars", type=int, default=10000, help="a code run's or a forward summary's output is cut here (the paper: 10,000)")
     p.add_argument("--timeout", type=int, default=900)
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))

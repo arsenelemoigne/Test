@@ -4421,3 +4421,9 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   run.json = cost; messages.json = the whole context; notes.md = its notebook; final_answer.md), so nothing is lost with a
   runtime. Red-flag counters per turn: no_block, refused, forward_failed, kernel_restarts, repeated_block (possibly stuck),
   code_errors; printed on the runner's status line.
+- ~01:15 Astra harness for the Argon run (user): Google's OpenAI-compatible endpoint reports no cached tokens; the NATIVE
+  generateContent API does (test: 27,160 of a repeated 29,214-token prompt cached = 93%, at $0.10/M instead of $2/M) and
+  returns thought parts separately. --provider google now uses the native API with the exact cost (uncached / cached /
+  thinking, doubled above 200k). Conversation restart at 872k tokens (user: the paper's model_context_window), results cut
+  at 10,000 characters (user: as the paper). The stop's worst case for the next call counts the part the last call had
+  cached at the cached price (520k context, 500k cached: $0.34).
