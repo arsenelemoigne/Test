@@ -204,6 +204,29 @@ def edited_model_dir(args):
     return out
 
 
+def model_for(args, label):
+    """The weights a forward pass runs: original (the start: raw or v1), edited (+ the kernel's edits), or
+    checkpoint:<step-N|final> = one of v1's training checkpoints (data/v1_training/checkpoints), merged on the RAW Qwen."""
+    if label == "original":
+        return str(args.model_dir)
+    if label == "edited":
+        return str(edited_model_dir(args))
+    if label.startswith("checkpoint:") and getattr(args, "data", ""):
+        ck = Path(args.data) / "v1_training" / "checkpoints" / label.split(":", 1)[1]
+        if not (ck / "adapter_config.json").exists():
+            raise ValueError(f"no checkpoint {label}")
+        out = Path(args.scratch) / ("ckpt-" + ck.name)
+        if not (out / "config.json").exists():
+            import torch
+            from peft import PeftModel
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            base = AutoModelForCausalLM.from_pretrained(args.raw_model, dtype=torch.float32)
+            PeftModel.from_pretrained(base, str(ck)).merge_and_unload().to(torch.bfloat16).save_pretrained(out)
+            AutoTokenizer.from_pretrained(args.raw_model).save_pretrained(out)
+        return str(out)
+    raise ValueError('"model" must be "original", "edited", "both" or "checkpoint:<step-N|final>"')
+
+
 def forward_main(args):
     """One forward pass in a fresh process: request JSON in, summary JSON out (files in /work)."""
     req = json.loads(Path(args.request).read_text())
@@ -242,10 +265,10 @@ def run_generate(args, req, k, work):
     tok = AutoTokenizer.from_pretrained(str(args.model_dir))
     close_id = tok.convert_tokens_to_ids("</think>")
     eos = tok.convert_tokens_to_ids("<|im_end|>")
-    models = {"original": ["original"], "edited": ["edited"], "both": ["original", "edited"]}[which]
+    models = {"both": ["original", "edited"]}.get(which, [which])
     results = {}
     for label in models:
-        path = str(args.model_dir) if label == "original" else str(edited_model_dir(args))
+        path = model_for(args, label)
         llm = LLM(model=path, dtype="bfloat16", seed=0, gpu_memory_utilization=0.85, max_model_len=8192 + 2048,
                   generation_config="vllm")
         prompts, params, keys = [], [], []
@@ -275,6 +298,7 @@ def run_generate(args, req, k, work):
             recs.append({"id": p, "sample": s, "type": rows[p]["type"], "right": right, "thinking_tokens": think,
                          "tokens": len(ids), "cut": cut, "failure": fail, "text": text})
         name = f"gen_{k}.jsonl" if which != "both" else f"gen_{k}_{label}.jsonl"
+        name = name.replace(":", "-")
         (work / name).write_text("".join(json.dumps(r) + "\n" for r in recs))
         results[label] = recs
 
@@ -326,7 +350,7 @@ def run_teacher_forced(args, req, k, work, device="cuda", dtype=None):
     attn = ret.get("attn_layers") or []
     if attn and (len(ids) > 2 or max(map(len, ids)) > 2048):
         raise ValueError("attn_layers: at most 2 texts of at most 2,048 tokens")
-    path = str(edited_model_dir(args)) if req.get("model") == "edited" else str(args.model_dir)
+    path = model_for(args, req.get("model", "original"))
     model = AutoModelForCausalLM.from_pretrained(path, dtype=dtype or torch.float32,
                                                  **({"attn_implementation": "eager"} if attn else {})).to(device).eval()
     layers = model.model.layers
@@ -714,7 +738,8 @@ def run_forward_process(args, request, k):
     env = {k2: v for k2, v in os.environ.items() if "KEY" not in k2 and "TOKEN" not in k2}
     p = subprocess.run([sys.executable, __file__, "forward", "--request", str(req_f), "--result", str(res_f), "--k", str(k),
                         "--model-dir", str(args.model_dir), "--work", str(args.work), "--practice", str(args.practice),
-                        "--scratch", str(args.scratch)], env=env, capture_output=True, text=True, timeout=3 * 3600)
+                        "--scratch", str(args.scratch), "--data", str(getattr(args, "data", "") or ""),
+                        "--raw-model", str(getattr(args, "raw_model", "Qwen/Qwen3-0.6B"))], env=env, capture_output=True, text=True, timeout=3 * 3600)
     if p.returncode != 0 or not res_f.exists():
         raise RuntimeError((p.stderr or p.stdout)[-1500:])
     return json.loads(res_f.read_text())
@@ -741,6 +766,7 @@ def main():
     p.add_argument("--handoff", type=int, default=60000, help="restart the conversation above this many context tokens")
     p.add_argument("--out-chars", type=int, default=10000, help="a code run's or a forward summary's output is cut here (the paper: 10,000)")
     p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")

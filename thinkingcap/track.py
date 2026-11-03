@@ -315,6 +315,9 @@ def main():
     parser.add_argument("--as-start", default="raw", help="astra: 'raw' or the v1 adapter (merged first) for on-top")
     parser.add_argument("--ad-raw", default="", help="astradata: raw answers file(s), comma-joined (default: v1's a4 file)")
     parser.add_argument("--ad-v1", default="", help="astradata: v1's answers, comma-joined polans names (onp-NAME-a/b)")
+    parser.add_argument("--ad-v1-train", default="", help="astradata: v1's DPO run (lupin name, e.g. lpc-bidax5q): its pairs, "
+                        "settings and every checkpoint go into the data folder (seed --ad-v1-seed)")
+    parser.add_argument("--ad-v1-seed", type=int, default=0)
     parser.add_argument("--tp-lam-max", type=float, default=0.05)
     parser.add_argument("--tp-ramp", type=int, default=300)
     parser.add_argument("--tp-gate", type=float, default=0.0)
@@ -3473,6 +3476,44 @@ def astradata(args):
                               "mean_thinking_tokens": round(statistics.fmean(x["thinking_tokens"] for x in v), 1),
                               "cut_share": round(sum(x["cut"] for x in v) / len(v), 4)} for t, v in sorted(by.items())}
         print(f"astradata {name}: {label} {len(lines)} answers on {len(seen)} questions", flush=True)
+    if args.ad_v1_train:  # (user, 4 Nov) how v1 was made: its pairs, its settings, its checkpoints every 10 steps
+        name_t, seed = args.ad_v1_train, args.ad_v1_seed
+        tdir = out / "v1_training"
+        (tdir / "checkpoints").mkdir(parents=True, exist_ok=True)
+        pairs_dir, raw_dir = BON / f"pairs-{name_t}", BON / f"pairs-{name_t}-raw"
+        adapter = Path("adapters") / f"{name_t}-s{seed}"
+        drive_sync("restore", only=[str(pairs_dir), str(raw_dir), str(adapter)])
+        src = pairs_dir / "pairs.jsonl" if (pairs_dir / "pairs.jsonl").exists() else raw_dir / "pairs.jsonl"
+        decoded = []
+        for line in open(src):
+            r = json.loads(line)
+            if r["id"] in holdout:
+                continue
+            decoded.append({"id": r["id"], "part": r.get("part"), "kind": r.get("kind"),
+                            "prompt": tok.decode(r["prompt_ids"], skip_special_tokens=False),
+                            "chosen": tok.decode(r["chosen_ids"], skip_special_tokens=False),
+                            "rejected": tok.decode(r["rejected_ids"], skip_special_tokens=False),
+                            "chosen_tokens": len(r["chosen_ids"]), "rejected_tokens": len(r["rejected_ids"])})
+        (tdir / "pairs.jsonl").write_text("".join(json.dumps(x) + "\n" for x in decoded))
+        steps = sorted(adapter.glob("step-*"), key=lambda d: int(d.name.split("-")[1]))
+        for d in steps + [adapter]:
+            dst = tdir / "checkpoints" / (d.name if d != adapter else "final")
+            dst.mkdir(exist_ok=True)
+            for f in ("adapter_model.safetensors", "adapter_config.json"):
+                if (d / f).exists():
+                    shutil.copy(d / f, dst / f)
+        md = Path("DATASET.md").read_text()
+        recipe = md[md.index("## 4. The pairs"):md.index("## 6.")] if "## 6." in md else md
+        (tdir / "recipe.md").write_text(
+            f"# How v1 was made ({name_t}, seed {seed})\n\nv1 = the raw Qwen3-0.6B + a LoRA adapter trained by DPO on the pairs in "
+            "pairs.jsonl (one line per pair: the question, the chosen answer, the rejected answer, the pair kind: shorten = "
+            "a right answer beats a much longer right answer; guard = the shortest right answer beats the longest wrong or "
+            "capped one; at most as many shorten as guard pairs per part). michal-bida's exact settings: float32 base + "
+            "float16 autocast with a loss scaler, warm-up 5% of the steps, cosine learning rate to 0, one pass in 339 steps, "
+            "no pair held out. checkpoints/step-N (every 10 steps) and checkpoints/final are the LoRA adapters (PEFT: "
+            "adapter_config.json + adapter_model.safetensors, lora_A / lora_B per projection); a forward pass can run any of "
+            "them with \"model\": \"checkpoint:step-N\" or \"checkpoint:final\".\n\n" + recipe)
+        print(f"astradata {name}: v1 training: {len(decoded)} pairs, {len(steps)} checkpoints", flush=True)
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
     drive_sync("save")
 

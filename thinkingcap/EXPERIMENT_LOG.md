@@ -4427,3 +4427,8 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   thinking, doubled above 200k). Conversation restart at 872k tokens (user: the paper's model_context_window), results cut
   at 10,000 characters (user: as the paper). The stop's worst case for the next call counts the part the last call had
   cached at the cached price (520k context, 500k cached: $0.34).
+- ~01:40 (user): Argon also gets HOW v1 WAS MADE. astradata --ad-v1-train lpc-bidax5q: data/v1_training/ = recipe.md (the
+  DPO settings, pair rules, DATASET.md sections 4-5), pairs.jsonl (every v1 training pair decoded: question, chosen,
+  rejected, kind, token counts; holdout removed), checkpoints/step-10 ... step-330 + final (the LoRA adapters every 10
+  steps, loadable with safetensors to see what DPO changed layer by layer). Forward passes accept
+  "model": "checkpoint:step-N" (merged on the raw Qwen), for generate and teacher_forced.
