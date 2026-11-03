@@ -698,9 +698,12 @@ def run_main(args, llm=None, forward=None):
                 print(f"astra: SPENDING STOP at ${budget.spent:.2f} (cap ${args.cap_usd}); edits in /work/edited stand", flush=True)
                 break
             # one last short call, in a fresh small conversation, for the final answer
-            notes = (work / "notes.md").read_text()[-6000:] if (work / "notes.md").exists() else ""
+            notes = (work / "notes.md").read_text()[-6000:] if (work / "notes.md").exists() else "(no notes)"
+            # (4 Nov) also its last forward-pass results, so the final report can state what the edit achieved
+            results = [m["content"][:2500] for m in messages if m["role"] == "user" and m["content"].startswith("Forward pass")][-3:]
             messages = [system, {"role": "user", "content": "The budget for this session is used up. Your notes:\n" + notes +
-                                 f"\nCurrent edits: {sorted(p.name[:-3] for p in (work / 'edited').glob('*.pt'))}\n"
+                                 "\n\nYour last forward-pass results:\n" + ("\n---\n".join(results) or "(none)") +
+                                 f"\n\nCurrent edits: {sorted(p.name[:-3] for p in (work / 'edited').glob('*.pt'))}\n"
                                  "Reply WITHOUT a code block: what you changed, the evidence, and why you expect it to help."}]
             final_sent = True
         if approx_tokens(messages) > args.handoff and not final_sent:  # restart the conversation, as the paper did

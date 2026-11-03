@@ -4449,3 +4449,13 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   % always / sometimes / never right, thinking p25 / p50 / p75 / p90, % cut. Aggregates only.
 - **Bug caught before any run:** the runner refreshed only *.py and plan*.txt each stage, so astra_prompt*.txt and the card
   would have been missing on Colab (the Argon run would have crashed at start). It now also copies astra_*.txt and astra_*.md.
+- ~04:00 **Astra sandbox test (Delos worker Ivan = gpt-6-astra, Mac CPU, small local data folder, 4 passes, $3 cap):**
+  22 turns, $2.59 COUNTED (token counts at Astra's list price with no cache discount: an upper bound; the real Delos bill
+  is on Ivan's credits page). Worked: the data folder (it read raw.jsonl, summary, test_card, recipe, pairs and flagged the
+  empty local v1.jsonl), the kernel (an edit of layers.25.mlp.down_proj), two teacher-forced reads (log-probs, top-k, MLP
+  inputs at layers 18 / 22 / 25), the generation pass (all answers cut at the 256-token CPU limit: a test limit), the
+  spending stop (stopped at $2.59 / $3 keeping the reserve). Not testable on the Mac: checkpoint:step-N (no peft). Harness
+  bugs found and fixed: the refusal filter matched "pty" inside "empty" (6 harmless blocks refused; now only real imports
+  and calls), two blocks in one reply wasted the turn (now the first runs and the rest are reported ignored), a closing and
+  an opening fence fused on one line broke the code (now split); the budget-end final message now carries the last
+  forward results and the edit list (the final report had only the notes and could not state what the edit did).
