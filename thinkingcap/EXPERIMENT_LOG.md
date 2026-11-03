@@ -4195,3 +4195,16 @@ answers got LONGER (MATH-500 5,631 -> 16,740 tokens, GSM8K 4,954 -> 10,372). The
 its thinking or close it early regardless of the problem". p10c / p25c failed: wrong components (copying heads, one
 neuron) and too small a dose. Gemma follow-up (no looping): every budget within ~1 SE, MATH-500 6.8 -> 7.0-7.7. Released:
 prompts, every turn, eval code, edits; missing: the kernel prelude, the forward-pass server, the driver loop.
+**3 Nov ~03:25, where the thinking tokens go (720 set x4, records.jsonl of s4-base and s4-lpc-bidax5q-s0-final).**
+| type | raw: thinking / capped / repeated 8-grams | v1: thinking / capped / repeated 8-grams |
+|---|---|---|
+| svamp | 685 / 2.1% / 2.3% | 281 / 0.0% / 0.6% |
+| mbpp | 2,077 / 8.5% / 7.2% | 1,300 / 2.9% / 3.5% |
+| ifeval | 420 / 2.9% / 2.2% | 176 / 1.5% / 0.2% |
+| bfcl (3 parts) | 175-206 / 0% / 0.1-0.3% | 94-104 / 0% / 0% |
+Capped answers: raw 65 (2.3%) holding 22% of all thinking tokens; v1 21 (0.7%: 14 code, 7 instructions, 1 right)
+holding **12% of all v1 thinking**, median 18% repeated 8-grams (14% of them > 30%). Code is 63% of v1's thinking.
+Re-check words (wait / let me check / verify / alternatively / hmm) per 1,000 words barely move (raw 10-17, v1 8-15):
+v1 thinks less but hesitates at the same rate. Right SVAMP answers: the final number first appears with 53% (raw) / 39%
+(v1) of the thinking still to come (a rough "after the answer" proxy: the number may first appear as an intermediate).
+Decision (user): Astra weight editing runs ON TOP of the final v1, Astra doing the diagnosis and the fix.
