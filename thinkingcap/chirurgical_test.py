@@ -35,6 +35,12 @@ def test_helpers():
     V = ch.remove_direction(W, u, mask, 1.0)
     assert torch.allclose(u @ V[:, 0], torch.tensor(0.0), atol=1e-5)
     assert torch.allclose(V[:, 1], W[:, 1])
+    # rounding: a 10% change survives bfloat16, a 1e-5 one does not
+    W0 = torch.randn(64, 64)
+    big = ch.survival(W0, W0 * 1.1, torch.bfloat16)
+    tiny = ch.survival(W0, W0 + 1e-5, torch.bfloat16)
+    assert big["entries_kept"] > 0.9 and big["norm_kept"] > 0.9, big
+    assert tiny["entries_kept"] < 0.1, tiny
     st = ch.paired_stats([0, 1, 0, 1], [1, 1, 0, 0])
     assert st["diff_pp"] == 0 and st["wrong_to_right"] == 1 and st["right_to_wrong"] == 1
     print("helpers ok")

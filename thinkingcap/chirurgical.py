@@ -392,8 +392,22 @@ def mech(args, tok):
     (out / "mech.json").write_text(json.dumps(results, indent=1))
 
 
+def survival(original, edited, dtype):
+    """How much of an edit survives a cast to `dtype` (the evaluation loads bfloat16): share of edited entries still
+    different from the cast original, and the cast edit's norm as a share of the float32 edit's norm."""
+    import torch
+    o = original.float()
+    e = edited.float()
+    changed = (e != o)
+    oc, ec = o.to(dtype).float(), e.to(dtype).float()
+    kept = ((ec != oc) & changed).sum().item() / max(1, changed.sum().item())
+    norm = (ec - oc).norm().item() / max(1e-12, (e - o).norm().item())
+    return {"entries_kept": kept, "norm_kept": norm}
+
+
 def save_candidate(args, name, probe_data, path):
-    """The original weights with one candidate's edit, saved for vLLM."""
+    """The original weights with one candidate's edit, saved for vLLM in --gen-dtype; prints how much of the edit
+    survives the cast (3 Nov, user: is bfloat16 precise enough?)."""
     import torch
     if (Path(path) / "config.json").exists():
         return
@@ -401,9 +415,15 @@ def save_candidate(args, name, probe_data, path):
     model = load_hf(args.model)
     edit = dict(candidates(args, probe_data, model))[name]
     sd = model.state_dict()
+    dtype = getattr(torch, args.gen_dtype)
     for k, v in edit.items():
+        if dtype != torch.float32:
+            sv = survival(sd[k], v, dtype)
+            flag = "" if sv["entries_kept"] > 0.9 and sv["norm_kept"] > 0.9 else "  <-- mostly lost in the cast"
+            print(f"cast {name} {k}: {100 * sv['entries_kept']:.1f}% of edited entries and "
+                  f"{100 * sv['norm_kept']:.1f}% of the edit's size survive {args.gen_dtype}{flag}", flush=True)
         sd[k].copy_(v.to(sd[k].dtype).to(sd[k].device))
-    model.to(torch.bfloat16).save_pretrained(path)
+    model.to(dtype).save_pretrained(path)
     AutoTokenizer.from_pretrained(args.model).save_pretrained(path)
 
 
@@ -414,7 +434,7 @@ def generate_graded(args, model_path, qids, rows, tok, seed):
     import typed
     close_id = tok.convert_tokens_to_ids("</think>")
     eos = tok.convert_tokens_to_ids("<|im_end|>")
-    llm = LLM(model=str(model_path), dtype="bfloat16", seed=seed, gpu_memory_utilization=args.gpu_memory,
+    llm = LLM(model=str(model_path), dtype=args.gen_dtype, seed=seed, gpu_memory_utilization=args.gpu_memory,
               max_model_len=args.max_tokens + 2048, generation_config="vllm")
     prompts = [tok.apply_chat_template(rows[q]["prompt"], tokenize=True, add_generation_prompt=True) for q in qids]
     params = [SamplingParams(max_tokens=args.max_tokens, seed=seed + k, stop_token_ids=[eos], **SAMPLING)
@@ -535,7 +555,8 @@ def main():
     p.add_argument("--max-len", type=int, default=12288)
     p.add_argument("--gpu-memory", type=float, default=0.85)
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--dtype", default="float32")
+    p.add_argument("--dtype", default="float32", help="reads and edits (HF)")
+    p.add_argument("--gen-dtype", default="bfloat16", help="the paired test answers (vLLM); the evaluation runs bfloat16")
     args = p.parse_args()
     global DTYPE
     DTYPE = args.dtype
