@@ -4386,3 +4386,13 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   that, every phase worked (200 fresh answers: 102 capped, 63 right; 10 loops -> 5 pairs; probe; mech; the edited head
   L21H8 survives bfloat16 100%). Fixed (copies built on CPU, memory freed). ch1 started with the old script (its mine phase:
   617 loop-prone questions + 2,383 others); a resume line with the fixed script follows it in the queue.
+- ~20:30 **Chirurgical ch1 on real data (raw Qwen), reads and checks done:** 3,000 fresh answers (617 loop-prone questions +
+  2,383 others): 121 capped (4.0%), 2,027 right; 50 looping questions (34 code, 9 instructions, 7 math) -> only 27 pairs
+  (13 to find, 14 to check) after the novelty filter; 396 normal answers; dev 512, holdout 1,024. Probe GO on the copy heads
+  (direction split-half cosine up to 0.71). **The same copy heads as the hand-written Mac pairs:** L16H14 0.65 vs 0.39, L18H5
+  0.42 vs 0.18, L21H8 0.43 vs 0.19 (weaker contrast than the 0.58 vs 0.15 of the clean pairs). Writers L26, L27, L25, L19.
+  **Mech: almost nothing is selective on real loops.** Heads x0 / x0.5: loop text only -0.002 to -0.009 nats/token (gate
+  -0.01) -> dropped. Direction L26+L27: a1 drop, **a2 PASS** (loop -0.014 vs productive -0.008, normal -0.011: barely
+  selective), a4 / a6 drop (productive and normal text fall as much as loops), random a6 drop. Reading: the paper's mechanism
+  is there, but on our model's real loops it is weak and tangled with normal text; only dir a2 goes to the paired
+  generation test (the resume line runs it with the fixed script).
