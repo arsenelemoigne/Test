@@ -4208,3 +4208,15 @@ Re-check words (wait / let me check / verify / alternatively / hmm) per 1,000 wo
 v1 thinks less but hesitates at the same rate. Right SVAMP answers: the final number first appears with 53% (raw) / 39%
 (v1) of the thinking still to come (a rough "after the answer" proxy: the number may first appear as an intermediate).
 Decision (user): Astra weight editing runs ON TOP of the final v1, Astra doing the diagnosis and the fix.
+
+### 3 Nov ~04:00: grA step 50 (720 x4) + grA crash fixed
+**grA-50** (GRPO from the raw Qwen, khudgins/Ornith length penalty, λ ramping to 0.05 over 100 steps, so ~0.025 at step 50;
+leash 0.04, lr 2e-6): **+1.5% / -1.0** (vs curve about -0.7; saving under 15%, below the yardstick's range). svamp +1.7 /
+-0.2, mbpp +3.3 / 0.0, ifeval +0.4 / -2.1, one function -4.1 / -1.2, several +1.6 / -2.9, no fit +2.8 / -1.0. Training: batch
+accuracy 83-95%, thinking 400-730 tokens per step with no trend, every question with signal (12/12): at this penalty
+strength the reward is almost all "be right", so 50 steps change nearly nothing. As expected for this recipe (khudgins
+trains 500-1,000 steps); the stronger half of the ramp (steps 50-100) is where saving should show.
+**Crash:** at step 51 rl_train's IFEval grader hit a language constraint and `import langdetect` failed (the package
+was missing on this runtime). Fixed: rl_train.py installs langdetect if missing (same fix protects grC / grD / grF).
+grA re-queued on GPU 1 right after D11 lpd-push2 (now training), resuming from its saved step 50. GPU 2: code2 answers
+done (1,500 questions), bidax7 training.
