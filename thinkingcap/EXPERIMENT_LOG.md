@@ -4075,3 +4075,11 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   user's plan: (1) visualize v1 vs the original (per type, length bands, 720 + training questions), (2) its answers,
   (3) pairs aimed at where it cuts and loses, compared on training vs evaluation questions, (4) iterate with the
   yardstick, watching for over-pushing.
+- ~01:25 (user): no full test until v1 is really good; full tests of bidax5q and v1's answers PAUSED. Pair combinations
+  first, all on bidax5q's data (dp13 + nofit4 + math1 + math2) with michal-bida's settings, 339 steps, 720 at
+  100/200/300/final, judged by the yardstick. GPU 1 after bidax5q seed 1: lpc-b5four (four signals from the original's
+  answers: loop / length-balanced be-right / shorten only on >= 80% solved, dose 1x / no think-enough without trained
+  answers; prostring rows and near-identical tool pairs dropped), lpc-b5diff (difficulty rule, no shorten under 50%
+  solved), lpc-b5cap2 (up to 2 shorten per guard). GPU 2: lpc-bidax7 widened to bidax5q + instr2 + code2 (all of his
+  sources) after the code top-up. BottleCap's own ThinkingCap method is not public (third-party pages guess RL with a
+  length-aware reward); their "collapse of self-trained LMs" paper warns about repeated self-training.
