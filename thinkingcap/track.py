@@ -3366,7 +3366,9 @@ def astra(args):
         return
     if (out / "work_edited").exists() and not (work / "edited").exists():  # a lost runtime: the edits come back
         shutil.copytree(out / "work_edited", work / "edited")
-    py("astra_harness.py", "run", "--name", name, "--out", out, "--work", work, "--model-dir", model_dir,
+    live = (DRIVE / out) if Path("/content/drive/MyDrive").exists() else out  # logs written straight to Drive, turn by turn
+    live.mkdir(parents=True, exist_ok=True)
+    py("astra_harness.py", "run", "--name", name, "--out", live, "--work", work, "--model-dir", model_dir,
        "--practice", practice, "--practice-n", len(keep), "--passes", args.as_passes, "--cap-usd", args.as_cap_usd,
        "--provider", args.as_provider, *(["--worker", args.as_worker] if args.as_worker else []),
        *(["--llm", args.as_llm] if args.as_llm else []),

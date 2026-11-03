@@ -426,7 +426,7 @@ def call_llm(args, key, messages):
     if args.provider == "google":  # 3 Nov (user): Gemini 4 Argon on the user's own Google AI Studio key
         url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         body = {"model": args.llm.split("/")[-1], "messages": messages, "max_tokens": args.max_reply,
-                "reasoning_effort": args.effort}
+                "extra_body": {"google": {"thinking_config": {"include_thoughts": True, "thinking_level": args.effort}}}}
     elif args.provider == "delos":  # 3 Nov (user): a Delos worker's raw, stateless, tool-free model endpoint
         url = f"https://app.delos.so/api/v1/workers/{args.worker}/chat/completions"
         body = {"model": args.llm.split("/")[-1], "messages": messages, "max_tokens": args.max_reply,
@@ -454,6 +454,16 @@ def call_llm(args, key, messages):
             time.sleep(30 * (attempt + 1))
 
 
+THOUGHT = re.compile(r"<thought>(.*?)</thought>", re.S)
+
+
+def split_thoughts(text):
+    """Argon's thought summaries (<thought>...</thought>) apart from its reply: we keep them in thoughts.md for the record
+    and leave them out of the conversation (as the paper's runs: the next turn sees the reply, not the reasoning)."""
+    thoughts = "\n\n".join(t.strip() for t in THOUGHT.findall(text))
+    return thoughts, THOUGHT.sub("", text).strip()
+
+
 def approx_tokens(messages):
     return sum(len(m["content"]) for m in messages) // 3 + 200  # ~3 characters per token, generous
 
@@ -476,6 +486,9 @@ def run_main(args, llm=None, forward=None):
     state_f = run / "state.json"
     st = json.loads(state_f.read_text()) if state_f.exists() else {"turn": 0, "passes": 0, "code_runs": 0, "spent_usd": 0.0,
                                                                   "conversations": 1, "finished": False}
+    for k in ("no_block", "refused", "forward_failed", "kernel_restarts", "repeated_block", "code_errors"):
+        st.setdefault(k, 0)
+    last_block = [None]
     if st["finished"]:
         print("astra: the session is already finished", flush=True)
         return st
@@ -517,10 +530,14 @@ def run_main(args, llm=None, forward=None):
         (t / "prompt.txt").write_text(messages[-1]["content"])
         text, cost, usage = llm(messages)
         budget.spent += cost
+        thoughts, text = split_thoughts(text)
+        if thoughts:
+            (t / "thoughts.md").write_text(thoughts)
         (t / "answer.md").write_text(text)
         (t / "run.json").write_text(json.dumps({"cost_usd": cost, "spent_usd": budget.spent, "usage": usage}))
+        flags = {k: st[k] for k in ("no_block", "refused", "forward_failed", "kernel_restarts", "repeated_block", "code_errors") if st[k]}
         print(f"astra turn {st['turn']}: ${cost:.3f} (total ${budget.spent:.2f} / ${args.cap_usd}), passes {st['passes']}/{args.passes}, "
-              f"code runs {st['code_runs']}", flush=True)
+              f"code runs {st['code_runs']}" + (f", flags {flags}" if flags else ""), flush=True)
         messages.append({"role": "assistant", "content": text})
         if final_sent or (out_of_passes and not find_blocks(text)):
             (run / "final_answer.md").write_text(text)
@@ -528,18 +545,27 @@ def run_main(args, llm=None, forward=None):
             save()
             break
         blocks = find_blocks(text)
+        if blocks and blocks[0] == last_block[0]:
+            st["repeated_block"] += 1  # the same action as last turn: possibly stuck
+        last_block[0] = blocks[0] if blocks else None
         if len(blocks) != 1:
+            st["no_block"] += 1
             reply = "Reply with exactly one ```python or ```forward block (or, once the forward passes are used, with no block)."
         elif blocks[0][0] == "python":
             code = blocks[0][1]
             if st["code_runs"] >= args.code_runs:
                 reply = "The code-run limit is reached: no more Python blocks; use the forward passes left, then answer."
             elif FORBIDDEN.search(code):
+                st["refused"] += 1
                 reply = ("Refused, not run: the block uses something the rules exclude (training / autograd, internet, "
                          "processes or the environment). Rewrite it without that.")
             else:
                 st["code_runs"] += 1
                 reply = kernel.run(code)
+                if reply.startswith("[the kernel was restarted"):
+                    st["kernel_restarts"] += 1
+                elif "Traceback (most recent call last)" in reply:
+                    st["code_errors"] += 1
         else:
             if out_of_passes:
                 reply = "All forward passes are used: make your final choice and reply without a code block."
@@ -550,10 +576,13 @@ def run_main(args, llm=None, forward=None):
                     st["passes"] = k
                     reply = f"Forward pass {k}/{args.passes} done:\n" + json.dumps(summary, indent=1)[:10000]
                 except Exception as e:  # noqa: BLE001  (a failed request does not count)
+                    st["forward_failed"] += 1
                     reply = f"The forward request failed and was not counted: {str(e)[:2000]}"
         if st["passes"] >= args.passes and not out_of_passes:
             reply += "\n\nThat was the last forward pass: make your final choice (the tensors in /work/edited are submitted) and reply without a code block."
         messages.append({"role": "user", "content": reply})
+        if (work / "notes.md").exists():
+            (run / "notes.md").write_text((work / "notes.md").read_text())
         save()
     save()
     return st

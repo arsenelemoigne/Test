@@ -4414,3 +4414,10 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   question from the first file that has it; + v1's answers; holdout removed), astra gv1 (on-top: Argon edits v1's own
   weights; objective in the prompt: > 50% fewer thinking tokens than the RAW model at < 1 point lost; "raw + DPO = v1,
   ~47% / -0.5"). GPU 1's other DPO runs (D2, D3, D4, D5, D10, re-scores, bidax6s) moved to the end of GPU 2's queue.
+- ~00:30 Astra harness, monitoring (user: keep what Astra sees and thinks; spot red flags): Argon's thought summaries come
+  back inside <thought> tags when thinking_config include_thoughts is set (Google refuses it together with
+  reasoning_effort; tested): saved per turn to thoughts.md, kept out of the conversation (as the paper). Logs are written
+  straight to Drive (MyDrive/thinkingcap-mvtf/runs/astra/<name>/: turns/tNNN/prompt.txt = what it saw, thoughts.md, answer.md,
+  run.json = cost; messages.json = the whole context; notes.md = its notebook; final_answer.md), so nothing is lost with a
+  runtime. Red-flag counters per turn: no_block, refused, forward_failed, kernel_restarts, repeated_block (possibly stuck),
+  code_errors; printed on the runner's status line.
