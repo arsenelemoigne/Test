@@ -48,6 +48,23 @@ PRICE_IN_WORST, PRICE_OUT_WORST = 10e-6, 50e-6
 FORBIDDEN = re.compile(r"\.backward\s*\(|torch\.optim|autograd|requires_grad_\s*\(\s*True|/proc\b|environ|getenv|"
                        r"\bsocket\b|urllib|requests|http\.client|subprocess|os\.system|os\.popen|pty\b|ctypes")
 BLOCK = re.compile(r"```(python|forward)\s*\n(.*?)```", re.S)
+OPEN = re.compile(r"^```(python|forward)\s*$")
+CLOSE = re.compile(r"^```\s*$")
+
+
+def find_blocks(text):
+    """The code blocks of a reply: a fence must open at the start of a line (```python / ```forward) and close on a line
+    of its own (the LAST such line before the next opening fence), so backticks inside the code's strings do not split it
+    (3 Nov: Astra's notes text held ``` and two turns were refused)."""
+    lines = text.split("\n")
+    opens = [i for i, l in enumerate(lines) if OPEN.match(l.strip())]
+    blocks = []
+    for j, i in enumerate(opens):
+        stop = opens[j + 1] if j + 1 < len(opens) else len(lines)
+        closes = [c for c in range(i + 1, stop) if CLOSE.match(lines[c].strip())]
+        if closes:
+            blocks.append((OPEN.match(lines[i].strip()).group(1), "\n".join(lines[i + 1:closes[-1]])))
+    return blocks
 
 
 # ---------------- kernel (runs in its own process) ----------------
@@ -224,10 +241,10 @@ def run_generate(args, req, k, work):
     tok = AutoTokenizer.from_pretrained(str(args.model_dir))
     close_id = tok.convert_tokens_to_ids("</think>")
     eos = tok.convert_tokens_to_ids("<|im_end|>")
-    models = {"original": [("original", str(args.model_dir))], "edited": [("edited", str(edited_model_dir(args)))],
-              "both": [("original", str(args.model_dir)), ("edited", str(edited_model_dir(args)))]}[which]
+    models = {"original": ["original"], "edited": ["edited"], "both": ["original", "edited"]}[which]
     results = {}
-    for label, path in models:
+    for label in models:
+        path = str(args.model_dir) if label == "original" else str(edited_model_dir(args))
         llm = LLM(model=path, dtype="bfloat16", seed=0, gpu_memory_utilization=0.85, max_model_len=8192 + 2048,
                   generation_config="vllm")
         prompts, params, keys = [], [], []
@@ -292,7 +309,7 @@ def run_generate(args, req, k, work):
     return summary
 
 
-def run_teacher_forced(args, req, k, work):
+def run_teacher_forced(args, req, k, work, device="cuda", dtype=None):
     import numpy as np
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -309,8 +326,8 @@ def run_teacher_forced(args, req, k, work):
     if attn and (len(ids) > 2 or max(map(len, ids)) > 2048):
         raise ValueError("attn_layers: at most 2 texts of at most 2,048 tokens")
     path = str(edited_model_dir(args)) if req.get("model") == "edited" else str(args.model_dir)
-    model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.float32,
-                                                 **({"attn_implementation": "eager"} if attn else {})).to("cuda").eval()
+    model = AutoModelForCausalLM.from_pretrained(path, dtype=dtype or torch.float32,
+                                                 **({"attn_implementation": "eager"} if attn else {})).to(device).eval()
     layers = model.model.layers
     acts = {}
     hooks = [layers[i].mlp.down_proj.register_forward_pre_hook(lambda m, inp, i=i: acts.__setitem__(i, inp[0].detach()))
@@ -320,7 +337,7 @@ def run_teacher_forced(args, req, k, work):
     topk = min(int(ret.get("topk", 0)), 50)
     meta = {"texts": len(ids), "tokens": [len(x) for x in ids], "files": []}
     for j, x in enumerate(ids):
-        t = torch.tensor([x], device="cuda")
+        t = torch.tensor([x], device=device)
         with torch.no_grad():
             o = model(t, output_hidden_states=bool(ret.get("hidden_states")), output_attentions=bool(attn))
         lp = torch.log_softmax(o.logits[0].float(), -1)
@@ -348,10 +365,14 @@ def run_teacher_forced(args, req, k, work):
 
 def task_prompt(args):
     text = (Path(__file__).parent / "astra_prompt.txt").read_text()
+    note = ("\n\nTHIS IS A SHORT TEST SESSION ON A LAPTOP CPU: the practice set is 12 easy math word problems (graded by the "
+            "final number); a generation pass takes at most 8 generations per model of at most 768 tokens; a teacher-forced "
+            "pass at most 8 texts of about 1,000 tokens. Keep your work small; the point is to check that the tools work."
+            if getattr(args, "cpu", False) else "")
     for k, v in {"{PASSES}": args.passes, "{CODE_RUNS}": args.code_runs, "{PRACTICE_N}": args.practice_n,
                  "{MODEL_DIR}": args.model_dir, "{PRACTICE}": args.practice, "{WORK}": args.work}.items():
         text = text.replace(k, str(v))
-    return text
+    return text + note
 
 
 class Budget:
@@ -470,12 +491,12 @@ def run_main(args, llm=None, forward=None):
         print(f"astra turn {st['turn']}: ${cost:.3f} (total ${budget.spent:.2f} / ${args.cap_usd}), passes {st['passes']}/{args.passes}, "
               f"code runs {st['code_runs']}", flush=True)
         messages.append({"role": "assistant", "content": text})
-        if final_sent or (out_of_passes and not BLOCK.search(text)):
+        if final_sent or (out_of_passes and not find_blocks(text)):
             (run / "final_answer.md").write_text(text)
             st["finished"] = True
             save()
             break
-        blocks = BLOCK.findall(text)
+        blocks = find_blocks(text)
         if len(blocks) != 1:
             reply = "Reply with exactly one ```python or ```forward block (or, once the forward passes are used, with no block)."
         elif blocks[0][0] == "python":
@@ -507,7 +528,70 @@ def run_main(args, llm=None, forward=None):
     return st
 
 
+def cpu_forward(args, request, k):
+    """--cpu (a Mac test): the same tool, small, on CPU with HF (bfloat16); math questions graded by the final number."""
+    import statistics
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    work = Path(args.work)
+    if request.get("type") == "teacher_forced":
+        texts = request.get("texts") or []
+        if not texts or len(texts) > 8 or any(len(t) > 4000 for t in texts):
+            raise ValueError("CPU test: 1..8 texts of at most ~1,000 tokens")
+        request = dict(request)
+        request["return"] = {k2: v for k2, v in request.get("return", {}).items()}
+        return run_teacher_forced(args, request, k, work, device="cpu", dtype=torch.bfloat16)
+    if request.get("type") != "generate":
+        raise ValueError('"type" must be "generate" or "teacher_forced"')
+    rows = practice_rows(args)
+    items, n, which = list(request.get("problems") or []), int(request.get("n", 1)), request.get("model", "original")
+    if not items or any(p not in rows for p in items) or len(items) * n > 8:
+        raise ValueError("CPU test: known practice ids, problems x n <= 8 (per model)")
+    cap = min(int(request.get("max_tokens", 768)), 768)
+    tok = AutoTokenizer.from_pretrained(str(args.model_dir))
+    tok.padding_side = "left"
+    close_id = tok.convert_tokens_to_ids("</think>")
+    eos = tok.convert_tokens_to_ids("<|im_end|>")
+    models = {"original": ["original"], "edited": ["edited"], "both": ["original", "edited"]}[which]
+    results = {}
+    for label in models:
+        path = str(args.model_dir) if label == "original" else str(edited_model_dir(args))
+        model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.bfloat16).eval()
+        keys = [(p, s2) for p in items for s2 in range(n)]
+        texts = [tok.apply_chat_template(rows[p]["prompt"], tokenize=False, add_generation_prompt=True) for p, _ in keys]
+        enc = tok(texts, return_tensors="pt", padding=True)
+        torch.manual_seed(0)
+        with torch.no_grad():
+            gen = model.generate(**enc, max_new_tokens=cap, do_sample=True, temperature=0.6, top_p=0.95, top_k=20,
+                                 eos_token_id=eos, pad_token_id=tok.pad_token_id or eos)
+        del model
+        recs = []
+        for (p, s2), g in zip(keys, gen[:, enc["input_ids"].shape[1]:].tolist()):
+            ids = g[:g.index(eos) + 1] if eos in g else g
+            cut = eos not in g
+            text = tok.decode(ids, skip_special_tokens=False)
+            nums = re.findall(r"-?\d+(?:\.\d+)?", text.split("</think>")[-1].replace(",", ""))
+            right = (not cut) and bool(nums) and abs(float(nums[-1]) - float(rows[p]["answer"])) < 1e-6
+            think = ids.index(close_id) if close_id in ids else len(ids)
+            recs.append({"id": p, "sample": s2, "type": rows[p]["type"], "right": right, "thinking_tokens": think,
+                         "tokens": len(ids), "cut": cut, "text": text})
+        (work / (f"gen_{k}.jsonl" if which != "both" else f"gen_{k}_{label}.jsonl")).write_text(
+            "".join(json.dumps(r) + "\n" for r in recs))
+        results[label] = recs
+    summary = {label: {"n": len(r), "accuracy": round(sum(x["right"] for x in r) / len(r), 3),
+                       "mean_thinking_tokens": round(statistics.fmean(x["thinking_tokens"] for x in r), 1),
+                       "cut_share": round(sum(x["cut"] for x in r) / len(r), 3)} for label, r in results.items()}
+    if which == "both":
+        a, b = results["original"], results["edited"]
+        summary["paired"] = {"accuracy_diff_pp": round(100 * statistics.fmean(int(y["right"]) - int(x["right"]) for x, y in zip(a, b)), 1),
+                             "thinking_saved_pct": round(100 * (1 - summary["edited"]["mean_thinking_tokens"] /
+                                                                max(1e-9, summary["original"]["mean_thinking_tokens"])), 1)}
+    return summary
+
+
 def run_forward_process(args, request, k):
+    if getattr(args, "cpu", False):
+        return cpu_forward(args, request, k)
     req_f = Path(args.work) / f"request_{k}.json"
     res_f = Path(args.work) / f"result_{k}.json"
     req_f.write_text(json.dumps(request))
@@ -540,6 +624,7 @@ def main():
     p.add_argument("--max-reply", type=int, default=8000, help="tokens per reply, reasoning included")
     p.add_argument("--handoff", type=int, default=60000, help="restart the conversation above this many context tokens")
     p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
     p.add_argument("--request")
     p.add_argument("--result")
     p.add_argument("--k", type=int, default=0)

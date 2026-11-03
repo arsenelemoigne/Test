@@ -100,6 +100,15 @@ def test_key_is_never_passed_on():
     print("key ok: removed from the environment, never in a log or a reply")
 
 
+def test_blocks():
+    one = "```python\nnotes = 'use ```python blocks'\nx = 1\n```"
+    assert ah.find_blocks(one) == [("python", "notes = 'use ```python blocks'\nx = 1")], ah.find_blocks(one)
+    two = "```python\na=1\n```\ntext\n```forward\n{}\n```"
+    assert [b[0] for b in ah.find_blocks(two)] == ["python", "forward"]
+    assert ah.find_blocks("no code") == []
+    print("blocks ok")
+
+
 def test_token_cost():
     assert abs(ah.token_cost({"prompt_tokens": 100000, "completion_tokens": 4000}) - (1.0 + 0.2)) < 1e-9
     assert ah.token_cost({"prompt_tokens": 300000, "completion_tokens": 0}) == 300000 * 20e-6
@@ -107,6 +116,7 @@ def test_token_cost():
 
 
 if __name__ == "__main__":
+    test_blocks()
     test_token_cost()
     test_session()
     test_spending_stop()
