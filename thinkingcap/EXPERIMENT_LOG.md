@@ -4432,3 +4432,7 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   rejected, kind, token counts; holdout removed), checkpoints/step-10 ... step-330 + final (the LoRA adapters every 10
   steps, loadable with safetensors to see what DPO changed layer by layer). Forward passes accept
   "model": "checkpoint:step-N" (merged on the raw Qwen), for generate and teacher_forced.
+- ~02:00 (user): **Astra on v1 waits for the end of the DPO screen** (v1's answers, the data folder and the Argon run are
+  parked at the end of GPU 1's queue). DPO screen rebalanced: GPU 1 = D1 dast (running), D2 hard, D3 route, D4 budget,
+  D5 margin, D10 l2s50e (~26 h); GPU 2 = D9 adar1 (running), D7 st1 + 2stage, D8 math, D6 simright, bidax6p, re-scores,
+  bidax6s (~27 h).

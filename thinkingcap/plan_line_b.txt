@@ -390,6 +390,10 @@ lupin --name lpd-route --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-
 rescreen --name rs-route --cx-names lpd-route --cx-steps 100 200 0 --seeds 0
 lupin --name lpd-budget --lp-min-solve 0 --lp-recipe long2short --lp-extra=--budget --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-budget --cx-names lpd-budget --cx-steps 100 200 0 --seeds 0
+lupin --name lpd-margin --lp-min-solve 0 --lp-recipe long2short --lp-extra=--margin-any --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-margin --cx-names lpd-margin --cx-steps 100 200 0 --seeds 0
+lupin --name lpd-l2s50e --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
 # ===== 3 Nov ~24:00 (user): ASTRA (A) ON v1 NOW, with Gemini 4 Argon on the user's Google key, EUR 15 (cap $16) =====
 # v1 = lpc-bidax5q-s0 (best so far). 1) v1 answers every training question x4 (both halves here); 2) the data folder:
 # the raw Qwen's 10-answer file first, the 4-answer top-ups after, + v1's answers, our holdout removed; 3) Argon edits
