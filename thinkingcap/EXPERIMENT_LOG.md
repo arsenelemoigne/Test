@@ -4373,3 +4373,7 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   raw Qwen makes thinking LONGER over training (step 50 / 100 / 150: grA +1.5 / -2.3 / -5.8%, grC -0.3 / -3.0 / -6.7%) at
   about -0.5 to -1 point: the "be right" reward dominates and longer thinking is what it rewards. The leash (grA KL 0.04 vs
   grC 0) changes little. grS / grP (standard scaling; 10x penalty) test the fix. GPU 1: grB resumed; GPU 2: D9 Ada-R1 DPO.
+- ~18:00 **grB step 100** (4x penalty, full at step 100): **+1.2% / 0.0** (svamp +2 / +0.2, mbpp +1 / +2.3, ifeval +3 / -1.5, one
+  function +1 / +0.4, several -2 / -3.4, no fit -3 / +0.2). The 4x penalty stops the drift to longer thinking seen in grA / grC
+  (-2.3 / -3.0% at step 100) but does not shorten either. D9 lpd-adar1 (GPU 2): 30,049 pairs (17,870 questions; 2,844 never
+  solved, 11,152 always solved), ~89 pairs a step over 339 steps, training.
