@@ -67,19 +67,55 @@ CASES_B = [  # (3 Nov, user: same result on a different batch?) other questions,
 ]
 
 
+CASES_C = [  # (user: "maybe more like 20 pairs") 8 more, mixed types
+    ("A bus has 30 seats. 18 are taken. How many are free?",
+     "Free seats are total minus taken: 30 - 18 = 12.",
+     " Adding back, 12 + 18 = 30, so 12 seats are free.",
+     " So 30 minus 18 is 12."),
+    ("Each notebook costs $3. How much do 7 notebooks cost?",
+     "Seven notebooks at $3 each is 7 x 3 = 21 dollars.",
+     " Counting in threes, 3, 6, 9, 12, 15, 18, 21: seven of them, so $21.",
+     " Let me check: 7 times 3 is 21."),
+    ("Write a Python function that reverses a string.",
+     "I need reverse(s). Python slicing with a step of -1 reverses a sequence.",
+     " So the body is return s[::-1], which also handles the empty string and single characters correctly.",
+     " The function should reverse the string."),
+    ("Write a Python function that checks whether a number is even.",
+     "I need is_even(n). A number is even when dividing by 2 leaves no remainder.",
+     " So return n % 2 == 0; this works for negative numbers too because Python's modulo keeps the sign of the divisor.",
+     " A number is even if n % 2 == 0."),
+    ("List three fruits, all in lowercase, separated by commas.",
+     "Three fruits, lowercase, commas between them. Apple, banana and cherry are simple choices.",
+     " The final answer is then: apple, banana, cherry. No capital letters and no trailing period.",
+     " The answer must be in lowercase."),
+    ("Write a title for a story about a lost dog, wrapped in double angular brackets.",
+     "The title needs double angular brackets around it, like <<title>>. The story is about a lost dog.",
+     " Something warm works: <<The Long Way Home>>, which hints at the dog finding its way back.",
+     " The title goes in double angular brackets."),
+    ("Find the user with id 42. Available: get_user(user_id), list_users().",
+     "The user asks for a single user by id, and get_user takes a user_id.",
+     " So the call is get_user(user_id=42); list_users is not needed since the id is known.",
+     " I should call get_user with the id."),
+    ("Convert 5 kilometres to metres.",
+     "One kilometre is 1000 metres, so 5 km is 5 x 1000 = 5000 metres.",
+     " Equivalently, move the decimal three places: 5.000 km becomes 5000 m.",
+     " So 5 times 1000 is 5000."),
+]
+
+
 def main():
     from transformers import AutoTokenizer
     tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
     enc = lambda t: tok.encode(t, add_special_tokens=False)
     pairs, normal = [], []
     import sys
-    cases = CASES_B if "--batch-b" in sys.argv else CASES
+    cases = CASES_B if "--batch-b" in sys.argv else CASES + CASES_B + CASES_C if "--twenty" in sys.argv else CASES
     for k, (q, start, prod, rep) in enumerate(cases):
         prompt = tok.apply_chat_template([{"role": "user", "content": q}], tokenize=True, add_generation_prompt=True)
         prompt = list(prompt["input_ids"]) if hasattr(prompt, "keys") else list(prompt)
         prefix = enc("<think>\n" + start)
         pairs.append({"id": f"c{k}", "part": "x", "prompt_ids": prompt, "prefix": prefix, "loop": enc(rep * 4),
-                      "productive": enc(prod), "split": "find" if k % 2 == 0 else "check"})
+                      "productive": enc(prod), "split": "find" if k % 2 == 0 else "check"})  # 10 / 10 with --twenty
         normal.append({"id": f"n{k}", "part": "x", "prompt_ids": prompt,
                        "output_ids": enc("<think>\n" + start + prod + "\n</think>\n\nThe answer follows from the work above.")})
     out = Path(tempfile.mkdtemp()) / "cpu"
@@ -87,8 +123,8 @@ def main():
     ch.write_jsonl(out / "pairs.jsonl", pairs)
     ch.write_jsonl(out / "normal.jsonl", normal)
     ch.DTYPE = "bfloat16"
-    args = SimpleNamespace(out=str(out), model="Qwen/Qwen3-0.6B", attn_pairs=3, attn_len=512, heads=2, layers=2,
-                           columns=64, doses=[2, 6], seed=0, check_pairs=3, check_normal=6, normal_len=128,
+    args = SimpleNamespace(out=str(out), model="Qwen/Qwen3-0.6B", attn_pairs=6 if "--twenty" in sys.argv else 3, attn_len=512, heads=2, layers=2,
+                           columns=64, doses=[2, 6], seed=0, check_pairs=10 if "--twenty" in sys.argv else 3, check_normal=6, normal_len=128,
                            min_stability=0.8, min_copy_gap=0.2)
     ch.probe(args)
     ch.mech(args, tok)
