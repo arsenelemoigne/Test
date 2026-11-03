@@ -4380,3 +4380,9 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
 - ~18:15 (user): **GRPO stopped.** No GRPO run shortened thinking (grA / grC finals 6-7% longer, grB +1.2% at step 100).
   grB finishes its 150 steps; grS, grP, gs0 and grF (SmartThinker) are taken out of the queues (kept as comments). The
   GPUs now run the DPO pair-strategy screen only.
+- ~19:30 **grB step 150 (final): -0.6% / -0.7** (svamp 0 / -1.9, mbpp -4 / +0.6, ifeval +1 / -1.0, one function -2 / -0.6,
+  several +2 / -0.8, no fit -1 / -0.4). GRPO screen closed: no run shortened thinking. **Chirurgical smoke chs0 failed** in its
+  gen phase: save_candidate built the edited copy on the GPU and kept ~3.7 GB, so vLLM found 18.28 < 18.73 GB free. Before
+  that, every phase worked (200 fresh answers: 102 capped, 63 right; 10 loops -> 5 pairs; probe; mech; the edited head
+  L21H8 survives bfloat16 100%). Fixed (copies built on CPU, memory freed). ch1 started with the old script (its mine phase:
+  617 loop-prone questions + 2,383 others); a resume line with the fixed script follows it in the queue.
