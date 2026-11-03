@@ -380,7 +380,10 @@ astra --name as0 --as-smoke
 lupin --name lpd-dast --lp-min-solve 0 --lp-recipe dast --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 0 --seeds 0
 # grE: learning rate 5e-6 (2.5x; everything else = grA)
-thinkprune --name grE --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 5e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
+# replaced (weak signal): thinkprune --name grE --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 5e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
+# 3 Nov ~15:45 (user): grE (lr x2.5, same weak penalty) replaced by grP: standard GRPO scaling + 10x penalty (0.5,
+# full by step 50): a strong length push; a right answer still always beats a wrong one (penalty < 1).
+thinkprune --name grP --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 50 --tp-score-every 50 --tp-kl 0.04 --tp-lam-max 0.5
 # D2 bida + keep trying: bidax5q's pairs + longest > shortest finished wrong on questions solved < 50% (DAST's accuracy guard)
 lupin --name lpd-hard --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.5 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-hard --cx-names lpd-hard --cx-steps 100 200 0 --seeds 0

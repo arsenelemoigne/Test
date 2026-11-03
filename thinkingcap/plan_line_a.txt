@@ -348,7 +348,11 @@ thinkprune --name grC --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-st
 lupin --name lpd-adar1 --lp-min-solve 0 --lp-recipe adar1 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-adar1 --cx-names lpd-adar1 --cx-steps 100 200 0 --seeds 0
 # grD: GRPO-lambda: length penalty only in groups right >= 50% of the time
-thinkprune --name grD --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05 --tp-gate 0.5
+# replaced (weak signal): thinkprune --name grD --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05 --tp-gate 0.5
+# 3 Nov ~15:45 (user): grA / grC at step 100 think LONGER (-2.3 / -3.0%) at -1: the length signal is too weak (penalty
+# ~0.01 next to 1.0 for being right, and Dr. GRPO does not rescale it). grD (gate) replaced by grS: standard GRPO
+# scaling (reward differences divided by the group's spread), same 0.05 penalty: does rescaling alone give length?
+thinkprune --name grS --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-kl 0.04 --tp-lam-max 0.05
 # grF (user, 3 Nov): SmartThinker reward (2603.08000): per question the length with the best chance of being right,
 # estimated from the group; only right answers longer than it penalized; the penalty's strength set per group so no
 # right answer falls below the group mean. As the paper (read in full 3 Nov): plain GRPO advantages (divided by the

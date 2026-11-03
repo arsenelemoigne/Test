@@ -4364,3 +4364,6 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   ~0.01 for a typical 400-token answer, against 1.0 for being right), so 12 questions x 8 answers a step give almost no
   length signal; the reward is nearly pure "be right" and GRPO drifts. grB (4x penalty) and grE (lr x2.5) test exactly
   this lever; step 150 of grA / grC next.
+- ~15:45 (user: don't run useless GRPO): queued GRPO changed. grD (gate) -> **grS** = standard GRPO scaling (no Dr. GRPO),
+  penalty 0.05 (rescaling alone); grE (lr x2.5) -> **grP** = standard scaling + penalty 0.5 reached at step 50. grB (0.2,
+  running), grF (SmartThinker, standard scaling) unchanged; grA / grC finish their 150 steps as the confirmation.
