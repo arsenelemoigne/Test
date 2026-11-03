@@ -4347,3 +4347,10 @@ and > 10% saved). Paired check on 8 new questions: 8/8 -> 8/8, thinking 468 -> 4
 validated repair": below its own 10% bar, too few questions, no dose-response. It left the edit submitted (it could have
 dropped it with a code run). The harness works end to end with the real Astra; the result itself says nothing (8 easy
 questions). The real test is the Colab run (12,000 practice questions of every type, 512 answers a round, our judges).
+**3 Nov ~16:30, experiment 3 will run FIRST with Gemini 4 Argon (user's own Google AI Studio key: exact spending in AI Studio).**
+The key lists 60 Google models (no "Carbon", no Astra): the strongest text model is gemini-4-argon ($2/M in, $10/M out on
+OpenRouter's list: 5x cheaper than Astra). Not a strict reproduction (the paper used Astra); Astra via Ivan follows with the
+identical harness, for the comparison. Driver: --provider google (Google's OpenAI-compatible endpoint, reasoning_effort high);
+one test call answered 391; Argon's thinking tokens are only in total_tokens (223 vs 58 + 7) and billed as output, so the
+count takes output = total - prompt. Cap $15 counted. Key only via Colab Secrets GOOGLE_API_KEY (cell 5). Queued commented
+at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).

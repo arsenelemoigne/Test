@@ -112,6 +112,8 @@ def test_blocks():
 def test_token_cost():
     assert abs(ah.token_cost({"prompt_tokens": 100000, "completion_tokens": 4000}) - (1.0 + 0.2)) < 1e-9
     assert ah.token_cost({"prompt_tokens": 300000, "completion_tokens": 0}) == 300000 * 20e-6
+    # Argon: thinking tokens only in total_tokens, billed as output
+    assert abs(ah.google_cost({"prompt_tokens": 58, "completion_tokens": 7, "total_tokens": 223}) - (58 * 2e-6 + 165 * 10e-6)) < 1e-12
     print("token cost ok")
 
 

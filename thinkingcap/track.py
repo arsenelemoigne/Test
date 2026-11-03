@@ -306,7 +306,8 @@ def main():
     parser.add_argument("--as-extra", default="", help="astra: more astra_harness.py flags, comma-joined")
     parser.add_argument("--as-holdout", type=int, default=512, help="astra: our own paired check of the final edit")
     parser.add_argument("--as-smoke", action="store_true", help="astra: the GPU tools only (no API call, no key needed)")
-    parser.add_argument("--as-provider", default="openrouter", choices=("openrouter", "delos"))
+    parser.add_argument("--as-provider", default="openrouter", choices=("openrouter", "delos", "google"))
+    parser.add_argument("--as-llm", default="", help="astra: the model (default openai/gpt-6-astra; google: gemini-4-argon)")
     parser.add_argument("--as-worker", default="", help="astra --as-provider delos: the worker id")
     parser.add_argument("--as-data", default="", help="astra: a folder made by `astradata` (raw + v1 answers) to give Astra")
     parser.add_argument("--as-goal", default="vs-dpo", choices=("vs-dpo", "on-top"),
@@ -3316,7 +3317,7 @@ def astra(args):
     seeds) and the 720 x4 screen (s4-astra-NAME)."""
     import random
     name = args.name
-    key_var = {"openrouter": "OPENROUTER_API_KEY", "delos": "DELOS_API_KEY"}[args.as_provider]
+    key_var = {"openrouter": "OPENROUTER_API_KEY", "delos": "DELOS_API_KEY", "google": "GOOGLE_API_KEY"}[args.as_provider]
     if not os.environ.get(key_var) and not args.as_smoke:
         print(f"astra: {key_var} is not set in this runtime (Colab Secrets + the key cell); skipped, nothing sent", flush=True)
         return
@@ -3368,6 +3369,7 @@ def astra(args):
     py("astra_harness.py", "run", "--name", name, "--out", out, "--work", work, "--model-dir", model_dir,
        "--practice", practice, "--practice-n", len(keep), "--passes", args.as_passes, "--cap-usd", args.as_cap_usd,
        "--provider", args.as_provider, *(["--worker", args.as_worker] if args.as_worker else []),
+       *(["--llm", args.as_llm] if args.as_llm else []),
        *(["--data", data_dir, "--goal", args.as_goal] if data_dir else []),
        *args.as_extra.replace(",", " ").split())
     for small in ("notes.md",):

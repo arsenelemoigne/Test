@@ -397,11 +397,20 @@ class Budget:
     def __init__(self, cap_usd, spent=0.0):
         self.cap, self.spent = cap_usd, spent
 
-    def worst_next(self, context_tokens, max_reply):
+    def worst_next(self, context_tokens, max_reply):  # Astra's prices: above Argon's, so safe for every provider
         return context_tokens * PRICE_IN_WORST + max_reply * PRICE_OUT_WORST
 
     def allows(self, context_tokens, max_reply):
         return self.spent + self.worst_next(context_tokens, max_reply) <= self.cap
+
+
+# Gemini 4 Argon (Google AI Studio key; OpenRouter's list on 3 Nov: $2/M in, $10/M out, thinking billed as output);
+# above 200k prompt tokens Google charges more: counted at 2x as the worst case
+def google_cost(usage):
+    prompt = usage.get("prompt_tokens", 0)
+    out = max(usage.get("completion_tokens", 0), usage.get("total_tokens", 0) - prompt)  # thinking is in total only
+    long = prompt > 200000
+    return prompt * (4e-6 if long else 2e-6) + out * (20e-6 if long else 10e-6)
 
 
 def token_cost(usage):
@@ -412,7 +421,11 @@ def token_cost(usage):
 
 def call_llm(args, key, messages):
     import urllib.request
-    if args.provider == "delos":  # 3 Nov (user): a Delos worker's raw, stateless, tool-free model endpoint
+    if args.provider == "google":  # 3 Nov (user): Gemini 4 Argon on the user's own Google AI Studio key
+        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        body = {"model": args.llm.split("/")[-1], "messages": messages, "max_tokens": args.max_reply,
+                "reasoning_effort": args.effort}
+    elif args.provider == "delos":  # 3 Nov (user): a Delos worker's raw, stateless, tool-free model endpoint
         url = f"https://app.delos.so/api/v1/workers/{args.worker}/chat/completions"
         body = {"model": args.llm.split("/")[-1], "messages": messages, "max_tokens": args.max_reply,
                 "reasoning_effort": args.effort}
@@ -429,8 +442,8 @@ def call_llm(args, key, messages):
             text = data["choices"][0]["message"].get("content") or ""
             u = data.get("usage", {})
             cost = u.get("cost")
-            if cost is None:  # no accounting returned (Delos): full list price, nothing counted as cached
-                cost = token_cost(u)
+            if cost is None:  # no accounting returned: full list price, nothing counted as cached
+                cost = google_cost(u) if args.provider == "google" else token_cost(u)
             return text, float(cost), u
         except Exception as e:  # noqa: BLE001
             if attempt == 3:
@@ -445,7 +458,7 @@ def approx_tokens(messages):
 
 def run_main(args, llm=None, forward=None):
     """The session. `llm(messages) -> (text, cost, usage)` and `forward(request, k) -> summary` are replaceable (tests)."""
-    keys = {"openrouter": "OPENROUTER_API_KEY", "delos": "DELOS_API_KEY"}
+    keys = {"openrouter": "OPENROUTER_API_KEY", "delos": "DELOS_API_KEY", "google": "GOOGLE_API_KEY"}
     key = os.environ.pop(keys[args.provider], None)
     for other in keys.values():  # never left where the kernel or a forward pass could see it
         os.environ.pop(other, None)
@@ -631,7 +644,7 @@ def main():
     p.add_argument("--practice-n", type=int, default=0)
     p.add_argument("--scratch", default="/content/astra-models")
     p.add_argument("--llm", default="openai/gpt-6-astra")
-    p.add_argument("--provider", default="openrouter", choices=("openrouter", "delos"))
+    p.add_argument("--provider", default="openrouter", choices=("openrouter", "delos", "google"))
     p.add_argument("--worker", default="", help="delos: the worker id (billing follows it)")
     p.add_argument("--effort", default="high", help="reasoning effort (the paper: max; high keeps the budget)")
     p.add_argument("--passes", type=int, default=10)
