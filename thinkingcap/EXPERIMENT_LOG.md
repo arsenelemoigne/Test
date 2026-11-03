@@ -4396,3 +4396,15 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   selective), a4 / a6 drop (productive and normal text fall as much as loops), random a6 drop. Reading: the paper's mechanism
   is there, but on our model's real loops it is weak and tangled with normal text; only dir a2 goes to the paired
   generation test (the resume line runs it with the fixed script).
+- ~21:30 **Chirurgical ch1 FINISHED (raw Qwen, the paper's loop recipe, scripted): no edit kept.** ch1 failed in gen as
+  expected (old script); the resume line ran gen with the fix. Paired dev test (512 questions, same seeds): **dir L26+L27 a2:
+  accuracy 72.7 -> 68.9 (-3.7 +- 1.6), thinking saved +3.0% (-0.1% on answers both finished), capped 1.2% -> 2.7%** (worse);
+  the random control a6: -0.8 +- 1.6, +3.7% saved, capped 1.8%. pick: none (rule: saves at no worse than -1 point). The
+  edits survive bfloat16 (98-99% of entries, 100% of their size). **Conclusion:** the paper's loop fix does not transfer to
+  the raw Qwen3-0.6B: its real loops are rare (4% of answers even on loop-prone questions), the loop signal is weak and
+  tangled with normal thinking, and the one edit that passed the likelihood checks lost accuracy and created MORE cut
+  answers. The random direction did better than the "loop" direction. Astra may still find something the fixed recipe
+  cannot (experiment 3 stays queued as a reminder).
+- **Astra smoke as0 (GPU tools, no API): all three work on Colab** (paired generation on 6 practice questions with per-type
+  summaries; a teacher-forced read with log-probs, top-k, hidden states, MLP inputs and attention; the kernel over 311
+  tensors). GPU 1 now on D1 lpd-dast; GPU 2: D9 Ada-R1 at step 150 / 338.
