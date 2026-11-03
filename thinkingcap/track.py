@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -301,6 +301,11 @@ def main():
     parser.add_argument("--ch-start", default="raw", help="chirurgical: 'raw' or an adapter (merged first), e.g. v1 later")
     parser.add_argument("--ch-smoke", action="store_true", help="chirurgical: tiny sizes, every phase, no 720 screen")
     parser.add_argument("--ch-extra", default="", help="chirurgical: more chirurgical.py flags, comma-joined")
+    parser.add_argument("--as-passes", type=int, default=10, help="astra: forward passes (the paper: 10 / 25 / 50)")
+    parser.add_argument("--as-cap-usd", type=float, default=8.0, help="astra: HARD spending stop (user, 3 Nov: EUR 8)")
+    parser.add_argument("--as-extra", default="", help="astra: more astra_harness.py flags, comma-joined")
+    parser.add_argument("--as-holdout", type=int, default=512, help="astra: our own paired check of the final edit")
+    parser.add_argument("--as-smoke", action="store_true", help="astra: the GPU tools only (no API call, no key needed)")
     parser.add_argument("--tp-lam-max", type=float, default=0.05)
     parser.add_argument("--tp-ramp", type=int, default=300)
     parser.add_argument("--tp-gate", type=float, default=0.0)
@@ -3294,6 +3299,91 @@ def chirurgical(args):
         drive_sync("save")
 
 
+def astra(args):
+    """Astra weight-space programming (3 Nov, user; the paper's Exp 8 as it was run): gpt-6-astra gets Qwen3-0.6B's weights
+    in a CPU kernel, practice questions and --as-passes forward passes, and does the diagnosis and the edit itself
+    (astra_harness.py). HARD spending stop --as-cap-usd. The key comes only from the environment variable
+    OPENROUTER_API_KEY (Colab Secrets, set in a notebook cell before the plan cell); without it this stage only prints
+    that and returns. Afterwards OUR checks, never shown to Astra: a paired holdout (original vs Astra's edit, same
+    seeds) and the 720 x4 screen (s4-astra-NAME)."""
+    import random
+    name = args.name
+    if not os.environ.get("OPENROUTER_API_KEY") and not args.as_smoke:
+        print("astra: OPENROUTER_API_KEY is not set in this runtime (Colab Secrets + the key cell); skipped, nothing sent", flush=True)
+        return
+    extra = [x for x in args.tp_extra.split(",") if x]
+    out = Path("runs/astra") / name
+    drive_sync("restore", only=["data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra], SCREEN,
+                                str(ROOT / "s4-base"), str(out)])
+    from build_pool import part_of
+    from huggingface_hub import snapshot_download
+    model_dir = snapshot_download("Qwen/Qwen3-0.6B")
+    rows = {}
+    for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
+        for line in f.read_text().splitlines():
+            if line.strip() and not re.search(r"prostring|stringname|stringName", line):
+                r = json.loads(line)
+                if part_of(r):
+                    rows[r["pool_id"]] = r | {"id": r["pool_id"], "type": part_of(r), "benchmark": part_of(r)}
+    ids = sorted(rows)
+    random.Random(7).shuffle(ids)
+    out.mkdir(parents=True, exist_ok=True)
+    held = out / "holdout.json"  # ours, fixed before the session, never in Astra's practice file
+    if not held.exists():
+        held.write_text(json.dumps(ids[:args.as_holdout]))
+    holdout = json.loads(held.read_text())
+    practice = Path(f"/content/astra/{name}/practice.jsonl")
+    practice.parent.mkdir(parents=True, exist_ok=True)
+    keep = [rows[i] for i in ids if i not in set(holdout)]
+    practice.write_text("".join(json.dumps(r) + "\n" for r in keep))
+    work = Path(f"/content/astra/{name}/work")
+    if args.as_smoke:
+        py("astra_harness.py", "smoke", "--work", work, "--model-dir", model_dir, "--practice", practice,
+           "--scratch", f"/content/astra/{name}/models")
+        return
+    if (out / "work_edited").exists() and not (work / "edited").exists():  # a lost runtime: the edits come back
+        shutil.copytree(out / "work_edited", work / "edited")
+    py("astra_harness.py", "run", "--name", name, "--out", out, "--work", work, "--model-dir", model_dir,
+       "--practice", practice, "--practice-n", len(keep), "--passes", args.as_passes, "--cap-usd", args.as_cap_usd,
+       *args.as_extra.replace(",", " ").split())
+    for small in ("notes.md",):
+        if (work / small).exists():
+            shutil.copy(work / small, out / small)
+    if (work / "edited").exists():
+        shutil.rmtree(out / "work_edited", ignore_errors=True)
+        shutil.copytree(work / "edited", out / "work_edited")
+    for g in work.glob("gen_*.jsonl"):
+        shutil.copy(g, out / g.name)
+    drive_sync("save")
+    if not list((work / "edited").glob("*.pt")):
+        print(f"astra {name}: no edit submitted", flush=True)
+        return
+    # our checks: Astra's final edit vs the original on our holdout (same seeds), then the 720
+    import types
+    import chirurgical
+    hargs = types.SimpleNamespace(model_dir=model_dir, work=str(work), scratch=f"/content/astra/{name}/models")
+    import astra_harness
+    edited_dir = astra_harness.edited_model_dir(hargs)
+    from transformers import AutoTokenizer
+    tok = AutoTokenizer.from_pretrained(model_dir)
+    gargs = types.SimpleNamespace(gen_dtype="bfloat16", gpu_memory=0.85, max_tokens=8192)
+    check = out / "holdout_check.json"
+    if not check.exists():
+        orig = chirurgical.generate_graded(gargs, model_dir, holdout, rows, tok, 0)
+        cand = chirurgical.generate_graded(gargs, edited_dir, holdout, rows, tok, 0)
+        res = chirurgical.summarize(orig, cand, holdout, {q: rows[q]["type"] for q in holdout})
+        check.write_text(json.dumps(res, indent=1))
+        a = res["all"]
+        print(f"astra {name} holdout (ours): accuracy {a['diff_pp']:+.1f} +- {a['se_pp']:.1f}, thinking saved "
+              f"{a['saved_pct']:+.1f}%, cut {100 * a['cap_original']:.1f}% -> {100 * a['cap_candidate']:.1f}%", flush=True)
+        drive_sync("save")
+    screen = ROOT / f"s4-astra-{name}"
+    drive_sync("restore", only=[str(screen)])
+    if not (screen / "results.json").exists():
+        evaluate(screen, samples=4, questions=SCREEN, model=edited_dir)
+        drive_sync("save")
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -4587,7 +4677,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

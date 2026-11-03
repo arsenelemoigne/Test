@@ -4295,3 +4295,21 @@ productive / normal): L16H14 x0 -0.025 / +0.006 / -0.000, x0.5 -0.013; L18H5 x0 
 L19+L22 a2 -0.058 / +0.006 / +0.008, **a6 -0.196 / +0.009 / +0.025** (the paper's a6: -0.103 vs -0.009); random a6 +0.001
 -> dropped. The paper's mechanism (copy head + MLP loop direction, selective, dose-dependent, random control null) shows up
 in our model, weaker on heads (0.58 vs 0.15 here, 0.887 vs 0.082 in the paper). Likelihood only; no length / accuracy yet.
+
+### 3 Nov: the Astra harness (the paper as it was run), built and tested without spending
+astra_harness.py: kernel (persistent CPU Python over Qwen3-0.6B's weights: NAMES / load / load_original / save_edit /
+drop_edit / edited / tok; save_edit refuses the embedding, lm_head, the final norm, non-finite tensors and whole-tensor
+scaling; scrubbed environment), forward tool (fresh GPU process per pass: generate original / edited / both with the
+eval sampling and per-type caps, graded, paired diff +- SE and thinking saved; teacher_forced log-probs / top-k / hidden
+states / MLP inputs / attention), driver (OpenRouter, openai/gpt-6-astra, reasoning effort high; one block per turn;
+blocks touching training, internet, processes or the environment refused; conversation restarted with notes above 60k
+tokens). Prompt astra_prompt.txt = the paper's Exp 8 prompt, rewritten for our model and goal (fewest thinking tokens at
+<= ~1 point, four test types, no "close early regardless").
+**HARD spending stop (user: EUR 8):** cap $8 (below EUR 8); real cost per call from OpenRouter's usage accounting (worst
+case charged if absent); before each call the worst case of the next one (whole context uncached at $10/M + 8,000 reply
+tokens at $50/M = at most $1.20) must fit; prompts kept far below the 272k-token price tier. Price on 3 Nov: $10/M in, $1/M
+cached, $50/M out. Key only from OPENROUTER_API_KEY (Colab Secrets, loaded in cell 5, removed from the environment at once).
+Tests (astra_harness_test.py, scripted Astra, real kernel on a tiny Qwen3): session loop, refusals, pass / code-run
+counting, failed requests not counted, final answer; the stop never passes the cap; the key never reaches the kernel,
+a log or a reply. Track stage `astra` (--as-smoke: GPU tools only, no API call); afterwards OUR checks, never shown to Astra:
+paired holdout (512) and the 720 x4. Queued on GPU 1 after ch1: as0 smoke; a1 (10 passes, $8) commented until the key is set.
