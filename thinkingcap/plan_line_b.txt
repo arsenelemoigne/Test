@@ -350,7 +350,7 @@
 # 150-step screens (lam ramp over 100 steps), the 720 at 50/100/150. A smoke test first. A/B here, C/D on GPU 2.
 # done: thinkprune --name gr0 --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-lr 2e-6 --tp-dr-grpo --tp-smoke
 # grA: his recipe (leash 0.04, penalty up to 0.05)
-thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
+# FAILED at step 51 (langdetect), re-queued below: thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # 3 Nov ~02:00 (user: only 2 GPUs on the account): the DPO pair screen (D1-D11, everything = bidax5q s0, only the pairs
 # change; 720 x4 at steps 100 / 200 / final) shares the two GPUs, alternating with the GRPO screens.
 # (GPU 1)
