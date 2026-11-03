@@ -16,6 +16,8 @@ Recipes (--recipe), each from the literature pass of 27 Oct (EXPERIMENT_LOG):
                 the widest pair of each kind per question, the narrowest --margin-drop share of each kind dropped.
     adar1       Ada-R1 (2504.21659): shortest right > each of the 2 longest answers of any outcome.
     rightwrong  only similar-length right > wrong pairs (within --right-band).
+    simright    (3 Nov) similar-length right > wrong (right, within --right-band) + long2short's shorten pairs, per part at
+                most --shorten-cap x the right pairs: correctness pairs carry no length shortcut, only shorten pushes length.
     four        (2 Nov, user) four separate signals, so that only one of them pushes length:
                   loop    the shortest right answer > a capped / unclosed one (the original's answers): "don't loop";
                   right   a right answer > a FINISHED wrong one by the SAME model (original, or --trained), the longer one
@@ -33,6 +35,12 @@ Modifiers, any recipe:
     --drop-similar J  drop pairs whose two answers share more than J of their token 4-grams (near-identical pairs push
                     probability onto unintended outputs: likelihood displacement, 2410.08847).
     --add-right     add the similar-length right > wrong pairs to any recipe.
+    --add-hard P    (3 Nov, DAST's DICP) on questions solved < P of the time, also the longest finished wrong answer >
+                    the shortest finished wrong one ("keep trying"; capped answers never win). Not for dast / four.
+    --budget        (3 Nov, DAST's budget) long2short / simright: the shorten pair's loser is the longest right answer
+                    when it thinks past L = p x mean right length + (1 - p) x L_max (L_max: the longest answer in the
+                    file), instead of the fixed --long-ratio.
+    --margin-any    apply --margin-drop (the narrowest share of each kind dropped) to any recipe, not only dast.
     --band PART:LO:HI  (1 Nov, math hole) on PART's questions whose answers think LO-HI tokens on average (mean thinking
                     length of the answers given), no shorten pair: the trained models over-cut exactly there (SVAMP
                     470-905: -13.5 pts) while the cut is free above it. Guard pairs stay.
@@ -84,7 +92,7 @@ def similar(a, b):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--rollouts", nargs="+", required=True)
-    parser.add_argument("--recipe", required=True, choices=("long2short", "dast", "adar1", "rightwrong", "four"))
+    parser.add_argument("--recipe", required=True, choices=("long2short", "dast", "adar1", "rightwrong", "four", "simright"))
     parser.add_argument("--trained", nargs="*", default=[], help="four: a trained model's answers to the same questions")
     parser.add_argument("--four-min-solve", type=float, default=0.8)
     parser.add_argument("--four-dose", type=float, default=1.0)
@@ -116,6 +124,9 @@ def main():
     parser.add_argument("--overcut-ratio", type=float, default=0.75)
     parser.add_argument("--drop-similar", type=float, default=0.0)
     parser.add_argument("--add-right", action="store_true")
+    parser.add_argument("--add-hard", type=float, default=0.0)
+    parser.add_argument("--budget", action="store_true")
+    parser.add_argument("--margin-any", action="store_true")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -185,7 +196,20 @@ def main():
         balance["longer" if r["output_tokens"] >= w["output_tokens"] else "shorter"] += 1
         add("right", r, w, q, "right")
 
+    l_max = max((r["output_tokens"] for q in groups.values() for r in q), default=0)
+
+    def too_long(rights, p):
+        """The shorten pair's loser test: the fixed ratio, or (--budget) past the question's budget."""
+        if args.budget:
+            mean = sum(r["output_tokens"] for r in rights) / len(rights)
+            return rights[-1]["output_tokens"] > p * mean + (1 - p) * l_max
+        return rights[-1]["output_tokens"] >= args.long_ratio * rights[0]["output_tokens"]
+
     for q in groups.values():
+        if args.add_hard and args.recipe not in ("dast", "four"):
+            done = sorted((r for r in q if finished(r) and not right(r)), key=lambda r: r["output_tokens"])
+            if sum(right(r) for r in q) / len(q) < args.add_hard and len(done) > 1 and done[-1]["output_tokens"] > done[0]["output_tokens"]:
+                add("hard", done[-1], done[0], q)
         if args.recipe == "four":
             rights = sorted((r for r in q if right(r)), key=lambda r: r["output_tokens"])
             loops = [r for r in q if not finished(r)]
@@ -215,7 +239,7 @@ def main():
         if banded:
             counts[(part, "in band")] += 1
         if not may_shorten:  # a hard question: only "be right", never "be shorter" (nor "short right > long wrong")
-            if args.recipe in ("long2short", "adar1"):
+            if args.recipe in ("long2short", "adar1", "simright"):
                 close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rights for w in wrongs if finished(w)
                          and abs(r["output_tokens"] - w["output_tokens"]) <= args.right_band * max(r["output_tokens"], w["output_tokens"])]
                 if close:
@@ -231,11 +255,21 @@ def main():
                 mid = rights[(len(rights) - 1) // 2] if rights else None
                 if p >= median_parts[part] and len(rights) > 2 and rights[-1]["output_tokens"] >= args.long_ratio * mid["output_tokens"]:
                     add("shorten", mid, rights[-1], q)
-            elif may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] >= ratio * rights[0]["output_tokens"]:
+            elif may_shorten and len(rights) > 1 and (too_long(rights, p) if args.budget else
+                                                      rights[-1]["output_tokens"] >= ratio * rights[0]["output_tokens"]):
                 if banded:
                     counts[(part, "shorten dropped (band)")] += 1
                 else:
                     add("shorten", rights[0], rights[-1], q)
+        elif args.recipe == "simright":
+            close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rights for w in wrongs if finished(w)
+                     and abs(r["output_tokens"] - w["output_tokens"]) <= args.right_band * max(r["output_tokens"], w["output_tokens"])]
+            if close:
+                _, r, w = min(close, key=lambda t: t[0])
+                add("right", r, w, q)
+            if len(rights) > 1 and too_long(rights, p):
+                add("shorten", rights[0], rights[-1], q)
+            continue
         elif args.recipe == "dast":
             if may_shorten and len(rights) > 1 and rights[-1]["output_tokens"] > rights[0]["output_tokens"]:
                 add("shorten", rights[0], rights[-1], q)
@@ -265,6 +299,15 @@ def main():
             limit = round(args.shorten_cap * sum(p["kind"] == "guard" for p in mine))
             counts[(part, "shorten capped from")] = len(short)
             kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
+        pairs = kept
+    if args.recipe == "simright":  # the 1:1 balance against the "be right" pairs
+        kept = []
+        for part in {p["part"] for p in pairs}:
+            mine = [p for p in pairs if p["part"] == part]
+            short = [p for p in mine if p["kind"] == "shorten"]
+            rng.shuffle(short)
+            counts[(part, "shorten capped from")] = len(short)
+            kept += [p for p in mine if p["kind"] != "shorten"] + short[:round(args.shorten_cap * sum(p["kind"] == "right" for p in mine))]
         pairs = kept
     if args.recipe == "four":  # the dose: per part, shorten pairs at most --four-dose x its "be right" pairs
         kept = []
@@ -296,7 +339,7 @@ def main():
                                   "rejected_ids": short[0]["output_ids"], "margin": 0.0})
                     counts[(part_of(q[0]), f"overcut ({who})")] += 1
         counts[("all", "overcut questions with trained answers")] = len(trained)
-    if args.recipe == "dast" and args.margin_drop > 0:  # DAST: the narrowest pairs of each kind carry little signal
+    if (args.recipe == "dast" or args.margin_any) and args.margin_drop > 0:  # DAST: the narrowest pairs of each kind carry little signal
         kept = []
         for kind in {p["kind"] for p in pairs}:
             mine = sorted((p for p in pairs if p["kind"] == kind), key=lambda p: p["margin"])

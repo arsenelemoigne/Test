@@ -4128,3 +4128,14 @@ paper's 1e-6 is a full fine-tune). Paper facts worth keeping: the longest right 
 pushed down); the fixed-λ ablation saved more (−63%) but lost 3.2 pts on the 1.5B model, so the dynamic λ is the
 accuracy guard; SmartThinker on top of an already-pruned model (ThinkPrune-4k → SmartThinker) was its best result,
 which fits the plan to try GRPO on v1.
+
+### 3 Nov: the DPO pair-strategy screen (task 1), queued on two new runtimes
+User: try many pair strategies now that the settings are fixed; more compute added. Everything = bidax5q seed 0
+(--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+New lupin_pairs.py flags: `--add-hard P` (DAST's "keep trying": longest > shortest finished wrong, questions solved < P),
+`--budget` (DAST's per-question length target replaces the fixed 1.5x), `--margin-any` (drop each kind's weakest 15%
+for any recipe), recipe `simright` (similar-length right > wrong + think less, 1:1). Tested on synthetic answers.
+Runtime 3 (third_colab.ipynb, plan_line_c.txt): D1 lpd-dast, D2 lpd-hard, D3 lpd-route, D4 lpd-budget, D5 lpd-margin.
+Runtime 4 (fourth_colab.ipynb, plan_line_d.txt): D7 lpd-st1 -> lpd-2stage, D8 lpd-math, D6 lpd-simright, D9 lpd-adar1,
+D10 lpd-l2s50e. Phase 2 (new code / answers): SimPO / LD-DPO, Ada-R1 with no-thinking answers, concise-prompt winners,
+SFT warm-up, stop pairs. Seed noise: bidax5q s0 +1.8 vs s1 +0.4, so a winner needs a second seed.

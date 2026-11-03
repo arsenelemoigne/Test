@@ -1,0 +1,21 @@
+# 3 Nov (user, task 1): the pair-strategy screen. Everything = bidax5q seed 0 (michal-bida's settings: --bida-exact,
+# 339 steps; bidax5q's data: dp13 + nofit4 + math1 + math2, 4 original answers a question; scored on the 720 set x4
+# at steps 100 / 200 / 300 / final, judged by the yardstick). ONLY the pair rule changes. Reference: bidax5q s0 +1.8,
+# s1 +0.4 vs the curve (seed noise ~1.4 pts: a winner gets a second seed before it counts).
+# Runtime 3 (third_colab.ipynb).
+# D1 DAST (2503.04472): think less (shortest > longest right) + keep trying (longest > shortest wrong), weakest 15% dropped, no right>wrong
+lupin --name lpd-dast --lp-min-solve 0 --lp-recipe dast --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 300 0 --seeds 0
+# D2 bida + keep trying: bidax5q's pairs + longest > shortest finished wrong on questions solved < 50% (DAST's accuracy guard)
+lupin --name lpd-hard --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.5 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-hard --cx-names lpd-hard --cx-steps 100 200 300 0 --seeds 0
+# D3 routed by difficulty: solved >= 75%: bida's pairs; below: similar-length right > wrong; below 75% also keep trying
+lupin --name lpd-route --lp-min-solve 0.75 --lp-recipe long2short --lp-extra=--add-hard,0.75 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-route --cx-names lpd-route --cx-steps 100 200 300 0 --seeds 0
+# D4 per-question length target (DAST budget p x mean right + (1-p) x L_max) instead of the fixed 1.5x for think-less
+lupin --name lpd-budget --lp-min-solve 0 --lp-recipe long2short --lp-extra=--budget --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-budget --cx-names lpd-budget --cx-steps 100 200 300 0 --seeds 0
+# D5 bida minus the weakest 15% of each pair kind (smallest length gap)
+lupin --name lpd-margin --lp-min-solve 0 --lp-recipe long2short --lp-extra=--margin-any --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-margin --cx-names lpd-margin --cx-steps 100 200 300 0 --seeds 0
+end
