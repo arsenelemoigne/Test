@@ -356,8 +356,8 @@
 # (GPU 1)
 # D11 push-harder control: bidax5q with up to 2x shorten pairs per guard pair. What extra saving costs; every protective
 # strategy must beat it at the same saving. A strategy counts only if it saves >= 40% (user, 3 Nov).
-lupin --name lpd-push2 --lp-min-solve 0 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
-rescreen --name rs-push2 --cx-names lpd-push2 --cx-steps 100 200 0 --seeds 0
+# done: lupin --name lpd-push2 --lp-min-solve 0 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+# done: rescreen --name rs-push2 --cx-names lpd-push2 --cx-steps 100 200 0 --seeds 0
 # 3 Nov ~04:00: grA died at step 51 (langdetect missing in rl_train's IFEval grader; fixed). Resumes from step 50.
 thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # grB: 4x stronger penalty (up to 0.2)
