@@ -3451,10 +3451,11 @@ def astradata(args):
             continue
         seen, lines = defaultdict(int), []
         for f in files:
+            covered = set(seen)  # questions an earlier file already gave (the 10-answer file before the 4-answer top-ups)
             for line in open(f):
                 r = json.loads(line)
                 q = r["id"]
-                if q not in rows or q in holdout:
+                if q not in rows or q in holdout or q in covered:
                     continue
                 ids_ = r["output_ids"]
                 lines.append({"id": q, "type": part_of(rows[q]), "sample": seen[q], "right": bool(r.get("correct")) and not r.get("truncated"),

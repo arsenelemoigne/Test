@@ -1,7 +1,7 @@
 
 
 DATA YOU ALSO HAVE. In {DATA} (read-only), the answers two models already gave to the practice questions, so you can study where thinking is spent without spending forward passes:
-- raw.jsonl: the original, unedited model{START_NOTE}, several answers per practice question;
+- raw.jsonl: the original, unedited model{START_NOTE}, up to 10 answers per practice question;
 - v1.jsonl: a second model of the same family, made from the unedited one by preference training (DPO) to think shorter: it saves about 47% of the thinking tokens on held-out questions at about -0.5 accuracy points;
 - summary.json: per model and type, the number of answers, the accuracy, the mean thinking tokens and the share cut at the limit.
 One JSON object per line: id (the practice question; join with {PRACTICE}), type, sample, right (graded with the test protocol), cut (stopped at the token limit), thinking_tokens, tokens, and full_text (the chat template, the question and the whole answer, ready to pass to a teacher-forced pass as one of its "texts"). The files are large: read them in your code (for example with pandas), filter, and print compact summaries, never whole files. A teacher-forced pass can read any of these texts with either the unedited weights or your edits, to see what happens inside the network on answers that already exist.

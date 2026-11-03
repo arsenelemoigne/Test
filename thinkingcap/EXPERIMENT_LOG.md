@@ -4408,3 +4408,9 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
 - **Astra smoke as0 (GPU tools, no API): all three work on Colab** (paired generation on 6 practice questions with per-type
   summaries; a teacher-forced read with log-probs, top-k, hidden states, MLP inputs and attention; the kernel over 311
   tensors). GPU 1 now on D1 lpd-dast; GPU 2: D9 Ada-R1 at step 150 / 338.
+- ~24:00 (user): **Astra-style experiment A on v1 NOW, with Gemini 4 Argon on the user's Google key (EUR 15 -> cap $16),
+  50 passes.** GPU 1: finish D1 DAST, then polans pv1 (v1 = lpc-bidax5q-s0 answers every training question x4, both halves),
+  astradata dv1 (raw: the 10-answer file lupin-all-dp13-nofit1-tools1-code1-nofit2 first, the 4-answer top-ups after, each
+  question from the first file that has it; + v1's answers; holdout removed), astra gv1 (on-top: Argon edits v1's own
+  weights; objective in the prompt: > 50% fewer thinking tokens than the RAW model at < 1 point lost; "raw + DPO = v1,
+  ~47% / -0.5"). GPU 1's other DPO runs (D2, D3, D4, D5, D10, re-scores, bidax6s) moved to the end of GPU 2's queue.

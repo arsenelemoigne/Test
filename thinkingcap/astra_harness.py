@@ -385,9 +385,11 @@ GOALS = {  # (3 Nov, user) the two data experiments
     "vs-dpo": ("You start from the unedited model, the same starting point v1 had. Beat v1 by editing weights only: more "
                "thinking tokens saved than v1 at no worse accuracy, or v1's saving at better accuracy. v1's answers show "
                "what a shorter-thinking version of this model does: use them to find what changes inside the network."),
-    "on-top": ("The weights you edit ARE v1's (the preference-trained model). Make it think shorter still at no worse "
-               "accuracy than it has now: v1 still loses tokens to answers cut at the limit and still hesitates and "
-               "re-checks; raw.jsonl shows the original model's habits for comparison."),
+    "on-top": ("The weights you edit ARE v1's: the raw model + preference training (DPO) = v1, which thinks about 47% "
+               "fewer tokens than the raw model at about -0.5 accuracy points. OBJECTIVE: more than 50% fewer thinking "
+               "tokens than the RAW model at less than 1 point of accuracy lost against the RAW model, so v1 must think "
+               "shorter still without losing more accuracy. v1 still loses tokens to answers cut at the limit and still "
+               "hesitates and re-checks; raw.jsonl shows the original model's habits, v1.jsonl v1's own answers."),
 }
 
 
