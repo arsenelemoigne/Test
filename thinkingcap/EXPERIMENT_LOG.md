@@ -4139,3 +4139,10 @@ Runtime 3 (third_colab.ipynb, plan_line_c.txt): D1 lpd-dast, D2 lpd-hard, D3 lpd
 Runtime 4 (fourth_colab.ipynb, plan_line_d.txt): D7 lpd-st1 -> lpd-2stage, D8 lpd-math, D6 lpd-simright, D9 lpd-adar1,
 D10 lpd-l2s50e. Phase 2 (new code / answers): SimPO / LD-DPO, Ada-R1 with no-thinking answers, concise-prompt winners,
 SFT warm-up, stop pairs. Seed noise: bidax5q s0 +1.8 vs s1 +0.4, so a winner needs a second seed.
+**3 Nov, revised (user: some strategies will not shorten enough):** D3, D6 and D8 now keep bida's FULL pairs and only add
+their protective pairs (new `--add-right-below SPEC`: similar-length right > wrong on questions solved below a share, all
+parts or per part). D3 = bida + right & keep-trying pairs below 75% solved; D6 = bida + similar-length (±15%) right > wrong
+everywhere; D8 = bida + right pairs on math / no-fit below 80%. D7's "be right" round cut to 50 steps (as the original),
+its second round is bida's full pairs. New D11 lpd-push2 = bidax5q with up to 2x shorten pairs per guard (the 1:1 cap binds
+in every part of bidax5q), the push-harder control every protective strategy must beat at the same saving. A strategy
+counts only if it saves >= 40%. Unchanged: D1 DAST, D2 bida + keep trying, D4 budget, D5 margin, D9 Ada-R1, D10 l2s50e.

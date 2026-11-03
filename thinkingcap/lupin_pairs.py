@@ -40,6 +40,8 @@ Modifiers, any recipe:
     --budget        (3 Nov, DAST's budget) long2short / simright: the shorten pair's loser is the longest right answer
                     when it thinks past L = p x mean right length + (1 - p) x L_max (L_max: the longest answer in the
                     file), instead of the fixed --long-ratio.
+    --add-right-below SPEC  (3 Nov) add the similar-length right > wrong pair only on questions solved below a share:
+                    "0.75" (every part) or "svamp=0.8,bfcl_irrelevance=0.8"; the recipe's own pairs stay untouched.
     --margin-any    apply --margin-drop (the narrowest share of each kind dropped) to any recipe, not only dast.
     --band PART:LO:HI  (1 Nov, math hole) on PART's questions whose answers think LO-HI tokens on average (mean thinking
                     length of the answers given), no shorten pair: the trained models over-cut exactly there (SVAMP
@@ -127,6 +129,7 @@ def main():
     parser.add_argument("--add-hard", type=float, default=0.0)
     parser.add_argument("--budget", action="store_true")
     parser.add_argument("--margin-any", action="store_true")
+    parser.add_argument("--add-right-below", default="")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
@@ -162,6 +165,16 @@ def main():
         return part_of(q[0]) == band_part and (q[0]["id"] in trained or band_lo <= sum(think(r) for r in q) / len(q) < band_hi)
     overrides = dict((k, float(v)) for k, v in (x.split("=") for x in args.min_solve_part.split(",") if x))
     right_parts = set(x for x in args.right_parts.split(",") if x)
+    below_all, below_parts = None, {}
+    for x in filter(None, args.add_right_below.split(",")):
+        if "=" in x:
+            below_parts[x.split("=")[0]] = float(x.split("=")[1])
+        else:
+            below_all = float(x)
+
+    def right_below(part, p):
+        limit = below_parts.get(part, below_all)
+        return limit is not None and p < limit
     median_parts = dict((k, float(v)) for k, v in (x.split("=") for x in args.median_shorten_part.split(",") if x))
 
     def answer_ids(r):
@@ -283,7 +296,7 @@ def main():
                     if right(o) and (not may_shorten or o["output_tokens"] <= rights[0]["output_tokens"]):
                         continue
                     add("shorten" if right(o) else "guard", rights[0], o, q)
-        if args.recipe == "rightwrong" or args.add_right or part in right_parts:
+        if args.recipe == "rightwrong" or args.add_right or part in right_parts or right_below(part, p):
             close = [(abs(r["output_tokens"] - w["output_tokens"]), r, w) for r in rights for w in wrongs if finished(w)
                      and abs(r["output_tokens"] - w["output_tokens"]) <= args.right_band * max(r["output_tokens"], w["output_tokens"])]
             if close:

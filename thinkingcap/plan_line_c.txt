@@ -9,8 +9,9 @@ rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 300 0 --seeds 0
 # D2 bida + keep trying: bidax5q's pairs + longest > shortest finished wrong on questions solved < 50% (DAST's accuracy guard)
 lupin --name lpd-hard --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.5 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-hard --cx-names lpd-hard --cx-steps 100 200 300 0 --seeds 0
-# D3 routed by difficulty: solved >= 75%: bida's pairs; below: similar-length right > wrong; below 75% also keep trying
-lupin --name lpd-route --lp-min-solve 0.75 --lp-recipe long2short --lp-extra=--add-hard,0.75 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+# D3 routed by difficulty, ON TOP of bida's full pairs (3 Nov, user: keep the shortening dose): questions solved < 75% also get
+# a similar-length right > wrong pair and a keep-trying pair
+lupin --name lpd-route --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.75,--add-right-below,0.75 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-route --cx-names lpd-route --cx-steps 100 200 300 0 --seeds 0
 # D4 per-question length target (DAST budget p x mean right + (1-p) x L_max) instead of the fixed 1.5x for think-less
 lupin --name lpd-budget --lp-min-solve 0 --lp-recipe long2short --lp-extra=--budget --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
