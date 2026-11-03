@@ -4102,3 +4102,11 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   --tp-extra, default nofit4,math1,math2; answers from bidax5q's 4-answer file, used for the eligibility filter only).
   The plan (user): 10 DPO pair strategies (all else = bidax5q) -> v1; 5 GRPO variations from the raw Qwen; then v1
   answers its own questions and both DPO and GRPO are tried on it. All judged on the 720 with the yardstick.
+- 01:30 (real clock; earlier "~02:xx" stamps tonight were estimates): bidax5q SEED 1 final +48.5 / -2.2 (svamp
+  +58/-2.9, mbpp +39/-4.6, ifeval +51/-0.4, simple +40/-2.5, multiple +44/-0.4, no-fit +45/+0.8): +0.4 vs the curve
+  (seed 0 final +46.7 / -0.5, +1.8). Seed 1 step 300 also scored (line truncated in the log view). The two seeds'
+  finals differ by 1.7 pts of accuracy: the recipe is ~+1.1 above the curve on average, seed luck +-0.7; the 1-point
+  bar holds at step 200 for both seeds (+1.7 / +1.3), at the final only for seed 0. lpw-2stage step 50 re-scored on the
+  720: +29.5 / +1.6 (+1.8 vs the curve; a dp13-era "be right first, then shorten" two-stage run, 29 Oct).
+  GPU 1 had pulled the plan before the GRPO lines and started bidax6s: interrupted and restarted so gr0 / grA / grB /
+  grE run first.
