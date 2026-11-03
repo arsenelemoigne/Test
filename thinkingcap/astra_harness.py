@@ -372,7 +372,23 @@ def task_prompt(args):
     for k, v in {"{PASSES}": args.passes, "{CODE_RUNS}": args.code_runs, "{PRACTICE_N}": args.practice_n,
                  "{MODEL_DIR}": args.model_dir, "{PRACTICE}": args.practice, "{WORK}": args.work}.items():
         text = text.replace(k, str(v))
+    if getattr(args, "data", ""):
+        extra = (Path(__file__).parent / "astra_prompt_data.txt").read_text()
+        start = " (in this run you edit v1's weights, not these)" if args.goal == "on-top" else " (the weights you edit)"
+        for k, v in {"{DATA}": args.data, "{PRACTICE}": args.practice, "{GOAL}": GOALS[args.goal], "{START_NOTE}": start}.items():
+            extra = extra.replace(k, str(v))
+        text += extra
     return text + note
+
+
+GOALS = {  # (3 Nov, user) the two data experiments
+    "vs-dpo": ("You start from the unedited model, the same starting point v1 had. Beat v1 by editing weights only: more "
+               "thinking tokens saved than v1 at no worse accuracy, or v1's saving at better accuracy. v1's answers show "
+               "what a shorter-thinking version of this model does: use them to find what changes inside the network."),
+    "on-top": ("The weights you edit ARE v1's (the preference-trained model). Make it think shorter still at no worse "
+               "accuracy than it has now: v1 still loses tokens to answers cut at the limit and still hesitates and "
+               "re-checks; raw.jsonl shows the original model's habits for comparison."),
+}
 
 
 class Budget:
@@ -624,6 +640,8 @@ def main():
     p.add_argument("--max-reply", type=int, default=8000, help="tokens per reply, reasoning included")
     p.add_argument("--handoff", type=int, default=60000, help="restart the conversation above this many context tokens")
     p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
+    p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
     p.add_argument("--request")
     p.add_argument("--result")

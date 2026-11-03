@@ -4321,3 +4321,20 @@ token at the public list price with NO cache discount ($10/M in, $50/M out): a c
 Key only via Colab Secrets DELOS_API_KEY (cell 5), removed from the environment at once (both keys). Plan line a1 updated
 (commented until the secret is set). Delos's own billing / markup is not visible to us: check the worker's usage page
 after the first turns.
+
+### 3 Nov: the Astra DATA experiments (idea + sandbox built; run once v1 is chosen)
+User idea: give Astra what we already know about both models and let it find, by itself, an edit that beats our DPO v1.
+Astra never reads the raw data in its context (weights 600M numbers, all hidden states ~700 GB): as in the paper it
+writes code over files on its disk and reads short printouts; hidden states are read on demand (teacher-forced passes
+over EXISTING answers, seconds to minutes, nothing new generated). New stage `astradata`: raw.jsonl (the raw Qwen's
+training answers) + v1.jsonl (v1's answers, from the polans job) with id, type, sample, right, cut, thinking_tokens,
+tokens and full_text (ready for a teacher-forced read), summary.json per model and type; our holdout questions removed and
+fixed there. NOT the 720 set or the full test: they stay the judges (giving Astra the eval runs would let it tune to the
+judge). astra --as-data / --as-goal: "vs-dpo" (start from the raw weights, beat v1) or "on-top" (--as-start v1: edit v1's
+own weights to think shorter still). Not Colab itself: Astra gets the GPU only through the forward-pass tool (no Drive,
+keys or other runs). Queued commented on GPU 1: astradata d1 (needs v1's answers), ax1 vs-dpo, ax2 on-top, 25 passes each,
+Delos worker Ivan, $20 counted cap each. Judged afterwards on our holdout and the 720 / full test.
+**Mac test session (CPU, Ivan, 2 passes):** running; so far Astra measured on 8 easy math answers (8/8 right, 394 thinking
+tokens) that 227 tokens (58%) come after the right number first appears, and ranked MLP neurons against checking /
+hesitation words: L22 n899, L26 n2934, L23 n716 (L22 and L26 = our script's top loop-direction writers, found independently).
+Bug found and fixed: backticks inside Astra's code strings split its block (2 turns refused); fences now only count at line starts.

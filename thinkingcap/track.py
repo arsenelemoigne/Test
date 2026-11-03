@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "astradata", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -308,6 +308,12 @@ def main():
     parser.add_argument("--as-smoke", action="store_true", help="astra: the GPU tools only (no API call, no key needed)")
     parser.add_argument("--as-provider", default="openrouter", choices=("openrouter", "delos"))
     parser.add_argument("--as-worker", default="", help="astra --as-provider delos: the worker id")
+    parser.add_argument("--as-data", default="", help="astra: a folder made by `astradata` (raw + v1 answers) to give Astra")
+    parser.add_argument("--as-goal", default="vs-dpo", choices=("vs-dpo", "on-top"),
+                        help="astra: beat v1 from the raw weights (vs-dpo) or improve v1's own weights (on-top)")
+    parser.add_argument("--as-start", default="raw", help="astra: 'raw' or the v1 adapter (merged first) for on-top")
+    parser.add_argument("--ad-raw", default="", help="astradata: raw answers file(s), comma-joined (default: v1's a4 file)")
+    parser.add_argument("--ad-v1", default="", help="astradata: v1's answers, comma-joined polans names (onp-NAME-a/b)")
     parser.add_argument("--tp-lam-max", type=float, default=0.05)
     parser.add_argument("--tp-ramp", type=int, default=300)
     parser.add_argument("--tp-gate", type=float, default=0.0)
@@ -3321,6 +3327,17 @@ def astra(args):
     from build_pool import part_of
     from huggingface_hub import snapshot_download
     model_dir = snapshot_download("Qwen/Qwen3-0.6B")
+    if args.as_start != "raw":  # on-top: Astra edits v1's merged weights
+        model_dir = str(Path("models") / f"{args.as_start}-merged")
+        drive_sync("restore", only=[model_dir, str(Path("adapters") / args.as_start)])
+        if not (Path(model_dir) / "config.json").exists():
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model_dir, "--adapters", f"adapters/{args.as_start}:1")
+            drive_sync("save")
+    data_dir = ""
+    if args.as_data:
+        data_dir = str(Path("runs/astradata") / args.as_data)
+        drive_sync("restore", only=[data_dir])
+        assert (Path(data_dir) / "summary.json").exists(), f"{data_dir}: run the astradata stage first"
     rows = {}
     for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
         for line in f.read_text().splitlines():
@@ -3332,6 +3349,8 @@ def astra(args):
     random.Random(7).shuffle(ids)
     out.mkdir(parents=True, exist_ok=True)
     held = out / "holdout.json"  # ours, fixed before the session, never in Astra's practice file
+    if args.as_data:  # the data folder's holdout (fixed when the data was made: its answers never include these)
+        held = Path(data_dir) / "holdout.json"
     if not held.exists():
         held.write_text(json.dumps(ids[:args.as_holdout]))
     holdout = json.loads(held.read_text())
@@ -3349,6 +3368,7 @@ def astra(args):
     py("astra_harness.py", "run", "--name", name, "--out", out, "--work", work, "--model-dir", model_dir,
        "--practice", practice, "--practice-n", len(keep), "--passes", args.as_passes, "--cap-usd", args.as_cap_usd,
        "--provider", args.as_provider, *(["--worker", args.as_worker] if args.as_worker else []),
+       *(["--data", data_dir, "--goal", args.as_goal] if data_dir else []),
        *args.as_extra.replace(",", " ").split())
     for small in ("notes.md",):
         if (work / small).exists():
@@ -3386,6 +3406,70 @@ def astra(args):
     if not (screen / "results.json").exists():
         evaluate(screen, samples=4, questions=SCREEN, model=edited_dir)
         drive_sync("save")
+
+
+def astradata(args):
+    """The data for the Astra data experiments (3 Nov, user): the answers the raw Qwen and v1 already gave to the training
+    questions, one line per answer (id, type, sample, right, cut, thinking_tokens, tokens, full_text = chat template +
+    question + answer, ready for a teacher-forced read), our holdout questions removed (fixed here, used to judge Astra's
+    edit); per model and type a summary. NOT the 720 set or the full test (the judges: Astra must never see them).
+    Raw answers: --ad-raw (default v1's training file, 4 answers a question); v1's answers: polans --ad-v1 (both halves)."""
+    import random
+    import statistics
+    from transformers import AutoTokenizer
+    from build_pool import part_of
+    name = args.name
+    out = Path("runs/astradata") / name
+    drive_sync("restore", only=[str(out)])
+    if (out / "summary.json").exists():
+        print(f"astradata {name}: done", flush=True)
+        return
+    extra = [x for x in args.tp_extra.split(",") if x]
+    raw_files = [BON / f for f in args.ad_raw.split(",") if f] or [BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"]
+    v1_files = [BON / f"onp-{x}-{h}" / "rollouts.jsonl" for x in args.ad_v1.split(",") if x for h in "ab"]
+    drive_sync("restore", only=[*map(str, raw_files), *[str(f.parent) for f in v1_files], "data/pool-dp13.jsonl",
+                                *[str(BON / f"tooltop-{x}") for x in extra]])
+    rows = {}
+    for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
+        for line in f.read_text().splitlines():
+            if line.strip() and not re.search(r"prostring|stringname|stringName", line):
+                r = json.loads(line)
+                if part_of(r):
+                    rows[r["pool_id"]] = r
+    ids = sorted(rows)
+    random.Random(7).shuffle(ids)
+    holdout = set(ids[:args.as_holdout])
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "holdout.json").write_text(json.dumps(sorted(holdout)))
+    tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+    close_id = tok.convert_tokens_to_ids("</think>")
+    summary = {}
+    for label, files in (("raw", raw_files), ("v1", v1_files)):
+        if not files:
+            continue
+        seen, lines = defaultdict(int), []
+        for f in files:
+            for line in open(f):
+                r = json.loads(line)
+                q = r["id"]
+                if q not in rows or q in holdout:
+                    continue
+                ids_ = r["output_ids"]
+                lines.append({"id": q, "type": part_of(rows[q]), "sample": seen[q], "right": bool(r.get("correct")) and not r.get("truncated"),
+                              "cut": bool(r.get("truncated")), "thinking_tokens": ids_.index(close_id) if close_id in ids_ else len(ids_),
+                              "tokens": len(ids_), "full_text": tok.decode(r["prompt_ids"] + ids_, skip_special_tokens=False)})
+                seen[q] += 1
+        (out / f"{label}.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+        by = defaultdict(list)
+        for x in lines:
+            by[x["type"]].append(x)
+        summary[label] = {t: {"answers": len(v), "questions": len({x["id"] for x in v}),
+                              "accuracy": round(sum(x["right"] for x in v) / len(v), 4),
+                              "mean_thinking_tokens": round(statistics.fmean(x["thinking_tokens"] for x in v), 1),
+                              "cut_share": round(sum(x["cut"] for x in v) / len(v), 4)} for t, v in sorted(by.items())}
+        print(f"astradata {name}: {label} {len(lines)} answers on {len(seen)} questions", flush=True)
+    (out / "summary.json").write_text(json.dumps(summary, indent=1))
+    drive_sync("save")
 
 
 def wanda(args):
@@ -4681,7 +4765,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "astradata", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

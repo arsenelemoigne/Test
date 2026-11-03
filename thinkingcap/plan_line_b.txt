@@ -372,6 +372,10 @@ chirurgical --name ch1
 astra --name as0 --as-smoke
 # needs DELOS_API_KEY in this runtime (user, 3 Nov: up to EUR 20 on the Delos worker 'Ivan', which runs gpt-6-astra):
 # astra --name a1 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 10 --as-cap-usd 20
+# 3 Nov (user): the ASTRA DATA EXPERIMENTS, once v1 is chosen and has answered the training questions (polans):
+# astradata --name d1 --ad-v1 pa5q   (raw + v1 answers on the training questions, our holdout removed; never the 720 / full test)
+# astra --name ax1 --as-data d1 --as-goal vs-dpo --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 25 --as-cap-usd 20
+# astra --name ax2 --as-data d1 --as-goal on-top --as-start lpc-bidax5q-s0 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 25 --as-cap-usd 20
 # D1 DAST (2503.04472): think less (shortest > longest right) + keep trying (longest > shortest wrong), weakest 15% dropped, no right>wrong
 lupin --name lpd-dast --lp-min-solve 0 --lp-recipe dast --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 0 --seeds 0
