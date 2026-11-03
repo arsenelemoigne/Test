@@ -361,19 +361,19 @@
 # 3 Nov ~04:00: grA died at step 51 (langdetect missing in rl_train's IFEval grader; fixed). Resumes from step 50.
 # done: thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
 # grB: 4x stronger penalty (up to 0.2)
-thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.2
+# done: thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.2
 # 3 Nov ~12:00 (user): CHIRURGICAL inserted here (between grB and D1): replicate 'Sparks of Weight-Space
 # Programming' Exp 8 on the raw Qwen (loops: 2.3% of its 720 answers hold 22% of its thinking). Smoke, then the run.
-chirurgical --name chs0 --ch-smoke
-chirurgical --name ch1
+# done: chirurgical --name chs0 --ch-smoke
+# done: chirurgical --name ch1
 # 3 Nov ~19:30: chs0 smoke failed in gen (the candidate copy was built on the GPU and kept ~3.7 GB, fixed); ch1 above
 # started with the old script, so its gen phase will fail the same way: this line resumes ch1 (mine / probe / mech
 # reused from Drive) with the fixed script.
-chirurgical --name ch1 --ch-extra=--seed,0
+# done: chirurgical --name ch1 --ch-extra=--seed,0
 # 3 Nov (user): ASTRA, the paper as it was run: gpt-6-astra does the diagnosis and the edit itself (astra_harness.py,
 # HARD stop at $8 < EUR 8). Smoke = the GPU tools only, no API call. The real run waits for the key cell (Colab
 # Secrets -> OPENROUTER_API_KEY, cell 5): uncomment it once the runtime has the key.
-astra --name as0 --as-smoke
+# done: astra --name as0 --as-smoke
 # needs DELOS_API_KEY in this runtime (user, 3 Nov: up to EUR 20 on the Delos worker 'Ivan', which runs gpt-6-astra):
 # (experiment 3 moved to the end of this queue, after the DPO / GRPO runs)
 # 3 Nov (user): the ASTRA DATA EXPERIMENTS, once v1 is chosen and has answered the training questions (polans):
