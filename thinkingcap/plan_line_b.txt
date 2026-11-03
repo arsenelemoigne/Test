@@ -422,7 +422,8 @@ rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --see
 # turn counted, ~74 turns like the paper's 10-pass run). Uncomment once DELOS_API_KEY is in Colab Secrets and the
 # runtime has run cell 5 (without the key the stage only prints 'skipped' and would count as done).
 # 3 Nov (user): FIRST with Gemini 4 Argon on the user's Google key (exact spending visible in AI Studio; ~5x cheaper
-# than Astra; not a strict reproduction: the paper used Astra). Uncomment once GOOGLE_API_KEY is in Colab Secrets:
+# than Astra; not a strict reproduction: the paper used Astra). GOOGLE_API_KEY is in Colab Secrets (3 Nov, notebook access on
+# full_eval_colab only); the runner reads it at its next restart through cell 5. REMINDER ONLY: run it after the queue.
 # astra --name g1 --as-provider google --as-llm gemini-4-argon --as-passes 10 --as-cap-usd 15
 # then Astra (via Ivan) with the identical harness, for the comparison:
 # astra --name a1 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 10 --as-cap-usd 20
