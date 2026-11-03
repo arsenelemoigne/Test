@@ -4357,3 +4357,10 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
 - ~13:40 **grC step 50** (GRPO, no leash: KL 0): **-0.3% / +0.4** (svamp +2 / -0.2, mbpp +3 / +3.5, ifeval -8 / -1.3, one
   function -1 / +0.6, several +4 / -2.1, no fit -1 / -0.2). Like grA / grB at step 50: unchanged from the raw Qwen. Both
   runtimes resumed after the ~12:40 reconnect (grA from step 50 on GPU 1, grC from its last block on GPU 2).
+- ~15:30 **grA step 100: -2.3% / -1.2** (svamp -1 / -2.5, mbpp -4 / +2.5, ifeval -3 / -2.5, one function -4 / -0.8, several 0 / -3.6,
+  no fit 0 / -2.3); **grC step 100: -3.0% / -1.0** (svamp +1 / +0.4, mbpp -5 / -1.2, ifeval -4 / -1.7, one function -3 / -1.9,
+  several -1 / -4.2, no fit -7 / +1.2). At the full penalty (λ 0.05 reached at step 100) both think slightly LONGER and lose
+  ~1 point. Reading: the khudgins penalty is tiny next to the right / wrong reward (at most 0.05 x min(1, thinking / 2048):
+  ~0.01 for a typical 400-token answer, against 1.0 for being right), so 12 questions x 8 answers a step give almost no
+  length signal; the reward is nearly pure "be right" and GRPO drifts. grB (4x penalty) and grE (lr x2.5) test exactly
+  this lever; step 150 of grA / grC next.
