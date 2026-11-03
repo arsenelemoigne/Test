@@ -4225,3 +4225,12 @@ done (1,500 questions), bidax7 training.
   one function +40 / -4.4, several +42 / +2.9, no fit +43 / -1.2. Against bidax5q s0 at the same step (41.8 / +0.2, +1.7):
   doubling the push buys ~7 points of saving for ~4 points of accuracy, so the 1:1 cap is protecting accuracy, as
   michal-bida intended. Steps 200 / final scoring.
+- ~08:00 **D11 lpd-push2** step 200 **+49.7 / -2.9 (on the curve, -0.1)**; final **+52.4 / -3.0 (+0.4)**: svamp +64 / -3.7,
+  mbpp +44 / -4.4, ifeval +53 / -3.3, one function +44 / -2.5, several +48 / +1.1, no fit +48 / +1.2. The push-harder control
+  reaches the highest saving of the screen so far but only rides the reference curve: extra 'think less' pairs move the
+  model ALONG the curve, they do not lift it (bidax5q s0: +1.0 to +1.8). This is the bar for the protective strategies:
+  beat ~-3.0 at ~52%, or -2.9 at ~50%.
+- ~08:00 **bidax7 step 100** (bidax5q + instr2 + code2, michal-bida's own instruction and code sources): **+41.3 / -1.9,
+  -0.5 vs the curve**: svamp +49 / -4.6, mbpp +38 / -1.7, ifeval +40 / -0.8, one function +36 / -1.9, several +39 / +0.8, no
+  fit +41 / +0.2. Below bidax5q s0 at step 100 (41.8 / +0.2, +1.7) at the same saving; steps 200 / 300 / final scoring.
+  GPU 1 moved on to grB (GRPO, 4x penalty).
