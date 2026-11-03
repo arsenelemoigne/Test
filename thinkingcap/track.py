@@ -295,6 +295,8 @@ def main():
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
     parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen", "smart"), help="thinkprune: rl_train.py --reward")
     parser.add_argument("--tp-min-solve", type=float, default=0.5, help="thinkprune: questions the original gets right > this share")
+    parser.add_argument("--tp-max-solve", type=float, default=1.0,
+                        help="thinkprune: and right <= this share (below 1: drop questions it always gets right, no signal)")
     parser.add_argument("--tp-rank", type=int, default=32)
     parser.add_argument("--tp-lam-max", type=float, default=0.05)
     parser.add_argument("--tp-ramp", type=int, default=300)
@@ -3188,7 +3190,7 @@ def thinkprune(args):
     caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
     eligible = defaultdict(list)
     for qid, got in by_q.items():
-        if qid in rows and sum(ok for ok, _ in got) / len(got) > args.tp_min_solve:
+        if qid in rows and args.tp_min_solve < sum(ok for ok, _ in got) / len(got) <= args.tp_max_solve:
             eligible[rows[qid]["part"]].append(qid)
     for part, ids in sorted(eligible.items()):
         lens = sorted(n for q in ids for ok, n in by_q[q] if ok)

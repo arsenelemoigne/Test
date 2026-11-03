@@ -4117,3 +4117,14 @@ rc1-rl-40 the same pattern. Read on the old fresh-240 set.
   all right get plain 0/1. Unit check on a toy group: right answers >= mean, wrong <= mean, the 900-token right answer
   lands exactly on the mean. Everything else = grA (the one change is the reward). Queued on GPU 2 after grD, behind a
   5-step smoke test (gs0).
+
+### 3 Nov: grF aligned with the SmartThinker paper (read in full)
+Before it ran, grF had three settings borrowed from grA that the paper does not use. Now: plain GRPO advantages
+(reward minus group mean, divided by the group's spread; token-mean loss, no Dr. GRPO), no KL leash (the paper omits
+it), constant lr. New `track.py --tp-max-solve`: grF keeps only questions the original Qwen misses at least once in 4,
+because an all-right group gets λ = p_err/... = 0, so no signal, and the paper uses 64 questions a step against our 12
+(the paper itself says difficulty-based sampling would cut the steps needed). lr stays 2e-6 like grA (LoRA r32; the
+paper's 1e-6 is a full fine-tune). Paper facts worth keeping: the longest right answer always gets advantage 0 (never
+pushed down); the fixed-λ ablation saved more (−63%) but lost 3.2 pts on the 1.5B model, so the dynamic λ is the
+accuracy guard; SmartThinker on top of an already-pruned model (ThinkPrune-4k → SmartThinker) was its best result,
+which fits the plan to try GRPO on v1.
