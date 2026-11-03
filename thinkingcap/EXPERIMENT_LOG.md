@@ -4220,3 +4220,8 @@ trains 500-1,000 steps); the stronger half of the ramp (steps 50-100) is where s
 was missing on this runtime). Fixed: rl_train.py installs langdetect if missing (same fix protects grC / grD / grF).
 grA re-queued on GPU 1 right after D11 lpd-push2 (now training), resuming from its saved step 50. GPU 2: code2 answers
 done (1,500 questions), bidax7 training.
+- ~07:00 **D11 lpd-push2 step 100** (bidax5q + up to 2x 'think less' pairs): **+49.2% / -3.7** (full-eval weighting; the
+  720 print: +49.3 / -3.5), **-1.0 vs the curve** (curve -2.7 at 49%). svamp +62 / -5.4, mbpp +49 / -5.2, ifeval +41 / -2.5,
+  one function +40 / -4.4, several +42 / +2.9, no fit +43 / -1.2. Against bidax5q s0 at the same step (41.8 / +0.2, +1.7):
+  doubling the push buys ~7 points of saving for ~4 points of accuracy, so the 1:1 cap is protecting accuracy, as
+  michal-bida intended. Steps 200 / final scoring.
