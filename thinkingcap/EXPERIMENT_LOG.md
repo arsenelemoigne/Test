@@ -4277,3 +4277,8 @@ Mech (loop / productive / normal log-prob per token, close): L16H14 x0 -0.035 / 
 L18H5 x0 -0.064 / -0.005 / +0.011 PASS, x0.5 -0.028 PASS; direction L22+L26 a2 -0.019 / -0.001 PASS, a6 -0.059 / -0.007
 PASS; random direction a6 +0.008 (loop MORE likely) -> dropped. Dose-response and the random control behave as in the
 paper. No accuracy or length evidence yet (needs the GPU generation phase).
+**3 Nov ~12:30, Chirurgical revised (user): generate from scratch, like the paper, but ask the questions we already know
+loop.** mine now fixes dev 256 / holdout 512 first, then the ORIGINAL model answers 1,500 fresh practice questions (75% of
+them questions where a stored answer was capped with >= 30% repeated 8-grams, 25% random for the normal answers), graded;
+loops and pairs come from those fresh answers. Inserted on GPU 1 between grB and D1 (chs0 smoke, then ch1). Tests:
+helpers, probe / candidates / mech on a tiny Qwen3, and mine's selection with a stand-in generator all pass.

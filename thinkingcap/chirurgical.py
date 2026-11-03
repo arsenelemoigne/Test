@@ -3,7 +3,8 @@ Weight-Space Programming" (Takehi et al., MIT, 2 Nov 2026; logs github.com/Rikiy
 measured on what we care about: thinking tokens at equal accuracy. No training: every edit is computed, not fitted.
 
 Phases (each saves to --out and is skipped when its file exists, so a lost runtime resumes):
-    mine   looping answers among the model's own graded answers (capped, >= --min-repeat of the thinking's 8-grams
+    mine   (3 Nov, user: "generate from scratch, like in the paper") the model first answers --fresh practice questions
+           (pool questions kept apart from dev / holdout; the evaluation's sampling, graded), then: looping answers (capped, >= --min-repeat of the thinking's 8-grams
            already seen); cut each just before its first repeated 32-token stretch: prefix = prompt + answer up to
            there, loop branch = the real next --branch tokens. The productive branch: --alternatives sampled
            continuations of the same prefix, keeping the one whose 8-grams overlap the prefix least (it must be
@@ -134,16 +135,40 @@ def mine(args, tok, part_of):
         return
     rng = random.Random(args.seed)
     close_id = tok.convert_tokens_to_ids("</think>")
-    rows = {}
-    for f in args.pool:
-        for r in read_jsonl(f):
-            if not re.search(r"prostring|stringname|stringName", json.dumps(r)):  # the "file" -> "string" corruption
-                rows[r.get("pool_id", r.get("id"))] = r
+    rows = load_rows(args)
+    ids = sorted(q for q in rows if part_of(rows[q]))  # only questions that imitate a test part
+    rng.shuffle(ids)
+    sets = {"dev": ids[:args.dev], "holdout": ids[args.dev:args.dev + args.holdout]}  # fixed before anything else
+    (out / "sets.json").write_text(json.dumps(sets))
     by_q = defaultdict(list)
-    for f in args.answers:
-        for r in read_jsonl(f):
-            if r["id"] in rows:
-                by_q[r["id"]].append(r)
+    if args.fresh:
+        rest = ids[args.dev + args.holdout:]
+        practice = rest[:args.fresh]
+        if args.answers:  # (user, 3 Nov) the stored answers say which questions loop: ask those, fresh, --loop-share of the
+            looped = Counter()  # batch; the rest random (they give the normal answers for the checks)
+            for f in args.answers:
+                for r in read_jsonl(f):
+                    if r.get("truncated") and repeat_share(r["output_ids"]) >= args.min_repeat:
+                        looped[r["id"]] += 1
+            prone = [q for q in rest if looped[q]]
+            prone.sort(key=lambda q: -looped[q])
+            k = min(len(prone), int(args.fresh * args.loop_share))
+            chosen = set(prone[:k])
+            practice = prone[:k] + [q for q in rest if q not in chosen][:args.fresh - k]
+            print(f"mine: {len(prone)} questions looped in the stored answers; asking {k} of them + {args.fresh - k} others",
+                  flush=True)
+        f = out / "fresh.jsonl"
+        if not f.exists():
+            write_jsonl(f, generate_answers(args, args.model, practice, rows, tok, args.seed))
+        answer_rows = read_jsonl(f)
+        print(f"mine: {len(answer_rows)} fresh answers, capped {sum(r['truncated'] for r in answer_rows)}, "
+              f"right {sum(r['correct'] for r in answer_rows)}", flush=True)
+    else:
+        answer_rows = [r for f in args.answers for r in read_jsonl(f)]
+    held = set(sets["dev"]) | set(sets["holdout"])
+    for r in answer_rows:
+        if r["id"] in rows and r["id"] not in held:
+            by_q[r["id"]].append(r)
     loops, normal = [], []
     for qid, answers in by_q.items():
         for r in answers:
@@ -193,11 +218,6 @@ def mine(args, tok, part_of):
         by_part[x["part"]].append(x)
     normal = [x for p in sorted(by_part) for x in by_part[p][:max(1, args.normal // len(by_part))]]
     write_jsonl(out / "normal.jsonl", normal)
-    used = {x["id"] for x in keep} | {x["id"] for x in normal}
-    pool = [q for q in rows if q not in used and q in by_q]
-    rng.shuffle(pool)
-    sets = {"dev": pool[:args.dev], "holdout": pool[args.dev:args.dev + args.holdout]}
-    (out / "sets.json").write_text(json.dumps(sets))
     print(f"mine: {len(keep)} pairs ({sum(x['split'] == 'find' for x in keep)} to find, rest to check), "
           f"{len(normal)} normal answers, dev {len(sets['dev'])}, holdout {len(sets['holdout'])}", flush=True)
 
@@ -428,6 +448,41 @@ def save_candidate(args, name, probe_data, path):
     AutoTokenizer.from_pretrained(args.model).save_pretrained(path)
 
 
+def load_rows(args):
+    rows = {}
+    for f in args.pool:
+        for r in read_jsonl(f):
+            if not re.search(r"prostring|stringname|stringName", json.dumps(r)):  # the "file" -> "string" corruption
+                rows[r.get("pool_id", r.get("id"))] = r
+    return rows
+
+
+def generate_answers(args, model_path, qids, rows, tok, seed):
+    """One answer per question (the evaluation's sampling), graded, in the stored answers' format."""
+    from vllm import LLM, SamplingParams
+    from utils.eval.recipe import SAMPLING
+    import typed
+    eos = tok.convert_tokens_to_ids("<|im_end|>")
+    llm = LLM(model=str(model_path), dtype=args.gen_dtype, seed=seed, gpu_memory_utilization=args.gpu_memory,
+              max_model_len=args.max_tokens + 2048, generation_config="vllm")
+    prompts = [list(tok.apply_chat_template(rows[q]["prompt"], tokenize=True, add_generation_prompt=True)) for q in qids]
+    params = [SamplingParams(max_tokens=args.max_tokens, seed=seed + k, stop_token_ids=[eos], **SAMPLING)
+              for k in range(len(qids))]
+    outs = llm.generate([{"prompt_token_ids": p} for p in prompts], params)
+    del llm
+    import gc
+    import torch
+    gc.collect()
+    torch.cuda.empty_cache()
+    res = []
+    for q, pr, o in zip(qids, prompts, outs):
+        ids = list(o.outputs[0].token_ids)
+        capped = o.outputs[0].finish_reason == "length"
+        right = (not capped) and bool(typed.is_correct(rows[q], typed.full_text(tok, ids)))
+        res.append({"id": q, "prompt_ids": pr, "output_ids": ids, "truncated": capped, "correct": right})
+    return res
+
+
 def generate_graded(args, model_path, qids, rows, tok, seed):
     """One answer per question, the evaluation's sampling, graded; returns per question (right, thinking, capped)."""
     from vllm import LLM, SamplingParams
@@ -477,10 +532,7 @@ def summarize(orig, cand, qids, part):
 def gen(args, tok, part_of):
     import torch
     out = Path(args.out)
-    rows = {}
-    for f in args.pool:
-        for r in read_jsonl(f):
-            rows[r.get("pool_id", r.get("id"))] = r
+    rows = load_rows(args)
     sets = json.loads((out / "sets.json").read_text())
     part = {q: part_of(rows[q]) for q in sets["dev"] + sets["holdout"]}
     mech_res = json.loads((out / "mech.json").read_text())
@@ -528,7 +580,9 @@ def gen(args, tok, part_of):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--answers", nargs="+", required=True)
+    p.add_argument("--answers", nargs="*", default=[], help="stored answers (used only with --fresh 0)")
+    p.add_argument("--fresh", type=int, default=1500, help="practice questions the model answers first (0: --answers)")
+    p.add_argument("--loop-share", type=float, default=0.75, help="--fresh share drawn from questions that looped before")
     p.add_argument("--pool", nargs="+", required=True)
     p.add_argument("--model", default="Qwen/Qwen3-0.6B")
     p.add_argument("--out", required=True)

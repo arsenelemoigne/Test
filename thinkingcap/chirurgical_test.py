@@ -91,3 +91,69 @@ def test_pipeline():
 if __name__ == "__main__":
     test_helpers()
     test_pipeline()
+
+
+def test_mine_selection():
+    """mine with --fresh: dev / holdout fixed first, looping questions asked first, then pairs from the fresh answers
+    (vLLM replaced by a stand-in that loops on the 'prone' questions)."""
+    import sys
+    import types
+    rng = random.Random(1)
+    tmp = Path(tempfile.mkdtemp())
+    close_id, eos = 7, 8
+    pool = [{"pool_id": f"q{k}", "source": "gsm8k_matched", "prompt": [{"role": "user", "content": f"Q{k}"}]} for k in range(60)]
+    ch.write_jsonl(tmp / "pool.jsonl", pool)
+    stored = []
+    for k in range(60):
+        loop = k % 5 == 0
+        ids = ([20, 21, 22, 23] * 300) if loop else [rng.randrange(30, 99) for _ in range(40)] + [close_id, 50]
+        stored.append({"id": f"q{k}", "output_ids": ids, "truncated": loop, "correct": not loop})
+    ch.write_jsonl(tmp / "stored.jsonl", stored)
+    prone_set = {f"q{k}" for k in range(60) if k % 5 == 0}
+
+    def fake_answers(args, model, qids, rows, tok, seed):
+        out = []
+        for q in qids:
+            if q in prone_set:
+                ids = [rng.randrange(30, 99) for _ in range(120)] + [40 + i % 20 for i in range(32)] * 8
+                out.append({"id": q, "prompt_ids": [1, 2], "output_ids": ids, "truncated": True, "correct": False})
+            else:
+                ids = [rng.randrange(30, 99) for _ in range(40)] + [close_id, 50]
+                out.append({"id": q, "prompt_ids": [1, 2], "output_ids": ids, "truncated": False, "correct": True})
+        return out
+
+    class Out:
+        def __init__(self, n, L):
+            self.outputs = [types.SimpleNamespace(token_ids=[rng.randrange(100, 2000) for _ in range(L)]) for _ in range(n)]
+
+    class LLM:
+        def __init__(self, **kw):
+            pass
+
+        def generate(self, reqs, params):
+            return [Out(params.n, params.max_tokens) for _ in reqs]
+    fake = types.SimpleNamespace(LLM=LLM, SamplingParams=lambda **kw: types.SimpleNamespace(**kw))
+    sys.modules["vllm"] = fake
+    for name in ("utils", "utils.eval"):
+        sys.modules.setdefault(name, types.ModuleType(name))
+    sys.modules["utils.eval.recipe"] = types.SimpleNamespace(SAMPLING={})
+    ch.generate_answers = fake_answers
+    from build_pool import part_of
+    args = types.SimpleNamespace(out=str(tmp / "run"), model="m", pool=[str(tmp / "pool.jsonl")], answers=[str(tmp / "stored.jsonl")],
+                                 seed=0, dev=10, holdout=10, fresh=20, loop_share=0.75, min_repeat=0.3, branch=48, context=1536,
+                                 pairs=50, alternatives=4, min_novelty=0.8, find=0.5, normal=10, gpu_memory=0.5, max_len=4096)
+    Path(args.out).mkdir()
+    tok = types.SimpleNamespace(convert_tokens_to_ids=lambda t: close_id)
+    ch.mine(args, tok, part_of)
+    sets = json.loads((Path(args.out) / "sets.json").read_text())
+    fresh = ch.read_jsonl(Path(args.out) / "fresh.jsonl")
+    asked = [r["id"] for r in fresh]
+    assert not set(asked) & (set(sets["dev"]) | set(sets["holdout"])), "practice must not touch dev / holdout"
+    assert sum(q in prone_set for q in asked) >= min(15, len(prone_set - set(sets["dev"]) - set(sets["holdout"])))
+    pairs = ch.read_jsonl(Path(args.out) / "pairs.jsonl")
+    assert pairs and all(len(x["loop"]) == 48 and len(x["productive"]) == 48 for x in pairs)
+    print(f"mine ok: asked {len(asked)} ({sum(q in prone_set for q in asked)} loop-prone), {len(pairs)} pairs")
+
+
+if __name__ == "__main__":
+    test_mine_selection()

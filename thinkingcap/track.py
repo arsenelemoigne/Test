@@ -3258,14 +3258,14 @@ def thinkprune(args):
 
 def chirurgical(args):
     """Chirurgical edits (3 Nov, user; "Sparks of Weight-Space Programming", Exp 8): remove the looping habit from a few
-    weights of the raw Qwen (later v1) with no training: chirurgical.py mines looping answers among the original's own
-    pool answers, finds the loop direction and the copying heads by teacher-forced reads, checks every candidate edit
+    weights of the raw Qwen (later v1) with no training: chirurgical.py first lets the model answer 4,000 fresh practice
+    questions (as in the paper; 75% of them questions the stored answers show it loops on), mines the looping answers, finds the loop direction and the copying heads by teacher-forced reads, checks every candidate edit
     (head zeroed / halved, direction removed at doses 1-6, a random-direction control) for selectivity, then generates
     paired dev answers, picks the most thinking saved at >= -1 point and confirms it on held-out questions. The pick
     is screened on the 720 x4 (s4-chir-NAME). --ch-smoke: tiny sizes, every phase, no screen."""
     name = args.name
     extra = [x for x in args.tp_extra.split(",") if x]
-    answers = BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"
+    answers = BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"  # which questions loop
     out = Path("runs/chir") / name
     drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra], SCREEN,
                                 str(ROOT / "s4-base"), str(out)])
@@ -3276,7 +3276,7 @@ def chirurgical(args):
         if not (Path(base) / "config.json").exists():
             py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", base, "--adapters", f"adapters/{args.ch_start}:1")
             drive_sync("save")
-    small = ["--pairs", 24, "--normal", 24, "--dev", 16, "--holdout", 16, "--attn-pairs", 8, "--check-pairs", 8,
+    small = ["--fresh", 200, "--pairs", 24, "--normal", 24, "--dev", 16, "--holdout", 16, "--attn-pairs", 8, "--check-pairs", 8,
              "--check-normal", 8, "--doses", 2, 6, "--heads", 1, "--max-tokens", 2048] if args.ch_smoke else []
     pools = ["data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}" / "questions.jsonl") for x in extra]]
     for phase in ("mine", "probe", "mech", "gen"):  # one process per phase: vLLM and the HF reads never share the GPU
