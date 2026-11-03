@@ -319,13 +319,13 @@
 # float32 base + float16 autocast with a loss scaler, warm-up 5% of steps then cosine to 0, pairs > 8,704 tokens
 # skipped, no held-out pairs). Tells whether our gap to his 47.0 / -0.78 is the training settings or the data.
 # done: lupin --name lpc-bidax6 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-exact
-rescreen --name rs-bidax6 --cx-names lpc-bidax6 --cx-steps 100 200 300 0 --seeds 0
+# done: rescreen --name rs-bidax6 --cx-names lpc-bidax6 --cx-steps 100 200 300 0 --seeds 0
 # 2 Nov (user): the clean test of bida's harder math questions: lpc-bidax5p = bidax4's plain recipe + math1 + math2
 # (GSM8K / MetaMath, his sources) added, NO band rule, NO don't-over-cut pairs, one pass held to ~333 steps (bidax4's
 # schedule; --target-steps sets the pairs per step). 2 Nov ~15:40 (user): with michal-bida's settings (--bida-exact),
 # as bidax6, so it isolates his math questions against bidax6.
-lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
-rescreen --name rs-bidax5q --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 0
+# done: lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+# done: rescreen --name rs-bidax5q --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 0
 # 2 Nov (user): the on-policy round's half b (half a + lpc-bidax8 on GPU 1)
 # paused (user, 2 Nov: wait for the bida rounds first): polans --name pa6 --op-adapter lpc-bidax6-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4 --dp-step b
 # 2 Nov ~16:30 (user): instructions and code, the two types bida cuts 8 pts more. His sources, his selection:
@@ -334,13 +334,19 @@ rescreen --name rs-bidax5q --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --see
 # (prepare_types kodcode_full; ours: the KodCode-Light slice <= 45 tokens). 3 Nov: bidax7 = bidax5q + instr2 + code2 (all of
 # his sources: math, instructions, code). Both with NO prompt-length matching
 # (--nt-raw), 4 answers each (what bida's recipe uses). Then lpc-bidax7 = bidax6 + instr2 + code2, his settings.
-newtop --name instr2 --nt-sources ifeval_bida --nt-parts ifeval --tt-questions 2000 --nt-raw --nt-samples 4 --data-seed 131
+# done: newtop --name instr2 --nt-sources ifeval_bida --nt-parts ifeval --tt-questions 2000 --nt-raw --nt-samples 4 --data-seed 131
 newtop --name code2 --nt-sources kodcode_full --nt-parts mbpp --tt-questions 1500 --nt-raw --nt-samples 4 --data-seed 132
 lupin --name lpc-bidax7 --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2,instr2,code2 --lp-add-q nofit4,math1,math2,instr2,code2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-bidax7 --cx-names lpc-bidax7 --cx-steps 100 200 300 0 --seeds 0
 # 3 Nov (user, task 2): GRPO screens C/D from the raw Qwen (A/B on GPU 1)
 # grC: no leash (KL 0)
 thinkprune --name grC --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0 --tp-lam-max 0.05
+# 3 Nov ~02:00 (user: only 2 GPUs on the account): the DPO pair screen (D1-D11, everything = bidax5q s0, only the pairs
+# change; 720 x4 at steps 100 / 200 / final) shares the two GPUs, alternating with the GRPO screens.
+# (GPU 2)
+# D9 Ada-R1 (instance level): shortest right > each of the 2 longest answers, right or wrong
+lupin --name lpd-adar1 --lp-min-solve 0 --lp-recipe adar1 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-adar1 --cx-names lpd-adar1 --cx-steps 100 200 0 --seeds 0
 # grD: GRPO-lambda: length penalty only in groups right >= 50% of the time
 thinkprune --name grD --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05 --tp-gate 0.5
 # grF (user, 3 Nov): SmartThinker reward (2603.08000): per question the length with the best chance of being right,
@@ -352,6 +358,18 @@ thinkprune --name grD --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-st
 # 1e-6 is a full fine-tune). A 5-step smoke test of the reward first.
 thinkprune --name gs0 --tp-start raw --tp-reward smart --tp-min-solve 0 --tp-max-solve 0.75 --tp-lr 2e-6 --tp-kl 0 --tp-smoke
 thinkprune --name grF --tp-start raw --tp-reward smart --tp-min-solve 0 --tp-max-solve 0.75 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-score-every 50 --tp-kl 0
+# D7 two-stage (lpw-2stage, +1.8 vs the curve on old settings): stage 1 'be right' only (similar-length right > wrong,
+# 50 steps, as the original: 3 Nov, user, a shorter round lengthens less), then bidax5q's full pairs from it (policy AND reference)
+lupin --name lpd-st1 --lp-min-solve 0 --lp-recipe rightwrong --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=50
+rescreen --name rs-st1 --cx-names lpd-st1 --cx-steps 0 --seeds 0
+lupin --name lpd-2stage --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339 --lp-init adapters/lpd-st1-s0
+rescreen --name rs-2stage --cx-names lpd-2stage --cx-steps 100 200 0 --seeds 0
+# D8 math protection, ON TOP of bida's full pairs: math / no-fit questions solved < 80% also get a similar-length right > wrong pair
+lupin --name lpd-math --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-right-below,svamp=0.8,bfcl_irrelevance=0.8 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-math --cx-names lpd-math --cx-steps 100 200 0 --seeds 0
+# D6 bida's full pairs + similar-length right > wrong (+-15%) on every question: 'be right' with no length push added
+lupin --name lpd-simright --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-right,--right-band,0.15 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-simright --cx-names lpd-simright --cx-steps 100 200 0 --seeds 0
 # 3 Nov (user): v1 (bidax5q seed 0) answers the training pool (dp13 + nofit4 + math1 + math2) 8 times: half a here.
 # paused (user, 3 Nov: v1 first): polans --name pa5q --op-adapter lpc-bidax5q-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4,math1,math2 --dp-step a
 # dropped (user, 2 Nov): lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25

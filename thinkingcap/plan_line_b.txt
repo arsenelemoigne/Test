@@ -343,18 +343,44 @@
 # done: rescreen --name rs-bidax6-dial --cx-names lpc-bidax6 --cx-steps 300 --cx-scale 0.5 0.75 --seeds 0
 # old runs re-scored on the 720 (they were measured on the small tilted sets)
 # 2 Nov ~19:10: bidax5q (seed 0: +1.7 above the curve at steps 100 and 200) needs a SECOND SEED before the full test.
-lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
-rescreen --name rs-bidax5q-s1 --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 1
+# done: lupin --name lpc-bidax5q --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+# done: rescreen --name rs-bidax5q-s1 --cx-names lpc-bidax5q --cx-steps 100 200 300 0 --seeds 1
 # 3 Nov ~02:00 (user, task 2): GRPO from the RAW Qwen, khudgins' ThinkingCap reward (right = 1 - lam * thinking/2048,
 # wrong = 0, + 0.1 format bonus, lam ramped up), Dr. GRPO normalization, LoRA r32, 12 questions x 8 answers, lr 2e-6,
 # 150-step screens (lam ramp over 100 steps), the 720 at 50/100/150. A smoke test first. A/B here, C/D on GPU 2.
-thinkprune --name gr0 --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-lr 2e-6 --tp-dr-grpo --tp-smoke
+# done: thinkprune --name gr0 --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-lr 2e-6 --tp-dr-grpo --tp-smoke
 # grA: his recipe (leash 0.04, penalty up to 0.05)
 thinkprune --name grA --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
+# 3 Nov ~02:00 (user: only 2 GPUs on the account): the DPO pair screen (D1-D11, everything = bidax5q s0, only the pairs
+# change; 720 x4 at steps 100 / 200 / final) shares the two GPUs, alternating with the GRPO screens.
+# (GPU 1)
+# D11 push-harder control: bidax5q with up to 2x shorten pairs per guard pair. What extra saving costs; every protective
+# strategy must beat it at the same saving. A strategy counts only if it saves >= 40% (user, 3 Nov).
+lupin --name lpd-push2 --lp-min-solve 0 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-push2 --cx-names lpd-push2 --cx-steps 100 200 0 --seeds 0
 # grB: 4x stronger penalty (up to 0.2)
 thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.2
+# D1 DAST (2503.04472): think less (shortest > longest right) + keep trying (longest > shortest wrong), weakest 15% dropped, no right>wrong
+lupin --name lpd-dast --lp-min-solve 0 --lp-recipe dast --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-dast --cx-names lpd-dast --cx-steps 100 200 0 --seeds 0
 # grE: learning rate 5e-6 (2.5x; everything else = grA)
 thinkprune --name grE --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 5e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05
+# D2 bida + keep trying: bidax5q's pairs + longest > shortest finished wrong on questions solved < 50% (DAST's accuracy guard)
+lupin --name lpd-hard --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.5 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-hard --cx-names lpd-hard --cx-steps 100 200 0 --seeds 0
+# D3 routed by difficulty, ON TOP of bida's full pairs (3 Nov, user: keep the shortening dose): questions solved < 75% also get
+# a similar-length right > wrong pair and a keep-trying pair
+lupin --name lpd-route --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.75,--add-right-below,0.75 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-route --cx-names lpd-route --cx-steps 100 200 0 --seeds 0
+# D4 per-question length target (DAST budget p x mean right + (1-p) x L_max) instead of the fixed 1.5x for think-less
+lupin --name lpd-budget --lp-min-solve 0 --lp-recipe long2short --lp-extra=--budget --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-budget --cx-names lpd-budget --cx-steps 100 200 0 --seeds 0
+# D5 bida minus the weakest 15% of each pair kind (smallest length gap)
+lupin --name lpd-margin --lp-min-solve 0 --lp-recipe long2short --lp-extra=--margin-any --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-margin --cx-names lpd-margin --cx-steps 100 200 0 --seeds 0
+# D10 our October long2short (l2s50e): no length push below 50% solved, always-right questions at 1.2x, shorten cap 2x
+lupin --name lpd-l2s50e --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
 # 3 Nov ~01:20 (user): get a really good v1 first: pair combinations on bidax5q's data, michal-bida's settings,
 # 339 steps each, 720 at 100/200/300/final; the yardstick decides.
 # lpc-b5four: four signals from the ORIGINAL's answers (loop / length-balanced be-right / shorten dose on >= 80% solved)

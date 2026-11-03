@@ -4146,3 +4146,8 @@ everywhere; D8 = bida + right pairs on math / no-fit below 80%. D7's "be right" 
 its second round is bida's full pairs. New D11 lpd-push2 = bidax5q with up to 2x shorten pairs per guard (the 1:1 cap binds
 in every part of bidax5q), the push-harder control every protective strategy must beat at the same saving. A strategy
 counts only if it saves >= 40%. Unchanged: D1 DAST, D2 bida + keep trying, D4 budget, D5 margin, D9 Ada-R1, D10 l2s50e.
+**3 Nov ~02:00:** only 2 GPUs on the Colab account (user), so runtimes 3/4 are dropped (plan_line_c/d and the two notebooks
+removed) and the DPO screen alternates with GRPO on the two queues, scored at steps 100 / 200 / final (step 300 dropped:
+too close to the final at 339). GPU 1: grA -> D11 push2 -> grB -> D1 dast -> grE -> D2 hard, D3 route, D4 budget, D5 margin,
+D10 l2s50e -> old re-scores, bidax6s. GPU 2: code2 -> bidax7 -> grC -> D9 adar1 -> grD -> gs0, grF -> D7 st1 + 2stage,
+D8 math, D6 simright -> bidax6p.
