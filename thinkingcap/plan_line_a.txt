@@ -352,7 +352,7 @@ rescreen --name rs-adar1 --cx-names lpd-adar1 --cx-steps 100 200 0 --seeds 0
 # 3 Nov ~15:45 (user): grA / grC at step 100 think LONGER (-2.3 / -3.0%) at -1: the length signal is too weak (penalty
 # ~0.01 next to 1.0 for being right, and Dr. GRPO does not rescale it). grD (gate) replaced by grS: standard GRPO
 # scaling (reward differences divided by the group's spread), same 0.05 penalty: does rescaling alone give length?
-thinkprune --name grS --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-kl 0.04 --tp-lam-max 0.05
+# stopped (user, 3 Nov ~18:15: GRPO gives no good results; finish grB, then DPO only): thinkprune --name grS --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-kl 0.04 --tp-lam-max 0.05
 # grF (user, 3 Nov): SmartThinker reward (2603.08000): per question the length with the best chance of being right,
 # estimated from the group; only right answers longer than it penalized; the penalty's strength set per group so no
 # right answer falls below the group mean. As the paper (read in full 3 Nov): plain GRPO advantages (divided by the
@@ -360,8 +360,8 @@ thinkprune --name grS --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-st
 # (p_err = 0), and the paper trains on 64 questions a step against our 12, so we keep only questions the original
 # misses at least once in 4 (its own "difficulty-based sampling" suggestion). lr stays 2e-6 = grA (LoRA; the paper's
 # 1e-6 is a full fine-tune). A 5-step smoke test of the reward first.
-thinkprune --name gs0 --tp-start raw --tp-reward smart --tp-min-solve 0 --tp-max-solve 0.75 --tp-lr 2e-6 --tp-kl 0 --tp-smoke
-thinkprune --name grF --tp-start raw --tp-reward smart --tp-min-solve 0 --tp-max-solve 0.75 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-score-every 50 --tp-kl 0
+# stopped (user, 3 Nov ~18:15: GRPO gives no good results; finish grB, then DPO only): thinkprune --name gs0 --tp-start raw --tp-reward smart --tp-min-solve 0 --tp-max-solve 0.75 --tp-lr 2e-6 --tp-kl 0 --tp-smoke
+# stopped (user, 3 Nov ~18:15: GRPO gives no good results; finish grB, then DPO only): thinkprune --name grF --tp-start raw --tp-reward smart --tp-min-solve 0 --tp-max-solve 0.75 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-score-every 50 --tp-kl 0
 # D7 two-stage (lpw-2stage, +1.8 vs the curve on old settings): stage 1 'be right' only (similar-length right > wrong,
 # 50 steps, as the original: 3 Nov, user, a shorter round lengthens less), then bidax5q's full pairs from it (policy AND reference)
 lupin --name lpd-st1 --lp-min-solve 0 --lp-recipe rightwrong --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=50

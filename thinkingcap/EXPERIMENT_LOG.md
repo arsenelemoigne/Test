@@ -4377,3 +4377,6 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   function +1 / +0.4, several -2 / -3.4, no fit -3 / +0.2). The 4x penalty stops the drift to longer thinking seen in grA / grC
   (-2.3 / -3.0% at step 100) but does not shorten either. D9 lpd-adar1 (GPU 2): 30,049 pairs (17,870 questions; 2,844 never
   solved, 11,152 always solved), ~89 pairs a step over 339 steps, training.
+- ~18:15 (user): **GRPO stopped.** No GRPO run shortened thinking (grA / grC finals 6-7% longer, grB +1.2% at step 100).
+  grB finishes its 150 steps; grS, grP, gs0 and grF (SmartThinker) are taken out of the queues (kept as comments). The
+  GPUs now run the DPO pair-strategy screen only.
