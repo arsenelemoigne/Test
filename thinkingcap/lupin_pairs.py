@@ -305,7 +305,7 @@ def main():
 
     if args.recipe == "long2short":  # michal-bida's balance: per part, no more shorten than guard pairs
         kept = []
-        for part in {p["part"] for p in pairs}:
+        for part in sorted({p["part"] for p in pairs}):
             mine = [p for p in pairs if p["part"] == part]
             short = [p for p in mine if p["kind"] == "shorten"]
             rng.shuffle(short)
@@ -315,7 +315,7 @@ def main():
         pairs = kept
     if args.recipe == "simright":  # the 1:1 balance against the "be right" pairs
         kept = []
-        for part in {p["part"] for p in pairs}:
+        for part in sorted({p["part"] for p in pairs}):
             mine = [p for p in pairs if p["part"] == part]
             short = [p for p in mine if p["kind"] == "shorten"]
             rng.shuffle(short)
@@ -324,7 +324,7 @@ def main():
         pairs = kept
     if args.recipe == "four":  # the dose: per part, shorten pairs at most --four-dose x its "be right" pairs
         kept = []
-        for part in {p["part"] for p in pairs}:
+        for part in sorted({p["part"] for p in pairs}):
             mine = [p for p in pairs if p["part"] == part]
             short = [p for p in mine if p["kind"] == "shorten"]
             rng.shuffle(short)
@@ -354,7 +354,7 @@ def main():
         counts[("all", "overcut questions with trained answers")] = len(trained)
     if (args.recipe == "dast" or args.margin_any) and args.margin_drop > 0:  # DAST: the narrowest pairs of each kind carry little signal
         kept = []
-        for kind in {p["kind"] for p in pairs}:
+        for kind in sorted({p["kind"] for p in pairs}):
             mine = sorted((p for p in pairs if p["kind"] == kind), key=lambda p: p["margin"])
             kept += mine[int(len(mine) * args.margin_drop):]
         pairs = kept

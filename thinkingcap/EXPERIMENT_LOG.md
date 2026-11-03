@@ -4151,3 +4151,9 @@ removed) and the DPO screen alternates with GRPO on the two queues, scored at st
 too close to the final at 339). GPU 1: grA -> D11 push2 -> grB -> D1 dast -> grE -> D2 hard, D3 route, D4 budget, D5 margin,
 D10 l2s50e -> old re-scores, bidax6s. GPU 2: code2 -> bidax7 -> grC -> D9 adar1 -> grD -> gs0, grF -> D7 st1 + 2stage,
 D8 math, D6 simright -> bidax6p.
+**3 Nov ~02:45, all-else-equal audit of the DPO screen.** Every lpd-* line differs from bidax5q's only in its pair flags
+(checked token by token). The edited lupin_pairs.py builds exactly bidax5q's pairs (byte-identical to the old code at a
+fixed hash seed). Found: which shorten pairs survive the 1:1 cap depended on Python's per-process set order (the parts
+were walked in random order before rng.shuffle), so bidax5q's exact subset can't be rebuilt; fixed (sorted), every new
+run is reproducible. That subset noise is part of the ~1.4-pt seed noise. Known differences kept: one pass in 339 steps
+means more pairs = more pairs per step (bidax5q ~16); D7 trains 50 extra steps and uses stage 1 as its reference.
