@@ -4367,3 +4367,9 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
 - ~15:45 (user: don't run useless GRPO): queued GRPO changed. grD (gate) -> **grS** = standard GRPO scaling (no Dr. GRPO),
   penalty 0.05 (rescaling alone); grE (lr x2.5) -> **grP** = standard scaling + penalty 0.5 reached at step 50. grB (0.2,
   running), grF (SmartThinker, standard scaling) unchanged; grA / grC finish their 150 steps as the confirmation.
+- ~17:00 **grA step 150 (final): -5.8% / -0.9** (svamp -5 / -1.0, mbpp -1 / +1.0, ifeval -13 / -3.3, one function -3 / 0.0,
+  several -5 / -1.3, no fit -4 / +1.0); **grC step 150 (final): -6.7% / -0.3** (svamp -5 / -1.5, mbpp -14 / +1.5, ifeval -7 / -1.7,
+  one function -2 / 0.0, several +2 / 0.0, no fit -5 / +0.8). Confirmed: with Dr. GRPO and the 0.05 penalty, GRPO from the
+  raw Qwen makes thinking LONGER over training (step 50 / 100 / 150: grA +1.5 / -2.3 / -5.8%, grC -0.3 / -3.0 / -6.7%) at
+  about -0.5 to -1 point: the "be right" reward dominates and longer thinking is what it rewards. The leash (grA KL 0.04 vs
+  grC 0) changes little. grS / grP (standard scaling; 10x penalty) test the fix. GPU 1: grB resumed; GPU 2: D9 Ada-R1 DPO.
