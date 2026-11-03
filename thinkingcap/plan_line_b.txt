@@ -371,7 +371,7 @@ chirurgical --name ch1
 # Secrets -> OPENROUTER_API_KEY, cell 5): uncomment it once the runtime has the key.
 astra --name as0 --as-smoke
 # needs DELOS_API_KEY in this runtime (user, 3 Nov: up to EUR 20 on the Delos worker 'Ivan', which runs gpt-6-astra):
-# astra --name a1 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 10 --as-cap-usd 20
+# (experiment 3 moved to the end of this queue, after the DPO / GRPO runs)
 # 3 Nov (user): the ASTRA DATA EXPERIMENTS, once v1 is chosen and has answered the training questions (polans):
 # astradata --name d1 --ad-v1 pa5q   (raw + v1 answers on the training questions, our holdout removed; never the 720 / full test)
 # astra --name ax1 --as-data d1 --as-goal vs-dpo --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 25 --as-cap-usd 20
@@ -417,4 +417,9 @@ fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 
 rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
 lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
 rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
+# 3 Nov (user): EXPERIMENT 3 = Astra as in the paper, after the DPO / GRPO runs: gpt-6-astra via the Delos worker Ivan
+# edits the raw Qwen itself, 10 passes, $20 counted cap (< EUR 20), conversations restarted at 30k tokens (~$0.25 a
+# turn counted, ~74 turns like the paper's 10-pass run). Uncomment once DELOS_API_KEY is in Colab Secrets and the
+# runtime has run cell 5 (without the key the stage only prints 'skipped' and would count as done).
+# astra --name a1 --as-provider delos --as-worker 19f12cd8-3083-43f3-a1f7-6c41f85cdb01 --as-passes 10 --as-cap-usd 20 --as-extra=--handoff,30000
 end
