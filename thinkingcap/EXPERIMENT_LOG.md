@@ -4157,3 +4157,27 @@ fixed hash seed). Found: which shorten pairs survive the 1:1 cap depended on Pyt
 were walked in random order before rng.shuffle), so bidax5q's exact subset can't be rebuilt; fixed (sorted), every new
 run is reproducible. That subset noise is part of the ~1.4-pt seed noise. Known differences kept: one pass in 339 steps
 means more pairs = more pairs per step (bidax5q ~16); D7 trains 50 extra steps and uses stage 1 as its reference.
+
+### 3 Nov: idea parked: weight-space editing (Astra) and a contrastive Wanda test (discussion only, nothing built)
+Source: "Sparks of Weight-Space Programming" (Takehi, Teoh, Zhang, Khattab, MIT, 2 Nov 2026,
+rikiyat.github.io/blog/weight-space-programming; logs github.com/RikiyaT/lm_understand-logs). A frontier LLM ("GPT-6
+Astra"), with a Python sandbox and up to 50 forward-pass batches, reads and edits weights by reasoning, no gradient descent.
+Closest to us, Exp 8: Qwen3.5-0.8B looped to the 32k cap on 93% of MATH-500; Astra traced the loop to one direction written
+by the MLPs of layers 15 and 19 and removed it from 64 output columns each (0.016% of weights): cap hits 93 -> 33%, MATH-500
+7.9 -> 48.1, IFEval x3. On Gemma 3 270M (rarely loops) no gain: "editing could remove an obstacle that hid an ability, but
+it could not add an ability the model lacked". So: it removes a bad habit, it does not add skill; math is spread over the
+weights (no "math weights" to pick out), but a habit (re-checking a settled answer) is a direction / a few heads.
+How it relates to ours: closer to Track 2d steering (October: 'short vs long' direction, ~18% saved at -0.1, stronger pushes
+broke accuracy) than to Wanda. Wanda (30 Oct: 10% pruned free, 20-30% make the model think LONGER) keeps what the model
+does on its usual answers; Astra finds the part that CAUSES a behaviour and removes only that. Our per-type length
+directions are nearly unrelated (cosines -0.18 to 0.39), so a math-only edit might spare the other types (DPO spills over).
+Hard part: some re-checks catch real errors; a column removal acts on every question alike, so keeping accuracy needs the
+model to "know" inside when it is already right (cf. "Reasoning Models Know When They're Right", 2025).
+How much waste is there to remove (our 25-26 Oct cut measurements, original Qwen, benchmark questions, small samples:
+51-148 replies): earliest cut whose 20 forced answers are as right as finishing, right replies only: SVAMP 41%, IFEval
+49%, MBPP+ 72%, BFCL 49% of the thinking. But on SVAMP the answer builds up LATE (success 0.34 at 20-40% kept vs 0.73
+full), so math has the least "re-check after a settled answer" and code the most; we never labelled re-checks directly.
+Cheap tests first, no API cost, ~1 GPU-h each, after the GRPO / DPO screens: (1) label re-checks in our math answers
+(did the answer change?) and fit a probe on hidden states: can the 0.6B tell useful from wasted re-checks? (2)
+contrastive Wanda: score weights on wasted vs useful stretches (wanda_prune.py), dampen those used only by wasted ones.
+Only if (1) shows a signal: an Astra harness (OpenRouter key; cost unknown, user's call), judged on the 720 / full test.
