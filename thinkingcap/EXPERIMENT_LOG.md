@@ -4234,3 +4234,8 @@ done (1,500 questions), bidax7 training.
   -0.5 vs the curve**: svamp +49 / -4.6, mbpp +38 / -1.7, ifeval +40 / -0.8, one function +36 / -1.9, several +39 / +0.8, no
   fit +41 / +0.2. Below bidax5q s0 at step 100 (41.8 / +0.2, +1.7) at the same saving; steps 200 / 300 / final scoring.
   GPU 1 moved on to grB (GRPO, 4x penalty).
+- ~09:00 **bidax7** (bidax5q + instr2 + code2): step 200 **+43.1 / -0.6 (+1.1 vs curve)**, step 300 **+45.3 / -0.8 (+1.3)**,
+  final +43.5 / -2.5 (-0.7). Step 300: svamp +49 / -1.3, mbpp +39 / +0.8, ifeval +51 / -2.9, one function +38 / -1.0,
+  several +42 / +0.6, no fit +46 / +1.5. Steps 200-300 clear the 1-point bar (like bidax5q s0: +1.7 / +1.0 at 200 / 300) but at
+  ~3 points less saving, and the final checkpoint drops (mbpp +30 / -4.4, svamp -3.5). His code / instruction questions do not
+  improve on bidax5q; one seed, so within seed noise. GPU 2 moved on to grC (GRPO, no leash).
