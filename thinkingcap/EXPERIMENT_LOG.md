@@ -4288,3 +4288,10 @@ helpers, probe / candidates / mech on a tiny Qwen3, and mine's selection with a 
   (thinks 2% LONGER; below the yardstick's range): svamp -2 / -1.0, mbpp 0 / +2.9, ifeval -8 / -2.5, one function +1 / -1.7,
   several +4 / -0.6, no fit 0 / -1.5. Like grA at step 50 (+1.5 / -1.0): 50 GRPO steps at 12 questions x 8 answers move
   nothing yet, even at 4x the penalty. Steps 100 / 150 next. GPU 2: grC at step 50, scoring.
+**3 Nov ~13:30, Chirurgical CPU check with 20 hand-written pairs (10 find / 10 check; real Qwen3-0.6B, bfloat16; no
+Astra):** go (top copy-head gap 0.43; direction split-half cosine up to 0.77, from 0.55 with 3 pairs per half). Same top
+copy heads as the 6-pair batch: L16H14 0.58 vs 0.15, L18H5 0.36 vs 0.04. Writers L19, L22, L26, L27. Mech (loop /
+productive / normal): L16H14 x0 -0.025 / +0.006 / -0.000, x0.5 -0.013; L18H5 x0 -0.044 / +0.005 / +0.011; direction
+L19+L22 a2 -0.058 / +0.006 / +0.008, **a6 -0.196 / +0.009 / +0.025** (the paper's a6: -0.103 vs -0.009); random a6 +0.001
+-> dropped. The paper's mechanism (copy head + MLP loop direction, selective, dose-dependent, random control null) shows up
+in our model, weaker on heads (0.58 vs 0.15 here, 0.887 vs 0.082 in the paper). Likelihood only; no length / accuracy yet.
