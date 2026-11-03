@@ -4181,3 +4181,17 @@ Cheap tests first, no API cost, ~1 GPU-h each, after the GRPO / DPO screens: (1)
 (did the answer change?) and fit a probe on hidden states: can the 0.6B tell useful from wasted re-checks? (2)
 contrastive Wanda: score weights on wasted vs useful stretches (wanda_prune.py), dampen those used only by wasted ones.
 Only if (1) shows a signal: an Astra harness (OpenRouter key; cost unknown, user's call), judged on the 720 / full test.
+**3 Nov, Astra repo read in full (later project, nothing built).** Correction: run.json token usage accumulates within a
+conversation (the repo README says not to sum it over turns); the real p50c total is ~5.4M input (5.2M cached) + 0.15M
+output over 4 conversations (turns 16-40 may be under-reported), not 86.8M. Time: 1.8 h of model calls, 9.1 h of generation
+passes (34 of 50 passes were generations, 16 teacher-forced reads; 19 requests failed and did not count).
+How p50c found the edit: 4 hand-written matched pairs (same correct start, then a productive check vs a 3-4x repeated
+phrase), teacher-forced; direction = mean residual difference over the last 36 tokens; per-layer attribution picked the MLP
+writers of layers 15 and 19; edit W' = W0 - a u(u^T W0) on down_proj, kept to the top-64 columns per layer by
+(u.W[:,j]) x activation difference; dose a = 1 / 2 / 3 / 6; controls: random direction +1.6 +-3.5 pp, premature-close
+log-prob unchanged; frozen edit confirmed on 1,152 fresh problems: +49.8 +-1.5 pp, 579 rescues vs 5 losses, accuracy on
+answers that had finished unchanged (93.9 -> 93.9). Answer length: mean drops only because fewer answers are cut; FINISHED
+answers got LONGER (MATH-500 5,631 -> 16,740 tokens, GSM8K 4,954 -> 10,372). The task prompt forbade "making the model skip
+its thinking or close it early regardless of the problem". p10c / p25c failed: wrong components (copying heads, one
+neuron) and too small a dose. Gemma follow-up (no looping): every budget within ~1 SE, MATH-500 6.8 -> 7.0-7.7. Released:
+prompts, every turn, eval code, edits; missing: the kernel prelude, the forward-pass server, the driver loop.
