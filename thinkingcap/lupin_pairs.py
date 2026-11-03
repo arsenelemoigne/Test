@@ -41,7 +41,7 @@ Modifiers, any recipe:
                     when it thinks past L = p x mean right length + (1 - p) x L_max (L_max: the longest answer in the
                     file), instead of the fixed --long-ratio.
     --add-right-below SPEC  (3 Nov) add the similar-length right > wrong pair only on questions solved below a share:
-                    "0.75" (every part) or "svamp=0.8,bfcl_irrelevance=0.8"; the recipe's own pairs stay untouched.
+                    "0.75" (every part) or "svamp=0.8+bfcl_irrelevance=0.8" (+ or ,); the recipe's own pairs stay untouched.
     --margin-any    apply --margin-drop (the narrowest share of each kind dropped) to any recipe, not only dast.
     --band PART:LO:HI  (1 Nov, math hole) on PART's questions whose answers think LO-HI tokens on average (mean thinking
                     length of the answers given), no shorten pair: the trained models over-cut exactly there (SVAMP
@@ -166,7 +166,7 @@ def main():
     overrides = dict((k, float(v)) for k, v in (x.split("=") for x in args.min_solve_part.split(",") if x))
     right_parts = set(x for x in args.right_parts.split(",") if x)
     below_all, below_parts = None, {}
-    for x in filter(None, args.add_right_below.split(",")):
+    for x in filter(None, args.add_right_below.replace("+", ",").split(",")):
         if "=" in x:
             below_parts[x.split("=")[0]] = float(x.split("=")[1])
         else:
