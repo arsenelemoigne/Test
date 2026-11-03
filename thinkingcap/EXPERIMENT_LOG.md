@@ -4270,3 +4270,10 @@ per type; pick = most saved at >= -1 point, confirmed on holdout, then the 720 x
 bfloat16 for generation (as the paper's evaluation). Tests: chirurgical_test.py (helpers + probe / candidates / mech on a
 tiny random Qwen3, CPU) pass; chirurgical_cpu_check.py runs the real 0.6B on CPU (bfloat16) with 6 hand-written matched pairs.
 Queued at the end of GPU 1 (after bidax6s): chirurgical chs0 --ch-smoke, then ch1.
+**3 Nov ~11:40, Chirurgical CPU check on the real Qwen3-0.6B (Mac, bfloat16, 6 hand-written matched pairs, 3 to find /
+3 to check; no Astra, no API; plumbing + sanity only):** copy heads L16H14 0.60 vs 0.18, L18H5 0.39 vs 0.05, L6H11, L21H8,
+L21H9; loop-direction writers L22, L26, L19, L21; split-half direction cosine <= 0.55 (3 pairs per half: too few to trust).
+Mech (loop / productive / normal log-prob per token, close): L16H14 x0 -0.035 / -0.001 / -0.000 PASS, x0.5 -0.019 PASS;
+L18H5 x0 -0.064 / -0.005 / +0.011 PASS, x0.5 -0.028 PASS; direction L22+L26 a2 -0.019 / -0.001 PASS, a6 -0.059 / -0.007
+PASS; random direction a6 +0.008 (loop MORE likely) -> dropped. Dose-response and the random control behave as in the
+paper. No accuracy or length evidence yet (needs the GPU generation phase).
