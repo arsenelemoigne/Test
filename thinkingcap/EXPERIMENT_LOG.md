@@ -4282,3 +4282,5 @@ loop.** mine now fixes dev 256 / holdout 512 first, then the ORIGINAL model answ
 them questions where a stored answer was capped with >= 30% repeated 8-grams, 25% random for the normal answers), graded;
 loops and pairs come from those fresh answers. Inserted on GPU 1 between grB and D1 (chs0 smoke, then ch1). Tests:
 helpers, probe / candidates / mech on a tiny Qwen3, and mine's selection with a stand-in generator all pass.
+**~12:40 (user: "it's ok if it takes more time"):** sizes raised toward the paper's: 3,000 fresh practice answers, dev 512
+(paired SE ~+-1.8 pts), holdout 1,024 (the paper confirmed on 1,152), 200 held-out pairs and 400 normal answers for the checks.
