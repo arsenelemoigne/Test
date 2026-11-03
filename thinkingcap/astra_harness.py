@@ -45,8 +45,11 @@ PROTECTED = {"model.embed_tokens.weight", "lm_head.weight", "model.norm.weight"}
 # call is its whole context uncached at 10e-6 plus --max-reply tokens at 50e-6.
 LONG_TIER = 272000
 PRICE_IN_WORST, PRICE_OUT_WORST = 10e-6, 50e-6
-FORBIDDEN = re.compile(r"\.backward\s*\(|torch\.optim|autograd|requires_grad_\s*\(\s*True|/proc\b|environ|getenv|"
-                       r"\bsocket\b|urllib|requests|http\.client|subprocess|os\.system|os\.popen|pty\b|ctypes")
+# Only real imports and calls (4 Nov: "pty" matched inside "empty" and 4 harmless blocks were refused)
+FORBIDDEN = re.compile(r"(?m)^\s*(?:import|from)\s+(?:socket|urllib|requests|http|subprocess|pty|ctypes|multiprocessing|"
+                       r"shutil\.rmtree)\b|\bos\.(?:system|popen|environ|getenv|exec\w*|spawn\w*|fork|kill)\b|"
+                       r"\bgetenv\s*\(|/proc/|\.backward\s*\(|\btorch\.optim\b|\btorch\.autograd\b|"
+                       r"requires_grad_\s*\(\s*True|__import__\s*\(|\bimportlib\b")
 BLOCK = re.compile(r"```(python|forward)\s*\n(.*?)```", re.S)
 OPEN = re.compile(r"^```(python|forward)\s*$")
 CLOSE = re.compile(r"^```\s*$")
@@ -56,6 +59,7 @@ def find_blocks(text):
     """The code blocks of a reply: a fence must open at the start of a line (```python / ```forward) and close on a line
     of its own (the LAST such line before the next opening fence), so backticks inside the code's strings do not split it
     (3 Nov: Astra's notes text held ``` and two turns were refused)."""
+    text = re.sub(r"```\s*```(python|forward)", r"```\n```\1", text)  # a closing and an opening fence on one line (4 Nov)
     lines = text.split("\n")
     opens = [i for i, l in enumerate(lines) if OPEN.match(l.strip())]
     blocks = []
@@ -487,7 +491,9 @@ def task_prompt(args):
     text = (Path(__file__).parent / "astra_prompt.txt").read_text()
     note = ("\n\nTHIS IS A SHORT TEST SESSION ON A LAPTOP CPU: the practice set is 12 easy math word problems (graded by the "
             "final number); a generation pass takes at most 8 generations per model of at most 768 tokens; a teacher-forced "
-            "pass at most 8 texts of about 1,000 tokens. Keep your work small; the point is to check that the tools work."
+            "pass at most 8 texts of about 1,000 tokens. Keep your work small; the point is to check that the tools and the "
+            "data folder work: open every file of the data folder once, try every kind of forward pass once (including a "
+            "checkpoint and a compare), make one small edit, and report anything missing or broken."
             if getattr(args, "cpu", False) else "")
     for k, v in {"{PASSES}": args.passes, "{CODE_RUNS}": args.code_runs, "{PRACTICE_N}": args.practice_n,
                  "{MODEL_DIR}": args.model_dir, "{PRACTICE}": args.practice, "{WORK}": args.work}.items():
@@ -729,7 +735,13 @@ def run_main(args, llm=None, forward=None):
         if blocks and blocks[0] == last_block[0]:
             st["repeated_block"] += 1  # the same action as last turn: possibly stuck
         last_block[0] = blocks[0] if blocks else None
-        if len(blocks) != 1:
+        ignored = ""
+        if len(blocks) > 1:  # (4 Nov) run the first, say so, instead of wasting the turn
+            st["extra_blocks"] = st.get("extra_blocks", 0) + 1
+            ignored = (f"\n\n[Only your first block was run; {len(blocks) - 1} more block(s) in that reply were ignored. "
+                       "Send exactly one block per reply.]")
+            blocks = blocks[:1]
+        if not blocks:
             st["no_block"] += 1
             reply = "Reply with exactly one ```python or ```forward block (or, once the forward passes are used, with no block)."
         elif blocks[0][0] == "python":
@@ -765,6 +777,7 @@ def run_main(args, llm=None, forward=None):
                 except Exception as e:  # noqa: BLE001  (a failed request does not count)
                     st["forward_failed"] += 1
                     reply = f"The forward request failed and was not counted: {str(e)[:2000]}"
+        reply += ignored
         if st["passes"] >= args.passes and not out_of_passes:
             reply += "\n\nThat was the last forward pass: make your final choice (the tensors in /work/edited are submitted) and reply without a code block."
         messages.append({"role": "user", "content": reply})
@@ -792,17 +805,19 @@ def cpu_forward(args, request, k):
         raise ValueError('"type" must be "generate" or "teacher_forced"')
     rows = practice_rows(args)
     items, n, which = list(request.get("problems") or []), int(request.get("n", 1)), request.get("model", "original")
-    if not items or any(p not in rows for p in items) or len(items) * n > 8:
-        raise ValueError("CPU test: known practice ids, problems x n <= 8 (per model)")
-    cap = min(int(request.get("max_tokens", 768)), 768)
+    if isinstance(request.get("compare"), list):
+        which = "compare"
+    if not items or any(p not in rows for p in items) or len(items) * n > args.cpu_items:
+        raise ValueError(f"CPU test: known practice ids, problems x n <= {args.cpu_items} (per model)")
+    cap = min(int(request.get("max_tokens", args.cpu_tokens)), args.cpu_tokens)
     tok = AutoTokenizer.from_pretrained(str(args.model_dir))
     tok.padding_side = "left"
     close_id = tok.convert_tokens_to_ids("</think>")
     eos = tok.convert_tokens_to_ids("<|im_end|>")
-    models = {"original": ["original"], "edited": ["edited"], "both": ["original", "edited"]}[which]
+    models = {"both": ["original", "edited"], "compare": list(request.get("compare") or [])}.get(which, [which])
     results = {}
     for label in models:
-        path = str(args.model_dir) if label == "original" else str(edited_model_dir(args))
+        path = model_for(args, label)
         model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.bfloat16).eval()
         keys = [(p, s2) for p in items for s2 in range(n)]
         texts = [tok.apply_chat_template(rows[p]["prompt"], tokenize=False, add_generation_prompt=True) for p, _ in keys]
@@ -822,17 +837,17 @@ def cpu_forward(args, request, k):
             think = ids.index(close_id) if close_id in ids else len(ids)
             recs.append({"id": p, "sample": s2, "type": rows[p]["type"], "right": right, "thinking_tokens": think,
                          "tokens": len(ids), "cut": cut, "text": text})
-        (work / (f"gen_{k}.jsonl" if which != "both" else f"gen_{k}_{label}.jsonl")).write_text(
+        (work / (f"gen_{k}.jsonl" if which not in ("both", "compare") else f"gen_{k}_{label}.jsonl".replace(":", "-"))).write_text(
             "".join(json.dumps(r) + "\n" for r in recs))
         results[label] = recs
     summary = {label: {"n": len(r), "accuracy": round(sum(x["right"] for x in r) / len(r), 3),
                        "mean_thinking_tokens": round(statistics.fmean(x["thinking_tokens"] for x in r), 1),
                        "cut_share": round(sum(x["cut"] for x in r) / len(r), 3)} for label, r in results.items()}
-    if which == "both":
-        a, b = results["original"], results["edited"]
+    if which in ("both", "compare"):
+        a, b = results[models[0]], results[models[1]]
         summary["paired"] = {"accuracy_diff_pp": round(100 * statistics.fmean(int(y["right"]) - int(x["right"]) for x, y in zip(a, b)), 1),
-                             "thinking_saved_pct": round(100 * (1 - summary["edited"]["mean_thinking_tokens"] /
-                                                                max(1e-9, summary["original"]["mean_thinking_tokens"])), 1)}
+                             "thinking_saved_pct": round(100 * (1 - summary[models[1]]["mean_thinking_tokens"] /
+                                                                max(1e-9, summary[models[0]]["mean_thinking_tokens"])), 1)}
     return summary
 
 
@@ -902,6 +917,8 @@ def main():
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
+    p.add_argument("--cpu-items", type=int, default=8, help="--cpu: generations per model per pass")
+    p.add_argument("--cpu-tokens", type=int, default=768, help="--cpu: max new tokens")
     p.add_argument("--request")
     p.add_argument("--result")
     p.add_argument("--k", type=int, default=0)

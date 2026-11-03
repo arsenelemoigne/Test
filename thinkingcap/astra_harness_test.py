@@ -106,6 +106,12 @@ def test_blocks():
     two = "```python\na=1\n```\ntext\n```forward\n{}\n```"
     assert [b[0] for b in ah.find_blocks(two)] == ["python", "forward"]
     assert ah.find_blocks("no code") == []
+    fused = "```python\na=1\n``````python\nb=2\n```"
+    assert [c for _, c in ah.find_blocks(fused)] == ["a=1", "b=2"], ah.find_blocks(fused)
+    for ok in ("x = 'the v1 file is empty'", "# forward requests are cheap", "print('environment ok')"):
+        assert not ah.FORBIDDEN.search(ok), ok
+    for bad in ("import subprocess", "from urllib import request", "os.environ['A']", "open('/proc/self/environ')", "loss.backward()"):
+        assert ah.FORBIDDEN.search(bad), bad
     print("blocks ok")
 
 
