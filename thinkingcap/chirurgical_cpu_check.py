@@ -39,12 +39,42 @@ CASES = [  # (question, shared start, productive continuation, sentence that get
 ]
 
 
+CASES_B = [  # (3 Nov, user: same result on a different batch?) other questions, other repeated phrases
+    ("Sara buys 4 boxes of 6 eggs and breaks 3. How many eggs are left?",
+     "Four boxes of six eggs is 4 x 6 = 24 eggs. She breaks 3, so 24 - 3 = 21.",
+     " To double check, 6 + 6 + 6 + 6 = 24, minus the 3 broken ones gives 21 eggs left.",
+     " Hmm, so the total is 21 eggs."),
+    ("A rectangle is 8 cm long and 5 cm wide. What is its area?",
+     "Area of a rectangle is length times width: 8 x 5 = 40 square centimetres.",
+     " Splitting it, 8 x 5 is the same as 4 x 10 = 40, so the area is 40 cm^2.",
+     " Let me recompute 8 times 5, which is 40."),
+    ("Write a Python function that counts the vowels in a string.",
+     "I need count_vowels(s). Vowels are a, e, i, o, u, and capital letters should count too.",
+     " I will lower-case the string once and sum 1 for each character found in the set of vowels; an empty string gives 0.",
+     " The function counts the vowels in the string."),
+    ("Answer in exactly two sentences: why is the sky blue?",
+     "Two sentences only. The first should say sunlight is scattered by air molecules.",
+     " The second should say blue light scatters more than red because its wavelength is shorter, which is why we see blue.",
+     " I must answer in exactly two sentences."),
+    ("Leo has 45 marbles and shares them equally among 5 friends. How many does each get?",
+     "Sharing 45 equally among 5 means 45 / 5 = 9 marbles each.",
+     " Checking by multiplying back, 9 x 5 = 45, which matches, so each friend gets 9.",
+     " Wait, 45 divided by 5 is 9."),
+    ("Call the weather tool for Paris tomorrow. Available: get_weather(city, day).",
+     "The user wants tomorrow's weather in Paris, and get_weather takes a city and a day.",
+     " So the call is get_weather(city=\"Paris\", day=\"tomorrow\"); no other function is needed.",
+     " The function is get_weather with city and day."),
+]
+
+
 def main():
     from transformers import AutoTokenizer
     tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
     enc = lambda t: tok.encode(t, add_special_tokens=False)
     pairs, normal = [], []
-    for k, (q, start, prod, rep) in enumerate(CASES):
+    import sys
+    cases = CASES_B if "--batch-b" in sys.argv else CASES
+    for k, (q, start, prod, rep) in enumerate(cases):
         prompt = tok.apply_chat_template([{"role": "user", "content": q}], tokenize=True, add_generation_prompt=True)
         prompt = list(prompt["input_ids"]) if hasattr(prompt, "keys") else list(prompt)
         prefix = enc("<think>\n" + start)
@@ -58,7 +88,8 @@ def main():
     ch.write_jsonl(out / "normal.jsonl", normal)
     ch.DTYPE = "bfloat16"
     args = SimpleNamespace(out=str(out), model="Qwen/Qwen3-0.6B", attn_pairs=3, attn_len=512, heads=2, layers=2,
-                           columns=64, doses=[2, 6], seed=0, check_pairs=3, check_normal=6, normal_len=128)
+                           columns=64, doses=[2, 6], seed=0, check_pairs=3, check_normal=6, normal_len=128,
+                           min_stability=0.8, min_copy_gap=0.2)
     ch.probe(args)
     ch.mech(args, tok)
     print(json.dumps(json.loads((out / "mech.json").read_text()), indent=1))

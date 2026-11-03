@@ -69,9 +69,11 @@ def test_pipeline():
     ch.write_jsonl(out / "pairs.jsonl", pairs)
     ch.write_jsonl(out / "normal.jsonl", normal)
     args = SimpleNamespace(out=str(out), model=str(tmp / "model"), attn_pairs=4, attn_len=128, heads=2, layers=2,
-                           columns=8, doses=[1, 6], seed=0, check_pairs=6, check_normal=6, normal_len=16)
+                           columns=8, doses=[1, 6], seed=0, check_pairs=6, check_normal=6, normal_len=16,
+                           min_stability=0.8, min_copy_gap=0.2)
     ch.probe(args)
     data = torch.load(out / "probe.pt")
+    assert "go" in json.loads((out / "go.json").read_text())
     assert len(data["u"]) == 4 and len(data["stability"]) == 4 and data["copy"]["loop"].shape == (4, 4)
     # the loop branches repeat the prefix's last tokens: a random model's copy score cannot be checked for sign,
     # but it must be a finite attention share

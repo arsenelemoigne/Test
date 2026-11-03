@@ -308,6 +308,11 @@ def probe(args):
     best = sorted(range(L), key=lambda i: -write[i])[:4]
     gap = scores["loop"] - scores["productive"]
     top = sorted(((float(gap[l, h]), l, h) for l in range(gap.shape[0]) for h in range(gap.shape[1])), reverse=True)[:5]
+    # go / no-go (3 Nov, user: don't bet hours of generation on a weak signal): a stable direction or a clear copy head
+    go = max(stab) >= args.min_stability or (top and top[0][0] >= args.min_copy_gap)
+    (out / "go.json").write_text(json.dumps({"go": bool(go), "max_stability": max(stab), "top_copy_gap": top[0][0] if top else 0}))
+    print(f"probe: {'GO' if go else 'NO GO'} (max split-half cosine {max(stab):.2f} vs {args.min_stability}, "
+          f"top copy-head gap {top[0][0] if top else 0:.3f} vs {args.min_copy_gap})", flush=True)
     print("probe: direction stability (split-half cosine) by layer: " + " ".join(f"{s:.2f}" for s in stab), flush=True)
     print("probe: top MLP writers (layer: loop-specific write) " + ", ".join(f"L{i}: {write[i]:.3f}" for i in best), flush=True)
     print("probe: top copy heads (loop - productive score) " + ", ".join(
@@ -535,6 +540,10 @@ def gen(args, tok, part_of):
     rows = load_rows(args)
     sets = json.loads((out / "sets.json").read_text())
     part = {q: part_of(rows[q]) for q in sets["dev"] + sets["holdout"]}
+    if (out / "go.json").exists() and not json.loads((out / "go.json").read_text())["go"]:
+        print("gen: skipped, the probe found no clear loop signal (go.json)", flush=True)
+        (out / "pick.json").write_text(json.dumps({"best": None, "reason": "no go"}))
+        return
     mech_res = json.loads((out / "mech.json").read_text())
     probe_data = torch.load(out / "probe.pt")
     passing = [k for k, v in mech_res.items() if k != "original" and v.get("pass")]
@@ -601,6 +610,8 @@ def main():
     p.add_argument("--attn-pairs", type=int, default=64)
     p.add_argument("--attn-len", type=int, default=768)
     p.add_argument("--heads", type=int, default=3)
+    p.add_argument("--min-stability", type=float, default=0.8, help="go: split-half cosine of the direction")
+    p.add_argument("--min-copy-gap", type=float, default=0.2, help="go: loop - productive copy score of the top head")
     p.add_argument("--layers", type=int, default=2)
     p.add_argument("--columns", type=int, default=64)
     p.add_argument("--doses", type=float, nargs="+", default=[1, 2, 4, 6])
