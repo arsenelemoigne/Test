@@ -366,6 +366,10 @@ thinkprune --name grB --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-st
 # Programming' Exp 8 on the raw Qwen (loops: 2.3% of its 720 answers hold 22% of its thinking). Smoke, then the run.
 chirurgical --name chs0 --ch-smoke
 chirurgical --name ch1
+# 3 Nov ~19:30: chs0 smoke failed in gen (the candidate copy was built on the GPU and kept ~3.7 GB, fixed); ch1 above
+# started with the old script, so its gen phase will fail the same way: this line resumes ch1 (mine / probe / mech
+# reused from Drive) with the fixed script.
+chirurgical --name ch1 --ch-extra=--seed,0
 # 3 Nov (user): ASTRA, the paper as it was run: gpt-6-astra does the diagnosis and the edit itself (astra_harness.py,
 # HARD stop at $8 < EUR 8). Smoke = the GPU tools only, no API call. The real run waits for the key cell (Colab
 # Secrets -> OPENROUTER_API_KEY, cell 5): uncomment it once the runtime has the key.

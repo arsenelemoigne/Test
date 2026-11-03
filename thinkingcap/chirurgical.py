@@ -225,12 +225,12 @@ def mine(args, tok, part_of):
 DTYPE = "float32"  # --dtype; bfloat16 lets the 0.6B fit an 8 GB Mac for the CPU check
 
 
-def load_hf(path, eager=False):
+def load_hf(path, eager=False, device=None):
     import torch
     from transformers import AutoModelForCausalLM
     kw = {"attn_implementation": "eager"} if eager else {}
     return AutoModelForCausalLM.from_pretrained(path, dtype=getattr(torch, DTYPE), **kw).to(
-        "cuda" if torch.cuda.is_available() else "cpu").eval()
+        device or ("cuda" if torch.cuda.is_available() else "cpu")).eval()
 
 
 def branch_means(model, prompt, prefix, branch, mlp_cache=None):
@@ -438,7 +438,8 @@ def save_candidate(args, name, probe_data, path):
     if (Path(path) / "config.json").exists():
         return
     from transformers import AutoTokenizer
-    model = load_hf(args.model)
+    # on CPU (3 Nov: built on the GPU it kept ~3.7 GB, and the next vLLM engine found 18.28 < 18.73 GB free)
+    model = load_hf(args.model, device="cpu")
     edit = dict(candidates(args, probe_data, model))[name]
     sd = model.state_dict()
     dtype = getattr(torch, args.gen_dtype)
@@ -451,6 +452,11 @@ def save_candidate(args, name, probe_data, path):
         sd[k].copy_(v.to(sd[k].dtype).to(sd[k].device))
     model.to(dtype).save_pretrained(path)
     AutoTokenizer.from_pretrained(args.model).save_pretrained(path)
+    del model
+    import gc
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def load_rows(args):
