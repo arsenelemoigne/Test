@@ -4488,3 +4488,8 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   Gated reward gives a signal in all-right groups (2/2 groups every step; grA's reward gave ~0 there); code question got its
   own rollout limit; lr warm-up + cosine follows the global step across blocks (1e-5, 1e-5, 5.5e-6, 1e-6); block 2 loaded
   block 1's AdamW ("optimizer state continued"). Untested on CPU: the vLLM path with --full-support (top_k -1): smoke on GPU first.
+
+### 4 Nov ~05:20 — D9 lpd-adar1 step 100 (720 x4)
+**lpd-adar1-s0-100: +68.3% / -6.6** (full-eval weighting +68.2 / -6.7). svamp +79 / -11.7, mbpp +74 / -7.9, ifeval +58 / -1.0,
+one function +52 / -6.9, several +56 / -4.6, no fit +59 / -5.6. Curve at 68.3% = -7.3, so +0.7 above it (on the curve).
+Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs cut very hard by step 100 (svamp, mbpp worst).
