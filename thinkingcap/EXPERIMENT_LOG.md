@@ -4493,3 +4493,13 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
 **lpd-adar1-s0-100: +68.3% / -6.6** (full-eval weighting +68.2 / -6.7). svamp +79 / -11.7, mbpp +74 / -7.9, ifeval +58 / -1.0,
 one function +52 / -6.9, several +56 / -4.6, no fit +59 / -5.6. Curve at 68.3% = -7.3, so +0.7 above it (on the curve).
 Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs cut very hard by step 100 (svamp, mbpp worst).
+- ~06:20 **D9 lpd-adar1 step 200: +69.4% / -7.6** (svamp +80 / -13.1, mbpp +74 / -9.4, ifeval +58 / -3.3, one function +56 / -9.0,
+  several +58 / -4.6, no fit +64 / -0.2), on the curve (0.0). **Final (338): +65.3% / -6.8** (svamp +79 / -10.8, mbpp +63 / -9.4,
+  ifeval +55 / -1.7, one function +56 / -9.4, several +58 / -5.3, no fit +63 / -1.2), -0.3 vs curve. Ada-R1 pairs = far too much
+  shortening; svamp / mbpp / one-function lose 9-13 points. Not a v1 candidate.
+- **D1 lpd-dast step 100: +39.5% / -2.6** (svamp +57 / -1.9, mbpp +33 / -3.5, ifeval +22 / -3.3, one function +33 / -5.4, several
+  +38 / -3.2, no fit +47 / +4.2), -1.4 vs curve. **Step 200: +30.8% / -2.0** (svamp +48 / -3.7, mbpp +22 / -2.1, ifeval +8 / -1.0,
+  one function +34 / -6.0, several +37 / -2.1, no fit +45 / +5.2), -1.7 vs curve: DAST gets LONGER with training and stays below
+  the curve; worse than bidax5q (46.7 / -0.5). Final pending.
+- Bug found: my --nt-full code (3 Nov) was inserted into drpo() instead of nothink(), so "ntfull" re-printed the old fresh-240
+  numbers. Moved into nothink(); re-queued as ntfull2 on GPU 2 (next after lpd-st1).

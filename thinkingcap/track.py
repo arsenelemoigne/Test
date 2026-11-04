@@ -1754,18 +1754,6 @@ def drpo(args):
     if log_file.exists():
         print(log_file.read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
-    if args.nt_full:  # the original only, full test x8 (blog: thinking-off point on every part's efficiency curve)
-        base = ROOT / "full-base"
-        if not (base / "results.json").exists():
-            drive_sync("restore", only=[f"runs/mvtf/{base.name}"])
-        out = ROOT / "full-base-nothink"
-        if not (out / "results.json").exists():
-            drive_sync("restore", only=[f"runs/mvtf/{out.name}"])
-        if not (out / "results.json").exists():
-            shutil.rmtree(out, ignore_errors=True)
-            py("evaluate_nothink.py", "--questions", "questions", "--samples", 8, "--out", out)
-        print(raw_diff("original with thinking OFF vs thinking ON (full test 2,759 x 8)", out, base), flush=True)
-        return
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
     ran = sum(1 for l in log_file.read_text().splitlines() if l.strip()) if log_file.exists() else 0
     steps = list(args.drpo_score) + ([ran] if args.drpo_score and ran and ran not in args.drpo_score else [])  # guard stop
@@ -1811,6 +1799,18 @@ def nothink(args):
     assert text.count("enable_thinking=True") == 1, "evaluate.py changed: the thinking switch is not where expected"
     dst.write_text(text.replace("enable_thinking=True", "enable_thinking=False"))
     fresh_q = f"questions_fresh{FRESH_SEED}"
+    if args.nt_full:  # the original only, full test x8 (blog: thinking-off point on every part's efficiency curve)
+        base = ROOT / "full-base"
+        if not (base / "results.json").exists():
+            drive_sync("restore", only=[f"runs/mvtf/{base.name}"])
+        out = ROOT / "full-base-nothink"
+        if not (out / "results.json").exists():
+            drive_sync("restore", only=[f"runs/mvtf/{out.name}"])
+        if not (out / "results.json").exists():
+            shutil.rmtree(out, ignore_errors=True)
+            py("evaluate_nothink.py", "--questions", "questions", "--samples", 8, "--out", out)
+        print(raw_diff("original with thinking OFF vs thinking ON (full test 2,759 x 8)", out, base), flush=True)
+        return
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
     for m in args.nothink_models:
         if m.startswith("models/") and not (Path(m) / "config.json").exists():
