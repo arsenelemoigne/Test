@@ -4512,3 +4512,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~08:20 **D7 lpd-st1 final (stage 1: right-beats-wrong pairs only, 50 steps): -4.6% / +0.8** (svamp +7 / +1.0, mbpp -15 / 0.0,
   ifeval -7 / +1.5, one function -9 / 0.0, several -5 / -1.5, no fit 0 / +3.3); +1.7 vs curve. As intended: accuracy up a little,
   answers slightly longer (code 15% longer); it is the start point for lpd-2stage (bida's 1:1 pairs on top), now training.
+- ~13:20 **D2 lpd-hard step 100: +9.4% / +0.1** (svamp +20 / 0.0, mbpp +7 / +0.2, ifeval -1 / +0.8, one function +9 / -0.6, several
+  +9 / -2.3, no fit +12 / +1.5), -0.1 vs curve. The hard "keep trying" pairs hold length back a lot (bidax5q step 100: 41.8 / +0.2).
+- **D7 lpd-2stage step 100: +16.2% / +1.7** (svamp +24 / +0.8, mbpp -5 / +2.3, ifeval +23 / +0.4, one function +13 / -1.7, several
+  +9 / +0.8, no fit +36 / +10.6), +1.4 vs curve: accuracy up (no-fit +10.6) but shortening slow; steps 200 / final decide.
