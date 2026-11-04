@@ -4509,3 +4509,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   solution): svamp 88.7 -> 20.6 (-68.1), mbpp 52.4 -> 40.8 (-11.6), ifeval 58.7 -> 57.5 (-1.3), one function 82.2 -> 71.4
   (-10.7), several 76.1 -> 55.3 (-20.8), no fit 83.4 -> 90.3 (+6.9); tokens saved 89-98% (ifeval 62%: its answers stay long).
   Data in runs/mvtf/full-base-nothink (Drive).
+- ~08:20 **D7 lpd-st1 final (stage 1: right-beats-wrong pairs only, 50 steps): -4.6% / +0.8** (svamp +7 / +1.0, mbpp -15 / 0.0,
+  ifeval -7 / +1.5, one function -9 / 0.0, several -5 / -1.5, no fit 0 / +3.3); +1.7 vs curve. As intended: accuracy up a little,
+  answers slightly longer (code 15% longer); it is the start point for lpd-2stage (bida's 1:1 pairs on top), now training.
