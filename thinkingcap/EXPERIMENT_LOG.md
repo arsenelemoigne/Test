@@ -4529,3 +4529,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~20:00 **D8 lpd-math step 200: +43.3% / -1.8** (-0.1 vs curve; svamp +50 / -4.6); **final: +41.7% / -1.0** (svamp +44 / -3.3,
   mbpp +29 / +1.3, ifeval +48 / -2.1, one function +41 / -2.9, several +44 / -1.5, no fit +44 / +5.4), +0.5 vs curve. On the
   curve, below bidax5q (46.7 / -0.5, +1.8): the math right>wrong pairs did not protect math. Dropped.
+
+### 5 Nov
+- ~00:30 **D3 lpd-route step 100: +7.5% / -1.0** (svamp +17 / -0.6, mbpp +1 / -1.0, ifeval -4 / -2.5, one function +10 / -1.9,
+  several +12 / -0.4, no fit +19 / +2.7), -1.1 vs curve. 13,430 pairs, most of them hard / right>wrong: they cancel the shortening
+  (like D2 hard). Steps 200 / final next. GPU 2: D6 simright step 250/334 after the restarts (fast restore now: f1580c2).
