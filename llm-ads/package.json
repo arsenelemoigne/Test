@@ -1,0 +1,20 @@
+{
+  "name": "llm-ads-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Privacy-first ad marketplace for LLM apps: the catalog comes to the app, the conversation never leaves.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "marketplace": "node marketplace/server.ts",
+    "demo": "node demo/server.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.2"
+  }
+}

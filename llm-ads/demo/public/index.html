@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Free Chat Demo</title>
+  <style>
+    :root {
+      --bg: #fafaf9; --surface: #ffffff; --text: #1c1917; --muted: #78716c; --border: #e7e5e4;
+      --user: #1c1917; --user-text: #fafaf9; --offer-bg: #fffbeb; --offer-border: #f59e0b; --offer-label: #b45309;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0c0a09; --surface: #1c1917; --text: #f5f5f4; --muted: #a8a29e; --border: #292524;
+        --user: #f5f5f4; --user-text: #0c0a09; --offer-bg: #1f1708; --offer-border: #b45309; --offer-label: #fbbf24;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 16px; min-height: 100vh; display: flex; flex-direction: column; }
+    header h1 { font-size: 18px; margin: 8px 0 2px; }
+    header p { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+    #log { flex: 1; display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+    .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .user { align-self: flex-end; background: var(--user); color: var(--user-text); }
+    .assistant { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); }
+    .offer { align-self: flex-start; max-width: 85%; background: var(--offer-bg); border: 1px solid var(--offer-border);
+      border-left-width: 4px; border-radius: 10px; padding: 10px 14px; }
+    .offer .label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--offer-label); }
+    .offer h3 { margin: 2px 0 4px; font-size: 15px; }
+    .offer ul { margin: 0 0 6px; padding-left: 18px; }
+    .offer code { font-weight: 600; }
+    .offer a { color: var(--offer-label); font-weight: 600; }
+    form { display: flex; gap: 8px; position: sticky; bottom: 0; background: var(--bg); padding: 8px 0 16px; }
+    input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; }
+    button { padding: 10px 16px; border-radius: 10px; border: 0; background: var(--user); color: var(--user-text); font: inherit; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Free chat (ad-supported demo)</h1>
+    <p>Offers are matched on this server. Your conversation is never sent to advertisers or to the ad marketplace.</p>
+  </header>
+  <div id="log"></div>
+  <form id="form">
+    <input id="input" autocomplete="off" placeholder="Try: I need running shoes, I have flat feet" required />
+    <button id="send">Send</button>
+  </form>
+</main>
+<script>
+  const log = document.getElementById('log');
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const send = document.getElementById('send');
+  const history = [];
+
+  function el(tag, props = {}, children = []) {
+    const node = Object.assign(document.createElement(tag), props);
+    for (const child of children) node.append(child);
+    return node;
+  }
+
+  function addMessage(role, text) {
+    log.append(el('div', { className: `msg ${role}`, textContent: text }));
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function addOffer(offer) {
+    const claims = el('ul', {}, offer.claims.map((c) => el('li', { textContent: c })));
+    const promo = offer.promoCode ? el('div', {}, ['Code: ', el('code', { textContent: offer.promoCode })]) : '';
+    const link = el('a', { href: offer.clickUrl, target: '_blank', rel: 'noopener sponsored', textContent: 'See offer →' });
+    log.append(el('div', { className: 'offer' }, [
+      el('div', { className: 'label', textContent: `${offer.label} · ${offer.brand}` }),
+      el('h3', { textContent: offer.title }),
+      claims, promo, link,
+    ]));
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    history.push({ role: 'user', content: text });
+    addMessage('user', text);
+    send.disabled = true;
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: history.slice(-20) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      history.push({ role: 'assistant', content: data.reply });
+      addMessage('assistant', data.reply);
+      for (const offer of data.offers) addOffer(offer);
+    } catch (err) {
+      addMessage('assistant', `Error: ${err.message}`);
+    } finally {
+      send.disabled = false;
+      input.focus();
+    }
+  });
+</script>
+</body>
+</html>
