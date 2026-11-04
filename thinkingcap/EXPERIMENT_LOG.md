@@ -4484,3 +4484,7 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   Strategy A: rewrite verified right answers with a $2/$10 teacher (prompts per type in the file), verify (re-grade, check the
   computation/plan/argument mapping, student NLL triage), 6,048 examples (75% compact, 25% original replay, ~15% hard repairs),
   LoRA r16 a32, lr 8e-5 cosine, 2 epochs, loss on the whole reply; rewriting cost ~$45-65; go to B at >= 20% saved, >= -0.3 pt.
+- ~03:30 GRPO v2 plumbing CPU smoke (Mac, hf backend, 6 easy math questions, 2 blocks x 2 steps, 2 questions x 4): passes.
+  Gated reward gives a signal in all-right groups (2/2 groups every step; grA's reward gave ~0 there); code question got its
+  own rollout limit; lr warm-up + cosine follows the global step across blocks (1e-5, 1e-5, 5.5e-6, 1e-6); block 2 loaded
+  block 1's AdamW ("optimizer state continued"). Untested on CPU: the vLLM path with --full-support (top_k -1): smoke on GPU first.
