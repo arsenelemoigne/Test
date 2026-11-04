@@ -4526,3 +4526,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~19:20 **D8 lpd-math step 100: +40.9% / -1.6** (svamp +47 / -3.1, mbpp +39 / -2.1, ifeval +40 / -2.1, one function +34 / -2.5,
   several +38 / +2.3, no fit +41 / +2.7), -0.2 vs curve. The extra right>wrong pairs on hard math did not protect math
   (bidax5q step 100: 41.8 / +0.2, svamp -1.5). Steps 200 / final next. GPU 1: D3 route step 130/336.
+- ~20:00 **D8 lpd-math step 200: +43.3% / -1.8** (-0.1 vs curve; svamp +50 / -4.6); **final: +41.7% / -1.0** (svamp +44 / -3.3,
+  mbpp +29 / +1.3, ifeval +48 / -2.1, one function +41 / -2.9, several +44 / -1.5, no fit +44 / +5.4), +0.5 vs curve. On the
+  curve, below bidax5q (46.7 / -0.5, +1.8): the math right>wrong pairs did not protect math. Dropped.
