@@ -468,4 +468,7 @@ rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
 # Step 4  judged automatically after each run: paired holdout (512) and the 720 x4 (s4-astra-gv1 / -av1); if one beats v1
 #         at the same accuracy, its full test (the user's rule: full tests only for a really good model).
 # Optional: "vs-dpo" (from the raw weights, beat v1) = same lines with --as-goal vs-dpo and no --as-start.
+# GRPO v2, PREPARED 4 Nov ~03:30, NOT queued (user: DPO first; then re-run grA, Ivan judges, then v2). Uncomment in order.
+# thinkprune --name gr2smoke --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-smoke --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--full-support
+# thinkprune --name gr2 --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-steps 250 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-every 50 --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,12,--full-support
 end
