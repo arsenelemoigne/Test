@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "astradata", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -3596,6 +3596,121 @@ def card_stats(out, rows, holdout, raw_files, tok):
     print(f"astradata: test card with stats for {len(stats['test'])} test parts and {len(stats['train'])} training parts", flush=True)
 
 
+def consultpack(args):
+    """The consultant pack (4 Nov, user: raw Qwen data + the test's profile, nothing of our work, for an independent strategy
+    analysis by Argon; CPU only): test_profile.md (astra_test_card.md + the ORIGINAL model on the FULL test, full-base
+    2,759 x 8: per part accuracy, thinking quantiles, cut share, solve-rate spread, question lengths; numbers only),
+    raw_meta.jsonl (every raw answer to the training questions: numbers only), raw_text_sample.jsonl (3,000 full answers,
+    stratified by type x outcome), train_profile.md. Saved to runs/consult/<name> (Drive)."""
+    import random
+    import statistics
+    from transformers import AutoTokenizer
+    from build_pool import part_of
+    name = args.name
+    out = Path("runs/consult") / name
+    drive_sync("restore", only=[str(out)])
+    if (out / "test_profile.md").exists():
+        print(f"consultpack {name}: done", flush=True)
+        return
+    extra = [x for x in "nofit1,tools1,code1,nofit2,nofit4,math1,math2".split(",")]
+    raw_files = [BON / "lupin-all-dp13-nofit1-tools1-code1-nofit2.jsonl",
+                 BON / "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2-a4.jsonl"]
+    drive_sync("restore", only=[*map(str, raw_files), "data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra],
+                                str(ROOT / "full-base"), "questions"])
+    tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+    close_id = tok.convert_tokens_to_ids("</think>")
+
+    def q(xs, f):
+        xs = sorted(xs)
+        return xs[min(len(xs) - 1, int(f * len(xs)))] if xs else 0
+
+    def profile(groups, qlen):
+        ans = [a for g in groups.values() for a in g]
+        rates = [sum(r for r, _, _ in g) / len(g) for g in groups.values() if g]
+        th = [t for _, t, _ in ans]
+        return {"questions": len(groups), "answers": len(ans), "q_len_p50": q(qlen, .5), "q_len_p90": q(qlen, .9),
+                "accuracy_pct": round(100 * sum(r for r, _, _ in ans) / max(1, len(ans)), 1),
+                "always_right_pct": round(100 * sum(x == 1 for x in rates) / max(1, len(rates))),
+                "sometimes_pct": round(100 * sum(0 < x < 1 for x in rates) / max(1, len(rates))),
+                "never_right_pct": round(100 * sum(x == 0 for x in rates) / max(1, len(rates))),
+                "think_mean": round(statistics.fmean(th), 0) if th else 0, "think_p10": q(th, .1), "think_p25": q(th, .25),
+                "think_p50": q(th, .5), "think_p75": q(th, .75), "think_p90": q(th, .9), "think_p99": q(th, .99),
+                "cut_pct": round(100 * sum(c for _, _, c in ans) / max(1, len(ans)), 1),
+                "think_right_p50": q([t for r, t, _ in ans if r], .5), "think_wrong_p50": q([t for r, t, _ in ans if not r], .5)}
+    cols = ["questions", "answers", "q_len_p50", "q_len_p90", "accuracy_pct", "always_right_pct", "sometimes_pct",
+            "never_right_pct", "think_mean", "think_p10", "think_p25", "think_p50", "think_p75", "think_p90", "think_p99",
+            "cut_pct", "think_right_p50", "think_wrong_p50"]
+
+    def table(stats, title):
+        lines = [title, "", "| part | " + " | ".join(cols) + " |", "|" + "---|" * (len(cols) + 1)]
+        lines += [f"| {k} | " + " | ".join(str(v[c]) for c in cols) + " |" for k, v in sorted(stats.items())]
+        return "\n".join(lines) + "\n"
+    # the test: the original model on the FULL test (numbers only)
+    qtext = {}
+    qfile = Path("questions/questions.jsonl")
+    if qfile.exists():
+        for line in open(qfile):
+            r = json.loads(line)
+            qtext[r["id"]] = json.dumps(r.get("messages") or r.get("prompt") or r.get("question", ""))
+    tg = defaultdict(lambda: defaultdict(list))
+    for line in open(ROOT / "full-base" / "records.jsonl"):
+        r = json.loads(line)
+        tg[r["dataset"]][r["id"]].append((str(r["correct"]) == "True", int(r.get("reasoning_tokens") or 0), str(r["truncated"]) == "True"))
+    test = {ds: profile(g, [len(tok.encode(qtext[i], add_special_tokens=False)) for i in g if i in qtext]) for ds, g in tg.items()}
+    # the training questions: the original model's answers (the 10-answer file first, the 4-answer top-ups after)
+    rows = {}
+    for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
+        for line in f.read_text().splitlines():
+            if line.strip() and not re.search(r"prostring|stringname|stringName", line):
+                r = json.loads(line)
+                if part_of(r):
+                    rows[r["pool_id"]] = r
+    out.mkdir(parents=True, exist_ok=True)
+    seen, meta, keep = set(), [], []
+    trg = defaultdict(lambda: defaultdict(list))
+    qlen_t = defaultdict(list)
+    for f in raw_files:
+        covered = set(seen)
+        for line in open(f):
+            r = json.loads(line)
+            qid = r["id"]
+            if qid not in rows or qid in covered:
+                continue
+            if qid not in seen:
+                qlen_t[part_of(rows[qid])].append(len(r["prompt_ids"]))
+            seen.add(qid)
+            ids_ = r["output_ids"]
+            th = ids_.index(close_id) if close_id in ids_ else len(ids_)
+            right = bool(r.get("correct")) and not r.get("truncated")
+            part = part_of(rows[qid])
+            trg[part][qid].append((right, th, bool(r.get("truncated"))))
+            m = {"id": qid, "type": part, "source": rows[qid].get("source"), "sample": len(trg[part][qid]) - 1, "right": right,
+                 "cut": bool(r.get("truncated")), "thinking_tokens": th, "tokens": len(ids_), "question_tokens": len(r["prompt_ids"])}
+            meta.append(m)
+            keep.append((part, "right" if right else "cut" if m["cut"] else "wrong", qid, r))
+    (out / "raw_meta.jsonl").write_text("".join(json.dumps(x) + "\n" for x in meta))
+    train = {p: profile(g, qlen_t[p]) for p, g in trg.items()}
+    rng = random.Random(0)
+    strata = defaultdict(list)
+    for part, outcome, qid, r in keep:
+        strata[(part, outcome)].append((qid, r))
+    sample = []
+    per = max(1, 3000 // max(1, len(strata)))
+    for key, items in sorted(strata.items()):
+        rng.shuffle(items)
+        for qid, r in items[:per]:
+            sample.append({"id": qid, "type": key[0], "outcome": key[1],
+                           "text": tok.decode(r["prompt_ids"] + r["output_ids"], skip_special_tokens=False)})
+    (out / "raw_text_sample.jsonl").write_text("".join(json.dumps(x) + "\n" for x in sample))
+    (out / "test_profile.md").write_text(Path("astra_test_card.md").read_text().split("## What the practice")[0] +
+                                         "\n" + table(test, "## The ORIGINAL model on the full test (2,759 x 8), numbers only"))
+    (out / "train_profile.md").write_text(table(train, "## The ORIGINAL model on the training questions") + "\n" +
+                                          table(test, "## ... and on the test, for comparison"))
+    sizes = {f.name: round(f.stat().st_size / 1e6, 1) for f in out.iterdir()}
+    print(f"consultpack {name}: {len(meta)} answers, {len(sample)} texts, files MB {sizes}", flush=True)
+    drive_sync("save")
+
+
 def wanda(args):
     """SPARSE arm C on a GPU (30 Oct: the 8 GB Mac swapped): wanda_prune.py with the dp11 check answers as calibration
     (128 of Qwen's own right answers) and damage check, levels --wd-sparsity, pruned models saved under models/ for the
@@ -4889,7 +5004,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "astradata", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
                                     "runs/bon/pairs-tg*", "adapters/fresh-tg*", "adapters/tg*", "models/tg*",

@@ -488,7 +488,8 @@ def run_teacher_forced(args, req, k, work, device="cuda", dtype=None):
 # ---------------- driver ----------------
 
 def task_prompt(args):
-    text = (Path(__file__).parent / "astra_prompt.txt").read_text()
+    text = (Path(__file__).parent / ("astra_prompt_consult.txt" if getattr(args, "task", "edit") == "consult"
+                                     else "astra_prompt.txt")).read_text()
     note = ("\n\nTHIS IS A SHORT TEST SESSION ON A LAPTOP CPU: the practice set is 12 easy math word problems (graded by the "
             "final number); a generation pass takes at most 8 generations per model of at most 768 tokens; a teacher-forced "
             "pass at most 8 texts of about 1,000 tokens. Keep your work small; the point is to check that the tools and the "
@@ -496,9 +497,10 @@ def task_prompt(args):
             "checkpoint and a compare), make one small edit, and report anything missing or broken."
             if getattr(args, "cpu", False) else "")
     for k, v in {"{PASSES}": args.passes, "{CODE_RUNS}": args.code_runs, "{PRACTICE_N}": args.practice_n,
-                 "{MODEL_DIR}": args.model_dir, "{PRACTICE}": args.practice, "{WORK}": args.work}.items():
+                 "{MODEL_DIR}": args.model_dir, "{PRACTICE}": args.practice, "{WORK}": args.work,
+                 "{DATA}": getattr(args, "data", "") or ""}.items():
         text = text.replace(k, str(v))
-    if getattr(args, "data", ""):
+    if getattr(args, "data", "") and getattr(args, "task", "edit") != "consult":
         extra = (Path(__file__).parent / "astra_prompt_data.txt").read_text()
         start = " (in this run you edit v1's weights, not these)" if args.goal == "on-top" else " (the weights you edit)"
         for k, v in {"{DATA}": args.data, "{PRACTICE}": args.practice, "{GOAL}": GOALS[args.goal], "{START_NOTE}": start}.items():
@@ -919,6 +921,8 @@ def main():
     p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
+    p.add_argument("--task", default="edit", choices=("edit", "consult"),
+                   help="consult (4 Nov, user): strategy analysis only, no forward passes, our work never mentioned")
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
     p.add_argument("--cpu-items", type=int, default=8, help="--cpu: generations per model per pass")
     p.add_argument("--cpu-tokens", type=int, default=768, help="--cpu: max new tokens")

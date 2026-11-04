@@ -1,0 +1,18 @@
+TASK. You are an ML research consultant. A team must make the reasoning model Qwen3-0.6B (28 layers of width 1,024, 16 query heads and 8 key/value heads of size 128, SwiGLU MLP width 3,072, tied embeddings; it thinks between <think> and </think>, then answers) THINK SHORTER WITHOUT LOSING ACCURACY. Target: more than 50% fewer tokens (thinking included) than the original model on the test below, at less than 1 point of accuracy lost. They want YOUR independent analysis: what would you do, and why?
+
+THE TEST (you never see its questions): {DATA}/test_profile.md describes it: four benchmarks (math word problems, Python functions with hidden tests, instruction following with checked constraints, function calling in three parts), 2,759 questions answered 8 times each, the fixed protocol (thinking on, temperature 0.6, top_p 0.95, top_k 20, 8,192 new tokens for code and 4,096 for the rest, an answer cut at the limit counts as wrong), the scoring (tokens saved against the original model and accuracy change, the four benchmarks weighted equally, BFCL's three parts pooled), the rules (start from Qwen3-0.6B; fine-tuning, LoRA, minor changes allowed; the result must still be a ~0.6B model that thinks before it answers; never train on the test; no prompt tricks; no turning thinking off) and, in numbers only, how the ORIGINAL model behaves on it per part (accuracy, thinking-length distribution, share cut at the limit, how many questions it always / sometimes / never gets right, question lengths).
+
+THE DATA YOU HAVE, in {DATA} (read-only; read it with code, never print whole files):
+- raw_meta.jsonl: one line per answer of the ORIGINAL model to the team's training questions (several answers per question): id, type (which test part the question imitates), source, sample, right, cut, thinking_tokens, tokens, question_tokens;
+- raw_text_sample.jsonl: a sample of those answers in full (question + whole answer), spread over types and outcomes;
+- train_profile.md: the same statistics as the test profile, for the training questions, side by side with the test.
+
+THE COMPUTE: 2 Google Colab runtimes, each one NVIDIA L4 GPU with 24 GB (bfloat16), usable in parallel; vLLM and Hugging Face Transformers (+ PEFT) available; generating with the 0.6B model is fast (thousands of answers an hour per GPU); a LoRA fine-tune of the 0.6B model over a few thousand examples takes 1-4 GPU-hours. Assume about 3 days of both GPUs in total.
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, scipy, scikit-learn, pandas, PyTorch CPU, tokenizers; tok = the model's tokenizer): reply with exactly one block that starts with ```python to run code; if its last line is an expression its value is shown; output is cut at 10,000 characters; you may run code up to {CODE_RUNS} times. Use it to study the data: where the original model spends its tokens, per type, per outcome, per difficulty; what its long answers do; how the training data compares with the test. You have NO forward passes in this session: you cannot run the model.
+
+WHAT TO DELIVER. When your analysis is done, reply WITHOUT a code block with a written report:
+1. What the data says: where the tokens go and what is wasted, per test part, with numbers from your analysis.
+2. Several distinct strategies (at least three, of different kinds) that could reach the target, each with: the idea, why it should work here (evidence from the data or the literature), the expected tokens saved and accuracy risk per test part, the compute it needs on the two L4s, and the main way it could fail.
+3. Your ranking, and a concrete plan for the 3 days: which experiments first, what each one decides, and the stopping rules.
+Be specific and quantitative; say what you are unsure about.
