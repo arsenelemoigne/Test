@@ -4503,3 +4503,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   the curve; worse than bidax5q (46.7 / -0.5). Final pending.
 - Bug found: my --nt-full code (3 Nov) was inserted into drpo() instead of nothink(), so "ntfull" re-printed the old fresh-240
   numbers. Moved into nothink(); re-queued as ntfull2 on GPU 2 (next after lpd-st1).
+- ~07:20 **D1 lpd-dast final (335): +33.1% / -2.3** (svamp +48 / -3.1, mbpp +24 / -2.5, ifeval +16 / -2.3, one function +33 / -6.9,
+  several +37 / -2.9, no fit +47 / +5.6), -1.8 vs curve. DAST closes below the curve at every checkpoint: dropped.
+- **ntfull2: the original Qwen with thinking OFF on the FULL test (2,759 x 8)** (measurement for the blog curves; not allowed as a
+  solution): svamp 88.7 -> 20.6 (-68.1), mbpp 52.4 -> 40.8 (-11.6), ifeval 58.7 -> 57.5 (-1.3), one function 82.2 -> 71.4
+  (-10.7), several 76.1 -> 55.3 (-20.8), no fit 83.4 -> 90.3 (+6.9); tokens saved 89-98% (ifeval 62%: its answers stay long).
+  Data in runs/mvtf/full-base-nothink (Drive).
