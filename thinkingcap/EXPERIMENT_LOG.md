@@ -4465,3 +4465,12 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
 - Findings we had not isolated: 80% of IFEval cuts had ALREADY closed </think> (~71% of their tokens are answer-side loops, e.g. repeated quotes); code cuts 24% repeated 8-word windows vs 5% in right code; BFCL irrelevance is 56% of training tool questions vs 29% on the test.
 - Limits it computed: deleting every cut answer = ~15% saving; halving all thinking = ~44%; shortest-of-4 right = 17-25% per part. So >50% needs denser reasoning on ordinary right answers, not only tail cuts.
 - Ranking: A compact verified SFT (rewritten dense traces + 20-30% original replay; est. 46-67% / -1.2..+1.5), B correctness-constrained DPO/GRPO after A (42-68%), C learned readiness head for </think> (32-57%). A+B est. 52-72%.
+- consult1 follow-up 1 (GRPO recipe, our runs not shown; $5.09 total): consult1_grpo_recipe.md. Start from a modest compact-SFT adapter;
+  reward = right x formed x not-cut x (1 - 0.30 L/(L+B_type)), B = median right length per type (svamp 512, mbpp 768, ifeval 416,
+  bfcl 160/192/192), wrong/cut/empty = 0, NO format bonus; group 8 x 32 questions, 252 steps; mean-centred advantages (no std),
+  Dr. GRPO constant denominator; lr 1e-5 warm-up 12 + cosine to 1e-6; KL 0.01; clip 0.8-1.2, grad clip 0.5; LoRA r16 a32;
+  mbpp rollouts 8,192; keep all-right groups (they carry the length signal). Ladder: penalty 0.45 / 0.15, lr 5e-6, KL 0.003, temp 0.8.
+- Against our grA (khudgins): per-step length pressure ~10x weaker (0.05 x thinking/2048 vs 0.30 x L/(L+B)), and smaller than the
+  0.1 format bonus that wrong answers also get; lr 5x lower (2e-6 constant) with KL 4x higher (0.04); 96 vs 256 completions per
+  step and 150 vs 252 steps (14k vs 64k completions); code rollouts cut at 4,096; fresh AdamW every 10-step block. Sent our runs
+  (consult1_our_grpo_runs.md) + the Strategy A question as follow-up 2 (cap $11).
