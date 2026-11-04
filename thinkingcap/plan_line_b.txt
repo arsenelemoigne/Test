@@ -469,6 +469,9 @@ rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
 #         at the same accuracy, its full test (the user's rule: full tests only for a really good model).
 # Optional: "vs-dpo" (from the raw weights, beat v1) = same lines with --as-goal vs-dpo and no --as-start.
 # GRPO v2, PREPARED 4 Nov ~03:30, NOT queued (user: DPO first; then re-run grA, Ivan judges, then v2). Uncomment in order.
+# grA2 (user 4 Nov: grA re-run, identical data and settings, ALL trainer fixes: never-solved questions included, fixed
+# denominator, one AdamW + schedule across blocks, code rollouts 8,192); runs FIRST after the DPO screen, then Ivan judges it
+# thinkprune --name grA2 --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-include-unsolved --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05 --tp-persist --tp-rl=--fixed-denominator,--max-tokens-code,8192
 # thinkprune --name gr2smoke --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-smoke --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--full-support
 # thinkprune --name gr2 --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-steps 250 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-every 50 --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,12,--full-support
 end
