@@ -4516,3 +4516,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   +9 / -2.3, no fit +12 / +1.5), -0.1 vs curve. The hard "keep trying" pairs hold length back a lot (bidax5q step 100: 41.8 / +0.2).
 - **D7 lpd-2stage step 100: +16.2% / +1.7** (svamp +24 / +0.8, mbpp -5 / +2.3, ifeval +23 / +0.4, one function +13 / -1.7, several
   +9 / +0.8, no fit +36 / +10.6), +1.4 vs curve: accuracy up (no-fit +10.6) but shortening slow; steps 200 / final decide.
+- ~15:20 **D2 lpd-hard step 200: +13.4% / -0.2** (-0.5 vs curve); **final: +13.8% / -0.1** (svamp +29 / -0.6, mbpp +4 / +1.0,
+  ifeval +2 / -1.7, one function +14 / +0.4, several +13 / -0.2, no fit +26 / +2.3), -0.4 vs curve. The "keep trying on hard
+  questions" pairs almost cancel the shortening: accuracy kept, saving tiny. Dropped.
+- **D7 lpd-2stage step 200: +19.4% / +1.0** (+0.7); **final: +16.5% / +1.4** (svamp +20 / +2.3, mbpp -19 / +4.0, ifeval +35 /
+  -1.7, one function +14 / -7.5, several +9 / -1.7, no fit +42 / +12.3), +1.1 vs curve. Starting from the right-beats-wrong
+  stage makes the same bida pairs shorten 3x less (bidax5q 46.7%); one-function -7.5, code longer. Not a v1 candidate.
+- D3 lpd-route started: 13,430 pairs (the hard + right-below pairs add many).
