@@ -4474,3 +4474,13 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   0.1 format bonus that wrong answers also get; lr 5x lower (2e-6 constant) with KL 4x higher (0.04); 96 vs 256 completions per
   step and 150 vs 252 steps (14k vs 64k completions); code rollouts cut at 4,096; fresh AdamW every 10-step block. Sent our runs
   (consult1_our_grpo_runs.md) + the Strategy A question as follow-up 2 (cap $11).
+- consult1 follow-up 2 (our GRPO runs shown + Strategy A detail; session total $10.52): consult1_grpo_diagnosis_and_sft.md.
+  Diagnosis: the length contrast in our lenpen reward was 115-1,035x smaller than the right/wrong contrast (halving a tool
+  trace's thinking = +0.0016 reward in grA); ramp = only ~100 full-strength-equivalent steps; thinking-only penalty (IFEval waste
+  is answer-side) saturating at 2,048; grC shows KL was not the blocker; grS / grP / grF untested, not failures. Confirmed two
+  trainer issues in rl_train.py: never-solved questions excluded (min_solve < rate), and the Dr. GRPO denominator counts ACTIVE
+  replies only (changes with filtering). Plus fresh AdamW every 10-step block and 4,096 code rollouts. Revised first run =
+  compact-SFT start, its reward on ALL tokens, KL 0.005, persistent optimizer, step-84 go/no-go (>= 5% shorter than the SFT start).
+  Strategy A: rewrite verified right answers with a $2/$10 teacher (prompts per type in the file), verify (re-grade, check the
+  computation/plan/argument mapping, student NLL triage), 6,048 examples (75% compact, 25% original replay, ~15% hard repairs),
+  LoRA r16 a32, lr 8e-5 cosine, 2 epochs, loss on the whole reply; rewriting cost ~$45-65; go to B at >= 20% saved, >= -0.3 pt.
