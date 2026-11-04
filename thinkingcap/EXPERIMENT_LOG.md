@@ -4523,3 +4523,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   -1.7, one function +14 / -7.5, several +9 / -1.7, no fit +42 / +12.3), +1.1 vs curve. Starting from the right-beats-wrong
   stage makes the same bida pairs shorten 3x less (bidax5q 46.7%); one-function -7.5, code longer. Not a v1 candidate.
 - D3 lpd-route started: 13,430 pairs (the hard + right-below pairs add many).
+- ~19:20 **D8 lpd-math step 100: +40.9% / -1.6** (svamp +47 / -3.1, mbpp +39 / -2.1, ifeval +40 / -2.1, one function +34 / -2.5,
+  several +38 / +2.3, no fit +41 / +2.7), -0.2 vs curve. The extra right>wrong pairs on hard math did not protect math
+  (bidax5q step 100: 41.8 / +0.2, svamp -1.5). Steps 200 / final next. GPU 1: D3 route step 130/336.
