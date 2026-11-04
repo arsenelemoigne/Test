@@ -394,6 +394,16 @@ lupin --name lpd-margin --lp-min-solve 0 --lp-recipe long2short --lp-extra=--mar
 rescreen --name rs-margin --cx-names lpd-margin --cx-steps 100 200 0 --seeds 0
 lupin --name lpd-l2s50e --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
+# D12 (user, 4 Nov): the October first line's rule (chain1: shortest right > longest right, shortest right > shortest
+# finished wrong, 40:60 per part), everything else = D1-D10 (bidax5q s0 settings and data). Round 1 from raw Qwen:
+lupin --name lpd-chain1 --lp-min-solve 0 --lp-recipe chain1 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
+rescreen --name rs-chain1 --cx-names lpd-chain1 --cx-steps 100 200 0 --seeds 0
+# D12 round 2: the round-1 model answers the same training questions x4 (on-policy), chain1 pairs from ITS answers,
+# training continues its LoRA with it as the DPO reference, a short pass (100 steps), screened at 25 / 50 / 75 / final
+polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step a
+polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
+lupin --name lpd-chain1r2 --lp-min-solve 0 --lp-recipe chain1 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-own-answers pc1 --lp-init adapters/lpd-chain1-s0 --lp-dpo=--bida-exact,--target-steps=100
+rescreen --name rs-chain1r2 --cx-names lpd-chain1r2 --cx-steps 25 50 75 0 --seeds 0
 # ===== 3 Nov ~24:00 (user): ASTRA (A) ON v1 NOW, with Gemini 4 Argon on the user's Google key, EUR 15 (cap $16) =====
 # v1 = lpc-bidax5q-s0 (best so far). 1) v1 answers every training question x4 (both halves here); 2) the data folder:
 # the raw Qwen's 10-answer file first, the 4-answer top-ups after, + v1's answers, our holdout removed; 3) Argon edits
