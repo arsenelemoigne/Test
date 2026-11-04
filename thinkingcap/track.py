@@ -244,6 +244,8 @@ def main():
     parser.add_argument("--rs-tag", default="base", help="refsets: run name tag (runs/mvtf/v4-<tag>-<seed>)")
     parser.add_argument("--lp-pool", default="auto", help="lupin: the checked pool (auto: dp11 if dp10 was superseded, else dp10)")
     parser.add_argument("--lp-recipe", default="long2short", help="lupin: lupin_pairs.py recipe")
+    parser.add_argument("--lp-own-answers", default="", help="lupin round 2 (4 Nov, D12): pairs from a trained model's OWN "
+                        "answers (polans NAME: runs/bon/onp-NAME-a/b) instead of the original's; use with --lp-init")
     parser.add_argument("--lp-min-solve", type=float, default=0.5, help="lupin: difficulty protection (0: none)")
     parser.add_argument("--lp-extra", default="", help="lupin: more lupin_pairs.py flags, e.g. '--add-right'")
     parser.add_argument("--lp-answers", type=int, default=10, help="lupin: answers per question used (newest first)")
@@ -3884,6 +3886,19 @@ def lupin(args):
         print(f"lupin: {len(per_q)} pool questions, answers per question min {min(per_q.values())} median "
               f"{statistics.median(per_q.values())}; from {dict(count)}", flush=True)
         drive_sync("save")
+    if args.lp_own_answers:  # round 2: the trained model's own answers to the same questions replace the original's
+        halves = [BON / f"onp-{args.lp_own_answers}-{h}" / "rollouts.jsonl" for h in "ab"]
+        for _ in range(288):
+            drive_sync("restore", only=[str(h.parent) for h in halves])
+            if all(h.exists() for h in halves):
+                break
+            print(f"lupin {name}: waiting for onp-{args.lp_own_answers}-a/b on Drive", flush=True)
+            time.sleep(300)
+        allfile = BON / f"lupin-own-{args.lp_own_answers}.jsonl"
+        with open(allfile, "w") as out:
+            for h in halves:
+                out.write("".join(l if l.endswith("\n") else l + "\n" for l in open(h) if l.strip()))
+        print(f"lupin {name}: {sum(1 for _ in open(allfile))} own answers of {args.lp_own_answers}", flush=True)
     raw, pairs = BON / f"pairs-{name}-raw", BON / f"pairs-{name}"
     drive_sync("restore", only=[str(raw), str(pairs)])  # the SAME pair files as before a lost runtime (31 Oct)
     for x in filter(None, (args.lp_overcut + "," + args.lp_trained).split(",")):

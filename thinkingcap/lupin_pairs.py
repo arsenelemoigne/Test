@@ -94,7 +94,7 @@ def similar(a, b):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--rollouts", nargs="+", required=True)
-    parser.add_argument("--recipe", required=True, choices=("long2short", "dast", "adar1", "rightwrong", "four", "simright"))
+    parser.add_argument("--recipe", required=True, choices=("long2short", "dast", "adar1", "rightwrong", "four", "simright", "chain1"))
     parser.add_argument("--trained", nargs="*", default=[], help="four: a trained model's answers to the same questions")
     parser.add_argument("--four-min-solve", type=float, default=0.8)
     parser.add_argument("--four-dose", type=float, default=1.0)
@@ -289,6 +289,14 @@ def main():
             done = sorted((r for r in wrongs if finished(r)), key=lambda r: r["output_tokens"])
             if len(done) > 1 and done[-1]["output_tokens"] > done[0]["output_tokens"]:
                 add("hard", done[-1], done[0], q)
+        elif args.recipe == "chain1":  # (4 Nov, user) the October first line's rule (bon_pairs.py, rounds 1-2):
+            # shorten = shortest right > longest right (>= --long-ratio longer); guard = shortest right > SHORTEST
+            # finished wrong (brevity must not come from giving up); balanced to 40 / 60 per part below
+            if len(rights) > 1 and rights[-1]["output_tokens"] >= args.long_ratio * rights[0]["output_tokens"]:
+                add("shorten", rights[0], rights[-1], q)
+            done = sorted((r for r in wrongs if finished(r)), key=lambda r: r["output_tokens"])
+            if rights and done:
+                add("guard", rights[0], done[0], q)
         elif args.recipe == "adar1":
             if rights:
                 others = sorted((r for r in q if r is not rights[0]), key=lambda r: -r["output_tokens"])[:2]
@@ -312,6 +320,18 @@ def main():
             limit = round(args.shorten_cap * sum(p["kind"] == "guard" for p in mine))
             counts[(part, "shorten capped from")] = len(short)
             kept += [p for p in mine if p["kind"] != "shorten"] + short[:limit]
+        pairs = kept
+    if args.recipe == "chain1":  # October's dpo.py --mix 0.4,0.6: per part, shorten : guard = 40 : 60 exactly
+        kept = []
+        for part in sorted({p["part"] for p in pairs}):
+            mine = [p for p in pairs if p["part"] == part]
+            short = [p for p in mine if p["kind"] == "shorten"]
+            guard = [p for p in mine if p["kind"] == "guard"]
+            rng.shuffle(short)
+            rng.shuffle(guard)
+            total = min(len(short) / 0.4, len(guard) / 0.6)
+            counts[(part, "chain1 shorten / guard before 40:60")] = f"{len(short)} / {len(guard)}"
+            kept += short[:int(total * 0.4)] + guard[:int(total * 0.6)]
         pairs = kept
     if args.recipe == "simright":  # the 1:1 balance against the "be right" pairs
         kept = []
