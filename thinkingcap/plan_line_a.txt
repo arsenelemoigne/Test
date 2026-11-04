@@ -349,6 +349,7 @@ lupin --name lpd-adar1 --lp-min-solve 0 --lp-recipe adar1 --lp-no-match --lp-nll
 # 4 Nov (user): the consultant pack (CPU only, minutes): raw Qwen data + the test's profile for an independent Argon analysis
 # (user: build it on the Mac instead) consultpack --name c1
 rescreen --name rs-adar1 --cx-names lpd-adar1 --cx-steps 100 200 0 --seeds 0
+nothink --name ntfull --nt-full
 # grD: GRPO-lambda: length penalty only in groups right >= 50% of the time
 # replaced (weak signal): thinkprune --name grD --tp-start raw --tp-reward lenpen --tp-min-solve 0 --tp-steps 150 --tp-questions 12 --tp-group 8 --tp-lr 2e-6 --tp-ramp 100 --tp-score-every 50 --tp-dr-grpo --tp-kl 0.04 --tp-lam-max 0.05 --tp-gate 0.5
 # 3 Nov ~15:45 (user): grA / grC at step 100 think LONGER (-2.3 / -3.0%) at -1: the length signal is too weak (penalty

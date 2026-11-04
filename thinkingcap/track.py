@@ -158,6 +158,8 @@ def main():
     parser.add_argument("--match-test", type=int, default=300, help="mathmatch: of which held out as a math test set")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
                         help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
+    parser.add_argument("--nt-full", action="store_true",
+                        help="nothink: the FULL test x8 (2,759 questions) instead of the fresh 240, against full-base")
     parser.add_argument("--drpo-score-only", action="store_true",
                         help="drpo: never train; only score the saved checkpoints (e.g. a run stopped early)")
     parser.add_argument("--rl-protect", default="", help="drpo: sources with no length pressure (rl_train --protect-sources)")
@@ -1746,6 +1748,18 @@ def drpo(args):
     if log_file.exists():
         print(log_file.read_text(), flush=True)
     fresh_q = f"questions_fresh{FRESH_SEED}"
+    if args.nt_full:  # the original only, full test x8 (blog: thinking-off point on every part's efficiency curve)
+        base = ROOT / "full-base"
+        if not (base / "results.json").exists():
+            drive_sync("restore", only=[f"runs/mvtf/{base.name}"])
+        out = ROOT / "full-base-nothink"
+        if not (out / "results.json").exists():
+            drive_sync("restore", only=[f"runs/mvtf/{out.name}"])
+        if not (out / "results.json").exists():
+            shutil.rmtree(out, ignore_errors=True)
+            py("evaluate_nothink.py", "--questions", "questions", "--samples", 8, "--out", out)
+        print(raw_diff("original with thinking OFF vs thinking ON (full test 2,759 x 8)", out, base), flush=True)
+        return
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
     ran = sum(1 for l in log_file.read_text().splitlines() if l.strip()) if log_file.exists() else 0
     steps = list(args.drpo_score) + ([ran] if args.drpo_score and ran and ran not in args.drpo_score else [])  # guard stop
