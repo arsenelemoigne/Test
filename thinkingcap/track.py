@@ -295,7 +295,13 @@ def main():
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
-    parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen", "smart"), help="thinkprune: rl_train.py --reward")
+    parser.add_argument("--tp-rl", default="", help="thinkprune: extra rl_train.py arguments, comma-separated "
+                        "(GRPO v2, 4 Nov: e.g. --fixed-denominator,--max-tokens-code,8192,--full-support,--grad-clip,0.5)")
+    parser.add_argument("--tp-persist", action="store_true",
+                        help="thinkprune: one AdamW and one lr schedule across the 10-step blocks (--init-state, --total-steps)")
+    parser.add_argument("--tp-include-unsolved", action="store_true",
+                        help="thinkprune: keep questions at solve rate == --tp-min-solve (with 0: the never-solved ones too)")
+    parser.add_argument("--tp-reward", default="cap", choices=("cap", "lenpen", "smart", "gated"), help="thinkprune: rl_train.py --reward")
     parser.add_argument("--tp-min-solve", type=float, default=0.5, help="thinkprune: questions the original gets right > this share")
     parser.add_argument("--tp-max-solve", type=float, default=1.0,
                         help="thinkprune: and right <= this share (below 1: drop questions it always gets right, no signal)")
@@ -3225,7 +3231,9 @@ def thinkprune(args):
     caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
     eligible = defaultdict(list)
     for qid, got in by_q.items():
-        if qid in rows and args.tp_min_solve < sum(ok for ok, _ in got) / len(got) <= args.tp_max_solve:
+        rate = sum(ok for ok, _ in got) / len(got)
+        low_ok = rate >= args.tp_min_solve if args.tp_include_unsolved else rate > args.tp_min_solve
+        if qid in rows and low_ok and rate <= args.tp_max_solve:
             eligible[rows[qid]["part"]].append(qid)
     for part, ids in sorted(eligible.items()):
         lens = sorted(n for q in ids for ok, n in by_q[q] if ok)
@@ -3271,7 +3279,10 @@ def thinkprune(args):
                "--advantage", "group", "--kl-coef", args.tp_kl, "--grader", "typed", "--redundant", "none", "--lr", args.tp_lr,
                "--dtype", args.dtype, "--rank", args.tp_rank,
                *(["--lp-lam-max", args.tp_lam_max, "--lp-ramp", args.tp_ramp, "--lp-gate", args.tp_gate]
-                 if args.tp_reward == "lenpen" else []), *(["--dr-grpo"] if args.tp_dr_grpo else []))
+                 if args.tp_reward == "lenpen" else []), *(["--dr-grpo"] if args.tp_dr_grpo else []),
+               *(["--total-steps", steps] if args.tp_persist else []),
+               *(["--init-state", previous / "resume.pt"] if args.tp_persist and previous else []),
+               *[x for x in args.tp_rl.split(",") if x])
             print(f"thinkprune {name}: steps to {done} took {(time.time() - began) / 60:.1f} min", flush=True)
             drive_sync("save")
         print((ckpt / "rl_log.jsonl").read_text()[-3000:], flush=True)

@@ -73,6 +73,8 @@ except ImportError:
 
 from probe_curve import read_jsonl
 from utils.eval.recipe import SAMPLING
+
+LOGIT_TEMP = 1.0  # --full-support: the sampling temperature, so the trained log-probs are those of the sampled policy
 from utils.train.rewards import is_task_correct
 
 
@@ -122,7 +124,24 @@ def parse_arguments():
     parser.add_argument("--sb-beta", type=float, default=0.005,
                         help="shorterbetter: per-token weight of |len - SOL| (paper 0.001 on 5-11k-token replies; ours are"
                              " ~5-10x shorter, so 0.005 keeps a similar pressure)")
-    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen", "smart"], default="shorter",
+    # (4 Nov, consult1_grpo_diagnosis_and_sft.md) the consultant's recipe: --reward gated, --fixed-denominator,
+    # --init-state (one AdamW across 10-step blocks), --warmup/--total-steps (one schedule across blocks),
+    # --max-tokens-code, --full-support (top_p 1, no top_k; log-probs at the sampling temperature), --grad-clip
+    parser.add_argument("--gr-coef", type=float, default=0.30, help="gated: R = right x formed x finished x (1 - c L/(L+B))")
+    parser.add_argument("--gr-norms", default="svamp=512,mbpp=768,ifeval=416,bfcl_simple_python=160,bfcl_multiple=192,"
+                        "bfcl_irrelevance=192", help="gated: B per test part, in ALL generated tokens")
+    parser.add_argument("--gr-min-think", type=int, default=8, help="gated: fewer non-blank thinking tokens = not formed")
+    parser.add_argument("--fixed-denominator", action="store_true",
+                        help="Dr. GRPO denominator = ALL replies of the step x max tokens (not only the active ones)")
+    parser.add_argument("--init-state", default="", help="resume.pt of the previous block: its AdamW state is loaded")
+    parser.add_argument("--warmup", type=int, default=0, help="linear warm-up steps (counted with --offset)")
+    parser.add_argument("--total-steps", type=int, default=0,
+                        help="the schedule's length across blocks (with --lr-end: cosine over offset + step)")
+    parser.add_argument("--max-tokens-code", type=int, default=0, help="rollout limit for code questions (the test: 8,192)")
+    parser.add_argument("--full-support", action="store_true",
+                        help="sample with top_p 1 and no top_k, and score log-probs at the sampling temperature")
+    parser.add_argument("--grad-clip", type=float, default=1.0)
+    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen", "smart", "gated"], default="shorter",
                         help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
                              "standardized among the group's correct replies; wrong or cut off = 0")
     parser.add_argument("--adaptive", action="store_true",
@@ -354,7 +373,7 @@ def batch_logps(model, rows, device, entropies=None):
     def piece(h, target):
         # vocabulary-wide logits for a few hundred positions only, recomputed in the backward pass: a 3,000-token
         # reply would otherwise keep 3,000 x 152k fp32 values alive (~1.8 GB) and run the GPU out of memory
-        logp = torch.log_softmax(head(h).float(), dim=-1)
+        logp = torch.log_softmax(head(h).float() / LOGIT_TEMP, dim=-1)
         return logp.gather(1, target[:, None])[:, 0], -(logp.exp() * logp).sum(-1)
 
     out = []
@@ -466,13 +485,19 @@ class Sampler:
 
     def __init__(self, args, tokenizer):
         self.args, self.tokenizer = args, tokenizer
+        global LOGIT_TEMP
+        if getattr(args, "full_support", False):  # (4 Nov) full-support sampling; trained log-probs at the same temperature
+            self.sampling, self.sampling_hf = dict(SAMPLING, top_p=1.0, top_k=-1), dict(SAMPLING, top_p=1.0, top_k=0)
+            LOGIT_TEMP = SAMPLING["temperature"]
+        else:
+            self.sampling = self.sampling_hf = SAMPLING
         if args.backend == "vllm":
             os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
             from vllm import LLM
             extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
             self.engine = LLM(model=args.model, dtype=args.dtype, seed=args.seed, enable_lora=True,
                               max_lora_rank=64, gpu_memory_utilization=args.gpu_memory,
-                              max_model_len=args.max_tokens + 1024, generation_config="vllm", **extra)
+                              max_model_len=max(args.max_tokens, getattr(args, "max_tokens_code", 0)) + 1024, generation_config="vllm", **extra)
 
     def sample(self, prompts, adapter_dir, step, model=None, no_think=0, caps=None):
         """--group replies per prompt; the last `no_think` of each group start with an empty
@@ -491,7 +516,7 @@ class Sampler:
                     # --reward cap (ThinkPrune, 2 Nov): each question's own token cap; generation stops there
                     params += [SamplingParams(n=n, max_tokens=(caps[k] if caps else self.args.max_tokens) - len(start),
                                               seed=self.args.seed + step, stop_token_ids=[eos],
-                                              **SAMPLING) for k in range(len(prompts))]
+                                              **self.sampling) for k in range(len(prompts))]
             outputs = self.engine.generate(requests, params, lora_request=lora)
             replies = [[] for _ in prompts]
             for index, out in enumerate(outputs):
@@ -501,16 +526,16 @@ class Sampler:
         import torch
         replies = []
         model.eval()
-        for prompt in prompts:
+        for k, prompt in enumerate(prompts):
             group = []
             for n, start in counts:
                 if not n:
                     continue
                 ids = torch.tensor([prompt + start], device=model.device)
                 with torch.no_grad():
-                    out = model.generate(ids, attention_mask=torch.ones_like(ids), do_sample=True,
-                                         num_return_sequences=n, max_new_tokens=self.args.max_tokens - len(start),
-                                         eos_token_id=eos, pad_token_id=eos, **SAMPLING)
+                    out = model.generate(ids, attention_mask=torch.ones_like(ids), do_sample=True, num_return_sequences=n,
+                                         max_new_tokens=(caps[k] if caps else self.args.max_tokens) - len(start),
+                                         eos_token_id=eos, pad_token_id=eos, **self.sampling_hf)
                 for row in out[:, len(prompt) + len(start):].tolist():
                     group.append(start + (row[:row.index(eos) + 1] if eos in row else row))
             replies.append(group)
@@ -614,6 +639,11 @@ def main():
         torch.set_rng_state(state["torch_rng"])
         log, start = state["log"], state["step"]
         print(f"resuming after step {start} (adapter, optimizer and log restored)", flush=True)
+    elif args.init_state and Path(args.init_state).exists():  # (4 Nov) the previous block's AdamW, not a fresh one
+        state = torch.load(args.init_state, weights_only=False)
+        optimizer.load_state_dict(state["optimizer"])
+        scaler.load_state_dict(state["scaler"])
+        print(f"optimizer state continued from {args.init_state}", flush=True)
     elif resume_from:
         start = done_steps[0]
         log_path = out / "rl_log.jsonl"
@@ -627,8 +657,12 @@ def main():
         questions = [pool[((args.offset + step) * drawn + i) % len(pool)] for i in range(drawn)]
         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                                  enable_thinking=True) for q in questions]
+        prompts = [list(p["input_ids"]) if hasattr(p, "keys") else p for p in prompts]  # newer transformers: an encoding
         no_think = round(args.group * args.no_think_share)
         caps = [int(q["cap"]) for q in questions] if args.reward == "cap" else None
+        if args.max_tokens_code and caps is None:  # code gets the test's 8,192, the rest --max-tokens
+            caps = [args.max_tokens_code if (q.get("part") == "mbpp" or q.get("source") == "kodcode") else args.max_tokens
+                    for q in questions]
         replies = sampler.sample(prompts, current, args.offset + step, model, no_think, caps)
 
         by_type = {}
@@ -653,6 +687,17 @@ def main():
                 formed = [close_id in r and len(r) > r.index(close_id) + 2 for r in group]
                 rewards = [(1.0 - lam * min(1.0, n / args.lp_norm) if ok else 0.0) + (args.format_bonus if fm else 0.0)
                            for n, ok, fm in zip(think, correct, formed)]
+            elif args.reward == "gated":  # (4 Nov, consultant) right x formed x finished x (1 - c L/(L+B)), wrong = 0
+                norms = dict(kv.split("=") for kv in args.gr_norms.split(","))
+                b = float(norms.get(question.get("part", ""), 512))
+                rewards = []
+                for r, ok in zip(group, correct):
+                    think = r[:r.index(close_id)] if close_id in r else r
+                    answer = r[r.index(close_id) + 1:] if close_id in r else []
+                    blank = sum(1 for x in think if tokenizer.decode([x]).strip())
+                    formed = close_id in r and blank >= args.gr_min_think and len(answer) > 2
+                    finished = bool(r) and r[-1] == eos
+                    rewards.append(1.0 - args.gr_coef * len(r) / (len(r) + b) if ok and formed and finished else 0.0)
             elif args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
                 cap = int(question["cap"])
                 rewards = [1.0 if ok and len(r) < cap - 1 else 0.0 for r, ok in zip(group, correct)]  # cut at the cap = 0
@@ -721,7 +766,12 @@ def main():
         jobs = [tuple(j) for j in jobs]
 
         # on-policy update(s): loss = -sum_t A_t log pi(token_t), averaged over the chunk's tokens
-        lr = learning_rate(step, args.steps, args.lr, args.lr_end, args.restarts)
+        if args.total_steps:  # one schedule across 10-step blocks: warm-up, then cosine to --lr-end over the whole run
+            g = args.offset + step
+            lr = args.lr * (g + 1) / args.warmup if g < args.warmup else learning_rate(
+                g - args.warmup, args.total_steps - args.warmup, args.lr, args.lr_end, 1)
+        else:
+            lr = learning_rate(step, args.steps, args.lr, args.lr_end, args.restarts)
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr
         model.train()
@@ -731,6 +781,8 @@ def main():
             total_tokens = max(1, sum(len(j[1]) for j in chunk))
             if args.dr_grpo:  # a constant denominator: long wrong answers no longer get a smaller per-token push
                 total_tokens = max(1, len(chunk) * args.max_tokens)
+            if args.fixed_denominator:  # (4 Nov) every reply of the step counts, active or not: filtering keeps the scale
+                total_tokens = max(1, len(jobs) * max(args.max_tokens, args.max_tokens_code) // max(1, args.updates))
             n_questions = max(1, len({id(j[5]) for j in chunk}))
             if args.objective == "drpo":
                 kl_sum, kl_terms = 0.0, []
@@ -753,7 +805,7 @@ def main():
                                       for j, lp in zip(batch, batch_lp)) * scale_kl / total_tokens
                         scaler.scale(penalty).backward()
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+                torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
@@ -808,7 +860,7 @@ def main():
                 scaler.scale(loss).backward()
                 loss_sum += float(loss)
             scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+            torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
