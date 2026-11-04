@@ -4459,3 +4459,9 @@ at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
   and calls), two blocks in one reply wasted the turn (now the first runs and the rest are reported ignored), a closing and
   an opening fence fused on one line broke the code (now split); the budget-end final message now carries the last
   forward results and the edit list (the final report had only the notes and could not state what the edit did).
+
+### 2026-11-04 — consult1: independent strategy analysis (Ivan / gpt-6-astra, Mac CPU, raw-Qwen data only)
+- Given only the raw Qwen's 71,480 training answers (numbers + 2,806 texts), the test profile and thinking on/off; nothing of our work. 13 turns, 12 code runs, $2.83 (cap $4). Report: consult1_report.md.
+- Findings we had not isolated: 80% of IFEval cuts had ALREADY closed </think> (~71% of their tokens are answer-side loops, e.g. repeated quotes); code cuts 24% repeated 8-word windows vs 5% in right code; BFCL irrelevance is 56% of training tool questions vs 29% on the test.
+- Limits it computed: deleting every cut answer = ~15% saving; halving all thinking = ~44%; shortest-of-4 right = 17-25% per part. So >50% needs denser reasoning on ordinary right answers, not only tail cuts.
+- Ranking: A compact verified SFT (rewritten dense traces + 20-30% original replay; est. 46-67% / -1.2..+1.5), B correctness-constrained DPO/GRPO after A (42-68%), C learned readiness head for </think> (32-57%). A+B est. 52-72%.
