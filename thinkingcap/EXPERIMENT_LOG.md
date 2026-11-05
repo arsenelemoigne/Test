@@ -4814,3 +4814,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   strength 0 / .5 / 1). Selection on a NON-benchmark dev set (600) + a locked confirmation set (600), at most 12 screens,
   one frozen candidate, one full test. Expected ~50-52% / -0.8, P(both thresholds) 25-40%. Alternatives: (1) joint + one
   on-policy round; (2) October 4-adapter reproduction + balanced repair.
+- ~23:15 **Official weighting adopted** (consult4 audit, checked: recomputing each 720 score with BFCL pooled 400/200/240
+  reproduces the printed "full-eval weighting" lines within 0.1). All 117 screen scores in FullEval / ModelTree / the DPO
+  story page now carry the official overall accuracy (old equal-BFCL value kept as acc_screen_eq); shifts -0.5 to +0.1.
+  Key runs: rpC-80 +0.43 (+2.2 vs curve), rpB-40 +0.10 (+1.9), bidax5q final -0.59 (+1.7), pt-mid -2.58 (+1.3). Still 0
+  checkpoints in the target box. The yardstick formula is unchanged (fixed 2 Nov); FullEval's own live fit refits itself.
+  From now on the log uses the full-eval-weighting line as the overall accuracy.
