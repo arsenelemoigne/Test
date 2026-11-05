@@ -4768,9 +4768,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   +27 / -0.4, no-fit +29 / +2.3), +0.2 vs curve: the chain-1 rule (shortest right > longest right >= 1.5x; guard =
   shortest right > shortest finished wrong; balanced 40:60) trains slowly, far below 40% at step 100. Steps 200 / final next.
 - ~19:20 **D12 lpd-chain1 step 200 +18.4 / +0.4** (svamp +26 / -0.2, mbpp +9 / -0.4, ifeval +8 / +1.0, simple +27 / -2.1, multiple
-  +26 / +0.6, no-fit +33 / +4.8), +0.4 vs curve; **final +17.8 / +0.8** (svamp +28 / -0.2, mbpp +5 / +2.5, ifeval +6 / 0.0, simple
-  +24 / -2.5, multiple +25 / -0.6, no-fit +36 / +5.6), +0.8 vs curve. Chain-1 keeps accuracy but saves under 20%: far from
+  +26 / +0.6, no-fit +33 / +4.8), +0.1 vs curve; **final +17.8 / +0.8** (svamp +28 / -0.2, mbpp +5 / +2.5, ifeval +6 / 0.0, simple
+  +24 / -2.5, multiple +25 / -0.6, no-fit +36 / +5.6), +0.5 vs curve. Chain-1 keeps accuracy but saves under 20%: far from
   the 40% bar, below D11 push2 in saving. Round 2 (polans pc1 a + b, then lpd-chain1r2) running.
 - lpt6 half-strength solos: **one function @0.5 +15.3 / -0.7** (simple +18 / +0.2; no-fit +18 / -3.3, ifeval +4 / -1.0), -1.0 vs
-  curve; **several functions @0.5 +8.3 / -0.2** (multiple +14 / +0.6; no-fit +10 / -2.1, ifeval +1 / -1.9), -0.3 vs curve.
+  curve; **several functions @0.5 +8.3 / -0.2** (multiple +14 / +0.6; no-fit +10 / -2.1, ifeval +1 / -1.9), -0.4 vs curve.
   Mild shared shortening; the cost lands on no-fit again. No-fit @0.5 next, then consult3 screens #1 / #2.
