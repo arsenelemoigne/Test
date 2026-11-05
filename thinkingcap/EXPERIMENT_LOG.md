@@ -4637,3 +4637,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - **Track A smoke passed on the GPU** (answers, pairs, 4 training steps); the real run rpA started: 4,372 questions (svamp
   2,400 of which all 1,644 mixed; mbpp 900; no-fit 472 = all 260 mixed + the rest; ifeval / simple / multiple 300 / 150 / 150),
   pt-mid answering x4 (2,400 / 4,372 sampled at 11:30).
+- ~12:30 **Track A rpA**: pairs exactly as specified (1,600 from 1,233 questions; every quota filled; chosen longer in 43-52%
+  per part, median chosen ~= rejected length: no length signal, as intended; first 80 pairs span all six parts). Training
+  (40 steps, lr 5e-6, fp32): DPO loss 0.693 -> 0.667, ordered right 54-62% until step 35, 71% at 40: a very gentle dose.
+  **rpA-5 (pt-mid + repair at step 5): +53.9% / -3.4** (svamp +61 / -3.7, mbpp +64 / -6.0, ifeval +46 / -1.9, simple +37 / -0.2,
+  multiple +41 / +0.4, no-fit +42 / -5.8), +0.3 vs curve: at step 5 the repair has barely moved the model, so this is ~pt-mid
+  re-measured (55.0 / -2.6 on 1 Nov; -0.8 apart = screen noise and the merge path). Steps 10 / 20 / 40 next.
