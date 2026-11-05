@@ -1,3 +1,16 @@
+# PLAN VERSIONS (user, 5 Nov evening)
+- **v1 = this file** (written 4-5 Nov with the consultant's grounding and the user's objections): Track A repair of pt-mid,
+  Track B per-type adapters + merge, checks, tests, data saved.
+- **v2** = our plan after the running work finishes (Track A rpB / rpC, finish-lpt6 solos and merges, D10, D12).
+- **v3** = the consultant's battle plan from a DATA-ONLY pack (no literature report, no paper list: research_jasmin_merging.md
+  stays aside).
+- **v4** = the final battle plan, after confronting v2 and v3; Jasmin from scratch uses v4.
+
+## Rule for per-type LoRA SOLO screens only (user, 5 Nov)
+When one per-type adapter is scored alone: the same 720 screen questions, its OWN type answered x4, the other types x2
+(halves the cost, keeps the own-type signal precise). Every other screen (merges, full runs) stays 720 x4, so results remain
+comparable.
+
 # ThinkingCap game plan — beyond v1 (v3, 5 Nov 2026; NOT committed to the GPUs)
 
 v1 draft -> grounded by the consultant (Ivan, consult2 follow-up: consult2_game_plan_review.md, every number with its
