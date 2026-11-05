@@ -4713,3 +4713,11 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~15:50 **D10 lpd-l2s50e final: +53.5 / -2.7** (svamp +68 / -5.4, mbpp +50 / -3.1, ifeval +46 / -1.0, simple +43 / -3.3, multiple +46
   / -2.1, no-fit +48 / +1.2), +0.8 vs curve; beats D11 push2 final (52.4 / -3.0) slightly at a bit more saving. Math still the cost.
   GPU 1 now trains D12 lpd-chain1 (333 steps x 18 pairs). GPU 2: lpt6 svamp merged and screening.
+- ~16:15 **Finish lpt6, missing solos at full strength** (2 seeds souped, bfloat16, our Nov 2 settings, bidax5s's pair set):
+  - **math only (lpt6-svamp): -38.1 / -3.1** (answers LONGER: svamp -78% / -16.2; mbpp -17 / +2.3, ifeval -39 / +1.5, simple -23 /
+    -1.7, multiple -23 / 0.0, no-fit -29 / +2.5). bidax5s's math pairs (shorten 1510, guard 2387) lengthen math, as bidax5s itself
+    did (svamp -13 to -36%); the spill-over lengthens every type. Off the curve's range (fitted above 15% saved).
+  - **no-fit only (lpt6-bfcl_irrelevance): +11.9 / -1.9** (no-fit +36 / +11.7 but simple +18 / -20.6, multiple +17 / -16.6; ifeval
+    +3 / -0.4, mbpp +9 / +1.0, svamp +11 / +0.2), -2.2 vs curve: it teaches "no function fits" and the model then refuses calls on
+    the other tool types.
+  Both are poor merge ingredients at 1.0; the half-strength solos (rs-lpt6h) are screening now, merges after.
