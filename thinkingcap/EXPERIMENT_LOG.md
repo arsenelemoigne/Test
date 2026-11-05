@@ -4802,3 +4802,15 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   no-fit 26 / +0.2), -1.6 vs our curve, +4.0 vs the README bar: one extra MLP layer after layer 13 (198k trained params) on
   short answers the model wrote with Qwen3-8B hints. Added as a reference to FullEval and the DPO story page.
 - ~22:50 (user) **consult4** started: the consultant FROM SCRATCH (no earlier reports, none of our decisions) on all per-type data: raw Qwen per full-test question, thinking off, 144 checkpoints, run summaries, references, per-type families, every run command + code; question = best strategy for > 50% / better than -1 with our compute. Cap $25, 60 code runs.
+- ~23:05 **consult4 report** (from scratch, $8.56, 20 code runs): consult4_strategy.md. Audit: our screen totals weight the
+  three BFCL parts equally, not 400/200/240 (rpC-80 +0.6 -> +0.43, rpB-40 +0.3 -> +0.10, bidax5q -0.5 -> -0.59; the
+  "full-eval weighting" line is the official one); --bida-exact sets held-out pairs to 0 (no tripwire). Strategy: NOT six
+  specialists; J = a joint DPO adapter on all six types (5,424 pairs = 339 steps x 16: shorten = shortest right > longest
+  right >= 1.5x, solve >= .75 for math / multiple / no-fit and >= .5 elsewhere, no easy ratio; guard = shortest right >
+  longest wrong incl. capped; ~7% length-balanced right pairs; <= 2 pairs per question; fp32 + fp16 autocast, beta 0.1,
+  NLL 0, lr 2e-5 warm-up 16 + cosine to 0, 2 seeds averaged in weight space) + a bida-style control; I = an
+  instruction-only adapter (80 steps) merged at 0.25-0.5 as a compression booster; R = one balanced repair on the merged
+  model (1,280 pairs: 50% length-balanced right, 25% anti-overcut, 25% shortening replay; lr 1e-5, NLL 0.1, <= 80 steps,
+  strength 0 / .5 / 1). Selection on a NON-benchmark dev set (600) + a locked confirmation set (600), at most 12 screens,
+  one frozen candidate, one full test. Expected ~50-52% / -0.8, P(both thresholds) 25-40%. Alternatives: (1) joint + one
+  on-policy round; (2) October 4-adapter reproduction + balanced repair.
