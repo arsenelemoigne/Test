@@ -4607,3 +4607,14 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
     -2.3, no-fit +11 / -3.5), -1.6 vs curve: more own-type than the others (code 25% vs 7-20% elsewhere) and keeps code
     accuracy, unlike lpt6's code-only adapter (which did not shorten code).
   IFEval and tools solos next, then the 4 at pt-mid strength.
+- ~09:30 pt-mid solos (720 x4, no training), continued:
+  - IFEVAL adapter (1.0): **+36.1% / -1.2** (svamp +34 / -2.7, mbpp +42 / +0.2, ifeval +40 / +0.6, simple +28 / -1.9, multiple
+    +29 / -1.3, no-fit +29 / -5.6), -0.4 vs curve: shortens code more than ifeval itself.
+  - TOOLS adapter (1.0): **+50.1% / -2.9** (svamp +53 / -4.0, mbpp +59 / -4.6, ifeval +44 / -3.7, simple +38 / +1.5, multiple
+    +43 / +2.5, no-fit +45 / -2.3), 0.0 vs curve: alone it already saves 50%; its own tools GAIN accuracy (simple +1.5,
+    multiple +2.5) while math, code and ifeval pay: the strongest "general shorten" push of the four.
+  - MATH adapter at its pt-mid strength 0.30: **+11.9% / -1.0** (svamp +20 / -1.5, mbpp +13 / +0.8, ifeval +4 / -1.5, simple
+    +9 / -1.5, multiple +10 / -2.3, no-fit +11 / -1.9), -1.3 vs curve.
+  Reading so far: every pt-mid adapter spills over (math -> code 51%, ifeval -> code 42%, tools -> code 59%); the merge's 55%
+  is mostly stacked general pushes, as lpt6 suggested; own types tend to KEEP accuracy (tools +1.5/+2.5, ifeval +0.6, code
+  -0.2), the loss lands on the OTHER types. Remaining: code / ifeval / tools at pt-mid strength.
