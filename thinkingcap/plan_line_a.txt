@@ -437,4 +437,6 @@ fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 
 rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
 # DROPPED 5 Nov (user) lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
 # DROPPED 5 Nov (user) rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
+# 5 Nov (user): chain1 round 2, answers half b moved here from GPU 1 (lpd-chain1r2 on GPU 1 waits for both halves on Drive)
+polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
 end
