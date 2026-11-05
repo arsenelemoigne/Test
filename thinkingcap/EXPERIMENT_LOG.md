@@ -4730,3 +4730,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   challengers (7 adapters), pt pair rule, NLL 1.0, constant lr 2e-5, float32, ~N/16 steps with checkpoints every 10,
   task arithmetic starting at math .20 / code .15 / instr .60 / tools .55. Supports the user's candidate with 2 changes.
   Awaiting the user's decision; the merges stay paused.
+- ~17:20 lpt6 math solo at 0.5: **-12.2 / -0.5** (svamp -26% / -2.9, ifeval -15 / +1.5, mbpp -3 / -0.4, simple -6 / -1.2,
+  multiple -6 / -0.8, no-fit -6 / +1.9): still longer everywhere and worse on math -> by consult3's rule A, out of all merges.
+  GPU 1: D12 chain1 step 250/333.
