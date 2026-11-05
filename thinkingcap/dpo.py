@@ -40,7 +40,7 @@ def main():
     rows = [r for r in rows if len(r["prompt_ids"]) + max(len(r["chosen_ids"]), len(r["rejected_ids"])) <= args.max_len]
     if args.mix != "all":
         rows = mix(rows, [float(x) for x in args.mix.split(",")], rng)
-    else:
+    elif not args.keep_order:  # --keep-order (5 Nov, Track A): the pair file is already in a stratified order
         rng.shuffle(rows)
     checks = []
     if args.checker:
@@ -131,7 +131,8 @@ def main():
     optimizer = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.0)
     total = math.ceil(len(rows) * args.epochs / args.batch)
     steps = min(total, args.max_steps or total)
-    order = [i for _ in range(args.epochs) for i in rng.sample(range(len(rows)), len(rows))][:steps * args.batch]
+    order = [i for _ in range(args.epochs) for i in (range(len(rows)) if args.keep_order else
+                                                     rng.sample(range(len(rows)), len(rows)))][:steps * args.batch]
     baseline = tripwire()
     print(f"tripwire baseline {baseline:.3f}; {steps} steps of {args.batch} pairs", flush=True)
     step, stats, check_stats = 0, [], []
@@ -259,6 +260,7 @@ def parse_arguments():
     parser.add_argument("--bida-exact", action="store_true",
                         help="michal-bida's training settings: float32 base + float16 autocast with a loss scaler, cosine "
                              "warm-up 5%% of steps then down to 0, pairs over 8,704 tokens skipped, no held-out pairs")
+    parser.add_argument("--keep-order", action="store_true", help="with --mix all: train in the file's order (no shuffle)")
     parser.add_argument("--seed", type=int, default=0)
     return parser.parse_args()
 
