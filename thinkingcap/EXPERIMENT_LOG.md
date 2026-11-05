@@ -4721,3 +4721,12 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
     +3 / -0.4, mbpp +9 / +1.0, svamp +11 / +0.2), -2.2 vs curve: it teaches "no function fits" and the model then refuses calls on
     the other tool types.
   Both are poor merge ingredients at 1.0; the half-strength solos (rs-lpt6h) are screening now, merges after.
+- ~17:10 (user: let the consultant redesign the lpt6 merges) **consult3** (new session; consult2's state was lost with the
+  scratchpad; data-only pack: all_runs.json 132 runs, per_type.md, test card, thinking-off, his lpt6 reply; $3.17, 11 code
+  runs): consult3_merge_design.md. Cancel P / S6 / Pplus / T (lpt6 math and no-fit are not protectors), keep C as a
+  diagnostic; 10 ranked screens mostly on the pt family (drop code; shift strength from math/code to instructions/tools;
+  cross-family swaps of tools and instructions; a weak no-fit 0.25; pt-math in C; a repair on the redistributed base), with
+  decision rules on the half-strength lpt6 solos. Jasmin default: 4 groups (pooled tools) + the 3 tool slices as
+  challengers (7 adapters), pt pair rule, NLL 1.0, constant lr 2e-5, float32, ~N/16 steps with checkpoints every 10,
+  task arithmetic starting at math .20 / code .15 / instr .60 / tools .55. Supports the user's candidate with 2 changes.
+  Awaiting the user's decision; the merges stay paused.
