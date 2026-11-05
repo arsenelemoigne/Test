@@ -4539,3 +4539,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   shortening (as D2). Not a v1 candidate. GPU 1 now D4 budget (7,748 pairs); GPU 2 scoring D6 simright.
 - Consultant DPO session consult2 (Ivan, fresh session, best run / bida family / GRPO withheld): restarted once after the user
   asked to hide the GRPO runs ($1.98 spent on the aborted start); running, cap $18.
+- **consult2 done** (Ivan, $4.17 + $1.98 aborted start): consult2_dpo_strategy.md. Recommends: six per-type DPO adapters from the
+  original (4,800 pairs: math 10/40/50 shorten/guard/right, code & ifeval 65/20/15, simple 45/25/30, multiple 20/35/45, no-fit
+  10/50/40), merged at per-type strengths (start 0.35/0.80/0.90/0.65/0.50/0.85), then ONE gated on-policy round (2,400 pairs,
+  no math / no-fit shorten). Key findings: our "longest wrong" guards are hidden length pressure (median rejected/chosen 1.3-1.9x);
+  wrong>wrong "hard" pairs cancel compression; the per-type merges (pt-*) are the strongest evidence (pt-mid 55.0 / -2.6:
+  code and ifeval tolerate strong doses, math and no-fit carry the loss). Forecast 51 / -0.5, P(both thresholds) ~1/3-1/2.
+  Fast alternative: repair pt-mid with a short correctness-heavy on-policy round.
