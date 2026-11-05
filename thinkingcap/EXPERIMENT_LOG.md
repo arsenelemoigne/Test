@@ -4650,3 +4650,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   Verdict: lr 5e-6 x 40 steps is too gentle to repair; not a candidate. Next candidate (user to decide): the same pairs at a
   stronger dose (lr 2e-5, as D7 stage 1; or 1e-5 x 80 steps), screens 10 / 20 / 40; the pairs and pt-mid's answers are reused.
   GPU 2 moved on to bidax6p (the precision-only test); GPU 1 D5 margin trained, screening.
+- ~13:45 (user) Track A stronger doses queued, same pt-mid answers and pairs as rpA (ptrepair --rp-from): rpB lr 2e-5 x 40
+  steps (screens 10 / 20 / 40) on GPU 1 right after the D5 margin screens; rpC lr 1e-5 x 80 steps (screens 10 / 20 / 40 / 80)
+  on GPU 2 right after the bidax6p screens.

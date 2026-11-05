@@ -308,6 +308,7 @@ def main():
     parser.add_argument("--rp-lr", type=float, default=5e-6, help="ptrepair: lr (2.5e-6 on step 1, then constant)")
     parser.add_argument("--rp-steps", type=int, default=40, help="ptrepair: training steps (16 pairs each)")
     parser.add_argument("--rp-screen", type=int, nargs="*", default=[5, 10, 20, 40], help="ptrepair: steps scored on the 720 x4")
+    parser.add_argument("--rp-from", default="", help="ptrepair: reuse this run's pt-mid answers AND pairs (a new dose only)")
     parser.add_argument("--rp-smoke", action="store_true", help="ptrepair: 5 questions per part, 4 steps, no screen (GPU test)")
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
                         help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
@@ -3235,21 +3236,26 @@ def ptrepair(args):
     answers = BON / f"lupin-all-dp13-{'-'.join(extras)}-a4.jsonl"
     pt = {g: Path("adapters") / f"lpw-pertype-{g}" for g in PT_MID}
     pool = Path("data/pool-dp13.jsonl")
-    drive_sync("restore", only=[str(answers), str(pool), *[str(BON / f"tooltop-{x}") for x in extras],
+    drive_sync("restore", only=[*([] if args.rp_from else [str(answers), str(pool), *[str(BON / f"tooltop-{x}") for x in extras]]),
                                 *[str(a) for a in pt.values()], SCREEN, str(ROOT / "s4-base")])
     for a in pt.values():
         assert (a / "adapter_config.json").exists(), f"{a} is not on Drive"
     merged = Path("/content/lupin-models/pt-mid")
     if not (merged / "config.json").exists():
         py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", merged, "--adapters", *[f"{pt[g]}:{w}" for g, w in PT_MID.items()])
+    if args.rp_from:  # (5 Nov) same answers and pairs as --rp-from, only the training dose changes
+        pairs = BON / f"pairs-{args.rp_from}"
+        drive_sync("restore", only=[str(pairs)])
+        assert (pairs / "pairs.jsonl").exists(), f"{pairs} is not on Drive"
+        print(f"repair {name}: pairs of {args.rp_from}", flush=True)
     rows = {}
-    for f in (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras]):
+    for f in (() if args.rp_from else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
         for line in f.read_text().splitlines():
             if line.strip():
                 r = json.loads(line)
                 rows[r.get("pool_id", r.get("id"))] = r
     solve = defaultdict(list)
-    for line in open(answers):
+    for line in (() if args.rp_from else open(answers)):
         r = json.loads(line)
         solve[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
     from build_pool import part_of
@@ -3273,16 +3279,18 @@ def ptrepair(args):
         print(f"repair {name}: {part} {len(take)} questions ({min(n, len(b['mixed']))} mixed of {len(b['mixed'])})", flush=True)
         chosen += take
     data = Path(f"data/repair-{name}.jsonl")
-    data.write_text("".join(json.dumps(rows[q] | {"id": q}) + "\n" for q in chosen))
-    roll = BON / f"rp-{name}"
-    drive_sync("restore", only=[str(roll)])
-    if not (roll / "rollouts.jsonl").exists():
+    if not args.rp_from:
+        data.write_text("".join(json.dumps(rows[q] | {"id": q}) + "\n" for q in chosen))
+    roll = BON / f"rp-{args.rp_from or name}"
+    if not args.rp_from:
+        drive_sync("restore", only=[str(roll)])
+    if not args.rp_from and not (roll / "rollouts.jsonl").exists():
         py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
            "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", 4,
            "--model", merged, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
            "--max-questions", len(chosen), "--seed", 53)
         drive_sync("save")
-    pairs = BON / f"pairs-{name}"
+    pairs = BON / f"pairs-{args.rp_from or name}"
     drive_sync("restore", only=[str(pairs)])
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
