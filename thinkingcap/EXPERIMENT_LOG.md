@@ -4743,3 +4743,5 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   changes: math adapter + a few "be right" pairs; pooled tools adapter (no-fit protection) + the 3 slices as challengers;
   code adapter possibly dropped (screen #1). Next (user): variations of each rule (the 1.5x ratio, the 50% solve floor and
   1.2x easy ratio, per-type tweaks) decided by the data.
+- ~18:00 lpt6 code solo at 0.5: **-0.8 / +0.3** (mbpp -2% / +2.3, ifeval -10 / +0.2, multiple +6 / -3.2, rest ~0): no
+  shortening at all, as at 1.0. GPU 1: D12 chain1 trained (333 steps), screens at 100 / 200 / final starting.
