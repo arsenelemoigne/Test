@@ -4555,3 +4555,11 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   autocast for both tracks (switch only on a clear bidax6p result); short rounds at lr 5e-6 (2.5e-6 first step), pools as
   reservoirs, early screens (A: 5/10/20, then 30/40; round 2: 4/8, then 16/24), save every 5 / 2 steps, one strength rescue
   (0.25 / 0.5) on a promising checkpoint; batches kept (16 / 64). GAME_PLAN.md -> v3.
+- consult2 lpt6 reply ($15.81 total): consult2_lpt6_reply.md. lpt6 weakens Track B: the spill-over matrix is ~rank one
+  (first component 95% of the log-compression matrix; simple-only vs multiple-only profiles cosine 0.991), so separate
+  training isolates the gradient source, not the behaviour; Run A (joint) at 33.4 / +0.4 vs single-type adapters at
+  ~33 / -1.7..-2.8. New ranking: Track A first, then a joint adapter on the balanced recipe, per-type only if a bounded
+  lpt6 completion shows complementarity (13 screens: math adapter in historical bf16 settings, irrelevance solo, all six
+  at 0.5, five predeclared merges C / P / S6 / P+ / T, additivity residuals). 4 vs 6: neither by default; use six to
+  finish lpt6. Most informative cheap data: pt-mid's 4 adapters alone at their deployed strengths -> queued (4 screens)
+  after the 4 full-strength solos on GPU 2.

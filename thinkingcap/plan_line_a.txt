@@ -383,6 +383,11 @@ pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag
 pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-mbpp --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
 pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-ifeval --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
 pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-bfcl --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
+# same 4 adapters alone at their pt-mid strength (consultant: compare the sum of solo effects with the measured pt-mid merge)
+pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-svamp-mid --pt-weights svamp=0.3,mbpp=0,ifeval=0,bfcl=0
+pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-mbpp-mid --pt-weights svamp=0,mbpp=0.45,ifeval=0,bfcl=0
+pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-ifeval-mid --pt-weights svamp=0,mbpp=0,ifeval=0.6,bfcl=0
+pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag solo-bfcl-mid --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=0.45
 # 3 Nov (user): v1 (bidax5q seed 0) answers the training pool (dp13 + nofit4 + math1 + math2) 8 times: half a here.
 # paused (user, 3 Nov: v1 first): polans --name pa5q --op-adapter lpc-bidax5q-s0 --op-samples 8 --lp-pool dp13 --lp-add-q nofit4,math1,math2 --dp-step a
 # dropped (user, 2 Nov): lupin --name lpc-bidax5s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 1 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-band svamp:470:905 --lp-overcut om1,om2 --lp-min-overcut 500 --lp-dpo=--batch=25
