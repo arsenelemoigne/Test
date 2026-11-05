@@ -4653,3 +4653,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~13:45 (user) Track A stronger doses queued, same pt-mid answers and pairs as rpA (ptrepair --rp-from): rpB lr 2e-5 x 40
   steps (screens 10 / 20 / 40) on GPU 1 right after the D5 margin screens; rpC lr 1e-5 x 80 steps (screens 10 / 20 / 40 / 80)
   on GPU 2 right after the bidax6p screens.
+- ~14:30 **D5 lpd-margin** (narrowest 15% of each pair kind dropped): step 100 **+55.0 / -3.1** (+0.8 vs curve), step 200 **+56.9 /
+  -3.8** (+0.5), **final +53.3 / -2.6** (svamp +65 / -4.2, mbpp +50 / -2.7, ifeval +50 / -2.7, simple +42 / -3.5, multiple +46 /
+  -0.8, no-fit +49 / +2.3), +1.0. Keeping only wide-margin pairs = more shortening at more accuracy cost (on the curve, below
+  v1). Not a v1 candidate.
+- Queue note: GPU 1 had already re-read its plan before rpB was pushed, so it started D10 l2s50e first; rpB runs right after
+  D10 (~5 h later than intended). rpC stays after bidax6p on GPU 2 (bidax6p at step 190/336).
