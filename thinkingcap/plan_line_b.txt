@@ -487,4 +487,10 @@ rescreen --name rs-chain1r2 --cx-names lpd-chain1r2 --cx-steps 25 50 75 0 --seed
 # thinkprune --name gr2smoke --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-smoke --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--full-support
 # (5 Nov, step sensitivity) dense early screens: 10 20 40 60 80, then 120 160 200 250
 # thinkprune --name gr2 --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-steps 250 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-steps 10 20 40 60 80 120 160 200 250 --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,12,--full-support
+# 5 Nov (user): five lpt6 merges (2-seed averages, no training), after chain1 round 2: single adapters vs merged, subtype mixes
+mixscreen --name lpt6mix-C --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
+mixscreen --name lpt6mix-Ccode --mx-weights svamp=0,mbpp=0.5,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
+mixscreen --name lpt6mix-Cnf --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.25
+mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
+mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_python=0.7,bfcl_multiple=0.7,bfcl_irrelevance=0
 end
