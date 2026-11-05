@@ -4546,3 +4546,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   wrong>wrong "hard" pairs cancel compression; the per-type merges (pt-*) are the strongest evidence (pt-mid 55.0 / -2.6:
   code and ifeval tolerate strong doses, math and no-fit carry the loss). Forecast 51 / -0.5, P(both thresholds) ~1/3-1/2.
   Fast alternative: repair pt-mid with a short correctness-heavy on-policy round.
+- consult2 follow-up (game plan grounding, session total $8.99 + $1.98 aborted): consult2_game_plan_review.md. GAME_PLAN.md v2
+  applies it: Track A repairs math + CODE + no-fit (code is -0.88 of pt-mid's loss), 1,600 pairs, NLL 0, lr 1e-5, 100 steps
+  max; Track B = 4 adapters (not 6) at the historical pt settings (bf16, NLL 1.0, constant 2e-5, batch 16), quotas verified
+  feasible from the existing store, merge search from the 3 historical vectors +-0.05/0.10; round-2 gate tightened to
+  48-52% and >= -0.5. Awaiting the user's approval; nothing queued.
