@@ -279,6 +279,8 @@ def main():
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
+    parser.add_argument("--pt-no-train", action="store_true",
+                        help="pertype (5 Nov): the adapters must already exist on Drive; fail instead of retraining (solo screens)")
     parser.add_argument("--lp-median-part", default="", help="lupin: lupin_pairs.py --median-shorten-part (Run B)")
     parser.add_argument("--to-parts", default=",".join(("svamp", "mbpp", "ifeval", "bfcl_simple_python", "bfcl_multiple", "bfcl_irrelevance")), help="typeonly: parts to train")
     parser.add_argument("--op-from", default="math1", help="onpolicy: the top-up whose questions are answered")
@@ -2854,10 +2856,13 @@ def pertype(args):
             pairs.mkdir(parents=True, exist_ok=True)
             (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in mine))
         counts = [sum(r["kind"] == k for r in mine) for k in ("shorten", "guard", "hard", "right")]
-        start = Path("adapters") / f"fresh-{name}-{group}"
-        if not (start / "adapter_config.json").exists():
-            py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
         adapter = Path("adapters") / f"{name}-{group}"
+        drive_sync("restore", only=[str(adapter)])  # (5 Nov) a fresh runtime must not retrain an adapter that exists
+        if args.pt_no_train:
+            assert (adapter / "adapter_config.json").exists(), f"{adapter} is not on Drive (--pt-no-train)"
+        start = Path("adapters") / f"fresh-{name}-{group}"
+        if not (adapter / "adapter_config.json").exists() and not (start / "adapter_config.json").exists():
+            py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
         if not (adapter / "adapter_config.json").exists():
             py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out",
                adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 25,
@@ -2877,7 +2882,7 @@ def pertype(args):
         if not (out / "results.json").exists():
             model = Path("/content/lupin-models") / f"{name}-{tag}"
             py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
-               *[f"{finals[g]}:{w.get(g, 1.0)}" for g in PT_GROUPS])
+               *[f"{finals[g]}:{w.get(g, 1.0)}" for g in PT_GROUPS if w.get(g, 1.0) > 0])  # 0 = left out (solo screens)
             evaluate(out, samples=4, questions=val, model=model)
             shutil.rmtree(model, ignore_errors=True)
             drive_sync("save")
