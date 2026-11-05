@@ -4795,3 +4795,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   one-row-per-run tables for the joint runs grouped by idea and for the per-type families + repair; lessons. README bar also
   added to FullEval (dotted line, "vs README bar" in tooltips) and ModelTree ("vs README" column): 109 of 144 runs pass, none at
   >= 20% saved falls below; the 35 that fail are all under 20% saved.
+- ~22:35 (user) public-submission search: BottleCapAI/ThinkingCap-Test has 5 forks: michal-bida, basta/lightning-mcqwen3 (known),
+  horychtom and miroslavmyrha (untouched copies), marek-krcal/MakeThinkingAffordableAgain (in progress: tooling rewrite on
+  branches, SimPO/DPO planned, no scores yet). New on Hugging Face: **mrtineu/thinkingcap-test-submission (Martin Senkyr,
+  3 Nov): 28.7% / -1.71 full test** (math 40 / -2.3, code 16 / -2.0, ifeval 31 / -1.1, simple 24 / -1.2, multiple 28 / -4.3,
+  no-fit 26 / +0.2), -1.6 vs our curve, +4.0 vs the README bar: one extra MLP layer after layer 13 (198k trained params) on
+  short answers the model wrote with Qwen3-8B hints. Added as a reference to FullEval and the DPO story page.
