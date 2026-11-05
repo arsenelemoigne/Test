@@ -1,0 +1,20 @@
+TASK. You are an ML research consultant (you advised this team before; your previous reply on the per-type study is in {DATA}/your_previous_lpt6_reply.md, but your earlier session's working files are lost). The team makes the reasoning model Qwen3-0.6B (28 layers, thinks between <think> and </think>, then answers) THINK SHORTER WITHOUT LOSING ACCURACY: more than 50% fewer tokens (thinking included) than the original model on the test, at less than 1 point of accuracy lost. Rules: start from Qwen3-0.6B, LoRA / fine-tuning allowed, the result still thinks before answering, never train on the test, no prompt tricks, no turning thinking off.
+
+Their next big run is "Jasmin": the best possible set of PER-TYPE LoRA adapters trained FROM SCRATCH (one adapter per test part or group), then merged. Before it, they have GPU time for a series of cheap screens with the adapters that ALREADY exist (two families, 4 and 6 adapters), and they want YOU to design those screens so that each one teaches something needed to build Jasmin.
+
+THE DATA, in {DATA} (read-only; read it with code, never print whole files):
+- per_type.md: READ IT FIRST. Both adapter families (exact pair rules, settings, every solo and merge result), the repair runs, the joint references, what can be run and what it costs.
+- all_runs.json: every scored run as structured data (id, description, saved %, accuracy change, per-part numbers). Query it.
+- test_card.md: the test (parts, sizes, protocol, scoring: the four benchmarks weighted equally, BFCL's three parts pooled).
+- thinking_off.md: how much each test part depends on its thinking (measurement only).
+- your_previous_lpt6_reply.md: your earlier analysis of the 4 then-known lpt6 solos.
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, scipy, pandas, scikit-learn): reply with exactly one block that starts with ```python to run code; if its last line is an expression its value is shown; output is cut at 10,000 characters; up to {CODE_RUNS} code runs. No forward passes.
+
+THE QUESTIONS.
+1. With the two new lpt6 solos (math: answers LONGER; no-fit: "no call" everywhere), redo the spill-over matrix for all 6 lpt6 adapters and the 4 pt adapters (at 1.0 and, for pt, at the deployed strengths). What is shared ("think less" habit) and what is type-specific? Quantify (e.g. a rank / factor analysis of the matrix, own-part advantage, protection effect of merging: measured merge vs sum of solos).
+2. Why are the lpt6 adapters worse than the pt adapters? Rank the candidate causes (pair rule and pair counts, NLL anchor 1.0 vs 0, constant vs cosine lr, 4 groups vs 6, seeds) by the evidence, and say which ones the cheap screens can separate and which need a training run.
+3. Redesign the paused merge screens (and any others, pt family included, cross-family merges allowed, merges as the base for a short repair LoRA allowed): give a ranked list of at most 10 screens, each with exact strengths per adapter, the hypothesis it tests, the result you predict (saved / accuracy, worst parts) and the decision it informs for Jasmin. The half-strength lpt6 solos arrive in a few hours: say how your list changes depending on what they show (decision rules).
+4. Your current best guess at the Jasmin recipe (groups: 4 or 6 or other; pair rule per group; NLL; lr and schedule; precision; steps / checkpoints and how to pick each adapter's step from own-type gain vs spill-over; merge method and strengths; repair on top or not), and what in your screen list would change it. The team's own candidate: redo the pt family in float32 on the same data and pair rule, with the tools adapter split into one function / several / no-fit (so 4 or 6 can be merged), checkpoints saved so each adapter's step can be chosen before merging. Say what you think of it.
+
+WHAT TO DELIVER. When your analysis is done, reply WITHOUT a code block with a written report answering 1-4, specific and quantitative, with numbers from your analysis and what you are unsure about.
