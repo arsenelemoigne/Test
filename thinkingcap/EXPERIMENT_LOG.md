@@ -4822,3 +4822,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   From now on the log uses the full-eval-weighting line as the overall accuracy.
 - ~23:45 (user) queued on GPU 2 after chain1 answers half b: FULL TEST of pt-mid (pertype --pt-full, new option: merge + official 2,759 x 8 against full-base).
 - ~00:00 (user) queued on GPU 1 after chain1 round 2: five lpt6 merges (C, C+code, C+weak no-fit .25, tools-only 3 slices, C at .7), 2-seed averages, no math.
+- ~00:10 (user) chain1 round 2 POSTPONED on both GPUs (pc1 answers so far kept on Drive: ~4,000 of 17,000, resumable); GPU 2 -> pt-mid full test now, GPU 1 -> the five lpt6 merges now.

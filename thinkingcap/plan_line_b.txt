@@ -402,10 +402,10 @@
 # done 5 Nov (skipped on restart) rescreen --name rs-chain1 --cx-names lpd-chain1 --cx-steps 100 200 0 --seeds 0
 # D12 round 2: the round-1 model answers the same training questions x4 (on-policy), chain1 pairs from ITS answers,
 # training continues its LoRA with it as the DPO reference, a short pass (100 steps), screened at 25 / 50 / 75 / final
-polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step a
+# POSTPONED 5 Nov (user; answers so far kept on Drive, resumable) polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step a
 # MOVED to GPU 2 (5 Nov, user) polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
-lupin --name lpd-chain1r2 --lp-min-solve 0 --lp-recipe chain1 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-own-answers pc1 --lp-init adapters/lpd-chain1-s0 --lp-dpo=--bida-exact,--target-steps=100
-rescreen --name rs-chain1r2 --cx-names lpd-chain1r2 --cx-steps 25 50 75 0 --seeds 0
+# POSTPONED 5 Nov (user; answers so far kept on Drive, resumable) lupin --name lpd-chain1r2 --lp-min-solve 0 --lp-recipe chain1 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-own-answers pc1 --lp-init adapters/lpd-chain1-s0 --lp-dpo=--bida-exact,--target-steps=100
+# POSTPONED 5 Nov (user; answers so far kept on Drive, resumable) rescreen --name rs-chain1r2 --cx-names lpd-chain1r2 --cx-steps 25 50 75 0 --seeds 0
 # ===== 3 Nov ~24:00 (user): ASTRA (A) ON v1 NOW, with Gemini 4 Argon on the user's Google key, EUR 15 (cap $16) =====
 # v1 = lpc-bidax5q-s0 (best so far). 1) v1 answers every training question x4 (both halves here); 2) the data folder:
 # the raw Qwen's 10-answer file first, the 4-answer top-ups after, + v1's answers, our holdout removed; 3) Argon edits

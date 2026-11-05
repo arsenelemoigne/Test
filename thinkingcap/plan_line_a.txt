@@ -438,7 +438,7 @@
 # DROPPED 5 Nov (user) lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
 # DROPPED 5 Nov (user) rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
 # 5 Nov (user): chain1 round 2, answers half b moved here from GPU 1 (lpd-chain1r2 on GPU 1 waits for both halves on Drive)
-polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
+# POSTPONED 5 Nov (user; answers so far kept on Drive, resumable) polans --name pc1 --op-adapter lpd-chain1-s0 --op-samples 4 --lp-pool dp13 --lp-add-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --dp-step b
 # 5 Nov (user): FULL TEST of pt-mid (October 4-adapter merge, before any repair); the 720 screen exists and is skipped
 pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-full --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
 end
