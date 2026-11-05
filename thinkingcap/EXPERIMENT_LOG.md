@@ -4674,3 +4674,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   multiple / no-fit): C 0/0/.5/.5/.5/0, P .5/0/.5/.5/.5/.5, S6 all .5, P+ 1/0/.5/.5/.5/1, T .5/0/.5/0/1/.5. Purpose: a second,
   differently-trained per-type family (6 adapters, rule-B pairs, no NLL, cosine) to compare with pt-mid's (4 adapters, LUPIN
   pairs, NLL 1.0, constant lr): solos, dose and merges, as data for the Jasmin battle plan.
+- Deep research for Jasmin (107 agents, 24 sources, 23 of 25 claims confirmed): research_jasmin_merging.md. No source tests
+  0.6B, per-type DPO LoRA merging, or non-math tasks. Supported: separate-then-merge beats data mixing for 2-5 sources at 3-13B
+  (DEM, Cohere Aya, LoRA Soups), DPO merges more consistent than SFT merges; the advantage fades with more skills (3+: data mix
+  won; TIES collapses with merge count; Task Arithmetic the only reliable method); plain shortest-vs-longest DPO cuts ~17-30%
+  only; -50% at < 1 pt at 1.5B came from on-policy RL with correctness-aware length rewards (DRPO; AdaptThink uses skipping
+  thinking = not allowed here) or SEARCHED / layer-wise merge coefficients (Evo-L2S -52% at +4.6 pts, FIM-TIES); uniform merges
+  degrade at 1.5B ("smaller models struggle to learn from model merging"); DARE needs drop < 0.5.
