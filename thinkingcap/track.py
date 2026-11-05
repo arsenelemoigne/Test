@@ -354,6 +354,9 @@ def main():
     parser.add_argument("--lp-min-overcut", type=int, default=0, help="lupin: gate, at least this many trained overcut pairs or no training")
     parser.add_argument("--lp-overcut", default="", help="lupin: onpolicy run names, comma-separated: their answers are lupin_pairs.py --overcut")
     parser.add_argument("--lp-reset-seeds", nargs="*", type=int, default=[], help="lupin: delete these seeds' adapters (local and Drive) and train them again")
+    parser.add_argument("--lp-pairs-only", action="store_true", help="lupin: build and report the pairs, no training")
+    parser.add_argument("--lp-cap-like", default="", help="lupin --lp-no-match: cut the raw pairs at random to "
+                        "pairs-<this>'s count per part x kind")
     parser.add_argument("--lp-no-match", action="store_true", help="lupin: train on the raw pairs, no lupin_select matching (michal-bida control)")
     parser.add_argument("--lp-loose", default="", help="lupin: lupin_select.py --loose-parts (parts short of pairs)")
     parser.add_argument("--lp-add-q", default="", help="lupin: top-up sets (in --lp-extra-q) whose questions all join the pool")
@@ -2206,6 +2209,15 @@ def balround(args):
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
+    if args.lp_pairs_only:  # (5 Nov) build and report the pairs, no training: per part x kind counts and median lengths
+        per = Counter((r["part"], r["kind"]) for r in rows)
+        print(f"lupin {name}: PAIRS ONLY, {len(rows)} pairs, {len({r['id'] for r in rows})} questions", flush=True)
+        for (part, kind), n in sorted(per.items()):
+            ch = sorted(len(r["chosen_ids"]) for r in rows if r["part"] == part and r["kind"] == kind)
+            rj = sorted(len(r["rejected_ids"]) for r in rows if r["part"] == part and r["kind"] == kind)
+            print(f"  {part} / {kind}: {n} pairs, median chosen {ch[len(ch) // 2]} vs rejected {rj[len(rj) // 2]} tokens",
+                  flush=True)
+        return
     start = Path("adapters") / f"fresh-{name}"
     if not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", base, "--out", start)
@@ -4081,6 +4093,19 @@ def lupin(args):
     if args.lp_no_match and not (pairs / "pairs.jsonl").exists():  # michal-bida control (30 Oct): his pairs as they come
         pairs.mkdir(parents=True, exist_ok=True)
         shutil.copy(raw / "pairs.jsonl", pairs / "pairs.jsonl")
+        if args.lp_cap_like:  # (5 Nov, Jasmin data b) unmatched pairs, cut at random to another set's count per part x kind
+            like = BON / f"pairs-{args.lp_cap_like}" / "pairs.jsonl"
+            drive_sync("restore", only=[str(like.parent)])
+            cap = Counter((json.loads(l)["part"], json.loads(l)["kind"]) for l in open(like) if l.strip())
+            rows = [l for l in open(raw / "pairs.jsonl") if l.strip()]
+            random.Random(0).shuffle(rows)
+            got, keep = Counter(), []
+            for l in rows:
+                r = json.loads(l)
+                if got[(r["part"], r["kind"])] < cap[(r["part"], r["kind"])]:
+                    got[(r["part"], r["kind"])] += 1
+                    keep.append(l)
+            (pairs / "pairs.jsonl").write_text("".join(keep))
         kept = Counter((json.loads(l)["part"], json.loads(l)["kind"]) for l in open(pairs / "pairs.jsonl"))
         (pairs / "summary.txt").write_text("no matching (raw pairs): " + ", ".join(f"{p}/{k} {n}" for (p, k), n in sorted(kept.items())) + "\n")
         drive_sync("save")
