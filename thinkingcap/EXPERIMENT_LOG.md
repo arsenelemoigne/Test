@@ -4762,3 +4762,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~18:30 lpt6 instructions solo at 0.5: **+17.8 / -0.2** (ifeval +19 / -0.6, svamp +19 / +0.4, mbpp +18 / +0.8, simple +14 /
   -2.1, multiple +18 / 0.0, no-fit +12 / -1.7), -0.5 vs curve: at half strength a mild shared shortening
   (at 1.0: 32.6 / -2.8). GPU 1: D12 chain1 step-100 screen grading.
+- ~18:40 (user) bidax6s (bida's full schedule) DROPPED from GPU 2's queue.

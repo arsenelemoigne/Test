@@ -435,6 +435,6 @@ pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag
 # moved back to GPU 1 (4 Nov, balance): rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
 fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 models/stopB3-soup-25 --fm-screen-only
 rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
-lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
-rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
+# DROPPED 5 Nov (user) lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
+# DROPPED 5 Nov (user) rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
 end
