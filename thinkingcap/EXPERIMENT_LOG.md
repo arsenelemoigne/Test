@@ -4828,3 +4828,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   10 answers) and float32 (dpo.py --dtype float32: pure fp32); same 4 groups, NLL 1, constant lr 2e-5, 16 pairs/step, one
   pass, 48 held out, seed 0; each group x kind cut at random to lpv-base's count (pertype --pt-cap-like, new option) so each
   adapter takes October's number of steps; scored like October: 4 solos at 1.0, 4 at pt-mid strength, softer / soft / mid.
+- ~00:50 (user) jpa built and its capped counts CHECKED before training (pertype --pt-check, new: prints available / October / kept pairs and steps per group, no training), right after lpt6mix-C on GPU 1.

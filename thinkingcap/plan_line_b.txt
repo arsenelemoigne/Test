@@ -489,6 +489,9 @@
 # thinkprune --name gr2 --tp-start lpc-bidax5q-s0 --tp-reward gated --tp-min-solve 0 --tp-include-unsolved --tp-steps 250 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-steps 10 20 40 60 80 120 160 200 250 --tp-rl=--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,12,--full-support
 # 5 Nov (user): five lpt6 merges (2-seed averages, no training), after chain1 round 2: single adapters vs merged, subtype mixes
 mixscreen --name lpt6mix-C --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
+# 6 Nov (user): build jpa and CHECK the capped counts before any training (no adapter trained, nothing scored)
+lupin --name jpa --lp-pairs-only --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-check
 mixscreen --name lpt6mix-Ccode --mx-weights svamp=0,mbpp=0.5,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
 mixscreen --name lpt6mix-Cnf --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.25
 mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
@@ -496,7 +499,6 @@ mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_p
 # 6 Nov (user): the October per-type run redone, ONLY two changes: the NEW training data (jpa = October's exact lpv-base rule +
 # matching on the new pool) and float32; same 4 groups, same settings (NLL 1, constant lr 2e-5, 16 pairs/step, one pass, seed 0),
 # each group x kind cut to October's pair count (same steps); scored exactly like October: solos at 1.0 and at pt-mid strength, softer/soft/mid
-lupin --name jpa --lp-pairs-only --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
 pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-svamp --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
 pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-mbpp --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
 pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-ifeval --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0

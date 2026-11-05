@@ -279,6 +279,7 @@ def main():
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-cap-like", default="", help="pertype: cut each group x kind to pairs-<this>'s counts (same steps)")
+    parser.add_argument("--pt-check", action="store_true", help="pertype: print the (capped) pair counts per group and stop, no training")
     parser.add_argument("--pt-full", action="store_true", help="pertype: also run the official full test (2,759 x 8) of each merge")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--pt-no-train", action="store_true",
@@ -2897,6 +2898,12 @@ def pertype(args):
             short = {k: like[(group, k)] - got[k] for k in ("shorten", "guard", "hard", "right") if like[(group, k)] > got[k]}
             print(f"pertype {name}: {group} capped like {args.pt_cap_like}: {dict(got)}" + (f", SHORT {short}" if short else ""),
                   flush=True)
+        if args.pt_check:  # (6 Nov, user) the pair counts only: no adapter trained, nothing scored
+            have = Counter(r["kind"] for r in rows if r["part"] in parts)
+            want = {k: like[(group, k)] for k in ("shorten", "guard", "hard", "right") if like[(group, k)]}
+            print(f"pertype CHECK {name} {group}: available {dict(have)}; October {want}; kept {len(mine)} pairs "
+                  f"= {max(0, len(mine) - 48) // 16} steps at 16 pairs/step after 48 held out", flush=True)
+            continue
         pairs = BON / f"pairs-{name}-{group}"
         if not (pairs / "pairs.jsonl").exists():
             pairs.mkdir(parents=True, exist_ok=True)
@@ -2916,6 +2923,8 @@ def pertype(args):
             drive_sync("save")
         finals[group] = adapter
         print(f"pertype {name}: {group} adapter on {len(mine)} pairs", flush=True)
+    if args.pt_check:
+        return
     weights = dict((k, float(v)) for k, v in (x.split("=") for x in args.pt_weights.split(",") if x))
     # --pt-screen (1 Nov): score on the 720 screen set x4 against s4-base instead of the choosing set
     val = SCREEN if args.pt_screen else f"questions_val{VAL_SEED}"
