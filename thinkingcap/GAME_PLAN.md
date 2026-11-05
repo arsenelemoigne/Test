@@ -44,9 +44,9 @@ protection; bf16, NLL 1.0, constant lr 2e-5, batch 16, one pass), merged at 0.30
 |---|---|
 | A1 answers | merged pt-mid answers 5,400 training questions x4 (21,600 answers): math 2,400, code 900, no-fit 1,500, ifeval 300, simple 150, multiple 150; mixed-outcome questions first, then all-right and all-wrong |
 | A2 pairs | 1,600 pairs, 50% shortest right > shortest FINISHED wrong + 50% similar-length right > wrong (ratio <= 1.25, exactly half with the right one longer); math 640, code 400, no-fit 240, ifeval 160, simple 96, multiple 64 (80% repair, 20% maintenance); no shorten, no wrong>wrong, no cut rejections; <= 3 pairs per question (<= 2 similar-length); dedup across kinds |
-| A3 training | fresh LoRA on merged pt-mid, settings column A, 1,600 pairs as a RESERVOIR (no forced pass), stratified deterministic order so every 80 pairs hold the intended mix; save step 0 then every 5 steps; max 40 steps |
-| A4 test | 720 x 4 at steps 5, 10, 20; 30 and 40 only if still improving the frontier; optional rescue: one checkpoint merged at strength 0.25 and 0.5 |
-| stop | hard: saving falls > 4 points between two screens, or below 48%; warning: saving -2 vs pt-mid without credible accuracy gain; 52 / -0.5 -> validate, do not train further |
+| A3 training | fresh LoRA on merged pt-mid, settings column A, 1,600 pairs as a RESERVOIR (no forced pass), stratified deterministic order so every 80 pairs hold the intended mix; train the full 40 steps (no mid-run stop: training is < 1 h), save step 0 then every 5 steps |
+| A4 test | 720 x 4 on ALL 8 checkpoints (5, 10, 15, 20, 25, 30, 35, 40; ~8 GPU-hours, user: compute is fine): the whole saving / accuracy curve over steps; optional rescue: the chosen checkpoint merged at strength 0.25 and 0.5 |
+| choose | AFTER all screens, from the whole curve (screens wiggle: saving moves a few points between nearby checkpoints, accuracy +-0.7 with seeds): the best saving / accuracy point; not a candidate if saving < 48% (the target is out of reach from there); a 52 / -0.5 point -> validation (section 5) |
 | fails if | too few right answers on damaged questions; accuracy comes back only by long thinking; shortest-right guards still push shorter; no-fit repair turns into refusing valid calls; chosen likelihood collapses (-> NLL ablation) |
 
 ## 4. Track B — per-type adapters + merge (~25-40 GPU-hours, bundled candidate)
@@ -64,7 +64,7 @@ subsets are small, and one tools adapter learns call vs no-call jointly.
 | B2 adapters | settings column B; one pass: math 45 steps (save 15/30/45), code 90 (30/60/90), ifeval 90 (30/60/90), tools 75 (25/50/75) |
 | B3 merge | final adapters; first the 3 historical vectors softer 0.20/0.25/0.35/0.25, soft 0.25/0.35/0.45/0.35, mid 0.30/0.45/0.60/0.45; then at most 8 one-coordinate moves around the best (math +-0.05, code +-0.05, ifeval +-0.10, tools +-0.05); merge weight deltas, one model |
 | B4 control | same 4,800 pairs, ONE joint adapter, column B settings, 300 steps (= the four runs' total), screens 100 / 200 / 300 |
-| B5 round 2 | only if a merge is at 48-52% and >= -0.5 with no part collapsed (>= 52 / -0.5 -> validate instead; worse accuracy -> repair; < 48% -> fix round 1): the merge answers ~3,000 questions x8 (math 600, code 800, ifeval 800, simple 300, multiple 200, no-fit 300); 2,400 pairs (shorten / guard / right: math 0/200/200, code 352/160/128, ifeval 384/160/96, simple 72/84/84, multiple 16/64/80, no-fit 0/192/128), 75% new + 25% replay; shorten needs >= 6/8 right (multiple >= 7/8); lr 2.5e-6 at step 1 then 5e-6, beta 0.1, NLL 1.0, batch 64, 2,400 pairs as a reservoir, save every 2 steps, screens 4 and 8, then 16, then 24 (max) only if improving; stop if accuracy falls > 1 pt vs its start or an earlier checkpoint dominates; optional strength rescue 0.25 / 0.5 |
+| B5 round 2 | only if a merge is at 48-52% and >= -0.5 with no part collapsed (>= 52 / -0.5 -> validate instead; worse accuracy -> repair; < 48% -> fix round 1): the merge answers ~3,000 questions x8 (math 600, code 800, ifeval 800, simple 300, multiple 200, no-fit 300); 2,400 pairs (shorten / guard / right: math 0/200/200, code 352/160/128, ifeval 384/160/96, simple 72/84/84, multiple 16/64/80, no-fit 0/192/128), 75% new + 25% replay; shorten needs >= 6/8 right (multiple >= 7/8); lr 2.5e-6 at step 1 then 5e-6, beta 0.1, NLL 1.0, batch 64, 2,400 pairs as a reservoir, train the full 24 steps, save every 2 steps, screen ALL of 4 / 8 / 12 / 16 / 20 / 24 and choose afterwards from the whole curve (not a candidate if it loses > 1 pt vs its start or an earlier checkpoint dominates it); optional strength rescue 0.25 / 0.5 |
 
 ## 5. Tests
 - 720 x 4: development and checkpoint selection.
@@ -97,4 +97,4 @@ checkpoint. Screen gain gone on fresh / seed 2 -> treat as noise.
 2. Track A on one GPU; Track B adapters on the other.
 3. B3 merges (3 screens), B4 control alongside, up to 8 coordinate screens.
 4. B5 only if its gate passes. Freeze; seed 2 + fresh 240; full test with the user's OK.
-GPU estimates are reservations: A ~6-8 h (3 h answers + short training + 3-5 screens); B adapters <= 14 h; merges 3-11 h; control 6-7 h; round 2 <= 13 h.
+GPU estimates are reservations: A ~12 h (3 h answers + < 1 h training + 8 screens); B adapters <= 14 h; merges 3-11 h; control 6-7 h; round 2 <= 13 h.
