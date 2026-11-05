@@ -278,6 +278,7 @@ def main():
     parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
+    parser.add_argument("--pt-cap-like", default="", help="pertype: cut each group x kind to pairs-<this>'s counts (same steps)")
     parser.add_argument("--pt-full", action="store_true", help="pertype: also run the official full test (2,759 x 8) of each merge")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--pt-no-train", action="store_true",
@@ -2876,9 +2877,26 @@ def pertype(args):
     name, base_pairs = args.name, BON / f"pairs-{args.cc_base}" / "pairs.jsonl"
     drive_sync("restore", only=[str(base_pairs.parent), "runs/mvtf/v4-base"])
     rows = [json.loads(l) for l in base_pairs.read_text().splitlines() if l.strip()]
+    like = Counter()
+    if args.pt_cap_like:  # (6 Nov, user) same pair count per group x kind as another set (October's), so the same steps
+        like_file = BON / f"pairs-{args.pt_cap_like}" / "pairs.jsonl"
+        drive_sync("restore", only=[str(like_file.parent)])
+        like = Counter((group, json.loads(l)["kind"]) for l in open(like_file) if l.strip()
+                       for group, parts in PT_GROUPS.items() if json.loads(l)["part"] in parts)
     finals = {}
     for group, parts in PT_GROUPS.items():
         mine = [r for r in rows if r["part"] in parts]
+        if args.pt_cap_like:
+            pool = mine[:]
+            random.Random(0).shuffle(pool)
+            got, mine = Counter(), []
+            for r in pool:
+                if got[r["kind"]] < like[(group, r["kind"])]:
+                    got[r["kind"]] += 1
+                    mine.append(r)
+            short = {k: like[(group, k)] - got[k] for k in ("shorten", "guard", "hard", "right") if like[(group, k)] > got[k]}
+            print(f"pertype {name}: {group} capped like {args.pt_cap_like}: {dict(got)}" + (f", SHORT {short}" if short else ""),
+                  flush=True)
         pairs = BON / f"pairs-{name}-{group}"
         if not (pairs / "pairs.jsonl").exists():
             pairs.mkdir(parents=True, exist_ok=True)

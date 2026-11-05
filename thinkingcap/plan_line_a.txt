@@ -413,7 +413,7 @@
 # done 5 Nov (skipped on restart) pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag shift --pt-weights svamp=0.15,mbpp=0,ifeval=0.65,bfcl=0.65
 # 5 Nov (user OK): Jasmin pair sets, October's lpv-base rule on the NEW data (+ math1, math2, nofit4), 10 answers, pairs only:
 # (a) matched like October; (b) unmatched, cut to (a)'s count per part x kind
-# WAIT Ivan (user 5 Nov) lupin --name jpa --lp-pairs-only --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
+# MOVED to plan_line_b (6 Nov) lupin --name jpa --lp-pairs-only --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
 # WAIT Ivan (user 5 Nov) lupin --name jpb --lp-pairs-only --lp-no-match --lp-cap-like jpa --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
 # (d) five predeclared merges (order math / code / ifeval / simple / multiple / no-fit): C compression core, P + protection,
 #     S6 all six, P+ stronger protection, T multiple instead of simple pressure
