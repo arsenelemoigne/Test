@@ -4694,3 +4694,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   (code, ifeval, no-fit fully), but so does length (55 -> 43% saved); the points move ALONG a frontier above v1's. Not yet
   >= 50 / -1. Natural next probes: strength rescue (rpB-40 at 0.5, rpB-20 at 0.5 / 0.75) to land between 20 and 40 at ~50 / -1,
   and a second seed. rpC-10 (lr 1e-5): +53.6 / -3.0 (+0.6); rpC 20 / 40 / 80 next.
+- ~22:30 rpC (lr 1e-5 x 80): **step 20 +50.5 / -1.8** (svamp +57 / -4.0, mbpp +61 / -2.5, ifeval +41 / -0.6, simple +36 / -0.6, multiple
+  +40 / +2.1, no-fit +42 / -1.5), +1.2 vs curve; **step 40 +51.2 / -2.1** (svamp +58 / -4.0, mbpp +61 / -4.4, ifeval +43 / -1.3, simple
+  +36 / -0.2, multiple +39 / +1.1, no-fit +41 / +2.7), +1.0. Gentler than rpB: keeps ~51% saved but math (-4.0) and code stay
+  damaged; step 80 next. GPU 1: D10 l2s50e step 250/332.
