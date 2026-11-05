@@ -4551,3 +4551,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   max; Track B = 4 adapters (not 6) at the historical pt settings (bf16, NLL 1.0, constant 2e-5, batch 16), quotas verified
   feasible from the existing store, merge search from the 3 historical vectors +-0.05/0.10; round-2 gate tightened to
   48-52% and >= -0.5. Awaiting the user's approval; nothing queued.
+- consult2 objections reply ($10.38 total): consult2_objections_reply.md. Agrees with both user objections: fp32 + fp16
+  autocast for both tracks (switch only on a clear bidax6p result); short rounds at lr 5e-6 (2.5e-6 first step), pools as
+  reservoirs, early screens (A: 5/10/20, then 30/40; round 2: 4/8, then 16/24), save every 5 / 2 steps, one strength rescue
+  (0.25 / 0.5) on a promising checkpoint; batches kept (16 / 64). GAME_PLAN.md -> v3.
