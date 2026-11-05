@@ -400,17 +400,17 @@
 # done 5 Nov (skipped on restart): lupin --name lpc-bidax6p --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-precision
 # done 5 Nov (skipped on restart) rescreen --name rs-bidax6p --cx-names lpc-bidax6p --cx-steps 100 200 300 0 --seeds 0
 # Track A, stronger dose 2 (user, 5 Nov): same answers and pairs as rpA, lr 1e-5 x 80 steps
-ptrepair --name rpC --rp-from rpA --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+# done 5 Nov (skipped on restart) ptrepair --name rpC --rp-from rpA --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
 # Finish lpt6 (user, 5 Nov; the consultant's 13-screen diagnostic, consult2_lpt6_reply.md): lpt6's exact settings and pairs
 # (a) the missing math adapter, 2 seeds (typeonly, bidax5s pairs, bf16 historical path, as the other five)
-typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts svamp
+# done 5 Nov (skipped on restart) typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts svamp
 # (b) solos at full strength: math (new) and no-fit (trained 2 Nov, never reported)
-rescreen --name rs-lpt6m --cx-names lpt6-svamp lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
+# done 5 Nov (skipped on restart) rescreen --name rs-lpt6m --cx-names lpt6-svamp lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
 # (c) all six solos at strength 0.5 (dose nonlinearity vs merge interaction)
-rescreen --name rs-lpt6h --cx-names lpt6-svamp lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1 --cx-scale 0.5
+# done 5 Nov (skipped on restart) rescreen --name rs-lpt6h --cx-names lpt6-svamp lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1 --cx-scale 0.5
 # 5 Nov (user OK): consult3 screens #1 (pt-mid without code) and #2 (strength moved from math/code to instructions/tools), no training
-pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag nocode --pt-weights svamp=0.3,mbpp=0,ifeval=0.6,bfcl=0.45
-pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag shift --pt-weights svamp=0.15,mbpp=0,ifeval=0.65,bfcl=0.65
+# done 5 Nov (skipped on restart) pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag nocode --pt-weights svamp=0.3,mbpp=0,ifeval=0.6,bfcl=0.45
+# done 5 Nov (skipped on restart) pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag shift --pt-weights svamp=0.15,mbpp=0,ifeval=0.65,bfcl=0.65
 # 5 Nov (user OK): Jasmin pair sets, October's lpv-base rule on the NEW data (+ math1, math2, nofit4), 10 answers, pairs only:
 # (a) matched like October; (b) unmatched, cut to (a)'s count per part x kind
 # WAIT Ivan (user 5 Nov) lupin --name jpa --lp-pairs-only --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
@@ -433,8 +433,8 @@ pertype --name lpw-pertype --cc-base lpv-base --pt-screen --pt-no-train --pt-tag
 # moved back to GPU 1 (4 Nov, balance): rescreen --name rs-margin --cx-names lpd-margin --cx-steps 100 200 0 --seeds 0
 # moved back to GPU 1 (4 Nov, balance): lupin --name lpd-l2s50e --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 # moved back to GPU 1 (4 Nov, balance): rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
-fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 models/stopB3-soup-25 --fm-screen-only
-rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
+# done 5 Nov (skipped on restart) fullmodel --name rescore-old --nothink-models models/drpo3d-23 models/drpo3f-15 models/stopB3-soup-25 --fm-screen-only
+# done 5 Nov (skipped on restart) rescreen --name rs-lpw-2stage --cx-names lpw-2stage --cx-steps 50 --seeds 0
 # DROPPED 5 Nov (user) lupin --name lpc-bidax6s --lp-min-solve 0 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4 --lp-add-q nofit4 --lp-answers-pool dp10 --lp-dpo=--bida-schedule
 # DROPPED 5 Nov (user) rescreen --name rs-bidax6s --cx-names lpc-bidax6s --cx-steps 100 200 300 0 --seeds 0
 # 5 Nov (user): chain1 round 2, answers half b moved here from GPU 1 (lpd-chain1r2 on GPU 1 waits for both halves on Drive)
