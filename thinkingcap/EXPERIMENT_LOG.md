@@ -4599,3 +4599,11 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   autocast, beta 0.1, no NLL, batch 16, lr 2.5e-6 then 5e-6, 40 steps, saved every 5; (4) pt-mid + repair adapter on the 720
   at 5 / 10 / 20 / 40. Tested on the Mac: pair builder (quotas, half longer, order) and 3 CPU DPO steps (keep-order, fp32).
   GPU smoke line first (rpA-smoke: 5 questions per part, 4 steps).
+- ~08:30 **pt-mid adapters scored ALONE at full strength** (720 x4, no training):
+  - MATH adapter: **+41.7% / -2.1** (svamp +59 / -4.8, mbpp +51 / -1.0, ifeval +26 / +0.6, simple +21 / -1.7, multiple +24 / -1.3,
+    no-fit +25 / -6.0), -0.6 vs curve: trained on math pairs only, it shortens code almost as much as math (51 vs 59%) and
+    hurts no-fit most: the same shared-habit spill-over as lpt6.
+  - CODE adapter: **+16.5% / -1.3** (svamp +20 / -1.3, mbpp +25 / -0.2, ifeval +7 / -1.3, simple +14 / -1.5, multiple +14 /
+    -2.3, no-fit +11 / -3.5), -1.6 vs curve: more own-type than the others (code 25% vs 7-20% elsewhere) and keeps code
+    accuracy, unlike lpt6's code-only adapter (which did not shorten code).
+  IFEval and tools solos next, then the 4 at pt-mid strength.
