@@ -4760,5 +4760,5 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   5-7/10 questions, 1 per question. Train only the affected adapter (fp32, NLL 1, constant 2e-5, ckpt every 10), solo
   screen own x4 / others x2, compare at matched saving and matched exposure.
 - ~18:30 lpt6 instructions solo at 0.5: **+17.8 / -0.2** (ifeval +19 / -0.6, svamp +19 / +0.4, mbpp +18 / +0.8, simple +14 /
-  -2.1, multiple +18 / 0.0, no-fit +12 / -1.7), +0.2 vs curve: at half strength the shared shortening with little cost
+  -2.1, multiple +18 / 0.0, no-fit +12 / -1.7), -0.5 vs curve: at half strength a mild shared shortening
   (at 1.0: 32.6 / -2.8). GPU 1: D12 chain1 step-100 screen grading.
