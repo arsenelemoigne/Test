@@ -4591,3 +4591,11 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   gr2 now screened at steps 10 20 40 60 80 120 160 200 250 (step sensitivity, --tp-score-steps).
 - Ops: Chrome Memory Saver exception for Colab (user); finished plan stages commented out and old-line adapters no longer
   restored at plan start (restarts now fast); "Connecting" on the tabs is cosmetic while steps advance.
+- ~07:30 **Track A built and queued** (GPU 2, after the 8 pt-mid solo screens): track.py ptrepair + repair_pairs.py + dpo.py
+  --keep-order. (1) pt-mid (lpw-pertype merged 0.30/0.45/0.60/0.45) answers 5,400 training questions x4 (math 2,400, code 900,
+  no-fit 1,500, ifeval 300, simple 150, multiple 150; the original's mixed-outcome questions first); (2) 1,600 be-right pairs
+  (half shortest right > shortest finished wrong, half similar-length right > wrong with exactly half the right one longer;
+  <= 3 per question, <= 2 right; no cut rejections) in a stratified order; (3) fresh LoRA on merged pt-mid, fp32 + fp16
+  autocast, beta 0.1, no NLL, batch 16, lr 2.5e-6 then 5e-6, 40 steps, saved every 5; (4) pt-mid + repair adapter on the 720
+  at 5 / 10 / 20 / 40. Tested on the Mac: pair builder (quotas, half longer, order) and 3 CPU DPO steps (keep-order, fp32).
+  GPU smoke line first (rpA-smoke: 5 questions per part, 4 steps).
