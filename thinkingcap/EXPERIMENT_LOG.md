@@ -4829,3 +4829,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   pass, 48 held out, seed 0; each group x kind cut at random to lpv-base's count (pertype --pt-cap-like, new option) so each
   adapter takes October's number of steps; scored like October: 4 solos at 1.0, 4 at pt-mid strength, softer / soft / mid.
 - ~00:50 (user) jpa built and its capped counts CHECKED before training (pertype --pt-check, new: prints available / October / kept pairs and steps per group, no training), right after lpt6mix-C on GPU 1.
+- ~00:20 6 Nov **lpt6mix-C (instructions + one function + several functions, each 0.5, 2-seed averages): +41.3 / -1.3** official
+  (screen-equal -1.3; svamp +41 / -1.7, mbpp +45 / -1.0, ifeval +41 / -0.6, simple +36 / -0.2, multiple +39 / +3.6, no-fit +37 / -9.4),
+  +0.15 vs curve. The merge saves MORE than its solos predict (token ratios multiplied: 36.2%; consult3 guessed 40 / -2.5); accuracy
+  close to the solos' sum (about -1.1); the whole cost is no-fit -9.4 (no no-fit adapter, two call-making adapters).
