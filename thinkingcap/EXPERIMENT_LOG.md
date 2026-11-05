@@ -4618,3 +4618,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   Reading so far: every pt-mid adapter spills over (math -> code 51%, ifeval -> code 42%, tools -> code 59%); the merge's 55%
   is mostly stacked general pushes, as lpt6 suggested; own types tend to KEEP accuracy (tools +1.5/+2.5, ifeval +0.6, code
   -0.2), the loss lands on the OTHER types. Remaining: code / ifeval / tools at pt-mid strength.
+- ~10:30 **D4 lpd-budget step 100: +43.8% / -1.8** (svamp +58 / -4.6, mbpp +44 / -1.7, ifeval +31 / -0.8, simple +35 / -0.8, multiple
+  +39 / +0.6, no-fit +39 / -0.6), 0.0 vs curve; **step 200: +48.6% / -1.5** (svamp +61 / -3.1, mbpp +40 / -1.2, ifeval +46 / -0.8,
+  simple +41 / -2.3, multiple +45 / +0.2, no-fit +47 / +0.2), +1.1 vs curve. At bidax5q's step-200 saving (48.5 / -0.9, +1.7) but
+  0.6 less accurate; math carries it (-3.1). Final next.
+- pt-mid solos at pt-mid strength: CODE 0.45 **+10.0% / -2.5** (-2.7 vs curve; ifeval -3.7, math -2.5: likely partly screen noise,
+  since the same adapter at 1.0 read -1.3); IFEVAL 0.60 **+23.1% / -1.2** (-1.4; no-fit -3.3, multiple -2.7). Tools at 0.45 next,
+  then the additivity check vs pt-mid (55.0 / -2.6), then Track A.
