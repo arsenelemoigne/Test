@@ -4568,3 +4568,26 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   ifeval +37 / -0.6, one function +31 / -4.0, several +30 / -1.5, no fit +40 / +9.4), +0.8. Accuracy kept or gained (no-fit
   strongly) but the right pairs halve the shortening vs bidax5q (41.8 / +0.2 at step 100). Final screening next.
   GPU 1: D4 budget step 55/337. Both tabs show "Connecting" while still progressing (cosmetic).
+- ~06:30 **D6 lpd-simright final: +28.1% / +1.7** (svamp +35 / +0.2, mbpp +10 / +2.7, ifeval +32 / +3.1, one function +30 / -5.8,
+  several +29 / -1.9, no fit +41 / +10.2), +1.8 vs curve (as high above the curve as v1, but at 28% saved): the similar-length
+  right pairs buy accuracy (no-fit +10) and cost shortening; one-function is hurt (-5.8). Not a v1 candidate on its own; a
+  candidate ingredient for the per-type design (Jasmin).
+
+### 5 Nov — decisions of the day (user), state before the night
+- DPO screen so far (720 x4, finals): D9 adar1 65.3 / -6.8, D11 push2 52.4 / -3.0, D8 math 41.7 / -1.0, D1 dast 33.1 / -2.3,
+  D6 simright 28.1 / +1.7, D7 2stage 16.5 / +1.4, D2 hard 13.8 / -0.1, D3 route 9.4 / -0.7. None beats v1 (46.7 / -0.5).
+  Still to run: D4 budget (training, step 90/337), D5 margin, D10 l2s50e, D12 chain1 rounds 1-2 (GPU 1); bidax6p / 6s (GPU 2).
+- Consultant (Ivan / gpt-6-astra, consult2, ~$16 today): DPO strategy (consult2_dpo_strategy.md), game-plan grounding
+  (consult2_game_plan_review.md), the user's objections accepted (consult2_objections_reply.md: fp32 both tracks, lr 5e-6 short
+  rounds, early screens), lpt6 reply (consult2_lpt6_reply.md: per-type spill-over is ~one shared habit; Track A first).
+- GAME_PLAN.md v3 (not committed to GPUs beyond the solos): Track A = repair pt-mid (pt-mid answers 5,400 q x4 -> 1,600 "be
+  right" pairs on math / code / no-fit + maintenance, fresh LoRA on merged pt-mid, fp32, lr 5e-6, 40 steps, screens 5/10/20/40
+  first, fill gaps where interesting). Track B per-type adapters + merge + mixed-step merges, to be redesigned as "Jasmin".
+- Order agreed: (1) pt-mid's 4 adapters scored ALONE (8 screens: full strength + pt-mid strength), queued GPU 2, solo-svamp
+  started; (2) Track A (code to build and test on the Mac, then GPU 2); (3) one sandbox with EVERYTHING (raw Qwen, thinking off,
+  bida / v1 INCLUDED this time, all DPO rounds, all per-type LoRA runs, Track A) -> the consultant designs "Jasmin", the best
+  per-type LoRA from scratch.
+- GRPO: grA2 (grA + all trainer fixes, same data) and gr2 (consultant's recipe from v1) prepared, commented in plan_line_b;
+  gr2 now screened at steps 10 20 40 60 80 120 160 200 250 (step sensitivity, --tp-score-steps).
+- Ops: Chrome Memory Saver exception for Colab (user); finished plan stages commented out and old-line adapters no longer
+  restored at plan start (restarts now fast); "Connecting" on the tabs is cosmetic while steps advance.
