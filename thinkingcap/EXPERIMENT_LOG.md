@@ -4659,3 +4659,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   v1). Not a v1 candidate.
 - Queue note: GPU 1 had already re-read its plan before rpB was pushed, so it started D10 l2s50e first; rpB runs right after
   D10 (~5 h later than intended). rpC stays after bidax6p on GPU 2 (bidax6p at step 190/336).
+- ~15:30 **bidax6p (bidax4's pairs, our settings, ONLY the precision switched to fp32 + fp16 autocast)**: step 100 **+45.7 / -1.8**
+  (svamp +55 / -2.3, mbpp +43 / -2.3, ifeval +40 / -2.9, simple +39 / -2.7, multiple +44 / -0.4, no-fit +45 / +3.7), +0.3 vs curve;
+  step 200 **+48.9 / -2.0** (svamp +52 / -3.5, mbpp +45 / -0.6, ifeval +53 / -3.1, simple +43 / -5.0, multiple +46 / -0.8, no-fit
+  +49 / +3.1), +0.7. Same pairs in bf16 (bidax4): 100 +57.1 / -5.1, 200 +54.6 / -3.7; with ALL of his settings (bidax6): 100
+  +44.4 / -2.2, 200 +40.1 / -0.9. Reading: the precision alone accounts for most of the change his settings made (much gentler,
+  -11 pts saving and +3 pts accuracy at step 100): float32 + fp16 autocast trains less aggressively than our bf16 path. It moves
+  the model along the curve (from below to slightly above) rather than giving a big jump above it. Final next; then rpC.
