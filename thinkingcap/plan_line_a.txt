@@ -401,6 +401,20 @@
 rescreen --name rs-bidax6p --cx-names lpc-bidax6p --cx-steps 100 200 300 0 --seeds 0
 # Track A, stronger dose 2 (user, 5 Nov): same answers and pairs as rpA, lr 1e-5 x 80 steps
 ptrepair --name rpC --rp-from rpA --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+# Finish lpt6 (user, 5 Nov; the consultant's 13-screen diagnostic, consult2_lpt6_reply.md): lpt6's exact settings and pairs
+# (a) the missing math adapter, 2 seeds (typeonly, bidax5s pairs, bf16 historical path, as the other five)
+typeonly --name lpt6 --cc-base lpc-bidax5s --seeds 0 1 --to-parts svamp
+# (b) solos at full strength: math (new) and no-fit (trained 2 Nov, never reported)
+rescreen --name rs-lpt6m --cx-names lpt6-svamp lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1
+# (c) all six solos at strength 0.5 (dose nonlinearity vs merge interaction)
+rescreen --name rs-lpt6h --cx-names lpt6-svamp lpt6-mbpp lpt6-ifeval lpt6-bfcl_simple_python lpt6-bfcl_multiple lpt6-bfcl_irrelevance --cx-steps 0 --seeds 0 1 --cx-scale 0.5
+# (d) five predeclared merges (order math / code / ifeval / simple / multiple / no-fit): C compression core, P + protection,
+#     S6 all six, P+ stronger protection, T multiple instead of simple pressure
+mixscreen --name lpt6mix-C --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
+mixscreen --name lpt6mix-P --mx-weights svamp=0.5,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
+mixscreen --name lpt6mix-S6 --mx-weights svamp=0.5,mbpp=0.5,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
+mixscreen --name lpt6mix-Pplus --mx-weights svamp=1.0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=1.0
+mixscreen --name lpt6mix-T --mx-weights svamp=0.5,mbpp=0,ifeval=0.5,bfcl_simple_python=0,bfcl_multiple=1.0,bfcl_irrelevance=0.5
 # 3 Nov ~24:00: moved here from GPU 1 (GPU 1 runs Astra on v1)
 # moved back to GPU 1 (4 Nov, Astra waits for the screen): lupin --name lpd-hard --lp-min-solve 0 --lp-recipe long2short --lp-extra=--add-hard,0.5 --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 # moved back to GPU 1 (4 Nov, Astra waits for the screen): rescreen --name rs-hard --cx-names lpd-hard --cx-steps 100 200 0 --seeds 0

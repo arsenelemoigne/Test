@@ -4668,3 +4668,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   the model along the curve (from below to slightly above) rather than giving a big jump above it. Final next; then rpC.
 - ~16:30 bidax6p step 300: **+47.8 / -1.4** (svamp +57 / -1.7, mbpp +39 / -0.4, ifeval +48 / -1.9, simple +42 / -6.5, multiple
   +46 / -0.8, no-fit +48 / +2.5), +1.1 vs curve. Final next, then rpC on GPU 2.
+- ~17:30 (user) **Finish lpt6 queued** (GPU 2, after rpC; the consultant's 13-screen design): (a) train the missing math adapter
+  (typeonly lpt6 --to-parts svamp, bidax5s pairs, 2 seeds, lpt6's exact historical settings); (b) solos at 1.0: math + no-fit;
+  (c) all six solos at 0.5 (rescreen --cx-scale 0.5); (d) five merges via the new mixscreen stage (math / code / ifeval / simple /
+  multiple / no-fit): C 0/0/.5/.5/.5/0, P .5/0/.5/.5/.5/.5, S6 all .5, P+ 1/0/.5/.5/.5/1, T .5/0/.5/0/1/.5. Purpose: a second,
+  differently-trained per-type family (6 adapters, rule-B pairs, no NLL, cosine) to compare with pt-mid's (4 adapters, LUPIN
+  pairs, NLL 1.0, constant lr): solos, dose and merges, as data for the Jasmin battle plan.
