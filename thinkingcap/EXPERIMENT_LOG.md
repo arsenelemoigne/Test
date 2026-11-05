@@ -4745,3 +4745,17 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   1.2x easy ratio, per-type tweaks) decided by the data.
 - ~18:00 lpt6 code solo at 0.5: **-0.8 / +0.3** (mbpp -2% / +2.3, ifeval -10 / +0.2, multiple +6 / -3.2, rest ~0): no
   shortening at all, as at 1.0. GPU 1: D12 chain1 trained (333 steps), screens at 100 / 200 / final starting.
+- ~18:05 **consult3 follow-up on the Jasmin pair sets** (code + jasmin_pairs.md given; $9.40, total $12.57; 26 code runs):
+  consult3_jasmin_pairs.md. Build jpa as a frozen replica (no math supplement), but October's rule does not mean October's
+  behaviour on a new pool: the shorten cap is 2x GUARD pairs only (per part, before matching); an empty matching cell gets
+  its share redistributed but a nearly empty one stays short (one example can cut the total 39%); every part is trimmed
+  to the weakest part's fill (how 3,200 requested became ~1,400; nofit4 may release it and give every adapter more steps);
+  no-fit protection switches at 8/10 while the matcher pools 5-9/10; the 1.2 easy ratio applies only to 10/10; right
+  band 0.25; lengths are total output tokens. jpb (random pairs at jpa's counts) tests the whole selector, not the
+  matching alone: add jpb-RR (question-first, same counts and questions per pair) and jpc-trainref (references from
+  held-out TRAINING questions, at pool AND pair stages, for a clean rules path). Variants in order: matching policy;
+  1.5 -> 2.0 / 1.25; floor .5 -> .6 / .4; easy 1.2 -> 1.5 / 1.1; math supplement 0 / 5 / 10%; no-fit floor .8 vs .9; with
+  pre-cap / post-cap / post-match / final reports (k/10 solve, sources, unique questions, lengths, steps at batch 16).
+  Math supplement: 10% of the math budget as similar-length right > finished wrong (within 15%, half right-longer) on
+  5-7/10 questions, 1 per question. Train only the affected adapter (fp32, NLL 1, constant 2e-5, ckpt every 10), solo
+  screen own x4 / others x2, compare at matched saving and matched exposure.
