@@ -45,7 +45,7 @@ protection; bf16, NLL 1.0, constant lr 2e-5, batch 16, one pass), merged at 0.30
 | A1 answers | merged pt-mid answers 5,400 training questions x4 (21,600 answers): math 2,400, code 900, no-fit 1,500, ifeval 300, simple 150, multiple 150; mixed-outcome questions first, then all-right and all-wrong |
 | A2 pairs | 1,600 pairs, 50% shortest right > shortest FINISHED wrong + 50% similar-length right > wrong (ratio <= 1.25, exactly half with the right one longer); math 640, code 400, no-fit 240, ifeval 160, simple 96, multiple 64 (80% repair, 20% maintenance); no shorten, no wrong>wrong, no cut rejections; <= 3 pairs per question (<= 2 similar-length); dedup across kinds |
 | A3 training | fresh LoRA on merged pt-mid, settings column A, 1,600 pairs as a RESERVOIR (no forced pass), stratified deterministic order so every 80 pairs hold the intended mix; train the full 40 steps (no mid-run stop: training is < 1 h), save step 0 then every 5 steps |
-| A4 test | 720 x 4 on ALL 8 checkpoints (5, 10, 15, 20, 25, 30, 35, 40; ~8 GPU-hours, user: compute is fine): the whole saving / accuracy curve over steps; optional rescue: the chosen checkpoint merged at strength 0.25 and 0.5 |
+| A4 test | 720 x 4 at steps 5, 10, 20 and 40 first (4 screens, ~4 h on one GPU or ~2 h on both; user, 5 Nov); then fill in 15 / 25 / 30 / 35 only where the curve looks interesting; optional rescue: the chosen checkpoint merged at strength 0.25 and 0.5 |
 | choose | AFTER all screens, from the whole curve (screens wiggle: saving moves a few points between nearby checkpoints, accuracy +-0.7 with seeds): the best saving / accuracy point; not a candidate if saving < 48% (the target is out of reach from there); a 52 / -0.5 point -> validation (section 5) |
 | fails if | too few right answers on damaged questions; accuracy comes back only by long thinking; shortest-right guards still push shorter; no-fit repair turns into refusing valid calls; chosen likelihood collapses (-> NLL ablation) |
 
@@ -98,4 +98,4 @@ checkpoint. Screen gain gone on fresh / seed 2 -> treat as noise.
 2. Track A on one GPU; Track B adapters on the other.
 3. B3 merges (3 screens), B4 control alongside, up to 8 coordinate screens.
 4. B5 only if its gate passes. Freeze; seed 2 + fresh 240; full test with the user's OK.
-GPU estimates are reservations: A ~12 h (3 h answers + < 1 h training + 8 screens); B adapters <= 14 h; merges 3-11 h; control 6-7 h; round 2 <= 13 h.
+GPU estimates are reservations: A ~8 h (3 h answers + < 1 h training + 4 screens, more only if the curve is interesting); B adapters <= 14 h; merges 3-11 h; control 6-7 h; round 2 <= 13 h.
