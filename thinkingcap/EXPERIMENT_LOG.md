@@ -4698,3 +4698,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   +40 / +2.1, no-fit +42 / -1.5), +1.2 vs curve; **step 40 +51.2 / -2.1** (svamp +58 / -4.0, mbpp +61 / -4.4, ifeval +43 / -1.3, simple
   +36 / -0.2, multiple +39 / +1.1, no-fit +41 / +2.7), +1.0. Gentler than rpB: keeps ~51% saved but math (-4.0) and code stay
   damaged; step 80 next. GPU 1: D10 l2s50e step 250/332.
+- 5 Nov ~13:50 Claude session restart: both Colab tabs lost their output; the user reconnected, plans re-run from a47f4cf
+  (rs-bidax6p, rpB commented as done). GPU 1 resumed D10 l2s50e after step 310; GPU 2 skipped the finished rpC screens.
+- **rpC-80 (lr 1e-5, step 80): +43.4 / +0.6** (svamp +44 / -1.7, mbpp +47 / +2.3, ifeval +46 / +0.6, simple +31 / -2.7, multiple
+  +35 / +1.1, no-fit +39 / +5.4), **+2.4 vs curve: new highest above the curve** (rpB-40 +2.1 at the same 43.4% saved, +0.3 pts).
+  rpC's four points (53.6/-3.0, 50.5/-1.8, 51.2/-2.1, 43.4/+0.6) and rpB's lie on one frontier: the repair trades length for
+  accuracy, the gentler lr lands slightly higher at the end. Still no point at >= 50 / -1. Track A done; finish-lpt6 started
+  (svamp adapter seed 1 training, 241 steps).
