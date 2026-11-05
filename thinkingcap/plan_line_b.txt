@@ -499,15 +499,15 @@ mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_p
 # 6 Nov (user): the October per-type run redone, ONLY two changes: the NEW training data (jpa = October's exact lpv-base rule +
 # matching on the new pool) and float32; same 4 groups, same settings (NLL 1, constant lr 2e-5, 16 pairs/step, one pass, seed 0),
 # each group x kind cut to October's pair count (same steps); scored exactly like October: solos at 1.0 and at pt-mid strength, softer/soft/mid
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-svamp --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-mbpp --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-ifeval --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-bfcl --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-svamp-mid --pt-weights svamp=0.3,mbpp=0,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-mbpp-mid --pt-weights svamp=0,mbpp=0.45,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-ifeval-mid --pt-weights svamp=0,mbpp=0,ifeval=0.6,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag solo-bfcl-mid --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=0.45
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag softer --pt-weights svamp=0.2,mbpp=0.25,ifeval=0.35,bfcl=0.25
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-svamp --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-mbpp --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-ifeval --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-bfcl --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-svamp-mid --pt-weights svamp=0.3,mbpp=0,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-mbpp-mid --pt-weights svamp=0,mbpp=0.45,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-ifeval-mid --pt-weights svamp=0,mbpp=0,ifeval=0.6,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag solo-bfcl-mid --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=0.45
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag softer --pt-weights svamp=0.2,mbpp=0.25,ifeval=0.35,bfcl=0.25
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
 end

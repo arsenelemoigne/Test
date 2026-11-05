@@ -4833,3 +4833,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   (screen-equal -1.3; svamp +41 / -1.7, mbpp +45 / -1.0, ifeval +41 / -0.6, simple +36 / -0.2, multiple +39 / +3.6, no-fit +37 / -9.4),
   +0.15 vs curve. The merge saves MORE than its solos predict (token ratios multiplied: 36.2%; consult3 guessed 40 / -2.5); accuracy
   close to the solos' sum (about -1.1); the whole cost is no-fit -9.4 (no no-fit adapter, two call-making adapters).
+- ~00:45 (user) the October rerun's adapters save a checkpoint every 5 steps (pertype --pt-save 5, new; adapters/lpj-<group>/step-N, synced to Drive) so any step can be scored or restored later.

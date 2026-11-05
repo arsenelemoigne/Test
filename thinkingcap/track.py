@@ -279,6 +279,7 @@ def main():
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-cap-like", default="", help="pertype: cut each group x kind to pairs-<this>'s counts (same steps)")
+    parser.add_argument("--pt-save", type=int, default=25, help="pertype: save a checkpoint (adapters/<name>-<group>/step-N, kept on Drive) every N steps")
     parser.add_argument("--pt-check", action="store_true", help="pertype: print the (capped) pair counts per group and stop, no training")
     parser.add_argument("--pt-full", action="store_true", help="pertype: also run the official full test (2,759 x 8) of each merge")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
@@ -2918,7 +2919,7 @@ def pertype(args):
             py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
         if not (adapter / "adapter_config.json").exists():
             py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out",
-               adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", 25,
+               adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.pt_save,
                "--epochs", 1, "--dtype", args.dtype, "--seed", 0)
             drive_sync("save")
         finals[group] = adapter
