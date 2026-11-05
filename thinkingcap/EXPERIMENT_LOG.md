@@ -4820,3 +4820,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   Key runs: rpC-80 +0.43 (+2.2 vs curve), rpB-40 +0.10 (+1.9), bidax5q final -0.59 (+1.7), pt-mid -2.58 (+1.3). Still 0
   checkpoints in the target box. The yardstick formula is unchanged (fixed 2 Nov); FullEval's own live fit refits itself.
   From now on the log uses the full-eval-weighting line as the overall accuracy.
+- ~23:45 (user) queued on GPU 2 after chain1 answers half b: FULL TEST of pt-mid (pertype --pt-full, new option: merge + official 2,759 x 8 against full-base).

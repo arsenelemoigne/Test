@@ -278,6 +278,7 @@ def main():
     parser.add_argument("--lp-epochs", type=int, default=1, help="lupin: dpo.py --epochs")
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
+    parser.add_argument("--pt-full", action="store_true", help="pertype: also run the official full test (2,759 x 8) of each merge")
     parser.add_argument("--pt-weights", default="svamp=0.5,mbpp=0.8,ifeval=1,bfcl=0.8", help="pertype: per-type merge strengths")
     parser.add_argument("--pt-no-train", action="store_true",
                         help="pertype (5 Nov): the adapters must already exist on Drive; fail instead of retraining (solo screens)")
@@ -2906,14 +2907,22 @@ def pertype(args):
     for tag, w in ((("sum", {g: 1.0 for g in PT_GROUPS}),) if not args.pt_tag else ()) + ((args.pt_tag or "tuned", weights),):
         out = ROOT / f"{pre}-{name}-{tag}"
         drive_sync("restore", only=[str(out)])
-        if not (out / "results.json").exists():
+        full = ROOT / f"full-{name}-{tag}"  # (5 Nov, user) --pt-full: the official full test (2,759 x 8) of the merge
+        if args.pt_full:
+            drive_sync("restore", only=[str(full), str(ROOT / "full-base")])
+        need = [(o, q, n) for o, q, n in ((out, val, 4), (full, "questions", 8))
+                if (o is out or args.pt_full) and not (o / "results.json").exists()]
+        if need:
             model = Path("/content/lupin-models") / f"{name}-{tag}"
             py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
                *[f"{finals[g]}:{w.get(g, 1.0)}" for g in PT_GROUPS if w.get(g, 1.0) > 0])  # 0 = left out (solo screens)
-            evaluate(out, samples=4, questions=val, model=model)
+            for o, q, n in need:
+                evaluate(o, samples=n, questions=q, model=model)
+                drive_sync("save")
             shutil.rmtree(model, ignore_errors=True)
-            drive_sync("save")
         print(score_line(f"{name}-{tag} {w} ({label})", out, base=ref), flush=True)
+        if args.pt_full:
+            print(score_line(f"{name}-{tag} {w} (FULL evaluation 2,759 x 8)", full, base=ROOT / "full-base"), flush=True)
 
 
 def tooltopup(args):
