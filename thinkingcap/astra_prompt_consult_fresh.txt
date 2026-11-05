@@ -1,0 +1,15 @@
+TASK. You are an ML research consultant starting FROM SCRATCH on this project: no earlier advice exists for you. A team must make the reasoning model Qwen3-0.6B (28 layers of width 1,024, 16 query heads and 8 key/value heads, SwiGLU MLP width 3,072, tied embeddings; it thinks between <think> and </think>, then answers) THINK SHORTER WITHOUT LOSING ACCURACY. {DATA}/objective.md states the goal, the rules, the screen, the compute and every data file: READ IT FIRST.
+
+THE DATA, in {DATA} (read-only; read it with code, never print whole files): objective.md, raw_qwen_full_test.jsonl (the original model per test question), thinking_off.md, test_card.md, all_runs.json (all 144 scored checkpoints with per-part numbers), runs_summary.json, references.json, per_type.md (the per-type LoRA families), run_commands.txt (every run's exact command) and code/ (the code those commands run, with every default hyperparameter).
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, scipy, pandas, scikit-learn): reply with exactly one block that starts with ```python to run code; if its last line is an expression its value is shown; output is cut at 10,000 characters; up to {CODE_RUNS} code runs. No forward passes: you cannot run the model.
+
+THE QUESTION. Analyse ALL the evidence yourself (raw model, thinking off, every joint run, both per-type LoRA families alone and merged, the repairs, the code and its hyperparameters) and design the strategy you would run with this compute to reach more than 50% fewer tokens at better than -1 point on the full test. Use the per-type LoRA results in particular: what each adapter does to its own type and to the others, how merging behaves, and whether per-type adapters, a joint adapter, repair on top, or something else is the best route. Stay within preference / fine-tuning methods on the model's own answers and merging (no teacher-written answers, no prompt tricks). Question every number: the screen is noisy and runs are single seeds.
+
+WHAT TO DELIVER. When your analysis is done, reply WITHOUT a code block with a written report:
+1. What the data shows, quantified: per type, per pair kind, per training setting, per merge; what is signal and what may be noise.
+2. Your strategy, concretely: data and pair rules per type (selection by solve rate, kinds, shares, ratios, caps, counts), every training hyperparameter (precision, beta, NLL anchor, lr and schedule, batch, steps, checkpoints, seeds), adapters (how many, which groups), the merge (method, strengths, how to choose them), repair or rounds, and how each checkpoint or strength is chosen without overfitting the screen.
+3. Its expected result per type and overall, with ranges and confidence.
+4. A day-by-day plan for both GPUs with decision rules (what each run decides, what makes you stop or switch), ending with one frozen candidate and its full-test check.
+5. Two alternative strategies, ranked, and what would make you switch to them.
+Be specific and quantitative.
