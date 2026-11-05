@@ -301,6 +301,9 @@ def main():
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
     parser.add_argument("--tp-rl", default="", help="thinkprune: extra rl_train.py arguments, comma-separated "
                         "(GRPO v2, 4 Nov: e.g. --fixed-denominator,--max-tokens-code,8192,--full-support,--grad-clip,0.5)")
+    parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
+                        help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
+                             "instead of every --tp-score-every")
     parser.add_argument("--tp-persist", action="store_true",
                         help="thinkprune: one AdamW and one lr schedule across the 10-step blocks (--init-state, --total-steps)")
     parser.add_argument("--tp-include-unsolved", action="store_true",
@@ -3294,7 +3297,7 @@ def thinkprune(args):
             drive_sync("save")
         print((ckpt / "rl_log.jsonl").read_text()[-3000:], flush=True)
         previous = ckpt
-        if not args.tp_smoke and done % args.tp_score_every == 0:
+        if not args.tp_smoke and (done in args.tp_score_steps if args.tp_score_steps else done % args.tp_score_every == 0):
             out = ROOT / f"s4-{name}-{done}"
             drive_sync("restore", only=[str(out)])
             if not (out / "results.json").exists():
