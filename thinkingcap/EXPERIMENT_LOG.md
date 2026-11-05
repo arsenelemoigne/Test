@@ -4774,3 +4774,18 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - lpt6 half-strength solos: **one function @0.5 +15.3 / -0.7** (simple +18 / +0.2; no-fit +18 / -3.3, ifeval +4 / -1.0), -1.0 vs
   curve; **several functions @0.5 +8.3 / -0.2** (multiple +14 / +0.6; no-fit +10 / -2.1, ifeval +1 / -1.9), -0.4 vs curve.
   Mild shared shortening; the cost lands on no-fit again. No-fit @0.5 next, then consult3 screens #1 / #2.
+- ~20:20 GPU 2's queue ENDED (screens ran ~15-25 min each, faster than planned):
+  - lpt6 no-fit @0.5: **+4.5 / -0.6** (no-fit +23 / +4.8; simple +10 / -4.0, multiple +10 / -3.4, ifeval -3 / -1.7), -0.6 vs
+    curve: half strength keeps the "no call" bias (callable -4.0 / -3.4) -> consult3 rule B: cancel screen #6.
+  - **consult3 #1 pt-nocode (math .30 / code 0 / instr .60 / tools .45): +50.8 / -2.7** (svamp +58 / -4.0, mbpp +60 / -2.5, ifeval
+    +44 / -2.5, simple +36 / -1.7, multiple +40 / +1.3, no-fit +40 / -4.8), +0.35 vs curve (pt-mid +1.3). Dropping code loses
+    4.2 points of saving at the SAME accuracy (pt-mid 55.0 / -2.6): code still saves 60% without its own adapter (spill-over),
+    and the code adapter costs nothing in the merge. Prediction was 51 / -1.5: wrong on accuracy -> keep a code adapter.
+  - **consult3 #2 pt-shift (.15 / 0 / .65 / .65): +54.4 / -3.9** (svamp +59 / -5.4, mbpp +63 / -5.0, ifeval +49 / -2.7, simple +39 /
+    -1.9, multiple +44 / +1.7, no-fit +45 / -7.3), -0.1 vs curve. Prediction 55 / -2.0: wrong. Less math strength does NOT
+    protect math (-5.4 with math at .15): math's loss comes from the instructions / tools spill-over; more tools strength hurts
+    no-fit (-7.3) and code (-5.0). pt-mid's mix stays the best of the pt merges (+1.3).
+  - rescore-old (old line, reference only): drpo3d-23 +21.7 / -0.4, drpo3f-15 +26.5 / +0.1, stopB3-soup-25 +39.6 / -3.2.
+  - lpw-2stage step 50 (dp13, "be right" round then l2s50e): **+29.5 / +1.6** (no-fit +37 / +6.5, multiple +32 / +2.9, mbpp +16 /
+    +3.7, simple +27 / -4.0), +1.8 vs curve.
+  GPU 2 is IDLE. GPU 1: polans pc1-a (chain1 answers 10,068 questions x4), then pc1-b, chain1r2.
