@@ -4625,3 +4625,15 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - pt-mid solos at pt-mid strength: CODE 0.45 **+10.0% / -2.5** (-2.7 vs curve; ifeval -3.7, math -2.5: likely partly screen noise,
   since the same adapter at 1.0 read -1.3); IFEVAL 0.60 **+23.1% / -1.2** (-1.4; no-fit -3.3, multiple -2.7). Tools at 0.45 next,
   then the additivity check vs pt-mid (55.0 / -2.6), then Track A.
+- ~11:30 **D4 lpd-budget final: +49.0% / -1.3** (svamp +60 / -2.9, mbpp +43 / -0.2, ifeval +47 / -1.9, simple +40 / -2.5, multiple
+  +45 / +1.7, no-fit +46 / +0.4), **+1.4 vs curve**: the best D-variant so far, close to v1 (46.7 / -0.5, +1.8) but not above it;
+  math carries the loss.
+- pt-mid solo TOOLS at 0.45: **+28.6% / -1.1** (svamp +27 / -2.9, mbpp +32 / +0.4, ifeval +28 / -0.8, simple +25 / -2.5, multiple
+  +28 / -0.2, no-fit +28 / -0.8), -1.0 vs curve.
+- **Additivity check (pt-mid's 4 solos at their strengths vs the measured pt-mid merge 55.0 / -2.6):** token ratios multiply
+  (0.881 x 0.900 x 0.769 x 0.714 = 0.435 -> predicted 56.5% saved, measured 55.0: lengths ADD almost exactly as stacked
+  pushes); accuracy losses do NOT add (sum -5.8 predicted, -2.6 measured: +3.2 better than additive). Merging protects more
+  than the sum of its parts (each adapter's own-type "be right" pairs offset the others' spill-over).
+- **Track A smoke passed on the GPU** (answers, pairs, 4 training steps); the real run rpA started: 4,372 questions (svamp
+  2,400 of which all 1,644 mixed; mbpp 900; no-fit 472 = all 260 mixed + the rest; ifeval / simple / multiple 300 / 150 / 150),
+  pt-mid answering x4 (2,400 / 4,372 sampled at 11:30).
