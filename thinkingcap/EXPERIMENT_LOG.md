@@ -4789,3 +4789,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   - lpw-2stage step 50 (dp13, "be right" round then l2s50e): **+29.5 / +1.6** (no-fit +37 / +6.5, multiple +32 / +2.9, mbpp +16 /
     +3.7, simple +27 / -4.0), +1.8 vs curve.
   GPU 2 is IDLE. GPU 1: polans pc1-a (chain1 answers 10,068 questions x4), then pc1-b, chain1r2.
+- ~22:15 (user) **DPO story page** https://claude.ai/artifact/AVfDkpzQ62tuXuwwgciC21 (Dashboard type): every scored checkpoint
+  (144) on one chart with our curve, the README bar (> 20% shorter, <= 0.2 pt per 1% saved), the target box and the references
+  (raw, thinking off on the FULL test ~90% / -22.3 [saved approximate: 62-98% per part], michal-bida, Lightning McQwen3);
+  one-row-per-run tables for the joint runs grouped by idea and for the per-type families + repair; lessons. README bar also
+  added to FullEval (dotted line, "vs README bar" in tooltips) and ModelTree ("vs README" column): 109 of 144 runs pass, none at
+  >= 20% saved falls below; the 35 that fail are all under 20% saved.
