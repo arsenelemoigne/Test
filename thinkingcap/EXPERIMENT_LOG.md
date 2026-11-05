@@ -4563,3 +4563,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   at 0.5, five predeclared merges C / P / S6 / P+ / T, additivity residuals). 4 vs 6: neither by default; use six to
   finish lpt6. Most informative cheap data: pt-mid's 4 adapters alone at their deployed strengths -> queued (4 screens)
   after the 4 full-strength solos on GPU 2.
+- ~05:30 **D6 lpd-simright step 100: +34.1% / +0.7** (svamp +52 / -0.2, mbpp +16 / 0.0, ifeval +29 / +1.5, one function +30 /
+  -2.9, several +32 / +1.5, no fit +40 / +6.7), +1.3 vs curve; **step 200: +30.3% / +0.6** (svamp +40 / +0.6, mbpp +6 / +1.0,
+  ifeval +37 / -0.6, one function +31 / -4.0, several +30 / -1.5, no fit +40 / +9.4), +0.8. Accuracy kept or gained (no-fit
+  strongly) but the right pairs halve the shortening vs bidax5q (41.8 / +0.2 at step 100). Final screening next.
+  GPU 1: D4 budget step 55/337. Both tabs show "Connecting" while still progressing (cosmetic).
