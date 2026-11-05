@@ -4764,3 +4764,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   (at 1.0: 32.6 / -2.8). GPU 1: D12 chain1 step-100 screen grading.
 - ~18:40 (user) bidax6s (bida's full schedule) DROPPED from GPU 2's queue.
 - ~18:45 (user) GRPO stays off. Let every per-type DPO LoRA run finish (rs-lpt6h, consult3 screens #1/#2), then gather all per-type data -> battle plan -> try it (Jasmin).
+- **D12 lpd-chain1 step 100: +21.7 / +0.4** (svamp +36 / -0.6, mbpp +11 / +0.2, ifeval +10 / +1.7, simple +25 / -1.0, multiple
+  +27 / -0.4, no-fit +29 / +2.3), +0.2 vs curve: the chain-1 rule (shortest right > longest right >= 1.5x; guard =
+  shortest right > shortest finished wrong; balanced 40:60) trains slowly, far below 40% at step 100. Steps 200 / final next.
