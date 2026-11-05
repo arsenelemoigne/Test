@@ -393,7 +393,7 @@
 # done 5 Nov (skipped on restart): lupin --name lpd-margin --lp-min-solve 0 --lp-recipe long2short --lp-extra=--margin-any --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 # done 5 Nov (skipped on restart): rescreen --name rs-margin --cx-names lpd-margin --cx-steps 100 200 0 --seeds 0
 # Track A, stronger dose 1 (user, 5 Nov): same pt-mid answers and pairs as rpA, lr 2e-5 (D7 stage-1 dose), 40 steps
-ptrepair --name rpB --rp-from rpA --rp-lr 2e-5 --rp-steps 40 --rp-screen 10 20 40
+# done 5 Nov (skipped on restart) ptrepair --name rpB --rp-from rpA --rp-lr 2e-5 --rp-steps 40 --rp-screen 10 20 40
 lupin --name lpd-l2s50e --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --lp-recipe long2short --lp-no-match --lp-nll 0 --lp-answers 4 --lp-lr-schedule cosine --seeds 0 --lp-save 10 --dpo-steps 9999 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10 --lp-dpo=--bida-exact,--target-steps=339
 rescreen --name rs-l2s50e --cx-names lpd-l2s50e --cx-steps 100 200 0 --seeds 0
 # D12 (user, 4 Nov): the October first line's rule (chain1: shortest right > longest right, shortest right > shortest
