@@ -4643,3 +4643,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   **rpA-5 (pt-mid + repair at step 5): +53.9% / -3.4** (svamp +61 / -3.7, mbpp +64 / -6.0, ifeval +46 / -1.9, simple +37 / -0.2,
   multiple +41 / +0.4, no-fit +42 / -5.8), +0.3 vs curve: at step 5 the repair has barely moved the model, so this is ~pt-mid
   re-measured (55.0 / -2.6 on 1 Nov; -0.8 apart = screen noise and the merge path). Steps 10 / 20 / 40 next.
+- ~13:30 **Track A rpA curve** (pt-mid + be-right repair, lr 5e-6): step 10 **+53.6 / -2.7** (+0.9 vs curve), step 20 **+54.1 /
+  -3.6** (+0.1), step 40 **+52.3 / -2.8** (+0.5); step 5 was +53.9 / -3.4. Flat within screen noise (+-0.7): the repair at this
+  dose did not move accuracy overall. Per type: no-fit improves steadily (-5.8 -> -5.2 -> -3.7 -> -1.7, the one clear signal),
+  code -6.0 -> -2.5 (noisy), math stays -3.7..-5.4, ifeval worsens (-1.9 -> -4.2). Training barely moved (loss 0.693 -> 0.667).
+  Verdict: lr 5e-6 x 40 steps is too gentle to repair; not a candidate. Next candidate (user to decide): the same pairs at a
+  stronger dose (lr 2e-5, as D7 stage 1; or 1e-5 x 80 steps), screens 10 / 20 / 40; the pairs and pt-mid's answers are reused.
+  GPU 2 moved on to bidax6p (the precision-only test); GPU 1 D5 margin trained, screening.
