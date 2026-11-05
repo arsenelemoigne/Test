@@ -4801,3 +4801,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   3 Nov): 28.7% / -1.71 full test** (math 40 / -2.3, code 16 / -2.0, ifeval 31 / -1.1, simple 24 / -1.2, multiple 28 / -4.3,
   no-fit 26 / +0.2), -1.6 vs our curve, +4.0 vs the README bar: one extra MLP layer after layer 13 (198k trained params) on
   short answers the model wrote with Qwen3-8B hints. Added as a reference to FullEval and the DPO story page.
+- ~22:50 (user) **consult4** started: the consultant FROM SCRATCH (no earlier reports, none of our decisions) on all per-type data: raw Qwen per full-test question, thinking off, 144 checkpoints, run summaries, references, per-type families, every run command + code; question = best strategy for > 50% / better than -1 with our compute. Cap $25, 60 code runs.
