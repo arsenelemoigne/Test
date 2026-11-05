@@ -4707,6 +4707,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   (svamp adapter seed 1 training, 241 steps).
 - ~15:20 **D10 lpd-l2s50e** (bidax5q s0 settings, l2s50e pair rule: shorten only where solve >= 50%, easy ratio 1.2, shorten cap 2):
   **step 100 +54.4 / -3.6** (svamp +71 / -7.9, mbpp +59 / -3.7, ifeval +37 / -0.2, simple +41 / -2.5, multiple +45 / +0.4, no-fit +44 /
-  -5.4), -0.2 vs curve; **step 200 +49.7 / -3.0** (svamp +64 / -6.0, mbpp +46 / -1.5, ifeval +40 / -4.0, simple +42 / -2.5, multiple +45
+  -5.4), +0.2 vs curve; **step 200 +49.7 / -3.0** (svamp +64 / -6.0, mbpp +46 / -1.5, ifeval +40 / -4.0, simple +42 / -2.5, multiple +45
   / +0.0, no-fit +47 / +1.2), -0.2 vs curve. On the curve, no better than D11 push2 at the same saving (push2-200 49.7 / -2.9); math
   hit hardest. Final screen next. GPU 2: lpt6 svamp seed 1 step 200/241.
