@@ -4687,3 +4687,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   -2.5, multiple +40 / +0.6, no-fit +42 / -1.5), +1.2 vs curve: code and no-fit repaired (mbpp -6.0 -> -0.8, no-fit -5.8 -> -1.5
   vs rpA-5), math still -5.8. Training moved this time (loss 0.693 -> 0.578, 75% ordered right at step 40). Steps 20 / 40 next.
   rpC (lr 1e-5 x 80) training on GPU 2, step 25/80.
+- ~21:30 **Track A rpB (lr 2e-5) curve**: step 10 +52.4 / -2.2 (+1.2), **step 20 +48.7 / -1.1** (svamp +53 / -1.9, mbpp +56 / -1.9,
+  ifeval +45 / -1.5, simple +35 / -1.0, multiple +38 / +1.5, no-fit +41 / +2.1), **+1.55 vs curve**; **step 40 +43.4 / +0.3** (svamp
+  +45 / -3.1, mbpp +48 / +1.0, ifeval +44 / +1.7, simple +31 / -3.1, multiple +36 / +0.8, no-fit +41 / +7.3), **+2.1 vs curve: the
+  highest above the curve of any model on the current data** (v1 +1.8). The repair works at this dose: accuracy comes back
+  (code, ifeval, no-fit fully), but so does length (55 -> 43% saved); the points move ALONG a frontier above v1's. Not yet
+  >= 50 / -1. Natural next probes: strength rescue (rpB-40 at 0.5, rpB-20 at 0.5 / 0.75) to land between 20 and 40 at ~50 / -1,
+  and a second seed. rpC-10 (lr 1e-5): +53.6 / -3.0 (+0.6); rpC 20 / 40 / 80 next.
