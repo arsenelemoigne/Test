@@ -4681,3 +4681,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   only; -50% at < 1 pt at 1.5B came from on-policy RL with correctness-aware length rewards (DRPO; AdaptThink uses skipping
   thinking = not allowed here) or SEARCHED / layer-wise merge coefficients (Evo-L2S -52% at +4.6 pts, FIM-TIES); uniform merges
   degrade at 1.5B ("smaller models struggle to learn from model merging"); DARE needs drop < 0.5.
+- ~19:30 **bidax6p final: +48.8 / -2.3** (svamp +57 / -3.1, mbpp +39 / -0.6, ifeval +52 / -5.2, simple +42 / -5.2, multiple +46 /
+  +0.2, no-fit +48 / +3.7), +0.4 vs curve. Precision alone: best at step 300 (+1.1); his schedule (bidax6s) still to come.
+- **rpB-10 (pt-mid + repair at lr 2e-5, step 10): +52.4 / -2.2** (svamp +58 / -5.8, mbpp +63 / -0.8, ifeval +46 / -0.8, simple +37 /
+  -2.5, multiple +40 / +0.6, no-fit +42 / -1.5), +1.2 vs curve: code and no-fit repaired (mbpp -6.0 -> -0.8, no-fit -5.8 -> -1.5
+  vs rpA-5), math still -5.8. Training moved this time (loss 0.693 -> 0.578, 75% ordered right at step 40). Steps 20 / 40 next.
+  rpC (lr 1e-5 x 80) training on GPU 2, step 25/80.
