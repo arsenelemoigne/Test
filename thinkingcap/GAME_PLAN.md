@@ -99,3 +99,11 @@ checkpoint. Screen gain gone on fresh / seed 2 -> treat as noise.
 3. B3 merges (3 screens), B4 control alongside, up to 8 coordinate screens.
 4. B5 only if its gate passes. Freeze; seed 2 + fresh 240; full test with the user's OK.
 GPU estimates are reservations: A ~8 h (3 h answers + < 1 h training + 4 screens, more only if the curve is interesting); B adapters <= 14 h; merges 3-11 h; control 6-7 h; round 2 <= 13 h.
+
+## 9. Proposed next step (NOT queued; propose to the user after the current runs)
+TIES and SLERP merges of pt-mid's existing 4 LoRAs (no training, ~1 h per 720 screen): TIES at two trim levels (keep the top
+20% and 50% of each adapter's weight change, sign election, merge at pt-mid strengths) and one chained SLERP. Why: the literature
+on training per data type then merging (DEM, EMNLP 2024; "Mix Data or Merge Models?", Cohere 2024; "Multi-task Code LLMs: Data Mix
+or Model Merge?", 2026; long-to-short reasoning merging, Wu et al. 2025, Evo-L2S) finds the merge method matters, and plain
+weighted addition is the weakest; TIES may keep each adapter's type-specific change and drop the shared "think shorter
+everywhere" part (the spill-over seen in the pt-mid solos). Needs a small merge-method option in merge.py.
