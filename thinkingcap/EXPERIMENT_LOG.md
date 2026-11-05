@@ -4710,3 +4710,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   -5.4), +0.2 vs curve; **step 200 +49.7 / -3.0** (svamp +64 / -6.0, mbpp +46 / -1.5, ifeval +40 / -4.0, simple +42 / -2.5, multiple +45
   / +0.0, no-fit +47 / +1.2), -0.2 vs curve. On the curve, no better than D11 push2 at the same saving (push2-200 49.7 / -2.9); math
   hit hardest. Final screen next. GPU 2: lpt6 svamp seed 1 step 200/241.
+- ~15:50 **D10 lpd-l2s50e final: +53.5 / -2.7** (svamp +68 / -5.4, mbpp +50 / -3.1, ifeval +46 / -1.0, simple +43 / -3.3, multiple +46
+  / -2.1, no-fit +48 / +1.2), +0.8 vs curve; beats D11 push2 final (52.4 / -3.0) slightly at a bit more saving. Math still the cost.
+  GPU 1 now trains D12 lpd-chain1 (333 steps x 18 pairs). GPU 2: lpt6 svamp merged and screening.
