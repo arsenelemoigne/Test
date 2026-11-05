@@ -4733,3 +4733,13 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~17:20 lpt6 math solo at 0.5: **-12.2 / -0.5** (svamp -26% / -2.9, ifeval -15 / +1.5, mbpp -3 / -0.4, simple -6 / -1.2,
   multiple -6 / -0.8, no-fit -6 / +1.9): still longer everywhere and worse on math -> by consult3's rule A, out of all merges.
   GPU 1: D12 chain1 step 250/333.
+- ~17:40 (user OK) queued on GPU 2 after rs-lpt6h: consult3 screens #1 pt-nocode (math .30 / code 0 / instr .60 / tools .45)
+  and #2 pt-shift (.15 / 0 / .65 / .65), no training; then the Jasmin pair sets, October's lpv-base rule (l2s50e: shortest
+  right > right >= 1.5x longer on questions solved >= 50%, easy 1.2x; shortest right > longest wrong; no-fit protection:
+  solve >= 0.8 + right pairs) on the NEW data (dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2; 10 answers per
+  question, as in October): jpa = matched like October (lupin_select.py against the original model's runs on the choosing
+  set + questions_40, both drawn from the evaluation questions), jpb = unmatched, cut at random to jpa's count per part x
+  kind. Pairs only (lupin --lp-pairs-only), counts and median lengths reported, no training yet. User's agreed Jasmin
+  changes: math adapter + a few "be right" pairs; pooled tools adapter (no-fit protection) + the 3 slices as challengers;
+  code adapter possibly dropped (screen #1). Next (user): variations of each rule (the 1.5x ratio, the 50% solve floor and
+  1.2x easy ratio, per-type tweaks) decided by the data.
