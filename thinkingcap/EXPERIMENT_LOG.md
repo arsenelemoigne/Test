@@ -4923,3 +4923,5 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   pool's own labels over the original's 10 answers, asserts every B >= 100 tokens, and passes it as --gr-norms. Restarted as
   **gr2f** on GPU 1 (same settings otherwise: original Qwen, solved >= 5/10, 40 steps x 32 x 8, scored at 10/20/30/40);
   gr2e's step-10 adapter is discarded (its 720 score was interrupted).
+- ~08:45 gr2f started on GPU 1 with the corrected scale: B = irrelevance 231, multiple 208, simple 180, ifeval 669, mbpp 1,818,
+  **svamp 824** (was 82). Scores due at steps 10 / 20 / 30 / 40 (~35 min of training per 10 steps + a 720 screen each).
