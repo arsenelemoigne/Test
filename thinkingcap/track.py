@@ -309,6 +309,7 @@ def main():
     parser.add_argument("--tp-cap-other", type=float, default=0.70)
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
+    parser.add_argument("--tp-norm-means", action="store_true", help="thinkprune: gated B per part = the original's mean generated tokens (pool part labels)")
     parser.add_argument("--tp-check", action="store_true", help="thinkprune: print the selected questions per part vs the need, no training")
     parser.add_argument("--tp-answers10", action="store_true", help="thinkprune: select questions from the original's 10 answers, not 4")
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
@@ -3584,6 +3585,20 @@ def thinkprune(args):
             py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", base, "--adapters", f"adapters/{args.tp_start}:1")
             drive_sync("save")
     steps, questions, group = (5, 16, 8) if args.tp_smoke else (args.tp_steps, args.tp_questions, args.tp_group)
+    norm_args = []
+    if args.tp_norm_means:  # (6 Nov) the gated reward's B per part = the original's mean generated tokens on the pool's
+        # questions, using the POOL's part labels (gr2e's --gr-norms-from re-derived parts and got svamp = 82 tokens: wrong)
+        tot, cnt = defaultdict(int), defaultdict(int)
+        for qid, got in by_q.items():
+            if qid in rows:
+                for _, n in got:
+                    tot[rows[qid]["part"]] += n
+                    cnt[rows[qid]["part"]] += 1
+        means = {p: round(tot[p] / cnt[p]) for p in tot if cnt[p]}
+        print(f"thinkprune {name}: gated B = the original's mean generated tokens per part: " +
+              ", ".join(f"{p} {v}" for p, v in sorted(means.items())), flush=True)
+        assert all(v >= 100 for p, v in means.items()), f"implausible mean lengths {means}"
+        norm_args = ["--gr-norms", ",".join(f"{p}={v}" for p, v in sorted(means.items()))]
     rl = Path("adapters") / f"{name}-rl"
     drive_sync("restore", only=[str(rl)])
     previous = None
@@ -3601,7 +3616,7 @@ def thinkprune(args):
                  if args.tp_reward == "lenpen" else []), *(["--dr-grpo"] if args.tp_dr_grpo else []),
                *(["--total-steps", steps] if args.tp_persist else []),
                *(["--init-state", previous / "resume.pt"] if args.tp_persist and previous else []),
-               *[x for x in args.tp_rl.split(",") if x])
+               *[x for x in args.tp_rl.split(",") if x], *norm_args)
             print(f"thinkprune {name}: steps to {done} took {(time.time() - began) / 60:.1f} min", flush=True)
             drive_sync("save")
         print((ckpt / "rl_log.jsonl").read_text()[-3000:], flush=True)
