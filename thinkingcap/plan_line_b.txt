@@ -494,9 +494,11 @@
 # done 6 Nov (skipped on restart) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-check
 mixscreen --name lpt6mix-Ccode --mx-weights svamp=0,mbpp=0.5,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
 # 6 Nov (user): what fills Drive, read only (aim: free ~50 GB, list first)
-drivereport --name dr6nov
+# done 6 Nov drivereport --name dr6nov
 mixscreen --name lpt6mix-Cnf --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.25
 mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
+# 6 Nov (user): Drive clean-up LIST (dry run, nothing moved)
+drivetidy --name dt6nov
 mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_python=0.7,bfcl_multiple=0.7,bfcl_irrelevance=0
 # 6 Nov (user): the October per-type run redone, ONLY two changes: the NEW training data (jpa = October's exact lpv-base rule +
 # matching on the new pool) and float32; same 4 groups, same settings (NLL 1, constant lr 2e-5, 16 pairs/step, one pass, seed 0),

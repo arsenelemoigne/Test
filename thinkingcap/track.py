@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--order", default="gain")
@@ -279,6 +279,9 @@ def main():
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-cap-like", default="", help="pertype: cut each group x kind to pairs-<this>'s counts (same steps)")
+    parser.add_argument("--dt-apply", action="store_true", help="drivetidy: move the listed items to Drive's trash (default: list only)")
+    parser.add_argument("--dt-keep-days", type=float, default=2, help="drivetidy: never touch anything changed in the last N days")
+    parser.add_argument("--dt-show", type=int, default=40, help="drivetidy: items printed per category")
     parser.add_argument("--pt-extend", action="store_true", help="pertype --pt-cap-like: train the capped pairs first, then all the remaining ones, in order, with a checkpoint at the capped run's last full step")
     parser.add_argument("--pt-step", type=int, default=0, help="pertype: score the adapters' step-N checkpoints instead of the finals")
     parser.add_argument("--pt-wait", type=int, default=0, help="pertype --pt-no-train: wait up to N hours for the adapters on Drive")
@@ -2181,6 +2184,76 @@ def drivereport(args):
     for sz, f in big:
         print(f"drivereport: file {f.relative_to(DRIVE)} {sz / 1e9:.2f} GB "
               f"{time.strftime('%Y-%m-%d', time.localtime(f.stat().st_mtime))}", flush=True)
+
+
+def drivetidy(args):
+    """(6 Nov, user: free ~90 GB on Drive, list first) What can go, by category, with exact paths and sizes. --dt-apply moves
+    them (deleting on the mounted Drive sends files to Drive's TRASH: reversible ~30 days; the user empties it). Never
+    touched: any results folder (runs/mvtf), any adapter's final weights, any checkpoint that was ever scored, anything
+    written in the last --dt-keep-days days, and every path named in a plan line."""
+    import re
+    import time
+    def size(path):
+        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file()) if path.is_dir() else path.stat().st_size
+    now = time.time()
+    recent = lambda p: now - p.stat().st_mtime < args.dt_keep_days * 86400  # noqa: E731
+    plans = " ".join(Path(f).read_text() for f in ("plan_line_a.txt", "plan_line_b.txt") if Path(f).exists())
+    results = [p.name for p in (DRIVE / ROOT).iterdir() if p.is_dir()] if (DRIVE / ROOT).is_dir() else []
+    cats = defaultdict(list)
+    # A: merged full models whose adapters are kept (rebuilt by merge.py in a minute)
+    for m in sorted((DRIVE / "models").iterdir()) if (DRIVE / "models").is_dir() else []:
+        if m.is_dir() and not recent(m) and m.name not in plans:
+            cats["A merged full models (adapters kept)"].append(m)
+    # B: dead-end experiment folders
+    for d in ("runs/sparse",):
+        if (DRIVE / d).is_dir():
+            cats["B Wanda pruning masks (direction ended 30 Oct)"].append(DRIVE / d)
+    # C: adapter checkpoints never scored (finals and scored steps kept)
+    for a in sorted((DRIVE / "adapters").iterdir()) if (DRIVE / "adapters").is_dir() else []:
+        if not a.is_dir() or recent(a) or a.name in plans:
+            continue
+        base = re.sub(r"-s\d+$", "", a.name)
+        scored = {int(m.group(1)) for r in results for m in [re.search(rf"{re.escape(base)}(?:-s\d+|-soup|-[a-z]+)?-(\d+)$", r)] if m}
+        for ck in sorted(a.glob("step-*")):
+            n = int(ck.name.split("-")[1]) if ck.name.split("-")[1].isdigit() else -1
+            if n not in scored:
+                cats["C adapter checkpoints never scored (final + scored steps kept)"].append(ck)
+        for f in a.rglob("resume.pt"):
+            cats["D optimizer resume states of finished RL runs"].append(f)
+    # E: probe answers of older pool candidates and rejected pools (results logged; dp9n-all kept: tool top-ups read it)
+    bon = DRIVE / "runs/bon"
+    for d in sorted(bon.iterdir()) if bon.is_dir() else []:
+        if recent(d) or d.name in plans:
+            continue
+        if re.match(r"probe-poolcand-dp([3-9]|1[01])(c|n)?(-all|-a|-b)?$", d.name) and d.name != "probe-poolcand-dp9n-all":
+            cats["E answers to older pool candidates (pools dp3-dp11)"].append(d)
+        elif re.match(r"poolup-dp1[245]$", d.name) or re.match(r"probe-poolmore-dp(8|9|10|11)-[ab]$", d.name):
+            cats["E rejected / superseded pools (dp12, dp14, dp15) and their top-up probes"].append(d)
+        elif d.is_file() and re.match(r"lupin-all-.*-a4\.jsonl$", d.name):
+            cats["F combined answer files of finished runs (rebuilt automatically when needed)"].append(d)
+    for f in bon.rglob("rollouts.jsonl.partial") if bon.is_dir() else []:
+        if (f.parent / "rollouts.jsonl").exists() and not recent(f):
+            cats["G leftover .partial copies next to a finished rollouts.jsonl"].append(f)
+    total = 0
+    for cat in sorted(cats):
+        items = sorted(((size(p), p) for p in cats[cat]), key=lambda t: -t[0])
+        sub = sum(sz for sz, _ in items)
+        total += sub
+        print(f"drivetidy: CATEGORY {cat}: {len(items)} items, {sub / 1e9:.1f} GB", flush=True)
+        for sz, p in items[:args.dt_show]:
+            print(f"drivetidy:   {p.relative_to(DRIVE)} {sz / 1e9:.2f} GB", flush=True)
+        if len(items) > args.dt_show:
+            print(f"drivetidy:   ... and {len(items) - args.dt_show} more", flush=True)
+    print(f"drivetidy: TOTAL {total / 1e9:.1f} GB" + (" -> moving to Drive trash" if args.dt_apply else " (dry run, nothing moved)"),
+          flush=True)
+    if args.dt_apply:
+        for cat in cats:
+            for p in cats[cat]:
+                if p.is_dir():
+                    shutil.rmtree(p, ignore_errors=True)
+                elif p.exists():
+                    p.unlink()
+        print("drivetidy: done", flush=True)
 
 
 def stopgold(args):
@@ -5292,7 +5365,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
