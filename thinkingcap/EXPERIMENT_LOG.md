@@ -4933,3 +4933,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   simple +7 / -1.9; no-fit +9 / 0.0). Step 30 trained (29.7 min), its score running.
 - ~12:00 **gr2f @ step 30: +6.8 / -0.4** official (-0.5 vs curve): saving FELL from step 20 (11.4): ifeval now LONGER than the
   original (-7% / -1.7), svamp +12 / 0.0, mbpp +11 / +0.8, tools +9-11 / -0.4 to -0.8. Step 40 trained, its score running.
+- ~13:00 **gr2f @ step 40 (final): +11.3 / +0.3** official (0.0 vs curve; multiple +12 / -2.7, ifeval +3 / +2.5, svamp +17 / -0.4).
+  **GRPO verdict:** 40 steps x 32 x 8 from the raw model save 4 -> 11 -> 7 -> 11% at about -0.5 to +0.3: accuracy holds, but the
+  saving is small and does not grow steadily; on the curve, not above it. Both GPUs' queues have now ended.
