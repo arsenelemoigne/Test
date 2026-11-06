@@ -4866,3 +4866,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - drivetidy first dry run: 108 GB listed, but two flaws found in review BEFORE anything moved: scored GRPO checkpoints
   (grA/B/C-rl steps 50 / 100) were listed (adapter "grA-rl" vs results "grA-*"), and GRPO resume files were counted twice.
   Fixed (name suffixes -rl / -drpo / -teach / ... stripped; D skips files inside C items); a second dry run is queued.
+- ~02:45 (user found it) new competitor **matousek-martin/qwen3-self-replay** (non-fork, created 5 Nov; "An independent submission to
+  BottleCapAI's ThinkingCap Test"): LoRA on Qwen3-0.6B, correctness-gated length reward + supervised replay of its own short
+  verified solutions, no teacher. Full test 2,759 x 8: Self-Replay-256 **31.23% / +0.21** (CI -0.48..+0.88; +0.5 vs our curve),
+  Self-Replay-850 **41.60% / -1.17** (+0.3), checkpoint 1280 46.58% / -2.35 (-0.1). No-fit -4.17 / -6.88 pp; one seed;
+  checkpoints chosen on the benchmark (stated). Added to FullEval as references (per-part numbers not copied).
