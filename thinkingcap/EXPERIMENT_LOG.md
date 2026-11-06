@@ -4857,3 +4857,12 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   / -2.1), +0.5 vs curve: the weak no-fit adapter repairs no-fit (-9.4 -> -2.1) WITHOUT breaking the call types and adds saving:
   the best lpt6 merge so far. drivereport: Drive project folder ~197 GB = adapters 120 (never-scored checkpoints), runs 61,
   models 13.3, data 2.7; drivetidy (new, dry run) queued to list exact clean-up items.
+- ~02:30 lpt6mix-tools (one fn + several + no-fit, each 0.5): **+31.0 / -2.3** official (svamp +31 / -5.0, mbpp +31 / -2.1, ifeval +25 / -1.7,
+  simple +32 / -4.0, multiple +37 / +2.9, no-fit +39 / +2.1): the three tool slices merged shorten everything ~31% but lose
+  one-function and math; weaker than pt's single pooled tools adapter at a similar dose (tools@.45 28.6 / -1.1).
+- The extended October rerun in PURE fp32 ran out of GPU memory on the code adapter (8,192-token answers on an L4); the math
+  adapter (lpj-svamp) trained. Rerun as lpk with --bida-precision (fp32 weights + fp16 autocast, as bidax6p / Track A), new
+  pertype --pt-dpo pass-through; everything else unchanged.
+- drivetidy first dry run: 108 GB listed, but two flaws found in review BEFORE anything moved: scored GRPO checkpoints
+  (grA/B/C-rl steps 50 / 100) were listed (adapter "grA-rl" vs results "grA-*"), and GRPO resume files were counted twice.
+  Fixed (name suffixes -rl / -drpo / -teach / ... stripped; D skips files inside C items); a second dry run is queued.
