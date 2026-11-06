@@ -309,6 +309,7 @@ def main():
     parser.add_argument("--tp-cap-other", type=float, default=0.70)
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
+    parser.add_argument("--tp-answers10", action="store_true", help="thinkprune: select questions from the original's 10 answers, not 4")
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
     parser.add_argument("--tp-rl", default="", help="thinkprune: extra rl_train.py arguments, comma-separated "
                         "(GRPO v2, 4 Nov: e.g. --fixed-denominator,--max-tokens-code,8192,--full-support,--grad-clip,0.5)")
@@ -3517,7 +3518,8 @@ def thinkprune(args):
     name = args.name
     # the same questions as v1's DPO data (3 Nov, user: same data for the DPO and GRPO comparisons): pool dp13 + top-ups
     extra = [x for x in args.tp_extra.split(",") if x]
-    answers = BON / f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}-a4.jsonl"
+    # (6 Nov, user) --tp-answers10: the original model's 10 answers per question (better solve rates / length means)
+    answers = BON / (f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}" + ("" if args.tp_answers10 else "-a4") + ".jsonl")
     drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra], SCREEN,
                                 str(ROOT / "s4-base")])
     rows = {}
