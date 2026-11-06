@@ -4928,3 +4928,6 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~09:30 (user) Ivan's joint plan J rejected: its core is bida's pair rules + settings; nothing built on another candidate's recipe will be run or submitted.
 - ~10:00 **gr2f @ step 10: +4.0 / -0.4** official (-0.3 vs curve; svamp +7 / -0.4, multiple +6 / -1.1, ifeval +3 / -1.7, mbpp +3 / +0.8):
   barely moved after 10 steps (training answers 600 -> 450 tokens, but that is on the training questions); step 20 training done, its score next.
+- ~11:00 **gr2f @ step 20: +11.4 / -0.6** official (-0.9 vs curve): math and code shorten with accuracy UP (svamp +18 / +0.6,
+  mbpp +16 / +0.8), but instructions barely shorten and lose (ifeval +2 / -2.5) and tool calls lose (multiple +10 / -2.3,
+  simple +7 / -1.9; no-fit +9 / 0.0). Step 30 trained (29.7 min), its score running.
