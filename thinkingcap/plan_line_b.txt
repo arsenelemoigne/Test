@@ -495,11 +495,11 @@
 # 6 Nov (user): build jpa and CHECK the capped counts before any training (no adapter trained, nothing scored)
 # done 6 Nov (skipped on restart) lupin --name jpa --lp-pairs-only --lp-min-solve-part bfcl_irrelevance=0.8 --lp-right-parts bfcl_irrelevance --lp-recipe long2short --lp-min-solve 0.5 --lp-easy-ratio 1.2 --lp-shorten-cap 2 --seeds 0 --lp-pool dp13 --lp-extra-q nofit1,tools1,code1,nofit2,nofit4,math1,math2 --lp-add-q nofit4,math1,math2 --lp-answers-pool dp10
 # done 6 Nov (skipped on restart) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-check
-mixscreen --name lpt6mix-Ccode --mx-weights svamp=0,mbpp=0.5,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
+# done 6 Nov (skipped on restart) mixscreen --name lpt6mix-Ccode --mx-weights svamp=0,mbpp=0.5,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0
 # 6 Nov (user): what fills Drive, read only (aim: free ~50 GB, list first)
 # done 6 Nov drivereport --name dr6nov
-mixscreen --name lpt6mix-Cnf --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.25
-mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
+# done 6 Nov (skipped on restart) mixscreen --name lpt6mix-Cnf --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.25
+# done 6 Nov (skipped on restart) mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
 # 6 Nov (user): Drive clean-up LIST (dry run, nothing moved)
 # done 6 Nov (first dry run: 108 GB, flawed: scored GRPO steps listed, resume files counted twice) drivetidy --name dt6nov
 # done 6 Nov mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_python=0.7,bfcl_multiple=0.7,bfcl_irrelevance=0
@@ -520,16 +520,16 @@ mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_
 # REPLACED 6 Nov by the extended run (GPU 2) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
 # REPLACED 6 Nov by the extended run (GPU 2) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
 # 6 Nov (user): dose curve of the extended lpj adapters (trained on GPU 2): each adapter alone at 1.0, at steps 10 and 30 (every 5th step stored on Drive)
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-svamp-s10 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-svamp-s10 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
 # 6 Nov (user approved categories A-G): move the reviewed list to Drive TRASH (reversible ~30 days; the user empties it)
-drivetidy --name dt6nov-apply --dt-apply
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-mbpp-s10 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-ifeval-s10 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-bfcl-s10 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-svamp-s30 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-mbpp-s30 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-ifeval-s30 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
-pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-bfcl-s30 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
+# done 6 Nov (skipped on restart) drivetidy --name dt6nov-apply --dt-apply
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-mbpp-s10 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-ifeval-s10 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-bfcl-s10 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-svamp-s30 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-mbpp-s30 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-ifeval-s30 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
+# done 6 Nov (skipped on restart) pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-bfcl-s30 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
 # 6 Nov 07:25: GRPO gr2e moved here from GPU 2 (GPU 1 was idle)
 thinkprune --name gr2e --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0.5 --tp-include-unsolved --tp-steps 40 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-steps 10 20 30 40 --tp-rl=--gr-form,linear,--gr-norms-from,runs/bon/lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl,--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,4,--full-support
 end
