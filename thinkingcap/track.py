@@ -279,6 +279,9 @@ def main():
     parser.add_argument("--pt-screen", action="store_true", help="pertype: score on questions_screen720 x4")
     parser.add_argument("--pt-tag", default="", help="pertype: name of an extra merge of the same adapters (no retraining)")
     parser.add_argument("--pt-cap-like", default="", help="pertype: cut each group x kind to pairs-<this>'s counts (same steps)")
+    parser.add_argument("--pt-extend", action="store_true", help="pertype --pt-cap-like: train the capped pairs first, then all the remaining ones, in order, with a checkpoint at the capped run's last full step")
+    parser.add_argument("--pt-step", type=int, default=0, help="pertype: score the adapters' step-N checkpoints instead of the finals")
+    parser.add_argument("--pt-wait", type=int, default=0, help="pertype --pt-no-train: wait up to N hours for the adapters on Drive")
     parser.add_argument("--pt-save", type=int, default=25, help="pertype: save a checkpoint (adapters/<name>-<group>/step-N, kept on Drive) every N steps")
     parser.add_argument("--pt-check", action="store_true", help="pertype: print the (capped) pair counts per group and stop, no training")
     parser.add_argument("--pt-full", action="store_true", help="pertype: also run the official full test (2,759 x 8) of each merge")
@@ -2867,6 +2870,7 @@ def pertype(args):
     (from --cc-base's matched pairs, the l2s50e recipe), then merged with per-type strengths (--pt-weights; e.g. math 0.5
     to protect it, instructions 1.0), plus the plain sum (all 1.0) as the control. One adapter per type means the type
     losing accuracy can be turned down without retraining the others. Scored on the choosing set x4."""
+    import time
     name, base_pairs = args.name, BON / f"pairs-{args.cc_base}" / "pairs.jsonl"
     drive_sync("restore", only=[str(base_pairs.parent), "runs/mvtf/v4-base"])
     rows = [json.loads(l) for l in base_pairs.read_text().splitlines() if l.strip()]
@@ -2887,6 +2891,9 @@ def pertype(args):
                 if got[r["kind"]] < like[(group, r["kind"])]:
                     got[r["kind"]] += 1
                     mine.append(r)
+            if args.pt_extend:  # (6 Nov, user) the capped pairs FIRST (= the capped run up to its last full step), then the rest
+                kept_ids = {id(r) for r in mine}
+                mine = mine + [r for r in pool if id(r) not in kept_ids]
             short = {k: like[(group, k)] - got[k] for k in ("shorten", "guard", "hard", "right") if like[(group, k)] > got[k]}
             print(f"pertype {name}: {group} capped like {args.pt_cap_like}: {dict(got)}" + (f", SHORT {short}" if short else ""),
                   flush=True)
@@ -2904,17 +2911,30 @@ def pertype(args):
         adapter = Path("adapters") / f"{name}-{group}"
         drive_sync("restore", only=[str(adapter)])  # (5 Nov) a fresh runtime must not retrain an adapter that exists
         if args.pt_no_train:
+            for _ in range(args.pt_wait * 12):  # (6 Nov) the other GPU may still be training it: wait for Drive
+                if (adapter / "adapter_config.json").exists():
+                    break
+                print(f"pertype {name}: waiting for {adapter} on Drive", flush=True)
+                time.sleep(300)
+                drive_sync("restore", only=[str(adapter)])
             assert (adapter / "adapter_config.json").exists(), f"{adapter} is not on Drive (--pt-no-train)"
         start = Path("adapters") / f"fresh-{name}-{group}"
         if not (adapter / "adapter_config.json").exists() and not (start / "adapter_config.json").exists():
             py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
         if not (adapter / "adapter_config.json").exists():
+            capped_steps = (sum(got.values()) - 48) // 16 if args.pt_extend else 0
+            if args.pt_extend:
+                print(f"pertype {name}: {group} extended: {len(mine)} pairs in order, the first {sum(got.values())} = the "
+                      f"capped set; checkpoint at step {capped_steps} = its last full step", flush=True)
             py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out",
-               adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts), "--save-every", args.pt_save,
+               adapter, "--mix", "all" if args.pt_extend else ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts),
+               *(["--keep-order", "--save-at", capped_steps] if args.pt_extend else []), "--save-every", args.pt_save,
                "--epochs", 1, "--dtype", args.dtype, "--seed", 0)
             drive_sync("save")
-        finals[group] = adapter
-        print(f"pertype {name}: {group} adapter on {len(mine)} pairs", flush=True)
+        finals[group] = adapter / f"step-{args.pt_step}" if args.pt_step else adapter
+        assert (finals[group] / "adapter_config.json").exists(), f"{finals[group]} missing"
+        print(f"pertype {name}: {group} adapter on {len(mine)} pairs" + (f", scored at step {args.pt_step}" if args.pt_step else ""),
+              flush=True)
     if args.pt_check:
         return
     weights = dict((k, float(v)) for k, v in (x.split("=") for x in args.pt_weights.split(",") if x))

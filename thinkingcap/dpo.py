@@ -194,7 +194,7 @@ def main():
                 extra = f"  checker NLL {sum(check_stats) / len(check_stats):.3f}" if check_stats else ""
                 print(f"step {step}/{steps}  loss {loss_avg:.4f}  pairs ordered right {acc:.0%}{extra}", flush=True)
                 stats, check_stats = [], []
-            if step % args.save_every == 0 or step == steps:
+            if step % args.save_every == 0 or step == steps or step in args.save_at:
                 model.eval()
                 wire = tripwire()
                 model.train()
@@ -248,6 +248,7 @@ def parse_arguments():
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--max-steps", type=int, default=0, help="stop early (0: the whole epoch)")
     parser.add_argument("--save-every", type=int, default=25)
+    parser.add_argument("--save-at", type=int, nargs="*", default=[], help="also save a checkpoint at these steps")
     parser.add_argument("--log-every", type=int, default=5)
     parser.add_argument("--held-out", type=int, default=48, help="pairs kept aside for the tripwire")
     parser.add_argument("--tripwire", type=float, default=0.2)

@@ -4843,3 +4843,9 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - jpa cap CHECK (lpj, before training): every group reaches October's exact counts, no shortfall: math shorten 299 / guard 47 /
   right 7 (available 599 / 87 / 17), code 251 / 79 / 23 (497 / 156 / 50), instructions 218 / 86 / 49 (454 / 146 / 103), tools 284 /
   44 / 25 (574 / 89 / 40); 353 pairs per adapter = 19 steps at 16 pairs/step after 48 held out, as in October.
+- ~01:40 (user) the October rerun is EXTENDED instead of stopped: per adapter the October-count pairs first (shuffled, seed 0),
+  then the remaining matched jpa pairs (~703 in all), trained in that order (--mix all --keep-order), constant lr, float32,
+  checkpoints every 5 steps + step 19 (dpo.py --save-at, new) = the capped run's last full step. GPU 2 (idle) trains it now and
+  scores the October comparison at step 19 (pertype --pt-step 19: solos at 1.0 and pt-mid strength, softer / soft / mid);
+  GPU 1 after its merges scores each adapter alone at steps 25 and 40 (pertype --pt-no-train --pt-wait 3). New pertype
+  options: --pt-extend, --pt-step, --pt-wait.
