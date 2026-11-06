@@ -4926,3 +4926,5 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~08:45 gr2f started on GPU 1 with the corrected scale: B = irrelevance 231, multiple 208, simple 180, ifeval 669, mbpp 1,818,
   **svamp 824** (was 82). Scores due at steps 10 / 20 / 30 / 40 (~35 min of training per 10 steps + a 720 screen each).
 - ~09:30 (user) Ivan's joint plan J rejected: its core is bida's pair rules + settings; nothing built on another candidate's recipe will be run or submitted.
+- ~10:00 **gr2f @ step 10: +4.0 / -0.4** official (-0.3 vs curve; svamp +7 / -0.4, multiple +6 / -1.1, ifeval +3 / -1.7, mbpp +3 / +0.8):
+  barely moved after 10 steps (training answers 600 -> 450 tokens, but that is on the training questions); step 20 training done, its score next.
