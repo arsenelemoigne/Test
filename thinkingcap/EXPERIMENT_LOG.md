@@ -4852,7 +4852,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~01:50 (user) dose scores changed to steps 10 and 30 (+ the full October comparison at step 19 on GPU 2); every 5th step stays stored on Drive.
 - ~02:00 (user) drivereport extended (sub-folders > 100 MB and files > 300 MB with dates, read only) and queued on GPU 1 between two merges: Drive clean-up list first, nothing deleted.
 - ~02:30 lpt6 merges: **C + code .5: +39.5 / -2.8** (svamp +42 / -1.9, mbpp +40 / -3.1, ifeval +37 / -3.3, simple +37 / -2.1, multiple +40
-  / +1.7, no-fit +39 / -8.1), -1.2 vs curve: the lpt6 code adapter (useless alone) hurts in the merge, unlike pt's code adapter.
+  / +1.7, no-fit +39 / -8.1), -1.6 vs curve: the lpt6 code adapter (useless alone) hurts in the merge, unlike pt's code adapter.
   **C + no-fit .25: +43.3 / -1.2** (svamp +42 / -1.3, mbpp +48 / -0.4, ifeval +42 / -2.7, simple +37 / 0.0, multiple +41 / +1.1, no-fit +41
   / -2.1), +0.5 vs curve: the weak no-fit adapter repairs no-fit (-9.4 -> -2.1) WITHOUT breaking the call types and adds saving:
   the best lpt6 merge so far. drivereport: Drive project folder ~197 GB = adapters 120 (never-scored checkpoints), runs 61,
