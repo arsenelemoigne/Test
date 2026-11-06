@@ -4925,3 +4925,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   gr2e's step-10 adapter is discarded (its 720 score was interrupted).
 - ~08:45 gr2f started on GPU 1 with the corrected scale: B = irrelevance 231, multiple 208, simple 180, ifeval 669, mbpp 1,818,
   **svamp 824** (was 82). Scores due at steps 10 / 20 / 30 / 40 (~35 min of training per 10 steps + a 720 screen each).
+- ~09:30 (user) Ivan's joint plan J rejected: its core is bida's pair rules + settings; nothing built on another candidate's recipe will be run or submitted.
