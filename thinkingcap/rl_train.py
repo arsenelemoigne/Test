@@ -131,6 +131,13 @@ def parse_arguments():
     parser.add_argument("--gr-norms", default="svamp=512,mbpp=768,ifeval=416,bfcl_simple_python=160,bfcl_multiple=192,"
                         "bfcl_irrelevance=192", help="gated: B per test part, in ALL generated tokens")
     parser.add_argument("--gr-min-think", type=int, default=8, help="gated: fewer non-blank thinking tokens = not formed")
+    # (6 Nov, user, after Herz1c's write-up) the official metric is a ratio of summed tokens PER BENCHMARK, so the length
+    # term is normalised by each type's own mean length (long code answers must not dominate), and may be linear
+    parser.add_argument("--gr-form", choices=("saturating", "linear"), default="saturating",
+                        help="gated: saturating = 1 - c L/(L+B); linear = max(0, 1 - c L/B)")
+    parser.add_argument("--gr-norms-from", default="",
+                        help="gated: set every B to the mean generated length per test part in this rollouts file "
+                             "(the ORIGINAL model's answers to TRAINING questions, never test questions)")
     parser.add_argument("--fixed-denominator", action="store_true",
                         help="Dr. GRPO denominator = ALL replies of the step x max tokens (not only the active ones)")
     parser.add_argument("--init-state", default="", help="resume.pt of the previous block: its AdamW state is loaded")
@@ -580,8 +587,24 @@ def held_out_eval(args):
     print(json.dumps(rows), flush=True)
 
 
+GR_MEANS = {}  # --gr-norms-from: mean generated tokens per test part, filled in main()
+
+
 def main():
     args = parse_arguments()
+    if args.gr_norms_from:
+        from build_pool import part_of
+        tot, cnt = {}, {}
+        with open(args.gr_norms_from) as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    part = part_of(r)
+                    tot[part] = tot.get(part, 0) + r["output_tokens"]
+                    cnt[part] = cnt.get(part, 0) + 1
+        GR_MEANS.update({p: f"{tot[p] / cnt[p]:.0f}" for p in tot if p})
+        print("gated: B = mean generated tokens per part from " + args.gr_norms_from + ": " +
+              ", ".join(f"{p} {v}" for p, v in sorted(GR_MEANS.items())), flush=True)
     if args.eval_only:
         return held_out_eval(args)
     import torch
@@ -689,6 +712,7 @@ def main():
                            for n, ok, fm in zip(think, correct, formed)]
             elif args.reward == "gated":  # (4 Nov, consultant) right x formed x finished x (1 - c L/(L+B)), wrong = 0
                 norms = dict(kv.split("=") for kv in args.gr_norms.split(","))
+                norms.update(GR_MEANS)
                 b = float(norms.get(question.get("part", ""), 512))
                 rewards = []
                 for r, ok in zip(group, correct):
@@ -697,7 +721,9 @@ def main():
                     blank = sum(1 for x in think if tokenizer.decode([x]).strip())
                     formed = close_id in r and blank >= args.gr_min_think and len(answer) > 2
                     finished = bool(r) and r[-1] == eos
-                    rewards.append(1.0 - args.gr_coef * len(r) / (len(r) + b) if ok and formed and finished else 0.0)
+                    shape = (max(0.0, 1.0 - args.gr_coef * len(r) / b) if args.gr_form == "linear"
+                             else 1.0 - args.gr_coef * len(r) / (len(r) + b))
+                    rewards.append(shape if ok and formed and finished else 0.0)
             elif args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
                 cap = int(question["cap"])
                 rewards = [1.0 if ok and len(r) < cap - 1 else 0.0 for r, ok in zip(group, correct)]  # cut at the cap = 0

@@ -4878,3 +4878,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - drivetidy second dry run (fixed): **99.1 GB** (A 4.8, B 2.6, C 51.7 = 1,009 never-scored checkpoints, D 7.5, E 16.9 + 6.6,
   F 2.6, G 6.3); reviewed: scored GRPO steps 50 / 100 now kept, no results folder, nothing from 5-6 Nov, no input of a
   queued run. User approved A-G: drivetidy --dt-apply queued on GPU 1 (moves to Drive trash; the user empties it).
+- ~03:20 (user) GRPO v2 option after Herz1c's write-up: rl_train.py --gr-form linear (R = max(0, 1 - c L/B) for a right, formed,
+  finished answer, else 0) and --gr-norms-from FILE (B = the original model's mean generated tokens per test part on TRAINING
+  answers, never test questions; the official metric is a ratio of summed tokens per benchmark, so long code answers must
+  not dominate the penalty). Prepared as the commented plan line gr2n next to gr2; GRPO stays off.
