@@ -2166,6 +2166,21 @@ def drivereport(args):
             near = [a for a in adapters if a.startswith(run)]
             print(f"drivereport: model {m.name} {size(m) / 1e9:.2f} GB {time.strftime('%Y-%m-%d', time.localtime(m.stat().st_mtime))} "
                   f"adapters: {','.join(near) or 'NONE'}", flush=True)
+    # (6 Nov, user: free ~50 GB, list first) every sub-folder of runs/bon, runs/mvtf, data, models, adapters over 100 MB,
+    # with its last change, then every single file over 300 MB; read only
+    for top in ("runs/bon", "runs/mvtf", "runs", "data", "models", "adapters"):
+        base = DRIVE / top
+        if not base.is_dir():
+            continue
+        subs = [(size(p) if p.is_dir() else p.stat().st_size, p) for p in base.iterdir() if p.name not in ("bon", "mvtf")]
+        for sz, p in sorted(subs, key=lambda t: -t[0]):
+            if sz >= 1e8:
+                print(f"drivereport: sub {top}/{p.name} {sz / 1e9:.2f} GB "
+                      f"{time.strftime('%Y-%m-%d', time.localtime(p.stat().st_mtime))}", flush=True)
+    big = sorted(((f.stat().st_size, f) for f in DRIVE.rglob("*") if f.is_file() and f.stat().st_size >= 3e8), key=lambda t: -t[0])
+    for sz, f in big:
+        print(f"drivereport: file {f.relative_to(DRIVE)} {sz / 1e9:.2f} GB "
+              f"{time.strftime('%Y-%m-%d', time.localtime(f.stat().st_mtime))}", flush=True)
 
 
 def stopgold(args):

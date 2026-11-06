@@ -4850,3 +4850,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   GPU 1 after its merges scores each adapter alone at steps 25 and 40 (pertype --pt-no-train --pt-wait 3). New pertype
   options: --pt-extend, --pt-step, --pt-wait.
 - ~01:50 (user) dose scores changed to steps 10 and 30 (+ the full October comparison at step 19 on GPU 2); every 5th step stays stored on Drive.
+- ~02:00 (user) drivereport extended (sub-folders > 100 MB and files > 300 MB with dates, read only) and queued on GPU 1 between two merges: Drive clean-up list first, nothing deleted.
