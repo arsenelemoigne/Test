@@ -309,6 +309,7 @@ def main():
     parser.add_argument("--tp-cap-other", type=float, default=0.70)
     parser.add_argument("--tp-score-every", type=int, default=40)
     parser.add_argument("--tp-smoke", action="store_true")
+    parser.add_argument("--tp-check", action="store_true", help="thinkprune: print the selected questions per part vs the need, no training")
     parser.add_argument("--tp-answers10", action="store_true", help="thinkprune: select questions from the original's 10 answers, not 4")
     parser.add_argument("--tp-extra", default="nofit4,math1,math2", help="thinkprune: top-ups whose questions join the pool")
     parser.add_argument("--tp-rl", default="", help="thinkprune: extra rl_train.py arguments, comma-separated "
@@ -3561,6 +3562,18 @@ def thinkprune(args):
                 credit[part] -= 1
                 q = rows[eligible[part].pop()]
                 pool.append(q | {"id": q["pool_id"], "cap": caps[part]})
+    if args.tp_check:  # (6 Nov, user) the question selection only: counts per part vs what the run needs, no training
+        need = args.tp_steps * args.tp_questions
+        per = defaultdict(int)
+        for q in pool:
+            per[q["part"]] += 1
+        shares = {p: w / sum(weights.values()) for p, w in weights.items()}
+        print(f"thinkprune CHECK {name}: {len(pool)} eligible questions for {args.tp_steps} steps x {args.tp_questions} = {need} needed "
+              f"({len(pool) / max(1, need):.1f}x)", flush=True)
+        for p in weights:
+            want = round(need * shares[p])
+            print(f"thinkprune CHECK {name}:   {p}: {per[p]} eligible, ~{want} used" + ("  SHORT" if per[p] < want else ""), flush=True)
+        return
     data = Path(f"data/tp-{name}.jsonl")
     data.write_text("".join(json.dumps(r) + "\n" for r in pool))
     base = "Qwen/Qwen3-0.6B"
