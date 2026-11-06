@@ -4911,8 +4911,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   no-fit +28 / -4.2, multiple -2.1), -1.0 vs curve: below October's softer (39.2 / -0.8); instructions @30 **+36.5 / -0.6**, +0.2 vs curve
   (better than @19, 27.7 / -1.2: instructions keeps improving with the extra pairs); tools @30 **+45.3 / -2.4** (ifeval -4.8, svamp -3.3).
   GPU 1's queue ended -> GRPO gr2e moved to GPU 1 to start now (soft / mid merges still on GPU 2).
-- ~08:00 lpk merges @19 (GPU 2's queue now ended): **soft +40.4 / -2.3** (-1.0 vs curve; October soft 48.4 / -1.9),
-  **mid +48.6 / -2.1** (+0.5 vs curve; October pt-mid 55.0 / -2.6 on the 720). **Verdict on the October rerun: the new data + fp32
+- ~08:00 lpk merges @19 (GPU 2's queue now ended): **soft +40.3 / -2.3** (-1.0 vs curve; October soft 48.4 / -1.9),
+  **mid +48.5 / -2.1** (+0.5 vs curve; October pt-mid 55.0 / -2.6 on the 720). **Verdict on the October rerun: the new data + fp32
   does NOT beat October**: every merge saves 6-8 points less; mid sits a little better on the curve (+0.5 vs pt-mid's +0.3 full-test),
   but at less saving. Best single change seen: instructions at step 30 (36.5 / -0.6).
 - ~08:30 **BUG in GRPO gr2e, run stopped after 10 steps**: rl_train's --gr-norms-from re-derived each answer's type with
