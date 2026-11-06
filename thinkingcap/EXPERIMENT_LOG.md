@@ -4888,3 +4888,12 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - (user) just one GRPO run: the smoke test removed; gr2n alone.
 - ~04:10 (user) the single GRPO run is now gr2e: gr2n restricted to questions the original solves at least half the time (10 stored answers, --tp-min-solve 0.5 with --tp-include-unsolved = rate >= 0.5); everything else unchanged.
 - ~04:20 (user) thinkprune --tp-check (new: eligible questions per part vs 40 x 32 needed, no training) queued on GPU 2 as the next stage, before gr2e.
+- ~04:20 6 Nov **gr2e selection check OK**: 14,001 questions solved >= 5/10 for 1,280 needed (10.9x): svamp 6,141, mbpp 1,835,
+  ifeval 1,758, simple 1,216, multiple 540, no-fit 2,511 (each >= 5x its share); gr2e stays queued as is.
+- **Drive clean-up applied** (drivetidy --dt-apply, user-approved A-G): 99.1 GB moved to the Drive trash; the user empties it.
+- **October rerun (lpk = October rule + matching on the new data, fp32 weights + fp16 compute), adapters alone at 1.0:**
+  - math @ step 19 (= October's count): **+40.9 / -2.3** (svamp +60 / -2.3, mbpp +44 / -3.3, ifeval +29 / -1.0, simple +23 / -2.3,
+    multiple +25 / -1.9, no-fit +24 / -4.0), -0.9 vs curve. October's math adapter: 41.7 / -2.1 with svamp 59 / -4.8 and no-fit
+    -6.0: same overall, but math itself loses half as much (-2.3 vs -4.8); code pays more (-3.3 vs -1.0).
+  - math @ step 10: **+26.6 / -1.1** (svamp +48 / -0.8; no-fit -3.1, multiple -2.5), -1.1 vs curve.
+  - code @ step 19: **+16.6 / -1.9** (mbpp +26 / +1.3; ifeval -4.6, svamp -3.5), -2.2 vs curve. October's: 16.5 / -1.3 (mbpp 25 / -0.2).
