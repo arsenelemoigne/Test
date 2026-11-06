@@ -4886,3 +4886,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~03:45 (user) gr2n selects questions and length means from the original's 10 answers per question (thinkprune --tp-answers10, new), not 4; GRPO itself samples 8 fresh answers per question per step (group 8).
 - ~04:00 (user) GRPO launched: gr2n (from the original Qwen, 40 steps x 32 questions x 8 answers, scored at 10/20/30/40, gated linear per-type reward) queued on GPU 2 after the October rerun's step-19 scores, preceded by a 5-step smoke test (gr2nsmoke).
 - (user) just one GRPO run: the smoke test removed; gr2n alone.
+- ~04:10 (user) the single GRPO run is now gr2e: gr2n restricted to questions the original solves at least half the time (10 stored answers, --tp-min-solve 0.5 with --tp-include-unsolved = rate >= 0.5); everything else unchanged.
