@@ -4835,3 +4835,11 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   close to the solos' sum (about -1.1); the whole cost is no-fit -9.4 (no no-fit adapter, two call-making adapters).
 - ~00:45 (user) the October rerun's adapters save a checkpoint every 5 steps (pertype --pt-save 5, new; adapters/lpj-<group>/step-N, synced to Drive) so any step can be scored or restored later.
 - ~01:10 BUG (mine): lupin --lp-pairs-only had been inserted into balround(), not lupin(); jpa built its pairs (2,812 matched: math 802, code 780, instr 799, simple 335, multiple 182, no-fit 210; vs ~1,400 in October) then started an unwanted joint training (jpa-s0). Fixed (moved into lupin).
+- ~01:35 6 Nov **FULL TEST of pt-mid** (October 4-adapter merge .30/.45/.60/.45, rebuilt from the saved adapters, no repair; 2,759 x 8):
+  **+53.6 / -3.3** official (svamp +61 / -6.0, mbpp +62 / -3.9, ifeval +50 / -1.7, simple +35 / +0.2, multiple +38 / +0.4, no-fit
+  +40 / -5.6), +0.3 vs curve. Its 720 screen re-ran in the same stage: 55.1 / -2.6 (= Oct 31's 55.0 / -2.6). The 720 read 1.4 high on
+  saving and 0.7 favourable on accuracy: the October strengths were picked on screens. On the full test pt-mid sits just above
+  the curve, below michal-bida (47.0 / -0.78, +1.6); the loss is math and no-fit, as on the screen, plus code.
+- jpa cap CHECK (lpj, before training): every group reaches October's exact counts, no shortfall: math shorten 299 / guard 47 /
+  right 7 (available 599 / 87 / 17), code 251 / 79 / 23 (497 / 156 / 50), instructions 218 / 86 / 49 (454 / 146 / 103), tools 284 /
+  44 / 25 (574 / 89 / 40); 353 pairs per adapter = 19 steps at 16 pairs/step after 48 held out, as in October.
