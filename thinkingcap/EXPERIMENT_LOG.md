@@ -4897,3 +4897,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
     -6.0: same overall, but math itself loses half as much (-2.3 vs -4.8); code pays more (-3.3 vs -1.0).
   - math @ step 10: **+26.6 / -1.1** (svamp +48 / -0.8; no-fit -3.1, multiple -2.5), -1.1 vs curve.
   - code @ step 19: **+16.6 / -1.9** (mbpp +26 / +1.3; ifeval -4.6, svamp -3.5), -2.2 vs curve. October's: 16.5 / -1.3 (mbpp 25 / -0.2).
+- ~05:20 lpk adapters alone at 1.0: **instructions @19 +27.7 / -1.2** (ifeval +34 / -2.3; no-fit -2.7, simple -2.3), -1.2 vs curve
+  (October: 36.1 / -1.2, ifeval 40 / +0.6: the rerun shortens instructions LESS and costs ifeval more); **tools @19 +42.8 / -1.6**
+  official (simple +38 / -4.0, multiple +44 / +1.1, no-fit +42 / 0.0; svamp -2.1, ifeval -1.3), +0.1 vs curve (October: 50.1 / -2.9 with
+  math -4.0, code -4.6: less saving, much less spill-over cost); code @10 +10.9 / -1.3 (mbpp +16 / +2.1); instructions @10 +14.0 /
+  -1.4. So far the rerun's adapters are gentler than October's (less saving, less damage); merges at step 19 next.
