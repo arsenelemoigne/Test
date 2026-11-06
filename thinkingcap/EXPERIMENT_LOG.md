@@ -4849,3 +4849,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   scores the October comparison at step 19 (pertype --pt-step 19: solos at 1.0 and pt-mid strength, softer / soft / mid);
   GPU 1 after its merges scores each adapter alone at steps 25 and 40 (pertype --pt-no-train --pt-wait 3). New pertype
   options: --pt-extend, --pt-step, --pt-wait.
+- ~01:50 (user) dose scores changed to steps 10 and 30 (+ the full October comparison at step 19 on GPU 2); every 5th step stays stored on Drive.

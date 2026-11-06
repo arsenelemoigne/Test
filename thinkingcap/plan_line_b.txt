@@ -510,13 +510,13 @@ mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_p
 # REPLACED 6 Nov by the extended run (GPU 2) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag softer --pt-weights svamp=0.2,mbpp=0.25,ifeval=0.35,bfcl=0.25
 # REPLACED 6 Nov by the extended run (GPU 2) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag soft --pt-weights svamp=0.25,mbpp=0.35,ifeval=0.45,bfcl=0.35
 # REPLACED 6 Nov by the extended run (GPU 2) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
-# 6 Nov (user): dose curve of the extended lpj adapters (trained on GPU 2): each adapter alone at 1.0, at steps 25 and 40
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 25 --pt-tag solo-svamp-s25 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 25 --pt-tag solo-mbpp-s25 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 25 --pt-tag solo-ifeval-s25 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 25 --pt-tag solo-bfcl-s25 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 40 --pt-tag solo-svamp-s40 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 40 --pt-tag solo-mbpp-s40 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 40 --pt-tag solo-ifeval-s40 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
-pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 40 --pt-tag solo-bfcl-s40 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
+# 6 Nov (user): dose curve of the extended lpj adapters (trained on GPU 2): each adapter alone at 1.0, at steps 10 and 30 (every 5th step stored on Drive)
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-svamp-s10 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-mbpp-s10 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-ifeval-s10 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-bfcl-s10 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-svamp-s30 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-mbpp-s30 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-ifeval-s30 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
+pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --pt-extend --dtype float32 --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 30 --pt-tag solo-bfcl-s30 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
 end
