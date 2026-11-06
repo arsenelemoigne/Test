@@ -4871,3 +4871,10 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   verified solutions, no teacher. Full test 2,759 x 8: Self-Replay-256 **31.23% / +0.21** (CI -0.48..+0.88; +0.5 vs our curve),
   Self-Replay-850 **41.60% / -1.17** (+0.3), checkpoint 1280 46.58% / -2.35 (-0.1). No-fit -4.17 / -6.88 pp; one seed;
   checkpoints chosen on the benchmark (stated). Added to FullEval as references (per-part numbers not copied).
+- ~03:00 **lpt6mix-C7 (instructions + one fn + several, each 0.7): +51.3 / -3.6** official (svamp +55 / -4.2, mbpp +55 / -2.7, ifeval +50 /
+  -3.7, simple +42 / -2.1, multiple +46 / +1.7, no-fit +45 / -11.7), -0.5 vs curve: the higher dose saves more but no-fit
+  collapses without a no-fit adapter. lpt6 merge summary: C 41.3 / -1.3, C + code 39.5 / -2.8, C + weak no-fit 43.3 / -1.2 (best),
+  tools only 31.0 / -2.3, C at .7 51.3 / -3.6.
+- drivetidy second dry run (fixed): **99.1 GB** (A 4.8, B 2.6, C 51.7 = 1,009 never-scored checkpoints, D 7.5, E 16.9 + 6.6,
+  F 2.6, G 6.3); reviewed: scored GRPO steps 50 / 100 now kept, no results folder, nothing from 5-6 Nov, no input of a
+  queued run. User approved A-G: drivetidy --dt-apply queued on GPU 1 (moves to Drive trash; the user empties it).

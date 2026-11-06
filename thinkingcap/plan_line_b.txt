@@ -499,9 +499,9 @@ mixscreen --name lpt6mix-Cnf --mx-weights svamp=0,mbpp=0,ifeval=0.5,bfcl_simple_
 mixscreen --name lpt6mix-tools --mx-weights svamp=0,mbpp=0,ifeval=0,bfcl_simple_python=0.5,bfcl_multiple=0.5,bfcl_irrelevance=0.5
 # 6 Nov (user): Drive clean-up LIST (dry run, nothing moved)
 # done 6 Nov (first dry run: 108 GB, flawed: scored GRPO steps listed, resume files counted twice) drivetidy --name dt6nov
-mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_python=0.7,bfcl_multiple=0.7,bfcl_irrelevance=0
+# done 6 Nov mixscreen --name lpt6mix-C7 --mx-weights svamp=0,mbpp=0,ifeval=0.7,bfcl_simple_python=0.7,bfcl_multiple=0.7,bfcl_irrelevance=0
 # 6 Nov: the clean-up list again, fixed (dry run, nothing moved)
-drivetidy --name dt6nov2
+# done 6 Nov (99.1 GB listed, reviewed: scored GRPO steps now kept) drivetidy --name dt6nov2
 # 6 Nov (user): the October per-type run redone, ONLY two changes: the NEW training data (jpa = October's exact lpv-base rule +
 # matching on the new pool) and float32; same 4 groups, same settings (NLL 1, constant lr 2e-5, 16 pairs/step, one pass, seed 0),
 # each group x kind cut to October's pair count (same steps); scored exactly like October: solos at 1.0 and at pt-mid strength, softer/soft/mid
@@ -518,6 +518,8 @@ drivetidy --name dt6nov2
 # REPLACED 6 Nov by the extended run (GPU 2) pertype --name lpj --cc-base jpa --pt-cap-like lpv-base --dtype float32 --pt-save 5 --pt-screen --pt-tag mid --pt-weights svamp=0.3,mbpp=0.45,ifeval=0.6,bfcl=0.45
 # 6 Nov (user): dose curve of the extended lpj adapters (trained on GPU 2): each adapter alone at 1.0, at steps 10 and 30 (every 5th step stored on Drive)
 pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-svamp-s10 --pt-weights svamp=1,mbpp=0,ifeval=0,bfcl=0
+# 6 Nov (user approved categories A-G): move the reviewed list to Drive TRASH (reversible ~30 days; the user empties it)
+drivetidy --name dt6nov-apply --dt-apply
 pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-mbpp-s10 --pt-weights svamp=0,mbpp=1,ifeval=0,bfcl=0
 pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-ifeval-s10 --pt-weights svamp=0,mbpp=0,ifeval=1,bfcl=0
 pertype --name lpk --cc-base jpa --pt-cap-like lpv-base --pt-extend --pt-dpo=--bida-precision --pt-save 5 --pt-screen --pt-no-train --pt-wait 3 --pt-step 10 --pt-tag solo-bfcl-s10 --pt-weights svamp=0,mbpp=0,ifeval=0,bfcl=1
