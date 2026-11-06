@@ -4907,3 +4907,7 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   (saving FALLS after 19: the extra matched pairs past October's count pull length back; svamp 60 -> 50% while svamp acc -2.3 -> -3.5);
   code 10.9 / -1.3, 16.6 / -1.9, **16.3 / -2.5** (saturates, accuracy worsens); tools @10 **+22.0 / -1.1** (@19 42.8 / -1.6).
   Reading: step 19 (= October's count) is the sweet spot for math and tools; code past 10 only loses accuracy.
+- ~07:20 lpk: tools @.45 (step 19) **+20.2 / -1.2** (Oct 28.6 / -1.1); **softer merge @19 (.20/.25/.35/.25): +32.0 / -1.4** (svamp +38 / -1.9,
+  no-fit +28 / -4.2, multiple -2.1), -1.0 vs curve: below October's softer (39.2 / -0.8); instructions @30 **+36.5 / -0.6**, +0.2 vs curve
+  (better than @19, 27.7 / -1.2: instructions keeps improving with the extra pairs); tools @30 **+45.3 / -2.4** (ifeval -4.8, svamp -3.3).
+  GPU 1's queue ended -> GRPO gr2e moved to GPU 1 to start now (soft / mid merges still on GPU 2).
