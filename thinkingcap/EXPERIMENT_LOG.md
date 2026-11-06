@@ -4902,3 +4902,8 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   official (simple +38 / -4.0, multiple +44 / +1.1, no-fit +42 / 0.0; svamp -2.1, ifeval -1.3), +0.1 vs curve (October: 50.1 / -2.9 with
   math -4.0, code -4.6: less saving, much less spill-over cost); code @10 +10.9 / -1.3 (mbpp +16 / +2.1); instructions @10 +14.0 /
   -1.4. So far the rerun's adapters are gentler than October's (less saving, less damage); merges at step 19 next.
+- ~06:20 lpk scores. Alone at pt-mid strength (step 19): math @.30 **+12.1 / -1.1** (Oct 11.9 / -1.0), code @.45 **+8.8 / -0.8** (Oct 10.0 / -2.5),
+  instructions @.60 **+17.7 / -0.7** (Oct 23.1 / -1.2). Dose curve at 1.0: math 10 / 19 / 30 = 26.6 / -1.1, 40.9 / -2.3, **33.9 / -1.4**
+  (saving FALLS after 19: the extra matched pairs past October's count pull length back; svamp 60 -> 50% while svamp acc -2.3 -> -3.5);
+  code 10.9 / -1.3, 16.6 / -1.9, **16.3 / -2.5** (saturates, accuracy worsens); tools @10 **+22.0 / -1.1** (@19 42.8 / -1.6).
+  Reading: step 19 (= October's count) is the sweet spot for math and tools; code past 10 only loses accuracy.
