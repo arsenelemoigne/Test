@@ -2213,15 +2213,6 @@ def balround(args):
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
-    if args.lp_pairs_only:  # (5 Nov) build and report the pairs, no training: per part x kind counts and median lengths
-        per = Counter((r["part"], r["kind"]) for r in rows)
-        print(f"lupin {name}: PAIRS ONLY, {len(rows)} pairs, {len({r['id'] for r in rows})} questions", flush=True)
-        for (part, kind), n in sorted(per.items()):
-            ch = sorted(len(r["chosen_ids"]) for r in rows if r["part"] == part and r["kind"] == kind)
-            rj = sorted(len(r["rejected_ids"]) for r in rows if r["part"] == part and r["kind"] == kind)
-            print(f"  {part} / {kind}: {n} pairs, median chosen {ch[len(ch) // 2]} vs rejected {rj[len(rj) // 2]} tokens",
-                  flush=True)
-        return
     start = Path("adapters") / f"fresh-{name}"
     if not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", base, "--out", start)
@@ -4160,6 +4151,15 @@ def lupin(args):
     print((pairs / "summary.txt").read_text(), flush=True)
     rows = [json.loads(l) for l in (pairs / "pairs.jsonl").read_text().splitlines() if l.strip()]
     counts = [sum(r["kind"] == k for r in rows) for k in ("shorten", "guard", "hard", "right")]
+    if args.lp_pairs_only:  # (5 Nov; moved into lupin 6 Nov) build and report the pairs, no training: per part x kind counts and median lengths
+        per = Counter((r["part"], r["kind"]) for r in rows)
+        print(f"lupin {name}: PAIRS ONLY, {len(rows)} pairs, {len({r['id'] for r in rows})} questions", flush=True)
+        for (part, kind), n in sorted(per.items()):
+            ch = sorted(len(r["chosen_ids"]) for r in rows if r["part"] == part and r["kind"] == kind)
+            rj = sorted(len(r["rejected_ids"]) for r in rows if r["part"] == part and r["kind"] == kind)
+            print(f"  {part} / {kind}: {n} pairs, median chosen {ch[len(ch) // 2]} vs rejected {rj[len(rj) // 2]} tokens",
+                  flush=True)
+        return
     start = Path("adapters") / f"fresh-{name}"
     if args.lp_init:  # two-stage (29 Oct): start from an earlier adapter (policy AND DPO reference), e.g. the "be right" round
         start = Path(args.lp_init)

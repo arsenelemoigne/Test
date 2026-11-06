@@ -4834,3 +4834,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   +0.15 vs curve. The merge saves MORE than its solos predict (token ratios multiplied: 36.2%; consult3 guessed 40 / -2.5); accuracy
   close to the solos' sum (about -1.1); the whole cost is no-fit -9.4 (no no-fit adapter, two call-making adapters).
 - ~00:45 (user) the October rerun's adapters save a checkpoint every 5 steps (pertype --pt-save 5, new; adapters/lpj-<group>/step-N, synced to Drive) so any step can be scored or restored later.
+- ~01:10 BUG (mine): lupin --lp-pairs-only had been inserted into balround(), not lupin(); jpa built its pairs (2,812 matched: math 802, code 780, instr 799, simple 335, multiple 182, no-fit 210; vs ~1,400 in October) then started an unwanted joint training (jpa-s0). Fixed (moved into lupin).
