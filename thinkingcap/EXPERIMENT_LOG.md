@@ -4931,3 +4931,5 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~11:00 **gr2f @ step 20: +11.4 / -0.6** official (-0.9 vs curve): math and code shorten with accuracy UP (svamp +18 / +0.6,
   mbpp +16 / +0.8), but instructions barely shorten and lose (ifeval +2 / -2.5) and tool calls lose (multiple +10 / -2.3,
   simple +7 / -1.9; no-fit +9 / 0.0). Step 30 trained (29.7 min), its score running.
+- ~12:00 **gr2f @ step 30: +6.8 / -0.4** official (-0.5 vs curve): saving FELL from step 20 (11.4): ifeval now LONGER than the
+  original (-7% / -1.7), svamp +12 / 0.0, mbpp +11 / +0.8, tools +9-11 / -0.4 to -0.8. Step 40 trained, its score running.
