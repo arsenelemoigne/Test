@@ -4882,3 +4882,4 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
   finished answer, else 0) and --gr-norms-from FILE (B = the original model's mean generated tokens per test part on TRAINING
   answers, never test questions; the official metric is a ratio of summed tokens per benchmark, so long code answers must
   not dominate the penalty). Prepared as the commented plan line gr2n next to gr2; GRPO stays off.
+- ~03:35 (user) gr2n set to start from the ORIGINAL Qwen (not v1), 40 steps x 32 questions x 8 answers, scored at 10 / 20 / 30 / 40, per-type mean-length normalisation from the 4-answer training file thinkprune already restores; still OFF.
