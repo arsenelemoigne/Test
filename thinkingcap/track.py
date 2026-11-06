@@ -282,6 +282,7 @@ def main():
     parser.add_argument("--dt-apply", action="store_true", help="drivetidy: move the listed items to Drive's trash (default: list only)")
     parser.add_argument("--dt-keep-days", type=float, default=2, help="drivetidy: never touch anything changed in the last N days")
     parser.add_argument("--dt-show", type=int, default=40, help="drivetidy: items printed per category")
+    parser.add_argument("--pt-dpo", default="", help="pertype: extra dpo.py flags, comma-joined (e.g. --bida-precision)")
     parser.add_argument("--pt-extend", action="store_true", help="pertype --pt-cap-like: train the capped pairs first, then all the remaining ones, in order, with a checkpoint at the capped run's last full step")
     parser.add_argument("--pt-step", type=int, default=0, help="pertype: score the adapters' step-N checkpoints instead of the finals")
     parser.add_argument("--pt-wait", type=int, default=0, help="pertype --pt-no-train: wait up to N hours for the adapters on Drive")
@@ -2212,14 +2213,16 @@ def drivetidy(args):
     for a in sorted((DRIVE / "adapters").iterdir()) if (DRIVE / "adapters").is_dir() else []:
         if not a.is_dir() or recent(a) or a.name in plans:
             continue
-        base = re.sub(r"-s\d+$", "", a.name)
+        base = re.sub(r"-(rl|drpo|teach|shorterbetter|matched|raw)$", "", re.sub(r"-s\d+$", "", a.name))
         scored = {int(m.group(1)) for r in results for m in [re.search(rf"{re.escape(base)}(?:-s\d+|-soup|-[a-z]+)?-(\d+)$", r)] if m}
         for ck in sorted(a.glob("step-*")):
             n = int(ck.name.split("-")[1]) if ck.name.split("-")[1].isdigit() else -1
             if n not in scored:
                 cats["C adapter checkpoints never scored (final + scored steps kept)"].append(ck)
+        gone = {str(p) for p in cats["C adapter checkpoints never scored (final + scored steps kept)"]}
         for f in a.rglob("resume.pt"):
-            cats["D optimizer resume states of finished RL runs"].append(f)
+            if str(f.parent) not in gone:
+                cats["D optimizer resume states of finished RL runs"].append(f)
     # E: probe answers of older pool candidates and rejected pools (results logged; dp9n-all kept: tool top-ups read it)
     bon = DRIVE / "runs/bon"
     for d in sorted(bon.iterdir()) if bon.is_dir() else []:
@@ -3017,7 +3020,7 @@ def pertype(args):
             py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out",
                adapter, "--mix", "all" if args.pt_extend else ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts),
                *(["--keep-order", "--save-at", capped_steps] if args.pt_extend else []), "--save-every", args.pt_save,
-               "--epochs", 1, "--dtype", args.dtype, "--seed", 0)
+               "--epochs", 1, "--dtype", args.dtype, "--seed", 0, *args.pt_dpo.replace(",", " ").split())
             drive_sync("save")
         finals[group] = adapter / f"step-{args.pt_step}" if args.pt_step else adapter
         assert (finals[group] / "adapter_config.json").exists(), f"{finals[group]} missing"
