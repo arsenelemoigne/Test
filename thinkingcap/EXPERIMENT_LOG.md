@@ -5014,3 +5014,7 @@ Plan lines, in order:
   mbpp -3.5, multiple +0.6). After 10 repair steps: svamp -2.7 (+2.3), ifeval -2.5 (+1.5), simple -2.7 (+1.3), irrelevance
   -3.7 (+0.9), multiple +1.5, mbpp -4.6 (-1.1); +0.9 accuracy for -1.3 saving. Repair pairs: chosen re-checks the question
   51 / 77 / 94% (math / code / no-fit) vs rejected 41 / 57 / 82%; chosen and rejected about equal length.
+- 9 Nov **rpE (repair of rc1-soup-30) @ 20: +54.8 / -2.6** (irrelevance -1.9, simple -1.0, mbpp -2.5, ifeval -2.9, svamp -4.2,
+  multiple +1.3); **@ 40: +50.5 / -1.7** official (irrelevance -0.2, multiple +1.5, simple -1.9, ifeval -1.7, mbpp -2.7, svamp -1.9;
+  saved: svamp 60, mbpp 54, irrelevance 50, multiple 43, ifeval 42, simple 40). Path from rc1's 720 (58.7 / -3.8): each 10 steps
+  buys ~0.5 pt of accuracy for ~2 pts of saving after step 20; vs curve rc1 +0.6, @10 +0.6?, see below. Step 80 scoring.
