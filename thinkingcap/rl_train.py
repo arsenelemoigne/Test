@@ -55,6 +55,8 @@ instruction in front of the question, and gives each reply token A_t = log p(y_t
 +-10: tokens only a thorough teacher would write (re-checks, filler) are pushed down, tokens a brief teacher would also
 write are pushed up, ending the thinking early included. Loss = -mean over replies of (1/T) sum_t A_t log pi(y_t), one update
 per step (on-policy). Grading still runs, for the log only. The student never sees the instructions.
+--copd-outcome w (9 Nov, user): real accuracy in the same step: each reply also gets w x (right - its question's mean right)
+on every token (GRPO's group comparison, no std), so right replies are pushed up and wrong ones down while the coach trims.
 
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
@@ -190,6 +192,9 @@ def parse_arguments():
     parser.add_argument("--copd-light", default="Reasoning Effort: Minimum viable, shortcuts strongly encouraged.")
     parser.add_argument("--copd-heavy", default="Reasoning Effort: Absolute maximum with no shortcuts permitted.")
     parser.add_argument("--copd-clip", type=float, default=10.0, help="copd: |A_t| cap (the paper: 10)")
+    parser.add_argument("--copd-outcome", type=float, default=0.0,
+                        help="copd (9 Nov, user: real accuracy in the training): add w x (right - the mean of its question's "
+                             "group) to every token of each reply, right = graded correct; 0 = COPD alone. Needs --group >= 2")
     parser.add_argument("--protect-sources", default="",
                         help="comma list of sources (e.g. math) given NO length pressure: right replies weighted equally "
                              "(drpo) / correctness-only reward (shorterbetter); they are still trained to stay right")
@@ -842,6 +847,19 @@ def main():
                 all_adv += adv
                 close_adv += [a for a, t in zip(adv, j[1]) if t == close_id]
                 j[3] = 1.0  # every sampled reply is trained (no reward filter)
+            if args.copd_outcome:  # (9 Nov) the right/wrong signal, relative to the other replies to the same question
+                groups_of = defaultdict(list)
+                for j in scored:
+                    groups_of[id(j[5])].append(j)
+                with_signal = 0
+                for members in groups_of.values():
+                    mean_right = sum(bool(j[2]) for j in members) / len(members)
+                    with_signal += 0 < mean_right < 1
+                    for j in members:
+                        bonus = args.copd_outcome * (float(bool(j[2])) - mean_right)
+                        if bonus:
+                            copd_adv[id(j[1])] = [a + bonus for a in copd_adv[id(j[1])]]
+                stats["copd_outcome_groups"] = with_signal
             stats["copd_mean"] = sum(all_adv) / max(1, len(all_adv))
             stats["copd_negative"] = sum(a < 0 for a in all_adv) / max(1, len(all_adv))
             stats["copd_close"] = sum(close_adv) / len(close_adv) if close_adv else None
@@ -1027,6 +1045,8 @@ def main():
         if args.objective == "copd":  # the teacher's verdict: mean advantage, share of tokens pushed down, at </think>
             entry["copd"] = {"mean": round(stats["copd_mean"], 4), "negative": round(stats["copd_negative"], 3),
                              "close_think": None if stats["copd_close"] is None else round(stats["copd_close"], 3)}
+            if args.copd_outcome:
+                entry["copd"]["questions_mixed"] = stats["copd_outcome_groups"]
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)

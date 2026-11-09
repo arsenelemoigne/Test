@@ -480,4 +480,8 @@
 # 9 Nov (user): continue COPD to step 40, 5-step blocks, 720 at 25 / 30 / 35 / 40 (the cosine now spans 40 steps, so the lr
 # rises back to about the middle of its range at step 21: ~5.5e-6 instead of ~1e-6)
 thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 40 --tp-block 5 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 25 30 35 40 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--lr-end,1e-6,--warmup,4
+# 9 Nov (user): COPD Run C = COPD + real accuracy in the same step: 4 answers per question, each also pushed by
+# 1.0 x (right - its question's mean right) on every token (right up, wrong down); CONSTANT lr 1e-5 after a 4-step warm-up;
+# from the original Qwen, same questions as Run A (solved >= 1/10); 40 steps x 32 questions x 4 answers; 720 at 10/20/30/40.
+thinkprune --name cp1c --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 40 --tp-questions 32 --tp-group 4 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 10 20 30 40 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--copd-outcome,1.0,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--warmup,4
 end

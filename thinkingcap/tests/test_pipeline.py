@@ -339,6 +339,13 @@ def test_rl_train_runs_on_the_toy_model(toy):
             "--objective", "copd", "--copd-teacher", teacher, "--lr", "1e-3", cwd=ROOT)
         log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
         assert [e["step"] for e in log] == [1, 2] and all(0 <= e["copd"]["negative"] <= 1 for e in log)
+    out = work / "rl-copd-outcome"  # (9 Nov) COPD + the right/wrong signal
+    run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+        "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
+        "--max-tokens", "40", "--backend", "hf", "--redundant", "none", "--dtype", "float32",
+        "--objective", "copd", "--copd-teacher", "self", "--copd-outcome", "1.0", "--lr", "1e-3", cwd=ROOT)
+    log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+    assert [e["step"] for e in log] == [1, 2] and all("questions_mixed" in e["copd"] for e in log)
 
 
 def test_learning_rate_schedule_and_group_split():

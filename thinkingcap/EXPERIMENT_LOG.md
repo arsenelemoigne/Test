@@ -5056,3 +5056,7 @@ Plan lines, in order:
   is within the per-type noise except a slow math slide (-0.2 / -1.0 / -1.9 at 25 / 30 / 35); COPD has no correctness term to
   stop it. Data-backed fix: the rpE repair (equal-length right>wrong pairs, constant lr) took rc1 from -3.8 to -0.2 at the same
   length, so "COPD to compress, then the same repair" on a COPD checkpoint; and a constant lr for any further COPD.
+- 9 Nov (user) **COPD Run C (cp1c) queued on GPU 2 after Run A**: rl_train --copd-outcome w adds w x (right - the question's mean
+  right) to every token of each reply (GRPO-style group comparison, no std) on top of the coach's per-token push: correctness
+  trained in the same step; w = 1.0, 32 questions x 4 answers, CONSTANT lr 1e-5 after 4 warm-up steps, 40 steps, 720 at 10/20/30/40.
+  No per-type brake (user). Toy-model test passes.
