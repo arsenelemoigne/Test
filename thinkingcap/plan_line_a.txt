@@ -461,4 +461,11 @@
 # MOVED to GPU 1 (6 Nov 07:25, GPU 1 idle) thinkprune --name gr2e --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0.5 --tp-include-unsolved --tp-steps 40 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-steps 10 20 30 40 --tp-rl=--gr-form,linear,--gr-norms-from,runs/bon/lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl,--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,4,--full-support
 # 9 Nov (user): Step 1 of the repair plan: the round-4 model before RL on the FULL test (never run on it)
 fullmodel --name full-rc1soup --nothink-models models/rc1-soup-30
+# 9 Nov (user): COPD Run A = on-policy distillation, Qwen3-4B teacher reads each reply under a light and a heavy effort
+# instruction, token advantage = log p(light) - log p(heavy) (no reward). From the ORIGINAL Qwen; questions the original solves
+# at least once in its 10 stored answers (always-solved kept, never-solved out). lr 1e-5 = the paper's 1e-6 x 10 for LoRA
+# (LoRA Without Regret). 80 steps x 64 questions x 2 answers = 10,240 answers (= gr2f's budget), 720 at 20/40/60/80.
+# First a 5-step smoke test (memory with the 4B teacher on the L4, the teacher's verdict in the log).
+thinkprune --name cp1smoke --tp-smoke --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.3
+thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 80 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 20 40 60 80 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.3,--lr-end,1e-6,--warmup,4
 end
