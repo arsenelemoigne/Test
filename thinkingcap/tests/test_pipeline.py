@@ -251,6 +251,25 @@ def test_length_rewards_follow_the_shortest_correct_reply():
     assert group_advantages([1.0, 1.0]) == [0.0, 0.0]
 
 
+def test_copd_advantage_is_the_light_minus_heavy_gap_clipped():
+    from rl_train import copd_token_advantages
+    # token 1: both modes agree (0); token 2: only the thorough teacher writes it (pushed down); token 3: brief only (up)
+    assert copd_token_advantages([-1.0, -4.0, -0.5], [-1.0, -0.9, -3.0], 10.0) == [0.0, -3.1, 2.5]
+    assert copd_token_advantages([0.0, -30.0], [-30.0, 0.0], 10.0) == [10.0, -10.0]
+
+
+def test_copd_teacher_prompt_puts_the_instruction_before_the_user_text_only():
+    from rl_train import copd_teacher_prompt
+
+    class Tok:
+        def apply_chat_template(self, messages, **kw):
+            return [ord(c) for c in "|".join(m["role"] + ":" + m["content"] for m in messages)]
+
+    q = {"prompt": [{"role": "system", "content": "tools"}, {"role": "user", "content": "2+2?"}]}
+    text = "".join(map(chr, copd_teacher_prompt(Tok(), q, "BRIEF")))
+    assert text == "system:tools|user:BRIEF\n\n2+2?" and q["prompt"][1]["content"] == "2+2?"
+
+
 def test_drpo_weights_right_always_up_shorter_more_wrong_down_length_blind():
     from rl_train import drpo_weights
     # DRPO's Figure 1 group: 3 right (2,000 / 2,500 / 4,000 tokens), 3 wrong
@@ -312,6 +331,14 @@ def test_rl_train_runs_on_the_toy_model(toy):
         "--objective", "drpo", "--updates", "2", "--lr", "1e-3", "--save-every", "1", cwd=ROOT)
     log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
     assert [e["step"] for e in log] == [1, 2] and (out / "step-2" / "adapter_config.json").exists()
+    for teacher in ("self", str(model)):  # COPSD, and an external teacher sharing the tokenizer (here the same toy)
+        out = work / f"rl-copd-{'self' if teacher == 'self' else 'ext'}"
+        run(str(ROOT / "rl_train.py"), "--model", str(model), "--data", str(work / "rl-data.jsonl"),
+            "--sources", "toy", "--out", str(out), "--steps", "2", "--questions", "2", "--group", "3",
+            "--max-tokens", "40", "--backend", "hf", "--redundant", "none", "--dtype", "float32",
+            "--objective", "copd", "--copd-teacher", teacher, "--lr", "1e-3", cwd=ROOT)
+        log = [json.loads(line) for line in (out / "rl_log.jsonl").read_text().splitlines()]
+        assert [e["step"] for e in log] == [1, 2] and all(0 <= e["copd"]["negative"] <= 1 for e in log)
 
 
 def test_learning_rate_schedule_and_group_split():

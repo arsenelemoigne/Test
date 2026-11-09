@@ -49,6 +49,13 @@ rate p in its own group: lambda_q = lambda / max(p, 1/group size), so a question
 solved 1/8 eight times less (a softer softmax over its right replies): easy questions are shortened, hard ones keep
 their thinking.
 
+COPD (--objective copd; Ruan et al., arXiv 2607.19046, 9 Nov, user): no reward at all. A frozen teacher (--copd-teacher,
+e.g. Qwen3-4B, or 'self' = the starting weights) re-reads each sampled reply twice, with a light-effort and a heavy-effort
+instruction in front of the question, and gives each reply token A_t = log p(y_t | light) - log p(y_t | heavy), clipped to
++-10: tokens only a thorough teacher would write (re-checks, filler) are pushed down, tokens a brief teacher would also
+write are pushed up, ending the thinking early included. Loss = -mean over replies of (1/T) sum_t A_t log pi(y_t), one update
+per step (on-policy). Grading still runs, for the log only. The student never sees the instructions.
+
 Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
 
     python rl_train.py --init-adapter adapters/pruned_v2 --out adapters/rl --steps 6
@@ -173,7 +180,16 @@ def parse_arguments():
                         help="DLER's dynamic sampling: draw this many times --questions per step and train only on groups "
                              "with at least one right reply (an all-wrong group carries no correctness signal), keeping "
                              "--questions of them (0: off)")
-    parser.add_argument("--objective", choices=["grpo", "drpo"], default="grpo")
+    parser.add_argument("--objective", choices=["grpo", "drpo", "copd"], default="grpo")
+    # --objective copd (9 Nov, user; Ruan et al., arXiv 2607.19046): no reward; a frozen teacher re-reads each sampled reply
+    # under a light- and a heavy-effort instruction and the per-token log-prob gap is the advantage (see copd_token_advantages)
+    parser.add_argument("--copd-teacher", default="Qwen/Qwen3-4B",
+                        help="copd: the frozen teacher (same tokenizer as --model), or 'self' = the base model without the "
+                             "LoRA (COPSD: a frozen snapshot of the starting weights; with --init-adapter that is the raw "
+                             "model, not the init adapter)")
+    parser.add_argument("--copd-light", default="Reasoning Effort: Minimum viable, shortcuts strongly encouraged.")
+    parser.add_argument("--copd-heavy", default="Reasoning Effort: Absolute maximum with no shortcuts permitted.")
+    parser.add_argument("--copd-clip", type=float, default=10.0, help="copd: |A_t| cap (the paper: 10)")
     parser.add_argument("--protect-sources", default="",
                         help="comma list of sources (e.g. math) given NO length pressure: right replies weighted equally "
                              "(drpo) / correctness-only reward (shorterbetter); they are still trained to stay right")
@@ -252,6 +268,22 @@ def drpo_weights(lengths, correct, old_scores, lam, tau):
             for i, e in zip(members, exps):
                 coef[i] = sign * e / total
     return coef
+
+
+def copd_token_advantages(light, heavy, clip):
+    """COPD Eq. 3-4: A_t = log p_teacher(y_t | light prompt) - log p_teacher(y_t | heavy prompt), clipped to +-clip.
+    Positive: a brief teacher would write this token too; negative: only a thorough one would (filler, re-checks)."""
+    return [max(-clip, min(clip, a - b)) for a, b in zip(light, heavy)]
+
+
+def copd_teacher_prompt(tokenizer, question, instruction):
+    """The question's chat prompt with the effort instruction in front of its first user message; the student
+    never sees it (thinking on, as the student samples)."""
+    messages = [dict(m) for m in question["prompt"]]
+    user = next(i for i, m in enumerate(messages) if m["role"] == "user")
+    messages[user]["content"] = instruction + "\n\n" + messages[user]["content"]
+    ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, enable_thinking=True)
+    return list(ids["input_ids"]) if hasattr(ids, "keys") else list(ids)
 
 
 def learning_rate(step, steps, lr, lr_end, restarts):
@@ -591,6 +623,7 @@ GR_MEANS = {}  # --gr-norms-from: mean generated tokens per test part, filled in
 
 
 def main():
+    global LOGIT_TEMP  # --objective copd reads the teacher at temperature 1
     args = parse_arguments()
     if args.gr_norms_from:
         from build_pool import part_of
@@ -645,6 +678,19 @@ def main():
     scaler = torch.amp.GradScaler(enabled=dtype == torch.float16)
     close_id = tokenizer.convert_tokens_to_ids("</think>")
     eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
+    teacher = None
+    if args.objective == "copd":
+        if args.updates != 1:  # on-policy only: one update per sampling step, so the PPO ratio is 1 and needs no clip
+            raise SystemExit("--objective copd needs --updates 1")
+        if args.copd_teacher != "self":
+            teacher_tokenizer = AutoTokenizer.from_pretrained(args.copd_teacher)
+            probe = "Tom has 5 apples. <think>\nWait, 5 - 2 = 3.\n</think>\n\ndef f(x): return x"
+            if teacher_tokenizer.encode(probe) != tokenizer.encode(probe) or len(teacher_tokenizer) != len(tokenizer):
+                raise SystemExit(f"{args.copd_teacher}: tokenizer differs from {args.model}; COPD scores the student's tokens")
+            teacher = AutoModelForCausalLM.from_pretrained(args.copd_teacher, dtype=dtype).to(device).eval()
+            for p in teacher.parameters():
+                p.requires_grad_(False)
+        print(f"copd: teacher {args.copd_teacher}; light = {args.copd_light!r}; heavy = {args.copd_heavy!r}", flush=True)
 
     keep = set(args.sources.split(","))
     pool = balanced_order([r for r in read_jsonl(Path(args.data)) if args.sources == "all" or r["source"] in keep],
@@ -759,6 +805,35 @@ def main():
                 jobs.append([prompt, reply, ok, advantages[index] if advantages else (len(groups) - 1, index),
                              thinking_len, question])
         old_logps = {}
+        copd_adv = {}
+        if args.objective == "copd":  # the teacher reads every reply twice (light, heavy); no gradient
+            student_temp, LOGIT_TEMP = LOGIT_TEMP, 1.0  # the teacher's own distribution, not the sampling temperature
+            scored = [j for j in jobs if j[1]]
+            reads = {}
+            model.eval()
+            for effort, instruction in (("light", args.copd_light), ("heavy", args.copd_heavy)):
+                rows = [(copd_teacher_prompt(tokenizer, j[5], instruction), j[1], j) for j in scored]
+                for batch in token_batches(rows, args.batch_tokens):
+                    with torch.no_grad(), torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        if teacher is None:
+                            with model.disable_adapter():
+                                lps = batch_logps(model, [(r[0], r[1]) for r in batch], device)
+                        else:
+                            lps = batch_logps(teacher, [(r[0], r[1]) for r in batch], device)
+                    for r, lp in zip(batch, lps):
+                        reads[(effort, id(r[2][1]))] = lp.float().tolist()
+            LOGIT_TEMP = student_temp
+            all_adv, close_adv = [], []
+            for j in scored:
+                adv = copd_token_advantages(reads[("light", id(j[1]))], reads[("heavy", id(j[1]))], args.copd_clip)
+                copd_adv[id(j[1])] = adv
+                all_adv += adv
+                close_adv += [a for a, t in zip(adv, j[1]) if t == close_id]
+                j[3] = 1.0  # every sampled reply is trained (no reward filter)
+            stats["copd_mean"] = sum(all_adv) / max(1, len(all_adv))
+            stats["copd_negative"] = sum(a < 0 for a in all_adv) / max(1, len(all_adv))
+            stats["copd_close"] = sum(close_adv) / len(close_adv) if close_adv else None
+            stats["signal"] = len(scored)
         if args.objective == "drpo":  # coefficients per reply, from the sampling policy's scores (no gradient)
             model.eval()
             with torch.no_grad():
@@ -836,6 +911,36 @@ def main():
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
                 continue
+            if args.objective == "copd":  # Eq. 5 on-policy: loss = -mean over replies of (1/T) sum_t A_t log pi(y_t)
+                for batch in token_batches(chunk, args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        entropies = []
+                        batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
+                    refs = None
+                    if args.kl_coef:
+                        with torch.no_grad(), model.disable_adapter():
+                            with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                                refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                    loss = 0.0
+                    for index, j in enumerate(batch):
+                        logps = batch_lp[index].float()
+                        per_token = -torch.tensor(copd_adv[id(j[1])], device=device) * logps
+                        if refs is not None:
+                            gap = refs[index].float() - logps
+                            per_token = per_token + args.kl_coef * (torch.exp(gap) - gap - 1)
+                        if args.entropy_coef:
+                            per_token = per_token - args.entropy_coef * entropies[index]
+                        entropy_sum += float(entropies[index].detach().sum())
+                        entropy_count += len(j[1])
+                        loss = loss + per_token.sum() / len(j[1]) / len(chunk)
+                    scaler.scale(loss).backward()
+                    loss_sum += float(loss)
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                continue
             for batch in token_batches(chunk, args.batch_tokens):
                 with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
                     entropies = []
@@ -901,6 +1006,9 @@ def main():
                  "entropy": entropy_sum / max(1, entropy_count)}
         entry["by_type"] = {k: {"accuracy": round(c / max(1, n), 3), "thinking": round(t / max(1, n)), "replies": n}
                             for k, (c, n, t) in sorted(by_type.items())}
+        if args.objective == "copd":  # the teacher's verdict: mean advantage, share of tokens pushed down, at </think>
+            entry["copd"] = {"mean": round(stats["copd_mean"], 4), "negative": round(stats["copd_negative"], 3),
+                             "close_think": None if stats["copd_close"] is None else round(stats["copd_close"], 3)}
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)
