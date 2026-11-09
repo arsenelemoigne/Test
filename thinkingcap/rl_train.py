@@ -687,7 +687,9 @@ def main():
             probe = "Tom has 5 apples. <think>\nWait, 5 - 2 = 3.\n</think>\n\ndef f(x): return x"
             if teacher_tokenizer.encode(probe) != tokenizer.encode(probe) or len(teacher_tokenizer) != len(tokenizer):
                 raise SystemExit(f"{args.copd_teacher}: tokenizer differs from {args.model}; COPD scores the student's tokens")
-            teacher = AutoModelForCausalLM.from_pretrained(args.copd_teacher, dtype=dtype).to(device).eval()
+            # (9 Nov) kept in CPU memory and moved to the GPU only for its two reads each step: resident, the 4B teacher
+            # (~8 GB) plus the student's backward pass and the sampler ran a 22 GB L4 out of memory
+            teacher = AutoModelForCausalLM.from_pretrained(args.copd_teacher, dtype=dtype).eval()
             for p in teacher.parameters():
                 p.requires_grad_(False)
         print(f"copd: teacher {args.copd_teacher}; light = {args.copd_light!r}; heavy = {args.copd_heavy!r}", flush=True)
@@ -811,6 +813,8 @@ def main():
             scored = [j for j in jobs if j[1]]
             reads = {}
             model.eval()
+            if teacher is not None:
+                teacher.to(device)
             for effort, instruction in (("light", args.copd_light), ("heavy", args.copd_heavy)):
                 rows = [(copd_teacher_prompt(tokenizer, j[5], instruction), j[1], j) for j in scored]
                 for batch in token_batches(rows, args.batch_tokens):
@@ -823,6 +827,10 @@ def main():
                     for r, lp in zip(batch, lps):
                         reads[(effort, id(r[2][1]))] = lp.float().tolist()
             LOGIT_TEMP = student_temp
+            if teacher is not None:
+                teacher.to("cpu")
+            if device == "cuda":
+                torch.cuda.empty_cache()  # the reads' activations must not stay cached through the backward pass
             all_adv, close_adv = [], []
             for j in scored:
                 adv = copd_token_advantages(reads[("light", id(j[1]))], reads[("heavy", id(j[1]))], args.copd_clip)
