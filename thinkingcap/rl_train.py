@@ -406,7 +406,7 @@ def batch_logps(model, rows, device, entropies=None):
     for i, (prompt, reply) in enumerate(rows):
         ids[i, :len(prompt) + len(reply)] = torch.tensor(prompt + reply)
         mask[i, :len(prompt) + len(reply)] = 1
-    hidden = body(input_ids=ids.to(device), attention_mask=mask.to(device)).last_hidden_state
+    hidden = body(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False).last_hidden_state  # (9 Nov) no KV cache
     from torch.utils.checkpoint import checkpoint
 
     def piece(h, target):
@@ -814,6 +814,9 @@ def main():
             reads = {}
             model.eval()
             if teacher is not None:
+                import gc
+                gc.collect()
+                torch.cuda.empty_cache()
                 teacher.to(device)
             for effort, instruction in (("light", args.copd_light), ("heavy", args.copd_heavy)):
                 rows = [(copd_teacher_prompt(tokenizer, j[5], instruction), j[1], j) for j in scored]
@@ -826,6 +829,7 @@ def main():
                             lps = batch_logps(teacher, [(r[0], r[1]) for r in batch], device)
                     for r, lp in zip(batch, lps):
                         reads[(effort, id(r[2][1]))] = lp.float().tolist()
+                    del lps
             LOGIT_TEMP = student_temp
             if teacher is not None:
                 teacher.to("cpu")
@@ -943,6 +947,7 @@ def main():
                         loss = loss + per_token.sum() / len(j[1]) / len(chunk)
                     scaler.scale(loss).backward()
                     loss_sum += float(loss)
+                    del batch_lp, entropies, refs, loss, per_token, logps  # nothing of the graph survives the batch
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
                 scaler.step(optimizer)
@@ -1014,6 +1019,11 @@ def main():
                  "entropy": entropy_sum / max(1, entropy_count)}
         entry["by_type"] = {k: {"accuracy": round(c / max(1, n), 3), "thinking": round(t / max(1, n)), "replies": n}
                             for k, (c, n, t) in sorted(by_type.items())}
+        if args.objective == "copd" and device == "cuda":  # (9 Nov) memory after the step, to see a leak before it bites
+            import gc
+            gc.collect()
+            torch.cuda.empty_cache()
+            entry["gpu_gb"] = round(torch.cuda.memory_allocated() / 1e9, 2)
         if args.objective == "copd":  # the teacher's verdict: mean advantage, share of tokens pushed down, at </think>
             entry["copd"] = {"mean": round(stats["copd_mean"], 4), "negative": round(stats["copd_negative"], 3),
                              "close_think": None if stats["copd_close"] is None else round(stats["copd_close"], 3)}

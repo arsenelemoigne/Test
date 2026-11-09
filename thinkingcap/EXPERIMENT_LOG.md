@@ -4982,3 +4982,14 @@ Plan lines, in order:
   </think>: the 0.6B barely reacts to the effort instructions, so the self-coach version would teach nothing. The 4B check runs on
   GPU 2 first (copddemo) before the smoke test and Run A (the Mac's 8.6 GB RAM cannot hold the 4B).
 - (user) Run B, only if Run A loses accuracy: COPD pushes applied to RIGHT answers only (wrong answers never teach "be brief").
+- 9 Nov ~13:00 **ca1-soup-10 FULL TEST: +49.1 / -2.4** official (+0.4 vs curve; its 720 screen said 52.4 / -0.9: flattered).
+  svamp +58 / -4.3, mbpp +53 / -2.2, ifeval +45 / -2.4, irrelevance +41 / -3.2, multiple +38 / +0.6, simple +36 / +0.4.
+  Same pattern as rc1-soup-30, milder: math loss from always-solved questions (100 -> 94.6); no-fit 7/8 questions -23 pts.
+  160 regressed questions (rc1-soup-30: 212). Breakdown + struggle in runs/mvtf/bd-ca1-soup-10, st-ca1-soup-10.
+- 9 Nov COPD smoke test (cp1smoke2): step 1 ran (coach verdict on 128 answers: mean push -0.012, 38% of tokens pushed down,
+  </think> 0.00), step 2 out of memory moving the teacher back to the GPU (~7 GB still held after step 1); Run A (cp1a) the same
+  at step 2. copddemo, 20 hand-written questions: 0.6B as coach ~0 (direction 10/20); **4B as coach reacts (needless check
+  pushed down in 19/20) but pushes the USEFUL check down twice as hard (-0.20 vs -0.10; needless below useful only 7/20), stop
+  +0.01**: on this evidence COPD with these instructions would remove the re-read step. User: run Run A anyway for a few steps,
+  it may show something useful. Memory fix: no KV cache in batch_logps (use_cache=False), explicit frees between the read and
+  training phases, GPU memory logged per step (gpu_gb). cp1a resumes after its step 1.

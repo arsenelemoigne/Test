@@ -469,11 +469,11 @@
 # (LoRA Without Regret). 80 steps x 64 questions x 2 answers = 10,240 answers (= gr2f's budget), 720 at 20/40/60/80.
 # First a 5-step smoke test (memory with the 4B teacher on the L4, the teacher's verdict in the log).
 # FAILED 9 Nov (CUDA out of memory: the 4B teacher resident on the GPU) thinkprune --name cp1smoke --tp-smoke --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.3
-thinkprune --name cp1smoke2 --tp-smoke --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25
+# DONE 9 Nov thinkprune --name cp1smoke2 --tp-smoke --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25
 # 9 Nov (user): the questions rc1-soup-30 lost and why (one reason per wrong answer, full texts), CPU only
 # DONE 9 Nov struggle --bd-names rc1-soup-30
 # FAILED 9 Nov (CUDA out of memory: the 4B teacher resident on the GPU) thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 80 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 20 40 60 80 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.3,--lr-end,1e-6,--warmup,4
 # 9 Nov (user): before Run A, do the coach's two hats differ? (0.6B as its own coach: ~0 pushes on the Mac)
-copddemo
+# DONE 9 Nov copddemo
 thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 80 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 20 40 60 80 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--lr-end,1e-6,--warmup,4
 end
