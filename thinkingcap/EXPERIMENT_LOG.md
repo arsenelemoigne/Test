@@ -4993,3 +4993,12 @@ Plan lines, in order:
   +0.01**: on this evidence COPD with these instructions would remove the re-read step. User: run Run A anyway for a few steps,
   it may show something useful. Memory fix: no KV cache in batch_logps (use_cache=False), explicit frees between the read and
   training phases, GPU memory logged per step (gpu_gb). cp1a resumes after its step 1.
+- 9 Nov **ca1-soup-10 why-data** (st-ca1-soup-10/summary.json, read from Drive): wrong answers out of 8 per question, original ->
+  ca1. Math: cut off 139 -> 0, stopped early 27 -> 252, plain wrong 644 -> 922; on its 62 regressed questions 30% stopped early,
+  68% wrong after normal-length thinking, thinking 0.43 of the original's right answers, 271 of 307 wrong numbers far off (the
+  question misread, as rc1). Code: cut off 236 -> 34, stopped early 23 -> 157, wrong 1,179 -> 1,311. IFEval: stopped early
+  24 -> 247, cut off 156 -> 94, wrong 1,648 -> 1,575. No-fit: stopped early 3 -> 29, wrong 316 -> 351. Calls: about unchanged.
+  Same mechanism as rc1-soup-30, milder: fewer early stops (it shortens less), the misread-question errors remain.
+- 9 Nov COPD Run A (cp1a, short version) stopped by the user after step 4 (resumes from there): memory fix holds (gpu_gb 1.33
+  after every step), but ~15-20 min per step (the 8 GB teacher moved CPU<->GPU twice a step). Steps 2-3: practice accuracy
+  0.867 / 0.828, tokens 566 / 636, coach 36-38% of tokens pushed down, mean -0.018, </think> 0.00.
