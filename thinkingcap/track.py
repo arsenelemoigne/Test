@@ -3781,6 +3781,12 @@ def thinkprune(args):
             want = round(need * shares[p])
             print(f"thinkprune CHECK {name}:   {p}: {per[p]} eligible, ~{want} used" + ("  SHORT" if per[p] < want else ""), flush=True)
         return
+    if args.tp_mixed_share is not None and not args.tp_smoke:
+        # (9 Nov) rl_train re-orders its pool by source (balanced_order), which undid the 50/50 ORDER: keep exactly the
+        # questions the run uses (steps x questions, taken in the mixed order), so the share holds whatever the order
+        pool = pool[:steps * questions]
+        some = sum(0 < q["solve10"] < 1 for q in pool)
+        print(f"thinkprune {name}: {len(pool)} questions kept, {some} sometimes wrong ({some / max(1, len(pool)):.0%})", flush=True)
     data = Path(f"data/tp-{name}.jsonl")
     data.write_text("".join(json.dumps(r) + "\n" for r in pool))
     base = "Qwen/Qwen3-0.6B"

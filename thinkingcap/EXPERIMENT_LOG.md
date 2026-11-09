@@ -5069,3 +5069,11 @@ Plan lines, in order:
   Accuracy meets the goal (better than -1), the saving does not (47 < 50). Its 720 screen said 50.4 / -0.2: flattered by 3.4 pts
   of saving and 0.7 pt of accuracy. Reference (not ours): michal-bida 47.0 / -0.78, Herz1c 43.4 / -0.97. rpE @ 40 full test
   running. Run C rescheduled to Run A's checkpoints (10/20/25/30/35/40, 5-step blocks).
+- 9 Nov **COPD Run A @ 40 (final): +34.1 / -2.4** (svamp +51 / -2.7, mbpp +31 / -4.4, ifeval +22 / -1.9, irrelevance +30 / -1.5,
+  multiple +27 / -0.2, simple +25 / 0.0): saving 29.8 -> 34.1 at the lr floor, accuracy down to -2.4.
+- 9 Nov Run C (cp1c) stopped at step 3: its mix was not 50/50 (steps 1-3: 8/16, 2/16, 3/16 sometimes-wrong) because rl_train
+  re-orders the pool by source (balanced_order). Fix: with --tp-mixed-share, thinkprune keeps exactly steps x questions
+  questions in the mixed order (319 of 640 sometimes-wrong on the real pool sizes). Relaunched as cp1c2. Early mix data
+  (cp1c steps 1-3): sometimes-wrong questions mixed-now 6/8, 2/2, 3/3; always-right ones 2/8, 5/14, 2/13 (right 0.91-0.98).
+  Available per part (sometimes / always): svamp 2,597 / 4,001, mbpp 1,274 / 898, ifeval 1,015 / 1,098, simple 316 / 955,
+  multiple 239 / 360, irrelevance 401 / 2,253.
