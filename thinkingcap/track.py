@@ -334,6 +334,8 @@ def main():
                         help="ptrepair (9 Nov): questions from the user's own sources only (own_repair_questions): math = "
                              "GSM8K train+test at every difficulty in SVAMP wording; code / instructions / tools = pool-dp13 "
                              "rows minus MetaMath + the own top-ups nofit1, nofit2, tools1, code1; no michal-bida source")
+    parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
+                        "--think-only,ifeval,--prefer-reread)")
     parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard"),
                         help="ptrepair: repair_pairs.py --kinds (guard = only shortest right > shortest finished wrong)")
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
@@ -3581,7 +3583,8 @@ def ptrepair(args):
     drive_sync("restore", only=[str(pairs)])
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
-        py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds)
+        py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+           *[x for x in args.rp_pair_args.split(",") if x])
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / f"{name}-s0"

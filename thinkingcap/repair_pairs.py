@@ -8,6 +8,12 @@ Quotas per part (--quota part=n), half guard / half right; <= 3 pairs per questi
 sample pair used twice. --kinds guard (9 Nov): guard pairs only, the whole quota (the user's own 21 Oct rule, bon_pairs'
 guard; the similar-length "right" kind matches Lightning McQwen3's correctness DPO and is left out). A question gives at
 most one guard pair, so a part needs at least its quota of mixed-outcome questions. Mixed-outcome questions are the only source (a pair needs a right and a wrong answer).
+--think-only PARTS (9 Nov, user, from the rc1-soup-30 full-test diagnosis): for these parts (ifeval) "shortest" is the
+shortest THINKING, never the shortest whole answer, so a pair never rewards a shorter final response (length constraints:
+"at least 600 words"). --prefer-reread (same day): the chosen right answer is the shortest one that RE-CHECKS THE QUESTION
+(what exactly is asked, the example / assert, the constraints, whether a tool fits; regex markers on its thinking) when one
+exists within 1.5x the shortest right answer's thinking, else the shortest: the shortened model's lost questions were
+right calculations of the wrong question, the re-check it had dropped.
 The output is ordered so that every --block consecutive pairs hold the intended part x kind mix (training reads it in
 order with dpo.py --keep-order: a checkpoint at step 5 has seen a representative slice, not one part).
 
@@ -16,10 +22,25 @@ order with dpo.py --keep-order: a checkpoint at step 5 has seen a representative
 import argparse
 import json
 import random
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
 from build_pool import part_of
+
+
+REREAD = re.compile(r"\b(the (question|problem|task|user|prompt) (is )?(asks?|asking|says|wants|wanted|states|requires|mentions)|"
+                    r"(re-?read|reading|read) (the|it) (question|problem|again|carefully)|let me re-?read|"
+                    r"(they('re| are)|it('s| is)|we('re| are)) (being )?asked|asked (for|to)|"
+                    r"(only|actually) (asks?|wants?)|wait,? (the|it) (question|problem|asks)|"
+                    r"(check|compare|verify|test)\w* (it )?(against|with)? ?the (example|assert|test|sample|constraints?)|"
+                    r"(none of the|no) (available )?(functions?|tools?) (fit|match|appl|is relevant|are relevant|can)|"
+                    r"(does|do) (the|this|these|any) (functions?|tools?) (fit|match|apply|help)|"
+                    r"the (constraints?|requirements?|instructions?) (are|is|say|require))", re.I)
+
+
+def thinking_len(r):
+    return len(r.get("thinking_ids") or []) or r["output_tokens"]
 
 
 def finished(r):
@@ -38,6 +59,9 @@ def main():
     ap.add_argument("--ratio", type=float, default=1.25)
     ap.add_argument("--block", type=int, default=80)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--think-only", default="", help="parts (comma) whose shortness is the thinking only (ifeval)")
+    ap.add_argument("--prefer-reread", action="store_true",
+                    help="chosen = the shortest right answer that re-checks the question, within 1.5x the shortest's thinking")
     ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard"),
                     help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
@@ -49,16 +73,31 @@ def main():
             if line.strip():
                 r = json.loads(line)
                 groups[r["id"]].append(r)
+    think_only = set(filter(None, args.think_only.split(",")))
+    decode = None
+    if args.prefer_reread:
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+        decode = lambda r: tok.decode(r.get("thinking_ids") or r["output_ids"], skip_special_tokens=True)  # noqa: E731
+    rereads = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": []})
     for qid, q in groups.items():
         part = part_of(q[0])
         if part not in quota:
             continue
-        rights = sorted((r for r in q if right(r)), key=lambda r: r["output_tokens"])
-        wrongs = sorted((r for r in q if finished(r) and not right(r)), key=lambda r: r["output_tokens"])
+        size = thinking_len if part in think_only else (lambda r: r["output_tokens"])
+        rights = sorted((r for r in q if right(r)), key=size)
+        wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
         if not rights or not wrongs:
             continue
-        cand[part]["guard"].append((qid, rights[0], wrongs[0]))
+        chosen = rights[0]
+        if decode:
+            checked = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0]) and REREAD.search(decode(r))]
+            chosen = checked[0] if checked else rights[0]
+            rereads[(part, "chosen re-checks")] += bool(checked)
+            rereads[(part, "rejected re-checks")] += bool(REREAD.search(decode(wrongs[0])))
+            rereads[(part, "guard questions")] += 1
+        cand[part]["guard"].append((qid, chosen, wrongs[0]))
         close = [(r, w) for r in rights for w in wrongs
                  if max(r["output_tokens"], w["output_tokens"]) <= args.ratio * min(r["output_tokens"], w["output_tokens"])]
         rng.shuffle(close)
@@ -129,6 +168,11 @@ def main():
             lines.append(f"  {part}: median chosen / rejected tokens {med([p['chosen_tokens'] for p in ps])} / "
                          f"{med([p['rejected_tokens'] for p in ps])}; chosen longer in "
                          f"{sum(p['chosen_tokens'] > p['rejected_tokens'] for p in ps) / len(ps):.0%}")
+    for part in quota:
+        if rereads[(part, "guard questions")]:
+            n = rereads[(part, "guard questions")]
+            lines.append(f"  {part}: re-check of the question in the chosen answer {rereads[(part, 'chosen re-checks')] / n:.0%}, "
+                         f"in the rejected {rereads[(part, 'rejected re-checks')] / n:.0%} ({n} guard questions)")
     first = Counter(p["part"] for p in pairs[:args.block])
     lines.append(f"  first {args.block} pairs by part: {dict(first)}")
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
