@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -2925,6 +2925,17 @@ def breakdown(args):
         assert (cand / "records.jsonl").exists(), f"{cand} has no records.jsonl"
         py("difficulty_breakdown.py", "--base", base, "--cand", cand, "--out", ROOT / f"bd-{name}")
         py("struggle_dump.py", "--base", base, "--cand", cand, "--questions", "questions", "--out", ROOT / f"st-{name}")
+    drive_sync("save")
+
+
+def struggle(args):
+    """(9 Nov, user) The questions a fully tested model lost and why (struggle_dump.py), for each --bd-names."""
+    base = ROOT / "full-base"
+    for name in args.bd_names:
+        cand = ROOT / f"full-{name}"
+        drive_sync("restore", only=[str(base), str(cand)])
+        py("struggle_dump.py", "--base", base, "--cand", cand, "--questions", "questions", "--out", ROOT / f"st-{name}",
+           "--show", 6)
     drive_sync("save")
 
 
