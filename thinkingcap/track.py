@@ -372,6 +372,9 @@ def main():
     parser.add_argument("--tp-gate", type=float, default=0.0)
     parser.add_argument("--tp-dr-grpo", action="store_true")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
+    parser.add_argument("--fm-soup", nargs="*", default=[], help="fullmodel (9 Nov): NAME:STEP rebuilds a missing "
+                        "models/NAME-soup-STEP = the original Qwen + adapters/NAME-s0..2/step-STEP averaged (a first chain "
+                        "round, e.g. ca1:10; the seeds started from the previous round's adapter, so they hold the lineage)")
     parser.add_argument("--lp-trained", default="", help="lupin: onpolicy/polans run names (comma-separated): lupin_pairs.py --trained")
     parser.add_argument("--lp-min-overcut", type=int, default=0, help="lupin: gate, at least this many trained overcut pairs or no training")
     parser.add_argument("--lp-overcut", default="", help="lupin: onpolicy run names, comma-separated: their answers are lupin_pairs.py --overcut")
@@ -2875,6 +2878,18 @@ def fullmodel(args):
     how far off we were"), e.g. --nothink-models models/rc1-rl-40; then the representativeness check on every full run."""
     base = ROOT / "full-base"
     drive_sync("restore", only=[str(base), SCREEN, str(ROOT / "s4-base")])
+    for soup in args.fm_soup:  # (9 Nov) rebuild a merged soup the clean-ups removed, from its kept adapters
+        run_name, step = soup.split(":")
+        model = Path("models") / f"{run_name}-soup-{step}"
+        drive_sync("restore", only=[str(model)])
+        if not (model / "config.json").exists():
+            parts = [Path("adapters") / f"{run_name}-s{seed}" / f"step-{step}" for seed in (0, 1, 2)]
+            drive_sync("restore", only=[str(p) for p in parts])
+            parts = [p for p in parts if (p / "adapter_config.json").exists()]
+            assert len(parts) == 3, f"{model}: only {len(parts)} of its 3 seed adapters are on Drive"
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters", *[f"{p}:{1 / 3:.6f}" for p in parts])
+            drive_sync("save")
+            print(f"fullmodel: rebuilt {model} from {', '.join(map(str, parts))}", flush=True)
     for model in args.nothink_models:
         name = Path(model).name
         drive_sync("restore", only=[model])

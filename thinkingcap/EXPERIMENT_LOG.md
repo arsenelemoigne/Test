@@ -4955,3 +4955,8 @@ Plan lines, in order:
   fullmodel --name full-rc1soup --nothink-models models/rc1-soup-30         (GPU 2)
   ptrepair --name rpD-smoke --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-smoke
   ptrepair --name rpD --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+- 9 Nov ~09:05: Step 1 started on both runtimes from 9c4ac5b. GPU 2 (second_colab): fullmodel rc1-soup-30 running (vLLM up 09:02).
+  GPU 1 (full_eval_colab): fullmodel ca1-soup-10 FAILED at once: models/ca1-soup-10 not on Drive (a clean-up removed the merged
+  model). New `fullmodel --fm-soup NAME:STEP` rebuilds models/NAME-soup-STEP from the original Qwen + adapters/NAME-s0..2/step-STEP
+  at 1/3 each (first chain round: the seeds started from clean-a2's adapter, so they hold the whole lineage); dry-run checked here.
+  plan_line_b now: fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10 (needs full_eval_colab re-run).

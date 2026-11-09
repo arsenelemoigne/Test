@@ -535,5 +535,7 @@
 # 6 Nov 08:30: the same GRPO run, fixed (length scale per part from the pool's own labels, checked >= 100 tokens)
 # done before 9 Nov (commented 9 Nov so a fresh start does not rerun it) thinkprune --name gr2f --tp-norm-means --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0.5 --tp-include-unsolved --tp-steps 40 --tp-questions 32 --tp-group 8 --tp-lr 1e-5 --tp-kl 0.005 --tp-dr-grpo --tp-rank 16 --tp-persist --tp-score-steps 10 20 30 40 --tp-rl=--gr-form,linear,--fixed-denominator,--max-tokens-code,8192,--grad-clip,0.5,--lr-end,1e-6,--warmup,4,--full-support
 # 9 Nov (user): Step 1 of the repair plan: the round-3 model on the FULL test (never run on it)
-fullmodel --name full-ca1 --nothink-models models/ca1-soup-10
+# FAILED 9 Nov 09:0x (models/ca1-soup-10 not on Drive: removed by a clean-up) fullmodel --name full-ca1 --nothink-models models/ca1-soup-10
+# 9 Nov: the same test, rebuilding the soup first from its kept seed adapters (ca1-s0..2, step 10)
+fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10
 end
