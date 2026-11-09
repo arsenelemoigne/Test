@@ -4960,3 +4960,15 @@ Plan lines, in order:
   model). New `fullmodel --fm-soup NAME:STEP` rebuilds models/NAME-soup-STEP from the original Qwen + adapters/NAME-s0..2/step-STEP
   at 1/3 each (first chain round: the seeds started from clean-a2's adapter, so they hold the whole lineage); dry-run checked here.
   plan_line_b now: fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10 (needs full_eval_colab re-run).
+
+### 9 Nov: COPD (contrastive on-policy distillation) built and queued (user)
+- rl_train.py --objective copd (Ruan et al., arXiv 2607.19046): no reward; a frozen teacher (Qwen3-4B, or 'self') re-reads each
+  sampled reply under a light- and a heavy-effort instruction; token advantage = log p(light) - log p(heavy), clipped +-10;
+  loss = -mean over replies of (1/T) sum A_t log pi; one update per step. Refuses a teacher with a different tokenizer. Logs the
+  teacher's verdict each step (mean advantage, share of tokens pushed down, advantage at </think>). Toy-model tests pass.
+- Settings researched: lr 1e-5 = the paper's 1e-6 (full fine-tuning) x 10 for LoRA ("LoRA Without Regret": optimal LoRA lr ~10x
+  full FT for SFT and RL); one answer per question in the paper (no group needed), so 64 questions x 2 answers per step.
+- Questions (user): Run A = solved at least once in the original's 10 answers, always-solved kept, never-solved out (the
+  never-solved arm, free savings vs the risk of giving up early on hard-but-solvable questions, is a later test).
+- Queued on GPU 2 after the rc1-soup-30 full test: cp1smoke (5 steps, memory check) then cp1a (80 x 64 x 2 = 10,240 answers,
+  gr2f's budget; 720 at 20/40/60/80). After it: token distribution per data type + accuracy vs the original (user).
