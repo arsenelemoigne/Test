@@ -476,5 +476,8 @@
 # 9 Nov (user): before Run A, do the coach's two hats differ? (0.6B as its own coach: ~0 pushes on the Mac)
 # DONE 9 Nov copddemo
 # SHORTENED 9 Nov (user: a short version just to see) thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 80 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 20 40 60 80 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--lr-end,1e-6,--warmup,4
-thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 20 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 10 20 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--lr-end,1e-6,--warmup,4
+# DONE 9 Nov (steps 1-20, 720 at 10 and 20) thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 20 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 10 20 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--lr-end,1e-6,--warmup,4
+# 9 Nov (user): continue COPD to step 40, 5-step blocks, 720 at 25 / 30 / 35 / 40 (the cosine now spans 40 steps, so the lr
+# rises back to about the middle of its range at step 21: ~5.5e-6 instead of ~1e-6)
+thinkprune --name cp1a --tp-answers10 --tp-start raw --tp-reward gated --tp-min-solve 0 --tp-steps 40 --tp-block 5 --tp-questions 64 --tp-group 2 --tp-lr 1e-5 --tp-kl 0 --tp-rank 16 --tp-persist --tp-score-steps 25 30 35 40 --tp-rl=--objective,copd,--copd-teacher,Qwen/Qwen3-4B,--full-support,--max-tokens-code,8192,--gpu-memory,0.25,--lr-end,1e-6,--warmup,4
 end

@@ -341,6 +341,7 @@ def main():
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
                         help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
                              "instead of every --tp-score-every")
+    parser.add_argument("--tp-block", type=int, default=10, help="thinkprune: steps per block (a checkpoint at each)")
     parser.add_argument("--tp-persist", action="store_true",
                         help="thinkprune: one AdamW and one lr schedule across the 10-step blocks (--init-state, --total-steps)")
     parser.add_argument("--tp-include-unsolved", action="store_true",
@@ -3743,12 +3744,18 @@ def thinkprune(args):
     rl = Path("adapters") / f"{name}-rl"
     drive_sync("restore", only=[str(rl)])
     previous = None
-    for done in range(10 if not args.tp_smoke else steps, steps + 1, 10 if not args.tp_smoke else steps):
+    block = steps if args.tp_smoke else args.tp_block
+    # (9 Nov) --tp-block: blocks of any size; checkpoints already on disk (e.g. a run extended from 20 to 40 steps with
+    # 5-step blocks after 10-step ones) are kept and the next block continues from the latest of them
+    have = sorted(int(d.name[5:]) for d in rl.glob("step-*") if (d / "adapter_config.json").exists())
+    dones = [d for d in have if d <= steps] + [d for d in range(block, steps + 1, block) if d > max(have, default=0)]
+    for done in dones:
         ckpt = rl / f"step-{done}"
         if not (ckpt / "adapter_config.json").exists():
             began = time.time()
+            size = done - (previous_done if previous else 0) if not args.tp_smoke else steps
             py("rl_train.py", "--model", base, "--data", data, "--sources", "all", "--out", ckpt,
-               "--steps", 10 if not args.tp_smoke else steps, "--offset", done - (10 if not args.tp_smoke else steps),
+               "--steps", size, "--offset", done - size,
                *(["--init-adapter", previous] if previous else []), "--questions", questions, "--group", group,
                "--max-tokens", max(caps.values()) if args.tp_reward == "cap" else 4096, "--reward", args.tp_reward,
                "--advantage", "group", "--kl-coef", args.tp_kl, "--grader", "typed", "--redundant", "none", "--lr", args.tp_lr,
@@ -3761,7 +3768,7 @@ def thinkprune(args):
             print(f"thinkprune {name}: steps to {done} took {(time.time() - began) / 60:.1f} min", flush=True)
             drive_sync("save")
         print((ckpt / "rl_log.jsonl").read_text()[-3000:], flush=True)
-        previous = ckpt
+        previous, previous_done = ckpt, done
         if not args.tp_smoke and (done in args.tp_score_steps if args.tp_score_steps else done % args.tp_score_every == 0):
             out = ROOT / f"s4-{name}-{done}"
             drive_sync("restore", only=[str(out)])
