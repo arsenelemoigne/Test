@@ -376,6 +376,8 @@ def main():
     parser.add_argument("--tp-gate", type=float, default=0.0)
     parser.add_argument("--tp-dr-grpo", action="store_true")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
+    parser.add_argument("--fm-merge", nargs="*", default=[], help="fullmodel (9 Nov): models/OUT=BASE:ADAPTER merges an "
+                        "adapter onto a base model before testing models/OUT")
     parser.add_argument("--fm-soup", nargs="*", default=[], help="fullmodel (9 Nov): NAME:STEP rebuilds a missing "
                         "models/NAME-soup-STEP = the original Qwen + adapters/NAME-s0..2/step-STEP averaged (a first chain "
                         "round, e.g. ca1:10; the seeds started from the previous round's adapter, so they hold the lineage)")
@@ -2894,6 +2896,17 @@ def fullmodel(args):
             py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters", *[f"{p}:{1 / 3:.6f}" for p in parts])
             drive_sync("save")
             print(f"fullmodel: rebuilt {model} from {', '.join(map(str, parts))}", flush=True)
+    for spec in args.fm_merge:  # (9 Nov) models/OUT=BASE:ADAPTER, e.g. a repair checkpoint merged onto its base model
+        out_model, rest = spec.split("=")
+        merge_base, adapter = rest.split(":")
+        drive_sync("restore", only=[out_model])
+        if not (Path(out_model) / "config.json").exists():
+            drive_sync("restore", only=[merge_base, adapter])
+            assert (Path(merge_base) / "config.json").exists(), f"{merge_base} not found"
+            assert (Path(adapter) / "adapter_config.json").exists(), f"{adapter} not found"
+            py("merge.py", "--model", merge_base, "--out", out_model, "--adapters", f"{adapter}:1")
+            drive_sync("save")
+            print(f"fullmodel: built {out_model} = {merge_base} + {adapter}", flush=True)
     for model in args.nothink_models:
         name = Path(model).name
         drive_sync("restore", only=[model])
