@@ -5060,3 +5060,7 @@ Plan lines, in order:
   right) to every token of each reply (GRPO-style group comparison, no std) on top of the coach's per-token push: correctness
   trained in the same step; w = 1.0, 32 questions x 4 answers, CONSTANT lr 1e-5 after 4 warm-up steps, 40 steps, 720 at 10/20/30/40.
   No per-type brake (user). Toy-model test passes.
+- 9 Nov (user: option 3, and keep data on the mix) Run C now uses --tp-mixed-share 0.5: per part, the questions alternate
+  "sometimes wrong" (the original solves 1-9 of its 10 stored answers) and "always right" (10/10); the counts available per
+  part are printed at the start, each pool row carries solve10, and every step logs per kind: questions, how many are MIXED NOW
+  (right and wrong among the 4 fresh answers: where the correctness push acts) and the share right.

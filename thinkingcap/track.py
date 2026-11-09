@@ -341,6 +341,8 @@ def main():
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
                         help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
                              "instead of every --tp-score-every")
+    parser.add_argument("--tp-mixed-share", type=float, default=None, help="thinkprune: share of questions the original "
+                        "solves 1-9 of 10 (the rest 10/10), in the order used (9 Nov: 0.5)")
     parser.add_argument("--tp-block", type=int, default=10, help="thinkprune: steps per block (a checkpoint at each)")
     parser.add_argument("--tp-persist", action="store_true",
                         help="thinkprune: one AdamW and one lr schedule across the 10-step blocks (--init-state, --total-steps)")
@@ -3740,6 +3742,25 @@ def thinkprune(args):
     rng = random.Random(args.data_seed)
     for ids in eligible.values():
         rng.shuffle(ids)
+    solve = {qid: sum(ok for ok, _ in got) / len(got) for qid, got in by_q.items()}
+    if args.tp_mixed_share is not None:  # (9 Nov, user) a set share of "sometimes wrong" questions (solved 1-9 of 10)
+        mix_lines = [f"thinkprune {name}: questions per part, sometimes wrong (1-9/10) / always right (10/10), "
+                     f"{args.tp_mixed_share:.0%} sometimes-wrong in the order used"]
+        for part, ids in eligible.items():
+            some = [q for q in ids if 0 < solve[q] < 1]
+            always = [q for q in ids if solve[q] >= 1]
+            order, credit_some = [], 0.0
+            while some or always:  # the share holds until one kind runs out, then the other fills in
+                credit_some += args.tp_mixed_share
+                if some and (credit_some >= 1 or not always):
+                    order.append(some.pop())
+                    credit_some -= 1
+                elif always:
+                    order.append(always.pop())
+            eligible[part] = order[::-1]  # popped from the end: the first chosen is order[0]
+            n_some = sum(0 < solve[q] < 1 for q in ids)
+            mix_lines.append(f"  {part}: {n_some} sometimes wrong, {len(ids) - n_some} always right")
+        print("\n".join(mix_lines), flush=True)
     pool, credit = [], defaultdict(float)  # interleaved by the test's shares
     while any(eligible.values()):
         for part, w in weights.items():
@@ -3747,7 +3768,7 @@ def thinkprune(args):
             while credit[part] >= 1 and eligible.get(part):
                 credit[part] -= 1
                 q = rows[eligible[part].pop()]
-                pool.append(q | {"id": q["pool_id"], "cap": caps[part]})
+                pool.append(q | {"id": q["pool_id"], "cap": caps[part], "solve10": round(solve[q["pool_id"]], 2)})
     if args.tp_check:  # (6 Nov, user) the question selection only: counts per part vs what the run needs, no training
         need = args.tp_steps * args.tp_questions
         per = defaultdict(int)

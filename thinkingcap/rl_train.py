@@ -852,13 +852,22 @@ def main():
                 for j in scored:
                     groups_of[id(j[5])].append(j)
                 with_signal = 0
+                origin = {"sometimes": [0, 0, 0, 0], "always": [0, 0, 0, 0]}  # [questions, mixed now, right, answers]
                 for members in groups_of.values():
                     mean_right = sum(bool(j[2]) for j in members) / len(members)
                     with_signal += 0 < mean_right < 1
+                    s10 = members[0][5].get("solve10")
+                    if s10 is not None:  # (9 Nov) the question's kind from the original's 10 stored answers
+                        o = origin["always" if s10 >= 1 else "sometimes"]
+                        o[0] += 1
+                        o[1] += 0 < mean_right < 1
+                        o[2] += sum(bool(j[2]) for j in members)
+                        o[3] += len(members)
                     for j in members:
                         bonus = args.copd_outcome * (float(bool(j[2])) - mean_right)
                         if bonus:
                             copd_adv[id(j[1])] = [a + bonus for a in copd_adv[id(j[1])]]
+                stats["copd_origin"] = origin
                 stats["copd_outcome_groups"] = with_signal
             stats["copd_mean"] = sum(all_adv) / max(1, len(all_adv))
             stats["copd_negative"] = sum(a < 0 for a in all_adv) / max(1, len(all_adv))
@@ -1047,6 +1056,9 @@ def main():
                              "close_think": None if stats["copd_close"] is None else round(stats["copd_close"], 3)}
             if args.copd_outcome:
                 entry["copd"]["questions_mixed"] = stats["copd_outcome_groups"]
+                entry["copd"]["by_origin"] = {k: {"questions": v[0], "mixed_now": v[1],
+                                                  "right": round(v[2] / v[3], 3) if v[3] else None}
+                                              for k, v in stats["copd_origin"].items() if v[0]}
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)
