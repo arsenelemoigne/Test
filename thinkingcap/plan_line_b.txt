@@ -548,4 +548,6 @@
 # NOT NEEDED (read from Drive instead) struggle --bd-names ca1-soup-10
 ptrepair --name rpE-smoke --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-smoke
 ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+# 9 Nov (user): score the in-between checkpoints (training is done, only the 720 screens run)
+ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 45 50 60 70
 end
