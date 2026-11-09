@@ -4972,3 +4972,7 @@ Plan lines, in order:
   never-solved arm, free savings vs the risk of giving up early on hard-but-solvable questions, is a later test).
 - Queued on GPU 2 after the rc1-soup-30 full test: cp1smoke (5 steps, memory check) then cp1a (80 x 64 x 2 = 10,240 answers,
   gr2f's budget; 720 at 20/40/60/80). After it: token distribution per data type + accuracy vs the original (user).
+- ~10:20 **rc1-soup-30 FULL TEST (2,759 x 8): +57.4 / -3.5** official (BFCL 400/200/240), **+0.95 vs curve** (pt-mid's full test:
+  53.6 / -3.3, +0.3). Per type: svamp +67 / -6.6, mbpp +63 / -3.5, ifeval +51 / -2.5, irrelevance +51 / -4.1, multiple +44 / -0.8,
+  simple +41 / -0.1. Earlier x8 runs of the same model: usual-set 58.0 / -3.1, fresh set 55.6 / -2.9 (Oct). Math carries the loss.
+  Its 720 screen running next, then COPD on GPU 2.
