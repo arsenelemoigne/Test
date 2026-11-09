@@ -5045,3 +5045,5 @@ Plan lines, in order:
 - 9 Nov **COPD cp1a @ 30: +29.2 / -1.3** (-1.2 vs curve): svamp +45 / -1.0, mbpp +33 / -0.8, ifeval +12 / -3.5, irrelevance +26 /
   -0.6, multiple +24 / 0.0, simple +22 / +0.6. Saving still rising (20.8 -> 25.6 -> 29.2), accuracy steady near -1.4, IFEval the
   loss. ifeval_rules.py + ifevalrules stage queued on GPU 1 after the full tests (full-rc1, full-ca1, full-rpE-80/40, s4-cp1a-20/25).
+- 9 Nov **COPD cp1a @ 35: +29.8 / -1.7** (svamp +48 / -1.9, mbpp +27 / -1.0, ifeval +15 / -2.5, irrelevance +26 / -0.8, multiple
+  +25 / -0.6, simple +23 / -2.1): the saving has flattened (29.2 -> 29.8) while accuracy drifts down; math now loses too (-1.9).
