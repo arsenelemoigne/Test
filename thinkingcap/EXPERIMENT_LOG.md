@@ -5047,3 +5047,12 @@ Plan lines, in order:
   loss. ifeval_rules.py + ifevalrules stage queued on GPU 1 after the full tests (full-rc1, full-ca1, full-rpE-80/40, s4-cp1a-20/25).
 - 9 Nov **COPD cp1a @ 35: +29.8 / -1.7** (svamp +48 / -1.9, mbpp +27 / -1.0, ifeval +15 / -2.5, irrelevance +26 / -0.8, multiple
   +25 / -0.6, simple +23 / -2.1): the saving has flattened (29.2 -> 29.8) while accuracy drifts down; math now loses too (-1.9).
+- 9 Nov **COPD diagnostic (user: what is happening at step 35?)**. (a) The lr: cosine stretched to 40 steps, so 6.1e-6 at step 21,
+  4.5e-6 at 25, 2.7e-6 at 30, 1.4e-6 at 35, ~1e-6 at 40: the saving flattens as the lr reaches its floor. (b) The coach's signal
+  shrinks as the student becomes "brief": mean push -0.015 (steps 21-25) -> -0.008..-0.012 (31-38), tokens pushed down 34-37% ->
+  31-33%; entropy 0.29 -> 0.25-0.28; practice answers ~500 -> ~400 tokens, practice accuracy flat 0.83-0.91. (c) 720 @35 vs @25
+  (compare.json): svamp thinking 406 -> 353, acc 89.8 -> 88.1; mbpp 1,586 -> 1,501, 49.2 -> 49.8, still 4.4% cut at 8,192
+  (original 8.5%); ifeval thinking 317 -> 290, RESPONSE 245 -> 278 (longer), cut 3.1 -> 3.8%, acc 55.0 -> 56.5. The accuracy drift
+  is within the per-type noise except a slow math slide (-0.2 / -1.0 / -1.9 at 25 / 30 / 35); COPD has no correctness term to
+  stop it. Data-backed fix: the rpE repair (equal-length right>wrong pairs, constant lr) took rc1 from -3.8 to -0.2 at the same
+  length, so "COPD to compress, then the same repair" on a COPD checkpoint; and a constant lr for any further COPD.
