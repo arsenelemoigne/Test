@@ -538,4 +538,7 @@
 # FAILED 9 Nov 09:0x (models/ca1-soup-10 not on Drive: removed by a clean-up) fullmodel --name full-ca1 --nothink-models models/ca1-soup-10
 # 9 Nov: the same test, rebuilding the soup first from its kept seed adapters (ca1-s0..2, step 10)
 fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10
+# 9 Nov (user): ca1-soup-10's lost questions by difficulty and length, then why (CPU only, a few minutes)
+breakdown --bd-names ca1-soup-10
+struggle --bd-names ca1-soup-10
 end
