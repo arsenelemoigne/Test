@@ -2916,13 +2916,15 @@ def fullmodel(args):
 
 def breakdown(args):
     """(9 Nov, user) Where a fully tested model loses accuracy and saves tokens, per part, by the original's solve rate
-    and by its answer length (difficulty_breakdown.py), for each --bd-names (runs/mvtf/full-NAME)."""
+    and by its answer length (difficulty_breakdown.py), then the questions it lost and why, with full answer texts
+    (struggle_dump.py), for each --bd-names (runs/mvtf/full-NAME)."""
     base = ROOT / "full-base"
     for name in args.bd_names:
         cand = ROOT / f"full-{name}"
         drive_sync("restore", only=[str(base), str(cand)])
         assert (cand / "records.jsonl").exists(), f"{cand} has no records.jsonl"
         py("difficulty_breakdown.py", "--base", base, "--cand", cand, "--out", ROOT / f"bd-{name}")
+        py("struggle_dump.py", "--base", base, "--cand", cand, "--questions", "questions", "--out", ROOT / f"st-{name}")
     drive_sync("save")
 
 
