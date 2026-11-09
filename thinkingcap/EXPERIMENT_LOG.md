@@ -4936,3 +4936,22 @@ Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs 
 - ~13:00 **gr2f @ step 40 (final): +11.3 / +0.3** official (0.0 vs curve; multiple +12 / -2.7, ifeval +3 / +2.5, svamp +17 / -0.4).
   **GRPO verdict:** 40 steps x 32 x 8 from the raw model save 4 -> 11 -> 7 -> 11% at about -0.5 to +0.3: accuracy holds, but the
   saving is small and does not grow steadily; on the curve, not above it. Both GPUs' queues have now ended.
+
+### 2026-11-09 — repair stage opened to any model and to own data only (code, no run)
+Plan (user): full-test round 3 (ca1-soup-10) and round 4 before RL (rc1-soup-30), then a "be right" repair on the one closest
+to > 50% / better than -1, with nothing from michal-bida (no MetaMath, math1, math2, instr2, code2, nofit4).
+- `track.py ptrepair --rp-base models/<X>`: repair any merged model instead of pt-mid (it answers, is DPO's reference, and
+  every screen merges onto it).
+- `track.py ptrepair --rp-own-data` (new `own_repair_questions()`): math = GSM8K train+test at every difficulty in SVAMP wording
+  (prepare_types gsm8k_std), minus questions already trained on in rounds 1-4; code / instructions / tools = pool-dp13 rows
+  minus MetaMath + own top-ups nofit1, nofit2, tools1, code1; 8-gram check against every evaluation question.
+- `repair_pairs.py --kinds guard` / `ptrepair --rp-kinds guard`: only the 21 Oct pair (shortest right > shortest finished
+  wrong); the similar-length right>wrong kind (Lightning McQwen3's) left out.
+- Checked here without a GPU: guard-only pairs on synthetic answers; own_repair_questions on stand-in files (MetaMath and easy
+  pool math excluded, used and test-overlapping GSM8K dropped); a mocked ptrepair smoke run (base model passed to answering,
+  DPO and screens; --kinds guard; smoke quota). Not run: tests/test_pipeline.py (needs the challenge's utils package).
+Plan lines, in order:
+  fullmodel --name full-ca1 --nothink-models models/ca1-soup-10            (GPU 1)
+  fullmodel --name full-rc1soup --nothink-models models/rc1-soup-30         (GPU 2)
+  ptrepair --name rpD-smoke --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-smoke
+  ptrepair --name rpD --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80

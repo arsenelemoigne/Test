@@ -327,6 +327,14 @@ def main():
     parser.add_argument("--mx-seeds", type=int, nargs="*", default=[0, 1], help="mixscreen: seeds averaged per part")
     parser.add_argument("--rp-from", default="", help="ptrepair: reuse this run's pt-mid answers AND pairs (a new dose only)")
     parser.add_argument("--rp-smoke", action="store_true", help="ptrepair: 5 questions per part, 4 steps, no screen (GPU test)")
+    parser.add_argument("--rp-base", default="", help="ptrepair (9 Nov): repair this MERGED model (e.g. models/ca1-soup-10) "
+                        "instead of pt-mid: it answers the questions, is DPO's reference and the base of every screen")
+    parser.add_argument("--rp-own-data", action="store_true",
+                        help="ptrepair (9 Nov): questions from the user's own sources only (own_repair_questions): math = "
+                             "GSM8K train+test at every difficulty in SVAMP wording; code / instructions / tools = pool-dp13 "
+                             "rows minus MetaMath + the own top-ups nofit1, nofit2, tools1, code1; no michal-bida source")
+    parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard"),
+                        help="ptrepair: repair_pairs.py --kinds (guard = only shortest right > shortest finished wrong)")
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
                         help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
                              "instead of every --tp-score-every")
@@ -3380,39 +3388,116 @@ def polans(args):
 PT_MID = {"svamp": 0.30, "mbpp": 0.45, "ifeval": 0.60, "bfcl": 0.45}  # pt-mid = lpw-pertype merged at these strengths
 
 
+def own_repair_questions(want, seed=0):
+    """(9 Nov, user: "100% not copying michal-bida") The repair's questions from the user's OWN sources only, want[part] per
+    test part, drawn at random (the trained model's own 4 answers then decide which give pairs):
+      math         GSM8K train + test at EVERY difficulty, in SVAMP's wording (prepare_types.py gsm8k_std; GSM8K is in the
+                   data since night 1, 20 Oct): harder than the pool's SVAMP-like math, so the model is sometimes wrong
+                   and math gets "be right" pairs; questions already trained on in rounds 1-4 dropped
+      code, instructions, tools
+                   pool-dp13 rows (KodCode, IFEval built / argilla, Glaive / ToolACE / Hermes) and the own top-ups
+                   nofit1, nofit2 (Haiku-verified no-fit), tools1, code1
+    Left out: MetaMath (every metamath_* source), math1, math2, instr2, code2, nofit4 (michal-bida's sources). Every
+    question sharing an 8-word sequence with an evaluation question is dropped (as build_pool.py)."""
+    from build_pool import ngrams, part_of, words
+    own_extras = ["nofit1", "nofit2", "tools1", "code1"]
+    pool = Path("data/pool-dp13.jsonl")
+    used_globs = [f"data/{prefix}*.jsonl" for prefix in ("bon", "bal", "chain", "trapmath", "rlcal", "rl-", "lot-")]
+    drive_sync("restore", only=[str(pool), *[str(BON / f"tooltop-{x}" / "questions.jsonl") for x in own_extras], *used_globs])
+    if not Path("questions/questions.jsonl").exists():
+        py("utils/eval/benchmarks.py")
+    gsm = Path("data/gsm8k-std-all.jsonl")
+    if not gsm.exists():
+        py("prepare_types.py", "--sources", "gsm8k_std", "--per-source", 1000000, "--out", gsm)
+
+    def read(path):
+        return [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()] if Path(path).exists() else []
+    seen = Counter()
+    for q in read("questions/questions.jsonl"):
+        seen.update(ngrams(words(q["messages"])))
+    eval_grams = {g for g, n in seen.items() if n < 3}  # shared templates (>= 3 questions) are not evidence of copying
+    used = Counter()  # math already trained on (rounds 1-4: bon, chain, trap math, rlcal draws), any wording
+    for f in sorted({str(x) for pattern in used_globs for x in Path(".").glob(pattern)}):
+        for r in read(f):
+            if str(r.get("source", "")).startswith("gsm") and r.get("prompt"):
+                used.update(ngrams(words(r["prompt"])))
+    used_grams = {g for g, n in used.items() if n < 3}
+    cands, texts, dropped = defaultdict(list), set(), Counter()
+    gsm_rows = [r | {"id": f"gsm8k-std-{i}"} for i, r in enumerate(read(gsm))]
+    other = [r | {"id": r.get("pool_id", r.get("id"))} for r in read(pool)]
+    for x in own_extras:
+        other += [r | {"id": r.get("pool_id", r.get("id"))} for r in read(BON / f"tooltop-{x}" / "questions.jsonl")]
+    for r in gsm_rows + other:
+        part = part_of(r)
+        if part not in want or str(r["source"]).startswith("metamath"):
+            continue
+        if part == "svamp" and not r["id"].startswith("gsm8k-std-"):  # math only from full-difficulty GSM8K
+            continue
+        key = json.dumps(r["prompt"])
+        if key in texts:
+            continue
+        texts.add(key)
+        grams = ngrams(words(r["prompt"]))
+        if grams & eval_grams:
+            dropped[(part, "overlaps an evaluation question")] += 1
+            continue
+        if part == "svamp" and grams and len(grams & used_grams) / len(grams) > 0.3:
+            dropped[(part, "already trained on")] += 1
+            continue
+        cands[part].append(r)
+    rng = random.Random(seed)
+    chosen = []
+    for part, n in want.items():
+        rng.shuffle(cands[part])
+        chosen += cands[part][:n]
+        print(f"own repair questions: {part} {min(n, len(cands[part]))} of {len(cands[part])} usable "
+              f"(dropped: {dict((k[1], v) for k, v in dropped.items() if k[0] == part)})", flush=True)
+    return chosen
+
+
 def ptrepair(args):
     """Track A (GAME_PLAN.md v3, 5 Nov): repair pt-mid. (1) pt-mid (the 4 lpw-pertype adapters merged at PT_MID) answers
     --rp-questions training questions x4 (the original's mixed-outcome questions first, then all-right and all-wrong);
     (2) repair_pairs.py: "be right" pairs only (shortest right > shortest finished wrong; similar-length right > wrong,
     half with the right answer longer), --rp-quota, stratified order; (3) a fresh LoRA on merged pt-mid (reference =
     pt-mid), float32 + fp16 autocast, beta 0.1, no NLL, batch 16, lr 2.5e-6 then --rp-lr constant, --rp-steps, saved
-    every 5, pairs read in order; (4) pt-mid + the repair adapter at each --rp-screen step on the 720 x4."""
+    every 5, pairs read in order; (4) pt-mid + the repair adapter at each --rp-screen step on the 720 x4.
+    9 Nov (user: repair the rc line, own data only): --rp-base repairs any merged model instead of pt-mid (it answers,
+    it is DPO's reference, every screen merges onto it); --rp-own-data draws the questions from own_repair_questions()
+    instead of the original's mixed-outcome dp13 questions; --rp-kinds guard keeps only the 21 Oct "be right" pair."""
     name = args.name
     smoke = args.rp_smoke
     extras = ["nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2"]
     answers = BON / f"lupin-all-dp13-{'-'.join(extras)}-a4.jsonl"
     pt = {g: Path("adapters") / f"lpw-pertype-{g}" for g in PT_MID}
     pool = Path("data/pool-dp13.jsonl")
-    drive_sync("restore", only=[*([] if args.rp_from else [str(answers), str(pool), *[str(BON / f"tooltop-{x}") for x in extras]]),
-                                *[str(a) for a in pt.values()], SCREEN, str(ROOT / "s4-base")])
-    for a in pt.values():
-        assert (a / "adapter_config.json").exists(), f"{a} is not on Drive"
-    merged = Path("/content/lupin-models/pt-mid")
-    if not (merged / "config.json").exists():
-        py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", merged, "--adapters", *[f"{pt[g]}:{w}" for g, w in PT_MID.items()])
+    if args.rp_base:  # (9 Nov) any merged model; pt-mid's adapters and the original's answers are not needed
+        drive_sync("restore", only=[args.rp_base, SCREEN, str(ROOT / "s4-base")])
+        merged = Path(args.rp_base)
+        assert (merged / "config.json").exists(), f"{merged} is not on Drive (rebuild it with merge.py)"
+    else:
+        drive_sync("restore", only=[*([] if args.rp_from or args.rp_own_data else
+                                      [str(answers), str(pool), *[str(BON / f"tooltop-{x}") for x in extras]]),
+                                    *[str(a) for a in pt.values()], SCREEN, str(ROOT / "s4-base")])
+        for a in pt.values():
+            assert (a / "adapter_config.json").exists(), f"{a} is not on Drive"
+        merged = Path("/content/lupin-models/pt-mid")
+        if not (merged / "config.json").exists():
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", merged, "--adapters", *[f"{pt[g]}:{w}" for g, w in PT_MID.items()])
     if args.rp_from:  # (5 Nov) same answers and pairs as --rp-from, only the training dose changes
         pairs = BON / f"pairs-{args.rp_from}"
         drive_sync("restore", only=[str(pairs)])
         assert (pairs / "pairs.jsonl").exists(), f"{pairs} is not on Drive"
         print(f"repair {name}: pairs of {args.rp_from}", flush=True)
+    own = args.rp_own_data and not args.rp_from
     rows = {}
-    for f in (() if args.rp_from else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
+    for f in (() if args.rp_from or own else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
         for line in f.read_text().splitlines():
             if line.strip():
                 r = json.loads(line)
                 rows[r.get("pool_id", r.get("id"))] = r
     solve = defaultdict(list)
-    for line in (() if args.rp_from else open(answers)):
+    for line in (() if args.rp_from or own else open(answers)):
         r = json.loads(line)
         solve[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
     from build_pool import part_of
@@ -3426,7 +3511,11 @@ def ptrepair(args):
             p = sum(s) / len(s)
             by_part[part_of(rows[qid])]["mixed" if 0 < p < 1 else "right" if p == 1 else "wrong"].append(qid)
     chosen = []
-    for part, n in want.items():
+    if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
+        for r in own_repair_questions(want):
+            rows[r["id"]] = r
+            chosen.append(r["id"])
+    for part, n in ({} if own else want).items():
         b = by_part[part]
         for k in b:
             rng.shuffle(b[k])
@@ -3451,7 +3540,7 @@ def ptrepair(args):
     drive_sync("restore", only=[str(pairs)])
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
-        py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota)
+        py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds)
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / f"{name}-s0"
@@ -3474,8 +3563,11 @@ def ptrepair(args):
         drive_sync("restore", only=[str(out)])
         if not (out / "results.json").exists():
             model = Path("/content/lupin-models") / f"{name}-{step}"
-            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
-               *[f"{pt[g]}:{w}" for g, w in PT_MID.items()], f"{adapter / f'step-{step}'}:1")
+            if args.rp_base:
+                py("merge.py", "--model", args.rp_base, "--out", model, "--adapters", f"{adapter / f'step-{step}'}:1")
+            else:
+                py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+                   *[f"{pt[g]}:{w}" for g, w in PT_MID.items()], f"{adapter / f'step-{step}'}:1")
             evaluate(out, samples=4, questions=SCREEN, model=model)
             shutil.rmtree(model, ignore_errors=True)
             drive_sync("save")

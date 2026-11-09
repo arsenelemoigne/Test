@@ -5,7 +5,9 @@ Per question (the model's 4 answers), two kinds, each a right answer over a FINI
   right  a right answer > a finished wrong answer of similar length (max(Lc/Lr, Lr/Lc) <= --ratio), exactly half of each
          part's right pairs with the right answer strictly LONGER (a correctness signal without a length signal)
 Quotas per part (--quota part=n), half guard / half right; <= 3 pairs per question, <= 2 right pairs per question; no
-sample pair used twice. Mixed-outcome questions are the only source (a pair needs a right and a wrong answer).
+sample pair used twice. --kinds guard (9 Nov): guard pairs only, the whole quota (the user's own 21 Oct rule, bon_pairs'
+guard; the similar-length "right" kind matches Lightning McQwen3's correctness DPO and is left out). A question gives at
+most one guard pair, so a part needs at least its quota of mixed-outcome questions. Mixed-outcome questions are the only source (a pair needs a right and a wrong answer).
 The output is ordered so that every --block consecutive pairs hold the intended part x kind mix (training reads it in
 order with dpo.py --keep-order: a checkpoint at step 5 has seen a representative slice, not one part).
 
@@ -36,6 +38,8 @@ def main():
     ap.add_argument("--ratio", type=float, default=1.25)
     ap.add_argument("--block", type=int, default=80)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard"),
+                    help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
     rng = random.Random(args.seed)
     quota = {k: int(v) for k, v in (x.split("=") for x in args.quota.split(","))}
@@ -81,6 +85,12 @@ def main():
         return got
     by_part = {}
     for part, n in quota.items():
+        if args.kinds == "guard":
+            by_part[part] = take(part, "guard", cand[part]["guard"], n)
+            for p in by_part[part]:
+                counts[(part, "guard")] += 1
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
         g = take(part, "guard", cand[part]["guard"], n // 2)
         r_long = take(part, "right", cand[part]["right_long"], (n - n // 2) // 2)
         r_short = take(part, "right", cand[part]["right_short"], n - n // 2 - len(r_long))
