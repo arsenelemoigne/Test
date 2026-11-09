@@ -537,8 +537,13 @@
 # 9 Nov (user): Step 1 of the repair plan: the round-3 model on the FULL test (never run on it)
 # FAILED 9 Nov 09:0x (models/ca1-soup-10 not on Drive: removed by a clean-up) fullmodel --name full-ca1 --nothink-models models/ca1-soup-10
 # 9 Nov: the same test, rebuilding the soup first from its kept seed adapters (ca1-s0..2, step 10)
-fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10
+# DONE 9 Nov fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10
 # 9 Nov (user): ca1-soup-10's lost questions by difficulty and length, then why (CPU only, a few minutes)
-breakdown --bd-names ca1-soup-10
-struggle --bd-names ca1-soup-10
+# DONE 9 Nov breakdown --bd-names ca1-soup-10
+# DONE 9 Nov struggle --bd-names ca1-soup-10
+# 9 Nov (user): repair rc1-soup-30 (57.4 / -3.5 full test, +0.95 vs curve) from the why-data: guard pairs (shortest right >
+# shortest finished wrong) on own questions only, the chosen right answer preferring one that RE-CHECKS the question
+# (--prefer-reread), ifeval shortness = thinking only (--think-only ifeval). Sizes = the cloud session's rpD plan. Smoke first.
+ptrepair --name rpE-smoke --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-smoke
+ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
 end
