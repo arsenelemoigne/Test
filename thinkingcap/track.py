@@ -474,13 +474,27 @@ DRIVE = Path("/content/drive/MyDrive/thinkingcap-mvtf")
 
 
 def drive_sync(direction, models=None, only=None):
+    """_drive_sync, but a Drive error (a dropped mount: OSError, Errno 107) is reported and the stage goes on (9 Nov)."""
+    try:
+        return _drive_sync(direction, models=models, only=only)
+    except OSError as error:
+        print(f"drive: {direction} FAILED ({error}); the stage goes on, results stay on this runtime until Drive is "
+              "remounted (run the Drive cell again)", flush=True)
+
+
+def _drive_sync(direction, models=None, only=None):
     """Copy runs/, adapters/ and data/ to Google Drive ("save") or back ("restore"), when Drive is mounted.
 
     Colab wipes the runtime disk when it recycles a runtime; Drive keeps every result, adapter and rollout.
     """
-    if not Path("/content/drive/MyDrive").exists():
+    try:
+        if not Path("/content/drive/MyDrive").exists():
+            return
+        DRIVE.mkdir(parents=True, exist_ok=True)
+    except OSError as error:  # (9 Nov) a dropped Drive mount (Errno 107) crashed a whole queue: warn, keep working
+        print(f"drive: NOT connected ({error}); {direction} skipped, results stay on this runtime until Drive is "
+              "remounted (run the Drive cell again)", flush=True)
         return
-    DRIVE.mkdir(parents=True, exist_ok=True)
     names = ["runs", "adapters", "data", "models", *[p.name for p in Path(".").glob("questions_*") if p.is_dir()]]
     if direction == "restore":
         names = ["runs", "adapters", "data", "models", *[p.name for p in DRIVE.glob("questions_*") if p.is_dir()]]
