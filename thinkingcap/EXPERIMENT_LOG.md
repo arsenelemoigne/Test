@@ -5064,3 +5064,8 @@ Plan lines, in order:
   "sometimes wrong" (the original solves 1-9 of its 10 stored answers) and "always right" (10/10); the counts available per
   part are printed at the start, each pool row carries solve10, and every step logs per kind: questions, how many are MIXED NOW
   (right and wrong among the 4 fresh answers: where the correctness push acts) and the share right.
+- 9 Nov ~21:30 **rpE @ 80 FULL TEST (2,759 x 8): +47.0 / -0.9** official (**+1.45 vs curve: our best full-test trade-off**):
+  irrelevance +50 / +3.4, multiple +39 / +0.1, simple +37 / +0.1, ifeval +45 / -2.6, mbpp +46 / -1.0, svamp +54 / -1.2.
+  Accuracy meets the goal (better than -1), the saving does not (47 < 50). Its 720 screen said 50.4 / -0.2: flattered by 3.4 pts
+  of saving and 0.7 pt of accuracy. Reference (not ours): michal-bida 47.0 / -0.78, Herz1c 43.4 / -0.97. rpE @ 40 full test
+  running. Run C rescheduled to Run A's checkpoints (10/20/25/30/35/40, 5-step blocks).
