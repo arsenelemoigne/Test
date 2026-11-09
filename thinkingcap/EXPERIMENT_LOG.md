@@ -5018,3 +5018,7 @@ Plan lines, in order:
   multiple +1.3); **@ 40: +50.5 / -1.7** official (irrelevance -0.2, multiple +1.5, simple -1.9, ifeval -1.7, mbpp -2.7, svamp -1.9;
   saved: svamp 60, mbpp 54, irrelevance 50, multiple 43, ifeval 42, simple 40). Path from rc1's 720 (58.7 / -3.8): each 10 steps
   buys ~0.5 pt of accuracy for ~2 pts of saving after step 20; vs curve rc1 +0.6, @10 +0.6?, see below. Step 80 scoring.
+- 9 Nov **rpE @ 80: +50.4 / -0.2** official (720 x 4; compare's average 50.6 / -0.1; **+2.8 vs curve**): irrelevance +51 / +3.1,
+  multiple +43 / +1.3, simple +39 / -2.1, ifeval +50 / +0.4, mbpp +52 / +1.0, svamp +56 / -2.5. First model to meet >50% / better
+  than -1 on the 720 screen. CAVEAT: the 720 flattered ca1-soup-10 by 1.5 pts (720 -0.9 vs full test -2.4); rc1-soup-30's 720
+  (-3.8) was close to its full test (-3.5). A full test is needed before any claim. Screens at 45 / 50 running.
