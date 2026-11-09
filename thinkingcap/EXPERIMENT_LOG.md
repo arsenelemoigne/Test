@@ -5077,3 +5077,7 @@ Plan lines, in order:
   (cp1c steps 1-3): sometimes-wrong questions mixed-now 6/8, 2/2, 3/3; always-right ones 2/8, 5/14, 2/13 (right 0.91-0.98).
   Available per part (sometimes / always): svamp 2,597 / 4,001, mbpp 1,274 / 898, ifeval 1,015 / 1,098, simple 316 / 955,
   multiple 239 / 360, irrelevance 401 / 2,253.
+- 9-10 Nov **Run C (cp1c2) started** (both runtimes restarted after the outage; plan start now light): 640 questions, 319
+  sometimes-wrong. Steps 1-6 (practice): accuracy 0.84 / 0.76 / 0.89 / 0.87 / 0.57 / 0.66 swinging with the draw's share of
+  sometimes-wrong questions (7 / 12 / 7 / 8 / 13 / 10 of 16); sometimes-wrong mixed-now 4/7, 8/12, 2/7, 4/8, 12/13, 7/10 (right
+  47-79%); always-right mixed-now 0-2 (right 96-100%). 24 min per 5-step block. GPU 1: rpE @40 full test running.
