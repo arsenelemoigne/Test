@@ -5025,3 +5025,8 @@ Plan lines, in order:
 - 9 Nov ~19:45 (after Colab's provisioning outage; both runtimes restarted) **rpE @ 45: +52.9 / -1.7** official (irrelevance +0.4,
   multiple +0.6, simple -2.1, ifeval -3.1, mbpp -1.7, svamp -1.3). Path @40 50.5 / -1.7, @45 52.9 / -1.7, @80 50.4 / -0.2: between
   40 and 45 the screens differ by 2.4 pts of saving at equal accuracy (screen noise ~ +-2). COPD steps 21-25 trained (465-542 tokens).
+- 9 Nov **rpE @ 50: +49.5 / -1.6** (irrelevance +2.3, multiple +1.5, simple -1.7, ifeval -1.9, mbpp -3.3, svamp -1.3). Full tests
+  of rpE-80 then rpE-40 started on GPU 1 (both models built by fullmodel --fm-merge).
+- 9 Nov **COPD cp1a @ 25: +25.6 / -1.5** (-1.6 vs curve): svamp +40 / -0.2, mbpp +23 / -1.7, ifeval +16 / -4.0, irrelevance +20 /
+  -1.7, multiple +23 / +0.6, simple +19 / 0.0. Saving up from 20.8 (@20) but accuracy down from -0.4: the lr jumped back to
+  ~5.5e-6 at step 21 (cosine stretched to 40 steps); IFEval carries the loss (the coach shortens the RESPONSE too).
