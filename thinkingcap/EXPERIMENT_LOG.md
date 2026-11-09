@@ -5030,3 +5030,15 @@ Plan lines, in order:
 - 9 Nov **COPD cp1a @ 25: +25.6 / -1.5** (-1.6 vs curve): svamp +40 / -0.2, mbpp +23 / -1.7, ifeval +16 / -4.0, irrelevance +20 /
   -1.7, multiple +23 / +0.6, simple +19 / 0.0. Saving up from 20.8 (@20) but accuracy down from -0.4: the lr jumped back to
   ~5.5e-6 at step 21 (cosine stretched to 40 steps); IFEval carries the loss (the coach shortens the RESPONSE too).
+- 9 Nov **diagnostic (user): thinking vs response tokens and accuracy per type, 720 x 4, from compare.json** (base -> model):
+  | model | ifeval acc | ifeval think | ifeval response | svamp acc / think | mbpp acc / think |
+  | rc1-soup-30 | 59.0 -> 55.0 | 420 -> 129 | 247 -> 217 | 90.0 -> 85.0 / 685 -> 205 | 50.8 -> 47.3 / 2077 -> 685 |
+  | rpE @ 50 | 59.0 -> 57.1 | 420 -> 153 | 247 -> 245 | 90.0 -> 88.8 / 685 -> 274 | 50.8 -> 47.5 / 2077 -> 968 |
+  | rpE @ 80 | 59.0 -> 59.4 | 420 -> 146 | 247 -> 190 | 90.0 -> 87.5 / 685 -> 297 | 50.8 -> 51.9 / 2077 -> 981 |
+  | COPD @ 25 | 59.0 -> 55.0 | 420 -> 317 | 247 -> 245 | 90.0 -> 89.8 / 685 -> 406 | 50.8 -> 49.2 / 2077 -> 1586 |
+  (1) The repair's lr was CONSTANT (cosine from 1e-5 to lr-min = 1e-5): 50 -> 80 the thinking lengths barely move (ifeval 153 ->
+  146, mbpp 968 -> 981, svamp 274 -> 297) while accuracy rises (ifeval +2.3, mbpp +4.4): its pairs are equal-length (medians
+  chosen / rejected 271/278, 440/440, 185/183), so they teach correctness inside the same length; the saving fell only over
+  steps 0-40. (2) IFEval's loss is NOT a shortened response: COPD and rpE @50 keep the response (247 -> 245); rpE @80 even shortens
+  it (-> 190) yet beats the original. The losses go with THINKING cuts (rc1 -69%, COPD -25%). IFEval is the noisiest part
+  (original 59%, 720 half-width +-3.6 pts vs svamp +-1.9). Which instructions fail needs records + questions (next).
