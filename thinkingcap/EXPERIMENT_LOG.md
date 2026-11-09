@@ -4976,3 +4976,9 @@ Plan lines, in order:
   53.6 / -3.3, +0.3). Per type: svamp +67 / -6.6, mbpp +63 / -3.5, ifeval +51 / -2.5, irrelevance +51 / -4.1, multiple +44 / -0.8,
   simple +41 / -0.1. Earlier x8 runs of the same model: usual-set 58.0 / -3.1, fresh set 55.6 / -2.9 (Oct). Math carries the loss.
   Its 720 screen running next, then COPD on GPU 2.
+- 9 Nov ~12:10 COPD sanity check (copd_demo.py): one SVAMP-style trick question, a hand-written answer in six parts (setup, a
+  useful re-read, the calculation, a needless double-check, the stop, the answer). Qwen3-0.6B as its own coach (COPSD, on the
+  Mac): mean push per part +0.01 / -0.01 / -0.06 / +0.01 / -0.01 / 0.00, biggest single pushes on spaces and digits, 0.00 at
+  </think>: the 0.6B barely reacts to the effort instructions, so the self-coach version would teach nothing. The 4B check runs on
+  GPU 2 first (copddemo) before the smoke test and Run A (the Mac's 8.6 GB RAM cannot hold the 4B).
+- (user) Run B, only if Run A loses accuracy: COPD pushes applied to RIGHT answers only (wrong answers never teach "be brief").
