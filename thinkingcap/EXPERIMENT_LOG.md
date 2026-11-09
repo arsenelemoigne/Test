@@ -5022,3 +5022,6 @@ Plan lines, in order:
   multiple +43 / +1.3, simple +39 / -2.1, ifeval +50 / +0.4, mbpp +52 / +1.0, svamp +56 / -2.5. First model to meet >50% / better
   than -1 on the 720 screen. CAVEAT: the 720 flattered ca1-soup-10 by 1.5 pts (720 -0.9 vs full test -2.4); rc1-soup-30's 720
   (-3.8) was close to its full test (-3.5). A full test is needed before any claim. Screens at 45 / 50 running.
+- 9 Nov ~19:45 (after Colab's provisioning outage; both runtimes restarted) **rpE @ 45: +52.9 / -1.7** official (irrelevance +0.4,
+  multiple +0.6, simple -2.1, ifeval -3.1, mbpp -1.7, svamp -1.3). Path @40 50.5 / -1.7, @45 52.9 / -1.7, @80 50.4 / -0.2: between
+  40 and 45 the screens differ by 2.4 pts of saving at equal accuracy (screen noise ~ +-2). COPD steps 21-25 trained (465-542 tokens).
