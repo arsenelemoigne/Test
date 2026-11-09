@@ -5006,3 +5006,11 @@ Plan lines, in order:
   simple +11 / -1.0, irrelevance +10 / 0.0, multiple +8 / -1.1, ifeval +8 / -1.3. Against GRPO gr2f at the same step 10:
   4.0 / -0.4 (and 11.4 / -0.6 at step 20): COPD shortens ~3.5x faster per step with no math loss, despite the demo's warning.
   Run A continues to step 20.
+- 9 Nov ~15:30 **COPD Run A (cp1a) @ step 20 (end of the short run): +20.8 / -0.4** official (720 x 4; -0.7 vs curve): svamp
+  +35 / +0.2, mbpp +18 / +0.6, irrelevance +19 / -0.6, multiple +20 / -1.1, simple +14 / -0.4, ifeval +11 / -1.9. Step 10 -> 20:
+  saving 14.6 -> 20.8, accuracy -0.2 -> -0.4: still growing, math still free. GPU 2's queue ended.
+- 9 Nov **rpE (repair of rc1-soup-30) @ step 10: +57.4 / -2.9** (compare's average; official 57.2 / -3.0). rc1-soup-30's own
+  720 screen (s4-rc1-soup-30/compare.json, from Drive): +58.7 / -3.8 (svamp -5.0, ifeval -4.0, simple -4.0, irrelevance -4.6,
+  mbpp -3.5, multiple +0.6). After 10 repair steps: svamp -2.7 (+2.3), ifeval -2.5 (+1.5), simple -2.7 (+1.3), irrelevance
+  -3.7 (+0.9), multiple +1.5, mbpp -4.6 (-1.1); +0.9 accuracy for -1.3 saving. Repair pairs: chosen re-checks the question
+  51 / 77 / 94% (math / code / no-fit) vs rejected 41 / 57 / 82%; chosen and rejected about equal length.
