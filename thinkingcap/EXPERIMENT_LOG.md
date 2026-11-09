@@ -5002,3 +5002,7 @@ Plan lines, in order:
 - 9 Nov COPD Run A (cp1a, short version) stopped by the user after step 4 (resumes from there): memory fix holds (gpu_gb 1.33
   after every step), but ~15-20 min per step (the 8 GB teacher moved CPU<->GPU twice a step). Steps 2-3: practice accuracy
   0.867 / 0.828, tokens 566 / 636, coach 36-38% of tokens pushed down, mean -0.018, </think> 0.00.
+- 9 Nov ~14:45 **COPD Run A (cp1a) @ step 10: +14.6 / -0.2** official (720 x 4; -0.5 vs curve): svamp +23 / +0.2, mbpp +15 / +0.8,
+  simple +11 / -1.0, irrelevance +10 / 0.0, multiple +8 / -1.1, ifeval +8 / -1.3. Against GRPO gr2f at the same step 10:
+  4.0 / -0.4 (and 11.4 / -0.6 at step 20): COPD shortens ~3.5x faster per step with no math loss, despite the demo's warning.
+  Run A continues to step 20.
