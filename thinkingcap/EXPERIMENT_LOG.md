@@ -5145,3 +5145,11 @@ od1: 4 rounds from rpE step 80 (base rc1-soup-30). Each round the CURRENT model 
 shortest wrong, + re-read / IFEval counting rules) and half shorten (shortest right > longest right, only on questions right
 >= 6/8 with the longest >= 1.5x the shortest; never on IFEval counting-rule questions); DPO 10 steps continuing the adapter,
 the round's start as the reference; 720 x4 after rounds 2 and 4. Tested on fake answers (pairs) and mocked rounds (loop).
+
+## 10 Nov — correction: the October rerun (lpk) verdict was too strong
+Re-read of the 6 Nov data (all 720 x4, same yardstick): adapters alone are a tie with October (tools +0.07 vs +0.01, math -0.91
+vs -0.59, instructions @19 -1.15 vs -0.41 but @30 +0.24). The merges lose (mid +0.5 vs October pt-mid +1.3; soft -1.0 vs +0.7)
+because they reused October's strengths (.30/.45/.60/.45), which were picked ON this 720 for October's own adapters: the rerun was
+never tuned, and its gentler adapters at the same strengths save 6-8 points less. Also: two changes at once (new data AND fp32,
+so neither effect is known), one seed, one run; gaps of ~1 pt are within 720 x4 noise. The earlier "+0.5 vs +0.3" compared a
+720 score with a full-test score. Conclusion: the rerun does not show that better settings fail; it was not a fair test.
