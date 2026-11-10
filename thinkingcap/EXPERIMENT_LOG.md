@@ -5194,3 +5194,19 @@ answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4
 - rpF-80: **48.1% / -2.6** (svamp 63 / -3.5, mbpp 50 / -4.6, ifeval 31 / -0.8, simple -2.7, multiple +2.3, no-fit -2.5), vs curve -0.1:
   80 steps moved Run C ALONG the curve (57 -> 48% saved, -4.7 -> -2.6), not above it.
 - od1 started on GPU 1 (round 1: rpE-80 answers 1,290 new questions x8).
+
+## 10 Nov — rpI step 120, FULL TEST (2,759 x 8): **41.9% saved / +0.1** (official weighting)
+svamp 47 / +0.0, mbpp 38 / +0.5, ifeval 41 / -1.5, simple 37 / +0.2, multiple 38 / -0.9, no-fit 50 / +5.8. vs curve **+1.64**: the
+highest of any full test so far (rpE-80 +1.45, rc1-soup-30 +0.95; michal-bida 47.0 / -0.78, about +1.6). No accuracy loss at all,
+but 42% saved, below the 50% goal. Its 720 screen said 43.0 / +0.9: the screen read 1.1 pts high on saving and 0.8 on accuracy.
+
+## Items decided 10 Nov that were committed but not logged above (added for the record)
+- **cp1e** (queued on GPU 2 after cp1d): cp1d + `rl_train.py --copd-early 1.0` (new, "fix 2", user): every token of a WRONG reply whose
+  thinking is under 0.5 x the original model's median thinking on its right answers to that question (row field base_think, from the
+  original's 10 stored answers; track.py thinkprune prints how many questions carry it) gets -1.0 more. Logged per step as
+  copd.early_penalised = [punished, wrong]. Tested on mocked replies (only the too-short wrong reply is punished).
+- **od2 changed to 10 rounds** (user: "add more rounds of 160"): 10 rounds x 10 steps, IFEval 290 questions per round (2,900 of the
+  2,998 usable, no question reused), 720 x4 after rounds 2, 4, 6, 8, 10.
+- **repair_pairs.py --kinds guard,shorten backup supply:** if "shorten" pairs (longest right >= 1.5x shortest) run short, questions
+  with a 1.25-1.5x spread fill in; the summary prints both candidate counts per part.
+- Full test of rpI-120 queued on GPU 2 after rpH (user); done above.

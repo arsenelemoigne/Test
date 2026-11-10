@@ -1,4 +1,4 @@
-# ThinkingCap / Qwen3-0.6B shorter thinking — complete experiment dossier (state 30 Oct 2026, ~14:00 CET)
+# ThinkingCap / Qwen3-0.6B shorter thinking — complete experiment dossier (state 10 Nov 2026)
 
 Plain record for external analysis, from the first experiment to now: context, methods, training data, evaluation, every
 measured result (including failed and broken runs), bugs, and the decisions taken. No ranking or interpretation is intended;
@@ -15,6 +15,7 @@ round-1 work (27–30 Oct). Values not in the sources are "—". Runs still in p
 4. Part D — Track 2g, second half, and the stop-classifier work (25–26 Oct)
 5. Part E — 26–30 Oct: runs outside the LUPIN pool, analyses, literature, decisions
 6. Part F — LUPIN round 1: pools dp1–dp15, pairs, screens, confirms, cross-checks, Wanda pruning
+7. Part G — 30 Oct (afternoon) to 10 Nov: evaluation changes (G0), full tests (G1), per-type (G2), joint DPO / bida / D-screen (G3), GRPO (G4), COPD (G5), repair line (G6), online DPO (G7), diagnostics (G8), competitors (G9), consultants (G10), infrastructure (G11), user decisions (G12), weight-space editing (G13)
 
 ---
 
@@ -2530,3 +2531,653 @@ Real evaluation (choosing set ×4 vs the unpruned model; negative saving = longe
   crosscheck / codecut / wanda / wandaeval), `nofit_verify.py`, `wanda_prune.py`.
 - Every score is also appended to `runs/bon/results.csv` on the project Drive (from 29 Oct night).
 
+
+---
+
+## Part G — 30 Oct (afternoon) to 10 Nov
+
+Scope: `EXPERIMENT_LOG.md` from the 30 Oct ~14:00 entry (line ~3,460) to its last line (5,196 at the time of writing). Organised by
+workstream, time order inside each. Conventions as in Parts E–F: "saved / acc" = tokens saved (%) / accuracy change (pts) vs the
+original Qwen3-0.6B on the same questions; negative saving = longer than the original. "720" = `questions_screen720` × 4 samples
+(see G0). "full test" = the official 2,759 × 8. "vs curve" = accuracy minus the reference curve of G0 at the same saving, as logged.
+"official" = BFCL parts pooled 400/200/240 (see G0). Missing values = —. Runs not finished on 10 Nov evening are marked pending.
+The log has no entries dated 7 or 8 Nov.
+
+### G0. Changes to evaluation since Part 0
+
+- **Full test of every candidate became possible.** The original Qwen's full test (`full-base`) ran on GPU 2 from 30 Oct ~14:10.
+  Pace logged at 14:34 (512 of 22,072 answers, ~18 h per model estimated), 15:17 (1,280, ~19 answers/min, ~19 h) and 16:20
+  (2,560, ETA ~08:45 on 31 Oct); the 19:15 entry reports it done, and lpc-l2s50e's full test (5,376 / 22,072 at 18:58) was done
+  by ~20:25. The log does not record why the pace changed. Original Qwen on the full test (accuracy over 8 samples / mean
+  thinking tokens): svamp 88.7 / 677 (1,000 q), mbpp 52.4 / 2,079 (378), ifeval 58.7 / 433 (541), simple 82.2 / 171 (400),
+  multiple 76.1 / 192 (200), no-fit 83.4 / 186 (240).
+- **The 720 screen set** (`questions_screen720`, `screen_set.py`, 30 Oct ~20:25): 120 questions per part matched to the ORIGINAL
+  Qwen's full-test run, fresh set excluded (multiple has 119: one cell lacked a free question; a 10 Nov entry calls it "120
+  questions x4"). Original Qwen on the 720 vs full: svamp 89.1 / 88.7, mbpp 52.7 / 52.4, ifeval 58.8 / 58.7, simple 82.4 / 82.2,
+  multiple 76.4 / 76.1, no-fit 83.2 / 83.4; output tokens within ±3% except mbpp −4.8%. The 720 × 4 is the screen set from 30 Oct
+  ~23:16 onward (first: lpc-runa2-soup-100). Logged noise: 720 × 4 accuracy error "about ±1 pt" (31 Oct 17:44); one part
+  of the 720 = CI about ±4.4 pts (10 Nov); IFEval half-width ±3.6 vs svamp ±1.9 (9 Nov); screen-to-screen noise "~±2" of
+  saving (rpE 40 vs 45, 9 Nov).
+- **720 vs full test, same model** (as logged; official weighting where the log gives it):
+
+  | model | 720 × 4 | full test | gap noted in the log |
+  |---|---|---|---|
+  | lpc-l2s50e-soup-100 | +49.9 / −2.29 | +48.0 / −2.08 | saving 1.9 high, accuracy 0.2 low |
+  | rc1-rl-40 | +55.2 / −3.7 | +55.4 / −2.6 | accuracy 1.1 low, saving exact |
+  | lpc-bidax2 s0 final | +51.8 / −2.7 | +51.2 / −3.0 | saving 0.6 high, accuracy 0.3 favourable |
+  | pt-mid | +55.1 / −2.6 (31 Oct: 55.0 / −2.6) | +53.6 / −3.3 | saving 1.4 high, accuracy 0.7 favourable |
+  | rc1-soup-30 | +58.7 / −3.8 | +57.4 / −3.5 | "close" |
+  | ca1-soup-10 | +52.4 / −0.9 | +49.1 / −2.4 | "flattered" by 1.5 pts |
+  | rpE @ 40 | +50.5 / −1.7 | +50.6 / −1.9 | — |
+  | rpE @ 60 | +48.6 / −0.7 | +47.8 / −1.2 | — |
+  | rpE @ 80 | +50.4 / −0.2 | +47.0 / −0.9 | flattered by 3.4 pts of saving and 0.7 pt of accuracy |
+
+  Recomputed from lpc-l2s50e's full-run answers (`subset_check.py`, 30 Oct): choosing +47.7 / −1.17, questions_40 +50.7 / −2.11,
+  ref24 +51.3 / −1.51, ref25 +47.3 / −3.80, fresh +44.7 / −2.73, screen720 +49.9 / −2.29; 5,000 random 240-question draws:
+  saved 5–95% [+44.7, +51.3], accuracy [−4.09, −0.18], sd 1.19 pts.
+- **Comparison rule (30 Oct ~16:00, user):** runs compared by accuracy at the same tokens saved, not at the same step.
+- **Reference curve ("yardstick", 2 Nov ~18:40):** quadratic fit to the 43 Screen-720 points above 15% saved:
+  **acc = −0.388 + 0.0899·s − 0.0028·s²** (about 0 at 20%, −1.3 at 40%, −2.35 at 47%, −2.9 at 50%). Fixed on 2 Nov and not refitted
+  (the FullEval page's own live fit refits itself). Pass bar set for the ThinkPrune plan the same evening: a checkpoint ≥ 1 pt
+  above the curve at the same saving on the 720, confirmed by a second seed, then the full test. Target throughout: > 50% saved at
+  better than −1.
+- **README bar (5 Nov ~22:15):** > 20% shorter and ≤ 0.2 pt lost per 1% saved; 109 of 144 scored checkpoints pass; the 35 that
+  fail are all under 20% saved.
+- **Weighting change (5 Nov ~23:05–23:15):** consult4's audit found that the screen totals weighted the three BFCL parts equally,
+  not 400/200/240. Checked: recomputing each 720 score with BFCL pooled 400/200/240 reproduces the printed "full-eval weighting"
+  lines (printed since 30 Oct ~12:45) within 0.1. **Adopted as the official overall accuracy**; all 117 screen scores on the
+  FullEval / ModelTree / DPO-story pages rewritten (old value kept as acc_screen_eq); shifts −0.5 to +0.1. Examples: rpC-80
+  +0.6 → +0.43 (+2.2 vs curve), rpB-40 +0.3 → +0.10 (+1.9), bidax5q final −0.5 → −0.59 (+1.7), pt-mid −2.58 (+1.3). The
+  yardstick formula was left unchanged. Before 5 Nov the log mixes both prints (the entries say which); numbers below are as
+  logged.
+
+### G1. Full evaluations (2,759 × 8)
+
+| model | date | saved / acc | svamp | mbpp | ifeval | simple | multiple | no-fit | 720 of the same model | vs curve |
+|---|---|---|---|---|---|---|---|---|---|---|
+| lpc-l2s50e-soup-100 (dp10 LUPIN) | 30 Oct ~20:25 | +48.0 / −2.08 | 55.9 / −3.2 | 51.9 / −2.2 | 45.8 / −1.6 | 33.4 / −0.8 | 36.6 / −0.2 | 40.9 / −3.3 | +49.9 / −2.29 | — |
+| rc1-rl-40 (DPO + RL, Oct) | 31 Oct 16:44 | +55.4 / −2.6 | +65 / −4.5 | +60 / −3.0 | +49 / −2.3 | +41 / −0.6 | +43 / −1.2 | +52 / −0.2 | +55.2 / −3.7 | — |
+| lpc-bidax2 s0 final (michal-bida recipe on our data) | 2 Nov ~09:00 | +51.2 / −3.0 | +64 / −6.0 | +42 / −2.4 | +53 / −1.1 | +40 / −2.2 | +43 / −2.0 | +44 / −3.5 | +51.8 / −2.7 | — (720 point +0.5) |
+| original, thinking OFF (ntfull2; measurement only) | 4 Nov | "~90% / −22.3" (saved approximate, 62–98% per part) | — / −68.1 | — / −11.6 | 62 / −1.3 | — / −10.7 | — / −20.8 | — / +6.9 | — | — |
+| pt-mid (Oct 4-adapter merge .30/.45/.60/.45) | 6 Nov ~01:35 | +53.6 / −3.3 | +61 / −6.0 | +62 / −3.9 | +50 / −1.7 | +35 / +0.2 | +38 / +0.4 | +40 / −5.6 | +55.1 / −2.6 | +0.3 |
+| rc1-soup-30 (Oct round 4 before RL) | 9 Nov ~10:20 | +57.4 / −3.5 | +67 / −6.6 | +63 / −3.5 | +51 / −2.5 | +41 / −0.1 | +44 / −0.8 | +51 / −4.1 | +58.7 / −3.8 | +0.95 |
+| ca1-soup-10 (Oct round 3) | 9 Nov ~13:00 | +49.1 / −2.4 | +58 / −4.3 | +53 / −2.2 | +45 / −2.4 | +36 / +0.4 | +38 / +0.6 | +41 / −3.2 | +52.4 / −0.9 | +0.4 |
+| rpE @ 80 (repair of rc1-soup-30) | 9 Nov ~21:30 | +47.0 / −0.9 | +54 / −1.2 | +46 / −1.0 | +45 / −2.6 | +37 / +0.1 | +39 / +0.1 | +50 / +3.4 | +50.4 / −0.2 | +1.45 |
+| rpE @ 40 | 10 Nov | +50.6 / −1.9 | — / −3.0 | — / −1.7 | — / −2.8 | — / +0.4 | — / −0.6 | — / −0.4 | +50.5 / −1.7 | +1.1 |
+| rpE @ 60 | 10 Nov | +47.8 / −1.2 | +55 / −1.5 | +48 / −0.7 | +46 / −3.0 | +38 / +0.1 | +39 / −0.2 | +49 / +1.4 | +48.6 / −0.7 | +1.3 |
+| rpI @ 120 (rpE-80 + own-answer round) | 10 Nov evening | +41.9 / +0.1 | +47 / +0.0 | +38 / +0.5 | +41 / −1.5 | +37 / +0.2 | +38 / −0.9 | +50 / +5.8 | +43.0 / +0.9 | +1.64 |
+
+Thinking-off row: per-part accuracy original → thinking off: svamp 88.7 → 20.6, mbpp 52.4 → 40.8, ifeval 58.7 → 57.5, simple
+82.2 → 71.4, multiple 76.1 → 55.3, no-fit 83.4 → 90.3; tokens saved 89–98% per part except ifeval 62% (per-part savings not
+listed individually); not allowed as a solution (data in runs/mvtf/full-base-nothink). Earlier ×8 runs of rc1-soup-30 (Oct):
+usual set 58.0 / −3.1, fresh set 55.6 / −2.9. The rpE-80 entry calls it "our best full-test trade-off": accuracy meets the goal
+(better than −1), saving does not (47 < 50). lpc-l2s50e full per-part breakdown (thinking fifths, broke/fixed, capped) is in G8.
+Full tests not run: lpc-press (dropped 30 Oct ~16:00); bidax5q seeds 0/1 (queued 3 Nov ~01:00, paused ~01:25 by the user: "no full
+test until v1 is really good").
+
+### G2. Per-type adapters: pt family, lpt6, October rerun (lpk)
+
+#### G2.1 October's per-type adapters (lpw-pertype, 4 adapters on lpv-base pairs) — merges
+
+| merge (svamp / mbpp / ifeval / bfcl) | set | overall | svamp | mbpp | ifeval | simple | multiple | no-fit |
+|---|---|---|---|---|---|---|---|---|
+| soft 0.25 / 0.35 / 0.45 / 0.35 | choosing × 4 (1 Nov 05:44) | +44.6 / −1.3 | +51 / +0.6 | +53 / −3.7 | +41 / −0.6 | +29 / +0.6 | +32 / 0.0 | +36 / −5.0 |
+| softer 0.2 / 0.25 / 0.35 / 0.25 | 720 (1 Nov 06:44, full-eval wt) | +39.2 / −0.8 | −2.1 acc | — | — | — | — | −4.8 acc |
+| soft 0.25 / 0.35 / 0.45 / 0.35 | 720 | +48.4 / −1.9 | −4.0 acc | — | — | — | — | −6.9 acc |
+| mid ("pt-mid") 0.3 / 0.45 / 0.6 / 0.45 | 720 | +55.0 / −2.6 | −5.6 acc | — | — | — | — | −7.1 acc |
+
+pt-mid full test 6 Nov: +53.6 / −3.3 (G1). Yardstick distances (2 Nov): per-type mid +1.3, per-type soft +0.7.
+
+#### G2.2 pt-mid's adapters scored alone (5 Nov, 720 × 4, no training)
+
+| adapter | strength | overall | svamp | mbpp | ifeval | simple | multiple | no-fit | vs curve |
+|---|---|---|---|---|---|---|---|---|---|
+| math | 1.0 | +41.7 / −2.1 | +59 / −4.8 | +51 / −1.0 | +26 / +0.6 | +21 / −1.7 | +24 / −1.3 | +25 / −6.0 | −0.6 |
+| code | 1.0 | +16.5 / −1.3 | +20 / −1.3 | +25 / −0.2 | +7 / −1.3 | +14 / −1.5 | +14 / −2.3 | +11 / −3.5 | −1.6 |
+| ifeval | 1.0 | +36.1 / −1.2 | +34 / −2.7 | +42 / +0.2 | +40 / +0.6 | +28 / −1.9 | +29 / −1.3 | +29 / −5.6 | −0.4 |
+| tools | 1.0 | +50.1 / −2.9 | +53 / −4.0 | +59 / −4.6 | +44 / −3.7 | +38 / +1.5 | +43 / +2.5 | +45 / −2.3 | 0.0 |
+| math | 0.30 | +11.9 / −1.0 | +20 / −1.5 | +13 / +0.8 | +4 / −1.5 | +9 / −1.5 | +10 / −2.3 | +11 / −1.9 | −1.3 |
+| code | 0.45 | +10.0 / −2.5 | — / −2.5 | — | — / −3.7 | — | — | — | −2.7 |
+| ifeval | 0.60 | +23.1 / −1.2 | — | — | — | — | — / −2.7 | — / −3.3 | −1.4 |
+| tools | 0.45 | +28.6 / −1.1 | +27 / −2.9 | +32 / +0.4 | +28 / −0.8 | +25 / −2.5 | +28 / −0.2 | +28 / −0.8 | −1.0 |
+
+Additivity check (logged): token ratios of the four solos at pt-mid strength multiply to 0.881 × 0.900 × 0.769 × 0.714 = 0.435 →
+predicted 56.5% saved vs measured 55.0; accuracy losses sum to −5.8 vs measured −2.6 (+3.2 better than additive). The code-0.45
+entry notes "likely partly screen noise".
+
+#### G2.3 lpt6 — one adapter per type, each trained alone (track.py typeonly, 2 Nov; bidax5s's pairs, our settings, 2-seed soups, final, 720 × 4)
+
+| adapter (own pairs) | strength | overall | own type | spill-over noted | vs curve |
+|---|---|---|---|---|---|
+| code only | 1.0 | −3.2 / −1.0 | code −5% / +0.4 | instructions −9% / −3.1 | no effect |
+| instructions only | 1.0 | +32.6 / −2.8 | ifeval +43 / −4.4 | math +27 / −3.5, code +32 / −1.9, tools +26–28 | −2.4 |
+| one function only | 1.0 | +33.7 / −1.7 | simple +34 / −1.2 | code +41 / −0.8, math +34 / −4.2, no-fit +35 / −7.3 | −1.2 |
+| several functions only | 1.0 | +18.3 / −1.4 | multiple +26 / 0.0 | code +24 / −2.5, simple +21 / −1.5, math +18 / −1.5, no-fit +18 / −2.9, ifeval +9 / 0.0 | −1.7 |
+| no-fit only | 1.0 (2 Nov ~16:40; again 5 Nov ~16:15) | +11.9 / −1.9 | no-fit +36 / +11.7 | simple +18 / −20.6, multiple +17 / −16.6 | −2.2 |
+| math only (trained 5 Nov) | 1.0 | −38.1 / −3.1 | svamp −78% / −16.2 | mbpp −17 / +2.3, ifeval −39 / +1.5, simple −23 / −1.7, multiple −23 / 0.0, no-fit −29 / +2.5 | outside the curve's range |
+| math | 0.5 | −12.2 / −0.5 | svamp −26% / −2.9 | ifeval −15 / +1.5 | — |
+| code | 0.5 | −0.8 / +0.3 | mbpp −2% / +2.3 | multiple +6 / −3.2 | — |
+| instructions | 0.5 | +17.8 / −0.2 | ifeval +19 / −0.6 | no-fit +12 / −1.7, simple +14 / −2.1 | −0.5 |
+| one function | 0.5 | +15.3 / −0.7 | simple +18 / +0.2 | no-fit +18 / −3.3 | −1.0 |
+| several functions | 0.5 | +8.3 / −0.2 | multiple +14 / +0.6 | no-fit +10 / −2.1 | −0.4 |
+| no-fit | 0.5 | +4.5 / −0.6 | no-fit +23 / +4.8 | simple +10 / −4.0, multiple +10 / −3.4 | −0.6 |
+
+Code-only checked on the records (2 Nov ~15:55): code median thinking 966 vs 994, capped 9.4% vs 8.5%, accuracy 51.2 vs 50.8,
+although 86% of held-out code pairs were ordered right. The typeonly math adapter was stopped before training on 2 Nov (math waited
+for fixed pairs) and trained on 5 Nov in the "finish lpt6" stage (consult2's 13-screen design). lpt6b (same with michal-bida's
+settings) and the step-50 screens were dropped 2 Nov ~16:00 (user).
+
+lpt6 merges (2-seed averages, no math, official weighting, 6 Nov):
+
+| merge | overall | svamp | mbpp | ifeval | simple | multiple | no-fit | vs curve |
+|---|---|---|---|---|---|---|---|---|
+| C = instructions + one fn + several, each 0.5 | +41.3 / −1.3 | +41 / −1.7 | +45 / −1.0 | +41 / −0.6 | +36 / −0.2 | +39 / +3.6 | +37 / −9.4 | +0.15 |
+| C + code 0.5 | +39.5 / −2.8 | +42 / −1.9 | +40 / −3.1 | +37 / −3.3 | +37 / −2.1 | +40 / +1.7 | +39 / −8.1 | −1.6 |
+| C + no-fit 0.25 | +43.3 / −1.2 | +42 / −1.3 | +48 / −0.4 | +42 / −2.7 | +37 / 0.0 | +41 / +1.1 | +41 / −2.1 | +0.5 |
+| tools only (one fn + several + no-fit, each 0.5) | +31.0 / −2.3 | +31 / −5.0 | +31 / −2.1 | +25 / −1.7 | +32 / −4.0 | +37 / +2.9 | +39 / +2.1 | — |
+| C at 0.7 (C7) | +51.3 / −3.6 | +55 / −4.2 | +55 / −2.7 | +50 / −3.7 | +42 / −2.1 | +46 / +1.7 | +45 / −11.7 | −0.5 |
+
+For C the log notes token ratios of the solos multiplied predict 36.2% (consult3 had guessed 40 / −2.5).
+
+consult3 screens on the pt family (5 Nov ~20:20, no training): #1 pt-nocode (math .30 / code 0 / instr .60 / tools .45) +50.8 / −2.7
+(svamp +58 / −4.0, mbpp +60 / −2.5, ifeval +44 / −2.5, simple +36 / −1.7, multiple +40 / +1.3, no-fit +40 / −4.8), +0.35 vs curve
+(prediction 51 / −1.5); #2 pt-shift (.15 / 0 / .65 / .65) +54.4 / −3.9 (svamp +59 / −5.4, mbpp +63 / −5.0, ifeval +49 / −2.7, simple
++39 / −1.9, multiple +44 / +1.7, no-fit +45 / −7.3), −0.1 (prediction 55 / −2.0). Screen #6 cancelled by consult3's rule B.
+
+#### G2.4 Jasmin pair sets (5 Nov ~17:40) and the October rerun lpk (6 Nov)
+
+- jpa = October's lpv-base rule and matching on the new data (dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2; 10
+  answers); jpb = unmatched, cut at random to jpa's count per part × kind; pairs only. Bug (6 Nov ~01:10): `--lp-pairs-only` sat in
+  balround(), so jpa built its pairs (2,812 matched: math 802, code 780, instr 799, simple 335, multiple 182, no-fit 210; ~1,400 in
+  October) and started an unwanted joint training (jpa-s0); fixed.
+- October rerun (user, 6 Nov ~00:30): two changes only, the new data (jpa) and float32; same 4 groups, NLL 1, constant lr 2e-5, 16
+  pairs/step, one pass, 48 held out, seed 0; each group × kind cut to lpv-base's count (`--pt-cap-like`). Cap check: every group
+  reaches October's counts (math shorten 299 / guard 47 / right 7 of available 599 / 87 / 17; code 251 / 79 / 23 of 497 / 156 / 50;
+  instructions 218 / 86 / 49 of 454 / 146 / 103; tools 284 / 44 / 25 of 574 / 89 / 40); 353 pairs per adapter = 19 steps. Extended
+  (~01:40): October-count pairs first, then the remaining matched jpa pairs (~703 in all), checkpoints every 5 steps + step 19.
+  Pure fp32 (lpj) ran out of GPU memory on the code adapter (math lpj-svamp trained); rerun as **lpk** with fp32 weights + fp16
+  autocast (`--bida-precision`).
+
+lpk results (720 × 4):
+
+| adapter / merge | step | overall | details | vs curve | October's equivalent |
+|---|---|---|---|---|---|
+| math @1.0 | 19 | +40.9 / −2.3 | svamp +60 / −2.3, mbpp +44 / −3.3, ifeval +29 / −1.0, simple +23 / −2.3, multiple +25 / −1.9, no-fit +24 / −4.0 | −0.9 | 41.7 / −2.1 (svamp 59 / −4.8) |
+| math @1.0 | 10 | +26.6 / −1.1 | svamp +48 / −0.8; no-fit −3.1, multiple −2.5 | −1.1 | |
+| math @1.0 | 30 | +33.9 / −1.4 | svamp 50% / −3.5 | — | |
+| code @1.0 | 19 | +16.6 / −1.9 | mbpp +26 / +1.3; ifeval −4.6, svamp −3.5 | −2.2 | 16.5 / −1.3 |
+| code @1.0 | 10 / 30 | +10.9 / −1.3; +16.3 / −2.5 | mbpp +16 / +2.1 at 10 | — | |
+| instructions @1.0 | 19 | +27.7 / −1.2 | ifeval +34 / −2.3; no-fit −2.7, simple −2.3 | −1.2 | 36.1 / −1.2 |
+| instructions @1.0 | 10 / 30 | +14.0 / −1.4; **+36.5 / −0.6** | | +0.2 at 30 | |
+| tools @1.0 | 19 | +42.8 / −1.6 | simple +38 / −4.0, multiple +44 / +1.1, no-fit +42 / 0.0; svamp −2.1, ifeval −1.3 | +0.1 | 50.1 / −2.9 |
+| tools @1.0 | 10 / 30 | +22.0 / −1.1; +45.3 / −2.4 | ifeval −4.8, svamp −3.3 at 30 | — | |
+| math @.30 / code @.45 / instr @.60 / tools @.45 | 19 | +12.1 / −1.1; +8.8 / −0.8; +17.7 / −0.7; +20.2 / −1.2 | | — | 11.9 / −1.0; 10.0 / −2.5; 23.1 / −1.2; 28.6 / −1.1 |
+| softer merge .20/.25/.35/.25 | 19 | +32.0 / −1.4 | svamp +38 / −1.9, no-fit +28 / −4.2, multiple −2.1 | −1.0 | 39.2 / −0.8 |
+| soft merge | 19 | +40.3 / −2.3 | | −1.0 | 48.4 / −1.9 |
+| mid merge | 19 | +48.5 / −2.1 | | +0.5 | 55.0 / −2.6 (720) |
+
+Verdict as logged 6 Nov ~08:00: "the new data + fp32 does NOT beat October": every merge saves 6–8 points less; mid "a little better
+on the curve (+0.5 vs pt-mid's +0.3 full-test)". **Correction logged 10 Nov:** re-read on the same yardstick, adapters alone are a
+tie with October (tools +0.07 vs +0.01, math −0.91 vs −0.59, instructions @19 −1.15 vs −0.41 but @30 +0.24); the merges lose (mid
++0.5 vs October pt-mid +1.3; soft −1.0 vs +0.7) because they reused October's strengths, which had been picked on this 720 for
+October's own adapters; two changes at once (data and precision), one seed, one run; gaps of ~1 pt within 720 × 4 noise; the
+earlier "+0.5 vs +0.3" compared a 720 score with a full-test score. Conclusion logged: "the rerun does not show that better settings
+fail; it was not a fair test".
+
+### G3. Joint DPO runs on dp13: LUPIN spec runs, michal-bida reproduction (bidax*), v1, the D1–D12 pair-strategy screen
+
+#### G3.1 LUPIN round-1 runs finished after Part F (pool dp13)
+
+lpc-math (math + no-fit protection, 3 seeds, fresh 240 × 8):
+
+| soup | overall | svamp | mbpp | ifeval | simple | multiple | no-fit | full-eval weighting |
+|---|---|---|---|---|---|---|---|---|
+| 40 | +45.6 / −3.6 | +60 / −5.6 | +51 / −2.8 | +32 / −2.5 | +33 / −2.8 | +36 / −4.4 | +33 / −3.4 | +45.5 / −3.6 |
+| 50 | +43.8 / −3.5 | +59 / −4.7 | +43 / −3.4 | +36 / −3.7 | +32 / −1.2 | +35 / −2.8 | +33 / −2.8 | +43.7 / −3.5 |
+| 60 | +40.1 / −3.5 | +56 / −5.9 | — | — | — | +35 / −5.9 | +33 / −4.4 | — |
+| 70 | +43.7 / −3.1 | +59 / −5.6 | +46 / −2.5 | +33 / −1.6 | +33 / −0.9 | +35 / −3.7 | +33 / −3.1 | — |
+
+(Screen had shown +50.9 / −0.6 at step 50.)
+
+External build spec (THINKINGCAP_BUILD_SPEC.md, reviewed 30 Oct ~15:00): per-type pair mix (`lupin_select.py --kind-share-part`)
+and cosine lr (`dpo.py --lr-schedule cosine`, warm-up 10, floor 2e-6) built; Run C of the spec (math cut pairs) not built (user).
+
+| run | design (vs Run A) | set | results |
+|---|---|---|---|
+| lpc-runa | part shares svamp 15 / mbpp 30 / ifeval 30 / bfcl 25; per-part kind mix; cosine lr; 4,800 pairs target | — | selection kept 2,070 of 4,800 (no-fit 148 of 343 set a 43% fill); stopped at seed 0 step 25 |
+| lpc-runa2 | Run A + `--lp-loose bfcl_irrelevance` | 4,442 pairs (shorten 2,265 / guard 1,017 / right 1,160), fill 0.94, ~275 steps × 3 seeds | fresh × 8: 100 +31.0 / −0.5; 150 +28.7 / −1.5; 200 +27.9 / −0.2; 250 +23.3 / −0.9. 720 × 4 (full-eval wt): 100 +33.4 / +0.4; 150 +32.3 / −0.1; 200 +32.9 / −0.4; 250 +32.3 / −1.0; 270 +32.5 / +0.4 |
+| lpc-runb | + svamp shorten = median-length right > longest right (≥ 1.5×) on questions ≥ 0.8 solved | 4,442 pairs, 275 steps × 3 seeds | fresh × 8 (mixed draws): 100 +23.8 / −0.4; 150 +24.5 / +0.3; 200 +26.5 / +0.2; 250 +23.3 / −0.8. Clean (all seeds one draw): 100 +24.0 / −0.5; 250 +24.7 / +0.1. 720: 100 +29.8 / −0.6; 150 +29.0 / −0.6; 200 +30.0 / −0.1; 250 +31.0 / +0.1; 270 +28.4 / +0.1 |
+| lpc-rund | Run A pairs, β 0.2, lr 1e-5 | — | replaced (31 Oct 16:00, user) by lpc-runac before running |
+| lpc-runac | Run A pairs, constant lr 2e-5 | Run A's pairs (own draw), 3 seeds | fresh × 8: 100 +26.2 / −1.3; 150 +24.9 / −0.6; 200 +22.0 / −0.9; 250 +19.5 / −0.8. 720: 100 +29.3 / −0.7; 150 +34.3 / −0.9; 200 +29.2 / −0.4; 250 +26.3 / −1.2; 270 +23.4 / −0.1 |
+| single seeds @200 on the 720 | — | — | lpc-runb s0 +27.6 / −0.3 (mbpp +17); s1 +26.6 / +1.0 (mbpp +18); lpc-runa2 s0 +33.9 / −0.3 (mbpp +33) |
+| lpc-runa2r | exact replay of lpc-runa2 seed 0 (same flags, current code) | 4,442 (same counts, fill 0.94) | 720 @200: +26.0 / −0.8 vs the original seed's +33.9 / −0.3; answers file, pair selection, code and vLLM version checked identical; logged explanation: training run-to-run randomness (GPU non-determinism) of ~8 pts saving for one seed |
+
+Pair-file check (31 Oct ~19:45): lpc-runb vs lpc-runa2, both 4,442 pairs, counts equal except svamp; summed length push per part
+equal except svamp (B 375 vs A2 298); 2,272 identical pairs; "pairs cannot explain B's lower saving". Logged pattern: every run trained
+after the 31 Oct restart saves less than lpc-runa2.
+Other screens: lpw-pressmath (choosing × 4, 1 seed) 25 +34.7 / −0.2, 50 +42.0 / −0.8; lpw-p4tools (choosing × 4) 25 +41.9 / −0.1,
+50 +37.6 / −0.3, 75 +45.9 / −0.6; on the 720 (full-eval wt): p4tools 75 +48.4 / −2.6 (ifeval +43 / −6.0, svamp +57 / −4.0), 50
++42.2 / −2.2. lpw-2stage step 50 re-scored on the 720 (2–5 Nov): +29.5 / +1.6 (+1.8 vs curve). The Part F pending lpc-press soup-50
+per-part numbers and cx-press do not appear later in the log.
+
+#### G3.2 michal-bida reproduction (bidax*), 31 Oct – 3 Nov (720 × 4, full-eval weighting unless stated)
+
+| run | change | pairs / steps | results |
+|---|---|---|---|
+| lpc-bida (queued 30 Oct 22:25, revised 22:35) | his recipe with our matching + 1:1 balance | — | replaced 1 Nov ~01:45 by the exact copy lpc-bidax |
+| lpc-bidax | exact copy: long2short, shorten capped at guard count, no min-solve, no right pairs, no matching, NLL 0, 4 answers, cosine 2e-5, 1 seed | 4,247 (before fix) | stopped at step 140/266: raw pairs held right pairs because `--lp-min-solve` defaulted to 0.5 |
+| lpc-bidax2 s0 | bidax with `--lp-min-solve 0` | 5,026 / 315 | 100 +54.7 / −4.6; 200 +49.1 / −3.1; 300 +51.1 / −2.6; final +51.8 / −2.7; FULL +51.2 / −3.0 |
+| lpc-bidax2 s1 | same pairs, seed 1 | | final +51.0 / −3.9 |
+| lpc-bidax3 | intended + nofit3; in fact same pairs and same seed as bidax2 s0 (top-ups not joined) | 5,026 | 100 +52.4 / −3.9; 200 +56.3 / −4.2; 300 +54.8 / −3.7; final +54.5 / −3.9 (no-fit −7.3) — a same-seed repeat |
+| lpc-bidax4 | + nofit4 (own no-fit, 1,871 q) via `--lp-add-q` | 5,362 | 100 +57.1 / −5.1; 200 +54.6 / −3.7; 300 +53.2 / −3.3; final +52.7 / −3.5 (no-fit +50 / −1.2, svamp +66 / −5.4) |
+| lpc-bidax4l | bidax4 pairs, 2 passes, cosine over 600 | 5,362 / 600 | 300 +38.4 / −1.1; 400 +38.8 / −1.8; 500 +41.8 / −1.7 (no-fit +11–12, one-function −9 to −11); step 600 screen stopped |
+| lpc-bidax5 | + math1 | svamp guard 1,085 / shorten 1,085 | stopped before its first step (1 Nov 21:20) |
+| lpc-bidax5m | + math1/math2, no shorten on svamp 470–905 band, 743 don't-over-cut pairs (622 trained + 121 natural), 16/step | 8,308 / ~520 | final +11.3 / −3.6 (svamp −56% / −19.2; mbpp +1 / +4.6; no-fit +41 / +10.2) |
+| lpc-bidax5s | bidax5m data at 25/step (~331 steps) | 8,308 | 100 +21.6 / +1.2; 200 +20.1 / −0.2; 300 +21.8 / +0.1; final +23.6 / +1.3 (svamp −22% / +1.0); seed 1 dropped |
+| lpc-bidax6 | bidax4 pairs, `--bida-exact` (fp32 base + fp16 autocast + GradScaler, warm-up steps//20, cosine to 0, 0 held out, 8,704 max) | 339 | 100 +44.4 / −2.2; 200 +40.1 / −0.9; 300 +41.7 / −1.0 (+0.5); final +37.8 / −1.7 ("about 0.7 below"). Dial on step 300: 0.5 +22.5 / −0.8; 0.75 +30.9 / −0.7 |
+| lpc-bidax5p → lpc-bidax5q | bidax4's plain bida + math1 + math2, `--bida-exact`, 339 steps | — | s0: 100 +41.8 / +0.2 (+1.7); 200 +48.5 / −0.9 (+1.7); 300 +47.9 / −1.5 (+1.0); **final +46.7 / −0.5 (+1.8)**. s1: 100 +42.8 / −1.9 (−0.2); 200 +51.8 / −1.9 (+1.3); 300 scored ("line truncated in the log view"); final +48.5 / −2.2 (+0.4). Official re-weighting (5 Nov) of s0 final: −0.59 (+1.7) |
+| lpc-bidax7 | bidax5q + instr2 + code2 (his instruction and code sources) | — | 100 +41.3 / −1.9 (−0.5); 200 +43.1 / −0.6 (+1.1); 300 +45.3 / −0.8 (+1.3); final +43.5 / −2.5 (−0.7) |
+| lpc-bidax6p | bidax4 pairs, only his precision | 336 | 100 +45.7 / −1.8 (+0.3); 200 +48.9 / −2.0 (+0.7); 300 +47.8 / −1.4 (+1.1); final +48.8 / −2.3 (+0.4) |
+| lpc-bidax6s | only his schedule | — | dropped 5 Nov ~18:40 (user), never run |
+| lpc-bidax8 / polans pa6 | four-signal pairs from bidax6's own answers | — | paused 2 Nov ~19:00, never run |
+
+Logged readings: the bidax2 full test shows "the 720 is accurate" and "the gap to his 47.0 / −0.78 is real" (math −6.0 vs his −2.4,
+no-fit −3.5 vs +6.0); bidax2 s0 vs s1: seed spread ~1 pt saving, ~1.2 pts accuracy; bidax5m math thinks longer and is less accurate at
+every length fifth (86/84/75/62/46% vs original 99/99/93/95/65; mean thinking 1,053 vs original 685, bidax4 232; capped 4.6%); logged
+cause: don't-over-cut pairs mix two models (winner = original text, loser = bidax4 text). bidax6p: "the precision alone accounts for most
+of the change his settings made". bidax5q: "his math data + his settings together close the gap that neither closed alone"; seed spread
+of the finals 1.7 pts accuracy ("recipe ~+1.1 above the curve on average, seed luck ±0.7").
+Data supporting runs: newtop nofit3 (958 new no-fit × 10, mean solve 98%; 888 dropped as already used); nofit4 (1,871 × 10, solve
+94%; 1,308 dropped); math1 (2,000 GSM8K/MetaMath × 10, solve 80%; 3,722 candidates dropped); math2 (2,000 more); onpolicy om1
+(lpc-bidax4-s0 × 4 on math1's 934 band questions: right 80.5%, mean thinking 291, 730 wrong answers); instr2 (his instruction sources,
+2,000 × 4, solve 65%); code2 (his KodCode selection, 1,500 questions; 33,401 candidates built). Gate `--lp-min-overcut 500` passed 2 Nov
+~00:10 (743 overcut pairs).
+**v1 = lpc-bidax5q (user, 3 Nov ~01:00).** User decision of 6 Nov ~09:30 (G12): nothing built on another candidate's recipe will be run
+or submitted.
+
+#### G3.3 DPO pair-strategy screen D1–D12 (3–5 Nov; everything = bidax5q s0 except the pair flags; 720 × 4; steps 100 / 200 / final)
+
+All-else-equal audit (3 Nov ~02:45): lpd-* lines differ only in pair flags; the edited `lupin_pairs.py` rebuilds bidax5q's pairs
+byte-identically at a fixed hash seed; bug found: the shorten subset surviving the 1:1 cap depended on Python's per-process set order
+(fixed; "part of the ~1.4-pt seed noise"). A strategy counts only if it saves ≥ 40%.
+
+| id | run | pairs | step 100 | step 200 | final | vs curve (final) |
+|---|---|---|---|---|---|---|
+| D1 | lpd-dast (DAST budget pairs) | — | +39.5 / −2.6 (−1.4) | +30.8 / −2.0 (−1.7) | +33.1 / −2.3 (335) | −1.8 |
+| D2 | lpd-hard (bida + keep trying) | — | +9.4 / +0.1 (−0.1) | +13.4 / −0.2 (−0.5) | +13.8 / −0.1 | −0.4 |
+| D3 | lpd-route (bida + right & keep-trying below 75%) | 13,430 | +7.5 / −1.0 (−1.1) | +6.2 / −0.6 (−0.7) | +9.4 / −0.7 | −0.9 |
+| D4 | lpd-budget | 7,748 | +43.8 / −1.8 (0.0) | +48.6 / −1.5 (+1.1) | +49.0 / −1.3 | +1.4 |
+| D5 | lpd-margin (weakest 15% per kind dropped) | — | +55.0 / −3.1 (+0.8) | +56.9 / −3.8 (+0.5) | +53.3 / −2.6 | +1.0 |
+| D6 | lpd-simright (bida + similar-length right > wrong) | — | +34.1 / +0.7 (+1.3) | +30.3 / +0.6 (+0.8) | +28.1 / +1.7 | +1.8 |
+| D7 | lpd-st1 (right>wrong only, 50 steps) → lpd-2stage | — | st1 final −4.6 / +0.8 (+1.7); 2stage +16.2 / +1.7 (+1.4) | +19.4 / +1.0 (+0.7) | +16.5 / +1.4 | +1.1 |
+| D8 | lpd-math (bida + right pairs on math / no-fit below 80%) | — | +40.9 / −1.6 (−0.2) | +43.3 / −1.8 (−0.1) | +41.7 / −1.0 | +0.5 |
+| D9 | lpd-adar1 (Ada-R1) | 30,049 (17,870 q), ~89 / step | +68.3 / −6.6 (+0.7) | +69.4 / −7.6 (0.0) | +65.3 / −6.8 (338) | −0.3 |
+| D10 | lpd-l2s50e (Oct l2s50e rule) | — | +54.4 / −3.6 (+0.2) | +49.7 / −3.0 (−0.2) | +53.5 / −2.7 | +0.8 |
+| D11 | lpd-push2 (up to 2× shorten per guard) | — | +49.2 / −3.7 (−1.0) | +49.7 / −2.9 (−0.1) | +52.4 / −3.0 | +0.4 |
+| D12 | lpd-chain1 (shortest right > longest right ≥ 1.5×; guard = shortest right > shortest finished wrong; 40:60) | 333 × 18 | +21.7 / +0.4 (+0.2) | +18.4 / +0.4 (+0.1) | +17.8 / +0.8 | +0.5 |
+
+Per-part detail for each row is in the log (lines ~4223–4235, 4492–4531, 4534–4574, 4621–4631, 4656–4659, 4708–4715, 4767–4773).
+Summary logged 5 Nov: "None beats v1 (46.7 / −0.5)". chain1 round 2 (polans pc1 a + b, then lpd-chain1r2) started, then postponed 5 Nov
+~00:10 (user; ~4,000 of 17,000 answers kept). Queued earlier and never reported: lpc-b5four, lpc-b5diff, lpc-b5cap2 (3 Nov ~01:25).
+Runtimes 3/4 for the screen were dropped (only 2 GPUs on the account).
+
+### G4. GRPO / RL runs
+
+| run | date | design | results (720 × 4) |
+|---|---|---|---|
+| tp0 (ThinkPrune smoke) | 2 Nov ~16:40 | `rl_train.py --reward cap`: 1 if right AND under the question's own cap; from the original; 5 steps × 16 q × 8; lr 5e-6, KL 1e-3 | ran clean, 6.6 min; caps math 1,147 (99% keep a right answer), code 1,022 (84%), instr 528 (84%), simple 171 (89%), multiple 196 (91%), no-fit 223 (88%); batch accuracy 62–84%; 6–9 of 16 questions informative; LoRA B matrices non-zero (196/196) |
+| grA | 3 Nov | khudgins/Ornith lenpen (right = 1 − λ·min(1, thinking/2048), +0.1 format), λ → 0.05 over 100 steps, KL 0.04, lr 2e-6, Dr. GRPO, 12 q × 8, 150 steps | 50 +1.5 / −1.0; 100 −2.3 / −1.2; 150 −5.8 / −0.9. Crash at step 51 (langdetect missing), fixed, resumed |
+| grB | 3 Nov | grA with penalty up to 0.2 | 50 −2.0 / −0.5; 100 +1.2 / 0.0; 150 −0.6 / −0.7 |
+| grC | 3 Nov | grA with KL 0 | 50 −0.3 / +0.4; 100 −3.0 / −1.0; 150 −6.7 / −0.3 |
+| grD → grS | 3 Nov | gate 0.5 (GRPO-λ) → replaced by standard scaling, penalty 0.05 | not run (removed 3 Nov ~18:15) |
+| grE → grP | 3 Nov | lr 5e-6 → replaced by standard scaling + penalty 0.5 at step 50 | not run |
+| grF (+ gs0 smoke) | 3 Nov | SmartThinker reward (arXiv 2603.08000), aligned with the paper (plain GRPO advantages, no KL, constant lr, `--tp-max-solve`) | not run |
+| — | 3 Nov ~18:15 | **GRPO stopped (user)**: no run shortened thinking | |
+| GRPO v2 plumbing smoke | 4 Nov ~03:30 | consult1 recipe (gated reward, persistent AdamW, per-type rollout limit), Mac CPU | passes |
+| grA2, gr2 | 5 Nov | grA + all trainer fixes; consultant recipe from v1 (screens 10–250) | prepared, commented, not run |
+| gr2n → gr2e | 6 Nov ~03:20–04:20 | `--gr-form linear` R = max(0, 1 − c·L/B), B = original's mean tokens per part on training answers; from the original; 40 steps × 32 q × 8; gr2e = questions solved ≥ 5/10 (14,001 eligible for 1,280 needed) | **bug**: B for svamp = 82 tokens (others 231 / 208 / 180 / 669 / 1,818); every right math answer above ~273 tokens earned 0; training tokens 620 → 464 in 10 steps; stopped after 10 steps, adapter discarded |
+| gr2f | 6 Nov ~08:45 | gr2e with B computed in-stage, asserted ≥ 100 (svamp 824) | 10 +4.0 / −0.4 (−0.3); 20 +11.4 / −0.6 (−0.9); 30 +6.8 / −0.4 (−0.5); 40 +11.3 / +0.3 (0.0) |
+
+Per-part numbers of every GRPO checkpoint are in the log (lines ~4212–4221, 4287–4290, 4357–4383, 4929–4937). Logged reading of
+grA/grC: the khudgins penalty (at most 0.05 × min(1, thinking/2048), ~0.01 for a 400-token answer) is tiny next to the right/wrong
+reward, so GRPO drifts to longer thinking. gr2f verdict (logged): saving small and not growing steadily; on the curve, not above it.
+User 5 Nov ~18:45: GRPO stays off; 6 Nov ~04:00: one GRPO run launched (gr2n → gr2e → gr2f).
+
+### G5. COPD (contrastive on-policy distillation, 9–10 Nov)
+
+Method (`rl_train.py --objective copd`, Ruan et al., arXiv 2607.19046): no reward; a frozen teacher (Qwen3-4B, or 'self') re-reads each
+sampled reply under a light- and a heavy-effort instruction; token advantage = log p(light) − log p(heavy), clipped ±10; loss = −mean
+(1/T) Σ A_t log π; one update per step. lr 1e-5 (paper's 1e-6 full FT × 10 for LoRA); 64 questions × 2 answers per step.
+Questions of Run A: solved at least once in the original's 10 answers.
+- copd_demo (Mac, 0.6B as own coach, one hand-written answer): pushes per part +0.01 / −0.01 / −0.06 / +0.01 / −0.01 / 0.00, 0.00 at
+  </think>. copddemo on GPU, 20 hand-written questions: 0.6B coach ~0 (direction 10/20); 4B coach pushes the needless check down in
+  19/20 but pushes the useful check down twice as hard (−0.20 vs −0.10; needless below useful only 7/20), stop +0.01. User: run Run A anyway.
+- Smoke (cp1smoke2): step 1 ran (mean push −0.012, 38% of tokens pushed down), step 2 out of memory; fix: no KV cache in batch_logps,
+  explicit frees, gpu_gb logged (1.33 after every step); ~15–20 min per step (8 GB teacher moved CPU↔GPU twice a step).
+
+| run | settings | step | 720 × 4 official | per part | vs curve |
+|---|---|---|---|---|---|
+| Run A (cp1a) | 64 × 2, lr 1e-5 cosine (stretched to 40 steps after step 20) → 1e-6, solved ≥ 1/10 | 10 | +14.6 / −0.2 | svamp +23 / +0.2, mbpp +15 / +0.8, simple +11 / −1.0, no-fit +10 / 0.0, multiple +8 / −1.1, ifeval +8 / −1.3 | −0.5 |
+| | | 20 | +20.8 / −0.4 | svamp +35 / +0.2, mbpp +18 / +0.6, no-fit +19 / −0.6, multiple +20 / −1.1, simple +14 / −0.4, ifeval +11 / −1.9 | −0.7 |
+| | | 25 | +25.6 / −1.5 | svamp +40 / −0.2, mbpp +23 / −1.7, ifeval +16 / −4.0, no-fit +20 / −1.7, multiple +23 / +0.6, simple +19 / 0.0 | −1.6 |
+| | | 30 | +29.2 / −1.3 | svamp +45 / −1.0, mbpp +33 / −0.8, ifeval +12 / −3.5, no-fit +26 / −0.6, multiple +24 / 0.0, simple +22 / +0.6 | −1.2 |
+| | | 35 | +29.8 / −1.7 | svamp +48 / −1.9, mbpp +27 / −1.0, ifeval +15 / −2.5, no-fit +26 / −0.8, multiple +25 / −0.6, simple +23 / −2.1 | — |
+| | | 40 (final) | +34.1 / −2.4 | svamp +51 / −2.7, mbpp +31 / −4.4, ifeval +22 / −1.9, no-fit +30 / −1.5, multiple +27 / −0.2, simple +25 / 0.0 | — |
+| Run C (cp1c) | + `--copd-outcome 1.0` (w × (right − question's mean right) on every token), 32 q × 4, constant lr 1e-5 after 4 warm-up, `--tp-mixed-share 0.5` | — | stopped at step 3: mix not 50/50 (8/16, 2/16, 3/16) because rl_train re-orders by source; fixed | | |
+| Run C (cp1c2) | as cp1c, mix fixed (640 q, 319 sometimes-wrong) | 10 | +12.7 / −1.1 (also logged +12.6 / −1.1) | — | — |
+| | | 20 / 25 / 30 / 35 | +28.0 / −2.0; +35.8 / −3.6; +43.2 / −3.2; +49.7 / −3.0 | — | −0.2 to −0.5 (range given for the run) |
+| | | 40 | +57.1 / −4.7 | svamp +74 / −5.2, mbpp +60 / −7.5, no-fit +46 / −6.5 | −0.3 (10 Nov rpF entry) |
+
+Run A training log: practice accuracy 0.83–0.91, answers ~500 → ~400 tokens; coach mean push −0.015 (steps 21–25) → −0.008..−0.012
+(31–38). Logged comparison: at step 10 COPD shortened ~3.5× faster per step than GRPO gr2f (4.0 / −0.4). Run B (pushes on right answers
+only) was planned "only if Run A loses accuracy"; not run.
+**copdanalysis (10 Nov, GPU 1):** (1) on the training questions wrong answers are longer than right ones (svamp right 880 / wrong 1,773
+tokens, wrong longer on 72% of questions; mbpp 1,449 / 2,271 (62%); ifeval 643 / 1,057 (57%); irrelevance 330 / 448 (75%)); (2) on the
+720 at step 40 Run C's right answers are much shorter (svamp 583 → 159, A 312; mbpp 1,209 → 420, A 843; ifeval 519 → 256, A 372); its
+extra errors stopped early (thinking < half the original's median right-answer thinking): svamp 54 of 73 wrong (A 19/61), mbpp 68/272
+(A 26/257), ifeval 54/212 (A 14/210), simple 25/96 (A 9/83); cut-offs not the issue (mbpp 8.5% → 0.2%); at equal saving C is worse
+(A-40 34.1 / −2.4 vs C-25 35.8 / −3.6); (3) Run C's coach push fades to 0 by step 24 and turns positive (+0.015 at step 40) while
+tokens keep falling (700 → 250–300). Logged reading: the correctness push carries a hidden length reward.
+Queued: **cp1d** = Run A's exact settings + only the correctness push (`--copd-outcome 1.0`), 720 at 10/20/25/30/35/40 (GPU 2, after
+rpH and the rpI-120 full test) — pending. **cp1e** (queued after cp1d): cp1d + `--copd-early 1.0`: a WRONG reply whose thinking is under half the original's median right-answer thinking on that question gets −1.0 more on every token (logged 10 Nov, "items decided 10 Nov").
+
+### G6. Repair line ("be right" pairs on a shortened model)
+
+Common method (`track.py ptrepair`, `repair_pairs.py`): the base model answers training questions, pairs with no length signal are built
+from its own mistakes, a fresh LoRA is trained on the merged base (which is also DPO's reference), fp32 weights + fp16 autocast, β 0.1,
+no NLL, batch 16, then 720 × 4 screens. rpA–rpC (5 Nov, Track A of GAME_PLAN v3): base pt-mid; 5,400 questions × 4 (4,372 used: svamp
+2,400 of which all 1,644 mixed, mbpp 900, no-fit 472, ifeval / simple / multiple 300 / 150 / 150); 1,600 pairs from 1,233 questions
+(half shortest right > shortest finished wrong, half similar-length right > wrong with half the right one longer; ≤ 3 per question;
+chosen longer in 43–52% per part). 9 Nov: `--rp-base` (any model), `--rp-own-data` (math = GSM8K train+test in SVAMP wording minus
+questions trained in rounds 1–4; other parts = pool-dp13 minus MetaMath and top-ups; nothing from michal-bida's sources), `--rp-kinds
+guard`. rpE = the repair of rc1-soup-30 (the plan lines name it rpD with base `<B>`; the log reports it as rpE); its pairs: chosen
+re-checks the question 51 / 77 / 94% (math / code / no-fit) vs rejected 41 / 57 / 82%, chosen and rejected about equal length
+(medians 271/278, 440/440, 185/183); lr cosine from 1e-5 to lr-min 1e-5, i.e. constant. 10 Nov additions: `--count-rules` (IFEval
+counting-rule questions: chosen = right answer with response ≥ the rejected's and thinking ≤ 1.2× the rejected's), 1,500 IFEval
+questions, `--rp-samples`, `--rp-seed`, `--rp-answers-model`, `--rp-init-from`.
+
+| run | base / start | dose | pairs | step | 720 × 4 (official) | vs curve | full test |
+|---|---|---|---|---|---|---|---|
+| rpA | pt-mid | lr 5e-6 × 40 | 1,600 | 5 | +53.9 / −3.4 | +0.3 | |
+| | | | | 10 | +53.6 / −2.7 | +0.9 | |
+| | | | | 20 | +54.1 / −3.6 | +0.1 | |
+| | | | | 40 | +52.3 / −2.8 | +0.5 | |
+| rpB | pt-mid | lr 2e-5 × 40 | same | 10 | +52.4 / −2.2 | +1.2 | |
+| | | | | 20 | +48.7 / −1.1 | +1.55 | |
+| | | | | 40 | +43.4 / +0.3 (re-weighted +0.10) | +2.1 (re-weighted +1.9) | |
+| rpC | pt-mid | lr 1e-5 × 80 | same | 10 | +53.6 / −3.0 | +0.6 | |
+| | | | | 20 | +50.5 / −1.8 | +1.2 | |
+| | | | | 40 | +51.2 / −2.1 | +1.0 | |
+| | | | | 80 | +43.4 / +0.6 (re-weighted +0.43) | +2.4 (re-weighted +2.2) | |
+| rpE | rc1-soup-30 (720: +58.7 / −3.8) | lr 1e-5 constant × 80; own data | — | 10 | +57.2 / −3.0 (compare's average +57.4 / −2.9) | "+0.6?" (as logged) | |
+| | | | | 20 | +54.8 / −2.6 | — | |
+| | | | | 40 | +50.5 / −1.7 | — | +50.6 / −1.9 (+1.1) |
+| | | | | 45 | +52.9 / −1.7 | — | |
+| | | | | 50 | +49.5 / −1.6 | — | |
+| | | | | 60 | +48.6 / −0.7 | — | +47.8 / −1.2 (+1.3) |
+| | | | | 80 | +50.4 / −0.2 (compare's average +50.6 / −0.1) | +2.8 (also logged +2.77) | +47.0 / −0.9 (+1.45) |
+| rpG | rpE-80, continued 80 → 120 | rc1-soup-30 answers × 8, rpE's rules | 1,484 (IFEval 208/320) | 100 | +40.6 / +1.0 (BFCL-weighted +40.4 / +0.9) | +2.35 (later logged +2.2) | |
+| | | | | 120 | +32.7 / +0.5 | +0.9 | |
+| rpH | rpE-80 → 120 | rpG + `--count-rules`, 1,500 IFEval q | 1,598 (175 counting-rule) | 100 | +42.0 / −0.6 | +1.0 | |
+| | | | | 120 | +37.0 / −0.3 | +0.6 | |
+| rpI | rpE-80 → 120 | models/rpE-80 answers 5,700 new questions (seed 1) × 8 | 1,579 guard (IFEval 320/320 incl. 152 counting-rule; no-fit 59/80) | 100 | +42.9 / −0.2 | +1.5 | |
+| | | | | 120 | +43.0 / +0.9 | +2.6 | full test 41.9 / +0.1 (+1.64) |
+| rpF | COPD Run C step 40 (720: +57.1 / −4.7) | as rpE + count rules; Run C answers × 4, all 2,998 IFEval q | 1,446 (IFEval 320/320, 258 counting-rule; mbpp 287/400; tools 60–71/80) | 10 | +54.9 / −4.0 | −0.1 | |
+| | | | | 20 | +54.8 / −3.8 | +0.1 | |
+| | | | | 40 | +52.4 / −4.5 | −1.1 | |
+| | | | | 80 | +48.1 / −2.6 | −0.1 | |
+
+Per-part numbers (as logged): rpA-5 svamp +61 / −3.7, mbpp +64 / −6.0, ifeval +46 / −1.9, simple +37 / −0.2, multiple +41 / +0.4,
+no-fit +42 / −5.8; rpA no-fit −5.8 → −5.2 → −3.7 → −1.7 over steps 5–40, training loss 0.693 → 0.667. rpB-10 svamp +58 / −5.8, mbpp
++63 / −0.8, ifeval +46 / −0.8, simple +37 / −2.5, multiple +40 / +0.6, no-fit +42 / −1.5 (loss 0.693 → 0.578); rpB-20 svamp +53 / −1.9,
+mbpp +56 / −1.9, ifeval +45 / −1.5, simple +35 / −1.0, multiple +38 / +1.5, no-fit +41 / +2.1; rpB-40 svamp +45 / −3.1, mbpp +48 / +1.0,
+ifeval +44 / +1.7, simple +31 / −3.1, multiple +36 / +0.8, no-fit +41 / +7.3. rpC-20 svamp +57 / −4.0, mbpp +61 / −2.5, ifeval +41 / −0.6,
+simple +36 / −0.6, multiple +40 / +2.1, no-fit +42 / −1.5; rpC-40 svamp +58 / −4.0, mbpp +61 / −4.4, ifeval +43 / −1.3, simple +36 / −0.2,
+multiple +39 / +1.1, no-fit +41 / +2.7; rpC-80 svamp +44 / −1.7, mbpp +47 / +2.3, ifeval +46 / +0.6, simple +31 / −2.7, multiple +35 /
++1.1, no-fit +39 / +5.4. rpE-10 accuracies svamp −2.7, ifeval −2.5, simple −2.7, no-fit −3.7, multiple +1.5, mbpp −4.6; rpE-20 no-fit
+−1.9, simple −1.0, mbpp −2.5, ifeval −2.9, svamp −4.2, multiple +1.3; rpE-40 no-fit −0.2, multiple +1.5, simple −1.9, ifeval −1.7, mbpp
+−2.7, svamp −1.9 (saved svamp 60, mbpp 54, no-fit 50, multiple 43, ifeval 42, simple 40); rpE-45 no-fit +0.4, multiple +0.6, simple
+−2.1, ifeval −3.1, mbpp −1.7, svamp −1.3; rpE-50 no-fit +2.3, multiple +1.5, simple −1.7, ifeval −1.9, mbpp −3.3, svamp −1.3; rpE-80
+no-fit +51 / +3.1, multiple +43 / +1.3, simple +39 / −2.1, ifeval +50 / +0.4, mbpp +52 / +1.0, svamp +56 / −2.5. rpG-100 no-fit +51 /
++6.9, multiple +39 / −1.1, simple +37 / −2.1, ifeval +38 / +0.2, mbpp +40 / +1.7, svamp +42 / +1.0; rpG-120 svamp 31 / +0.4, mbpp 23 /
++2.5, ifeval 37 / −1.9, simple 34 / −2.9, multiple 36 / −0.4, no-fit 50 / +8.5. rpH-100 svamp 44 / −0.2, mbpp 40 / +0.2, ifeval 43 / −2.5,
+simple 37 / −1.2, multiple 40 / −0.6, no-fit 50 / +3.3; rpH-120 svamp 34 / −0.6, mbpp 37 / +0.6, ifeval 36 / −2.1, simple 35 / −1.7,
+multiple 39 / −1.1, no-fit 49 / +6.5. rpI-120 svamp 47 / −0.4, mbpp 39 / +3.5, ifeval 42 / −0.4, simple 39 / −2.5, multiple 42 / +0.2,
+no-fit 52 / +6.7. rpF-10 svamp 73 / −4.8, mbpp 57 / −4.8, ifeval 36 / −3.3, simple 43 / −2.9, multiple 45 / −0.2, no-fit 44 / −5.6;
+rpF-20 ifeval 42 / −0.8, svamp 72 / −6.2, mbpp 55 / −4.4, simple −4.0, multiple −1.5, no-fit −5.4; rpF-40 svamp 71 / −5.0, mbpp 52 /
+−6.2, ifeval 32 / −4.0, simple −3.1, multiple +1.1, no-fit −5.6; rpF-80 svamp 63 / −3.5, mbpp 50 / −4.6, ifeval 31 / −0.8, simple −2.7,
+multiple +2.3, no-fit −2.5.
+Logged readings: rpA "too gentle to repair"; rpB/rpC points lie on one frontier ("the repair trades length for accuracy"); rpE-80 "first
+model to meet > 50% / better than −1 on the 720 screen", with the caveat that a full test was needed (full: 47.0 / −0.9); rpG "more steps
+of the same repair only make the model longer … rpE step 80 stays the best stopping point"; "only rpI (answers from the CURRENT model on
+new questions) keeps its length"; "the IFEval counting rule alone did not fix IFEval on the 720"; rpF "does not lift Run C … Run C's loss
+(stopped-early math and code) is not fixed by right-vs-wrong pairs at equal length". rpE thinking vs response tokens: see G8.
+Planned and not run: rpD-smoke / rpD as written in the 9 Nov plan; consult2's "strength rescue" probes on rpB.
+
+### G7. Online DPO (odpo stage, 10 Nov)
+
+- **od1** (GPU 1, started 10 Nov after rpF; pending): 4 rounds from rpE step 80 (base rc1-soup-30). Each round the current model answers a
+  new slice of own questions × 8 (1,290 per round, no question twice); `repair_pairs.py --kinds guard,shorten` builds 160 pairs: half
+  guard (shortest right > shortest wrong, + re-read / IFEval counting rules), half shorten (shortest right > longest right, only on
+  questions right ≥ 6/8 with the longest ≥ 1.5× the shortest; never on IFEval counting-rule questions); DPO 10 steps continuing the
+  adapter, the round's start as reference; 720 × 4 after rounds 2 and 4. Tested on fake answers and mocked rounds. Logged state at the
+  log's end: round 1 (rpE-80 answering 1,290 new questions × 8).
+- **od2** (queued after od1; pending): the same loop from the ORIGINAL Qwen (fresh LoRA, reference = the original in round 1), **10 rounds** × 10
+  steps (changed from 6 by the user), IFEval 290 questions per round, fp32 weights + fp16 compute, 720 × 4 after rounds 2, 4, 6, 8, 10.
+  repair_pairs `guard,shorten` has a 1.25–1.5× backup supply if clear shorten pairs run short.
+
+### G8. Diagnostics and analyses (no training)
+
+- **Question sets vs the full test (30 Oct ~19:15):** random 40-per-part draws (4,000), 5–95% range of the original's accuracy: svamp
+  82–94, mbpp 42–63, ifeval 49–68, simple 74–90, multiple 68–84, no-fit 75–91. Original's accuracy (percentile) / thinking (percentile)
+  on each set:
+
+  | set | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|
+  | fresh | 88 (p47) / 614 (p27) | 45 (p13) / 2112 (p57) | 69 (p97) / 447 (p63) | 88 (p91) / 169 (p47) | 75 (p41) / 180 (p17) | 79 (p17) / 168 (p16) |
+  | choosing | 92 (p84) / 589 (p19) | 48 (p21) / 2175 (p64) | 51 (p10) / 522 (p92) | 90 (p96) / 167 (p42) | 78 (p61) / 200 (p74) | 76 (p8) / 173 (p25) |
+  | questions_40 | 82 (p5) / 789 (p85) | 55 (p67) / 2163 (p63) | 53 (p19) / 468 (p75) | 82 (p50) / 160 (p19) | 81 (p83) / 194 (p59) | 85 (p65) / 180 (p38) |
+  | ref20261024 | 82 (p5) / 952 (p99) | 57 (p80) / 1933 (p33) | 48 (p4) / 408 (p36) | 82 (p53) / 163 (p29) | 79 (p75) / 202 (p79) | 95 (p100) / 169 (p17) |
+  | ref20261025 | 92 (p82) / 657 (p43) | 52 (p52) / 1938 (p33) | 60 (p59) / 374 (p15) | 79 (p28) / 176 (p68) | 68 (p5) / 186 (p35) | 86 (p70) / 199 (p78) |
+
+- **lpc-l2s50e-soup-100 full test per type (30 Oct ~23:40):**
+
+  | part | n | saved | acc | broke / fixed (≥ 6 → ≤ 2 of 8) | by thinking fifth (saved / acc), shortest → longest |
+  |---|---|---|---|---|---|
+  | svamp | 1000 | 55.9 | −3.2 | 14 / 3 | 30/+0.1, 34/−0.9, 40/−4.2, 52/−6.7, 69/−4.4 |
+  | mbpp | 378 | 51.9 | −2.2 | 1 / 1 | 35/−2.7, 41/−2.3, 49/−3.8, 59/−4.1, 53/+2.0 |
+  | ifeval | 541 | 45.8 | −1.6 | 6 / 3 | 33/+1.0, 39/−0.3, 36/−4.4, 45/−2.9, 53/−1.4 |
+  | simple | 400 | 33.4 | −0.8 | 6 / 3 | 16/+0.5, 20/−0.9, 25/−1.2, 33/−3.9, 51/+1.9 |
+  | multiple | 200 | 36.6 | −0.2 | 3 / 3 | 21/+3.4, 30/+0.9, 32/−1.6, 36/−1.6, 50/−2.2 |
+  | no-fit | 240 | 40.9 | −3.3 | 3 / 0 | 16/0.0, 20/−0.5, 30/−1.3, 39/−3.1, 61/−11.5 |
+
+  Repeated-text replies (same short token 40+ times at the end): ifeval 10 (original 13), mbpp 1 (1), others 0. Capped replies: svamp
+  139 → 1, mbpp 236 → 28, ifeval 156 → 52.
+- **Where the cut happens (1 Nov, visual section 5):** the math 4th length band (original thinks 471–905 tokens) loses 12.5–17.7 pts at every
+  step of bidax4 and bidax2 s0. math1 analysis (21:10): band 470–905 holds 934 of 2,000 questions; bida's rule on math1 adds ~660 "cut more"
+  pairs in that band (485 shorten + 175 of 216 right>wrong pointing shorter, 41 longer); answers at 150–299 tokens 73% right vs 92% at 450–599.
+- **DATASET.md (2 Nov ~17:30):** dp13 math is mostly easy (of 2,999: metamath_easy 1,865 + gsm8k_easy 420; metamath_sv 473; gsm8k_matched 241).
+- **"Four signals" critique checked (2 Nov ~18:40):** right>wrong pairs push shorter too (math1 band 175 of 216); tool references hold one
+  accepted value per argument ("km" vs "kilometers"); IFEval langdetect coin-flip claim refuted (official grader seeds DetectorFactory = 0);
+  **"prostring" bug confirmed**: 99 ToolACE rows in dp13 contain prostring / stringname / stringName (source not traced; rows dropped in later
+  recipes).
+- **ps1 back-fill (logged 2 Nov ~14:15; run 27 Oct)**, original Qwen, 50 training questions per type × 4: prefill alone −4.3% / −1.0;
+  "no re-check" + prefill +0.2% / +0.9; worked examples +24.8% / −2.3; worked examples + prefill +24.8% / −1.9.
+- **Where the thinking tokens go (3 Nov ~03:25, 720 × 4, raw vs v1):** thinking / capped / repeated 8-grams: svamp 685 / 2.1% / 2.3% vs 281
+  / 0.0% / 0.6%; mbpp 2,077 / 8.5% / 7.2% vs 1,300 / 2.9% / 3.5%; ifeval 420 / 2.9% / 2.2% vs 176 / 1.5% / 0.2%; bfcl 175–206 / 0% /
+  0.1–0.3% vs 94–104 / 0% / 0%. v1's 21 capped answers hold 12% of its thinking; code is 63% of v1's thinking; re-check words per 1,000
+  barely move (raw 10–17, v1 8–15); right SVAMP answers: final number first appears with 53% (raw) / 39% (v1) of the thinking to come.
+- **ca1-soup-10 why-data (9 Nov):** wrong answers out of 8, original → ca1: math cut off 139 → 0, stopped early 27 → 252, plain wrong 644 →
+  922 (on its 62 regressed questions 30% stopped early, 68% wrong after normal-length thinking; 271 of 307 wrong numbers far off); code cut
+  off 236 → 34, stopped early 23 → 157, wrong 1,179 → 1,311; IFEval stopped early 24 → 247, cut off 156 → 94, wrong 1,648 → 1,575; no-fit
+  stopped early 3 → 29, wrong 316 → 351. Regressed questions: ca1 160, rc1-soup-30 212; math loss from always-solved questions (100 →
+  94.6); no-fit 7/8 questions −23 pts. Files: runs/mvtf/bd-ca1-soup-10, st-ca1-soup-10. The rc1-soup-30 breakdown itself is referenced
+  ("same mechanism as rc1-soup-30") but its numbers are not in the log. A breakdown of the rpE-80 full test was queued 10 Nov; its
+  numbers are not in the log.
+- **Thinking vs response tokens (9 Nov, 720 × 4, base → model):**
+
+  | model | ifeval acc | ifeval think | ifeval response | svamp acc / think | mbpp acc / think |
+  |---|---|---|---|---|---|
+  | rc1-soup-30 | 59.0 → 55.0 | 420 → 129 | 247 → 217 | 90.0 → 85.0 / 685 → 205 | 50.8 → 47.3 / 2077 → 685 |
+  | rpE @ 50 | 59.0 → 57.1 | 420 → 153 | 247 → 245 | 90.0 → 88.8 / 685 → 274 | 50.8 → 47.5 / 2077 → 968 |
+  | rpE @ 80 | 59.0 → 59.4 | 420 → 146 | 247 → 190 | 90.0 → 87.5 / 685 → 297 | 50.8 → 51.9 / 2077 → 981 |
+  | COPD @ 25 | 59.0 → 55.0 | 420 → 317 | 247 → 245 | 90.0 → 89.8 / 685 → 406 | 50.8 → 49.2 / 2077 → 1586 |
+
+  COPD @ 35 vs @ 25: svamp thinking 406 → 353, acc 89.8 → 88.1; mbpp 1,586 → 1,501, 49.2 → 49.8, 4.4% cut (original 8.5%); ifeval
+  thinking 317 → 290, response 245 → 278, cut 3.1 → 3.8%, acc 55.0 → 56.5.
+- **IFEval rule by rule (10 Nov, full tests, 541 × 8; ir-full/ifeval_rules.json):** every shortened model (rc1, ca1, rpE-40/60/80) loses on
+  counting rules: number_words −11 to −13 pts, keywords:frequency −8 to −10, number_sentences −6 to −7, number_highlighted_sections −6 to
+  −9, number_placeholders −5 to −11; gains on quotation, language, capitals (+3 to +6). Length-rule wrong responses mostly too short:
+  original 265 below the asked number, rc1 387, ca1 364, rpE-80 379; median response on length-rule questions 209 → 145–161 tokens. Wrong
+  answers with thinking under half the original's right-answer median: original 62 / 916, shortened models 626–815 / ~1,070.
+- COPD analysis: G5. Old-line re-scores on the 720 (2 and 5 Nov; reference only, not on the visuals): drpo3d-23 +21.7 / −0.4 (about 0.6
+  below the curve; old fresh-240 +21.2 / +0.2), drpo3f-15 +26.5 / +0.1 (+0.1), stopB3-soup-25 +39.6 / −3.2.
+
+### G9. Competitor and literature references (public scores as logged)
+
+| entry | source / date read | full test (saved / acc) | per part (saved / acc) | notes |
+|---|---|---|---|---|
+| michal-bida/ThinkingCap-Test, arm Db | repo read 1 Nov ~01:30, branch thinking-compression (9e997bd) 2 Nov | 47.0 / −0.78 | svamp 56.4 / −2.41, mbpp 33.0 / −1.22, ifeval 54.7 / −0.28, simple 35.3 / −1.41, multiple 41.9 / −1.12, no-fit 46.1 / +6.04 | +1.6 vs our curve (about +1.3 after the 720's bias); 11,327 prompts (code 2,989; tools 2,986 of which ~45% no-fit; IFEval 2,385; math GSM8K 2,152 + MetaMath SV 614 / FOBAR 201); 4 samples; 5,862 pairs; DPO β 0.1, no NLL, LoRA r32 α 64, lr 2e-5 cosine, 5% warm-up, 1 epoch (~366 steps), fp16 autocast, one seed, final adapter; his caveat: Db chosen after seeing earlier variants ("slightly optimistic"); his ablations: wrong pairs only +23.0 / +0.81, long pairs only +83.6 / −13.0, D unbalanced +50.2 / −0.41 (2 samples); evaluate.py = official + GPU-memory flag + Triton fallback |
+| basta/lightning-mcqwen3 | Part 0 | 43.2 / −0.85 (47.3 / −0.9 with test-time gate) | — | ps1 used its opening prefill |
+| khudgins/ornith-thinking-cap | read 3 Nov | — | — | reward source for grA (lenpen); G 8, 12 prompts, lr 2e-6, KL 0.04, temperature 0.9, 500–1,000 steps |
+| BottleCap's own method | 3 Nov | — | — | not public (third-party pages guess RL with length-aware reward) |
+| mrtineu/thinkingcap-test-submission (Martin Senkyr, 3 Nov) | HF, found 5 Nov ~22:35 | 28.7 / −1.71 | math 40 / −2.3, code 16 / −2.0, ifeval 31 / −1.1, simple 24 / −1.2, multiple 28 / −4.3, no-fit 26 / +0.2 | −1.6 vs curve, +4.0 vs README bar; one extra MLP layer after layer 13 (198k params) trained on short answers written with Qwen3-8B hints |
+| marek-krcal/MakeThinkingAffordableAgain | 5 Nov; 10 Nov | — | — | in progress (SimPO / DPO branches 6–9 Nov), no published score |
+| horychtom, miroslavmyrha forks | 5 Nov | — | — | untouched copies |
+| matousek-martin/qwen3-self-replay (created 5 Nov) | found by the user 6 Nov ~02:45; re-read 10 Nov | Self-Replay-256 31.23 / +0.21 (CI −0.48..+0.88; +0.5 vs curve); Self-Replay-850 41.60 / −1.17 (+0.3); checkpoint 1280 46.58 / −2.35 (−0.1) | @850: svamp 53.2 / −1.29, mbpp 42.3 / −1.26, ifeval 38.1 / +0.18, simple 28.4 / −2.00, multiple 30.4 / +2.44, irrelevance 33.4 / −6.87 | correctness-gated length reward + supervised replay of own short verified solutions; one seed; checkpoints chosen on the benchmark (stated); 10 Nov: ablations + release v0.1.2, headline unchanged |
+| Herz1c | 6 Nov (write-up behind gr2n's linear reward); 9 Nov | 43.4 / −0.97 | — | Herz1c/DoesLearningToStopScale: same recipe on Qwen3-1.7B 47.4 / −0.14 (not a 0.6B entry) |
+
+**10 Nov public scan (read-only):** no new or better 0.6B score; BottleCapAI/ThinkingCap-Test still has the same 5 forks; last pushes
+michal-bida 20 Oct, basta 14 Oct, Herz1c 15 Oct, mrtineu 3 Nov; khudgins unchanged; RikiyaT is not a ThinkingCap entry. **Upstream commit
+965a54c (6 Nov): a submission must now include the coding agent's traces and the conversation with the harness, as a text document.**
+Literature read in this range: "Base Models Can Reason By Taking a Cue From Training Data" (arXiv 2610.06851; prefilling ".\n\nOkay"
+lifts Olmo-3-7B base on MATH-500 41.5 → 76.9%; no token-saving figures); SmartThinker (arXiv 2603.08000; fixed-λ ablation −63% tokens at
+−3.2 pts on 1.5B; ThinkPrune-4k → SmartThinker its best); "Sparks of Weight-Space Programming" (G13); deep research for Jasmin (5 Nov,
+`research_jasmin_merging.md`, 107 agents, 24 sources, 23 of 25 claims confirmed: no source tests 0.6B or per-type DPO LoRA merging;
+separate-then-merge beats data mixing for 2–5 sources at 3–13B, fades at 3+ skills; −50% at < 1 pt at 1.5B came from on-policy RL with
+correctness-aware length rewards or searched / layer-wise merge coefficients; uniform merges degrade at 1.5B; DARE needs drop < 0.5).
+
+### G10. Consultant reports (Delos worker "Ivan" = gpt-6-astra; costs counted at list price)
+
+- **consult1 (4 Nov; raw-Qwen data only, 13 turns, $2.83; `consult1_report.md`):** 80% of IFEval cuts had already closed </think> (~71% of
+  their tokens answer-side loops); code cuts 24% repeated 8-word windows vs 5% in right code; BFCL irrelevance 56% of training tool
+  questions vs 29% on the test. Limits: deleting every cut answer ≈ 15% saving; halving all thinking ≈ 44%; shortest-of-4 right 17–25% per
+  part. Ranking: A compact verified SFT (est. 46–67% / −1.2..+1.5), B correctness-constrained DPO/GRPO after A (42–68%), C readiness head
+  for </think> (32–57%); A+B est. 52–72%. Follow-up 1 (`consult1_grpo_recipe.md`, $5.09 total): GRPO from a compact-SFT adapter, reward =
+  right × formed × not-cut × (1 − 0.30 L/(L + B_type)), group 8 × 32, 252 steps, lr 1e-5 cosine, KL 0.01, LoRA r16. Follow-up 2
+  (`consult1_grpo_diagnosis_and_sft.md`, session $10.52): our lenpen length contrast 115–1,035× smaller than the right/wrong contrast;
+  trainer issues confirmed in rl_train.py (never-solved questions excluded; Dr. GRPO denominator counts active replies only; fresh AdamW
+  every 10-step block; 4,096 code rollouts); Strategy A detail (6,048 rewritten examples, rewriting ~$45–65).
+- **consult2 (5 Nov; best run / bida family / GRPO withheld; $4.17 + $1.98 aborted start; `consult2_dpo_strategy.md`):** six per-type DPO
+  adapters (4,800 pairs, per-type kind mixes) merged at per-type strengths + one gated on-policy round; findings: "longest wrong" guards
+  are hidden length pressure (median rejected/chosen 1.3–1.9×), wrong>wrong pairs cancel compression, pt-mid is the strongest evidence;
+  forecast 51 / −0.5, P(both thresholds) ~1/3–1/2. Follow-ups: `consult2_game_plan_review.md` (GAME_PLAN v2: Track A repair + Track B 4
+  adapters), `consult2_objections_reply.md` (accepts fp32 + fp16 autocast, lr 5e-6 short rounds, early screens; GAME_PLAN v3; $10.38
+  total), `consult2_lpt6_reply.md` ($15.81 total: spill-over matrix ~rank one, first component 95%, simple-only vs multiple-only profiles
+  cosine 0.991; Track A first; 13-screen lpt6 completion).
+- **consult3 (5 Nov ~17:10; data-only pack, all_runs.json 132 runs; $3.17; `consult3_merge_design.md`):** cancel lpt6 merges P / S6 / P+ /
+  T, keep C as diagnostic; 10 ranked screens mostly on the pt family; Jasmin default 4 groups + 3 tool slices, pt pair rule, NLL 1.0,
+  constant 2e-5, float32. Follow-up `consult3_jasmin_pairs.md` ($9.40, total $12.57): October's rule on a new pool is not October's
+  behaviour (shorten cap 2× guard per part before matching; near-empty cells; fill-ratio trim explains ~1,400 of 3,200; protection
+  thresholds); add jpb-RR and jpc-trainref; variant order listed.
+- **consult4 (5 Nov ~22:50–23:05; from scratch, no earlier reports; $8.56, 20 code runs; `consult4_strategy.md`):** audit — screen
+  totals weighted BFCL parts equally (G0); `--bida-exact` sets held-out pairs to 0. Strategy: J = one joint DPO adapter on all six types
+  (5,424 pairs, rules listed in the log, fp32 + fp16, lr 2e-5 cosine, 2 seeds averaged) + bida-style control; I = instruction-only adapter
+  merged at 0.25–0.5; R = one balanced repair (1,280 pairs, lr 1e-5, NLL 0.1, ≤ 80 steps); selection on a non-benchmark dev set (600) +
+  locked confirmation set (600), ≤ 12 screens, one full test; expected ~50–52% / −0.8, P(both thresholds) 25–40%. **J rejected by the user
+  6 Nov ~09:30** (its core is bida's pair rules + settings).
+
+### G11. Infrastructure events and bugs
+
+| date | event |
+|---|---|
+| 30 Oct ~16:10 | lpc-runa selection kept 2,070 of 4,800 pairs (no-fit fill set a 43% trim for every part); `--loose-parts` added |
+| 31 Oct ~00:45 | both runtimes stopped progressing (GPU 1 "Reconnect L4"; GPU 2 no longer answering); not reconnected (rule: ask first) |
+| 31 Oct ~11:00–12:45 | after reconnect both plans retrained lpc-runa2-s0 / lpc-runb-s0 from scratch (stage checked the empty local disk before restoring); Drive checkpoints step-10..70 of those seeds overwritten; fix 155fc81 (restore before check) |
+| 31 Oct ~13:25 | runners started with "drive: NOT mounted": GPU 1 skipped the rescreen, fullmodel failed, lpc-rund starting; interrupted before training |
+| 31 Oct ~14:30 | lpc-runb seed 1 resumed with loss 8–10: rebuilt pair files in another row order reused the saved ref.json; fixes: pair files restored from Drive, ref.json fingerprint check, `--lp-reset-seeds`; seed 1 retrained |
+| 31 Oct 20:44 | GPU 2 picked the lpc-runb seed-0 reset line before the single-seed check lines were pushed (pre-restart seed 0 deleted) |
+| 1 Nov 02:45 | lpc-bidax: `--lp-min-solve` default 0.5 inserted right pairs; restarted as bidax2 |
+| 1 Nov 09:44 / 10:44 | GPU 1 runner lost its cwd ("can't open /content/track.py"); then disconnected for inactivity |
+| 1 Nov 14:44 | lpc-bidax3 did not include the nofit3 top-up (`--lp-answers-pool` takes pool ids only); `--lp-add-q` added |
+| 1 Nov 22:30 | onpolicy band fix (a question onpolicy chose stays in the band; 246 → 319 pairs) |
+| 2 Nov ~14:10 / ~15:45 | Chrome restarted, both Colab pages reloaded; ~1.5 h first copy from Drive on fresh machines |
+| 2 Nov ~16:30, ~18:30, ~22:05 | runtime disconnections (both; GPU 1; both); reconnected by the user ~19:10 and later; bidax5q's final screen lost and re-run |
+| 3 Nov 01:30 | earlier "~02:xx" stamps of that night were estimates (logged); GPU 1 pulled its plan before the GRPO lines and started bidax6s (interrupted) |
+| 3 Nov ~02:00 | only 2 GPUs on the Colab account: runtimes 3/4 dropped |
+| 3 Nov ~02:45 | shorten-pair subset depended on Python set order; fixed (sorted) |
+| 3 Nov ~04:00 | grA crash at step 51 (langdetect missing); rl_train installs it |
+| 3 Nov ~19:30 | Chirurgical chs0 out of GPU memory in gen (edited copy built on GPU, 18.28 < 18.73 GB free); fixed (copies on CPU) |
+| 3 Nov | Astra harness bugs fixed: backticks split blocks; refusal filter matched "pty" in "empty"; two blocks per reply; fused fences; runner did not copy astra_*.txt / .md |
+| 4 Nov | `--nt-full` code inserted into drpo() instead of nothink() (ntfull re-printed old numbers); re-run as ntfull2 |
+| 5 Nov | fast restore f1580c2; tabs show "Connecting" while progressing (cosmetic); Chrome Memory Saver exception for Colab; ~13:50 Claude session restart (both tabs lost output, plans re-run from a47f4cf); GPU 1 re-read its plan before rpB was pushed (rpB ~5 h late) |
+| 6 Nov ~01:10 | `--lp-pairs-only` in balround() (unwanted jpa-s0 training); fixed |
+| 6 Nov | pure fp32 October rerun out of memory on code (8,192-token answers on an L4) → lpk with `--bida-precision` |
+| 6 Nov ~02:00–04:20 | drivereport: project folder ~197 GB (adapters 120, runs 61, models 13.3, data 2.7); drivetidy dry run flaws (scored GRPO checkpoints listed, resume files counted twice) fixed; second dry run 99.1 GB; applied (user-approved A–G), moved to Drive trash |
+| 6 Nov ~08:30 | gr2e svamp length scale B = 82 tokens (build_pool.part_of re-derivation); run stopped; fixed as gr2f |
+| 9 Nov ~09:05 | full-ca1 failed: models/ca1-soup-10 removed by a clean-up; `--fm-soup NAME:STEP` rebuilds it from adapters |
+| 9 Nov | COPD step 2 out of memory (teacher moved back to GPU); memory fix; ~15–20 min per step |
+| 9 Nov ~19:45 | Colab provisioning outage; both runtimes restarted ("plan start now light") |
+| 9 Nov | cp1c mix not 50/50 (balanced_order re-sorted by source); fixed; relaunched as cp1c2 |
+| 10 Nov | rpF: mbpp 287/400 pairs (Run C right on code too rarely at 4 answers) |
+
+### G12. User decisions (chronological)
+
+| date | decision |
+|---|---|
+| 30 Oct ~14:00 | neutral dossiers for an external researcher (LUPIN_ROUND1_DOSSIER.md, this file) |
+| 30 Oct ~15:00 | build spec: build per-type pair mix + decaying lr, test small, Run A with 3 seeds; spec Run C not built |
+| 30 Oct ~16:00 | full test only for the original + lpc-l2s50e-soup-100 (lpc-press dropped); test the 720's bias on a trained model; Runs B and D; compare at matched saving |
+| 30 Oct 22:25 / 22:35 | michal-bida control queued; then with matching + 1:1 balance |
+| 31 Oct 16:00 | Run D replaced by lpc-runac (constant lr) |
+| 31 Oct ~19:30 | lpc-runb seed 0 retrained on the current draw |
+| 1 Nov ~01:45 | michal-bida control becomes an exact copy (lpc-bidax) |
+| 1 Nov ~11:00 / ~15:00 / ~15:50 | no-fit data step; "the training data must include the right data … better to create our own dataset" (xLAM irrelevance, nofit4); math data step (math1) |
+| 1 Nov ~21:20 | bidax5 stopped; math data checked before training, targeting where the model fails (band rule, don't-over-cut pairs, gate ≥ 500) |
+| 1 Nov | check more steps anyway (bidax4l, 600 steps) |
+| 2 Nov ~03:20–03:55 | full test of the bida copy; fix the schedule (bidax5s); bida-exact settings (bidax6); visuals only for current-data models on the 720 / full test |
+| 2 Nov ~04:20 / ~04:40 | per-type spill-over study (typeonly); on-policy round planned, decision 3 Nov |
+| 2 Nov ~15:00 / ~15:40 | bidax5p queued; next runs switched to michal-bida's settings (bidax5q, lpt6b) |
+| 2 Nov ~16:00 | **per-type direction dropped** |
+| 2 Nov ~16:50 | bidax5s seed 1 dropped; one-change tests bidax6p / bidax6s queued |
+| 2 Nov ~18:40 / ~19:00 | four-signal recipe built; on-policy round paused until the bida rounds report |
+| 2 Nov ~19:40 | ThinkPrune-style RL adopted, smoke test first; pass/fail bar fixed before running |
+| 3 Nov ~01:00 | **v1 = lpc-bidax5q**; full tests of both seeds queued |
+| 3 Nov ~01:25 | no full test until v1 is really good; pair combinations first |
+| 3 Nov ~02:00–02:40 | three tasks: stronger v1 from pair techniques, GRPO from raw Qwen (5 then 6 variations, one change each), RL on v1 |
+| 3 Nov | D3 / D6 / D8 keep bida's full pairs + protective pairs; D11 push2 added; 40% saving floor |
+| 3 Nov | Astra weight editing to run on top of the final v1; Chirurgical replication; Astra via Ivan up to EUR 20; Argon first on the user's Google key; spending caps $8 / $20 / $15 / $16 |
+| 3 Nov ~15:45 | "don't run useless GRPO": grD → grS, grE → grP |
+| 3 Nov ~18:15 | **GRPO stopped** |
+| 3 Nov ~24:00 / 4 Nov ~02:00 | Astra-style experiment A on v1 with Argon (50 passes) → then deferred until the DPO screen ends; experiment B built, not scheduled |
+| 5 Nov | consult2 game plan; objections (fp32 both tracks, lr 5e-6 short rounds, early screens); order: pt-mid solos → Track A → one sandbox for Jasmin |
+| 5 Nov ~13:45 | Track A stronger doses rpB / rpC |
+| 5 Nov ~17:10–17:40 | consultant redesigns lpt6 merges; consult3 screens #1 / #2; Jasmin pair sets jpa / jpb |
+| 5 Nov ~18:40 / ~18:45 | bidax6s dropped; GRPO stays off; finish every per-type run, then the battle plan (Jasmin) |
+| 5 Nov ~22:15 / ~22:35 / ~22:50 | DPO story page; public-submission search; consult4 from scratch |
+| 5 Nov ~23:15 | official 400/200/240 weighting adopted |
+| 5 Nov ~23:45 – 6 Nov ~00:10 | pt-mid full test; five lpt6 merges; chain1 round 2 postponed |
+| 6 Nov ~00:30–01:50 | October per-type run redone with two changes (data, fp32), cap check first, extended past October's count, every 5th step stored, dose steps 10 / 30 |
+| 6 Nov ~02:00 / ~03:00 | drivereport; Drive clean-up A–G approved |
+| 6 Nov ~03:20–04:20 | GRPO v2 linear reward prepared; one GRPO run only (gr2n → gr2e, solved ≥ 5/10), selection check first |
+| 6 Nov ~09:30 | consult4's plan J rejected: nothing built on another candidate's recipe will be run or submitted |
+| 9 Nov | full tests of round 3 (ca1-soup-10) and round 4 (rc1-soup-30), then a "be right" repair on the one closest to the target, nothing from michal-bida's data |
+| 9 Nov | COPD built and queued (Run A questions: solved ≥ 1/10); Run B only if Run A loses accuracy; run Run A anyway after the demo; Run A stopped after step 4 then continued; Run C (correctness push, constant lr, 50% mixed, no per-type brake) |
+| 10 Nov | repair improvements for rpF (count rules, 1,500 IFEval); three continuations rpG / rpH / rpI; copdanalysis; cp1d (one-change Run C); od2 from the original Qwen |
+
+### G13. Weight-space editing (Chirurgical, Astra harness), 3–4 Nov
+
+- Idea parked 3 Nov from "Sparks of Weight-Space Programming" (Takehi et al., MIT, 2 Nov 2026): a frontier LLM edits weights by reasoning;
+  its Exp 8 removed a loop direction from Qwen3.5-0.8B (cap hits 93 → 33%, MATH-500 7.9 → 48.1); the log's repo re-read notes that finished
+  answers got longer (MATH-500 5,631 → 16,740 tokens) and corrects a token-usage figure (~5.4M input, not 86.8M).
+- **Chirurgical (scripted replication, no API):** CPU checks on the real 0.6B with 6 and 20 hand-written pairs: copy heads L16H14 0.58 vs 0.15,
+  L18H5 0.36 vs 0.04; direction L19+L22 a6 −0.196 / +0.009 / +0.025 (loop / productive / normal log-prob per token); random direction null.
+  **ch1 on real data (raw Qwen):** 3,000 fresh answers (617 loop-prone + 2,383 others), 121 capped (4.0%), 50 looping questions → 27 pairs;
+  copy heads L16H14 0.65 vs 0.39, L18H5 0.42 vs 0.18, L21H8 0.43 vs 0.19; only direction L26+L27 a2 passed the mechanism gate. Paired dev
+  test (512): accuracy 72.7 → 68.9 (−3.7 ± 1.6), thinking saved +3.0% (−0.1% on answers both finished), capped 1.2% → 2.7%; random
+  control a6 −0.8 ± 1.6, +3.7%, capped 1.8%. **No edit kept** (rule: saves at no worse than −1).
+- **Astra harness** (`astra_harness.py`: kernel, forward tool, OpenRouter / Delos / Google drivers, spending stop): Mac test via Ivan (12 easy
+  math questions, 2 passes, $1.10 counted): edit of 4 MLP columns, paired check 8/8 → 8/8, thinking 468 → 454 (−3.0%), Astra's own verdict
+  "not a validated repair". Sandbox test with the data folder (22 turns, $2.59 counted). GPU smoke as0 passed. Experiment A on v1 with
+  Gemini 4 Argon (cap $16, 50 passes) and experiment B (Astra as training researcher) built; A parked at the end of GPU 1's queue until the
+  DPO screen ends (4 Nov ~02:00), B not scheduled. No Colab Astra run is recorded in the log.
