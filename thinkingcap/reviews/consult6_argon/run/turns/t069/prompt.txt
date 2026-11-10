@@ -1,0 +1,168 @@
+=== track_ptrepair_odpo_dev.py (part 2) ===
+n own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
+                                      exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None):
+            per_part[part_of(r)].append(r)
+        for part, n in want.items():
+            for r in per_part[part][k * n:(k + 1) * n]:
+                rows[r["id"]] = r
+                chosen.append(r["id"])
+    for part, n in ({} if own or reuse else want).items():
+        b = by_part[part]
+        for k in b:
+            rng.shuffle(b[k])
+        take = b["mixed"][:n]
+        rest = [x for pair in zip(b["right"], b["wrong"]) for x in pair]
+        take += rest[:n - len(take)]
+        print(f"repair {name}: {part} {len(take)} questions ({min(n, len(b['mixed']))} mixed of {len(b['mixed'])})", flush=True)
+        chosen += take
+    data = Path(f"data/repair-{name}.jsonl")
+    if not args.rp_from and not reuse:
+        data.write_text("".join(json.dumps(rows[q] | {"id": q}) + "\n" for q in chosen))
+    roll = BON / f"rp-{args.rp_from or reuse or name}"
+    if not args.rp_from:
+        drive_sync("restore", only=[str(roll)])
+    if reuse:
+        assert (roll / "rollouts.jsonl").exists(), f"{roll} has no rollouts on Drive"
+        print(f"repair {name}: the answers of {reuse} ({roll}), new pairs", flush=True)
+    answerer = Path(args.rp_answers_model) if args.rp_answers_model else merged  # (10 Nov) who answers: a new round
+    if args.rp_answers_model:
+        drive_sync("restore", only=[str(answerer)])
+        assert (answerer / "config.json").exists(), f"{answerer} is not on Drive"
+    if not args.rp_from and not reuse and not (roll / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
+           "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.rp_samples,
+           "--model", answerer, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+           "--max-questions", len(chosen), "--seed", 53)
+        drive_sync("save")
+    pairs = BON / f"pairs-{args.rp_from or name}"
+    drive_sync("restore", only=[str(pairs)])
+    if not (pairs / "pairs.jsonl").exists():
+        quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
+        py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+           *[x for x in args.rp_pair_args.split(",") if x])
+        drive_sync("save")
+    print((pairs / "summary.txt").read_text(), flush=True)
+    adapter = Path("adapters") / f"{name}-s0"
+    start = Path(args.rp_init_from) if args.rp_init_from else Path("adapters") / f"fresh-{name}"  # (10 Nov) continue an adapter
+    drive_sync("restore", only=[str(adapter), str(start)])
+    if args.rp_init_from:
+        assert (start / "adapter_config.json").exists(), f"{start} is not on Drive"
+    elif not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", merged, "--out", start)
+    steps = 4 if smoke else args.rp_steps
+    if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
+        py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+           "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", 0.1, "--batch", 16, "--lr", args.rp_lr,
+           "--lr-schedule", "cosine", "--warmup", 2, "--lr-min", args.rp_lr, "--max-steps", steps, "--epochs", args.rp_epochs,
+           "--save-every",
+           1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype, "--seed", 0)
+        drive_sync("save")
+    if smoke:
+        print(f"repair {name}: SMOKE done (answers, pairs, {steps} training steps)", flush=True)
+        return
+    if getattr(args, "rp_dev", False):  # (11 Nov) choices on Dev-512 only (consult6 protocol), never the 720
+        for step in args.rp_screen:
+            if args.rp_base:
+                spec = f"/content/lupin-models/{name}-{step}={args.rp_base}:{adapter / f'step-{step}'}"
+                print(dev_score_model(f"{name}-{step}", spec), flush=True)
+        return
+    for step in args.rp_screen:
+        out = ROOT / f"s4-{name}-{step}"
+        drive_sync("restore", only=[str(out)])
+        if not (out / "results.json").exists():
+            model = Path("/content/lupin-models") / f"{name}-{step}"
+            if args.rp_base:
+                py("merge.py", "--model", args.rp_base, "--out", model, "--adapters", f"{adapter / f'step-{step}'}:1")
+            else:
+                py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+                   *[f"{pt[g]}:{w}" for g, w in PT_MID.items()], f"{adapter / f'step-{step}'}:1")
+            evaluate(out, samples=4, questions=SCREEN, model=model)
+            shutil.rmtree(model, ignore_errors=True)
+            drive_sync("save")
+        print(score_line(f"{name}-{step} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
+
+
+def odpo(args):
+    """Online DPO (10 Nov, user): --od-rounds rounds of: the CURRENT model (--rp-base + the adapter so far, merged) answers a
+    new slice of own questions x --rp-samples; repair_pairs.py builds BOTH kinds from those answers (--rp-kinds guard,shorten:
+    shortest right > shortest wrong, and shortest right > longest right on questions it gets right >= 6 of 8 times); DPO
+    --od-steps steps continuing the adapter, the round's start as the reference. Each round is a ptrepair run named
+    <name>-r<k>; the answering model of the next round is merged to models/<name>-r<k>. 720 x4 at --od-screen-rounds."""
+    import copy
+    prev, answerer = args.od_init, args.od_answers0 or args.rp_base  # no --od-init: round 1 trains a fresh LoRA on --rp-base
+    assert args.rp_base and (answerer or not prev), "odpo needs --rp-base (and --od-answers0 with --od-init)"
+    for k in range(args.od_rounds):
+        a = copy.copy(args)
+        a.name = f"{args.name}-r{k + 1}"
+        a.rp_round = (k, args.od_rounds)
+        a.rp_init_from, a.rp_answers_model = prev, ("" if answerer == args.rp_base else answerer)
+        a.rp_steps = args.od_steps
+        a.rp_epochs = max(args.rp_epochs, 2)  # (10 Nov, reviewer) a round short of 160 pairs still reaches step --od-steps
+        a.rp_screen = [args.od_steps] if k + 1 in args.od_screen_rounds else []
+        print(f"odpo {args.name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO from {prev}", flush=True)
+        ptrepair(a)
+        prev = f"adapters/{a.name}-s0/step-{args.od_steps}"
+        if k + 1 < args.od_rounds:
+            nxt = Path("models") / a.name
+            drive_sync("restore", only=[str(nxt)])
+            if not (nxt / "config.json").exists():
+                py("merge.py", "--model", args.rp_base, "--out", nxt, "--adapters", f"{prev}:1")
+                drive_sync("save")
+            answerer = str(nxt)
+    print(f"odpo {args.name}: done; last adapter {prev}", flush=True)
+
+
+DEV_FILE = Path("data/dev512.jsonl")
+DEV_SOURCES = ("toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,"
+               "ifeval_like,ifeval_built")
+
+
+def dev_ids():
+    """(11 Nov) ids of the Dev-512 questions (never trained on once a run passes --rp-exclude-dev)."""
+    drive_sync("restore", only=[str(DEV_FILE)])
+    return {json.loads(l)["id"] for l in DEV_FILE.read_text().splitlines() if l.strip()} if DEV_FILE.exists() else set()
+
+
+def devset(args):
+    """Dev-512 (11 Nov, consult6 protocol): 512 own held-out questions for every choice (never the test, never the 720):
+    math 140, code 100, IFEval 132 (66 with a counting rule, 66 without), tools 140 (60 one function, 35 several, 45 no fit).
+    Drawn from the own pool OUTSIDE every question already drawn for training by rpE/rpG/rpH (seed 0), rpI (seed 1) and od1
+    (seed 7, 4 rounds); later runs exclude it with --rp-exclude-dev. Then the ORIGINAL Qwen answers it x8 (the reference)."""
+    from repair_pairs import counting
+    from build_pool import part_of
+    drive_sync("restore", only=[str(DEV_FILE)])
+    if not DEV_FILE.exists():
+        used = set()
+        sizes0 = {"svamp": 2400, "mbpp": 900, "ifeval": 1500, "bfcl_simple_python": 300, "bfcl_multiple": 300, "bfcl_irrelevance": 300}
+        od1 = {"svamp": 480 * 4, "mbpp": 180 * 4, "ifeval": 450 * 4, "bfcl_simple_python": 240, "bfcl_multiple": 240,
+               "bfcl_irrelevance": 240}
+        for seed, sizes in ((0, sizes0), (1, sizes0), (7, od1)):
+            used |= {r["id"] for r in own_repair_questions(sizes, seed=seed)}
+        every = own_repair_questions({p: 10 ** 6 for p in sizes0}, seed=99)
+        want = {"svamp": 140, "mbpp": 100, "bfcl_simple_python": 60, "bfcl_multiple": 35, "bfcl_irrelevance": 45}
+        picked, counts = [], defaultdict(int)
+        for r in every:
+            if r["id"] in used:
+                continue
+            p = part_of(r)
+            if p == "ifeval":
+                key = "ifeval-count" if counting(r) else "ifeval-plain"
+                if counts[key] < 66:
+                    counts[key] += 1
+                    picked.append(r)
+            elif counts[p] < want.get(p, 0):
+                counts[p] += 1
+                picked.append(r)
+        print(f"devset: {len(picked)} questions {dict(counts)} (outside {len(used)} questions already drawn for training)", flush=True)
+        DEV_FILE.parent.mkdir(exist_ok=True)
+        DEV_FILE.write_text("".join(json.dumps(r) + "\n" for r in picked))
+        drive_sync("save")
+    dev_generate("base", "Qwen/Qwen3-0.6B")
+
+
+def dev_generate(name, model):
+    rows = [l for l in DEV_FILE.read_text().splitlines() if l.strip()]
+    out = BON / f"dev512-{name}"
+    drive_sync("restore", only=[str(out)])
+    if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * le
+[output cut at 10,000 characters]

@@ -1,0 +1,46 @@
+Pack contents: ['LADDER_DESIGN_FOR_REVIEW.md', 'code', 'EXPERIMENT_LOG.md', 'PATH1_PLAN.md', 'all_runs.json', 'FACT_CHECK.md']
+Code dir contents: ['dev_score.py', 'queued_lines.txt', 'repair_pairs.py', 'track_ptrepair_odpo_dev.py']
+FACT_CHECK.md length: 3857 chars
+# Fact-check of the consult6 (Gemini 4 Argon) report, 11 Nov 2026
+
+Checked against EXPERIMENT_LOG.md (L = line) and all_runs.json by an independent agent; nothing edited.
+
+**Overall:** raw transcription is good (almost every per-run and per-part number matches, including the full-test table and the
+720-optimism averages: +1.52 saved / +0.47 accuracy over 9 models). Interpretation is unreliable: ~10 load-bearing causal claims
+are wrong, overstated or unsourced. Use it as a correctly indexed scoreboard plus hypotheses; not its win probabilities or its
+"proved" statements.
+
+## The five points that matter
+
+1. **Path #3 is built on a competitor's recipe.** D4 (lpd-budget) = bidax5q (bida-exact settings, bida's pairs, "bida settings +
+   his math") + DAST's per-question length target (L4131-4136). The report's solve-rate tiers are not in the log. D4 was also not
+   the best single pass: v1 = bidax5q 46.7/-0.5 (+1.8 vs curve) beat it (49.0/-1.42, +1.4; 720 only).
+2. **rpI evidence for Path #1 is overstated.** rpI did drift longer: 50.4 (rpE-80, 720) -> 42.9 by its step 100 (full test 47.0 ->
+   41.9); it held only between steps 100 and 120; single seed. The "+count-rules" IFEval gain did not appear in rpH. The
+   counterfactual "rpE-40 + rpI's gains -> 50.6 / -1.13" mixes gains measured at 42% saved into a 50.6%-saved model: not evidence.
+   Path #1 stays plausible, but its 55-65% win probability has no measured basis.
+3. **"bidax6p proved bf16 loses ~2.8 pp" is wrong.** The log: fp32 "moves the model along the curve rather than a big jump above
+   it" (-11 pts saving for +3 pts accuracy; at equal saving +0.3 to +1.1 vs curve; L4662-4668, 4684). Path #2's "fp32 + no-fit
+   lifts pt-mid by > 2.2 pp" shrinks to ~0.7 pp (no-fit alone).
+4. **Section 1's "already falsified" evidence is padded.** zbench 0.508 is only the position baseline (MLP judge 0.736, own
+   confidence 0.717; on SVAMP own confidence 0.87-0.88 and timing AUC 0.96; L1543-1547, 1618-1621). gold1 / teach1c failed from
+   an unanchored BCE loss (the model stopped answering), not from DPO on forced cuts. stopV2's lengthening came from long-chosen
+   guard pairs + the NLL anchor. "4+4 split fixed benchlot" is wrong (benchlot used 20 forced answers; the 4+4 split is lot V2).
+   The verdict against forced-cut DPO still stands on stopB3 (-3.2, code -8.4), stopB5 (-2.7) and stopV3 (stalls at 25%), but the
+   "a 0.6B LoRA cannot route budgets" leg is weak.
+5. **720 numbers presented as walls or breakthroughs** next to full tests (l2s50e 53.5/-2.81, push2 52.4/-3.00, margin 53.3/-2.70,
+   D4, rpB, rpC, lpt6mix are 720 screens; several are bida-pair runs; the "-2.5 to -3.5 wall" ignores bidax5q-final 46.7/-0.59 and
+   budget-final 49.0/-1.42). IFEval floor details unsourced or misattributed ("265 response tokens", "-0.65 pp from ir-full",
+   "counting rules caused 100% of IFEval's -2.6"; and L5042 says IFEval's loss is NOT a shortened response). The arithmetic itself
+   holds: IFEval ~40% and BFCL ~41% saved mean math and code need ~58% for a 50% headline.
+
+## Other corrections
+- rpG lost ~18 points of saving over 40 steps (50.4 -> 32.7), not 25.
+- rpA used lr 5e-6 on pt-mid, not lr 1e-5 on the raw Qwen.
+- "All 10 full-test runs": rc1-rl-40's full test (55.4 / -2.6, L3622) is missing.
+- The upstream commit 965a54c only adds "if you worked with a coding agent, its traces and your conversation with the harness, as a
+  text document"; it forbids nothing (the no-competitor rule is the team's own).
+- Correct and load-bearing: stopB3/stopB5/stopV3 results; benchlot strict SVAMP 41%/0.0 (47%/-1.0); ntfull2 thinking-off numbers;
+  rpE/rpI full-test numbers; re-read rates 51/77/94 vs 41/57/82 (observed in rpE's pairs, not a selection filter); Trap 7 (GPU
+  non-determinism, bidax2 vs bidax3 2.7 pts saving / 1.2 pts accuracy; runa2 vs runa2r 7.9 pts).
+

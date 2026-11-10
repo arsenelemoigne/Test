@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "p1src", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -346,6 +346,10 @@ def main():
     parser.add_argument("--ds-name", default="", help="devscore (11 Nov): the name of the scored model's Dev-512 run")
     parser.add_argument("--ds-model", default="", help="devscore: a merged model path / Hub id, or MERGED_OUT=BASE:ADAPTER to build it")
     parser.add_argument("--rp-rollouts-from", default="", help="ptrepair (11 Nov): reuse this run's answers (runs/bon/rp-NAME), new pairs")
+    parser.add_argument("--rp-warmup", type=int, default=2, help="ptrepair (11 Nov): DPO warm-up steps")
+    parser.add_argument("--rp-lr-min", type=float, default=None, help="ptrepair (11 Nov): cosine floor (default = --rp-lr: constant)")
+    parser.add_argument("--rp-dpo-seed", type=int, default=0, help="ptrepair (11 Nov): DPO seed (adapter init and pair order)")
+    parser.add_argument("--rp-exclude-ids", default="", help="ptrepair (11 Nov): a JSON list of question ids never drawn (with --rp-exclude-dev)")
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
     parser.add_argument("--rp-exclude-dev", action="store_true", help="ptrepair / odpo (11 Nov): never draw the Dev/Confirm questions")
     parser.add_argument("--ld-questions", default="svamp=450,mbpp=300,ifeval=450,bfcl_simple_python=100,bfcl_multiple=100,"
@@ -3659,7 +3663,7 @@ def ptrepair(args):
         k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
         per_part = defaultdict(list)
         for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
-                                      exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None):
+                                      exclude=excluded_ids(args)):
             per_part[part_of(r)].append(r)
         for part, n in want.items():
             for r in per_part[part][k * n:(k + 1) * n]:
@@ -3712,9 +3716,11 @@ def ptrepair(args):
     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
         py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
            "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", 0.1, "--batch", 16, "--lr", args.rp_lr,
-           "--lr-schedule", "cosine", "--warmup", 2, "--lr-min", args.rp_lr, "--max-steps", steps, "--epochs", args.rp_epochs,
+           "--lr-schedule", "cosine", "--warmup", getattr(args, "rp_warmup", 2),
+           "--lr-min", args.rp_lr if getattr(args, "rp_lr_min", None) is None else args.rp_lr_min, "--max-steps", steps, "--epochs", args.rp_epochs,
            "--save-every",
-           1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype, "--seed", 0)
+           1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype,
+           "--seed", getattr(args, "rp_dpo_seed", 0))
         drive_sync("save")
     if smoke:
         print(f"repair {name}: SMOKE done (answers, pairs, {steps} training steps)", flush=True)
@@ -3774,6 +3780,77 @@ def odpo(args):
 DEV_FILE = Path("data/dev512.jsonl")
 DEV_SOURCES = ("toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,"
                "ifeval_like,ifeval_built")
+
+
+def excluded_ids(args):
+    """(11 Nov) questions a new draw must skip: Dev-512 (--rp-exclude-dev) and a JSON id list (--rp-exclude-ids)."""
+    out = set()
+    if getattr(args, "rp_exclude_dev", False):
+        out |= dev_ids()
+    f = getattr(args, "rp_exclude_ids", "")
+    if f:
+        drive_sync("restore", only=[f])
+        out |= set(json.loads(Path(f).read_text()))
+    return out or None
+
+
+P1_ANSWERS = "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl"  # the original Qwen's 10 answers per question
+P1_IDS = Path("data/p1-round1-ids.json")
+
+
+def p1src(args):
+    """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen) Round 1's material without new generation: the original's 10
+    stored answers per pool question (runs/bon/P1_ANSWERS), keeping only our own sources (no metamath_*, none of the michal-bida
+    top-ups nofit4 / math1 / math2), never a Dev-512 question, and only 60% of the questions (a fixed hash of the id) so that
+    round 2 draws unseen ones (data/p1-round1-ids.json; round 2 passes --rp-exclude-ids). Written as runs/bon/rp-p1src/
+    rollouts.jsonl for ptrepair --rp-rollouts-from p1src."""
+    import hashlib
+    out = BON / "rp-p1src"
+    drive_sync("restore", only=[str(out), str(P1_IDS)])
+    if (out / "rollouts.jsonl").exists() and P1_IDS.exists():
+        print(f"p1src: already built ({sum(1 for _ in open(out / 'rollouts.jsonl'))} answers)", flush=True)
+        return
+    banned = set()
+    tops = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit4", "math1", "math2")]
+    drive_sync("restore", only=[str(BON / P1_ANSWERS), *[str(t) for t in tops]])
+    for t in tops:
+        assert t.exists(), f"{t} is needed to drop the michal-bida top-ups"
+        for l in t.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)
+                banned.add(q.get("pool_id", q.get("id")))
+    dev = dev_ids()
+    keep_ids, n_in, n_out, drop = set(), 0, 0, Counter()
+    out.mkdir(parents=True, exist_ok=True)
+    with open(BON / P1_ANSWERS) as src, open(out / "rollouts.jsonl", "w") as dst:
+        for line in src:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            n_in += 1
+            if n_in == 1:
+                missing = [k for k in ("prompt_ids", "output_ids", "thinking_ids", "correct", "closed_thinking", "truncated",
+                                       "output_tokens", "source") if k not in r]
+                assert not missing, f"the stored answers lack {missing}: cannot build pairs from them"
+            if str(r["source"]).startswith("metamath"):
+                drop["metamath (michal-bida source)"] += 1
+                continue
+            if r["id"] in banned:
+                drop["michal-bida top-ups"] += 1
+                continue
+            if r["id"] in dev:
+                drop["Dev-512"] += 1
+                continue
+            if int(hashlib.md5(str(r["id"]).encode()).hexdigest(), 16) % 10 >= 6:
+                drop["kept for round 2 (40%)"] += 1
+                continue
+            keep_ids.add(r["id"])
+            dst.write(line if line.endswith("\n") else line + "\n")
+            n_out += 1
+    P1_IDS.parent.mkdir(exist_ok=True)
+    P1_IDS.write_text(json.dumps(sorted(keep_ids)))
+    print(f"p1src: {n_out} of {n_in} stored answers kept ({len(keep_ids)} questions); dropped {dict(drop)}", flush=True)
+    drive_sync("save")
 
 
 def dev_ids():
@@ -5851,7 +5928,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "p1src", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "p1src"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",

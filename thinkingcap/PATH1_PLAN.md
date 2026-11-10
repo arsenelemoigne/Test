@@ -13,6 +13,8 @@ competitor recipe.
   the right answer writes at least as much and thinks at most 1.2×), ~15% "don't stop too early" (a right answer at ≤ 1.15× the
   question's median right thinking beats a wrong answer under 0.5× of it). Every choice on our own held-out questions (Dev-512),
   a separate Confirm-512, 2 seeds, one full test at the end, paired bootstrap.
+- **Decided by the user (11 Nov):** Path 1 only; Paths 2 and 3 are dropped. The cheap test (Step 1) uses rc1-soup-30 as a
+  stand-in for a round-1 model; the real run (Step 2) is clean, from the original Qwen.
 - **Not taken:** its win probabilities (no measured basis); its Path 3 (built on michal-bida's pair recipe + DAST: excluded by our
   rule); its claim that fp32 alone recovers ~2.8 points (wrong: fp32 moved the model along the curve); its reading that rpI
   "stopped the drift" (rpI still drifted longer for 20 steps; single seed).
@@ -40,12 +42,15 @@ competitor recipe.
 
 ## Step 2 — the full recipe, only if Step 1 passes (~40 GPU-hours, 2 GPUs, ~1 day)
 
-- **Round 1 (from the original Qwen):** ~8,000 own questions × 8 own answers (never-solved dropped; ~half reliably solved
-  6–8/8, ~half sometimes solved 2–5/8) → ~3,200 pairs (200 steps of 16): per type the three kinds (math and no-fit: 35% shorten /
+- **Round 1 (from the original Qwen), no new generation:** the original's 10 STORED answers per pool question
+  (runs/bon/lupin-all-dp13-…-math2.jsonl), filtered to our own sources (no metamath_*, none of the michal-bida top-ups nofit4 /
+  math1 / math2), never a Dev-512 question, and only 60% of the questions (a fixed hash of the id; the other 40% stay unseen
+  for round 2) → ~3,200 pairs (200 steps of 16; quotas math 800, code 800, IFEval 800, one function 280, several 200, no fit
+  320): per type the three kinds (math and no-fit: 35% shorten /
   50% equal-length right / 15% guard; code and one / several functions: 50 / 35 / 15; IFEval: counting-rule questions only
   counting-rule right pairs, others 55% shorten / 45% right). LoRA r16 α32, β 0.1, lr 1.5e-5 with 10 warm-up steps and cosine to
   5e-6, reference = the original, seeds 0 and 1; merge each seed at step 200.
-- **Round 2 (on-policy):** each seed's round-1 model answers ~6,000 NEW own questions × 8 → 1,280 pairs with the rpJ mix (30 /
+- **Round 2 (on-policy):** each seed's round-1 model answers ~5,350 NEW own questions × 8 (never a round-1 or Dev-512 question) → 1,280 pairs with the rpJ mix (30 /
   55 / 15), fresh LoRA, lr 1e-5 constant, 80 steps, reference = that round-1 model; checkpoints 40 / 60 / 80.
 - **Choice:** the 2-seed weight average (0.5 / 0.5) at 40 / 60 / 80, scored on Dev-512 × 8; the most accurate among those saving
   ≥ the target on Dev (after Step 0's offset); verified once on Confirm-512; then one full test with the paired bootstrap, both
@@ -55,7 +60,8 @@ competitor recipe.
 
 - GPU 2: Step 0 → Step 1 (queued now, after cp1d; cp1e dropped).
 - GPU 1: od1 finishing (online DPO from rpE-80); od2 queued (the same loop from the original Qwen, 10 rounds, ~9 GPU-hours).
-  If Step 1 passes, od2 should probably give way to Step 2 (open decision).
+  If Step 1 passes, od2 gives way to Step 2 (the Step 2 lines are written, commented, in both plan files: seed 0 on GPU 2, seed 1
+  on GPU 1).
 
 ## Open questions for the next analysis
 
@@ -65,4 +71,5 @@ competitor recipe.
 3. Should round 2 keep the round-1 model as reference, or the original?
 4. Dev-512 is drawn from our own sources, which differ from the test's (GSM8K-style math vs SVAMP, KodCode vs MBPP+): how much can
    a Dev-512 ranking be trusted, and is calibrating on rc1-soup-30 / rpE-80 enough?
-5. Given the fact-check, does Path 1 remain the best bet, or would you now rank something else first?
+5. Round 1 reuses the original's stored 10 answers (generated weeks ago with the same sampling settings) instead of fresh
+   ones: any risk? Is the 60 / 40 question split between rounds right?

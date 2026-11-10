@@ -1,0 +1,94 @@
+--- CHECK 1: D4 (lpd-budget) at L4131-4138, L4621-4628 ---
+L4130: which fits the plan to try GRPO on v1.
+L4131: 
+L4132: ### 3 Nov: the DPO pair-strategy screen (task 1), queued on two new runtimes
+L4133: User: try many pair strategies now that the settings are fixed; more compute added. Everything = bidax5q seed 0
+L4134: (--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+L4135: New lupin_pairs.py flags: `--add-hard P` (DAST's "keep trying": longest > shortest finished wrong, questions solved < P),
+L4136: `--budget` (DAST's per-question length target replaces the fixed 1.5x), `--margin-any` (drop each kind's weakest 15%
+L4137: for any recipe), recipe `simright` (similar-length right > wrong + think less, 1:1). Tested on synthetic answers.
+L4138: Runtime 3 (third_colab.ipynb, plan_line_c.txt): D1 lpd-dast, D2 lpd-hard, D3 lpd-route, D4 lpd-budget, D5 lpd-margin.
+L4139: Runtime 4 (fourth_colab.ipynb, plan_line_d.txt): D7 lpd-st1 -> lpd-2stage, D8 lpd-math, D6 lpd-simright, D9 lpd-adar1,
+L4140: D10 lpd-l2s50e. Phase 2 (new code / answers): SimPO / LD-DPO, Ada-R1 with no-thinking answers, concise-prompt winners,
+L4620:   -0.2), the loss lands on the OTHER types. Remaining: code / ifeval / tools at pt-mid strength.
+L4621: - ~10:30 **D4 lpd-budget step 100: +43.8% / -1.8** (svamp +58 / -4.6, mbpp +44 / -1.7, ifeval +31 / -0.8, simple +35 / -0.8, multiple
+L4622:   +39 / +0.6, no-fit +39 / -0.6), 0.0 vs curve; **step 200: +48.6% / -1.5** (svamp +61 / -3.1, mbpp +40 / -1.2, ifeval +46 / -0.8,
+L4623:   simple +41 / -2.3, multiple +45 / +0.2, no-fit +47 / +0.2), +1.1 vs curve. At bidax5q's step-200 saving (48.5 / -0.9, +1.7) but
+L4624:   0.6 less accurate; math carries it (-3.1). Final next.
+L4625: - pt-mid solos at pt-mid strength: CODE 0.45 **+10.0% / -2.5** (-2.7 vs curve; ifeval -3.7, math -2.5: likely partly screen noise,
+L4626:   since the same adapter at 1.0 read -1.3); IFEVAL 0.60 **+23.1% / -1.2** (-1.4; no-fit -3.3, multiple -2.7). Tools at 0.45 next,
+L4627:   then the additivity check vs pt-mid (55.0 / -2.6), then Track A.
+L4628: - ~11:30 **D4 lpd-budget final: +49.0% / -1.3** (svamp +60 / -2.9, mbpp +43 / -0.2, ifeval +47 / -1.9, simple +40 / -2.5, multiple
+L4629:   +45 / +1.7, no-fit +46 / +0.4), **+1.4 vs curve**: the best D-variant so far, close to v1 (46.7 / -0.5, +1.8) but not above it;
+L4630:   math carries the loss.
+
+--- CHECK 2: rpH and rpI at L5120-5205 ---
+L5120: 
+L5121: 1. **Wrong answers are longer than right ones** on the training questions (the original's 10 answers, questions with both):
+L5122:    svamp right 880 / wrong 1773 tokens, wrong longer on 72% of questions; mbpp 1449/2271 (62%); ifeval 643/1057 (57%);
+L5123:    irrelevance 330/448 (75%). So "push right up, wrong down" inside a group is also "push short up, long down".
+L5124: 2. **720 screens.** Run C cuts much harder: at step 40, right-answer tokens are svamp 583->159 (A: 312), mbpp 1209->420 (A: 843),
+L5125:    ifeval 519->256 (A: 372). Its extra errors are answers that **stopped early** (thinking < half the original's median right-answer
+L5126:    thinking): svamp 54 of 73 wrong (A: 19/61), mbpp 68/272 (A: 26/257), ifeval 54/212 (A: 14/210), simple 25/96 (A: 9/83).
+L5127:    Cut-offs are not the issue (mbpp 8.5% -> 0.2%). At equal savings C is worse: A-40 34.1/-2.4 vs C-25 35.8/-3.6.
+L5128: 3. **Training logs.** Run A's coach push stays at about -0.01 to -0.02 for all 40 steps. Run C's push fades from about -0.015 to 0 by
+L5129:    step 24, then turns positive (+0.015 at step 40), yet tokens keep falling (700 -> 250-300). From step 24 the correctness term
+L5130:    alone drives the shortening; the coach no longer does. Practice accuracy is noisy (0.57-0.92) because half the questions are
+L5131:    sometimes-wrong.
+L5132: **Reading:** the correctness push carries a hidden length reward, because wrong answers are longer, and it removes thinking that was
+L5133: needed. cp1d (Run A settings + the correctness push only) tests whether the 16x8 / constant-lr / 50%-mixed settings or the push
+L5134: itself causes it.
+L5135: 
+L5136: ## 10 Nov ? rpG (rpE-80 continued 80->120, normal method, 8 answers/question, 1484 pairs; IFEval 208/320 pairs)
+L5137: - rpG-20 (= repair step 100), 720 screen: **40.6% saved, +1.0 pts** (BFCL-weighted 40.4 / +0.9). Per part: irrelevance +51%/+6.9,
+L5138:   multiple +39%/-1.1, simple +37%/-2.1, ifeval +38%/+0.2, mbpp +40%/+1.7, svamp +42%/+1.0.
+L5139: - vs rpE-80 on the same 720 (50.4 / -0.2): about 10 pts less saved for +1.2 pts accuracy. Distance above the curve is about the same
+L5140:   (+2.35 vs +2.77 on the 720), so the model slid along the curve toward longer answers rather than improving.
+L5141: 
+L5142: ## 10 Nov ? online DPO (odpo stage, queued on GPU 1 after rpF)
+L5143: od1: 4 rounds from rpE step 80 (base rc1-soup-30). Each round the CURRENT model answers a new slice of own questions x8
+L5144: (1,290 per round, no question twice), repair_pairs.py --kinds guard,shorten builds 160 pairs: half guard (shortest right >
+L5145: shortest wrong, + re-read / IFEval counting rules) and half shorten (shortest right > longest right, only on questions right
+L5146: >= 6/8 with the longest >= 1.5x the shortest; never on IFEval counting-rule questions); DPO 10 steps continuing the adapter,
+L5147: the round's start as the reference; 720 x4 after rounds 2 and 4. Tested on fake answers (pairs) and mocked rounds (loop).
+L5148: 
+L5149: ## 10 Nov ? correction: the October rerun (lpk) verdict was too strong
+L5150: Re-read of the 6 Nov data (all 720 x4, same yardstick): adapters alone are a tie with October (tools +0.07 vs +0.01, math -0.91
+L5151: vs -0.59, instructions @19 -1.15 vs -0.41 but @30 +0.24). The merges lose (mid +0.5 vs October pt-mid +1.3; soft -1.0 vs +0.7)
+L5152: because they reused October's strengths (.30/.45/.60/.45), which were picked ON this 720 for October's own adapters: the rerun was
+L5153: never tuned, and its gentler adapters at the same strengths save 6-8 points less. Also: two changes at once (new data AND fp32,
+L5154: so neither effect is known), one seed, one run; gaps of ~1 pt are within 720 x4 noise. The earlier "+0.5 vs +0.3" compared a
+L5155: 720 score with a full-test score. Conclusion: the rerun does not show that better settings fail; it was not a fair test.
+L5156: od2 (queued after od1, user): the same online loop from the ORIGINAL Qwen (fresh LoRA, reference = the original in round 1),
+L5157: 6 rounds x 10 steps, fp32 weights + fp16 compute (dpo.py --bida-precision, as every repair), 720 x4 after rounds 2, 4, 6.
+L5158: - rpG-40 (= repair step 120), 720 x4, official weighting: **32.7% saved, +0.5** (svamp 31% / +0.4, mbpp 23% / +2.5, ifeval 37% / -1.9,
+L5159:   simple 34% / -2.9, multiple 36% / -0.4, irrelevance 50% / +8.5). Step 100 official: 40.4 / +0.9. vs curve: step 80 +2.8,
+L5160:   step 100 +2.2, step 120 +0.9. **More steps of the same repair only make the model longer (code 46% -> 23% saved) and fall back
+L5161:   toward the curve: rpE step 80 stays the best stopping point.**
+L5162: 
+L5163: ## 10 Nov ? public competitor scan (read-only)
+L5164: No new or better 0.6B score anywhere: BottleCapAI/ThinkingCap-Test still has the same 5 forks. michal-bida (last push 20 Oct),
+L5165: basta (14 Oct), horychtom, miroslavmyrha, Herz1c (15 Oct), mrtineu (3 Nov), khudgins: unchanged. marek-krcal active (SimPO /
+L5166: DPO branches 6-9 Nov), no published score. matousek-martin: ablations + release v0.1.2, headline unchanged (256 = 31.23 / +0.21,
+L5167: 850 = 41.60 / -1.17, 1280 = 46.58 / -2.35); per type @850: svamp 53.2 / -1.29, mbpp 42.3 / -1.26, ifeval 38.1 / +0.18, simple
+L5168: 28.4 / -2.00, multiple 30.4 / +2.44, irrelevance 33.4 / -6.87. Herz1c/DoesLearningToStopScale: same recipe on Qwen3-1.7B
+L5169: (47.4 / -0.14), not a 0.6B entry. RikiyaT is not a ThinkingCap entry. **Upstream commit 965a54c (6 Nov): a submission must now
+L5170: include the coding agent's traces and the conversation with the harness, as a text document.**
+L5171: 
+L5172: ## 10 Nov ? rpI (new round: rpE-80 answers 5,700 new questions x8 itself; 1,579 guard pairs, IFEval 320/320 incl. 152 counting-rule; no-fit 59/80)
+L5173: 720 x4, official weighting: **step 20 (=100): 42.9% / -0.2; step 40 (=120): 43.0% / +0.9** (svamp 47 / -0.4, mbpp 39 / +3.5,
+L5174: ifeval 42 / -0.4, simple 39 / -2.5, multiple 42 / +0.2, no-fit 52 / +6.7). vs curve: +1.5 then **+2.6** (rpE-80 +2.8, rpG-100 +2.2,
+L5175: rpG-120 +0.9). Unlike rpG (same steps, old model's answers), rpI kept its length (43% at both steps) while gaining accuracy:
+L5176: answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4 at 42% saved (rpG-120: -1.9 at 37%).
+L5177: 
+L5178: ## 10 Nov ? rpH (= rpG + IFEval counting rule, 1,500 IFEval questions; 1,598 pairs, 175 counting-rule)
+L5179: - rpH-20 (= step 100), 720 x4 official: **42.0% / -0.6** (svamp 44 / -0.2, mbpp 40 / +0.2, ifeval 43 / -2.5, simple 37 / -1.2,
+L5180:   multiple 40 / -0.6, no-fit 50 / +3.3); vs curve +1.0 (rpG-100 +2.2, rpI-100 +1.5). IFEval did NOT improve at step 100 (rpG-100:
+L5181:   38% / +0.2), but one part of the 720 is 120 questions x4 (CI about +/-4.4 pts): per-part gaps of 2-3 points are noise.
+L5182: - rpH-40 (= step 120): **37.0% / -0.3** (svamp 34 / -0.6, mbpp 37 / +0.6, ifeval 36 / -2.1, simple 35 / -1.7, multiple 39 / -1.1,
+L5183:   no-fit 49 / +6.5); vs curve +0.6. **The three continuations at step 120 (vs curve): rpG +0.9, rpH +0.6, rpI +2.6.** Only rpI
+L5184:   (answers from the CURRENT model on new questions) keeps its length; both runs on the old model's answers drift longer.
+L5185:   The IFEval counting rule alone did not fix IFEval on the 720.
+L5186: - rpF pairs (Run C step 40 answers x4, all 2,998 IFEval questions): 1,446 pairs; IFEval 320/320 (258 counting-rule); mbpp 287/400
+L5187:   (short 113: Run C is right on code too rarely for guard pairs at 4 answers), tools 60-71/80. Training started
+[output cut at 10,000 characters]

@@ -1,0 +1,184 @@
+=== track_ptrepair_odpo_dev.py (tail) ===
+           p = part_of(r)
+            if p == "ifeval":
+                key = "ifeval-count" if counting(r) else "ifeval-plain"
+                if counts[key] < 66:
+                    counts[key] += 1
+                    picked.append(r)
+            elif counts[p] < want.get(p, 0):
+                counts[p] += 1
+                picked.append(r)
+        print(f"devset: {len(picked)} questions {dict(counts)} (outside {len(used)} questions already drawn for training)", flush=True)
+        DEV_FILE.parent.mkdir(exist_ok=True)
+        DEV_FILE.write_text("".join(json.dumps(r) + "\n" for r in picked))
+        drive_sync("save")
+    dev_generate("base", "Qwen/Qwen3-0.6B")
+
+
+def dev_generate(name, model):
+    rows = [l for l in DEV_FILE.read_text().splitlines() if l.strip()]
+    out = BON / f"dev512-{name}"
+    drive_sync("restore", only=[str(out)])
+    if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
+        py("probe_curve.py", "--data", DEV_FILE, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
+           "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+           "--max-questions", len(rows), "--seed", 53)
+        drive_sync("save")
+    return out
+
+
+def dev_score_model(name, spec):
+    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here)."""
+    dev_ids()
+    assert DEV_FILE.exists(), "run the devset stage first"
+    base = dev_generate("base", "Qwen/Qwen3-0.6B")
+    model = spec
+    if "=" in spec:
+        model, rest = spec.split("=")
+        merge_base, adapter = rest.split(":")
+        if not (Path(model) / "config.json").exists():
+            drive_sync("restore", only=[*([] if merge_base.startswith("Qwen/") else [merge_base]), adapter])
+            py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
+    else:
+        drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
+    out = dev_generate(name, model)
+    if "=" in spec and model.startswith("/content/"):
+        shutil.rmtree(model, ignore_errors=True)
+    res = out / "dev_score.json"
+    run(sys.executable, "dev_score.py", "--base", base / "rollouts.jsonl", "--cand", out / "rollouts.jsonl", "--name", name,
+        "--out", res)
+    drive_sync("save")
+    d = json.loads(res.read_text())
+    return (f"== {name} (Dev-512 x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "
+            f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
+
+
+def devscore(args):
+    print(dev_score_model(args.ds_name, args.ds_model), flush=True)
+
+
+def ladder(args):
+    """Budget ladder, phase 0 (BUDGET_LADDER_PLAN.md, user 10 Nov): measurement only, no training. The ORIGINAL Qwen answers
+    --ld-questions own training questions (never an evaluation question) --ld-samples times; budget_ladder.py then cuts every
+    answer at each per-type rung, one rung per call (saved to Drive between rungs), and prints the needed-budget distribution
+    and the oracle curve with the go / no-go rule. Results: runs/bon/ld-<name>/ladder/summary.txt and ladder.jsonl."""
+    name = args.name
+    want = {k: int(v) for k, v in (x.split("=") for x in args.ld_questions.split(","))}
+    roll = BON / f"ld-{name}"
+    drive_sync("restore", only=[str(roll)])
+    data = Path(f"data/ladder-{name}.jsonl")
+    if not (roll / "rollouts.jsonl").exists():
+        rows = own_repair_questions(want, seed=args.ld_seed)
+        data.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
+           "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.ld_samples,
+           "--model", "Qwen/Qwen3-0.6B", "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+           "--max-questions", len(rows), "--seed", 53)
+        drive_sync("save")
+    out = roll / "ladder"
+    for _ in range(30):  # one rung per call, saved between rungs: a lost runtime resumes at the next rung
+        if (out / "LADDER_DONE").exists():
+            break
+        py("budget_ladder.py", "--rollouts", roll / "rollouts.jsonl", "--out", out, "--dtype", args.dtype,
+           "--tolerance", args.ld_tolerance, "--max-new-rounds", 1)
+        drive_sync("save")
+    if not (out / "summary.txt").exists():  # done on an earlier run: print the summary again
+        py("budget_ladder.py", "--rollouts", roll / "rollouts.jsonl", "--out", out, "--dtype", args.dtype,
+           "--tolerance", args.ld_tolerance)
+        drive_sync("save")
+    print((out / "summary.txt").read_text(), flush=True)
+
+
+def mixscreen(args):
+DEV_FILE = Path("data/dev512.jsonl")
+DEV_SOURCES = ("toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,"
+               "ifeval_like,ifeval_built")
+
+
+def dev_ids():
+    """(11 Nov) ids of the Dev-512 questions (never trained on once a run passes --rp-exclude-dev)."""
+    drive_sync("restore", only=[str(DEV_FILE)])
+    return {json.loads(l)["id"] for l in DEV_FILE.read_text().splitlines() if l.strip()} if DEV_FILE.exists() else set()
+
+
+def devset(args):
+    """Dev-512 (11 Nov, consult6 protocol): 512 own held-out questions for every choice (never the test, never the 720):
+    math 140, code 100, IFEval 132 (66 with a counting rule, 66 without), tools 140 (60 one function, 35 several, 45 no fit).
+    Drawn from the own pool OUTSIDE every question already drawn for training by rpE/rpG/rpH (seed 0), rpI (seed 1) and od1
+    (seed 7, 4 rounds); later runs exclude it with --rp-exclude-dev. Then the ORIGINAL Qwen answers it x8 (the reference)."""
+    from repair_pairs import counting
+    from build_pool import part_of
+    drive_sync("restore", only=[str(DEV_FILE)])
+    if not DEV_FILE.exists():
+        used = set()
+        sizes0 = {"svamp": 2400, "mbpp": 900, "ifeval": 1500, "bfcl_simple_python": 300, "bfcl_multiple": 300, "bfcl_irrelevance": 300}
+        od1 = {"svamp": 480 * 4, "mbpp": 180 * 4, "ifeval": 450 * 4, "bfcl_simple_python": 240, "bfcl_multiple": 240,
+               "bfcl_irrelevance": 240}
+        for seed, sizes in ((0, sizes0), (1, sizes0), (7, od1)):
+            used |= {r["id"] for r in own_repair_questions(sizes, seed=seed)}
+        every = own_repair_questions({p: 10 ** 6 for p in sizes0}, seed=99)
+        want = {"svamp": 140, "mbpp": 100, "bfcl_simple_python": 60, "bfcl_multiple": 35, "bfcl_irrelevance": 45}
+        picked, counts = [], defaultdict(int)
+        for r in every:
+            if r["id"] in used:
+                continue
+            p = part_of(r)
+            if p == "ifeval":
+                key = "ifeval-count" if counting(r) else "ifeval-plain"
+                if counts[key] < 66:
+                    counts[key] += 1
+                    picked.append(r)
+            elif counts[p] < want.get(p, 0):
+                counts[p] += 1
+                picked.append(r)
+        print(f"devset: {len(picked)} questions {dict(counts)} (outside {len(used)} questions already drawn for training)", flush=True)
+        DEV_FILE.parent.mkdir(exist_ok=True)
+        DEV_FILE.write_text("".join(json.dumps(r) + "\n" for r in picked))
+        drive_sync("save")
+    dev_generate("base", "Qwen/Qwen3-0.6B")
+
+
+def dev_generate(name, model):
+    rows = [l for l in DEV_FILE.read_text().splitlines() if l.strip()]
+    out = BON / f"dev512-{name}"
+    drive_sync("restore", only=[str(out)])
+    if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
+        py("probe_curve.py", "--data", DEV_FILE, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
+           "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+           "--max-questions", len(rows), "--seed", 53)
+        drive_sync("save")
+    return out
+
+
+def dev_score_model(name, spec):
+    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here)."""
+    dev_ids()
+    assert DEV_FILE.exists(), "run the devset stage first"
+    base = dev_generate("base", "Qwen/Qwen3-0.6B")
+    model = spec
+    if "=" in spec:
+        model, rest = spec.split("=")
+        merge_base, adapter = rest.split(":")
+        if not (Path(model) / "config.json").exists():
+            drive_sync("restore", only=[*([] if merge_base.startswith("Qwen/") else [merge_base]), adapter])
+            py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
+    else:
+        drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
+    out = dev_generate(name, model)
+    if "=" in spec and model.startswith("/content/"):
+        shutil.rmtree(model, ignore_errors=True)
+    res = out / "dev_score.json"
+    run(sys.executable, "dev_score.py", "--base", base / "rollouts.jsonl", "--cand", out / "rollouts.jsonl", "--name", name,
+        "--out", res)
+    drive_sync("save")
+    d = json.loads(res.read_text())
+    return (f"== {name} (Dev-512 x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "
+            f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
+
+
+def devscore(args):
+    print(dev_score_model(args.ds_name, args.ds_model), flush=True)
+
+
+def ladder(args):
+

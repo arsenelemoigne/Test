@@ -1,0 +1,155 @@
+=== repair_pairs.py (tail) ===
+and[part]['right_short'])}")
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
+        if args.kinds == "guard,shorten":  # (10 Nov, odpo) half "be right", half "be shorter when sure"; no backfill
+            g = take(part, "guard", cand[part]["guard"], n // 2)
+            sh = take(part, "shorten", cand[part]["shorten"], n - n // 2)
+            soft = take(part, "shorten", cand[part]["shorten_soft"], n - n // 2 - len(sh))
+            counts[(part, "shorten from the 1.25-1.5x backup")] += len(soft)
+            counts[(part, "shorten candidates (>= 1.5x / 1.25-1.5x)")] = f"{len(cand[part]['shorten'])} / {len(cand[part]['shorten_soft'])}"
+            sh += soft
+            by_part[part] = g + sh
+            counts[(part, "guard")] += len(g)
+            counts[(part, "shorten")] += len(sh)
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
+        if args.kinds == "guard":
+            by_part[part] = take(part, "guard", cand[part]["guard"], n)
+            for p in by_part[part]:
+                counts[(part, "guard")] += 1
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
+        g = take(part, "guard", cand[part]["guard"], n // 2)
+        r_long = take(part, "right", cand[part]["right_long"], (n - n // 2) // 2)
+        r_short = take(part, "right", cand[part]["right_short"], n - n // 2 - len(r_long))
+        if len(g) < n // 2:  # a short guard supply is filled with right pairs, never with another kind
+            r_short += take(part, "right", cand[part]["right_short"], n // 2 - len(g))
+        by_part[part] = g + r_long + r_short
+        for p in by_part[part]:
+            counts[(part, p["kind"] + ("" if p["kind"] == "guard" else
+                                       " (right longer)" if p["chosen_tokens"] > p["rejected_tokens"] else " (right shorter)"))] += 1
+        counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+    # stratified order: interleave the parts by their shares, kinds alternating inside each part
+    queues = {part: sorted(ps, key=lambda p: (p["kind"], rng.random())) for part, ps in by_part.items()}
+    for part in queues:
+        g = [p for p in queues[part] if p["kind"] == "guard"]
+        r = [p for p in queues[part] if p["kind"] != "guard"]
+        queues[part] = [x for pair in zip(g, r) for x in pair] + g[len(r):] + r[len(g):]
+    total = sum(len(q) for q in queues.values())
+    share = {part: len(q) / max(1, total) for part, q in queues.items()}
+    credit = Counter()
+    while any(queues.values()):  # each round adds every part's share; a part emits a pair per whole unit of credit
+        for part, q in queues.items():
+            credit[part] += share[part]
+            while credit[part] >= 1 and q:
+                pairs.append(q.pop(0))
+                credit[part] -= 1
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in pairs))
+    lines = [f"{len(pairs)} pairs ({len(per_q)} questions)"]
+    for (part, what), n in sorted(counts.items()):
+        lines.append(f"  {part} / {what}: {n}")
+    for part in quota:
+        ps = by_part[part]
+        if ps:
+            med = lambda xs: sorted(xs)[len(xs) // 2]  # noqa: E731
+            lines.append(f"  {part}: median chosen / rejected tokens {med([p['chosen_tokens'] for p in ps])} / "
+                         f"{med([p['rejected_tokens'] for p in ps])}; chosen longer in "
+                         f"{sum(p['chosen_tokens'] > p['rejected_tokens'] for p in ps) / len(ps):.0%}")
+    for (part, what), n in sorted(rereads.items()):
+        if what.startswith("counting-rule"):
+            lines.append(f"  {part}: {what}: {n}")
+    ifeval_q = [q for q in groups.values() if part_of(q[0]) == "ifeval"]
+    if ifeval_q:
+        lines.append(f"  ifeval questions answered: {len(ifeval_q)}, with a counting rule: {sum(counting(q[0]) for q in ifeval_q)}")
+    for part in quota:
+        if rereads[(part, "guard questions")]:
+            n = rereads[(part, "guard questions")]
+            lines.append(f"  {part}: re-check of the question in the chosen answer {rereads[(part, 'chosen re-checks')] / n:.0%}, "
+                         f"in the rejected {rereads[(part, 'rejected re-checks')] / n:.0%} ({n} guard questions)")
+    first = Counter(p["part"] for p in pairs[:args.block])
+    lines.append(f"  first {args.block} pairs by part: {dict(first)}")
+    (out / "summary.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
+
+
+if __name__ == "__main__":
+    main()
+
+
+=== track_ptrepair_odpo_dev.py ===
+def ptrepair(args):
+    """Track A (GAME_PLAN.md v3, 5 Nov): repair pt-mid. (1) pt-mid (the 4 lpw-pertype adapters merged at PT_MID) answers
+    --rp-questions training questions x4 (the original's mixed-outcome questions first, then all-right and all-wrong);
+    (2) repair_pairs.py: "be right" pairs only (shortest right > shortest finished wrong; similar-length right > wrong,
+    half with the right answer longer), --rp-quota, stratified order; (3) a fresh LoRA on merged pt-mid (reference =
+    pt-mid), float32 + fp16 autocast, beta 0.1, no NLL, batch 16, lr 2.5e-6 then --rp-lr constant, --rp-steps, saved
+    every 5, pairs read in order; (4) pt-mid + the repair adapter at each --rp-screen step on the 720 x4.
+    9 Nov (user: repair the rc line, own data only): --rp-base repairs any merged model instead of pt-mid (it answers,
+    it is DPO's reference, every screen merges onto it); --rp-own-data draws the questions from own_repair_questions()
+    instead of the original's mixed-outcome dp13 questions; --rp-kinds guard keeps only the 21 Oct "be right" pair."""
+    name = args.name
+    smoke = args.rp_smoke
+    extras = ["nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2"]
+    answers = BON / f"lupin-all-dp13-{'-'.join(extras)}-a4.jsonl"
+    pt = {g: Path("adapters") / f"lpw-pertype-{g}" for g in PT_MID}
+    pool = Path("data/pool-dp13.jsonl")
+    if args.rp_base:  # (9 Nov) any merged model; pt-mid's adapters and the original's answers are not needed
+        hub = args.rp_base.startswith("Qwen/")  # (10 Nov, odpo from the original) a Hub id: nothing to restore or build
+        drive_sync("restore", only=[*([] if hub else [args.rp_base]), SCREEN, str(ROOT / "s4-base")])
+        merged = Path(args.rp_base) if not hub else args.rp_base
+        if args.rp_base_from and not hub and not (merged / "config.json").exists():  # (10 Nov) build it: BASE_MODEL:ADAPTER
+            base_model, base_adapter = args.rp_base_from.rsplit(":", 1)
+            drive_sync("restore", only=[base_adapter])
+            assert (Path(base_adapter) / "adapter_config.json").exists(), f"{base_adapter} is not on Drive"
+            py("merge.py", "--model", base_model, "--out", merged, "--adapters", f"{base_adapter}:1")
+            drive_sync("save")
+            print(f"repair {name}: built {merged} = {base_model} + {base_adapter}", flush=True)
+        assert hub or (merged / "config.json").exists(), f"{merged} is not on Drive (rebuild it with merge.py)"
+    else:
+        drive_sync("restore", only=[*([] if args.rp_from or args.rp_own_data else
+                                      [str(answers), str(pool), *[str(BON / f"tooltop-{x}") for x in extras]]),
+                                    *[str(a) for a in pt.values()], SCREEN, str(ROOT / "s4-base")])
+        for a in pt.values():
+            assert (a / "adapter_config.json").exists(), f"{a} is not on Drive"
+        merged = Path("/content/lupin-models/pt-mid")
+        if not (merged / "config.json").exists():
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", merged, "--adapters", *[f"{pt[g]}:{w}" for g, w in PT_MID.items()])
+    if args.rp_from:  # (5 Nov) same answers and pairs as --rp-from, only the training dose changes
+        pairs = BON / f"pairs-{args.rp_from}"
+        drive_sync("restore", only=[str(pairs)])
+        assert (pairs / "pairs.jsonl").exists(), f"{pairs} is not on Drive"
+        print(f"repair {name}: pairs of {args.rp_from}", flush=True)
+    reuse = getattr(args, "rp_rollouts_from", "")  # (11 Nov) another run's answers, new pairs: no draw, no generation
+    own = args.rp_own_data and not args.rp_from and not reuse
+    rows = {}
+    for f in (() if args.rp_from or own or reuse else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
+        for line in f.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                rows[r.get("pool_id", r.get("id"))] = r
+    solve = defaultdict(list)
+    for line in (() if args.rp_from or own or reuse else open(answers)):
+        r = json.loads(line)
+        solve[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
+    from build_pool import part_of
+    want = {k: int(v) for k, v in (x.split("=") for x in args.rp_questions.split(","))}
+    if smoke:
+        want = {k: 5 for k in want}
+    rng = random.Random(0)
+    by_part = defaultdict(lambda: {"mixed": [], "right": [], "wrong": []})
+    for qid, s in solve.items():
+        if qid in rows and part_of(rows[qid]) in want:
+            p = sum(s) / len(s)
+            by_part[part_of(rows[qid])]["mixed" if 0 < p < 1 else "right" if p == 1 else "wrong"].append(qid)
+    chosen = []
+    if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
+        k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
+        per_part = defaultdict(list)
+        for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
+                                      exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None):
+            per_part[part_of(r)].append(r)
+        for part, n in w
+[output cut at 10,000 characters]

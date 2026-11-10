@@ -89,6 +89,9 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.30,right=0.55,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
+    ap.add_argument("--mix-preset", default="", choices=("", "round1"),
+                    help="--kinds mix: per-type shares instead of --mix-shares; round1 (consult6 path 1, from the original): "
+                         "math + no-fit 35/50/15, code + one / several functions 50/35/15, IFEval 27.5/72.5/0 (shorten / right / guard)")
     ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten", "mix"),
                     help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
@@ -196,6 +199,10 @@ def main():
     for part, n in quota.items():
         if args.kinds == "mix":
             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
+            if args.mix_preset == "round1":
+                sh_share = ({"shorten": 0.35, "right": 0.50, "guard": 0.15} if part in ("svamp", "bfcl_irrelevance") else
+                            {"shorten": 0.275, "right": 0.725, "guard": 0.0} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.35, "guard": 0.15})
             n_sh, n_g = round(sh_share["shorten"] * n), round(sh_share["guard"] * n)
             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
             g = take(part, "guard", cand[part]["capguard"], n_g)
