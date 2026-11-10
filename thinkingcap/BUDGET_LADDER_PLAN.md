@@ -34,11 +34,12 @@ So budget 0 already matches the original on IFEval and "no fit" and loses everyw
   stopped earlier".
 - **The original's rate p0(q):** the share of its 8 natural answers that are right (graded as the benchmark does).
 - **Needed budget b\*(q):** the smallest rung B where the share right at B is at least p0(q) − tolerance.
-  Tolerance (user to confirm): one answer of eight (0.125), so a question at 6/8 natural needs 5/8 at B. A stricter
-  variant: p_B ≥ p0 exactly.
+  Tolerance (user, 10 Nov): one answer of eight (0.125), so a question at 6/8 natural needs 5/8 at B.
 - **Classes of questions:**
-  - p0 = 0 (the original never gets it): no budget changes accuracy. Default: kept out of the pairs (training the model to
-    give up on hard questions could spread to questions it can solve); counted separately. User to confirm.
+  - p0 = 0 (the original's 8 natural answers all wrong): no explicit "stop early" pair (it could teach giving up on questions
+    it can solve); the general shortening is expected to carry over to them anyway. **Exception:** if some cut of a wrong
+    answer is RIGHT (the thinking had the answer and then talked itself out of it), that gives a "stop earlier and be right"
+    pair: chosen = the right cut answer, rejected = the wrong natural answer. Phase 0 counts how many such questions exist.
   - b\* = 0: the "freeze" class (no thinking needed).
   - b\* = natural: thinking cannot be shortened on this question.
 
@@ -71,8 +72,14 @@ oracle is near 45–50%, the method cannot reach the goal and we stop before tra
   as long as the rejected one's (the existing --count-rules logic); no pair shortens a final response.
 - Shares per part follow the test (BFCL 400/200/240); half freeze, half guard; at most one pair of each kind per question.
 
-**The ladder as a curriculum (the user's "gradually"):** stage k trains on questions with b\* ≤ rung k, plus a replay
-share (~30%) of the earlier stages' pairs as anchors; one stage per rung that holds enough questions (expected 4–5 stages).
+**The ladder as a curriculum (the user's "gradually"):** stage k trains on questions with b\* ≤ rung k, plus an anchor share
+(~30%) of questions from the earlier stages' budget classes; one stage per rung that holds enough questions (expected 4–5
+stages).
+
+**Against memorising (user, 10 Nov):** every pair is used once (one pass, no epochs); the anchor share uses NEW questions of the
+earlier budget classes, never the same pairs again; each budget class holds many different questions, so the lesson is "this
+kind of question needs about this much", not "this question = 256". Check: training-set gains without dev-set gains = memorising;
+the dev set's questions are never trained on.
 Control arm (the review's advice to change one thing at a time): the same pairs all at once, same total steps.
 
 **Training:** LoRA r16 / alpha 32, DPO beta 0.1, no SFT term, lr 1e-5 constant after 2 warm-up steps, batch 16, fp32
@@ -99,6 +106,6 @@ Optional later: re-run the ladder with the current model between stages (fresh r
 
 ## Open choices for the user
 
-1. Tolerance: one answer in eight (default) or exactly the original's rate?
-2. Never-solved questions (p0 = 0): leave out (default) or train them to stop early?
+1. Tolerance: one answer in eight — DECIDED (user, 10 Nov).
+2. Never-solved questions: no "give up" pairs; only the "a shorter cut was right" pairs — DECIDED (user, 10 Nov).
 3. Phase 0 placement: GPU 1 after od1 (replacing od2), or on GPU 2 replacing cp1e (consult5 advised no more COPD)?
