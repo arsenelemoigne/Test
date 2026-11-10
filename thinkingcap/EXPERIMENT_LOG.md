@@ -5231,3 +5231,13 @@ separately (open); (5) od2 = 90,400 completions for 1,600 pairs: measure pair yi
 from the original Qwen: fresh-rollout vs frozen-rollout arms, identical mixed pairs (256 per round, half guard half shorten at
 >= 6/8 and 1.25x), 3 rounds x 32 updates, 2 seeds, a NEW 512-question dev set for selection (never the 720), predetermined final
 checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Advice: do not spend GPU days on more COPD variants.
+
+## 10-11 Nov night — runtimes reconnected by the user; queues resumed from Drive
+- **od1 round 2** (rpE-80 + 2 online rounds = 20 steps; 160 pairs per round, guard 80 / shorten 80, no shortfall), 720 x4 official:
+  **51.5% / -1.2** (svamp 58 / -2.7, mbpp 54 / -2.5, ifeval 47 / +0.4, simple 41 / -3.1, multiple 44 / +0.8, no-fit 54 / +4.2);
+  vs curve +2.0 (rpE-80 on the 720: 50.4 / -0.2, +2.8). Rounds 3 done, round 4 answering.
+- **cp1d** (Run A settings + the right/wrong reward only), 720 x4: step 10 14.2 / -1.4; 20 30.4 / -2.1; 25 34.0 / -1.9.
+  vs curve: 20 -1.9, 25 -1.3 (Run A: 20 -0.7, 25 -1.6; Run C: 25 -2.8). The reward alone cuts faster than Run A, but cp1d does
+  not collapse like Run C: Run C's other settings (16x8, constant lr, 50% sometimes-wrong questions) explain part of its fall.
+- consult6 (Gemini 4 Argon via OpenRouter, cap $25, $3 report reserve): relaunched after an empty first turn (Gemini emitted a
+  native function call, MALFORMED_FUNCTION_CALL; fixed by a system note + provider errors retried); 27 turns, $0.34 so far.
