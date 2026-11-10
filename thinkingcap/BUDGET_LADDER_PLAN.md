@@ -90,7 +90,17 @@ the original (one answer of slack). Nothing is carried over from earlier stages,
 **Training per stage:** about 300-500 pairs = 20-30 DPO steps of 16 pairs, one pass, LoRA continued from the previous stage,
 lr 1e-5 constant, beta 0.1, the original Qwen as the reference throughout (so drift is measured against the start).
 
-**"Each stage strong" — the exit check (on a small held-out slice, never the 720 or the test):**
+**The tracking panel (user, 10 Nov) — the guard between stages.** One FIXED set of held-out questions (~300: 50 per type,
+never trained on, not the 720, not the test) is re-answered after EVERY stage, 8 times at every budget level, exactly like
+Phase 0. After each stage it shows, per type:
+- the level of each panel question (its lowest budget where it is as right as the original) and how questions MOVED between
+  levels since the previous stage: level B -> lower A = progress; A -> higher B = an earlier stage being undone (alarm);
+- the average thinking length at each level, with its spread (e.g. 10th-90th percentile);
+- accuracy at each level and overall, against the original.
+This is the evidence that a later stage did not destroy what earlier stages built. Stages go one at a time: the next starts
+only after its panel report is read.
+
+**"Each stage strong" — the exit check (on the tracking panel, never the 720 or the test):**
 - accuracy at B_k went UP vs the stage's start, and
 - the questions at lower levels did NOT get longer (their thinking within +10%).
 If either fails, the stage runs again on another batch of new questions (at most 2 extra batches), with a larger share of the
