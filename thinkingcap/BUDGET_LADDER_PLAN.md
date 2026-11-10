@@ -25,8 +25,13 @@ So budget 0 already matches the original on IFEval and "no fit" and loses everyw
 
 ## Definitions
 
-- **Rungs:** thinking budgets B = 0, 32, 64, 128, 256, 512, 1024, 2048, natural (no cap). Final-answer tokens are not part of
-  B but count in the score, as in the benchmark.
+- **Rungs, per data type (user, 10 Nov):** each type gets its own ladder, because the types think very differently (the
+  original's right answers on the 720: tools ~190–210 tokens, IFEval ~520, math ~580, code ~1,210). Rungs = 0, then the 5th,
+  10th, 20th, 30th, 40th, 50th, 65th, 80th and 90th percentiles of that type's natural right-answer thinking (measured in
+  Phase 0 from the 8 natural answers), then natural. So every type gets the same number of rungs, packed where its answers
+  actually are; a tool question is never tested at "1,024 tokens" and a code question never stops at "32" only. Final-answer
+  tokens are not part of B but count in the score, as in the benchmark. Everything (b\*, the oracle curve, the decision
+  rule, stages, quotas) is reported and decided per type; a type stops climbing once it is back at the original's accuracy.
 - **How an answer at budget B is made — the cut, not a new sample:** the original answers each question 8 times with no cap
   (its natural answers). For each natural answer, keep its first B thinking tokens, close `</think>` there and let the model
   write the final answer (as rc1's cut calibration and label_cuts.py / check_vllm.py already do). B = 0 is an empty thinking.
