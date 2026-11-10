@@ -5185,3 +5185,5 @@ answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4
   The IFEval counting rule alone did not fix IFEval on the 720.
 - rpF pairs (Run C step 40 answers x4, all 2,998 IFEval questions): 1,446 pairs; IFEval 320/320 (258 counting-rule); mbpp 287/400
   (short 113: Run C is right on code too rarely for guard pairs at 4 answers), tools 60-71/80. Training started.
+- rpF-10 (Run C step 40 + 10 repair steps), 720 x4: **54.9% / -4.0** (svamp 73 / -4.8, mbpp 57 / -4.8, ifeval 36 / -3.3, simple 43 / -2.9,
+  multiple 45 / -0.2, no-fit 44 / -5.6); vs curve -0.1 (Run C-40: 57.1 / -4.7, -0.3).
