@@ -5083,3 +5083,18 @@ Plan lines, in order:
   47-79%); always-right mixed-now 0-2 (right 96-100%). 24 min per 5-step block. GPU 1: rpE @40 full test running.
 - 10 Nov **rpE @ 40 FULL TEST: +50.6 / -1.9** (720 said 50.5 / -1.7). Step 80 full: 47.0 / -0.9. Step 60 full test next.
 - 10 Nov **COPD Run C (cp1c2) @ 10: +12.7 / -1.1** (720; Run A @10: 14.6 / -0.2). Training continues (scores at 20/25/30/35/40).
+- 10 Nov **rpE @ 60 FULL TEST: +47.8 / -1.2** (+1.3 vs curve; irrelevance +49 / +1.4, multiple +39 / -0.2, simple +38 / +0.1,
+  ifeval +46 / -3.0, mbpp +48 / -0.7, svamp +55 / -1.5); its 720: 48.6 / -0.7. **rpE @ 40 FULL: +50.6 / -1.9** (+1.1; irrelevance
+  -0.4, multiple -0.6, simple +0.4, ifeval -2.8, mbpp -1.7, svamp -3.0). Repair path on the full test: 40 -> 60 -> 80 = 50.6 / -1.9,
+  47.8 / -1.2, 47.0 / -0.9: each 20 steps buys ~0.5 pt of accuracy for ~1-3 pts of saving.
+- 10 Nov **COPD Run C (cp1c2, + correctness push, constant lr), 720**: @10 12.6 / -1.1, @20 28.0 / -2.0, @25 35.8 / -3.6, @30
+  43.2 / -3.2, @35 49.7 / -3.0, @40 57.1 / -4.7 (svamp +74 / -5.2, mbpp +60 / -7.5, irrelevance +46 / -6.5). With a constant lr
+  it shortens much further than Run A (57 vs 34%) but lands ON our DPO curve (-0.2 to -0.5 vs curve): the correctness push did
+  not keep accuracy. A shortener comparable to rc1-soup-30 (57.4 / -3.5 full), i.e. a candidate base for the same repair.
+- 10 Nov **IFEval rule-by-rule diagnostic (full tests, 541 questions x 8; ir-full/ifeval_rules.json)**: every shortened model
+  (rc1, ca1, rpE-40/60/80) loses on COUNTING rules: length_constraints:number_words -11 to -13 pts, keywords:frequency -8 to -10,
+  number_sentences -6 to -7, number_highlighted_sections -6 to -9, number_placeholders -5 to -11; gains on quotation, language,
+  capitals (+3 to +6). On length rules the wrong responses are mostly TOO SHORT: original 265 below the asked number, rc1 387,
+  ca1 364, rpE-80 379; responses on length-rule questions median 209 -> 145-161 tokens. Wrong answers with thinking under half
+  the original's right-answer median: original 62 / 916, shortened models 626-815 / ~1,070. So IFEval's loss = counting /
+  length requirements broken by shorter thinking AND shorter responses on exactly those questions.
