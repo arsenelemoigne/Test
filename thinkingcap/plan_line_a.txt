@@ -511,7 +511,8 @@ thinkprune --name cp1d --tp-answers10 --tp-start raw --tp-reward gated --tp-min-
 devset
 devscore --ds-name rc1s30 --ds-model models/rc1-soup-30
 devscore --ds-name rpE80 --ds-model models/rpE-80
-ptrepair --name rpJ --rp-base models/rc1-soup-30 --rp-own-data --rp-rollouts-from rpH --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--ratio,1.2,--shorten-ratio,1.3,--shorten-min-right,0.75 --rp-quota svamp=320,mbpp=320,ifeval=320,bfcl_simple_python=100,bfcl_multiple=80,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-screen 20 40 60 --rp-dev
+# (11 Nov, user) rpJ DROPPED (Claude review: it tests the wrong regime; replaced by a round-1 pilot from the original, design pending)
+# ptrepair --name rpJ --rp-base models/rc1-soup-30 --rp-own-data --rp-rollouts-from rpH --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--ratio,1.2,--shorten-ratio,1.3,--shorten-min-right,0.75 --rp-quota svamp=320,mbpp=320,ifeval=320,bfcl_simple_python=100,bfcl_multiple=80,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-screen 20 40 60 --rp-dev
 # 11 Nov (user): PATH 1 FULL RUN, clean, from the ORIGINAL Qwen (consult6 Rank 1). ENABLE ONLY IF rpJ PASSES (PATH1_PLAN.md).
 # Round 1: the original's 10 stored answers (own sources only, 60% of the questions; p1src) -> 3,200 pairs, per-type mix (round1
 # preset), 200 steps, lr 1.5e-5 cosine to 5e-6; Round 2: the round-1 model answers ~5,350 NEW own questions x8 -> 1,280 pairs
