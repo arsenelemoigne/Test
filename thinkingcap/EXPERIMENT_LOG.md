@@ -5187,3 +5187,7 @@ answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4
   (short 113: Run C is right on code too rarely for guard pairs at 4 answers), tools 60-71/80. Training started.
 - rpF-10 (Run C step 40 + 10 repair steps), 720 x4: **54.9% / -4.0** (svamp 73 / -4.8, mbpp 57 / -4.8, ifeval 36 / -3.3, simple 43 / -2.9,
   multiple 45 / -0.2, no-fit 44 / -5.6); vs curve -0.1 (Run C-40: 57.1 / -4.7, -0.3).
+- rpF-20: **54.8% / -3.8** (ifeval 42 / -0.8, svamp 72 / -6.2, mbpp 55 / -4.4, simple -4.0, multiple -1.5, no-fit -5.4), vs curve +0.1.
+- rpF-40: **52.4% / -4.5** (svamp 71 / -5.0, mbpp 52 / -6.2, ifeval 32 / -4.0, simple -3.1, multiple +1.1, no-fit -5.6), vs curve -1.1.
+  The repair does not lift Run C: it stays on or below the curve (rpE lifted rc1-soup-30 from +0.95 to +1.45 full test). Run C's
+  loss (stopped-early math and code) is not fixed by right-vs-wrong pairs at equal length.
