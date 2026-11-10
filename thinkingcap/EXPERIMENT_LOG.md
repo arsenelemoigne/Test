@@ -5159,3 +5159,12 @@ od2 (queued after od1, user): the same online loop from the ORIGINAL Qwen (fresh
   simple 34% / -2.9, multiple 36% / -0.4, irrelevance 50% / +8.5). Step 100 official: 40.4 / +0.9. vs curve: step 80 +2.8,
   step 100 +2.2, step 120 +0.9. **More steps of the same repair only make the model longer (code 46% -> 23% saved) and fall back
   toward the curve: rpE step 80 stays the best stopping point.**
+
+## 10 Nov — public competitor scan (read-only)
+No new or better 0.6B score anywhere: BottleCapAI/ThinkingCap-Test still has the same 5 forks. michal-bida (last push 20 Oct),
+basta (14 Oct), horychtom, miroslavmyrha, Herz1c (15 Oct), mrtineu (3 Nov), khudgins: unchanged. marek-krcal active (SimPO /
+DPO branches 6-9 Nov), no published score. matousek-martin: ablations + release v0.1.2, headline unchanged (256 = 31.23 / +0.21,
+850 = 41.60 / -1.17, 1280 = 46.58 / -2.35); per type @850: svamp 53.2 / -1.29, mbpp 42.3 / -1.26, ifeval 38.1 / +0.18, simple
+28.4 / -2.00, multiple 30.4 / +2.44, irrelevance 33.4 / -6.87. Herz1c/DoesLearningToStopScale: same recipe on Qwen3-1.7B
+(47.4 / -0.14), not a 0.6B entry. RikiyaT is not a ThinkingCap entry. **Upstream commit 965a54c (6 Nov): a submission must now
+include the coding agent's traces and the conversation with the harness, as a text document.**
