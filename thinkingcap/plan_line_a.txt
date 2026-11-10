@@ -496,6 +496,7 @@
 ptrepair --name rpG --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-samples 8 --rp-init-from adapters/rpE-s0/step-80 --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 40 --rp-screen 20 40
 # 2/ rpH: as rpG + the IFEval counting-rule pairs (--count-rules) and 1,500 IFEval questions
 ptrepair --name rpH --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-samples 8 --rp-init-from adapters/rpE-s0/step-80 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules --rp-questions svamp=2400,mbpp=900,ifeval=1500,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 40 --rp-screen 20 40
+fullmodel --fm-merge models/rpI-120=models/rc1-soup-30:adapters/rpI-s0/step-40 --nothink-models models/rpI-120
 # 10 Nov (user) the ONE-CHANGE version of Run C: Run A's exact settings (64 questions x 2 answers, lr 1e-5 decaying to 1e-6
 # over the run, the same question selection: solved >= 1/10) + ONLY the correctness push (--copd-outcome 1.0; with 2 answers
 # it acts when one is right and the other wrong); 40 steps, 720 at Run A's checkpoints 10/20/25/30/35/40
