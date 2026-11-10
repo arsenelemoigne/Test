@@ -5132,3 +5132,9 @@ Plan lines, in order:
 **Reading:** the correctness push carries a hidden length reward, because wrong answers are longer, and it removes thinking that was
 needed. cp1d (Run A settings + the correctness push only) tests whether the 16x8 / constant-lr / 50%-mixed settings or the push
 itself causes it.
+
+## 10 Nov — rpG (rpE-80 continued 80->120, normal method, 8 answers/question, 1484 pairs; IFEval 208/320 pairs)
+- rpG-20 (= repair step 100), 720 screen: **40.6% saved, +1.0 pts** (BFCL-weighted 40.4 / +0.9). Per part: irrelevance +51%/+6.9,
+  multiple +39%/-1.1, simple +37%/-2.1, ifeval +38%/+0.2, mbpp +40%/+1.7, svamp +42%/+1.0.
+- vs rpE-80 on the same 720 (50.4 / -0.2): about 10 pts less saved for +1.2 pts accuracy. Distance above the curve is about the same
+  (+2.35 vs +2.77 on the 720), so the model slid along the curve toward longer answers rather than improving.
