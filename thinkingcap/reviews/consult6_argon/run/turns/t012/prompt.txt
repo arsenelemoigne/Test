@@ -1,0 +1,12 @@
+Columns in all_runs: ['key', 'name', 'kind', 'what', 'saved', 'acc', 'parts', 'acc_screen_eq']
+Kinds: {'720': 197, 'full': 8}
+
+--- ALL FULL RUNS ---
+bidax2-full        | bida copy ? final            | saved= 51.2% | acc=-3.00 | v:64%/-6.0 | c:42%/-2.4 | f:53%/-1.1 | s:40%/-2.2 | m:43%/-2.0 | i:44%/-3.5
+pt-mid-full        | Per-type merge ? mid ? FULL TEST | saved= 53.6% | acc=-3.30 | v:61%/-6.0 | c:62%/-3.9 | f:50%/-1.7 | s:35%/+0.2 | m:38%/+0.4 | i:40%/-5.6
+cleanA-ca1-full    | ca1-soup-10 (clean line A, round 3) | saved= 49.1% | acc=-2.40 | v:58%/-4.3 | c:53%/-2.2 | f:45%/-2.4 | s:36%/+0.4 | m:38%/+0.6 | i:41%/-3.2
+cleanA-rc1-full    | rc1-soup-30                  | saved= 57.4% | acc=-3.50 | v:67%/-6.6 | c:63%/-3.5 | f:51%/-2.5 | s:41%/-0.1 | m:44%/-0.8 | i:51%/-4.1
+rpe-80full         | Repair rpE ? step 80         | saved= 47.0% | acc=-0.90 | v:54%/-1.2 | c:46%/-1.0 | f:45%/-2.6 | s:37%/+0.1 | m:39%/+0.1 | i:50%/+3.4
+rpe-40full         | Repair rpE ? step 40         | saved= 50.6% | acc=-1.90 | v:59%/-3.0 | c:53%/-1.7 | f:47%/-2.8 | s:39%/+0.4 | m:41%/-0.6 | i:50%/-0.4
+rpe-60full         | Repair rpE ? step 60         | saved= 47.8% | acc=-1.20 | v:55%/-1.5 | c:48%/-0.7 | f:46%/-3.0 | s:38%/+0.1 | m:39%/-0.2 | i:49%/+1.4
+rpi-120full        | Repair rpI ? step 120        | saved= 41.9% | acc=+0.10 | v:47%/+0.0 | c:38%/+0.5 | f:41%/-1.5 | s:37%/+0.2 | m:38%/-0.9 | i:50%/+5.8

@@ -1,0 +1,28 @@
+L205: lost. Round k keeps the best (1 - k x 10%) of the words. Scoring took ~85 min for 302
+L489: tool-mvt1024 crashed (vLLM out of memory capturing CUDA graphs next to the scoring model):
+L675: v_proj bias (Qwen3 `attention_bias`), checked identical in vLLM and Transformers. Small push tests
+L719: same in vLLM and Transformers, ratio 1.08, correlation 0.99):**
+L804: model; capped 1% vs 26%), so sampling took ~40 min. Its shortest correct vs its own mean: math 33%,
+L1110: Process notes: grading 144,640 answers serially took > 1 h (code tests; GPU idle) -> check_vllm grades with 16 threads
+L1111: (~15 min); a killed check_vllm left an orphan vLLM engine holding 10.5 GB (RL smoke test went out of memory).
+L1206: run-to-run noise of about 1 point at x8 (vLLM sampling is not bit-reproducible), so single x8 differences under ~1.5 pts are
+L1342: A + A2 held-out questions only, which keep their hash split). Expected +0.02-0.04 AUC; ~8 GPU-hours.
+L1439: x8 (~8 GPU-hours). Success (fixed before running): >= 5 pts more saving than rc1-rl-40 (>= ~59%) at accuracy >= -2.5, or
+L1651: answer per scored point (~30-50k short generations, ~1 GPU-hour).
+L1708: before stopB5 (adds ~8-10 GPU-hours to runtime 1).
+L1752: official vLLM evaluation can score it (weight 1, no averaging): it is how a checkpoint is tested. drpo1 only saved steps 20/40/60
+L1781: ("by_type"); track.py drpo scores every saved checkpoint (10, 20, ..., 60) on fresh x8 by default (~7 min each for these
+L1866: needs "Interrupt execution" on runtime 1's queue cell and re-running that cell (saves ~9 GPU-hours).
+L1938: score steps 5, 10, 15, 20, 25, 30, 40, 50, 60 on fresh x8 (~7 min each, ~1 h per run): the first 30 steps, where drpo1 and sb1
+L2016: 4). Estimated ~11-13 GPU-hours.
+L2065: - check_vllm.py (cut labelling, the hours-long part of every lot): results appended per 2,000-trace chunk (.part); a restart
+L2759: failed at once: vLLM could not get its GPU memory (ValueError in request_memory at engine start; root cause above it
+L2762: - Fix for tsk1: tokenskip.py now frees LLMLingua (del, gc, torch.cuda.empty_cache) before starting vLLM for --verify, and
+L2763: asks vLLM for 0.7 of the GPU instead of 0.85. Compression itself worked (6214 questions with a right answer); only the
+L2797: selection answers reused, 6 more generated: ~72,000 answers, ~13 GPU-hours). Measured with 4 answers (dp1 check): longest
+L2948: - 28 Oct: SPARSE add-on project specified (thinkingcap/SPARSE_SPEC.md): Wanda / Lottery Ticket pruning of Qwen3-0.6B, then LoRA or freed-weight training to think shorter; separate from LUPIN, reuses LUPIN data, pilot ~15-20 GPU-h on the Wanda cut. Nothing built.
+L3040: (merge.py, ~2 min each; scores already logged):
+L3225: - 20:30 (user): deployment added to the roadmap (LUPIN_SPEC.md 'Deployment'): after the final model, serve it with vLLM on a hosted L4 (HF Inference Endpoint / RunPod / Modal, ~$0.5-1/h, user approves spending), monitor /metrics, side-by-side demo vs the original Qwen.
+
+
+[Note: the session was restarted to raise your code-run limit to 150 (you have used 49). The Python kernel was restarted: re-load any data you need. Keep writing your notes and your report draft to the work folder.]

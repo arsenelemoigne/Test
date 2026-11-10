@@ -1,0 +1,48 @@
+bidax2-100           | 720  | saved= 54.7 | acc=-4.62 | bida copy ? step 100
+bidax2-200           | 720  | saved= 49.1 | acc=-3.08 | bida copy ? step 200
+bidax2-300           | 720  | saved= 51.1 | acc=-2.57 | bida copy ? step 300
+bidax2-final         | 720  | saved= 51.8 | acc=-2.66 | bida copy ? final
+bidax2s1-final       | 720  | saved= 51.0 | acc=-3.87 | bida copy seed 1 ? final
+bidax3-100           | 720  | saved= 52.4 | acc=-3.87 | repeat ? step 100
+bidax3-200           | 720  | saved= 56.3 | acc=-4.14 | repeat ? step 200
+bidax3-300           | 720  | saved= 54.8 | acc=-3.69 | repeat ? step 300
+bidax4-100           | 720  | saved= 57.1 | acc=-5.10 | own no-fit ? step 100
+bidax3-final         | 720  | saved= 54.5 | acc=-3.86 | repeat ? final
+bidax4-200           | 720  | saved= 54.6 | acc=-3.74 | own no-fit ? step 200
+bidax4-300           | 720  | saved= 53.2 | acc=-3.26 | own no-fit ? step 300
+bidax4-final         | 720  | saved= 52.7 | acc=-3.49 | own no-fit ? final
+bidax4l-300          | 720  | saved= 38.4 | acc=-1.47 | 600-step check ? step 300
+bidax4l-400          | 720  | saved= 38.8 | acc=-2.15 | 600-step check ? step 400
+bidax4l-500          | 720  | saved= 41.8 | acc=-2.12 | 600-step check ? step 500
+bidax2-full          | full | saved= 51.2 | acc=-3.00 | bida copy ? final
+bidax5m-final        | 720  | saved= 11.3 | acc=-3.91 | math fix, stretched schedule ? final
+bidax5s-100          | 720  | saved= 21.6 | acc=+1.04 | math fix ? step 100
+bidax5s-200          | 720  | saved= 20.1 | acc=-0.32 | math fix ? step 200
+bidax5s-300          | 720  | saved= 21.8 | acc=-0.09 | math fix ? step 300
+bidax5s-final        | 720  | saved= 23.6 | acc=+1.06 | math fix ? final
+bidax6-100           | 720  | saved= 44.4 | acc=-2.33 | bida settings ? step 100
+bidax6-200           | 720  | saved= 40.1 | acc=-0.96 | bida settings ? step 200
+bidax6-300           | 720  | saved= 41.7 | acc=-1.12 | bida settings ? step 300
+bidax6-final         | 720  | saved= 37.8 | acc=-1.83 | bida settings ? final
+bidax5q-100          | 720  | saved= 41.8 | acc=+0.03 | bida settings + his math ? step 100
+bidax5q-200          | 720  | saved= 48.5 | acc=-1.00 | bida settings + his math ? step 200
+bidax5q-300          | 720  | saved= 47.9 | acc=-1.58 | bida settings + his math ? step 300
+bidax5q-final        | 720  | saved= 46.7 | acc=-0.59 | bida settings + his math ? final
+bidax7-100           | 720  | saved= 41.3 | acc=-1.94 | bidax7 (+ his code & instructions) ? step 100
+bidax7-200           | 720  | saved= 43.1 | acc=-0.64 | bidax7 (+ his code & instructions) ? step 200
+bidax7-300           | 720  | saved= 45.3 | acc=-0.83 | bidax7 (+ his code & instructions) ? step 300
+bidax7-final         | 720  | saved= 43.5 | acc=-2.49 | bidax7 (+ his code & instructions) ? final
+bidax6p-100          | 720  | saved= 45.7 | acc=-1.96 | bidax4 pairs + michal-bida's PRECISION only (fp32 + fp16 autocast) ? step 100
+bidax6p-200          | 720  | saved= 48.9 | acc=-2.22 | bidax4 pairs + michal-bida's PRECISION only ? step 200
+bidax6p-300          | 720  | saved= 47.8 | acc=-1.64 | bidax4 pairs + michal-bida's PRECISION only ? step 300
+bidax6p-final        | 720  | saved= 48.8 | acc=-2.57 | bidax4 pairs + michal-bida's PRECISION only ? final
+l2s50e-100           | 720  | saved= 54.4 | acc=-3.61 | DPO D10 l2s50e pairs ? step 100
+l2s50e-200           | 720  | saved= 49.7 | acc=-3.09 | DPO D10 l2s50e pairs ? step 200
+l2s50e-final         | 720  | saved= 53.5 | acc=-2.81 | DPO D10 l2s50e pairs ? final
+pt-mid-full          | full | saved= 53.6 | acc=-3.30 | Per-type merge ? mid ? FULL TEST
+cleanA-ca1-full      | full | saved= 49.1 | acc=-2.40 | ca1-soup-10 (clean line A, round 3)
+cleanA-rc1-full      | full | saved= 57.4 | acc=-3.50 | rc1-soup-30
+rpe-80full           | full | saved= 47.0 | acc=-0.90 | Repair rpE ? step 80
+rpe-40full           | full | saved= 50.6 | acc=-1.90 | Repair rpE ? step 40
+rpe-60full           | full | saved= 47.8 | acc=-1.20 | Repair rpE ? step 60
+rpi-120full          | full | saved= 41.9 | acc=+0.10 | Repair rpI ? step 120

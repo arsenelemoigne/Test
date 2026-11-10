@@ -1,0 +1,7 @@
+astra: API error (provider error: MALFORMED_FUNCTION_CALL); retrying
+astra turn 57: $0.038 (total $2.05 / $10.0), passes 0/0, code runs 57, flags {'code_errors': 1}
+astra turn 58: $0.023 (total $2.07 / $10.0), passes 0/0, code runs 58, flags {'code_errors': 1}
+astra turn 59: $0.023 (total $2.09 / $10.0), passes 0/0, code runs 59, flags {'code_errors': 1}
+astra turn 60: $0.058 (total $2.15 / $10.0), passes 0/0, code runs 60, flags {'code_errors': 1}
+astra turn 61: $0.104 (total $2.25 / $10.0), passes 0/0, code runs 61, flags {'code_errors': 1}
+astra turn 62: $0.194 (total $2.45 / $10.0), passes 0/0, code runs 62, flags {'code_errors': 1}

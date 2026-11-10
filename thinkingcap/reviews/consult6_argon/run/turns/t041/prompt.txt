@@ -1,0 +1,107 @@
+**rr1 (RL done right on rc1-soup-30: fresh pool seed 42, 2,293 questions, alpha 0.3), fresh x8:** start model re-scored
+(rr1-start = rc1-soup-30) **+56.4 / -3.8** (bfcl irr +46% / -4.7, mult +41% / -4.4, simple +39% / +0.6; ifeval +48% / -5.9;
+mbpp +64% / -0.9; svamp +67% / -5.6); after RL block 1 (20 steps) **+57.5 / -5.1** (bfcl irr +47% / -3.7, mult +43% / -5.9,
+simple +39% / +0.3; ifeval +47% / -3.1; mbpp +65% / -4.1; svamp +68% / -10.0). Below floor - 2 -> RL stopped by its rule after
+one block. Readings: (1) the SAME model (rc1-soup-30) scored -2.9 this morning and -3.8 now on the same 240 x 8 questions:
+run-to-run noise of about 1 point at x8 (vLLM sampling is not bit-reproducible), so single x8 differences under ~1.5 pts are
+not real. (2) RL at alpha 0.3 on fresh questions buys +1 point of saving for -1.3 points, mostly math (-10 on SVAMP): on a
+model already this short, the length penalty pushes the wrong place (math), as the length-band analysis predicted.
+Runtime 2 moved on to rc2 (second calibrated-cut round from rc1-rl-40).
+
+**rc2 (second calibrated-cut round, from rc1-rl-40; seed 43, 869 q + KodCode x8, 675 replies, 5,400 cuts x 20, 2,019 right
+20/20; math safe cuts down to 19-22% (from 26-34% for ca1); 1,020 pairs: shorten 472, guard 319, hard 229; 61 steps), fresh x8:**
+soup 10 **+57.5 / -4.5** (svamp +66% / -7.8, mbpp +67% / -5.0, ifeval +48% / -1.6, bfcl irr +47% / -3.4, mult +44% / -5.0,
+simple +40% / -1.9); soup 20 +63.4 / -4.9 (svamp +71% / -9.1, mbpp +73% / -2.8, ifeval +57% / -4.1, bfcl +43-51% / -5.6..-0.6);
+soup 30 +63.6 / -4.9 (svamp +70% / -10.9, mbpp +76% / -2.8, ifeval +54% / -2.2, bfcl +45-52% / -6.2..-0.3); soup 60 +67.0 / -6.2
+(svamp +71% / -9.4, mbpp +80% / -9.7, ifeval +56% / -2.5, bfcl +49-58% / -5.0..-0.3). A second cut round buys 4-13 points of saving
+at 2.4-4 more points of loss, mostly math: the model was already at its safe math length, as its own cut table showed.
+
+**Confidence vs real outcome per cut point (cal_table.py; conf / real share right / share of cuts 20/20), the same for ca1,
+rc1-soup-30 and rc1-rl-40 within 0.01-0.05:**
+- math traps (gsm_ic, gsm_plus): real success ~0 up to 10% of the thinking, 0.04-0.13 at 20%, 0.2-0.33 at 50%, 0.43-0.52 at 65%,
+  0.64-0.76 at 80%; confidence 0.4-0.5 at the start (honest there), then 0.73-0.88 at 65-80% while real is 0.47-0.76: the
+  over-confidence is in the second half of the reasoning.
+- instructions (ifeval_like): real 0.76-0.84 already at 1% of the thinking (about half the cuts right 20/20) and flat to 80%;
+  confidence flat ~0.45-0.59: the thinking adds almost nothing on average; which questions need it is the open question.
+- tools: real 0.65-0.72 at 1%, 0.84-0.85 at 80% (53-75% of cuts 20/20); code 0.66-0.69 at 1% -> 0.87-0.91 at 80%.
+- multiple choice: real 0.86-0.89 at 1% (arc), 0.59-0.69 (csqa) -> 0.75-0.93 at 80%.
+Reading: for instructions, tools and code, roughly half the questions are already right with almost no thinking and the rest
+need it; a stopper is worth what it can tell the two apart per question. For math almost nothing is safe before 65%.
+Probes running: pkca1 on runtime 1 (v2r3 finished), pkrl40 (test set = rc2's cuts) on runtime 2.
+
+**Stopping probe, first run (pkrl40: rc1-rl-40's hidden states; development = the 904 rc1 replies' 7,232 cuts re-answered by
+rc1-rl-40, 9% left out as 16-19/20; held-out test = rc2's 675 new questions, 5,400 cuts; configuration chosen by nested CV =
+layer 21, AFTER "</think>").** Out-of-fold AUC of the 8 configurations 0.79-0.85. AUC, test set (dev in brackets):
+- ALL: probe 0.864 (0.842) vs cut position 0.823 (0.801).
+- math traps: gsm_ic 0.938 (0.951) vs position 0.859; gsm_plus 0.916 (0.881) vs 0.862.
+- instructions 0.736 (0.753) vs position 0.546; tools 0.795 (0.742) vs 0.585; code 0.752 (0.729) vs 0.617.
+- multiple choice: chance (0.53-0.61); the pooled probe also transfers poorly between types (leave-one-type-out: math
+  0.89-0.90, instructions 0.52, tools 0.48, MC 0.54-0.58).
+- 'confidence' scores 0.99-1.00 within math and MC, but it is the probability of the RIGHT answer (teacher-forced on the
+  full right reply's answer): it uses the reference and is not available to a real stopper. Flagged in the report from now on.
+Stopper (earliest cut with probe >= t, t per type from development data): ~0% saved on every type at the type allowance on
+the test set, 5% (math, 2-pt allowance): the signal is real (clearly above the cut position on math, instructions, tools,
+code) but not sharp enough at the top for a single threshold to stop safely. Oracle on the same test cuts: 19-22% math, 49%
+instructions, 56% code, 61% tools.
+Next in the queue: lot1 (rebalanced, ~1,500 new questions), probe on both lots with a learning curve and one probe per
+data type (added now); then lot2 and the probe on all three.
+
+**v2 round 3 (v2r3, from v2r2's soup; seed 23), soup step 40 chosen (usual x4 +35.6 / -0.1); fresh x8 +28.3 / -1.9**
+(CI on accuracy -3.6..0.0, saving 24-32%). Against round 2 (fresh +28.6 / -0.8): no more saving, 1.1 points more loss (within
+noise, but no progress). The v2 recipe stalls at ~28% on unseen questions after 3 rounds (~4-5 h per round).
+
+**Stopping probe on ca1 (pkca1: ca1's own cuts and hidden states, CV only):** same picture as rc1-rl-40's. Layer 21 after
+"</think>" chosen in 5/5 folds; out-of-fold AUC ALL 0.844 (position 0.801); math 0.937 / 0.888 (position 0.844 / 0.883),
+instructions 0.729 (0.481), tools 0.764 (0.553), code 0.736 (0.646), multiple choice 0.51-0.62. Stopper ~0-17% saved, mostly
+over the allowance. The internal signal was there before the cut-pair training and RL, at the same strength: training moved
+where the model stops, not what it knows about having the answer.
+v2 stopped after round 3 and rr4 removed from both queues (user). Runtime 2 had reached the end of its queue before lot1 was
+added and released itself; restarted with lot1 + the probe on lot1 only (Drive mount retried once after a consent timeout).
+
+**24 Oct, lot A (label_cuts.py: rc1-rl-40, paragraph-end cuts of right AND wrong replies, <= 10 cuts + the full thinking,
+20 re-answers each; seed 47, 664 clean questions, 922 replies of which 563 right, 4,838 cuts).** Success by share of thinking
+kept (0-20 / 20-40 / 40-60 / 60-80 / 80-<100% / full) and the "perfect stop" (earliest cut at least as good as the natural
+stop: saved; best cut minus natural stop: accuracy gained; an optimistic bound, the max over ~5-10 noisy cuts):
+- arc_easy (10 replies): .59/.43/.50/.50/.50/.77; 70% / +3.5
+- commonsense_qa (64): .49/.58/.33/.63/.50/.57; 54% / +18.0
+- gsm_ic (186): .04/.14/.29/.46/.62/.71; 33% / +3.8
+- gsm_plus (113): .01/.04/.12/.31/.50/.62; 44% / +5.0
+- ifeval_like (180): .81/.68/.73/.69/.86/.68; 17% / +2.7
+- kodcode (247): .57/.59/.61/.61/.58/.63; 74% / +18.3
+- toolace (122): .04/.37/.29/.02/.14/.41; 20% / +1.5
+Readings: with wrong replies included, success at the natural stop is 0.41-0.77 (not 1); math climbs steadily with thinking;
+code and instructions are flat (the thinking barely changes the outcome on average); tools are erratic. The "accuracy gained"
+column is inflated by picking the best of several noisy cuts (code +18 with a flat curve is mostly that). Runtime 2's zoo on
+lot A crashed (log(0) in the cut-position feature; fixed) and the runtime released itself; zoo A queued on runtime 1 after
+lot B and zoo B.
+
+**24 Oct, lot B (label_cuts.py on the ORIGINAL Qwen3-0.6B; seed 48, 639 clean questions, 924 replies of which 522 right,
+8,255 paragraph cuts x 20).** Success by share of thinking kept (0-20 / 20-40 / 40-60 / 60-80 / 80-<100% / full); perfect stop
+saved / accuracy gained (optimistic bound):
+- arc_easy (13): .67/.78/.65/.74/.81/.76; 78% / +18.8
+- commonsense_qa (76): .37/.43/.50/.54/.44/.50; 76% / +27.0
+- gsm_ic (211): .24/.48/.55/.55/.55/.52; 64% / +36.9
+- gsm_plus (119): .20/.48/.53/.54/.49/.49; 71% / +35.1
+- ifeval_like (170): .62/.67/.69/.67/.56/.69; 56% / +9.2
+- kodcode (247): .65/.65/.60/.61/.61/.63; 84% / +20.7
+- toolace (88): .31/.34/.37/.31/.30/.48; 63% / +2.3
+Reading: the untouched model's MATH is as good after 20-40% of its thinking as at its natural stop (0.48-0.55 vs 0.49-0.52):
+the second half of its math reasoning adds nothing on average, whereas rc1-rl-40's math keeps climbing to the end (the
+training already removed that slack). Instructions and code are flat for both. The untouched model has much more to save;
+supports training the learned stop on the original model (option B).
+
+**24 Oct, probe zoo A (lot A, rc1-rl-40; 643 questions, 70% development / 30% held out = 279 test questions).** Layer sweep:
+signal grows with depth, best layer 20 after "</think>" (dev AUC 0.787; early layers ~0.70). AUC on the held-out TEST (ALL):
+position 0.718, answer stability 0.672, the model's OWN confidence (probability of its own greedy answer, fair) 0.790,
+reference-based confidence 0.805; probes: linear 0.803, linear per type 0.794, linear on the real success rate 0.782,
+**MLP 0.852**, MLP on all 28 layers x 2 places 0.843, attention over the last 64 tokens 0.806-0.815. Per type, MLP: math
+0.91/0.91 (own confidence 0.92/0.93: as good), instructions 0.87 (own 0.74), tools 0.88 (own 0.63), code 0.80 (own 0.72).
+Reading: a small non-linear probe on one layer beats every simple signal, mostly on instructions, tools and code; in math
+the model's own confidence in its answer already carries the same information. The trade-off/stopper tables of this first
+report counted loss against "always right" (wrong replies included) and showed nothing; fixed (loss vs the natural stop) and
+redone from the saved scores by the `decide` stage, which then applies the user's rule.
+
+**24 Oct, decision (user's rule) and zoo B.** Zoo B (original Qwen, lot B, 281 held-out questions) TEST AUC: position 0.668,
+own confidence 0.728, MLP 0.826, MLP all layers 0.828 (math 0.92-0.94 vs own confidence 0.87-0.88). Pooled trade-off at
+<= 2 pts (report v2): zoo A linear 42% saved / 1.5 vs own confidence 25
+[output cut at 10,000 characters]

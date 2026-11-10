@@ -1,0 +1,37 @@
+L1080: ## Track 2g: calibrated cuts (confidence vs real outcome) + RL (rlcal), 23 Oct 2026
+L2255: ### 2026-10-26 ~20:40 ? mf1 pairs built, DPO under way; stopV3 seed 1 nearly done
+L3487: ### 2026-10-30 ~15:20 ? lpc-math fresh soups 40/50 (3 seeds, fresh 240 x 8)
+L3496: ### 2026-10-30 ~16:00 ? user: train the spec's runs, compare at matched saving, check the 720 screen set's bias
+L3508: ### 2026-10-30 ~16:10 ? lpc-math soups 60/70; Run A stopped and restarted as lpc-runa2
+L3520: ### 2026-10-30 ~19:15 ? original Qwen full evaluation done (full-base, 2,759 x 8); our small sets vs the full evaluation
+L3537: ### 2026-10-30 ~20:25 ? FULL evaluation of lpc-l2s50e-soup-100; 720 screen set built and checked
+L3556: ### 2026-10-30 ~22:25 ? michal-bida control queued (user)
+L3570: ### 2026-10-30 ~23:40 ? lpc-l2s50e-soup-100 full evaluation per type (computed from both full runs' records)
+L3665: ### 2026-11-01 ~01:30 ? michal-bida's repo read in full (user: "double check")
+L3728: ### 2026-11-01 ~11:00 ? no-fit data step (user: yes)
+L3765: ### 1 Nov 2026 ? section 5 of the visual + a 600-step check queued
+L3894: ### 2 Nov 2026, ~16:30 ? summary of the day: runs, settings, queues
+L3982: ### 2 Nov ~14:15 ? back-filled: the ps1 prompt search results (27 Oct; only its queueing had been logged)
+L4121: ### 3 Nov: grF aligned with the SmartThinker paper (read in full)
+L4132: ### 3 Nov: the DPO pair-strategy screen (task 1), queued on two new runtimes
+L4161: ### 3 Nov: idea parked: weight-space editing (Astra) and a contrastive Wanda test (discussion only, nothing built)
+L4212: ### 3 Nov ~04:00: grA step 50 (720 x4) + grA crash fixed
+L4243: ### 3 Nov: "Chirurgical" edits (built, tested on CPU, queued after the DPO / GRPO screens)
+L4299: ### 3 Nov: the Astra harness (the paper as it was run), built and tested without spending
+L4325: ### 3 Nov: the Astra DATA experiments (idea + sandbox built; run once v1 is chosen)
+L4463: ### 2026-11-04 ? consult1: independent strategy analysis (Ivan / gpt-6-astra, Mac CPU, raw-Qwen data only)
+L4492: ### 4 Nov ~05:20 ? D9 lpd-adar1 step 100 (720 x4)
+L4533: ### 5 Nov
+L4576: ### 5 Nov ? decisions of the day (user), state before the night
+L4940: ### 2026-11-09 ? repair stage opened to any model and to own data only (code, no run)
+L4964: ### 9 Nov: COPD (contrastive on-policy distillation) built and queued (user)
+L5119: ## 10 Nov ? COPD Runs A and C, read from the data (copdanalysis stage, GPU 1)
+L5136: ## 10 Nov ? rpG (rpE-80 continued 80->120, normal method, 8 answers/question, 1484 pairs; IFEval 208/320 pairs)
+L5142: ## 10 Nov ? online DPO (odpo stage, queued on GPU 1 after rpF)
+L5149: ## 10 Nov ? correction: the October rerun (lpk) verdict was too strong
+L5163: ## 10 Nov ? public competitor scan (read-only)
+L5172: ## 10 Nov ? rpI (new round: rpE-80 answers 5,700 new questions x8 itself; 1,579 guard pairs, IFEval 320/320 incl. 152 counting-rule; no-fit 59/80)
+L5178: ## 10 Nov ? rpH (= rpG + IFEval counting rule, 1,500 IFEval questions; 1,598 pairs, 175 counting-rule)
+L5198: ## 10 Nov ? rpI step 120, FULL TEST (2,759 x 8): **41.9% saved / +0.1** (official weighting)
+L5203: ## Items decided 10 Nov that were committed but not logged above (added for the record)
+L5219: ## 10 Nov ? consult5: independent review by the Ivan worker (gpt-6-astra), cap $15 then $30 (user)

@@ -1,0 +1,146 @@
+### Round 2 (on-policy): no-code step 30 answers the 750 unused questions x 8
+
+The round-1 model's replies are about half as long (math mean 661 tokens vs 2,221 for the raw
+model; capped 1% vs 26%), so sampling took ~40 min. Its shortest correct vs its own mean: math 33%,
+code 39%, CSQA 24%, instructions 19%, ARC 18%, tools 16% shorter. 7 contamination drops, 506 pairs
+(424 without code). One DPO pass, 2 samples:
+
+| run | step | tokens saved | accuracy | svamp | mbpp | ifeval | bfcl |
+|---|---|---|---|---|---|---|---|
+| r2, code pairs in | 10 | +55.4% | -4.4 | +68% / -5.0 | +41% / -6.2 | +66% / -7.5 | +37-44% / 0..+3.8 |
+| r2, code pairs in | 20 | +63.7% | -4.0 | +76% / -6.2 | +68% / -8.7 | +60% / -2.5 | +42-47% / -2.5..+7.5 |
+| r2, no code pairs | 10 | +57.6% | -4.5 | +67% / -7.5 | +50% / -11.2 | +68% / -1.2 | +37-43% / -2.5..+6.2 |
+
+Round 2 deepens the saving (42% -> 55-64%) at about -4 points, mostly math and code. Bug found:
+dpo.py never stepped on the last partial batch, so a pass of 317 pairs ended at step 19 without a
+final checkpoint (fixed). Queued: 4-sample checks of r2nc step 10 and r2 step 20; a gentler round 2
+(guard pairs 60%, checkpoints every 5 steps).
+
+**4-sample checks of round 2:**
+- **r2 without code pairs, step 10: +55.5% / -1.7** (within the limit): svamp +64% / 0.0, ifeval +61% /
+  +1.9, bfcl +36-42% / -1.3..+5.0, mbpp +54% / **-10.6**. New best: 13 points more saving than
+  round 1 for 1 point of accuracy; code carries the whole loss.
+- r2 with code pairs, step 20: +62.6% / -3.6 (outside): svamp +75% / -5.0, mbpp +65% / -14.4.
+
+**Gentle round 2 (guard pairs 60%, no code pairs), 2 samples:** step 5 +52.1% / -5.0; step 10 +55.3% /
+-0.9; step 15 +60.6% / -6.1 (swings beyond what 5 steps can do: 2-sample noise). **Step 10 with 4
+samples: +54.3% / -1.1** (svamp +63% / 0.0, ifeval +61% / +2.5, bfcl +36-44% / -0.6..+6.9, mbpp +50% /
+-9.4). About the same as r2 without code (+55.5% / -1.7), slightly safer. Queued: 8-sample recheck of
+it; round 3 on a fresh question draw (seed 1) from it.
+
+**8-sample recheck of the gentle round-2 model (step 10), 240 questions x 8: +54.2% / -1.6** (within the
+limit; 4 samples said +54.3% / -1.1: stable). svamp +64% / 0.0 (23 lost, 23 gained), ifeval +50% / -0.6,
+bfcl +34-42% / -0.6..+5.3, mbpp +60% / -7.5. Mean tokens: svamp 291, mbpp 876, ifeval 337, bfcl 119-128.
+Against Lightning McQwen3 (+43.2% / -0.85, full eval x 8): 11 points more saving for 0.75 point more loss.
+Round 3 started: 1,302 of 1,500 fresh questions (seed 1) not used before; 750 sampled.
+
+### Round 3 (fresh questions, seed 1): the gentle round-2 model answers 750 new questions x 8
+
+Its replies: math mean 528 tokens (0% capped), code 995, instructions 219, tools 143. Shortest correct vs
+its own mean: math 36%, code 34%, ARC 23%, CSQA 22%, instructions 21%, tools 14%. 3 contamination drops,
+420 pairs (no code), guard-heavy mix (0.4 / 0.6), one pass, 2 samples:
+
+| step | tokens saved | accuracy | svamp | mbpp | ifeval |
+|---|---|---|---|---|---|
+| 5 | +59.8% | -0.1 | +72% / -1.2 | +47% / 0.0 | +71% / -2.5 |
+| 10 | +61.6% | -3.4 | +77% / -10.0 | +52% / -6.2 | +65% / 0.0 |
+| 15 | +66.6% | -6.4 | +80% / -7.5 | +57% / -16.2 | +74% / -5.0 |
+| 20 | +69.4% | -4.2 | +82% / -7.5 | +73% / -8.7 | +67% / -3.7 |
+
+**Step 5 with 4 samples: +56.8% / -2.6** (svamp +69% / -0.6, ifeval +59% / +1.3, bfcl +38-45% / -1.3..+3.1,
+mbpp +53% / **-12.5**). Rounds compound on saving (42 -> 54 -> 57-69%) while code erodes round after
+round (-3.7 -> -7.5 -> -12.5 at 4-8 samples); the other benchmarks hold. Code is the bottleneck.
+Queued: diagnosis of the code losses; a round with code "stopped too early" pairs (`code_pairs.py`).
+
+**Code diagnosis (gentle round-2 model, 240 x 8 vs the raw model):** MBPP+ lost 40 answers and gained
+16; every loss is a wrong program (none cut by the cap, none unreadable). Thinking on the lost rows:
+1,420 -> 530 tokens. Typical loss: `next_smallest_palindrome` returns n when n is already a palindrome;
+the thinking "checks" that very case and accepts it ("what if n is already a palindrome? ... return
+it. That's correct."). Shorter thinking keeps a check but makes it shallow: the stricter MBPP+ tests
+catch the edge cases.
+
+**Code "stopped too early" pairs (`code_pairs.py`, round-3 answers of the gentle round-2 model):** 32
+code questions with a correct reply, 2 replies each, cut at 25/50/75% of the thinking, 4 re-answers:
+wrong after the cut 24/60 (25%), 15/60 (50%), 10/60 (75%). 30 hard pairs, added to round 3's 420
+(199 shorten, 221 guard): code is 7% of the pairs.
+
+**Code round (round-3 pairs + 30 code too-early pairs, from the gentle round-2 model), 2 samples:**
+step 5 +56.0% / -2.0; step 10 +57.5% / -4.0; step 15 +60.1% / -6.4; step 20 +64.5% / -6.4.
+**Step 5 with 4 samples: +53.2% / -0.1** (svamp +67% / +3.1, ifeval +53% / +3.7, bfcl +37-44% /
+-0.6..+5.6, mbpp +49% / -10.0). Against round 3 step 5 without code pairs (+56.8% / -2.6, mbpp -12.5):
+3.6 points less saving, 2.5 points more accuracy; code itself barely moves (-10.0 vs -12.5, within
+noise). Queued: 8-sample recheck; a bigger code dose (code-r3b: ~600 code questions answered 4x).
+
+**8-sample recheck of the code round, step 5: +53.6% / -2.9** (4 samples said +53.2% / -0.1). svamp +66% /
+-1.9, ifeval +51% / -3.4, mbpp +54% / -8.1, bfcl +35-43% / -0.3..+5.0. The 4-sample -0.1 was luck plus
+picking the sweep's best on the same questions. Best confirmed with 8 samples stays the gentle round 2
+(step 10): +54.2% / -1.6. Rule from now on: compare finalists at 8 samples only.
+
+**Bigger code dose (code-r3b):** all code questions of both draws answered 4x by the gentle round-2 model
+(300 + 133; 18 contamination drops): 167 code too-early pairs (28 + 102 + 37) with round 3's 420.
+2 samples: step 5 +55.2% / -3.6; step 10 +55.5% / -3.4; step 15 +60.3% / -2.2; step 20 +65.3% / -4.7.
+Step 15: 4 samples +60.4% / -2.7 (mbpp -13.7); **8 samples +60.9% / -3.0** (svamp +76% / -6.2, mbpp +61%
+/ -7.8, ifeval +57% / +0.6, bfcl +36-44% / -0.6..+5.3): at the limit. Code pairs, even 167 of them, do
+not move code (-7.8 vs -7.5 without); this time math pays. Frontier at 8 samples:
++54.2/-1.6 (r2g step 10), +53.6/-2.9 (code-r3 step 5), +60.9/-3.0 (code-r3b step 15).
+
+**8-sample checks (continued):** round 3 step 5 (no code pairs): **+56.9% / -1.9** (svamp +69% / -3.1,
+mbpp +57% / -7.5, ifeval +55% / +0.6, bfcl +36-44% / -0.9..+6.2). Weight-space midpoint of r2g step 10
+and code-r3b step 15 (`merge.py`, 0.5 + 0.5): +56.7% / -2.4: it lands between its two ends, unlike the
+night-1 merges of unrelated adapters.
+
+| model (240 q x 8) | tokens saved | accuracy |
+|---|---|---|
+| r2g step 10 (round 2, gentle) | +54.2% | -1.6 |
+| **bon-dpo-r3 step 5 (round 3)** | **+56.9%** | **-1.9** |
+| soup r2g + code-r3b | +56.7% | -2.4 |
+| code-r3 step 5 | +53.6% | -2.9 |
+| code-r3b step 15 | +60.9% | -3.0 |
+| night-1 best (MVT on MC + math whole x2) | +37.1% | -0.6 |
+
+### Fresh test set (to remove the selection bias)
+
+All choices so far (which checkpoint, which variant) were made on `questions_40`, the same 240 questions
+the results are reported on. `questions_fresh20261022`: 40 questions per benchmark part drawn at random
+with seed **20261022** (`subset_questions.py --per-dataset 40 --seed 20261022 --exclude questions_40`),
+none of them in `questions_40`, rebuilt identically from the seed. Finalists are scored there with 8
+samples against the raw model on the same set (`track.py fresh`), runs `runs/mvtf/f8-*`.
+
+**Round 4 (seed-2 draw, from round 3 step 5):** 1,202 of 1,500 fresh; replies math 432 tokens, code 1,207,
+instructions 230, tools 142. 424 pairs. 2 samples: step 5 +59.9 / -4.0; step 10 +62.1 / -4.7; step 15
++66.1 / -2.4. Step 15: 4 samples +66.6% / -1.1; **8 samples +65.4% / -2.4** (svamp +80% / -2.8, mbpp +68%
+/ -10.0, ifeval +58% / -0.3, bfcl +41-48% / -0.3..+9.4).
+
+**The mvt-pertype session's held-out test of our models (questions 41-80 of every part, 8 samples; read
+from its Drive folder with `track.py peek`):** round 1 no-code step 30 **+43.6% / -0.9**; r2g step 10
++53.1% / -2.7; r2nc step 10 +53.4% / -2.8. Savings hold on unseen questions; accuracy is about 1 point
+worse than on questions_40, the selection effect. Per benchmark (r2g): svamp -7.5, ifeval -4.1, mbpp
+-1.6: single-benchmark cells swing +/-10 at 40 questions.
+
+### MBPP-free chains and a clean code source (queued)
+
+Every model of rounds 1-4 descends from the gentle SFT step, whose 466 rows included ~74 MBPP tasks
+(MBPP minus MBPP+, near-copies dropped); "DPO from raw" used MBPP pairs. MBPP+ is built from MBPP, so to
+leave no doubt, two MBPP-free families of two rounds each (`track.py clean`): A, no code data at all;
+B, plus the MBPP-like slice of KodCode-Light-RL-10K as right-beats-wrong pairs only.
+
+KodCode against MBPP+ (CPU, Qwen3 tokenizer; medians): MBPP+ task 17 tokens, reference solution 29,
+3 base asserts (plus EvalPlus's extra inputs); MBPP minus MBPP+ 16 / 48 / 3; all usable KodCode (6,171)
+99 / 114 / 7-8 asserts, harder topics (graphs, matrices, LeetCode); **the MBPP-like slice (task <= 45,
+solution <= 90 tokens): 907 tasks, 28 / 63 / 6-7**, topics close to MBPP+ (lists 53 vs 45%, numbers 59 vs
+46%, strings 29 vs 19%). KodCode reports its own decontamination against standard benchmarks; our 8-gram
+check against all 2,759 test questions runs on top.
+
+**Runtime 2 (training randomness and fresh set):**
+- Round 2 retrained with DPO seed 1 (same pairs): 2 samples +49.7% / -3.6 (original step 10 at 2 samples:
+  +55.3% / -0.9).
+- Round 4 retrained with DPO seed 1: 2 samples +68.0% / -7.5 (original step 15: +66.1% / -2.4).
+- Fresh set (seed 20261022, 240 x 8): **round 4 step 15: +63.2% / -3.9 (outside)**; round 2 retrain:
+  +50.9% / -3.0 (at the limit).
+Training randomness at this size is large (several points of accuracy between seeds), and round 4 is past
+the limit on unseen questions: the late rounds push too far.
+
+### Where the accuracy goes at 60%+ (fresh questions), and the balanced round (queued)
+
+
+[output cut at 10,000 characters]

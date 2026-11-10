@@ -1,0 +1,4 @@
+rpe-80 -> repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest wrong, own questions only), chosen answer prefers a re-check of the question, ifeval judged on thinking only ? constant lr ? 1 seed
+rpe-80full -> repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest wrong, own questions only), chosen answer prefers a re-check of the question, ifeval judged on thinking only ? constant lr ? 1 seed ? full test 2,759 x 8
+rpi-120 -> rpE step 80 answers 5,700 NEW questions x8 itself; 1,579 guard pairs (+ IFEval counting rule); 40 steps ? Screen 720 x 4
+rpi-120full -> full test 2,759 x 8

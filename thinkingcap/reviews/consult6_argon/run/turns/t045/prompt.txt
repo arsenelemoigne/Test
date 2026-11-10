@@ -1,0 +1,89 @@
+The key lists 60 Google models (no "Carbon", no Astra): the strongest text model is gemini-4-argon ($2/M in, $10/M out on
+OpenRouter's list: 5x cheaper than Astra). Not a strict reproduction (the paper used Astra); Astra via Ivan follows with the
+identical harness, for the comparison. Driver: --provider google (Google's OpenAI-compatible endpoint, reasoning_effort high);
+one test call answered 391; Argon's thinking tokens are only in total_tokens (223 vs 58 + 7) and billed as output, so the
+count takes output = total - prompt. Cap $15 counted. Key only via Colab Secrets GOOGLE_API_KEY (cell 5). Queued commented
+at the end of GPU 1: astra g1 (Argon, 10 passes), then a1 (Astra via Ivan).
+- ~13:40 **grC step 50** (GRPO, no leash: KL 0): **-0.3% / +0.4** (svamp +2 / -0.2, mbpp +3 / +3.5, ifeval -8 / -1.3, one
+  function -1 / +0.6, several +4 / -2.1, no fit -1 / -0.2). Like grA / grB at step 50: unchanged from the raw Qwen. Both
+  runtimes resumed after the ~12:40 reconnect (grA from step 50 on GPU 1, grC from its last block on GPU 2).
+- ~15:30 **grA step 100: -2.3% / -1.2** (svamp -1 / -2.5, mbpp -4 / +2.5, ifeval -3 / -2.5, one function -4 / -0.8, several 0 / -3.6,
+  no fit 0 / -2.3); **grC step 100: -3.0% / -1.0** (svamp +1 / +0.4, mbpp -5 / -1.2, ifeval -4 / -1.7, one function -3 / -1.9,
+  several -1 / -4.2, no fit -7 / +1.2). At the full penalty (? 0.05 reached at step 100) both think slightly LONGER and lose
+  ~1 point. Reading: the khudgins penalty is tiny next to the right / wrong reward (at most 0.05 x min(1, thinking / 2048):
+  ~0.01 for a typical 400-token answer, against 1.0 for being right), so 12 questions x 8 answers a step give almost no
+  length signal; the reward is nearly pure "be right" and GRPO drifts. grB (4x penalty) and grE (lr x2.5) test exactly
+  this lever; step 150 of grA / grC next.
+- ~15:45 (user: don't run useless GRPO): queued GRPO changed. grD (gate) -> **grS** = standard GRPO scaling (no Dr. GRPO),
+  penalty 0.05 (rescaling alone); grE (lr x2.5) -> **grP** = standard scaling + penalty 0.5 reached at step 50. grB (0.2,
+  running), grF (SmartThinker, standard scaling) unchanged; grA / grC finish their 150 steps as the confirmation.
+- ~17:00 **grA step 150 (final): -5.8% / -0.9** (svamp -5 / -1.0, mbpp -1 / +1.0, ifeval -13 / -3.3, one function -3 / 0.0,
+  several -5 / -1.3, no fit -4 / +1.0); **grC step 150 (final): -6.7% / -0.3** (svamp -5 / -1.5, mbpp -14 / +1.5, ifeval -7 / -1.7,
+  one function -2 / 0.0, several +2 / 0.0, no fit -5 / +0.8). Confirmed: with Dr. GRPO and the 0.05 penalty, GRPO from the
+  raw Qwen makes thinking LONGER over training (step 50 / 100 / 150: grA +1.5 / -2.3 / -5.8%, grC -0.3 / -3.0 / -6.7%) at
+  about -0.5 to -1 point: the "be right" reward dominates and longer thinking is what it rewards. The leash (grA KL 0.04 vs
+  grC 0) changes little. grS / grP (standard scaling; 10x penalty) test the fix. GPU 1: grB resumed; GPU 2: D9 Ada-R1 DPO.
+- ~18:00 **grB step 100** (4x penalty, full at step 100): **+1.2% / 0.0** (svamp +2 / +0.2, mbpp +1 / +2.3, ifeval +3 / -1.5, one
+  function +1 / +0.4, several -2 / -3.4, no fit -3 / +0.2). The 4x penalty stops the drift to longer thinking seen in grA / grC
+  (-2.3 / -3.0% at step 100) but does not shorten either. D9 lpd-adar1 (GPU 2): 30,049 pairs (17,870 questions; 2,844 never
+  solved, 11,152 always solved), ~89 pairs a step over 339 steps, training.
+- ~18:15 (user): **GRPO stopped.** No GRPO run shortened thinking (grA / grC finals 6-7% longer, grB +1.2% at step 100).
+  grB finishes its 150 steps; grS, grP, gs0 and grF (SmartThinker) are taken out of the queues (kept as comments). The
+  GPUs now run the DPO pair-strategy screen only.
+- ~19:30 **grB step 150 (final): -0.6% / -0.7** (svamp 0 / -1.9, mbpp -4 / +0.6, ifeval +1 / -1.0, one function -2 / -0.6,
+  several +2 / -0.8, no fit -1 / -0.4). GRPO screen closed: no run shortened thinking. **Chirurgical smoke chs0 failed** in its
+  gen phase: save_candidate built the edited copy on the GPU and kept ~3.7 GB, so vLLM found 18.28 < 18.73 GB free. Before
+  that, every phase worked (200 fresh answers: 102 capped, 63 right; 10 loops -> 5 pairs; probe; mech; the edited head
+  L21H8 survives bfloat16 100%). Fixed (copies built on CPU, memory freed). ch1 started with the old script (its mine phase:
+  617 loop-prone questions + 2,383 others); a resume line with the fixed script follows it in the queue.
+- ~20:30 **Chirurgical ch1 on real data (raw Qwen), reads and checks done:** 3,000 fresh answers (617 loop-prone questions +
+  2,383 others): 121 capped (4.0%), 2,027 right; 50 looping questions (34 code, 9 instructions, 7 math) -> only 27 pairs
+  (13 to find, 14 to check) after the novelty filter; 396 normal answers; dev 512, holdout 1,024. Probe GO on the copy heads
+  (direction split-half cosine up to 0.71). **The same copy heads as the hand-written Mac pairs:** L16H14 0.65 vs 0.39, L18H5
+  0.42 vs 0.18, L21H8 0.43 vs 0.19 (weaker contrast than the 0.58 vs 0.15 of the clean pairs). Writers L26, L27, L25, L19.
+  **Mech: almost nothing is selective on real loops.** Heads x0 / x0.5: loop text only -0.002 to -0.009 nats/token (gate
+  -0.01) -> dropped. Direction L26+L27: a1 drop, **a2 PASS** (loop -0.014 vs productive -0.008, normal -0.011: barely
+  selective), a4 / a6 drop (productive and normal text fall as much as loops), random a6 drop. Reading: the paper's mechanism
+  is there, but on our model's real loops it is weak and tangled with normal text; only dir a2 goes to the paired
+  generation test (the resume line runs it with the fixed script).
+- ~21:30 **Chirurgical ch1 FINISHED (raw Qwen, the paper's loop recipe, scripted): no edit kept.** ch1 failed in gen as
+  expected (old script); the resume line ran gen with the fix. Paired dev test (512 questions, same seeds): **dir L26+L27 a2:
+  accuracy 72.7 -> 68.9 (-3.7 +- 1.6), thinking saved +3.0% (-0.1% on answers both finished), capped 1.2% -> 2.7%** (worse);
+  the random control a6: -0.8 +- 1.6, +3.7% saved, capped 1.8%. pick: none (rule: saves at no worse than -1 point). The
+  edits survive bfloat16 (98-99% of entries, 100% of their size). **Conclusion:** the paper's loop fix does not transfer to
+  the raw Qwen3-0.6B: its real loops are rare (4% of answers even on loop-prone questions), the loop signal is weak and
+  tangled with normal thinking, and the one edit that passed the likelihood checks lost accuracy and created MORE cut
+  answers. The random direction did better than the "loop" direction. Astra may still find something the fixed recipe
+  cannot (experiment 3 stays queued as a reminder).
+- **Astra smoke as0 (GPU tools, no API): all three work on Colab** (paired generation on 6 practice questions with per-type
+  summaries; a teacher-forced read with log-probs, top-k, hidden states, MLP inputs and attention; the kernel over 311
+  tensors). GPU 1 now on D1 lpd-dast; GPU 2: D9 Ada-R1 at step 150 / 338.
+- ~24:00 (user): **Astra-style experiment A on v1 NOW, with Gemini 4 Argon on the user's Google key (EUR 15 -> cap $16),
+  50 passes.** GPU 1: finish D1 DAST, then polans pv1 (v1 = lpc-bidax5q-s0 answers every training question x4, both halves),
+  astradata dv1 (raw: the 10-answer file lupin-all-dp13-nofit1-tools1-code1-nofit2 first, the 4-answer top-ups after, each
+  question from the first file that has it; + v1's answers; holdout removed), astra gv1 (on-top: Argon edits v1's own
+  weights; objective in the prompt: > 50% fewer thinking tokens than the RAW model at < 1 point lost; "raw + DPO = v1,
+  ~47% / -0.5"). GPU 1's other DPO runs (D2, D3, D4, D5, D10, re-scores, bidax6s) moved to the end of GPU 2's queue.
+- ~00:30 Astra harness, monitoring (user: keep what Astra sees and thinks; spot red flags): Argon's thought summaries come
+  back inside <thought> tags when thinking_config include_thoughts is set (Google refuses it together with
+  reasoning_effort; tested): saved per turn to thoughts.md, kept out of the conversation (as the paper). Logs are written
+  straight to Drive (MyDrive/thinkingcap-mvtf/runs/astra/<name>/: turns/tNNN/prompt.txt = what it saw, thoughts.md, answer.md,
+  run.json = cost; messages.json = the whole context; notes.md = its notebook; final_answer.md), so nothing is lost with a
+  runtime. Red-flag counters per turn: no_block, refused, forward_failed, kernel_restarts, repeated_block (possibly stuck),
+  code_errors; printed on the runner's status line.
+- ~01:15 Astra harness for the Argon run (user): Google's OpenAI-compatible endpoint reports no cached tokens; the NATIVE
+  generateContent API does (test: 27,160 of a repeated 29,214-token prompt cached = 93%, at $0.10/M instead of $2/M) and
+  returns thought parts separately. --provider google now uses the native API with the exact cost (uncached / cached /
+  thinking, doubled above 200k). Conversation restart at 872k tokens (user: the paper's model_context_window), results cut
+  at 10,000 characters (user: as the paper). The stop's worst case for the next call counts the part the last call had
+  cached at the cached price (520k context, 500k cached: $0.34).
+- ~01:40 (user): Argon also gets HOW v1 WAS MADE. astradata --ad-v1-train lpc-bidax5q: data/v1_training/ = recipe.md (the
+  DPO settings, pair rules, DATASET.md sections 4-5), pairs.jsonl (every v1 training pair decoded: question, chosen,
+  rejected, kind, token counts; holdout removed), checkpoints/step-10 ... step-330 + final (the LoRA adapters every 10
+  steps, loadable with safetensors to see what DPO changed layer by layer). Forward passes accept
+  "model": "checkpoint:step-N" (merged on the raw Qwen), for generate and teacher_forced.
+- ~02:00 (user): **Astra on v1 waits for the end of the DPO screen** (v1's answers, the data folder and the Argon run are
+  parked at the end of GPU 1's queue). DPO screen rebalanced: GPU 1 = D1 dast (running), D2 hard, D3 route, D4 budget,
+  D5 margin, D10 l2s50e (~26 h); GPU 2 = D9 adar1 (running), D7 st1 + 2stage, D8 math, D6 simright, bidax6p, re-scores,
+ 
+[output cut at 10,000 characters]

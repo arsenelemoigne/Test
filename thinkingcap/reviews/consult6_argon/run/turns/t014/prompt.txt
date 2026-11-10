@@ -1,0 +1,104 @@
+Conclusion of both repairs: no technique keeps 60%+ within -2 on unseen questions; the usual-set score is optimistic by
+2-5 points for every 60%+ candidate (RFT: -0.2 usual vs -5.5 fresh). Math (SVAMP) is always the main loss. Runtime 2's
+queue is done (end).
+
+## Track 2g: calibrated cuts (confidence vs real outcome) + RL (rlcal), 23 Oct 2026
+
+**rc1 cut calibration (ca1 = models/ca1-soup-10 answering a new draw, seed 31: 1,000 questions + 300 KodCode x8; 904
+right replies kept, the longest right one per question; each cut at 1/5/10/20/35/50/65/80% of its thinking, "</think>"
+closed there, 20 re-answers per cut = 144,640 answers; 2,901 of 7,232 cuts right 20/20). Confidence = per-token
+geometric-mean probability of the answer the full reply wrote, teacher-forced right after the cut.**
+
+Confidence bins -> real share of right re-answers (n = cuts):
+- arc_easy: 0.6-0.8 -> 0.18 (32); 0.8-0.9 -> 0.57 (16); 0.9-1.0 -> 0.99 (225). ECE 0.09
+- commonsense_qa: 0.0-0.2 -> 0.41 (36); 0.2-0.6 -> 0.00-0.01 (169); 0.6-0.8 -> 0.25 (90); 0.8-0.9 -> 0.61 (102); 0.9-1.0 -> 0.99 (483). ECE 0.16
+- gsm_ic: 0.0-0.6 -> 0.00 (975); 0.6-0.8 -> 0.05 (149); 0.8-0.9 -> 0.22 (87); 0.9-1.0 -> 0.80 (453). ECE 0.34
+- gsm_plus: 0.0-0.6 -> 0.00 (807); 0.6-0.8 -> 0.13 (134); 0.8-0.9 -> 0.32 (27); 0.9-1.0 -> 0.86 (216). ECE 0.34
+- ifeval_like: 0.2-0.4 -> 0.84 (132); 0.4-0.6 -> 0.78 (330); 0.6-0.8 -> 0.87 (48); 0.8-0.9 -> 0.84 (21); 0.9-1.0 -> 0.94 (21). ECE 0.31
+- kodcode: 0.4-0.6 -> 0.58 (35); 0.6-0.8 -> 0.63 (287); 0.8-0.9 -> 0.64 (496); 0.9-1.0 -> 0.87 (926). ECE 0.13
+- toolace: 0.0-0.2 -> 0.17 (69); 0.2-0.4 -> 0.57 (77); 0.4-0.6 -> 0.53 (71); 0.6-0.8 -> 0.61 (81); 0.8-0.9 -> 0.54 (120); 0.9-1.0 -> 0.92 (510). ECE 0.11
+
+Per source (allowance: math 0.5 pt, code 1, others 2): confidence threshold c / saved / real loss | outcome rule
+(earliest cut right 20/20) saved / loss:
+arc_easy c 0.9: 83% / 1.3 | 80% / 0.0; commonsense_qa c 0.95: 54% / 0.2 | 56% / 0.0; gsm_ic no c | 30% / 0.0;
+gsm_plus no c | 26% / 0.0; ifeval_like c 0.7: 7% / 1.7 | 48% / 0.0; kodcode no c | 62% / 0.0; toolace no c | 58% / 0.0.
+
+Reading: the model's confidence in its own answer is informative only at the top and only for multiple choice; for
+math it is overconfident (0.98 -> 0.80-0.86 right), for instructions flat (0.3-0.9 all ~0.8 right: the probability of
+one wording, not of being right), for code and tools weak. No confidence threshold keeps math, code or tools within
+their allowance. The real outcome, however, shows large safe cuts: code 62%, tools 58%, instructions 48%, math 26-30%
+of the reply cut with every re-answer still right. First rc1 pairs (confidence only: 142 cut pairs, mostly multiple
+choice) were dropped before training finished; rc1 reruns with the stopping rule per type: confidence where a
+threshold keeps the allowance (arc, csqa, ifeval-like), else the real outcome (gsm_ic, gsm_plus, kodcode, toolace).
+Cut pairs: gsm_ic 110 shorten / 140 hard, gsm_plus 74 / 92, kodcode 169 / 100, toolace 89 / 33, arc 32 / 3, csqa 71 / 26,
+ifeval-like 7 / 3; plus guard pairs (bon_pairs, math shorten 0) and 133 KodCode right-beats-wrong.
+Process notes: grading 144,640 answers serially took > 1 h (code tests; GPU idle) -> check_vllm grades with 16 threads
+(~15 min); a killed check_vllm left an orphan vLLM engine holding 10.5 GB (RL smoke test went out of memory).
+
+**v2 round 1 (v2r1, from the raw model; seed-21 draw, 1,500 questions + 300 KodCode x8; chain recipe + KodCode
+right-beats-wrong + verified MVT cuts for tools and instructions; 3-seed soups), questions_40 x4:** step 30 +19.3 / +1.5
+(chosen), step 40 +18.7 / +3.1. **Step 30 usual x8: +16.3 / +0.8** (bfcl +13-18% / 0..+0.6, ifeval +20% / +0.6, mbpp +8% /
+-0.3, svamp +21% / +2.5); **fresh x8: +14.8 / -0.2** (bfcl irrelevance +16% / -1.9, multiple +14% / -3.1, simple +14% /
+-2.8, ifeval +15% / +1.6, mbpp +6% / +1.6, svamp +23% / -1.2). A gentle first round from the raw model (as A1 step 10,
++17.7 / +1.1): almost free in accuracy, little saving. v2r2 started from its soup.
+rc1 DPO with the per-type rule: 1,489 training pairs (48 held out), mix shorten 0.45 / guard 0.29 / hard 0.26; seed 0
+94 steps, pairs ordered right 71-86%.
+
+**rc1 cal-cut DPO (per-type stopping rule; 1,489 training pairs: shorten 691, guard 451, hard 397; 3 seeds, soups), choosing
+set (questions_val20261023) x4:** ca1 (start, reference) +44.1 / -1.8 [mbpp +56% / -6.2, svamp +49% / +0.6, ifeval +30% / 0.0,
+bfcl +34-41% / -3.1..-0.6]; soup step 10 +52.5 / -0.1; step 20 +54.0 / -0.8; **step 30 +55.1 / -0.6 (chosen)** [svamp +63% /
+-2.5, mbpp +66% / +1.3, ifeval +40% / -1.3, bfcl +40-50% / -1.2..+1.9].
+- **rc1-soup-30 usual x8: +58.0 / -3.1** (bfcl irrelevance +48% / -4.4, multiple +45% / +3.1, simple +38% / -0.3; ifeval +53% /
+  -0.6; mbpp +61% / -6.9; svamp +69% / -4.4).
+- **rc1-soup-30 fresh x8: +55.6 / -2.9** (bfcl irrelevance +46% / -4.4, multiple +42% / -5.0, simple +39% / +0.3; ifeval +45% /
+  -1.9; mbpp +64% / -1.6; svamp +66% / -5.0). Against ca1 on the same fresh set (+48.6 / -1.8): +7.0 points of saving for
+  -1.1 point; code better (mbpp 53% / -2.8 -> 64% / -1.6), math and tools worse (svamp -4.1 -> -5.0; bfcl ~-0.6 -> -3.0 pooled).
+  On the choosing set the same model looked -0.6: x4 noise and picking the best of 3 soups. Clean (no MBPP), and on the
+  same saving/accuracy frontier as the grey-zone rep4 blend 50/50 (+57.3 / -2.4) and the balanced round (+53.8 / -2.5).
+- RL started from rc1-soup-30: pool of 782 questions solved >= 4/8 by ca1; 32 questions x 8 per step; first steps: accuracy
+  on its training answers 80-89%, mean thinking 200-340 tokens.
+
+**rc1 RL (from rc1-soup-30; reward right x (1 - alpha_q sigmoid(z_thinking)), alpha 0.15 x solve rate, batch-normalized
+advantages, KL 1e-3, lr 1e-5, LoRA r16, 32 questions x 8 per step, pool = the 782 round questions solved >= 4/8, repeated
+~every 24 steps), choosing set x2 quick checks:** block 1 (step 20) +54.2 / -0.2 [svamp +59% / -2.5, mbpp +64% / 0.0,
+ifeval +44% / +2.5, bfcl +43-49% / -3.7..+1.2]; block 2 (step 40) +51.3 / +0.9 [5 of 6 parts exactly equal to the base's
+accuracy: suspicious, x2]; block 3 (step 60) +48.5 / -0.6 [svamp +49% / -1.2, mbpp +56% / +1.3, ifeval +42% / -2.5, bfcl
++42-50% / -3.7..+3.7]. Mean thinking on its training answers rose from ~200-250 tokens (block 1 start) to 400-500 (block 4)
+at 82-96% right: with an already short model and repeated questions, the correctness reward outweighs alpha 0.15 and RL
+buys accuracy back with length. Block 2 hit CUDA out of memory on a long reply (vocabulary-wide log-probs per position;
+fixed: chunked, recomputed log-probs). RL stopped after block 3 (saving falling, accuracy flat); the DPO soup and blocks 1-3
+go to the x4 choice on the choosing set and the winner to x8 usual + fresh. Next RL (rr4, on the round-4 50/50 blend):
+fresh contamination-checked questions (seed 41, ~900 per source + unused KodCode, each seen about once), alpha 0.3.
+
+**rc1, every version scored on the fresh set x8 (user's call: no choosing set; so the fresh set now also chooses):**
+- DPO soup 30: +55.6 / -2.9 (svamp +66% / -5.0, mbpp +64% / -1.6, ifeval +45% / -1.9, bfcl +39-46% / -5.0..+0.3)
+- + RL 20 steps: **+54.8 / -3.7** (svamp +65% / -6.6, mbpp +63% / -1.3, ifeval +45% / -4.4, bfcl irr +45% / -3.7, mult +41% /
+  -3.7, simple +38% / 0.0). Choosing set x4 had said +57.3 / -0.2.
+- + RL 40 steps: **+53.9 / -2.1** (svamp +65% / -4.1, mbpp +59% / -1.9, ifeval +46% / -0.6, bfcl irr +45% / -1.2, mult +41% /
+  -4.1, simple +39% / -0.3). Choosing set x4: +54.8 / -0.9.
+- + RL 60 steps: **+49.6 / -3.4** (svamp +58% / -3.7, mbpp +58% / -4.7, ifeval +38% / -2.8, bfcl irr +44% / -2.2, mult +42% /
+  -4.4, simple +39% / -0.3).
+Reading: RL with alpha 0.15 on repeated questions does not move rc1 off its frontier on unseen questions: the four versions
+spread over -2.1 to -3.7 at 50-56% saved, within about two noise widths (+/-1.5 pts each at x8 on 240 questions), and the
+choosing set (x4) was 1.2-3.5 points more optimistic than the fresh set for every version. Best on fresh: RL 40 steps,
++53.9 / -2.1 (clean). Still to score: DPO soups 10 and 20.
+
+**MBPP audit of the 74 MBPP rows the gentle best-of-8 SFT trained on (runs/bon/select-r1/sft.jsonl; the only MBPP exposure of
+the rounds-1-5 / balanced / repair lineage: every DPO round used --drop-sources mbpp_train), mbpp_audit.py vs the 378 MBPP+
+tasks (runs/audit/mbpp74.txt):** 8-gram share >= 30%: 0; exact 13-word run: 2; same function name: 1; wording similarity
+(difflib on words) >= 0.8: 18. Read by hand, the closest pairs are sibling tasks built on the same template with a
+different operation, not the same problem: add vs multiply nested tuples (13-word run), n cheapest vs n most expensive
+items (13-word run), recursive gcd vs number of divisors (same-name flag), sum of even vs sum of odd numbers in a range
+(0.88), rhombus vs rectangle area, first even vs first odd number. No training row found to be an MBPP+ task under
+another id (the near copies, e.g. change_date_format ~ Mbpp/427, had been dropped by the 50% check before training).
+The lineage saw MBPP-style training tasks, some of them siblings of MBPP+ tasks; it did not see MBPP+ tasks.
+
+**v2 round 2 (v2r2, from v2r1's soup; seed 22), soups x4:** step 10 +20.9 / +0.2; 20 +23.6 / -0.6; 30 +27.3 / +0.6; 40 +28.6 /
+-0.6 (chosen). **Step 40 usual x8: +31.2 / -0.9; fresh x8: +28.6 / -0.8** (bfcl irrelevance +25% / -2.2, multiple +25% /
+-3.7, simple +22% / +0.6; ifeval +33% / +0.6; mbpp +21% / -0.3; svamp +35% / -1.6). v2r3 started.
+
+**rc1 DPO soups 10 and 20 on the fresh set x8:** soup 10 **+48.6 / -3.0** (svamp +62% / -6.2, mbpp +55% / -2.2, ifeval +35% / -1.9,
+bfcl irr +38% / -3.4, mult +38% / -2.2, simple +34% / +0.3); soup 20 **+54.8 / -4.0** (svamp +65% / -5.6, mbpp +63% / -4.7, ifeval
++46% / -3.1, bfcl irr +43% / -4.7, mult +40% / -3.7, simple +37% / +0.6). All seven rc1 versions on the fresh set: +48.6..+55.6%
+saved at -2.1..-4.0 (soup 10 -3.0, soup 20 -4.0, soup
+[output cut at 10,000 characters]

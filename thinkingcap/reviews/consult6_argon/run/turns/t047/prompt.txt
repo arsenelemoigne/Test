@@ -1,0 +1,15 @@
+If IFEval think cut=50% (tot saved=31.0%) & BFCL tot saved=38% -> SVAMP & MBPP+ must average 61.8% total saved!
+If IFEval think cut=50% (tot saved=31.0%) & BFCL tot saved=41% -> SVAMP & MBPP+ must average 60.8% total saved!
+If IFEval think cut=50% (tot saved=31.0%) & BFCL tot saved=45% -> SVAMP & MBPP+ must average 59.4% total saved!
+If IFEval think cut=60% (tot saved=37.2%) & BFCL tot saved=38% -> SVAMP & MBPP+ must average 59.9% total saved!
+If IFEval think cut=60% (tot saved=37.2%) & BFCL tot saved=41% -> SVAMP & MBPP+ must average 58.9% total saved!
+If IFEval think cut=60% (tot saved=37.2%) & BFCL tot saved=45% -> SVAMP & MBPP+ must average 57.5% total saved!
+If IFEval think cut=65% (tot saved=40.3%) & BFCL tot saved=38% -> SVAMP & MBPP+ must average 58.9% total saved!
+If IFEval think cut=65% (tot saved=40.3%) & BFCL tot saved=41% -> SVAMP & MBPP+ must average 57.9% total saved!
+If IFEval think cut=65% (tot saved=40.3%) & BFCL tot saved=45% -> SVAMP & MBPP+ must average 56.4% total saved!
+If IFEval think cut=70% (tot saved=43.4%) & BFCL tot saved=38% -> SVAMP & MBPP+ must average 57.8% total saved!
+If IFEval think cut=70% (tot saved=43.4%) & BFCL tot saved=41% -> SVAMP & MBPP+ must average 56.7% total saved!
+If IFEval think cut=70% (tot saved=43.4%) & BFCL tot saved=45% -> SVAMP & MBPP+ must average 55.2% total saved!
+If IFEval think cut=75% (tot saved=46.5%) & BFCL tot saved=38% -> SVAMP & MBPP+ must average 56.6% total saved!
+If IFEval think cut=75% (tot saved=46.5%) & BFCL tot saved=41% -> SVAMP & MBPP+ must average 55.5% total saved!
+If IFEval think cut=75% (tot saved=46.5%) & BFCL tot saved=45% -> SVAMP & MBPP+ must average 53.9% total saved!

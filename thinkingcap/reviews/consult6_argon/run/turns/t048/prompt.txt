@@ -1,0 +1,2 @@
+SVAMP simulation: {'in_sample_diff': np.float64(-4.3174999999999955), 'true_diff': np.float64(-11.967408339555249), 'optimism_bias': np.float64(7.649908339555253), 'mean_budget_pct': np.float64(54.383), 'mean_saved_think_pct': np.float64(45.617)}
+Code simulation: {'in_sample_diff': np.float64(-3.3174999999999955), 'true_diff': np.float64(-9.235683085628175), 'optimism_bias': np.float64(5.918183085628179), 'mean_budget_pct': np.float64(37.47), 'mean_saved_think_pct': np.float64(62.53)}

@@ -1,0 +1,16 @@
+L2800: - dp4 split over two GPUs (user): GPU 1 poolfix half a then select + check; GPU 2 poolfix half b (before tsk1). Halves h
+L2815: fixed (math thinking too long, mostly the gsm8k_easy format bug; no-fit tool questions too easy, 97% vs 79%). tsk1
+L2816: (TokenSkip, trains) paused in plan_line_a. Active queues: dataset stages only (dp3 check, dp4 a/b/select).
+L2817: - 28 Oct (user): LUPIN in rounds: v1 = DPO on the original Qwen's answers (10/question); v2 = DPO from v1 on v1's answer
+L2920: - drpo2-{5..60} = rc1-rl-40 + adapters/drpo2-drpo/step-N; sb2-{5,10} = rc1-rl-40 + adapters/sb2-shorterbetter/step-N
+L2923: Kept models: rc1-rl-40, rc1-soup-30, ca1-soup-10, stopB3-soup-25, stopB5 soups, sb1-*, drpo3b-*, drpo3d-*, drpo3f-*,
+L2924: stopV3-soup-300, mf1-soup-25, drpo1-*. All scores, adapters, lots and answers stay.
+L2930: the choosing set (x4) + questions_40 (x2); the fresh set is never used. No LUPIN training before the check passes and
+L3044: - drpo3b-{5,10,15} = drpo3b's start + adapters/drpo3b-drpo/step-N; drpo3d-{5..20} = drpo3b-20 + adapters/drpo3d-drpo/ste
+L3045: drpo3f-5 = drpo3d-23 + adapters/drpo3f-drpo/step-5; drpo1-{20,40,60} = drpo1's start + adapters/drpo1-drpo/step-N
+L3049: E rc1: rc1-soup-30; F rc1-rl-40 (53.9 / -2.1); F+math: mf1-soup-25; G gentle RL: drpo3b-20 (+13.5 / -0.3),
+L3050: drpo3d-23 (+21.2 / +0.2), drpo3f-10 (+23.6 / +0.2), drpo3f-15 (+24.6 / +0.5), drpo3f-20 (+22.5 / +0.4);
+L3058: - ~20:50: dp10 code answering very slow at chunk 150 (~20 min per chunk, ~600 tokens/s: a few capped code answers keep t
+L3071: - ~22:30: Colab displays never reattached after the Mac shutdown; the user reconnected, then both sessions were restarte
+L3072: - 23:15: dp10 resumed on both GPUs but from ZERO (0 already sampled, 1,200 to go per half): the first 600-question chunk
+L3099: Next: the best 2 -> 3 seeds + soups on the fresh set x8; code-only cut pairs (strict labels, small dose) on the best;

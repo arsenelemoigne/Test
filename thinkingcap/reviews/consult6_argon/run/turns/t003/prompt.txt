@@ -1,0 +1,52 @@
+--- PART 2 of LADDER_DESIGN_FOR_REVIEW.md ---
+rm-up steps), ? 0.1, no SFT/NLL term, fp32 weights + fp16 compute, **reference = the previous stage**.
+6. **Tracking panel (the guard between stages):** a FIXED held-out set (~300 questions, 50 per type, never trained on, not the
+   test) re-answered after every stage, 8 times at EVERY rung. It reports per type: each panel question's level and how levels
+   moved since the last stage (down = progress, up = an earlier stage being undone); mean thinking length per level with its
+   spread; accuracy per level and overall vs the original; the A(B) curve.
+7. **Exit check:** a stage is done only if accuracy at B_k rose on the panel AND lower-level questions did not get longer
+   (thinking within +10%). Otherwise re-run the stage on another batch of new questions (? 2 extra batches), with more of the
+   failing pair kind.
+8. **Rollback:** every stage's adapter is kept; if the panel shows a stage undid earlier ones, go back one stage and redo it.
+9. **Near the end:** when a type is within ~1 point of the original's accuracy, its stages get more questions and more "don't
+   stop too early" pairs (not a higher lr). A type stops climbing once back at the original's accuracy on the dev set.
+
+**Reference settings we based this on:** our best repair rpE (equal-length right > wrong pairs, lr 1e-5 constant, 80 steps)
+lifted accuracy +1 to +3 points without a length push. On identical pairs, fp32/fp16 + cosine-to-0 (michal-bida's published
+settings, used here only as a measurement) cut 13?15 points less and lost ~2.8 points less than our older bf16 settings.
+michal-bida's own run: 5,862 pairs, one pass, lr 2e-5 cosine, LoRA r32, ? 0.1.
+
+**Later option ? RL stages:** reward +1 if right AND thinking within B_k, else 0 (+ a small bonus for staying at a lower
+level). GRPO on the current model, same panel and rollback. For a stage DPO cannot make solid, or as a comparison arm. Our past
+GRPO runs were slow and sensitive (2?3? the GPU time of a DPO stage).
+
+**Control arm (from the review):** the same stages with answers from the ORIGINAL model (offline), same counts; 2 seeds each.
+
+**Evaluation:** a new 512-question dev set from our own sources (never trained on, not the test) is the only basis for choices;
+the final checkpoint (end of the last stage) is fixed in advance; both seeds go to the full test once; paired bootstrap;
+success = both seeds > 50% saved and better than ?1.
+
+## 8. Risks we see
+
+1. **Can the model predict its budget?** It must decide how much to think from the question alone. On math its confidence is
+   badly calibrated (says 0.98, right 0.80?0.86). Phase 0 checks predictability first.
+2. **Forced cuts vs natural stops:** an answer cut by force reads differently from one that stopped on its own; DPO on cut
+   answers may teach abrupt stops, or only "stop when told". Natural short answers should be preferred as chosen answers where
+   they exist.
+3. **Noise in levels:** 8 answers per question; one answer of slack.
+4. **IFEval responses** must not shrink (our known failure).
+5. **Seven stages of DPO may accumulate drift** (reference = previous stage); the panel and rollback are the defence.
+
+## 9. What we would like from you
+
+1. **Analysis:** is the bottom-up ladder a sound way to reach > 50% saved at better than ?1 with one reproducible recipe on
+   Qwen3-0.6B? Where is it most likely to fail? What does our log say for or against it?
+2. **Design review:** the per-type rungs, the level definition, the three pair kinds and their shares, the question mix,
+   hyperparameters (steps per stage, lr, LoRA rank, ?, reference = previous stage), the panel and exit check, the
+   offline-vs-online choice. What would you change, concretely, and why?
+3. **Strategy:** given two L4 GPUs over the next week and everything in the log, what is the best sequence of experiments
+   (Phase 0 first?), with decision rules at each point? Is there a better route to the goal we are missing?
+4. **Traps:** anything in our evaluation, data or method (from the log) that could make the ladder look better or worse than it
+   is.
+Please be specific, quantitative, and blunt.
+

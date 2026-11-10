@@ -1,0 +1,8 @@
+bidax2-full    : logged saved= 51.2 vs calc4= 51.1 | logged acc=-3.00 vs calc4=-3.01 (6eq=-2.87)
+pt-mid-full    : logged saved= 53.6 vs calc4= 53.5 | logged acc=-3.30 vs calc4=-3.25 (6eq=-2.77)
+cleanA-ca1-full: logged saved= 49.1 vs calc4= 49.0 | logged acc=-2.40 vs calc4=-2.37 (6eq=-1.85)
+cleanA-rc1-full: logged saved= 57.4 vs calc4= 57.3 | logged acc=-3.50 vs calc4=-3.50 (6eq=-2.93)
+rpe-80full     : logged saved= 47.0 vs calc4= 46.8 | logged acc=-0.90 vs calc4=-0.94 (6eq=-0.20)
+rpe-40full     : logged saved= 50.6 vs calc4= 50.8 | logged acc=-1.90 vs calc4=-1.89 (6eq=-1.35)
+rpe-60full     : logged saved= 47.8 vs calc4= 47.8 | logged acc=-1.20 vs calc4=-1.20 (6eq=-0.65)
+rpi-120full    : logged saved= 41.9 vs calc4= 41.8 | logged acc=+0.10 vs calc4=+0.13 (6eq=+0.68)

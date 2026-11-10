@@ -1,0 +1,98 @@
+runtime 1 after stopB3), then zoo B4 on B + B2 + B3 + B4. callot now samples every drawn source (it used a fixed list).
+User idea, not implemented yet: safe cut = as right as the question's own rate (not >= 95%); needs a split-sample check.
+
+**24 Oct, zoo B2: the ORIGINAL Qwen's judge retrained on lots B + B2 (development 1,279 questions / 11,314 cuts; TEST =
+545 held-out questions / 4,907 cuts).** TEST AUC (ALL): position 0.699, own confidence 0.740, linear 0.843, MLP 0.864, MLP all
+layers 0.864, attention 0.81-0.83 (zoo B: MLP 0.826-0.828; +0.04 from more data, as zoo A -> A2). Per type (MLP): math
+0.93-0.94, instructions 0.85, code 0.78, tools 0.69, multiple choice weak (0.48-0.63). Pooled one-threshold trade-off on TEST
+(tokens saved / real loss vs the natural stop): <= 2 pt budget: MLP 69% / 1.5, linear one per type 65% / -0.7, own confidence
+46% / 1.1, position 51% / 2.9; <= 0.5 pt: MLP 67% / 0.5. On the original Qwen (which thinks much longer than rc1-rl-40) a
+learned stop at paragraph ends would save ~2/3 of thinking on these practice types at ~0.5-1.5 pts (simulation, not the
+benchmark). Runtime 1 moves on to stopB3. Runtime 2: Drive mount timed out (no click); waiting for the user.
+
+**24 Oct, planned for later (user): stop-token training.** Once the judges are more accurate (zoo B4+), train the model's
+own `</think>` decision at every paragraph end ("\n\n") like the judge: safe cut -> next token `</think>`, unsafe -> keep
+thinking (push `</think>` down), one decision per paragraph end, small LoRA, nothing else trained; must be clear-cut since
+the evaluation samples. Rationale: DPO compares whole replies and teaches "shorter" more than "stop here"; the judge shows
+the information is in layer ~20, and the `</think>` probability is the model's built-in stop judge. Also queued: benchlot
+(the 240 choosing benchmark questions labelled with the original Qwen, measure only) + zbench (judge on lots B+B2+B3 tested
+on them), runtime 2 after lot B3.
+
+**24 Oct, deep-research summary (user-run; 22 sources; evidence mostly math, 1.5B-32B, nothing at 0.6B or on code/tools/
+instructions).** Our judge (0.86-0.905 AUC) is at/above published probes (0.7-0.9+; 2504.05419, LYNX 2512.05325,
+2511.14773); data, not probe size, is the bottleneck (LYNX: 1.4-2.8k problems). Closest transfer recipe = ESTAR
+(2602.10004): classifier -> model writes its own stop token -> RL rewarding good stops (Qwen3-8B 4,799 -> 1,290 thinking
+tokens at -0.7..-1.0). RL length rewards that hit our target on 1.5B math: ShorterBetter 2504.21370 (77-79%, +2.5..+3.2),
+ThinkPrune 2504.01296 (~65%, capped = 0, tightening cap; -2.3 on AIME), AdaptThink 2505.13417 (53%, +2.4), DRPO
+2510.04474 (length ranked only among right answers: -77% at -1.1 on GSM8K). Warning for our rc1 RL: batch-normalized
+right x (1 - alpha*length) can push long RIGHT answers below average (DRPO's failure); any future RL ranks length only
+among right answers. Stop candidates in papers: "Wait"/"Hmm" cue words, fixed delimiters, every 64 tokens; untested vs
+paragraph ends. Roadmap: lots/zoos now -> stop-token training (ESTAR step 2) -> short DRPO-style RL -> separate tests
+(never-solved "stop circling" with a tightening cap; cuts before "Wait"/"Hmm").
+
+**24 Oct, 10 papers read (HTML, partly summarised pages; verify numbers before citing).** ESTAR 2602.10004: LightGBM on
+logprob features -> ESTAR-FT (SFT, <stop> at <= 5 safe positions per trace, positives only, hint-injected wrong traces) ->
+GRPO (16 rollouts, 39 steps; reward 1/4 format + 1/4 earliness + 1/2 correct; truncate at first verified <stop>); the 3.7x
+headline still uses the classifier at test time; ESTAR-FT alone MATH500 3,962 -> 2,401 (-39%) vs ESTAR -84%. DRPO
+2510.04474: length softmax-weighted only among correct answers, wrong answers pushed down regardless of length; GSM8K -77%
+at -1.1 (1.5B); lr 1e-6..2e-6, 8 samples, 1,000 steps. ThinkPrune 2504.01296: reward = correct within cap L, else 0;
+4k -> 3k -> 2k, each round from the best checkpoint within 10% relative accuracy; 1.5B -65% at +0.6, QwQ cliff (-3.2).
+ShorterBetter 2504.21370: alpha*correct - beta*|len - shortest correct|, mean length if none correct (shortest-if-none
+collapses); 1.5B -77..-79% at +2.5..+3.2; removes verification (-14% of tokens). AdaptThink 2505.13417: empty-think mode
+via importance sampling, delta 0.05; GSM8K 87-99% no-think. LYNX 2512.05325: 1 forced answer per cue, MLP on 2 mid + last
+layer, conformal threshold over positives only (weaker guarantee than claimed). 2504.05419: "\n\n" chunks, last-layer probe,
+often linear, AUC > 0.7, 19-24% saved. DEER 2504.15895: geometric-mean confidence > 0.95 at "Wait"; code compresses 19.9% vs
+math 61.5%. Dynasor 2412.20993: agreement of probes every 64 tokens. FlashThink 2505.13949: 7B yes/no verifier, GSM8K
+76-91% (not 89-95%). Plan update: stop-token SFT WITH negatives -> RL with verify-at-stop + DRPO length weighting; soft
+k/20 labels; report ECE/Brier; never-solved: ThinkPrune-style gentle cap test; instructions: AdaptThink-style test later.
+
+**24 Oct, correction on ESTAR (full paper re-read by the user's research AI).** Every ESTAR result keeps the LightGBM veto at
+test time (a <stop> is accepted only if the classifier scores >= 0.9), including ESTAR-FT; the paper never measures the plain
+model. ESTAR-FT's job was to propose candidate stops (fewer classifier calls), not to save tokens (MATH500 2,401 vs 2,019 for
+the classifier alone); weak labels (one greedy forced answer = the model's own final answer), only the first 5 safe moments
+get <stop>, MATH-500 used for SFT data. RL (on-policy, rollouts cut at the first classifier-confirmed stop, earlier = more
+reward) took MATH500 2,019 -> 635, always under the veto. Takeaway: stop-token SFT + RL works WITH a veto; without one (our
+case) it is untested, so explicit unsafe -> keep-thinking training with our 20-answer gold-graded labels (all safe moments
+labelled) is the key step; in our RL, check stops with the judge / forced answers during training only and measure the plain
+model alone on fresh x8.
+
+**24 Oct, stopB3 (original Qwen, lots B + B2 stop pairs, code included: 1,058 pairs, 3 seeds, checkpoints 15-40), fresh x8:**
+- soup 15: +18.3% / -1.0; soup 20: +27.1% / -2.0; **soup 25: +34.6% / -0.4** (bfcl +20-22% / 0.0..-3.7, ifeval +28% / +2.8,
+  mbpp +50% / -0.3, svamp +36% / -2.2)
+- soup 30: +54.8% / -3.2 (mbpp +85% / -8.4, svamp +37% / -3.7); soup 40: +69.1% / -5.7 (mbpp +94% / -8.1, svamp +48% / -12.5)
+Twice the pairs of stopB2 gives the same saving (34.6%) at a much smaller loss (-0.4 vs -2.1), with code shortened 50% at -0.3.
+Past step 25 code collapses again (85-94% shorter at -8), as in stopB: code pairs over-cut once training runs longer.
+Best clean point on the stop line so far = stopB3 soup 25; still below rc1-rl-40 (53.9 / -2.1).
+
+**24 Oct, wronglen (thinking length on fresh x8, right / wrong / never-solved answers vs the original Qwen; never-solved = 0/8
+for the original, 14% of answers, no training pair ever came from them).** Every model shortens wrong and never-solved answers
+as much as or more than right ones: rc1-rl-40 ALL right +58% / wrong +61% / never solved +59%; stopB2 soup 20 +36 / +43 / +31;
+stopB3 soup 25 +37 / +49 / +46; stopB3 soup 30 +51 / +77 / +80. The shortening spills over onto answers training never saw,
+and on wrong answers most (except svamp never-solved: stopB3 soup 25 only +3%).
+
+**24 Oct ~17:35, both runtimes alive (Colab session list: both GPU, last execution 0 min ago; logs read from Drive).**
+Runtime 1: lot B4 drawing found only 362 new questions of 850 (mbpp_train/toolace/hermes_tools; earlier draws removed) +
+KodCode from the wider slice (3,063 tasks); 20 answers each, first batch 79% at 17:34. Then zoo B4, stopB4.
+Runtime 2: lot B3 = 743 new questions of 1,200 drawn x 20 answers (5 batches of 150), 3rd batch 95% at ~17:35 (4th 63% at 18:14, ~50 min per batch); then
+labelled cuts, benchlot, zbench.
+
+**24 Oct, DRPO implemented (user agreed; not run yet).** Full paper read (ICLR 2026). Our rc1 RL reward was exactly DRPO's
+RLOO-LP baseline (Arora & Zanette) + ALP's solve-rate scaling, but our failure was the opposite of DRPO's diagnosis:
+thinking grew (200-250 -> 400-500 tokens at 82-96% right; alpha 0.15 drowned by the correctness reward), not right
+answers being cut. DRPO helps both ways: right replies always pushed up with a softmax(r_l / lambda) weight normalised
+among the RIGHT replies only (strong, scale-free length preference), wrong replies pushed down (softmax(s / tau),
+length-blind), trust region beta0 [KL - delta]+^2. Our adaptation: r_l = 1 - len / the group's longest reply (relative,
+so tool calls and code feel the same pressure) instead of 1 - len / 8k. rl_train.py --objective drpo (drpo_weights
+tested: Figure-1 group -> [0.62, 0.33, 0.05 | -1/3 x3]); stage `drpo`: fresh shuffled pool mixed like the evaluation
+(GSM-IC/Plus, IFEval-like, ToolACE, Hermes, MBPP-train, KodCode; contamination-checked, earlier draws removed),
+48 questions x 8 x 60 steps (~2,900 questions each used once), from rc1-rl-40, lambda 0.2, checkpoints 40 and 60 on fresh
+x8 (~8 GPU-hours). Success (fixed before running): >= 5 pts more saving than rc1-rl-40 (>= ~59%) at accuracy >= -2.5, or
+>55% at better than -2. Caveat: RL cap 4,096 for every type (code's evaluation cap is 8,192). Waiting for the GPUs to be
+visible again and Drive space (arsene@lemoigne.eu nearly full).
+
+**24 Oct, experiment 5 coded and queued (user): the judge as teacher (teach_stop.py, stage `teach`).** The judge (MLP on
+layer 20 at the end of a closed cut, as probe_zoo's best) is fitted on the original Qwen's label lots (B..B4; safe =
+20/20, unsafe <= 15; held-out AUC printed); the original Qwen answers 3,000 fresh mixed questions once (shared
+`mixed_pool` with drpo: benchmark-like, contamination-checked, earlier draws removed); the judge scores up to 16
+paragraph ends per answer (never the natural end), target = sigmoid((p - threshold) / 0.03) so the per-p
+[output cut at 10,000 characters]

@@ -1,0 +1,6 @@
+astra turn 50: $0.058 (total $1.70 / $25.0), passes 0/0, code runs 50
+astra turn 51: $0.025 (total $1.72 / $25.0), passes 0/0, code runs 51
+astra turn 52: $0.027 (total $1.75 / $25.0), passes 0/0, code runs 52, flags {'code_errors': 1}
+astra turn 53: $0.029 (total $1.78 / $25.0), passes 0/0, code runs 53, flags {'code_errors': 1}
+astra turn 54: $0.088 (total $1.87 / $25.0), passes 0/0, code runs 54, flags {'code_errors': 1}
+astra turn 55: $0.057 (total $1.92 / $25.0), passes 0/0, code runs 55, flags {'code_errors': 1}

@@ -1,0 +1,88 @@
+- 5 Nov ~13:50 Claude session restart: both Colab tabs lost their output; the user reconnected, plans re-run from a47f4cf
+  (rs-bidax6p, rpB commented as done). GPU 1 resumed D10 l2s50e after step 310; GPU 2 skipped the finished rpC screens.
+- **rpC-80 (lr 1e-5, step 80): +43.4 / +0.6** (svamp +44 / -1.7, mbpp +47 / +2.3, ifeval +46 / +0.6, simple +31 / -2.7, multiple
+  +35 / +1.1, no-fit +39 / +5.4), **+2.4 vs curve: new highest above the curve** (rpB-40 +2.1 at the same 43.4% saved, +0.3 pts).
+  rpC's four points (53.6/-3.0, 50.5/-1.8, 51.2/-2.1, 43.4/+0.6) and rpB's lie on one frontier: the repair trades length for
+  accuracy, the gentler lr lands slightly higher at the end. Still no point at >= 50 / -1. Track A done; finish-lpt6 started
+  (svamp adapter seed 1 training, 241 steps).
+- ~15:20 **D10 lpd-l2s50e** (bidax5q s0 settings, l2s50e pair rule: shorten only where solve >= 50%, easy ratio 1.2, shorten cap 2):
+  **step 100 +54.4 / -3.6** (svamp +71 / -7.9, mbpp +59 / -3.7, ifeval +37 / -0.2, simple +41 / -2.5, multiple +45 / +0.4, no-fit +44 /
+  -5.4), +0.2 vs curve; **step 200 +49.7 / -3.0** (svamp +64 / -6.0, mbpp +46 / -1.5, ifeval +40 / -4.0, simple +42 / -2.5, multiple +45
+  / +0.0, no-fit +47 / +1.2), -0.2 vs curve. On the curve, no better than D11 push2 at the same saving (push2-200 49.7 / -2.9); math
+  hit hardest. Final screen next. GPU 2: lpt6 svamp seed 1 step 200/241.
+- ~15:50 **D10 lpd-l2s50e final: +53.5 / -2.7** (svamp +68 / -5.4, mbpp +50 / -3.1, ifeval +46 / -1.0, simple +43 / -3.3, multiple +46
+  / -2.1, no-fit +48 / +1.2), +0.8 vs curve; beats D11 push2 final (52.4 / -3.0) slightly at a bit more saving. Math still the cost.
+  GPU 1 now trains D12 lpd-chain1 (333 steps x 18 pairs). GPU 2: lpt6 svamp merged and screening.
+- ~16:15 **Finish lpt6, missing solos at full strength** (2 seeds souped, bfloat16, our Nov 2 settings, bidax5s's pair set):
+  - **math only (lpt6-svamp): -38.1 / -3.1** (answers LONGER: svamp -78% / -16.2; mbpp -17 / +2.3, ifeval -39 / +1.5, simple -23 /
+    -1.7, multiple -23 / 0.0, no-fit -29 / +2.5). bidax5s's math pairs (shorten 1510, guard 2387) lengthen math, as bidax5s itself
+    did (svamp -13 to -36%); the spill-over lengthens every type. Off the curve's range (fitted above 15% saved).
+  - **no-fit only (lpt6-bfcl_irrelevance): +11.9 / -1.9** (no-fit +36 / +11.7 but simple +18 / -20.6, multiple +17 / -16.6; ifeval
+    +3 / -0.4, mbpp +9 / +1.0, svamp +11 / +0.2), -2.2 vs curve: it teaches "no function fits" and the model then refuses calls on
+    the other tool types.
+  Both are poor merge ingredients at 1.0; the half-strength solos (rs-lpt6h) are screening now, merges after.
+- ~17:10 (user: let the consultant redesign the lpt6 merges) **consult3** (new session; consult2's state was lost with the
+  scratchpad; data-only pack: all_runs.json 132 runs, per_type.md, test card, thinking-off, his lpt6 reply; $3.17, 11 code
+  runs): consult3_merge_design.md. Cancel P / S6 / Pplus / T (lpt6 math and no-fit are not protectors), keep C as a
+  diagnostic; 10 ranked screens mostly on the pt family (drop code; shift strength from math/code to instructions/tools;
+  cross-family swaps of tools and instructions; a weak no-fit 0.25; pt-math in C; a repair on the redistributed base), with
+  decision rules on the half-strength lpt6 solos. Jasmin default: 4 groups (pooled tools) + the 3 tool slices as
+  challengers (7 adapters), pt pair rule, NLL 1.0, constant lr 2e-5, float32, ~N/16 steps with checkpoints every 10,
+  task arithmetic starting at math .20 / code .15 / instr .60 / tools .55. Supports the user's candidate with 2 changes.
+  Awaiting the user's decision; the merges stay paused.
+- ~17:20 lpt6 math solo at 0.5: **-12.2 / -0.5** (svamp -26% / -2.9, ifeval -15 / +1.5, mbpp -3 / -0.4, simple -6 / -1.2,
+  multiple -6 / -0.8, no-fit -6 / +1.9): still longer everywhere and worse on math -> by consult3's rule A, out of all merges.
+  GPU 1: D12 chain1 step 250/333.
+- ~17:40 (user OK) queued on GPU 2 after rs-lpt6h: consult3 screens #1 pt-nocode (math .30 / code 0 / instr .60 / tools .45)
+  and #2 pt-shift (.15 / 0 / .65 / .65), no training; then the Jasmin pair sets, October's lpv-base rule (l2s50e: shortest
+  right > right >= 1.5x longer on questions solved >= 50%, easy 1.2x; shortest right > longest wrong; no-fit protection:
+  solve >= 0.8 + right pairs) on the NEW data (dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2; 10 answers per
+  question, as in October): jpa = matched like October (lupin_select.py against the original model's runs on the choosing
+  set + questions_40, both drawn from the evaluation questions), jpb = unmatched, cut at random to jpa's count per part x
+  kind. Pairs only (lupin --lp-pairs-only), counts and median lengths reported, no training yet. User's agreed Jasmin
+  changes: math adapter + a few "be right" pairs; pooled tools adapter (no-fit protection) + the 3 slices as challengers;
+  code adapter possibly dropped (screen #1). Next (user): variations of each rule (the 1.5x ratio, the 50% solve floor and
+  1.2x easy ratio, per-type tweaks) decided by the data.
+- ~18:00 lpt6 code solo at 0.5: **-0.8 / +0.3** (mbpp -2% / +2.3, ifeval -10 / +0.2, multiple +6 / -3.2, rest ~0): no
+  shortening at all, as at 1.0. GPU 1: D12 chain1 trained (333 steps), screens at 100 / 200 / final starting.
+- ~18:05 **consult3 follow-up on the Jasmin pair sets** (code + jasmin_pairs.md given; $9.40, total $12.57; 26 code runs):
+  consult3_jasmin_pairs.md. Build jpa as a frozen replica (no math supplement), but October's rule does not mean October's
+  behaviour on a new pool: the shorten cap is 2x GUARD pairs only (per part, before matching); an empty matching cell gets
+  its share redistributed but a nearly empty one stays short (one example can cut the total 39%); every part is trimmed
+  to the weakest part's fill (how 3,200 requested became ~1,400; nofit4 may release it and give every adapter more steps);
+  no-fit protection switches at 8/10 while the matcher pools 5-9/10; the 1.2 easy ratio applies only to 10/10; right
+  band 0.25; lengths are total output tokens. jpb (random pairs at jpa's counts) tests the whole selector, not the
+  matching alone: add jpb-RR (question-first, same counts and questions per pair) and jpc-trainref (references from
+  held-out TRAINING questions, at pool AND pair stages, for a clean rules path). Variants in order: matching policy;
+  1.5 -> 2.0 / 1.25; floor .5 -> .6 / .4; easy 1.2 -> 1.5 / 1.1; math supplement 0 / 5 / 10%; no-fit floor .8 vs .9; with
+  pre-cap / post-cap / post-match / final reports (k/10 solve, sources, unique questions, lengths, steps at batch 16).
+  Math supplement: 10% of the math budget as similar-length right > finished wrong (within 15%, half right-longer) on
+  5-7/10 questions, 1 per question. Train only the affected adapter (fp32, NLL 1, constant 2e-5, ckpt every 10), solo
+  screen own x4 / others x2, compare at matched saving and matched exposure.
+- ~18:30 lpt6 instructions solo at 0.5: **+17.8 / -0.2** (ifeval +19 / -0.6, svamp +19 / +0.4, mbpp +18 / +0.8, simple +14 /
+  -2.1, multiple +18 / 0.0, no-fit +12 / -1.7), -0.5 vs curve: at half strength a mild shared shortening
+  (at 1.0: 32.6 / -2.8). GPU 1: D12 chain1 step-100 screen grading.
+- ~18:40 (user) bidax6s (bida's full schedule) DROPPED from GPU 2's queue.
+- ~18:45 (user) GRPO stays off. Let every per-type DPO LoRA run finish (rs-lpt6h, consult3 screens #1/#2), then gather all per-type data -> battle plan -> try it (Jasmin).
+- **D12 lpd-chain1 step 100: +21.7 / +0.4** (svamp +36 / -0.6, mbpp +11 / +0.2, ifeval +10 / +1.7, simple +25 / -1.0, multiple
+  +27 / -0.4, no-fit +29 / +2.3), +0.2 vs curve: the chain-1 rule (shortest right > longest right >= 1.5x; guard =
+  shortest right > shortest finished wrong; balanced 40:60) trains slowly, far below 40% at step 100. Steps 200 / final next.
+- ~19:20 **D12 lpd-chain1 step 200 +18.4 / +0.4** (svamp +26 / -0.2, mbpp +9 / -0.4, ifeval +8 / +1.0, simple +27 / -2.1, multiple
+  +26 / +0.6, no-fit +33 / +4.8), +0.1 vs curve; **final +17.8 / +0.8** (svamp +28 / -0.2, mbpp +5 / +2.5, ifeval +6 / 0.0, simple
+  +24 / -2.5, multiple +25 / -0.6, no-fit +36 / +5.6), +0.5 vs curve. Chain-1 keeps accuracy but saves under 20%: far from
+  the 40% bar, below D11 push2 in saving. Round 2 (polans pc1 a + b, then lpd-chain1r2) running.
+- lpt6 half-strength solos: **one function @0.5 +15.3 / -0.7** (simple +18 / +0.2; no-fit +18 / -3.3, ifeval +4 / -1.0), -1.0 vs
+  curve; **several functions @0.5 +8.3 / -0.2** (multiple +14 / +0.6; no-fit +10 / -2.1, ifeval +1 / -1.9), -0.4 vs curve.
+  Mild shared shortening; the cost lands on no-fit again. No-fit @0.5 next, then consult3 screens #1 / #2.
+- ~20:20 GPU 2's queue ENDED (screens ran ~15-25 min each, faster than planned):
+  - lpt6 no-fit @0.5: **+4.5 / -0.6** (no-fit +23 / +4.8; simple +10 / -4.0, multiple +10 / -3.4, ifeval -3 / -1.7), -0.6 vs
+    curve: half strength keeps the "no call" bias (callable -4.0 / -3.4) -> consult3 rule B: cancel screen #6.
+  - **consult3 #1 pt-nocode (math .30 / code 0 / instr .60 / tools .45): +50.8 / -2.7** (svamp +58 / -4.0, mbpp +60 / -2.5, ifeval
+    +44 / -2.5, simple +36 / -1.7, multiple +40 / +1.3, no-fit +40 / -4.8), +0.35 vs curve (pt-mid +1.3). Dropping code loses
+    4.2 points of saving at the SAME accuracy (pt-mid 55.0 / -2.6): code still saves 60% without its own adapter (spill-over),
+    and the code adapter costs nothing in the merge. Prediction was 51 / -1.5: wrong on accuracy -> keep a code adapter.
+  - **consult3 #2 pt-shift (.15 / 0 / .65 / .65): +54.4 / -3.9** (svamp +59 / -5.4, mbpp +63 / -5.0, ifeval +49 / -2.7, simple +39 /
+    -1.9, multiple +44 / +1.7, no-fit +45 / -7.3), -0.1 vs curve. Prediction 55 / -2.0: wrong. Less math strength does NOT
+    protect math (-5.4 with math at .15): math's loss comes from the instructions / tools spill-over; more tools strength hurts
+    no-fit (-7.3) and code (-5.0). pt-mid's mix stays t
+[output cut at 10,000 characters]

@@ -1,0 +1,31 @@
+- Both notebooks show setup + queue cells started 02:11-02:12 on fresh machines (setup rebuilt data/train and questions).
+- GPU 2: drpo3f resumed "after step 2 (adapter, optimizer and log restored)", now sampling step 3.
+- GPU 1: finished stages skipped via the light restore; stopV3 soups 25/50/75 kept; now scoring soup 100 on fresh x8.
+  Next on GPU 1: drop1, ps1, dp1, gold1, bp1b, teach1c, sb2.
+- stopV3-soup-100 (fresh 240 x 8): +10.0% / -0.6. The stop line from the original stays at 10-16% saved (soups 25-100); drpo3f resumed after step 2 and is at step 5.
+- stopV3 soups 150 / 200: +12.4% / +0.5, +16.2% / -0.9 (soup 300 scoring). Flat at 10-16% saved through soup 200.
+
+### 2026-10-27 ~04:00 ? stopV3 soups 100/150/200 (fresh 240 x 8)
+- soup 100: +10.0% / -0.6; soup 150: +12.4% / +0.5; soup 200: +16.2% / -0.9 (mbpp +32% / 0.0, ifeval +21% / +1.6,
+  but svamp 0% / -3.7 and BFCL 7-8%). The stop line from the original Qwen stays at 10-16% saved at every length of
+  training: cut-label stop pairs alone do not move it far. Soup 300 next, then ps1 and dp1.
+- **stopV3-soup-300 (fresh 240 x 8): +25.5% / -0.6.** The last soup finally shortens more (10-16% through soup 200).
+- **drop1 done (GPU 1, 27 Oct ~03:00): 28 merged models removed from Drive, 34.6 GB freed** (ca1-soup-20/30/40, ca2-soup-10..40,
+  drpo1-20/20x0.5/40/60, rc1-rl-20/60, rc1-soup-10/20, stopB3-soup-15/20/30/40, stopB-soup-10/20/30, stopB2-soup-20,
+  rc2-soup-10/20/30/60, rr1-rl-20); kept sb1-10/20/30 (adapters/sb1-drpo not on Drive). All rebuildable from their adapters
+  (recipes above). GPU 1 now on ps1 (prompt search); drpo3f at step 10 on GPU 2.
+- stopV3-soup-300 per part: mbpp +54% / -4.1, ifeval +26% / +2.5, bfcl simple +14% / -1.2, multiple +7% / -2.8,
+  irrelevance +2% / 0.0, svamp +2% / +0.6. The jump is almost all code (and IFEval); math and tool calls barely move.
+- ~05:10: GPU 1 on ps1, 10 of 11 prompts sampled (draft-typed last), table next, then dp1. GPU 2: drpo3f at training
+  step 14/40 (~8 min a step; its fresh scores come after training, ~3.5 h).
+
+### 2026-10-27 ~05:50 ? ps1 prompt search (original Qwen, plotV2 lot, 50 questions x 4 per source, vs no prompt)
+Training sources only (gsm8k_matched, metamath_sv, ifeval_like, toolace; no code in this lot). Leak = the thinking
+uses a prompt word the question lacks; the base row (no prompt) already reads 15% (false hits, IFEval-like 40%),
+so read leaks against 15%.
+| prompt | saved | acc pp | leak | gsm8k / metamath / ifeval-like / toolace (saved/acc) |
+|---|---|---|---|---|
+| concise | +1.4% | +2.0 | 11% | +10/+1.0, +6/+4.5, -9/-0.5, -2/+3.0 |
+| prefill | -4.3% | -1.0 | 13% | -6/+1.5, -3/-0.5, -21/-1.5, +10/-3.5 |
+| nocheck | +5.3% | +2.4 | 12% | +25/+1.5, +8/+5.0, -9/+1.0, -6/+2.0 |
+

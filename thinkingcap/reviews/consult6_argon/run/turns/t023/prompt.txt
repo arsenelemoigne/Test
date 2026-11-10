@@ -1,0 +1,28 @@
+rpA-5           | 720  | saved= 53.9% | acc=-3.31 | pt-mid (4 per-type adapters merged) + a be-right repair LoRA (1,6 | v:61%/-3.7 | c:64%/-6.0 | f:46%/-1.9 | s:37%/-0.2 | m:41%/+0.4 | i:42%/-5.8
+rpA-10          | 720  | saved= 53.6% | acc=-2.69 | pt-mid + be-right repair LoRA (fp32, lr 5e-6) at step 10 | v:60%/-4.4 | c:63%/-2.5 | f:48%/-2.3 | s:37%/-0.8 | m:41%/+1.3 | i:41%/-5.2
+rpA-20          | 720  | saved= 54.1% | acc=-3.62 | pt-mid + be-right repair LoRA (fp32, lr 5e-6) at step 20 | v:62%/-5.4 | c:64%/-4.4 | f:47%/-2.7 | s:36%/-1.5 | m:41%/-0.8 | i:42%/-3.7
+rpA-40          | 720  | saved= 52.3% | acc=-2.84 | pt-mid + be-right repair LoRA (fp32, lr 5e-6) at step 40 | v:59%/-4.0 | c:61%/-2.5 | f:46%/-4.2 | s:37%/-1.0 | m:40%/+1.3 | i:42%/-1.7
+rpB-10          | 720  | saved= 52.4% | acc=-2.22 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 2e-5) at ste | v:58%/-5.8 | c:63%/-0.8 | f:46%/-0.8 | s:37%/-2.5 | m:40%/+0.6 | i:42%/-1.5
+rpB-20          | 720  | saved= 48.7% | acc=-1.20 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 2e-5) at ste | v:53%/-1.9 | c:56%/-1.9 | f:45%/-1.5 | s:35%/-1.0 | m:38%/+1.5 | i:41%/+2.1
+rpB-40          | 720  | saved= 43.4% | acc=+0.10 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 2e-5) at ste | v:45%/-3.1 | c:48%/+1.0 | f:44%/+1.7 | s:31%/-3.1 | m:36%/+0.8 | i:41%/+7.3
+rpC-10          | 720  | saved= 53.6% | acc=-3.03 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 1e-5, 80 ste | v:60%/-4.8 | c:64%/-3.7 | f:47%/-2.7 | s:37%/-0.6 | m:40%/+2.1 | i:42%/-4.0
+rpC-20          | 720  | saved= 50.5% | acc=-1.83 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 1e-5, 80 ste | v:57%/-4.0 | c:61%/-2.5 | f:41%/-0.6 | s:36%/-0.6 | m:40%/+2.1 | i:42%/-1.5
+rpC-40          | 720  | saved= 51.2% | acc=-2.19 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 1e-5, 80 ste | v:58%/-4.0 | c:61%/-4.4 | f:43%/-1.3 | s:36%/-0.2 | m:39%/+1.1 | i:41%/+2.7
+rpC-80          | 720  | saved= 43.4% | acc=+0.43 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 1e-5, 80 ste | v:44%/-1.7 | c:47%/+2.3 | f:46%/+0.6 | s:31%/-2.7 | m:35%/+1.1 | i:39%/+5.4
+rpe-10          | 720  | saved= 57.2% | acc=-3.00 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:69%/-2.7 | c:63%/-4.6 | f:45%/-2.5 | s:42%/-2.7 | m:46%/+1.5 | i:52%/-3.7
+rpe-20          | 720  | saved= 54.8% | acc=-2.60 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:64%/-4.2 | c:63%/-2.5 | f:43%/-2.9 | s:41%/-1.0 | m:45%/+1.3 | i:52%/-1.9
+rpe-40          | 720  | saved= 50.5% | acc=-1.70 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:60%/-1.9 | c:54%/-2.7 | f:42%/-1.7 | s:40%/-1.9 | m:43%/+1.5 | i:50%/-0.2
+rpe-45          | 720  | saved= 52.9% | acc=-1.70 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:59%/-1.3 | c:58%/-1.7 | f:49%/-3.1 | s:40%/-2.1 | m:44%/+0.6 | i:51%/+0.4
+rpe-50          | 720  | saved= 49.5% | acc=-1.60 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:59%/-1.3 | c:52%/-3.3 | f:40%/-1.9 | s:40%/-1.7 | m:44%/+1.5 | i:51%/+2.3
+rpe-80          | 720  | saved= 50.4% | acc=-0.20 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:56%/-2.5 | c:52%/+1.0 | f:50%/+0.4 | s:39%/-2.1 | m:43%/+1.3 | i:51%/+3.1
+rpe-80full      | full | saved= 47.0% | acc=-0.90 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:54%/-1.2 | c:46%/-1.0 | f:45%/-2.6 | s:37%/+0.1 | m:39%/+0.1 | i:50%/+3.4
+rpe-40full      | full | saved= 50.6% | acc=-1.90 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:59%/-3.0 | c:53%/-1.7 | f:47%/-2.8 | s:39%/+0.4 | m:41%/-0.6 | i:50%/-0.4
+rpe-60full      | full | saved= 47.8% | acc=-1.20 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:55%/-1.5 | c:48%/-0.7 | f:46%/-3.0 | s:38%/+0.1 | m:39%/-0.2 | i:49%/+1.4
+rpe-60          | 720  | saved= 48.6% | acc=-0.70 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest ri | v:58%/-0.4 | c:52%/+1.3 | f:39%/-3.1 | s:39%/-3.3 | m:43%/+0.6 | i:51%/+2.7
+rpg-100         | 720  | saved= 40.4% | acc=+0.90 | rpE step 80 trained 20 more steps, same recipe, 8 answers per que | v:42%/+1.0 | c:40%/+1.7 | f:38%/+0.2 | s:37%/-2.1 | m:39%/-1.1 | i:51%/+6.9
+rpg-120         | 720  | saved= 32.7% | acc=+0.50 | rpE step 80 trained 40 more steps, same recipe, 8 answers per que | v:31%/+0.4 | c:23%/+2.5 | f:37%/-1.9 | s:34%/-2.9 | m:36%/-0.4 | i:50%/+8.5
+rpi-100         | 720  | saved= 42.9% | acc=-0.20 | rpE step 80 answers 5,700 NEW questions x8 itself; 1,579 guard pa | v:48%/-1.9 | c:43%/+2.5 | f:36%/-1.5 | s:39%/-2.1 | m:42%/-1.1 | i:51%/+4.8
+rpi-120         | 720  | saved= 43.0% | acc=+0.90 | rpE step 80 answers 5,700 NEW questions x8 itself; 1,579 guard pa | v:47%/-0.4 | c:39%/+3.5 | f:42%/-0.4 | s:39%/-2.5 | m:42%/+0.2 | i:52%/+6.7
+rph-100         | 720  | saved= 42.0% | acc=-0.60 | rpE step 80 + 20 steps on the old model's answers x8, IFEval coun | v:44%/-0.2 | c:40%/+0.2 | f:43%/-2.5 | s:37%/-1.2 | m:40%/-0.6 | i:50%/+3.3
+rph-120         | 720  | saved= 37.0% | acc=-0.30 | rpE step 80 + 40 steps on the old model's answers x8, IFEval coun | v:34%/-0.6 | c:37%/+0.6 | f:36%/-2.1 | s:35%/-1.7 | m:39%/-1.1 | i:49%/+6.5
+rpi-120full     | full | saved= 41.9% | acc=+0.10 | full test 2,759 x 8 | v:47%/+0.0 | c:38%/+0.5 | f:41%/-1.5 | s:37%/+0.2 | m:38%/-0.9 | i:50%/+5.8

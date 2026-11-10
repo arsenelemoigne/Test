@@ -1,0 +1,91 @@
+  GPU smoke line first (rpA-smoke: 5 questions per part, 4 steps).
+- ~08:30 **pt-mid adapters scored ALONE at full strength** (720 x4, no training):
+  - MATH adapter: **+41.7% / -2.1** (svamp +59 / -4.8, mbpp +51 / -1.0, ifeval +26 / +0.6, simple +21 / -1.7, multiple +24 / -1.3,
+    no-fit +25 / -6.0), -0.6 vs curve: trained on math pairs only, it shortens code almost as much as math (51 vs 59%) and
+    hurts no-fit most: the same shared-habit spill-over as lpt6.
+  - CODE adapter: **+16.5% / -1.3** (svamp +20 / -1.3, mbpp +25 / -0.2, ifeval +7 / -1.3, simple +14 / -1.5, multiple +14 /
+    -2.3, no-fit +11 / -3.5), -1.6 vs curve: more own-type than the others (code 25% vs 7-20% elsewhere) and keeps code
+    accuracy, unlike lpt6's code-only adapter (which did not shorten code).
+  IFEval and tools solos next, then the 4 at pt-mid strength.
+- ~09:30 pt-mid solos (720 x4, no training), continued:
+  - IFEVAL adapter (1.0): **+36.1% / -1.2** (svamp +34 / -2.7, mbpp +42 / +0.2, ifeval +40 / +0.6, simple +28 / -1.9, multiple
+    +29 / -1.3, no-fit +29 / -5.6), -0.4 vs curve: shortens code more than ifeval itself.
+  - TOOLS adapter (1.0): **+50.1% / -2.9** (svamp +53 / -4.0, mbpp +59 / -4.6, ifeval +44 / -3.7, simple +38 / +1.5, multiple
+    +43 / +2.5, no-fit +45 / -2.3), 0.0 vs curve: alone it already saves 50%; its own tools GAIN accuracy (simple +1.5,
+    multiple +2.5) while math, code and ifeval pay: the strongest "general shorten" push of the four.
+  - MATH adapter at its pt-mid strength 0.30: **+11.9% / -1.0** (svamp +20 / -1.5, mbpp +13 / +0.8, ifeval +4 / -1.5, simple
+    +9 / -1.5, multiple +10 / -2.3, no-fit +11 / -1.9), -1.3 vs curve.
+  Reading so far: every pt-mid adapter spills over (math -> code 51%, ifeval -> code 42%, tools -> code 59%); the merge's 55%
+  is mostly stacked general pushes, as lpt6 suggested; own types tend to KEEP accuracy (tools +1.5/+2.5, ifeval +0.6, code
+  -0.2), the loss lands on the OTHER types. Remaining: code / ifeval / tools at pt-mid strength.
+- ~10:30 **D4 lpd-budget step 100: +43.8% / -1.8** (svamp +58 / -4.6, mbpp +44 / -1.7, ifeval +31 / -0.8, simple +35 / -0.8, multiple
+  +39 / +0.6, no-fit +39 / -0.6), 0.0 vs curve; **step 200: +48.6% / -1.5** (svamp +61 / -3.1, mbpp +40 / -1.2, ifeval +46 / -0.8,
+  simple +41 / -2.3, multiple +45 / +0.2, no-fit +47 / +0.2), +1.1 vs curve. At bidax5q's step-200 saving (48.5 / -0.9, +1.7) but
+  0.6 less accurate; math carries it (-3.1). Final next.
+- pt-mid solos at pt-mid strength: CODE 0.45 **+10.0% / -2.5** (-2.7 vs curve; ifeval -3.7, math -2.5: likely partly screen noise,
+  since the same adapter at 1.0 read -1.3); IFEVAL 0.60 **+23.1% / -1.2** (-1.4; no-fit -3.3, multiple -2.7). Tools at 0.45 next,
+  then the additivity check vs pt-mid (55.0 / -2.6), then Track A.
+- ~11:30 **D4 lpd-budget final: +49.0% / -1.3** (svamp +60 / -2.9, mbpp +43 / -0.2, ifeval +47 / -1.9, simple +40 / -2.5, multiple
+  +45 / +1.7, no-fit +46 / +0.4), **+1.4 vs curve**: the best D-variant so far, close to v1 (46.7 / -0.5, +1.8) but not above it;
+  math carries the loss.
+- pt-mid solo TOOLS at 0.45: **+28.6% / -1.1** (svamp +27 / -2.9, mbpp +32 / +0.4, ifeval +28 / -0.8, simple +25 / -2.5, multiple
+  +28 / -0.2, no-fit +28 / -0.8), -1.0 vs curve.
+- **Additivity check (pt-mid's 4 solos at their strengths vs the measured pt-mid merge 55.0 / -2.6):** token ratios multiply
+  (0.881 x 0.900 x 0.769 x 0.714 = 0.435 -> predicted 56.5% saved, measured 55.0: lengths ADD almost exactly as stacked
+  pushes); accuracy losses do NOT add (sum -5.8 predicted, -2.6 measured: +3.2 better than additive). Merging protects more
+  than the sum of its parts (each adapter's own-type "be right" pairs offset the others' spill-over).
+- **Track A smoke passed on the GPU** (answers, pairs, 4 training steps); the real run rpA started: 4,372 questions (svamp
+  2,400 of which all 1,644 mixed; mbpp 900; no-fit 472 = all 260 mixed + the rest; ifeval / simple / multiple 300 / 150 / 150),
+  pt-mid answering x4 (2,400 / 4,372 sampled at 11:30).
+- ~12:30 **Track A rpA**: pairs exactly as specified (1,600 from 1,233 questions; every quota filled; chosen longer in 43-52%
+  per part, median chosen ~= rejected length: no length signal, as intended; first 80 pairs span all six parts). Training
+  (40 steps, lr 5e-6, fp32): DPO loss 0.693 -> 0.667, ordered right 54-62% until step 35, 71% at 40: a very gentle dose.
+  **rpA-5 (pt-mid + repair at step 5): +53.9% / -3.4** (svamp +61 / -3.7, mbpp +64 / -6.0, ifeval +46 / -1.9, simple +37 / -0.2,
+  multiple +41 / +0.4, no-fit +42 / -5.8), +0.3 vs curve: at step 5 the repair has barely moved the model, so this is ~pt-mid
+  re-measured (55.0 / -2.6 on 1 Nov; -0.8 apart = screen noise and the merge path). Steps 10 / 20 / 40 next.
+- ~13:30 **Track A rpA curve** (pt-mid + be-right repair, lr 5e-6): step 10 **+53.6 / -2.7** (+0.9 vs curve), step 20 **+54.1 /
+  -3.6** (+0.1), step 40 **+52.3 / -2.8** (+0.5); step 5 was +53.9 / -3.4. Flat within screen noise (+-0.7): the repair at this
+  dose did not move accuracy overall. Per type: no-fit improves steadily (-5.8 -> -5.2 -> -3.7 -> -1.7, the one clear signal),
+  code -6.0 -> -2.5 (noisy), math stays -3.7..-5.4, ifeval worsens (-1.9 -> -4.2). Training barely moved (loss 0.693 -> 0.667).
+  Verdict: lr 5e-6 x 40 steps is too gentle to repair; not a candidate. Next candidate (user to decide): the same pairs at a
+  stronger dose (lr 2e-5, as D7 stage 1; or 1e-5 x 80 steps), screens 10 / 20 / 40; the pairs and pt-mid's answers are reused.
+  GPU 2 moved on to bidax6p (the precision-only test); GPU 1 D5 margin trained, screening.
+- ~13:45 (user) Track A stronger doses queued, same pt-mid answers and pairs as rpA (ptrepair --rp-from): rpB lr 2e-5 x 40
+  steps (screens 10 / 20 / 40) on GPU 1 right after the D5 margin screens; rpC lr 1e-5 x 80 steps (screens 10 / 20 / 40 / 80)
+  on GPU 2 right after the bidax6p screens.
+- ~14:30 **D5 lpd-margin** (narrowest 15% of each pair kind dropped): step 100 **+55.0 / -3.1** (+0.8 vs curve), step 200 **+56.9 /
+  -3.8** (+0.5), **final +53.3 / -2.6** (svamp +65 / -4.2, mbpp +50 / -2.7, ifeval +50 / -2.7, simple +42 / -3.5, multiple +46 /
+  -0.8, no-fit +49 / +2.3), +1.0. Keeping only wide-margin pairs = more shortening at more accuracy cost (on the curve, below
+  v1). Not a v1 candidate.
+- Queue note: GPU 1 had already re-read its plan before rpB was pushed, so it started D10 l2s50e first; rpB runs right after
+  D10 (~5 h later than intended). rpC stays after bidax6p on GPU 2 (bidax6p at step 190/336).
+- ~15:30 **bidax6p (bidax4's pairs, our settings, ONLY the precision switched to fp32 + fp16 autocast)**: step 100 **+45.7 / -1.8**
+  (svamp +55 / -2.3, mbpp +43 / -2.3, ifeval +40 / -2.9, simple +39 / -2.7, multiple +44 / -0.4, no-fit +45 / +3.7), +0.3 vs curve;
+  step 200 **+48.9 / -2.0** (svamp +52 / -3.5, mbpp +45 / -0.6, ifeval +53 / -3.1, simple +43 / -5.0, multiple +46 / -0.8, no-fit
+  +49 / +3.1), +0.7. Same pairs in bf16 (bidax4): 100 +57.1 / -5.1, 200 +54.6 / -3.7; with ALL of his settings (bidax6): 100
+  +44.4 / -2.2, 200 +40.1 / -0.9. Reading: the precision alone accounts for most of the change his settings made (much gentler,
+  -11 pts saving and +3 pts accuracy at step 100): float32 + fp16 autocast trains less aggressively than our bf16 path. It moves
+  the model along the curve (from below to slightly above) rather than giving a big jump above it. Final next; then rpC.
+- ~16:30 bidax6p step 300: **+47.8 / -1.4** (svamp +57 / -1.7, mbpp +39 / -0.4, ifeval +48 / -1.9, simple +42 / -6.5, multiple
+  +46 / -0.8, no-fit +48 / +2.5), +1.1 vs curve. Final next, then rpC on GPU 2.
+- ~17:30 (user) **Finish lpt6 queued** (GPU 2, after rpC; the consultant's 13-screen design): (a) train the missing math adapter
+  (typeonly lpt6 --to-parts svamp, bidax5s pairs, 2 seeds, lpt6's exact historical settings); (b) solos at 1.0: math + no-fit;
+  (c) all six solos at 0.5 (rescreen --cx-scale 0.5); (d) five merges via the new mixscreen stage (math / code / ifeval / simple /
+  multiple / no-fit): C 0/0/.5/.5/.5/0, P .5/0/.5/.5/.5/.5, S6 all .5, P+ 1/0/.5/.5/.5/1, T .5/0/.5/0/1/.5. Purpose: a second,
+  differently-trained per-type family (6 adapters, rule-B pairs, no NLL, cosine) to compare with pt-mid's (4 adapters, LUPIN
+  pairs, NLL 1.0, constant lr): solos, dose and merges, as data for the Jasmin battle plan.
+- Deep research for Jasmin (107 agents, 24 sources, 23 of 25 claims confirmed): research_jasmin_merging.md. No source tests
+  0.6B, per-type DPO LoRA merging, or non-math tasks. Supported: separate-then-merge beats data mixing for 2-5 sources at 3-13B
+  (DEM, Cohere Aya, LoRA Soups), DPO merges more consistent than SFT merges; the advantage fades with more skills (3+: data mix
+  won; TIES collapses with merge count; Task Arithmetic the only reliable method); plain shortest-vs-longest DPO cuts ~17-30%
+  only; -50% at < 1 pt at 1.5B came from on-policy RL with correctness-aware length rewards (DRPO; AdaptThink uses skipping
+  thinking = not allowed here) or SEARCHED / layer-wise merge coefficients (Evo-L2S -52% at +4.6 pts, FIM-TIES); uniform merges
+  degrade at 1.5B ("smaller models struggle to learn from model merging"); DARE needs drop < 0.5.
+- ~19:30 **bidax6p final: +48.8 / -2.3** (svamp +57 / -3.1, mbpp +39 / -0.6, ifeval +52 / -5.2, simple +42 / -5.2, multiple +46 /
+  +0.2, no-fit +48 / +3.7), +0.4 vs curve. Precision alone: best at step 300 (+1.1); his schedule (bidax6s) still to come.
+- **rpB-10 (pt-mid + repair at lr 2e-5, step 10): +52.4 / -2.2** (svamp +58 / -5.8, mbpp +63 / -0.8, ifeval +46 / -0.8, simple +37 /
+  -2.5, multiple +40 / +0.6, no-fit +42 / -1.5), +1.2 vs curve: code and no-fit repaired (mbpp -6.0 -> -0.8, no-fit -5.8 -> -1.5
+  vs rpA-5), math still -5.8. Training moved this time (loss 0.693 -> 0.578, 75% ordered right at step 40). Steps 20 / 40 next.
+  rpC (lr 1e-5 x 80) training on GPU 2, step 25/80.
+- ~21:30 **Track A rpB (lr 2e-5) curve**: step 10 +52.4 / -2.2 (+
+[output cut at 10,000 characters]

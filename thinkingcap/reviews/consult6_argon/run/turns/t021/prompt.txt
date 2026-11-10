@@ -1,0 +1,84 @@
+  Mac): mean push per part +0.01 / -0.01 / -0.06 / +0.01 / -0.01 / 0.00, biggest single pushes on spaces and digits, 0.00 at
+  </think>: the 0.6B barely reacts to the effort instructions, so the self-coach version would teach nothing. The 4B check runs on
+  GPU 2 first (copddemo) before the smoke test and Run A (the Mac's 8.6 GB RAM cannot hold the 4B).
+- (user) Run B, only if Run A loses accuracy: COPD pushes applied to RIGHT answers only (wrong answers never teach "be brief").
+- 9 Nov ~13:00 **ca1-soup-10 FULL TEST: +49.1 / -2.4** official (+0.4 vs curve; its 720 screen said 52.4 / -0.9: flattered).
+  svamp +58 / -4.3, mbpp +53 / -2.2, ifeval +45 / -2.4, irrelevance +41 / -3.2, multiple +38 / +0.6, simple +36 / +0.4.
+  Same pattern as rc1-soup-30, milder: math loss from always-solved questions (100 -> 94.6); no-fit 7/8 questions -23 pts.
+  160 regressed questions (rc1-soup-30: 212). Breakdown + struggle in runs/mvtf/bd-ca1-soup-10, st-ca1-soup-10.
+- 9 Nov COPD smoke test (cp1smoke2): step 1 ran (coach verdict on 128 answers: mean push -0.012, 38% of tokens pushed down,
+  </think> 0.00), step 2 out of memory moving the teacher back to the GPU (~7 GB still held after step 1); Run A (cp1a) the same
+  at step 2. copddemo, 20 hand-written questions: 0.6B as coach ~0 (direction 10/20); **4B as coach reacts (needless check
+  pushed down in 19/20) but pushes the USEFUL check down twice as hard (-0.20 vs -0.10; needless below useful only 7/20), stop
+  +0.01**: on this evidence COPD with these instructions would remove the re-read step. User: run Run A anyway for a few steps,
+  it may show something useful. Memory fix: no KV cache in batch_logps (use_cache=False), explicit frees between the read and
+  training phases, GPU memory logged per step (gpu_gb). cp1a resumes after its step 1.
+- 9 Nov **ca1-soup-10 why-data** (st-ca1-soup-10/summary.json, read from Drive): wrong answers out of 8 per question, original ->
+  ca1. Math: cut off 139 -> 0, stopped early 27 -> 252, plain wrong 644 -> 922; on its 62 regressed questions 30% stopped early,
+  68% wrong after normal-length thinking, thinking 0.43 of the original's right answers, 271 of 307 wrong numbers far off (the
+  question misread, as rc1). Code: cut off 236 -> 34, stopped early 23 -> 157, wrong 1,179 -> 1,311. IFEval: stopped early
+  24 -> 247, cut off 156 -> 94, wrong 1,648 -> 1,575. No-fit: stopped early 3 -> 29, wrong 316 -> 351. Calls: about unchanged.
+  Same mechanism as rc1-soup-30, milder: fewer early stops (it shortens less), the misread-question errors remain.
+- 9 Nov COPD Run A (cp1a, short version) stopped by the user after step 4 (resumes from there): memory fix holds (gpu_gb 1.33
+  after every step), but ~15-20 min per step (the 8 GB teacher moved CPU<->GPU twice a step). Steps 2-3: practice accuracy
+  0.867 / 0.828, tokens 566 / 636, coach 36-38% of tokens pushed down, mean -0.018, </think> 0.00.
+- 9 Nov ~14:45 **COPD Run A (cp1a) @ step 10: +14.6 / -0.2** official (720 x 4; -0.5 vs curve): svamp +23 / +0.2, mbpp +15 / +0.8,
+  simple +11 / -1.0, irrelevance +10 / 0.0, multiple +8 / -1.1, ifeval +8 / -1.3. Against GRPO gr2f at the same step 10:
+  4.0 / -0.4 (and 11.4 / -0.6 at step 20): COPD shortens ~3.5x faster per step with no math loss, despite the demo's warning.
+  Run A continues to step 20.
+- 9 Nov ~15:30 **COPD Run A (cp1a) @ step 20 (end of the short run): +20.8 / -0.4** official (720 x 4; -0.7 vs curve): svamp
+  +35 / +0.2, mbpp +18 / +0.6, irrelevance +19 / -0.6, multiple +20 / -1.1, simple +14 / -0.4, ifeval +11 / -1.9. Step 10 -> 20:
+  saving 14.6 -> 20.8, accuracy -0.2 -> -0.4: still growing, math still free. GPU 2's queue ended.
+- 9 Nov **rpE (repair of rc1-soup-30) @ step 10: +57.4 / -2.9** (compare's average; official 57.2 / -3.0). rc1-soup-30's own
+  720 screen (s4-rc1-soup-30/compare.json, from Drive): +58.7 / -3.8 (svamp -5.0, ifeval -4.0, simple -4.0, irrelevance -4.6,
+  mbpp -3.5, multiple +0.6). After 10 repair steps: svamp -2.7 (+2.3), ifeval -2.5 (+1.5), simple -2.7 (+1.3), irrelevance
+  -3.7 (+0.9), multiple +1.5, mbpp -4.6 (-1.1); +0.9 accuracy for -1.3 saving. Repair pairs: chosen re-checks the question
+  51 / 77 / 94% (math / code / no-fit) vs rejected 41 / 57 / 82%; chosen and rejected about equal length.
+- 9 Nov **rpE (repair of rc1-soup-30) @ 20: +54.8 / -2.6** (irrelevance -1.9, simple -1.0, mbpp -2.5, ifeval -2.9, svamp -4.2,
+  multiple +1.3); **@ 40: +50.5 / -1.7** official (irrelevance -0.2, multiple +1.5, simple -1.9, ifeval -1.7, mbpp -2.7, svamp -1.9;
+  saved: svamp 60, mbpp 54, irrelevance 50, multiple 43, ifeval 42, simple 40). Path from rc1's 720 (58.7 / -3.8): each 10 steps
+  buys ~0.5 pt of accuracy for ~2 pts of saving after step 20; vs curve rc1 +0.6, @10 +0.6?, see below. Step 80 scoring.
+- 9 Nov **rpE @ 80: +50.4 / -0.2** official (720 x 4; compare's average 50.6 / -0.1; **+2.8 vs curve**): irrelevance +51 / +3.1,
+  multiple +43 / +1.3, simple +39 / -2.1, ifeval +50 / +0.4, mbpp +52 / +1.0, svamp +56 / -2.5. First model to meet >50% / better
+  than -1 on the 720 screen. CAVEAT: the 720 flattered ca1-soup-10 by 1.5 pts (720 -0.9 vs full test -2.4); rc1-soup-30's 720
+  (-3.8) was close to its full test (-3.5). A full test is needed before any claim. Screens at 45 / 50 running.
+- 9 Nov ~19:45 (after Colab's provisioning outage; both runtimes restarted) **rpE @ 45: +52.9 / -1.7** official (irrelevance +0.4,
+  multiple +0.6, simple -2.1, ifeval -3.1, mbpp -1.7, svamp -1.3). Path @40 50.5 / -1.7, @45 52.9 / -1.7, @80 50.4 / -0.2: between
+  40 and 45 the screens differ by 2.4 pts of saving at equal accuracy (screen noise ~ +-2). COPD steps 21-25 trained (465-542 tokens).
+- 9 Nov **rpE @ 50: +49.5 / -1.6** (irrelevance +2.3, multiple +1.5, simple -1.7, ifeval -1.9, mbpp -3.3, svamp -1.3). Full tests
+  of rpE-80 then rpE-40 started on GPU 1 (both models built by fullmodel --fm-merge).
+- 9 Nov **COPD cp1a @ 25: +25.6 / -1.5** (-1.6 vs curve): svamp +40 / -0.2, mbpp +23 / -1.7, ifeval +16 / -4.0, irrelevance +20 /
+  -1.7, multiple +23 / +0.6, simple +19 / 0.0. Saving up from 20.8 (@20) but accuracy down from -0.4: the lr jumped back to
+  ~5.5e-6 at step 21 (cosine stretched to 40 steps); IFEval carries the loss (the coach shortens the RESPONSE too).
+- 9 Nov **diagnostic (user): thinking vs response tokens and accuracy per type, 720 x 4, from compare.json** (base -> model):
+  | model | ifeval acc | ifeval think | ifeval response | svamp acc / think | mbpp acc / think |
+  | rc1-soup-30 | 59.0 -> 55.0 | 420 -> 129 | 247 -> 217 | 90.0 -> 85.0 / 685 -> 205 | 50.8 -> 47.3 / 2077 -> 685 |
+  | rpE @ 50 | 59.0 -> 57.1 | 420 -> 153 | 247 -> 245 | 90.0 -> 88.8 / 685 -> 274 | 50.8 -> 47.5 / 2077 -> 968 |
+  | rpE @ 80 | 59.0 -> 59.4 | 420 -> 146 | 247 -> 190 | 90.0 -> 87.5 / 685 -> 297 | 50.8 -> 51.9 / 2077 -> 981 |
+  | COPD @ 25 | 59.0 -> 55.0 | 420 -> 317 | 247 -> 245 | 90.0 -> 89.8 / 685 -> 406 | 50.8 -> 49.2 / 2077 -> 1586 |
+  (1) The repair's lr was CONSTANT (cosine from 1e-5 to lr-min = 1e-5): 50 -> 80 the thinking lengths barely move (ifeval 153 ->
+  146, mbpp 968 -> 981, svamp 274 -> 297) while accuracy rises (ifeval +2.3, mbpp +4.4): its pairs are equal-length (medians
+  chosen / rejected 271/278, 440/440, 185/183), so they teach correctness inside the same length; the saving fell only over
+  steps 0-40. (2) IFEval's loss is NOT a shortened response: COPD and rpE @50 keep the response (247 -> 245); rpE @80 even shortens
+  it (-> 190) yet beats the original. The losses go with THINKING cuts (rc1 -69%, COPD -25%). IFEval is the noisiest part
+  (original 59%, 720 half-width +-3.6 pts vs svamp +-1.9). Which instructions fail needs records + questions (next).
+- 9 Nov **COPD cp1a @ 30: +29.2 / -1.3** (-1.2 vs curve): svamp +45 / -1.0, mbpp +33 / -0.8, ifeval +12 / -3.5, irrelevance +26 /
+  -0.6, multiple +24 / 0.0, simple +22 / +0.6. Saving still rising (20.8 -> 25.6 -> 29.2), accuracy steady near -1.4, IFEval the
+  loss. ifeval_rules.py + ifevalrules stage queued on GPU 1 after the full tests (full-rc1, full-ca1, full-rpE-80/40, s4-cp1a-20/25).
+- 9 Nov **COPD cp1a @ 35: +29.8 / -1.7** (svamp +48 / -1.9, mbpp +27 / -1.0, ifeval +15 / -2.5, irrelevance +26 / -0.8, multiple
+  +25 / -0.6, simple +23 / -2.1): the saving has flattened (29.2 -> 29.8) while accuracy drifts down; math now loses too (-1.9).
+- 9 Nov **COPD diagnostic (user: what is happening at step 35?)**. (a) The lr: cosine stretched to 40 steps, so 6.1e-6 at step 21,
+  4.5e-6 at 25, 2.7e-6 at 30, 1.4e-6 at 35, ~1e-6 at 40: the saving flattens as the lr reaches its floor. (b) The coach's signal
+  shrinks as the student becomes "brief": mean push -0.015 (steps 21-25) -> -0.008..-0.012 (31-38), tokens pushed down 34-37% ->
+  31-33%; entropy 0.29 -> 0.25-0.28; practice answers ~500 -> ~400 tokens, practice accuracy flat 0.83-0.91. (c) 720 @35 vs @25
+  (compare.json): svamp thinking 406 -> 353, acc 89.8 -> 88.1; mbpp 1,586 -> 1,501, 49.2 -> 49.8, still 4.4% cut at 8,192
+  (original 8.5%); ifeval thinking 317 -> 290, RESPONSE 245 -> 278 (longer), cut 3.1 -> 3.8%, acc 55.0 -> 56.5. The accuracy drift
+  is within the per-type noise except a slow math slide (-0.2 / -1.0 / -1.9 at 25 / 30 / 35); COPD has no correctness term to
+  stop it. Data-backed fix: the rpE repair (equal-length right>wrong pairs, constant lr) took rc1 from -3.8 to -0.2 at the same
+  length, so "COPD to compress, then the same repair" on a COPD checkpoint; and a constant lr for any further COPD.
+- 9 Nov (user) **COPD Run C (cp1c) queued on GPU 2 after Run A**: rl_train --copd-outcome w adds w x (right - the question's mean
+  right) to every token of each reply (GRPO-style group comparison, no std) on top of the coach's per-token push: correctness
+  trained in the same step; w = 1.0, 32 questions x 4 answers, CONSTANT lr 1e-5 after 4 warm-up steps, 40 steps, 720 at 10/20/30/40.
+  No per-type brake (user). Toy-model test passes.
+- 9 Nov (user: option 3, and keep data on the mix) Run C now uses --tp-mixed-sh
+[output cut at 10,000 characters]

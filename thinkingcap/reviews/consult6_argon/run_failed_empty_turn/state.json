@@ -1,0 +1,14 @@
+{
+ "turn": 1,
+ "passes": 0,
+ "code_runs": 0,
+ "spent_usd": 0.0,
+ "conversations": 1,
+ "finished": true,
+ "no_block": 0,
+ "refused": 0,
+ "forward_failed": 0,
+ "kernel_restarts": 0,
+ "repeated_block": 0,
+ "code_errors": 0
+}

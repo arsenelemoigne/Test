@@ -1,0 +1,98 @@
+the math-only "be right" + keep-thinking pairs (chosen = full right replies, NLL anchor on) lengthen every type, as the
+long-chosen pairs did in stopV2. Accuracy +0.9 overall, mostly MBPP+ (+2.5); IFEval and BFCL multiple stay down.
+
+### 2026-10-27 ~00:00 ? mf1 soups 50/75 and stopV3 soup 25 (fresh 240 x 8)
+- mf1-soup-50: +32.2% / -0.5 (svamp +30% / -0.3, mbpp +29% / +2.5, ifeval +35% / -2.8, bfcl irr +37% / -0.3, mult +34% / -3.7, simple +32% / 0.0).
+- mf1-soup-75: +33.0% / -1.3 (svamp +24% / -0.6, ifeval +42% / -3.7, mult +35% / -3.7).
+  Reading: more mf1 training only makes every type think longer (saving 53.9 -> 45.6 -> 32-33) without buying accuracy back
+  (SVAMP stays at -0.3/-0.6 from soup 25 on; IFEval and BFCL multiple get worse). The "longest right beats shortest wrong"
+  guard pairs teach length to all types, not just math. Best mf1 point = soup 25 (+45.6 / -1.4); not the goal.
+- stopV3-soup-25 (from the original Qwen): +13.4% / -0.7 (svamp +18% / -0.6, mbpp +12% / +0.6, ifeval +14% / -0.9, bfcl irr +7% / -2.8,
+  mult +11% / -2.2, simple +10% / -0.3). Unlike stopV2 (replies got longer), dropping guard pairs and capping keep-thinking pairs gives a
+  real if small saving. Soups 50-300 next.
+**27 Oct ~00:15, drpo3e replaced by drpo3f (user):** the same continuation of drpo3d-23 (21.2% / +0.2) but lambda 0.3 instead
+of 0.5; math and toolace/multiple protected, guard 10 pts, 40 steps, every 5 scored on fresh x8 (GPU 2, after mf1's soups and
+bp1). stopB3's pairs by type (from pairs-stopB3): kodcode 359, gsm_ic 248, gsm_plus 130, ifeval_like 166, commonsense_qa 80,
+toolace 60, arc_easy 15 (1,058, all shorten); stopB5 ~71% code.
+**27 Oct ~00:40, sp1 queued (GPU 1, after teach1c, before sb2; user):** one big self-preference round from the original
+Qwen (michal-bida's recipe: own answers, shortest right > longest wrong and > much longer right, shorten capped at guard per
+type) but 12,000 questions x 4 (vs our A1's 438 pairs) and math + toolace/multiple PROTECTED: balanced_pairs.py --protect gives
+them only similar-length (+-25%) right > wrong pairs, no length push. Pool: MetaMathQA 25%, IFEval-like 25%, KodCode 25%,
+ToolACE 17%, Hermes 8%. balround gained --bal-mix / --bal-kod / --bal-protect; toy-tested (protected math gets 300-vs-320
+right > wrong, not 300-vs-900 shorten; code keeps guard + shorten; toolace/multiple protected by category).
+
+### 2026-10-27 ~01:00 ? Drive cleanup (user: free ~40 GB; record everything first)
+**State before:** personal Drive 408.05 GB used (Drive 125.9 GB, Photos 270.2 GB, Gmail 11.6 GB). thinkingcap-mvtf/models/
+holds ~62 merged models at ~1.13 GB each (model.safetensors 1.11 GB + tokenizer files). Every scored model's evaluation stays
+on Drive untouched (runs/mvtf/f8-*/results.json, records.jsonl, compare.json): only merged weights are removed, never results,
+adapters, lots, rollouts or data.
+**Why safe:** a merged model = base + LoRA adapter(s) (merge.py); the adapters stay in thinkingcap-mvtf/adapters/ (a few MB
+each), so each one is rebuilt in about a minute:
+- `<run>-soup-<N>` (targeted / clean / balround / mathfix stages): `python merge.py --model <base> --out models/<run>-soup-<N>
+  --adapters adapters/<run>-s0/step-<N>:0.333333 adapters/<run>-s1/step-<N>:0.333333 adapters/<run>-s2/step-<N>:0.333333`
+  (base: Qwen/Qwen3-0.6B for stop*; the parent model for chained rounds: ca1 from the clean-a2 line, ca2 from ca1, see the
+  24 Oct entries "Line A (runtime 2): ca1 from clean-a2" / "ca2").
+- `drpo1-<N>`: `python merge.py --model models/rc1-rl-40 --out models/drpo1-<N> --adapters adapters/drpo1-drpo/step-<N>:1`
+  (drpo1-20x0.5: weight 0.5).
+- `rc1-rl-<N>`: rlcal: `--model models/rc1-soup-30` (the chosen cal soup) `--adapters adapters/rc1-rl/<checkpoint N>:1`.
+**Only models made before both runtimes were replaced (26 Oct ~00:40) are deleted:** the runtimes copy their local models/ back
+to Drive after every stage, so anything a running runtime still holds would be re-uploaded. Kept: every chain start and queue
+start (ca1-soup-10, rc1-soup-30, rc1-rl-40, drpo3b-20, drpo3d-23, mf1-soup-25), every model made or restored since 26 Oct 00:40
+(stopB5, stopV2, stopV3, drpo3b/3d, mf1, teach1), and every family whose adapters could not be confirmed on Drive (stopB,
+stopB2, rc2, rr1, sb1: Drive search did not show stopB-s0 / rc2-s0 / sb1-drpo; to verify before any later deletion).
+**Moved to the Drive trash (19 models, ~21.5 GB; adapters confirmed on Drive: ca1-s0..2, ca2-s0..2, drpo1-drpo, rc1-rl,
+rc1-s0, stopB3-s0), with their fresh-x8 scores where scored:**
+ca1-soup-20, ca1-soup-30, ca1-soup-40, ca2-soup-10, ca2-soup-30, ca2-soup-40 (choosing-set scores only, see 23-24 Oct);
+ca2-soup-20 46.4% / -2.73; drpo1-20 61.7% / -4.92; drpo1-20x0.5 59.8% / -3.72; drpo1-40 73.3% / -6.90; drpo1-60 78.7% / -5.99;
+rc1-rl-20 54.8% / -3.67; rc1-rl-60 49.6% / -3.39; rc1-soup-10 48.6% / -3.02; rc1-soup-20 54.8% / -4.01;
+stopB3-soup-15 18.3% / -1.04; stopB3-soup-20 27.1% / -2.03; stopB3-soup-30 54.8% / -3.20; stopB3-soup-40 69.1% / -5.71.
+Emptying the trash (permanent) is left to the user. Not deleted, for a later pass: 12 models of the unverified families
+(~13.5 GB) and the post-00:40 models (~20 GB) once their runtimes are released.
+**Cleanup done by a runtime stage instead (user):** scripted clicks are ignored by Drive and the Chrome extension was not
+connected, so `dropmodels --name drop1` (GPU 2, after mf1's soups, before bp1) removes the models through the Drive mount
+(to the Drive trash). It checks each model's adapter folder on Drive first and KEEPS the model if it is missing. List (31):
+the 19 above, plus stopB-soup-10/20/30 (adapter stopB-s0, later found on Drive), stopB2-soup-20 (stopB2-s0), rc2-soup-10/20/30/60
+(rc2-s0), rr1-rl-20 (rr1-rl), sb1-10/20/30 (sb1-drpo); the last four families are removed only if their adapters are found.
+Extra recipes: sb1-<N> = merge(models/rc1-rl-40, adapters/sb1-drpo/step-<N>); rc2-soup-<N> = merge(models/rc1-rl-40,
+adapters/rc2-s0..2/step-<N>, 1/3 each); rr1-rl-<N> as rc1-rl (rlcal). Fresh-x8 scores of these: stopB soups 10/20/30 11.9/+0.9,
+31.1/-2.3, 54.2/-3.6; stopB2-20 34.6/-2.1; rc2 soups 10/20/30/60 in density_points (63-64% / -4.9 for 20/30); sb1 10/20/30
+58.6/-3.3, 66.2/-5.7, 78.2/-11.2. Expected: up to ~35 GB freed if every adapter is found.
+
+### 2026-10-27 ~01:30 ? mf1 soups 100/150, stopV3 soups 50/75 (fresh 240 x 8)
+- mf1-soup-100: +31.4% / -0.5 (svamp +23% / +1.3, ifeval +43% / -5.0, mult +35% / -4.1, mbpp +24% / +2.5).
+- mf1-soup-150: +29.9% / -0.3 (svamp +24% / +1.3, ifeval +38% / -1.9, mult +34% / -3.7).
+  mf1 settles at ~30% saved / ~-0.4: the math repair gives back ~24 points of rc1-rl-40's saving for ~1.7 pts accuracy. SVAMP is now
+  above the original (+1.3) but BFCL multiple stays ~-4. Not the goal; soup 25 (+45.6 / -1.4) remains mf1's best trade.
+- stopV3-soup-50: +16.4% / -1.4; stopV3-soup-75: +11.8% / +0.2. The stop line from the original Qwen plateaus at 12-16% saved.
+**27 Oct ~01:35, bp1 failed (my bug): "invalid choice: 'budgetprompt'"** ? another session had added "mathfix" to the stage
+list at the same place, so my edits adding "budgetprompt" and "dropmodels" did not apply (no assert). Fixed with an assert and a
+check that every stage function is in the list. drop1 moved to GPU 1 right after stopV3 (GPU 2 is on drpo3f for ~13 h); bp1
+requeued as bp1b on GPU 1 after gold1.
+
+### 2026-10-27 ~02:00 ? ps1 queued: prompt search before prompt distillation (user)
+- Lightning McQwen3's first step (distil a terse prompt into the weights) is the one piece of his recipe we never tried.
+  Before distilling, ps1 measures 11 prompts on the ORIGINAL model: no prompt, concise, prefill, no-re-check (+prefill),
+  token budget 100, Chain of Draft, his examples / ex-draft (+prefill), and ex-draft with one example per task type
+  (math, code, tool call, instructions). 50 training questions per type of lot V2 x 4 replies each; tokens saved,
+  accuracy change, leak rate, all paired against no prompt. Training questions only (choosing on the benchmarks would
+  fit to them). GPU 1, after stopV3, before gold1. prompt_search.py, prompt_candidates.py, track.py promptsearch.
+- Public competitors re-checked: 4 forks of ThinkingCap-Test; only basta (Lightning McQwen3) and michal-bida have work,
+  miroslavmyrha and horychtom have no commits. Submissions go to BottleCap by email (git bundle), so most are private.
+  BottleCap publishes no 0.6B score of its own; the README's guide is > 20% saved at <= 0.2 pt lost per 1% saved.
+
+### 2026-10-27 ~02:40 ? GPU 2 moved on; bp1 failed at start
+- mf1 finished (one epoch = 176 steps, so no soup 200): best trade stays soup 25 (+45.6 / -1.4); later soups ~30% / -0.4.
+- bp1 (budget prompt, GPU 2) failed at once: "invalid choice: 'budgetprompt'", the runtime's track.py was older than the plan
+  line when the stage started. bp1b on GPU 1 measures the same thing, so it was not requeued. GPU 2 now runs drpo3f
+  (from drpo3d-23, toolace/multiple protected, 40 steps scored every 5).
+- GPU 1: stopV3 soups 100-300 scoring (25/50/75 = +13.4/-0.7, +16.4/-1.4, +11.8/+0.2); then drop1, ps1, gold1, bp1b, teach1c, sp1.
+
+### 2026-10-27 ? literature on building pairs for shorter thinking (research pass, for the "many pair strategies" step)
+Strategies to test offline on one fixed set of graded answers, best supported first:
+1. DAST (2503.04472): add "longer WRONG beats shorter wrong" pairs on top of "shorter right beats longer right"; the
+   wrong-longer pairs are the accuracy guard (correct-shorter only: 90.0 / -60%; both: 93.6 / -18%; R1-Distill-7B MATH500).
+   SimPO, 1 epoch, max-margin pair per kind per question, bottom ~15% margins dropped. Opposite of michal-bida's "longest wrong".
+2. First-correct + one check (Chen et al. 2412.21187): chosen = the reply cut after its first right answer plus one
+   re-check, rejected = longest; QwQ-32B MATH500 92.8 at -45% (shortest reply as chosen: -22%). BFCL analogue: ThinkBrake
+   (2510.00546) stop at
+[output cut at 10,000 characters]

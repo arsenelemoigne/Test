@@ -1,0 +1,121 @@
+the limit on unseen questions: the late rounds push too far.
+
+### Where the accuracy goes at 60%+ (fresh questions), and the balanced round (queued)
+
+On the fresh set (240 x 8) the loss is math, not code: SVAMP -9.1 (round 4), -10.6 (round 4 retrain),
+-9.7 (round 2 retrain), -7.5 (round 2 on questions 41-80), while MBPP+ is -2.5 to +0.6. On questions_40
+math looked fine and code bad: picking checkpoints on those 40 SVAMP questions selected for them. Math
+is shortened most (SVAMP 76% at round 4) and SVAMP is built with traps (irrelevant numbers, rephrased
+questions). Late rounds mostly push math: round 4 had 96 math shorten pairs against 10 for tools and 15
+for instructions (their answers were already short), and a numeric answer can be right by a shortcut.
+
+Balanced round (`track.py balanced`, from round 2): savings from tools, instructions and multiple choice
+(short-beats-long only where the question is answered right >= 6/8), math protected (at most 40 shorten
+pairs per math source, right-beats-wrong with a median-length correct reply), math data with SVAMP-style
+traps: GSM-Plus (Li et al. 2024; distraction insertion, problem understanding, reversed/added operations,
+numerical substitution; GSM8K-based) and GSM-IC (Shi et al. 2023; in-topic irrelevant sentences). 1,500
+fresh questions x 8; DPO with 3 seeds averaged per checkpoint step (merge.py); best soup x8 usual + fresh.
+
+**Family A, A1 (DPO from raw, round-1 answers without code, 438 pairs, 28 steps), 2 samples:** step 10
++15.8% / 0.0; step 20 +41.9% / -3.6. Step 10 with 4 samples: +17.8% / +1.7. Steps 20 and 28 rechecked
+with 4 samples before A2 picks its start.
+A1 step 10 with 8 samples: +17.7% / +1.1. **A1 step 20 with 4 samples: +37.8% / +0.1** (the 2-sample -3.6 was
+noise): svamp +41% / +2.5, ifeval +52% / +4.4, mbpp +27% / -7.5, bfcl +26-29% / -0.6..+1.9.
+A1 step 28 with 4 samples: +40.5% / -1.2 (mbpp -8.7); A2 starts from it.
+
+**Fresh set (seed 20261022, 240 x 8), runtime 1:** round 1 no-code step 30 **+40.4% / -0.9**; round 2 (r2g step
+10) **+51.4% / -1.8**; round 3 step 5 +56.0% / -3.6 (outside; svamp -7.5). Round 2 holds on both fresh sets
+(-1.8 here, -2.7 on questions 41-80); round 3 does not.
+
+**Round 5 (seed-3 draw, from round 4 step 15):** 2 samples: step 5 +69.3 / -2.2, step 10 +70.9 / -3.3, step 15
++73.5 / -4.3. Step 5: 4 samples +71.1 / -1.1; **8 samples +68.6% / -2.4** (svamp +82% / -2.2, mbpp +71% / -10.3,
+ifeval +64% / +1.3, bfcl +43-49%). Not tested on fresh questions; round 4 lost 1.5 points there.
+
+**Family A, A2 (from A1 step 28; 750 unused questions without code, 345 pairs), 2 samples:** step 5
++45.9 / -3.1; step 10 +47.0 / -5.9; step 15 +53.3 / -4.6 (none within; svamp -3.7 to -11.2). **A1 step 28
+on the fresh set: +35.4% / -1.9.** A2's step 5 is rechecked with 4 samples after the balanced round.
+
+**Balanced round data (round 2 answering 1,437 fresh questions x 8):** shortest correct vs its own mean:
+gsm_plus 41%, gsm_ic 32%, ARC 27%, instructions 24%, CSQA 19%, tools 14%; 0 contamination drops. 736 pairs:
+shorten 218 (CSQA 59, gsm_plus 40 and gsm_ic 40 capped, instructions 35, ARC 24, tools 20), guard 518
+(math guards use a median-length correct reply). Mix 30 / 70. Three DPO seeds of 43 steps each; at step 10-15
+pairs are ordered right 46-64% only (harder pairs than before). Tools and instructions give few shorten
+pairs even at 6/8: round 2's answers there are already near their shortest.
+**Balanced soups (3 seeds averaged), questions_40 x 4:** step 10 +55.9% / -2.0; **step 20 +58.9% / -0.5**
+(svamp +67% / +1.9, ifeval +65% / +4.4, bfcl +38-47% / -0.6..+3.1, mbpp +57% / -10.0); step 30 +57.5% / -0.5.
+
+**Balanced round, step-20 soup (3 seeds averaged):** step 40 at 4 samples +55.6% / -0.9.
+- questions_40 x 8: **+58.8% / -2.1** (svamp +68% / -1.6, mbpp +60% / -8.4, ifeval +61% / -0.3, bfcl +36-44%)
+- **fresh set x 8: +53.8% / -2.5** (svamp +64% / -4.7, mbpp +58% / -1.6, ifeval +50% / -2.8, bfcl +36-41%)
+Against round 2 on the same fresh set (+51.4% / -1.8): 2.4 points more saving, 0.7 more loss; math loses
+-4.7 on fresh questions (rounds 3-4: -7.5 to -10.6). Protecting math works; the gain is modest.
+**A2 step 5 with 4 samples: +44.6% / +0.3** (the 2-sample -3.1 was noise).
+Runtime 2's worker predates the `end` line and failed on it; `end` is now also a stage that saves, flushes and
+stops its worker (runtime 1 reaches it later).
+
+**Fresh set (240 x 8), last results (read from Drive compare.json):**
+- Family B (MBPP-free, KodCode right-beats-wrong): **B1 step 20 +24.8% / -1.5** (svamp +36% / -0.3, mbpp +24% / +0.6,
+  ifeval +19% / -4.4, bfcl +17-21%); **B2 step 10 +32.7% / -0.1** (svamp +43% / -1.9, mbpp +31% / +1.9, ifeval
+  +31% / +0.6, bfcl +24-25% / -2.5..-0.3).
+- **Round 5 step 5: +65.5% / -5.4** (svamp +79% / -10.0, ifeval +55% / -5.0, mbpp +73% / -2.8, bfcl +43-47%):
+  outside, as rounds 3-4.
+
+## Track 2f: MBPP-free line, full recipe, toward > 60% saved at better than -2 (queued 22 Oct 2026)
+
+Goal set by the user: > 60% tokens saved with an accuracy change better than -2 points, from a model that never saw
+any evaluation data (so only the MBPP-free families A and B as starts). `track.py chain`: each round draws new
+questions (ToolACE, IFEval-like, ARC/CSQA, GSM-Plus, GSM-IC; minus every earlier draw), plus new KodCode tasks on line
+B; contamination check now at 30% of 8-grams OR any exact 13-word run, boilerplate lines shared by >= 50 evaluation
+questions ignored; pairs as the balanced round; DPO with 3 seeds; the soup with the most saving at a 4-sample change
+>= -1.5 is chosen and becomes the next round's base model (fresh LoRA on top). Every chosen soup is scored x8 on the
+usual and the fresh questions. `track.py audit` writes runs/audit/contamination_report.txt for every training
+question ever prepared. Line B (runtime 1): cb1 from clean-b2 step 10, cb2. Line A (runtime 2): ca1 from clean-a2
+step 5, ca2. The full 2,759 x 8 evaluation stays for the very end (user's call).
+
+Queued after the two clean lines (22 Oct 2026):
+- Runtime 2, `repair` on round 4 (rep4) and round 5 (rep5): blends with round 2 (75/25, 50/50), length-matched
+  right-beats-wrong DPO on new trap math (pairs of a right and a wrong reply within 25% in length: correctness
+  without a length signal), self-correction SFT on own right replies no longer than the typical one.
+- Runtime 1, **v2 from scratch** (`chain --start raw`, rounds v2r1-v2r4): one recipe in order, no MBPP anywhere;
+  adds verified MVT cuts (4/4 re-answers) as short-beats-long pairs for tools and instructions; KodCode from a
+  wider MBPP-like slice (task <= 70, solution <= 130 tokens; the 907-task slice runs out), tasks never repeated
+  within a line (checked by question text).
+
+**Contamination audit (runs/audit/contamination_report.txt), every training question ever prepared vs the 2,759
+evaluation questions:** math (GSM8K, GSM-Plus, GSM-IC), ToolACE, ARC, CSQA, Skywork: 0 at >= 30%, 0 exact 13-word
+runs (1 in Skywork, unused). **MBPP (old lineage only): ~9 of 300 per draw at >= 50% and ~39 with an exact 13-word
+run: MBPP holds MBPP+ problems under other ids** (e.g. change_date_format ~ Mbpp/427, max_product ~ Mbpp/415). The 50%
+check dropped the worst; weaker near copies may have reached the gentle SFT of rounds 1-5 and the balanced model,
+which therefore cannot be certified clean. IFEval-like: 0-2 of 300 at >= 50%, ~190 share an exact 13-word run with
+IFEval: its fixed constraint wording ("answer with one of the following options: My answer is yes..."), not its
+questions; the chain rounds' strict check (30% or any 13-word run) drops them all the same. KodCode: 0 at >= 50%, 64
+with a 13-word run, dropped likewise. The submission should come from a clean line (A, B, v2).
+
+**Clean line A, round 3 (ca1, from A2; full recipe; 3-seed soups), questions_40 x 4:** step 10 +52.5% / -1.0 (chosen,
+floor -1.5); step 20 +54.6% / -3.0; step 30 +49.2% / -3.0; step 40 +54.2% / -2.9 (svamp +60% / -2.5, ifeval +60% /
++1.9, bfcl +39-47%, mbpp +51% / -10.6). Its x8 tests were cut by the lost runtime (a half-written folder that evaluate.py
+refuses; track.evaluate now clears it) and are requeued; ca2 started from the step-10 soup.
+
+**Clean line B, round 3 (cb1, from B2; full recipe + KodCode right-beats-wrong; 787 pairs; 3-seed soups), questions_40 x 4:**
+step 10 +42.9% / -1.5; step 20 +41.6% / +0.8 (svamp +55% / +0.6, ifeval +49% / +6.9, bfcl +31-35%, mbpp +24% / -5.0);
+step 30 +41.9% / +1.0. Accuracy is kept or gained; the saving is ~10 points below line A's round 3 (+52.5% / -1.0).
+cb1 step 40 at 4 samples +44.0% / +0.9 (chosen). **x8 usual: +42.0% / -0.6** (svamp +55% / -3.1, mbpp +29% / -0.9,
+ifeval +45% / +0.3, bfcl +30-38%); **fresh x8: +41.0% / -1.1** (svamp +54% / -1.6, mbpp +34% / +0.3, ifeval +41% /
+-2.5, bfcl +28-33%). cb2 started from it.
+
+**Clean line A, round 4 (ca2, from ca1 step 10; 675 pairs), questions_40 x 4:** step 10 +49.8 / -2.9; step 20 +52.8 /
+-1.9 (svamp +60% / 0.0, mbpp +48% / -13.7, ifeval +60% / +5.0); step 30 +54.1 / -3.5; step 40 +56.3 / -2.2. Chosen
+step 20 (none reached the -1.5 floor: the most accurate). Round 4 adds little saving over round 3; code carries the loss.
+**ca2 step 20 x8: usual +53.5% / -2.4; fresh +46.4% / -2.7** (fresh: svamp +56% / -5.3, mbpp +51% / -1.9, ifeval +39% / -3.1,
+bfcl +35-40%). Line A's 4th round is weaker on unseen questions than line B's 3rd in accuracy, and its saving drops
+7 points from the usual to the fresh questions.
+
+**ca1 step 10 (line A round 3) x8: usual +49.7% / -2.3; fresh +48.6% / -1.8** (svamp +58% / -4.1, mbpp +53% / -2.8, ifeval
++46% / +0.3, bfcl +33-36%). Line A's best on unseen questions (better than its round 4: +46.4 / -2.7).
+
+**Repair of round 4 (rep4), 1. blend 75% round 4 + 25% round 2:** usual x4 +66.5% / -2.5; **fresh x8 +61.5% / -4.0**
+(svamp +74% / -8.8, mbpp +67% / -4.4, ifeval +55% / -1.9, bfcl +39-43%). Blending in a quarter of round 2 recovers
+little: math still -8.8 on unseen questions.
+
+**Repair of round 4 (rep4),
+[output cut at 10,000 characters]

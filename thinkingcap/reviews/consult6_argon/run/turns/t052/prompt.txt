@@ -1,0 +1,7 @@
+--- FULL-TEST TRAJECTORY OF RC1 -> RPE -> RPI ---
+Traceback (most recent call last):
+  File "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/astra_harness.py", line 140, in kernel_main
+    exec(compile(tree, "<block>", "exec"), env)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<block>", line 9, in <module>
+NameError: name 'df' is not defined. Did you mean: 'f'?

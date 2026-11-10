@@ -1,0 +1,88 @@
+- ~08:45 gr2f started on GPU 1 with the corrected scale: B = irrelevance 231, multiple 208, simple 180, ifeval 669, mbpp 1,818,
+  **svamp 824** (was 82). Scores due at steps 10 / 20 / 30 / 40 (~35 min of training per 10 steps + a 720 screen each).
+- ~09:30 (user) Ivan's joint plan J rejected: its core is bida's pair rules + settings; nothing built on another candidate's recipe will be run or submitted.
+- ~10:00 **gr2f @ step 10: +4.0 / -0.4** official (-0.3 vs curve; svamp +7 / -0.4, multiple +6 / -1.1, ifeval +3 / -1.7, mbpp +3 / +0.8):
+  barely moved after 10 steps (training answers 600 -> 450 tokens, but that is on the training questions); step 20 training done, its score next.
+- ~11:00 **gr2f @ step 20: +11.4 / -0.6** official (-0.9 vs curve): math and code shorten with accuracy UP (svamp +18 / +0.6,
+  mbpp +16 / +0.8), but instructions barely shorten and lose (ifeval +2 / -2.5) and tool calls lose (multiple +10 / -2.3,
+  simple +7 / -1.9; no-fit +9 / 0.0). Step 30 trained (29.7 min), its score running.
+- ~12:00 **gr2f @ step 30: +6.8 / -0.4** official (-0.5 vs curve): saving FELL from step 20 (11.4): ifeval now LONGER than the
+  original (-7% / -1.7), svamp +12 / 0.0, mbpp +11 / +0.8, tools +9-11 / -0.4 to -0.8. Step 40 trained, its score running.
+- ~13:00 **gr2f @ step 40 (final): +11.3 / +0.3** official (0.0 vs curve; multiple +12 / -2.7, ifeval +3 / +2.5, svamp +17 / -0.4).
+  **GRPO verdict:** 40 steps x 32 x 8 from the raw model save 4 -> 11 -> 7 -> 11% at about -0.5 to +0.3: accuracy holds, but the
+  saving is small and does not grow steadily; on the curve, not above it. Both GPUs' queues have now ended.
+
+### 2026-11-09 ? repair stage opened to any model and to own data only (code, no run)
+Plan (user): full-test round 3 (ca1-soup-10) and round 4 before RL (rc1-soup-30), then a "be right" repair on the one closest
+to > 50% / better than -1, with nothing from michal-bida (no MetaMath, math1, math2, instr2, code2, nofit4).
+- `track.py ptrepair --rp-base models/<X>`: repair any merged model instead of pt-mid (it answers, is DPO's reference, and
+  every screen merges onto it).
+- `track.py ptrepair --rp-own-data` (new `own_repair_questions()`): math = GSM8K train+test at every difficulty in SVAMP wording
+  (prepare_types gsm8k_std), minus questions already trained on in rounds 1-4; code / instructions / tools = pool-dp13 rows
+  minus MetaMath + own top-ups nofit1, nofit2, tools1, code1; 8-gram check against every evaluation question.
+- `repair_pairs.py --kinds guard` / `ptrepair --rp-kinds guard`: only the 21 Oct pair (shortest right > shortest finished
+  wrong); the similar-length right>wrong kind (Lightning McQwen3's) left out.
+- Checked here without a GPU: guard-only pairs on synthetic answers; own_repair_questions on stand-in files (MetaMath and easy
+  pool math excluded, used and test-overlapping GSM8K dropped); a mocked ptrepair smoke run (base model passed to answering,
+  DPO and screens; --kinds guard; smoke quota). Not run: tests/test_pipeline.py (needs the challenge's utils package).
+Plan lines, in order:
+  fullmodel --name full-ca1 --nothink-models models/ca1-soup-10            (GPU 1)
+  fullmodel --name full-rc1soup --nothink-models models/rc1-soup-30         (GPU 2)
+  ptrepair --name rpD-smoke --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-smoke
+  ptrepair --name rpD --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+- 9 Nov ~09:05: Step 1 started on both runtimes from 9c4ac5b. GPU 2 (second_colab): fullmodel rc1-soup-30 running (vLLM up 09:02).
+  GPU 1 (full_eval_colab): fullmodel ca1-soup-10 FAILED at once: models/ca1-soup-10 not on Drive (a clean-up removed the merged
+  model). New `fullmodel --fm-soup NAME:STEP` rebuilds models/NAME-soup-STEP from the original Qwen + adapters/NAME-s0..2/step-STEP
+  at 1/3 each (first chain round: the seeds started from clean-a2's adapter, so they hold the whole lineage); dry-run checked here.
+  plan_line_b now: fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10 (needs full_eval_colab re-run).
+
+### 9 Nov: COPD (contrastive on-policy distillation) built and queued (user)
+- rl_train.py --objective copd (Ruan et al., arXiv 2607.19046): no reward; a frozen teacher (Qwen3-4B, or 'self') re-reads each
+  sampled reply under a light- and a heavy-effort instruction; token advantage = log p(light) - log p(heavy), clipped +-10;
+  loss = -mean over replies of (1/T) sum A_t log pi; one update per step. Refuses a teacher with a different tokenizer. Logs the
+  teacher's verdict each step (mean advantage, share of tokens pushed down, advantage at </think>). Toy-model tests pass.
+- Settings researched: lr 1e-5 = the paper's 1e-6 (full fine-tuning) x 10 for LoRA ("LoRA Without Regret": optimal LoRA lr ~10x
+  full FT for SFT and RL); one answer per question in the paper (no group needed), so 64 questions x 2 answers per step.
+- Questions (user): Run A = solved at least once in the original's 10 answers, always-solved kept, never-solved out (the
+  never-solved arm, free savings vs the risk of giving up early on hard-but-solvable questions, is a later test).
+- Queued on GPU 2 after the rc1-soup-30 full test: cp1smoke (5 steps, memory check) then cp1a (80 x 64 x 2 = 10,240 answers,
+  gr2f's budget; 720 at 20/40/60/80). After it: token distribution per data type + accuracy vs the original (user).
+- ~10:20 **rc1-soup-30 FULL TEST (2,759 x 8): +57.4 / -3.5** official (BFCL 400/200/240), **+0.95 vs curve** (pt-mid's full test:
+  53.6 / -3.3, +0.3). Per type: svamp +67 / -6.6, mbpp +63 / -3.5, ifeval +51 / -2.5, irrelevance +51 / -4.1, multiple +44 / -0.8,
+  simple +41 / -0.1. Earlier x8 runs of the same model: usual-set 58.0 / -3.1, fresh set 55.6 / -2.9 (Oct). Math carries the loss.
+  Its 720 screen running next, then COPD on GPU 2.
+- 9 Nov ~12:10 COPD sanity check (copd_demo.py): one SVAMP-style trick question, a hand-written answer in six parts (setup, a
+  useful re-read, the calculation, a needless double-check, the stop, the answer). Qwen3-0.6B as its own coach (COPSD, on the
+  Mac): mean push per part +0.01 / -0.01 / -0.06 / +0.01 / -0.01 / 0.00, biggest single pushes on spaces and digits, 0.00 at
+  </think>: the 0.6B barely reacts to the effort instructions, so the self-coach version would teach nothing. The 4B check runs on
+  GPU 2 first (copddemo) before the smoke test and Run A (the Mac's 8.6 GB RAM cannot hold the 4B).
+- (user) Run B, only if Run A loses accuracy: COPD pushes applied to RIGHT answers only (wrong answers never teach "be brief").
+- 9 Nov ~13:00 **ca1-soup-10 FULL TEST: +49.1 / -2.4** official (+0.4 vs curve; its 720 screen said 52.4 / -0.9: flattered).
+  svamp +58 / -4.3, mbpp +53 / -2.2, ifeval +45 / -2.4, irrelevance +41 / -3.2, multiple +38 / +0.6, simple +36 / +0.4.
+  Same pattern as rc1-soup-30, milder: math loss from always-solved questions (100 -> 94.6); no-fit 7/8 questions -23 pts.
+  160 regressed questions (rc1-soup-30: 212). Breakdown + struggle in runs/mvtf/bd-ca1-soup-10, st-ca1-soup-10.
+- 9 Nov COPD smoke test (cp1smoke2): step 1 ran (coach verdict on 128 answers: mean push -0.012, 38% of tokens pushed down,
+  </think> 0.00), step 2 out of memory moving the teacher back to the GPU (~7 GB still held after step 1); Run A (cp1a) the same
+  at step 2. copddemo, 20 hand-written questions: 0.6B as coach ~0 (direction 10/20); **4B as coach reacts (needless check
+  pushed down in 19/20) but pushes the USEFUL check down twice as hard (-0.20 vs -0.10; needless below useful only 7/20), stop
+  +0.01**: on this evidence COPD with these instructions would remove the re-read step. User: run Run A anyway for a few steps,
+  it may show something useful. Memory fix: no KV cache in batch_logps (use_cache=False), explicit frees between the read and
+  training phases, GPU memory logged per step (gpu_gb). cp1a resumes after its step 1.
+- 9 Nov **ca1-soup-10 why-data** (st-ca1-soup-10/summary.json, read from Drive): wrong answers out of 8 per question, original ->
+  ca1. Math: cut off 139 -> 0, stopped early 27 -> 252, plain wrong 644 -> 922; on its 62 regressed questions 30% stopped early,
+  68% wrong after normal-length thinking, thinking 0.43 of the original's right answers, 271 of 307 wrong numbers far off (the
+  question misread, as rc1). Code: cut off 236 -> 34, stopped early 23 -> 157, wrong 1,179 -> 1,311. IFEval: stopped early
+  24 -> 247, cut off 156 -> 94, wrong 1,648 -> 1,575. No-fit: stopped early 3 -> 29, wrong 316 -> 351. Calls: about unchanged.
+  Same mechanism as rc1-soup-30, milder: fewer early stops (it shortens less), the misread-question errors remain.
+- 9 Nov COPD Run A (cp1a, short version) stopped by the user after step 4 (resumes from there): memory fix holds (gpu_gb 1.33
+  after every step), but ~15-20 min per step (the 8 GB teacher moved CPU<->GPU twice a step). Steps 2-3: practice accuracy
+  0.867 / 0.828, tokens 566 / 636, coach 36-38% of tokens pushed down, mean -0.018, </think> 0.00.
+- 9 Nov ~14:45 **COPD Run A (cp1a) @ step 10: +14.6 / -0.2** official (720 x 4; -0.5 vs curve): svamp +23 / +0.2, mbpp +15 / +0.8,
+  simple +11 / -1.0, irrelevance +10 / 0.0, multiple +8 / -1.1, ifeval +8 / -1.3. Against GRPO gr2f at the same step 10:
+  4.0 / -0.4 (and 11.4 / -0.6 at step 20): COPD shortens ~3.5x faster per step with no math loss, despite the demo's warning.
+  Run A continues to step 20.
+- 9 Nov ~15:30 **COPD Run A (cp1a) @ step 20 (end of the short run): +20.8 / -0.4** official (720 x 4; -0.7 vs curve): svamp
+  +35 / +0.2, mbpp +18 / +0.6, irrelevance +19 / -0.6, multiple +20 / -1.1, simple +14 / -0.4, ifeval +11 / -1.9. Step 10 -> 20:
+  saving 14.6 -> 20.8, accuracy -0.2 -> -0.4: still growing, math still free. GPU 2's queue ended.
+- 9 Nov **rp
+[output cut at 10,000 characters]

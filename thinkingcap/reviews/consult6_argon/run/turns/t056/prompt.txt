@@ -1,0 +1,5 @@
+rpe-60full (47.8% saved) with rpI's IFEval & no-fit -> -0.51 pp
+rpe-40full (50.6% saved) with rpI's IFEval & no-fit -> -1.13 pp
+
+
+[Note: the session was restarted again: you now have NO limit on code runs, only a spending budget (about $10 in all); when the budget is nearly used you will be asked for the report. The kernel was restarted: re-load what you need. Keep your notes and report draft in the work folder.]

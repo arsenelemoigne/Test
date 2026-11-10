@@ -1,0 +1,13 @@
+L3965: YARDSTICK: reference curve = quadratic fit to the 43 Screen-720 points above 15% saved: acc = -0.388 + 0.0899 s -
+L3976: every 40 steps. Pass/fail bar fixed BEFORE running (the yardstick): works = a checkpoint >= 1 pt above the reference
+L4038: - ~17:50: old-run re-score on the 720 (yardstick): drpo3d-23 (gentle DRPO RL from raw, old RL pool, 26 Oct) +21.7 / -0.4
+L4077: yardstick, watching for over-pushing.
+L4080: 100/200/300/final, judged by the yardstick. GPU 1 after bidax5q seed 1: lpc-b5four (four signals from the original's
+L4104: answers its own questions and both DPO and GRPO are tried on it. All judged on the 720 with the yardstick.
+L4134: (--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+L4214: leash 0.04, lr 2e-6): **+1.5% / -1.0** (vs curve about -0.7; saving under 15%, below the yardstick's range). svamp +1.7 /
+L4288: (thinks 2% LONGER; below the yardstick's range): svamp -2 / -1.0, mbpp 0 / +2.9, ifeval -8 / -2.5, one function +1 / -1.7,
+L4785: -1.9, multiple +44 / +1.7, no-fit +45 / -7.3), -0.1 vs curve. Prediction 55 / -2.0: wrong. Less math strength does NOT
+L4821: checkpoints in the target box. The yardstick formula is unchanged (fixed 2 Nov); FullEval's own live fit refits itself.
+L4834: +0.15 vs curve. The merge saves MORE than its solos predict (token ratios multiplied: 36.2%; consult3 guessed 40 / -2.5); accuracy
+L5150: Re-read of the 6 Nov data (all 720 x4, same yardstick): adapters alone are a tie with October (tools +0.07 vs +0.01, math -0.91

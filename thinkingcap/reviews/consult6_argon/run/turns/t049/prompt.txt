@@ -1,0 +1,16 @@
+p_nat=0.90, p_early=0.60 (true loss=-30.0 pp): P(pass 1 rung)= 28.7%, P(pass >=1 of 4 early rungs)= 63.7%
+p_nat=0.90, p_early=0.70 (true loss=-20.0 pp): P(pass 1 rung)= 47.7%, P(pass >=1 of 4 early rungs)= 85.2%
+p_nat=0.90, p_early=0.75 (true loss=-15.0 pp): P(pass 1 rung)= 58.7%, P(pass >=1 of 4 early rungs)= 92.7%
+p_nat=0.90, p_early=0.80 (true loss=-10.0 pp): P(pass 1 rung)= 70.0%, P(pass >=1 of 4 early rungs)= 97.3%
+p_nat=0.80, p_early=0.50 (true loss=-30.0 pp): P(pass 1 rung)= 30.4%, P(pass >=1 of 4 early rungs)= 62.4%
+p_nat=0.80, p_early=0.60 (true loss=-20.0 pp): P(pass 1 rung)= 47.3%, P(pass >=1 of 4 early rungs)= 81.1%
+p_nat=0.80, p_early=0.65 (true loss=-15.0 pp): P(pass 1 rung)= 56.6%, P(pass >=1 of 4 early rungs)= 88.2%
+p_nat=0.80, p_early=0.70 (true loss=-10.0 pp): P(pass 1 rung)= 65.9%, P(pass >=1 of 4 early rungs)= 93.4%
+p_nat=0.75, p_early=0.45 (true loss=-30.0 pp): P(pass 1 rung)= 30.8%, P(pass >=1 of 4 early rungs)= 61.8%
+p_nat=0.75, p_early=0.55 (true loss=-20.0 pp): P(pass 1 rung)= 47.3%, P(pass >=1 of 4 early rungs)= 80.0%
+p_nat=0.75, p_early=0.60 (true loss=-15.0 pp): P(pass 1 rung)= 56.1%, P(pass >=1 of 4 early rungs)= 86.9%
+p_nat=0.75, p_early=0.65 (true loss=-10.0 pp): P(pass 1 rung)= 64.8%, P(pass >=1 of 4 early rungs)= 92.1%
+p_nat=0.60, p_early=0.30 (true loss=-30.0 pp): P(pass 1 rung)= 31.0%, P(pass >=1 of 4 early rungs)= 59.3%
+p_nat=0.60, p_early=0.40 (true loss=-20.0 pp): P(pass 1 rung)= 47.2%, P(pass >=1 of 4 early rungs)= 77.6%
+p_nat=0.60, p_early=0.45 (true loss=-15.0 pp): P(pass 1 rung)= 55.4%, P(pass >=1 of 4 early rungs)= 84.4%
+p_nat=0.60, p_early=0.50 (true loss=-10.0 pp): P(pass 1 rung)= 63.4%, P(pass >=1 of 4 early rungs)= 89.8%

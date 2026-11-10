@@ -1,0 +1,94 @@
+Source: github.com/michal-bida/ThinkingCap-Test, branch thinking-compression (train_dpo_offline.py, queue/a10-train-Db.sh,
+reports/FINDINGS.md sections 17-20, reports/compare_Db-s8.txt). His submitted model is arm Db:
+- Data: 11,327 prompts in 4 domains (~3,000 each): code KodCode 2,989; tools 2,986 = ToolACE simple 641 / multiple
+  1,004 / decline 365 + xlam irrelevance 976 (45% of tools are "no function fits"); IFEval-style 2,385; math GSM8K
+  2,152 + MetaMath SV 614 / FOBAR 201. Prompt length matched per decile to each benchmark; 8-gram decontamination;
+  base behaviour checked against the benchmarks (accuracy code 53.8 vs 51.5, ifeval 63.7 vs 58.1, math 85.6 vs 88.5,
+  tools 78.9 vs 81.2). 4 samples per prompt (45,308 samples, ~25 h); 9,337 prompts with a right sample.
+- Pairs: per prompt, chosen = shortest right sample (of 4); rejected = the longest wrong/truncated sample, and the
+  longest right sample if >= 1.5x the chosen (at most 2 pairs per prompt). Db: per domain, long pairs capped at the
+  number of wrong pairs -> 5,862 pairs (code 941 / ifeval 724 / math 696 / tools 570 of each kind). No matching to
+  benchmark cells, no difficulty rule, no similar-length right>wrong pairs.
+- Training: standard DPO, beta 0.1, NO SFT/NLL term ("RPO" listed as not run), reference = base (adapter off), LoRA
+  r32 alpha 64 all linear, lr 2e-5 with cosine schedule and 5% warmup, 16 pairs per step, 1 epoch (~366 steps), fp16
+  autocast, max length 8,704, ONE seed, the final adapter evaluated (no checkpoint picking).
+- Full eval x8: +47.0 / -0.78; per benchmark: no-fit +46% / +6.04 (the model declines more), multiple +42 / -1.12,
+  simple +35 / -1.41, ifeval +55 / -0.28, mbpp +33 / -1.22, svamp +56 / -2.41. His ablations: wrong pairs only
+  +23.0 / +0.81; long pairs only +83.6 / -13.0; both (D, unbalanced) +50.2 / -0.41 (2 samples). Not run by him: RPO,
+  iterative second round.
+Differences from all our LUPIN runs: our NLL anchor (weight 1.0), 10 answers per question (more extreme shortest
+chosen), matching to eval cells, difficulty rule, similar-length right pairs, 3-seed soups, checkpoint picking, and
+his tools domain being ~45% no-fit (ours ~29% of BFCL pairs). track.py: an --lp-answers other than 10 now writes its
+own answers file (it would have overwritten the 10-answer one).
+- ~01:45 (user): the michal-bida control is now an EXACT copy, lpc-bidax: long2short (his two pair kinds), shorten
+  capped at the guard count per part (lupin_pairs default --shorten-cap 1 = his --balance), no min-solve, no right pairs,
+  --lp-no-match, --lp-nll 0, --lp-answers 4 (the 4 newest of each question's 10 answers; own answers file), cosine lr 2e-5
+  (warm-up 10 steps vs his 5%; floor 2e-6 vs 0), beta 0.1, LoRA r32, 16 pairs/step, 1 epoch, 1 seed. rescreen step 0 =
+  the final adapter. Scored on the 720 at steps 100 / 200 / 300 / final. Our pool dp13 (12,000 questions) is the data.
+- 01:44: 720 x 4 (full-eval weighting): lpc-runac 270 +23.4 / -0.1 (svamp 0%, mbpp 11%); clean lpc-runb 250 +31.0 / +0.1,
+  270 +28.4 / +0.1. GPU 1: lpc-runa2r (exact one-seed replay of lpc-runa2) training; GPU 2: lpc-bidax starting.
+- 02:45: lpc-bidax stopped at step 140/266: its raw pairs held "right" pairs (no-fit 28, multiple 31, simple 38, ifeval
+  162, mbpp 147, ...) because track.py's --lp-min-solve defaults to 0.5. Restarted as lpc-bidax2 with --lp-min-solve 0
+  (no difficulty rule, as michal-bida). bidax pairs before the fix: 4,247 (guard = shorten per part, e.g. mbpp 674/674,
+  ifeval 472/472, svamp 405/...).
+- 04:44: lpc-runa2r (exact replay of lpc-runa2, seed 0) on the 720 x 4 at step 200: +26.0 / -0.8 (svamp +14/-0.8, mbpp
+  +17/-1.7, ifeval +38/-1.5, simple +31/-1.0, multiple +34/+1.5, no-fit +33/+3.1) vs the original lpc-runa2 seed 0 at
+  step 200 +33.9 / -0.3 (scored after the restart, so scoring is not the difference). Checked identical: the answers
+  file (11,999 questions x 10, same sources and counts), the pair selection (kept 4,442: shorten 2,265 / guard 1,017 /
+  right 1,160; fill 0.94; mix 0.5099,0.2290,0,0.2611), the training code (dpo.py's only change adds a resume check),
+  vLLM 0.23.0 before and after (transformers / peft pinned). Same seed, same flags. Remaining explanation: training
+  run-to-run randomness (GPU non-determinism) large enough to move saving by ~8 pts for one seed; lpc-runa2's three
+  seeds all landed high (soups 32-33), the post-restart runs (B seeds 27.6 / 26.6, A-constant, replay) at 26-30.
+- 05:44: lpc-bidax2 (exact michal-bida copy, 5,026 pairs, 315 steps) on the 720 x 4 (full-eval weighting): step 100
+  +54.7 / -4.6 (svamp +69/-6.9, no-fit +46/-6.5, mbpp +51/-4.8, ifeval +51/-3.5); step 200 +49.1 / -3.1 (svamp +63/-5.2,
+  no-fit +43/-3.3, mbpp +35/-2.5). Steps 300 and final next. GPU 1 queue ended with lpw-pertype soft (choosing x4):
+  +44.6 / -1.3 (svamp +51/+0.6, mbpp +53/-3.7, ifeval +41/-0.6, simple +29/+0.6, multiple +32/0.0, no-fit +36/-5.0).
+  Queued on GPU 1: per-type merges on the 720 (pertype --pt-screen) at soft / softer / mid strengths (no training).
+- 06:44, 720 x 4 (full-eval weighting): per-type merges (lpw-pertype, 4 adapters trained on lpv-base pairs): softer
+  (0.2/0.25/0.35/0.25) +39.2 / -0.8; soft (0.25/0.35/0.45/0.35) +48.4 / -1.9; mid (0.3/0.45/0.6/0.45) +55.0 / -2.6. Each
+  loses most on no-fit (-4.8 / -6.9 / -7.1) and math (-2.1 / -4.0 / -5.6). lpc-bidax2: step 300 +51.1 / -2.6; FINAL
+  +51.8 / -2.7 (svamp +65/-5.4, no-fit +46/-4.6, ifeval +50/-2.3, simple +41/-1.7, multiple +46/-1.7, mbpp +45/-0.4) vs
+  michal-bida's own full-eval +47.0 / -0.78 (no-fit +6.0, svamp -2.4): his recipe on our pool does not reproduce his
+  result; the gap is concentrated on no-fit and math.
+- 07:44: lpw-pressmath (1 seed, choosing x4, noisy): step 25 +34.7 / -0.2, step 50 +42.0 / -0.8 (svamp +53/0.0, mbpp
+  +43/-2.5, no-fit +35/-1.9). GPU 1 idle (queue ended), waiting on the user for the no-fit data step. GPU 2: lpw-p4tools.
+- 08:44: lpw-p4tools (1 seed, choosing x4): 25 +41.9 / -0.1; 50 +37.6 / -0.3; 75 +45.9 / -0.6 (svamp +55/-0.6, mbpp
+  +48/-3.1, no-fit +39/-0.6). Both queues ended; 720 checks queued: p4tools 75/50 (GPU 2), pressmath 50 (GPU 1).
+- 09:44: lpw-p4tools on the 720 x 4 (full-eval weighting): step 75 +48.4 / -2.6 (ifeval +43/-6.0, svamp +57/-4.0);
+  step 50 +42.2 / -2.2 ? the choosing set had shown -0.6 / -0.3. GPU 1's runner had not started (cwd lost after the
+  queue end + restart: "can't open /content/track.py"); cells 1, 3-6 re-run.
+- 10:44: GPU 1's runtime disconnected "due to inactivity" (idle after its queue ended and the cwd restart); a Drive
+  access dialog is pending. Not reconnected (rule: ask the user first). GPU 2 idle (queue ended after the p4tools check).
+
+### 2026-11-01 ~11:00 ? no-fit data step (user: yes)
+- GPU 2: newtop nofit3 = up to 2,000 new no-fit questions from nofit_glaive_hard + nofit_glaive_verified (Haiku-verified
+  NO+NO), prompt-length bins of the choosing set, 8-gram decontamination, and (new) none whose prompt is already in a
+  pool-dp*.jsonl or an earlier top-up; answered x10 by the original Qwen. Then lpc-bidax3 = lpc-bidax2's exact
+  michal-bida recipe with nofit3 added to the extra questions; 720 at 100 / 200 / 300 / final.
+- GPU 1: lpc-bidax2 seed 1 (same pairs file as seed 0) -> how far one seed's final score moves by training randomness.
+- 14:44: newtop nofit3: 888 candidates already in the pool / top-ups dropped; 958 new no-fit questions x10: mean solve
+  rate 98% (always right 886, sometimes 72, never 0) -> almost no wrong answers, so almost no guard ("right > wrong")
+  pairs. AND lpc-bidax3 did not include them: with --lp-answers-pool dp10 the stage takes only the pool's own question
+  ids (top-ups must already be selected into the pool), so its pairs equal lpc-bidax2's (5,026; no-fit 92 / 92). Left
+  running as a SAME-SEED repeat of lpc-bidax2 (pure GPU non-determinism measure). GPU 1: lpc-bidax2 seed 1 on the 720.
+  Next (proposed): michal-bida's own no-fit source (xLAM irrelevance) if the base model gets it wrong often enough.
+- ~15:00 (user: "the training data must include the right data"; "better to create our own dataset"): prepare_types
+  xlam_irrelevance (MadeAgents/xlam-irrelevance-7.5k -> BFCL functions; 75 of 100 sample rows convert); track
+  --lp-add-q (top-up sets that join the pool even with --lp-answers-pool). Queued on GPU 1: newtop nofit4 = 3,000
+  questions from xLAM irrelevance + Glaive hard + ToolACE near-verified no-fit (dedup vs pool), x10 answers; then
+  lpc-bidax4 = exact michal-bida recipe + nofit4 added; 720 at 100/200/300/final.
+- 15:17: lpc-bidax2 SEED 1 final on the 720 x 4: +51.0 / -3.9 (svamp +61/-6.5, no-fit +46/-5.4, mbpp +49/-3.7, ifeval
+  +49/-3.3, simple +42/-0.4, multiple +47/-1.1) vs seed 0 +51.8 / -2.7: same pairs, seed-to-seed spread ~1 pt saving,
+  ~1.2 pts accuracy. newtop nofit4: 1,308 candidates dropped as already in pool/top-ups; 1,871 questions x10, mean solve
+  rate 94% (always 1,580, sometimes 257, never 34). lpc-bidax4 pool 13,870 questions; pairs 5,362 (no-fit 260 guard /
+  260 shorten vs 92 / 92 before; tools now 39% no-fit pairs). Training on GPU 1.
+- ~15:50 (user): math data step queued on GPU 2 after the bidax3 repeat: prepare_types gsm8k_std (GSM8K train+test in
+  SVAMP wording, labelled gsm8k_matched); newtop now answers math sources too. newtop math1 = 2,000 questions from
+  gsm8k_std + metamath_sv (dedup vs pool), x10; lpc-bidax5 = michal-bida recipe + nofit4 + math1 (--lp-add-q); 720.
+- 17:44, 720 x 4 (full-eval weighting): lpc-bidax3 = SAME pairs and SAME seed as lpc-bidax2 s0 (GPU non-determinism
+  only): 100 +52.4 / -3.9 (bidax2 s0: +54.7 / -4.6); 200 +56.3 / -4.2 (bidax2 s0: +49.1 / -3.1); 300 +54.8 / -3.7
+  (bidax2 s0: +51.1 / -2.6). lpc-bidax4 (own no-fit added) step 100: +57.1 / -5.1 (svamp +69/-8.8, mbpp +57/-9.0,
+  no-fit +49/-4.0, ifeval +53/-0.4).
+- 18:04: lpc-bidax3 (same-seed repeat) FINAL +54.5 / -3.9 (no-fit +47/-7.3, svamp +66/-6.5). lpc-bidax4 (own no-fit)
+  step 200 +54.6 / 
+[output cut at 10,000 characters]

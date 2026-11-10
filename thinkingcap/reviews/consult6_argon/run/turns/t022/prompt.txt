@@ -1,0 +1,18 @@
+L4941: Plan (user): full-test round 3 (ca1-soup-10) and round 4 before RL (rc1-soup-30), then a "be right" repair on the one closest
+L4943: - `track.py ptrepair --rp-base models/<X>`: repair any merged model instead of pt-mid (it answers, is DPO's reference, and
+L4945: - `track.py ptrepair --rp-own-data` (new `own_repair_questions()`): math = GSM8K train+test at every difficulty in SVAMP wording
+L4948: - `repair_pairs.py --kinds guard` / `ptrepair --rp-kinds guard`: only the 21 Oct pair (shortest right > shortest finished
+L4950: - Checked here without a GPU: guard-only pairs on synthetic answers; own_repair_questions on stand-in files (MetaMath and easy
+L4951: pool math excluded, used and test-overlapping GSM8K dropped); a mocked ptrepair smoke run (base model passed to answering,
+L4956: ptrepair --name rpD-smoke --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-smoke
+L4957: ptrepair --name rpD --rp-base models/<B> --rp-own-data --rp-kinds guard --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+L5012: - 9 Nov **rpE (repair of rc1-soup-30) @ step 10: +57.4 / -2.9** (compare's average; official 57.2 / -3.0). rc1-soup-30's own
+L5014: mbpp -3.5, multiple +0.6). After 10 repair steps: svamp -2.7 (+2.3), ifeval -2.5 (+1.5), simple -2.7 (+1.3), irrelevance
+L5017: - 9 Nov **rpE (repair of rc1-soup-30) @ 20: +54.8 / -2.6** (irrelevance -1.9, simple -1.0, mbpp -2.5, ifeval -2.9, svamp -4.2,
+L5021: - 9 Nov **rpE @ 80: +50.4 / -0.2** official (720 x 4; compare's average 50.6 / -0.1; **+2.8 vs curve**): irrelevance +51 / +3.1,
+L5025: - 9 Nov ~19:45 (after Colab's provisioning outage; both runtimes restarted) **rpE @ 45: +52.9 / -1.7** official (irrelevance +0.4,
+L5028: - 9 Nov **rpE @ 50: +49.5 / -1.6** (irrelevance +2.3, multiple +1.5, simple -1.7, ifeval -1.9, mbpp -3.3, svamp -1.3). Full tests
+L5029: of rpE-80 then rpE-40 started on GPU 1 (both models built by fullmodel --fm-merge).
+L5036: | rpE @ 50 | 59.0 -> 57.1 | 420 -> 153 | 247 -> 245 | 90.0 -> 88.8 / 685 -> 274 | 50.8 -> 47.5 / 2077 -> 968 |
+L5037: | rpE @ 80 | 59.0 -> 59.4 | 420 -> 146 | 247 -> 190 | 90.0 -> 87.5 / 685 -> 297 | 50.8 -> 51.9 / 2077 -> 981 |
+L5039: (1) The repair's lr was CONSTANT (cosine from 1e-5 to lr-min = 1e-5): 50 -> 80 the thinking lengths barely move (ifeval 153 ->
