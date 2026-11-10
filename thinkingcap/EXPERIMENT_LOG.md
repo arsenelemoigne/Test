@@ -5168,3 +5168,9 @@ DPO branches 6-9 Nov), no published score. matousek-martin: ablations + release 
 28.4 / -2.00, multiple 30.4 / +2.44, irrelevance 33.4 / -6.87. Herz1c/DoesLearningToStopScale: same recipe on Qwen3-1.7B
 (47.4 / -0.14), not a 0.6B entry. RikiyaT is not a ThinkingCap entry. **Upstream commit 965a54c (6 Nov): a submission must now
 include the coding agent's traces and the conversation with the harness, as a text document.**
+
+## 10 Nov — rpI (new round: rpE-80 answers 5,700 new questions x8 itself; 1,579 guard pairs, IFEval 320/320 incl. 152 counting-rule; no-fit 59/80)
+720 x4, official weighting: **step 20 (=100): 42.9% / -0.2; step 40 (=120): 43.0% / +0.9** (svamp 47 / -0.4, mbpp 39 / +3.5,
+ifeval 42 / -0.4, simple 39 / -2.5, multiple 42 / +0.2, no-fit 52 / +6.7). vs curve: +1.5 then **+2.6** (rpE-80 +2.8, rpG-100 +2.2,
+rpG-120 +0.9). Unlike rpG (same steps, old model's answers), rpI kept its length (43% at both steps) while gaining accuracy:
+answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4 at 42% saved (rpG-120: -1.9 at 37%).
