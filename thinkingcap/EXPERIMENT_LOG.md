@@ -5153,3 +5153,5 @@ because they reused October's strengths (.30/.45/.60/.45), which were picked ON 
 never tuned, and its gentler adapters at the same strengths save 6-8 points less. Also: two changes at once (new data AND fp32,
 so neither effect is known), one seed, one run; gaps of ~1 pt are within 720 x4 noise. The earlier "+0.5 vs +0.3" compared a
 720 score with a full-test score. Conclusion: the rerun does not show that better settings fail; it was not a fair test.
+od2 (queued after od1, user): the same online loop from the ORIGINAL Qwen (fresh LoRA, reference = the original in round 1),
+6 rounds x 10 steps, fp32 weights + fp16 compute (dpo.py --bida-precision, as every repair), 720 x4 after rounds 2, 4, 6.

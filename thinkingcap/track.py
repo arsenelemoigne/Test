@@ -3594,16 +3594,17 @@ def ptrepair(args):
     pt = {g: Path("adapters") / f"lpw-pertype-{g}" for g in PT_MID}
     pool = Path("data/pool-dp13.jsonl")
     if args.rp_base:  # (9 Nov) any merged model; pt-mid's adapters and the original's answers are not needed
-        drive_sync("restore", only=[args.rp_base, SCREEN, str(ROOT / "s4-base")])
-        merged = Path(args.rp_base)
-        if args.rp_base_from and not (merged / "config.json").exists():  # (10 Nov) build it: BASE_MODEL:ADAPTER
+        hub = args.rp_base.startswith("Qwen/")  # (10 Nov, odpo from the original) a Hub id: nothing to restore or build
+        drive_sync("restore", only=[*([] if hub else [args.rp_base]), SCREEN, str(ROOT / "s4-base")])
+        merged = Path(args.rp_base) if not hub else args.rp_base
+        if args.rp_base_from and not hub and not (merged / "config.json").exists():  # (10 Nov) build it: BASE_MODEL:ADAPTER
             base_model, base_adapter = args.rp_base_from.rsplit(":", 1)
             drive_sync("restore", only=[base_adapter])
             assert (Path(base_adapter) / "adapter_config.json").exists(), f"{base_adapter} is not on Drive"
             py("merge.py", "--model", base_model, "--out", merged, "--adapters", f"{base_adapter}:1")
             drive_sync("save")
             print(f"repair {name}: built {merged} = {base_model} + {base_adapter}", flush=True)
-        assert (merged / "config.json").exists(), f"{merged} is not on Drive (rebuild it with merge.py)"
+        assert hub or (merged / "config.json").exists(), f"{merged} is not on Drive (rebuild it with merge.py)"
     else:
         drive_sync("restore", only=[*([] if args.rp_from or args.rp_own_data else
                                       [str(answers), str(pool), *[str(BON / f"tooltop-{x}") for x in extras]]),
@@ -3723,13 +3724,13 @@ def odpo(args):
     --od-steps steps continuing the adapter, the round's start as the reference. Each round is a ptrepair run named
     <name>-r<k>; the answering model of the next round is merged to models/<name>-r<k>. 720 x4 at --od-screen-rounds."""
     import copy
-    prev, answerer = args.od_init, args.od_answers0
-    assert prev and answerer and args.rp_base, "odpo needs --rp-base, --od-init and --od-answers0"
+    prev, answerer = args.od_init, args.od_answers0 or args.rp_base  # no --od-init: round 1 trains a fresh LoRA on --rp-base
+    assert args.rp_base and (answerer or not prev), "odpo needs --rp-base (and --od-answers0 with --od-init)"
     for k in range(args.od_rounds):
         a = copy.copy(args)
         a.name = f"{args.name}-r{k + 1}"
         a.rp_round = (k, args.od_rounds)
-        a.rp_init_from, a.rp_answers_model = prev, answerer
+        a.rp_init_from, a.rp_answers_model = prev, ("" if answerer == args.rp_base else answerer)
         a.rp_steps = args.od_steps
         a.rp_screen = [args.od_steps] if k + 1 in args.od_screen_rounds else []
         print(f"odpo {args.name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO from {prev}", flush=True)
