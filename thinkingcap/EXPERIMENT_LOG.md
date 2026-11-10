@@ -5179,3 +5179,9 @@ answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4
 - rpH-20 (= step 100), 720 x4 official: **42.0% / -0.6** (svamp 44 / -0.2, mbpp 40 / +0.2, ifeval 43 / -2.5, simple 37 / -1.2,
   multiple 40 / -0.6, no-fit 50 / +3.3); vs curve +1.0 (rpG-100 +2.2, rpI-100 +1.5). IFEval did NOT improve at step 100 (rpG-100:
   38% / +0.2), but one part of the 720 is 120 questions x4 (CI about +/-4.4 pts): per-part gaps of 2-3 points are noise.
+- rpH-40 (= step 120): **37.0% / -0.3** (svamp 34 / -0.6, mbpp 37 / +0.6, ifeval 36 / -2.1, simple 35 / -1.7, multiple 39 / -1.1,
+  no-fit 49 / +6.5); vs curve +0.6. **The three continuations at step 120 (vs curve): rpG +0.9, rpH +0.6, rpI +2.6.** Only rpI
+  (answers from the CURRENT model on new questions) keeps its length; both runs on the old model's answers drift longer.
+  The IFEval counting rule alone did not fix IFEval on the 720.
+- rpF pairs (Run C step 40 answers x4, all 2,998 IFEval questions): 1,446 pairs; IFEval 320/320 (258 counting-rule); mbpp 287/400
+  (short 113: Run C is right on code too rarely for guard pairs at 4 answers), tools 60-71/80. Training started.
