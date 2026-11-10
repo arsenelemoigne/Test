@@ -137,11 +137,12 @@ def main():
                     for r, w in close[:4]:
                         cand[part]["right_long" if size(r) > size(w) else "right_short"].append((qid, r, w))
                 med = sorted(size(r) for r in rights)[len(rights) // 2]
-                capped = [r for r in rights if size(r) <= 1.15 * med]
-                early = [w for w in wrongs if size(w) < 0.5 * med]
+                tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # (11 Nov, review fix) on THINKING length
+                capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
+                early = sorted((w for w in wrongs if thinking_len(w) < 0.5 * tmed), key=thinking_len)
                 if capped and early:
                     pick = ([r for r in capped if decode and REREAD.search(decode(r))] or capped)[0]
-                    cand[part]["capguard"].append((qid, pick, early[0]))
+                    cand[part]["capguard"].append((qid, pick, early[-1]))  # the LONGEST early stop: the smallest length gap
             continue
         if (args.kinds == "guard,shorten" and len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right
                 and not (part == "ifeval" and counting(q[0]))):  # (10 Nov, odpo) a counting rule needs its full response
@@ -248,11 +249,23 @@ def main():
                                        " (right longer)" if p["chosen_tokens"] > p["rejected_tokens"] else " (right shorter)"))] += 1
         counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
     # stratified order: interleave the parts by their shares, kinds alternating inside each part
-    queues = {part: sorted(ps, key=lambda p: (p["kind"], rng.random())) for part, ps in by_part.items()}
-    for part in queues:
-        g = [p for p in queues[part] if p["kind"] == "guard"]
-        r = [p for p in queues[part] if p["kind"] != "guard"]
-        queues[part] = [x for pair in zip(g, r) for x in pair] + g[len(r):] + r[len(g):]
+    # (11 Nov, review fix) kinds interleaved by their shares (credit scheme), shuffled inside each kind: any prefix of the
+    # file holds every kind in proportion (before: kinds sorted by name, so with 3 kinds the "shorten" pairs all came last)
+    queues = {}
+    for part, ps in by_part.items():
+        kinds = {}
+        for pr in sorted(ps, key=lambda p: rng.random()):
+            kinds.setdefault(pr["kind"], []).append(pr)
+        tot = sum(len(v) for v in kinds.values())
+        kshare = {k: len(v) / max(1, tot) for k, v in kinds.items()}
+        kcredit, order = Counter(), []
+        while any(kinds.values()):
+            for k, v in kinds.items():
+                kcredit[k] += kshare[k]
+                while kcredit[k] >= 1 and v:
+                    order.append(v.pop(0))
+                    kcredit[k] -= 1
+        queues[part] = order
     total = sum(len(q) for q in queues.values())
     share = {part: len(q) / max(1, total) for part, q in queues.items()}
     credit = Counter()
