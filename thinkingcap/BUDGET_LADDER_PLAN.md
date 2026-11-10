@@ -135,6 +135,45 @@ test.
 **Control arm (review):** the same stages with answers from the ORIGINAL model instead of the current one (offline), same
 counts. 2 seeds each.
 
+## The objective as a curve (user, 10 Nov)
+
+For each type, accuracy as a function of the thinking budget, A(B): A(0) = no-thinking accuracy, rising steeply at first, then
+flattening (log-like) toward the original's natural accuracy A_nat. Each extra token buys less accuracy (diminishing marginal
+gain). The goal: the fewest tokens at which the official accuracy reaches A_nat - 1. Formally: minimise expected tokens subject
+to accuracy >= A_nat - 1; equivalently, stop each question where its next tokens add less accuracy than a threshold lambda (spend
+tokens where the marginal gain is highest — the marginal-value idea of our first track). Each ladder stage should LIFT A(B) at
+its budget (more accuracy per token) without lowering it at smaller budgets, so the point where the curve reaches A_nat - 1
+moves left. Measured and plotted per type and per difficulty band (the original's solve rate): Phase 0 and the tracking panel
+(answered at EVERY rung, not adaptively) give the original's curves; the panel after each stage gives the trained model's.
+
+## Phase 1 details from our data and michal-bida's published run (reference only; nothing copied)
+
+| setting | rpE (our best repair) | michal-bida (one offline round) | ladder, proposed |
+|---|---|---|---|
+| pairs | ~1,500 guard pairs, 80 steps | 5,862 pairs, 1 pass (~366 steps) | ~400-600 per stage x ~7 stages (~250 steps) |
+| lr / schedule | 1e-5 constant | 2e-5, cosine to 0, 5% warm-up | 1e-5 constant per stage, 2 warm-up steps |
+| LoRA | r16 | r32 alpha 64, all linear | r16 (r32 if stages saturate) |
+| beta / NLL | 0.1 / none | 0.1 / none | 0.1 / none |
+| precision | fp32 weights + fp16 compute | fp32 + fp16 autocast | fp32 + fp16 |
+| answers per question | 4-8 | 4 | 8 per budget |
+| reference | the round's start | the original | the previous stage (each stage a small step; the panel guards drift) |
+Evidence: on the same pairs, fp32/fp16 + cosine-to-0 (bidax6) cut 13-15 pts less and lost ~2.8 pts less than bf16 (bidax4):
+precision and schedule make DPO gentler. Equal-length right > wrong pairs at constant lr 1e-5 (rpE) lifted accuracy by
++1 to +3 pts without a length push.
+
+**Which questions a stage trains on (budget B, per type):** classify each fresh question by its right-rate AT B (8 answers):
+- solved below B (its level is a lower rung): source of "don't drift up" pairs — ~30% of the stage's questions;
+- **on the edge at B**: right 2-6 times of 8 at B, i.e. sitting between this rung and the next — the core, ~60%: they give
+  "get there within B" pairs and carry the accuracy gain;
+- just out of reach (right 0-1 of 8 at B but right at a higher rung) — ~10%, to stretch; the rest wait for later stages;
+- never right at any rung: not used.
+Shares are starting values, to be checked on Phase 0's distributions (per type and difficulty).
+
+**Making accuracy climb, not only length fall:** the "get there" pairs compare a right and a wrong answer of SIMILAR thinking
+length (within +-25%, both under B), so they carry correctness, not shortness; the only length signal is "don't drift up", and
+only on questions already solved below B. Early stages are mostly "get there" (few questions are solved low); the share of
+"don't drift up" grows naturally as more questions settle at lower levels. The panel must show A(B) rising at each stage.
+
 ## Evaluation (consult5 protocol)
 
 - A **new dev set** of 512 questions from our own sources (not in training, not the 720, not the test), scored ×4, is the
