@@ -546,14 +546,19 @@
 # (--prefer-reread), ifeval shortness = thinking only (--think-only ifeval). Sizes = the cloud session's rpD plan. Smoke first.
 # 9 Nov: re-print ca1-soup-10's why-data (the restart cleared the cell output)
 # NOT NEEDED (read from Drive instead) struggle --bd-names ca1-soup-10
-ptrepair --name rpE-smoke --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-smoke
-ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
+# DONE ptrepair --name rpE-smoke --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-smoke
+# DONE ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
 # 9 Nov (user): score the in-between checkpoints (training is done, only the 720 screens run)
-ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 45 50
+# DONE ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 45 50
 # 9 Nov (user): FULL tests (2,759 x 8, then the 720) of the repair's step 80 (720: 50.4 / -0.2) and step 40 (720: 50.5 / -1.7)
-fullmodel --name full-rpE --nothink-models models/rpE-80 models/rpE-40 --fm-merge models/rpE-80=models/rc1-soup-30:adapters/rpE-s0/step-80 models/rpE-40=models/rc1-soup-30:adapters/rpE-s0/step-40
+# DONE fullmodel --name full-rpE --nothink-models models/rpE-80 models/rpE-40 --fm-merge models/rpE-80=models/rc1-soup-30:adapters/rpE-s0/step-80 models/rpE-40=models/rc1-soup-30:adapters/rpE-s0/step-40
 # 9 Nov (user): which IFEval rules break, per rule type (CPU, a few minutes)
 # 10 Nov (user): FULL test of the repair's step 60 (between step 40 and step 80), plus its 720
-fullmodel --name full-rpE60 --nothink-models models/rpE-60 --fm-merge models/rpE-60=models/rc1-soup-30:adapters/rpE-s0/step-60
-ifevalrules --bd-names full-rc1-soup-30 full-ca1-soup-10 full-rpE-80 full-rpE-40 full-rpE-60 s4-cp1a-20 s4-cp1a-25
+# DONE fullmodel --name full-rpE60 --nothink-models models/rpE-60 --fm-merge models/rpE-60=models/rc1-soup-30:adapters/rpE-s0/step-60
+# DONE ifevalrules --bd-names full-rc1-soup-30 full-ca1-soup-10 full-rpE-80 full-rpE-40 full-rpE-60 s4-cp1a-20 s4-cp1a-25
+# 10 Nov (user): repair COPD Run C's step 40 (720: 57.1 / -4.7) with the rpE method: same pairs rule, sizes, lr; base model
+# = the original Qwen + Run C's step-40 adapter (built by --rp-base-from); 720 at 10 / 20 / 40 / 80
+# 10 Nov (user: the other types' losses) repair step 80's full test: lost questions by difficulty / length, then why
+breakdown --bd-names rpE-80
+ptrepair --name rpF --rp-base models/cp1c2-40 --rp-base-from Qwen/Qwen3-0.6B:adapters/cp1c2-rl/step-40 --rp-own-data --rp-kinds guard --rp-pair-args=--think-only,ifeval,--prefer-reread --rp-questions svamp=2400,mbpp=900,ifeval=600,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 80 --rp-screen 10 20 40 80
 end

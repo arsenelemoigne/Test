@@ -334,6 +334,9 @@ def main():
                         help="ptrepair (9 Nov): questions from the user's own sources only (own_repair_questions): math = "
                              "GSM8K train+test at every difficulty in SVAMP wording; code / instructions / tools = pool-dp13 "
                              "rows minus MetaMath + the own top-ups nofit1, nofit2, tools1, code1; no michal-bida source")
+    parser.add_argument("--rp-base-from", default="", help="ptrepair (10 Nov): BASE_MODEL:ADAPTER builds --rp-base when missing")
+    parser.add_argument("--rp-epochs", type=int, default=1, help="ptrepair (10 Nov): passes over the pairs (steps past one "
+                        "pass need 2; a finished run continues from its saved state)")
     parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
                         "--think-only,ifeval,--prefer-reread)")
     parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard"),
@@ -3568,6 +3571,13 @@ def ptrepair(args):
     if args.rp_base:  # (9 Nov) any merged model; pt-mid's adapters and the original's answers are not needed
         drive_sync("restore", only=[args.rp_base, SCREEN, str(ROOT / "s4-base")])
         merged = Path(args.rp_base)
+        if args.rp_base_from and not (merged / "config.json").exists():  # (10 Nov) build it: BASE_MODEL:ADAPTER
+            base_model, base_adapter = args.rp_base_from.rsplit(":", 1)
+            drive_sync("restore", only=[base_adapter])
+            assert (Path(base_adapter) / "adapter_config.json").exists(), f"{base_adapter} is not on Drive"
+            py("merge.py", "--model", base_model, "--out", merged, "--adapters", f"{base_adapter}:1")
+            drive_sync("save")
+            print(f"repair {name}: built {merged} = {base_model} + {base_adapter}", flush=True)
         assert (merged / "config.json").exists(), f"{merged} is not on Drive (rebuild it with merge.py)"
     else:
         drive_sync("restore", only=[*([] if args.rp_from or args.rp_own_data else
@@ -3647,7 +3657,8 @@ def ptrepair(args):
     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
         py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
            "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", 0.1, "--batch", 16, "--lr", args.rp_lr,
-           "--lr-schedule", "cosine", "--warmup", 2, "--lr-min", args.rp_lr, "--max-steps", steps, "--save-every",
+           "--lr-schedule", "cosine", "--warmup", 2, "--lr-min", args.rp_lr, "--max-steps", steps, "--epochs", args.rp_epochs,
+           "--save-every",
            1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype, "--seed", 0)
         drive_sync("save")
     if smoke:
