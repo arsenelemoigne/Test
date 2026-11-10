@@ -100,6 +100,17 @@ failing kind of pair (more "get there" pairs if accuracy did not rise, more "don
 "don't stop too early" pairs (not a higher learning rate: that is what made earlier runs unstable). A type stops climbing once
 it is back at the original's accuracy on the dev set.
 
+**Why 1.5x in "don't drift up":** the two answers must differ clearly in length, or the preference learns noise or style
+instead of "shorter"; 1.5x is a choice, not a law (1.25x gives more pairs with a weaker signal). To tune on Phase 0's data.
+
+**Insist where it breaks (user, 10 Nov):** the question budget of each stage is not fixed per type: after each stage, the held-out
+check gives each type's gap to the original; the next stage gives each type questions in proportion to its gap, with a floor
+(at least half its test share) so no type is forgotten. Inside a type, prefer questions on the edge: those the current model gets
+right SOMETIMES at the stage's budget (they give "get there" pairs; always-right or never-right ones give none); pre-screen by
+drawing ~2x candidates and keeping the edge ones, but keep at least ~30% always-right questions (the "don't drift up" pairs come
+from them; Run C showed that a mix too rich in hard questions over-cuts). IFEval is scarce (~3,000 usable): if it breaks the
+most, build more IFEval-style prompts with the existing builder (prepare_types.py ifeval_built) rather than reuse questions.
+
 **Control arm (review):** the same stages with answers from the ORIGINAL model instead of the current one (offline), same
 counts. 2 seeds each.
 
