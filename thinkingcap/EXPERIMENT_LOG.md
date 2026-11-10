@@ -5241,3 +5241,17 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   not collapse like Run C: Run C's other settings (16x8, constant lr, 50% sometimes-wrong questions) explain part of its fall.
 - consult6 (Gemini 4 Argon via OpenRouter, cap $25, $3 report reserve): relaunched after an empty first turn (Gemini emitted a
   native function call, MALFORMED_FUNCTION_CALL; fixed by a system note + provider errors retried); 27 turns, $0.34 so far.
+
+## 11 Nov — od1 done, cp1d step 30, plan changes
+- **od1 round 4** (rpE-80 + 4 online rounds, 40 steps), 720 x4 official: **53.3% / -1.8** (svamp 63 / -4.4, mbpp 55 / +0.8, ifeval
+  44 / -3.7, simple 43 / -1.2, multiple 47 / -1.9, no-fit 58 / +4.4); vs curve +1.75 (round 2: +2.0; rpE-80 on the 720: +2.8).
+  The online loop moved rpE-80 ALONG the curve (more saving, less accuracy), not above it; differences within the 720's noise.
+- **cp1d step 30:** 39.5% / -2.0 (vs curve -0.8). Steps 35 / 40 next. cp1e dropped (consult5 + consult6: no more COPD variants).
+- consult6 (Gemini 4 Argon) review + independent fact-check (reviews/consult6_argon/REPORT.md, FACT_CHECK.md): transcription good,
+  ~10 interpretation errors. User decision: Path 1 only (2 rounds, compact-and-verify, clean from the original Qwen); Paths 2 and 3
+  dropped (Path 3 rested on a bida-pair run). PATH1_PLAN.md. Cheap test rpJ (rc1-soup-30 stand-in) queued on GPU 2 after cp1d,
+  after Dev-512 (own held-out questions) + calibration scores of rc1-soup-30 and rpE-80. The full clean run (p1src -> p1r1 -> p1r2,
+  seeds 0 / 1) is written and commented in both plans until rpJ passes. consult6's second analysis (of the fact-check and the plan)
+  is running.
+- Caveat: od2 started on GPU 1 before Dev-512 existed, so its question draws do NOT exclude Dev-512 (its --rp-exclude-dev found no
+  file). od2 is screened on the 720, not judged on Dev-512; if it is ever scored on Dev-512, its overlap must be removed first.
