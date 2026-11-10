@@ -630,7 +630,10 @@ def call_llm(args, key, messages):
         try:
             with urllib.request.urlopen(req, timeout=900) as r:
                 data = json.loads(r.read())
-            text = data["choices"][0]["message"].get("content") or ""
+            choice = data["choices"][0]
+            if choice.get("finish_reason") == "error":  # (10 Nov) e.g. Gemini's MALFORMED_FUNCTION_CALL: retry, never a silent empty turn
+                raise RuntimeError(f"provider error: {choice.get('native_finish_reason')}")
+            text = choice["message"].get("content") or ""
             u = data.get("usage", {})
             cost = u.get("cost")
             if cost is None:  # no accounting returned: full list price, nothing counted as cached
@@ -691,6 +694,10 @@ def run_main(args, llm=None, forward=None):
     if forward is None:
         forward = lambda request, k: run_forward_process(args, request, k)  # noqa: E731
     system = {"role": "system", "content": "Answer the user's request."}
+    if "gemini" in args.llm:  # (10 Nov) Gemini otherwise emits a native function call -> MALFORMED_FUNCTION_CALL, empty reply
+        system["content"] += (" You have NO tools and NO function calling in this conversation: never call a function. When you "
+                              "want code run, write it as plain text in a markdown ```python block inside your reply; the user "
+                              "runs it and sends you the output in the next message.")
     msgs_f = run / "messages.json"
     messages = json.loads(msgs_f.read_text()) if msgs_f.exists() else [system, {"role": "user", "content": task_prompt(args)}]
     final_sent = False
@@ -759,7 +766,7 @@ def run_main(args, llm=None, forward=None):
         print(f"astra turn {st['turn']}: ${cost:.3f} (total ${budget.spent:.2f} / ${args.cap_usd}), passes {st['passes']}/{args.passes}, "
               f"code runs {st['code_runs']}" + (f", flags {flags}" if flags else ""), flush=True)
         messages.append({"role": "assistant", "content": text})
-        if final_sent or (out_of_passes and not find_blocks(text)):
+        if final_sent or (out_of_passes and not find_blocks(text) and len(text.strip()) > 200):  # (10 Nov) an empty reply is not a report
             (run / "final_answer.md").write_text(text)
             st["finished"] = True
             save()
