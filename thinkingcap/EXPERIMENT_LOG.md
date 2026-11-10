@@ -5110,3 +5110,8 @@ Plan lines, in order:
   round: the repaired model (models/rpE-80) answers a new question draw (seed 1) x8, pairs from its current mistakes + the IFEval
   fix. New ptrepair options: --rp-samples, --rp-seed, --rp-answers-model, --rp-init-from. GPU 1: breakdown rpE-80, rpI, rpF;
   GPU 2: rpG, rpH (the plain resume 80 -> 120 replaced by rpG).
+- 10 Nov (user) queued: **copdanalysis** (GPU 1, after the rpE-80 breakdown): copd_analysis.py = right vs wrong lengths on Runs A / C
+  training questions (the original's 10 answers: is "right up / wrong down" also "short up / long down"?), the 720 screens of A
+  and C per part (right / wrong lengths, cut at the limit, wrong answers that stopped early), the training logs side by side.
+  **cp1d** (GPU 2, after rpH) = the ONE-CHANGE version of Run C: Run A's exact settings (64 x 2, lr 1e-5 -> 1e-6, solved >= 1/10)
+  + only the correctness push (--copd-outcome 1.0); 720 at 10/20/25/30/35/40.

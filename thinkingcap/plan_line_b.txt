@@ -562,6 +562,8 @@
 breakdown --bd-names rpE-80
 # 10 Nov (user): + the IFEval counting-rule pair rule (--count-rules: response >= the rejected's, thinking <= 1.2x) and
 # 1,500 IFEval questions instead of 600 (only 154 IFEval pairs were found for rpE's quota of 320)
+# 10 Nov (user): COPD Runs A and C from the data (CPU, a few minutes)
+copdanalysis
 # 10 Nov (user) 3/ rpI: a NEW ROUND: the repaired model (repair step 80, models/rpE-80) answers NEW questions (seed 1) x8,
 # pairs from its current mistakes + the IFEval counting-rule fix; 40 steps from step 80's adapter; 720 at 20 / 40
 ptrepair --name rpI --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard --rp-samples 8 --rp-init-from adapters/rpE-s0/step-80 --rp-answers-model models/rpE-80 --rp-seed 1 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules --rp-questions svamp=2400,mbpp=900,ifeval=1500,bfcl_simple_python=300,bfcl_multiple=300,bfcl_irrelevance=300 --rp-quota svamp=640,mbpp=400,ifeval=320,bfcl_simple_python=80,bfcl_multiple=80,bfcl_irrelevance=80 --rp-lr 1e-5 --rp-steps 40 --rp-screen 20 40
