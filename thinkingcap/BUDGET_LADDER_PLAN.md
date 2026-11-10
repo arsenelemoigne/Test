@@ -121,6 +121,17 @@ drawing ~2x candidates and keeping the edge ones, but keep at least ~30% always-
 from them; Run C showed that a mix too rich in hard questions over-cuts). IFEval is scarce (~3,000 usable): if it breaks the
 most, build more IFEval-style prompts with the existing builder (prepare_types.py ifeval_built) rather than reuse questions.
 
+**Rollback:** every stage's adapter is kept; if the tracking panel shows a stage undid earlier ones, go back to the previous
+stage and redo it on a new batch of questions (nothing is repaired afterwards).
+
+**RL as a later option (user, 10 Nov; not in the first version):** a stage's goal is a natural reward: +1 if the answer is
+right AND its thinking stayed within the stage's budget B, else 0 (plus, for questions already solved at a lower level, a small
+bonus for staying at that level). GRPO on the current model, same fresh questions, same tracking panel and rollback. Uses:
+(1) a stage the DPO version cannot make solid (the panel shows accuracy at B not rising after the extra batches);
+(2) a comparison arm, the same ladder with RL stages, once the DPO ladder works. Caution from our GRPO runs (grA/B/C, gr2f):
+slow moves, ~2-3x the GPU time of a DPO stage, sensitive to lr and KL; start from their fixed trainer (rl_train.py) and a smoke
+test.
+
 **Control arm (review):** the same stages with answers from the ORIGINAL model instead of the current one (offline), same
 counts. 2 seeds each.
 
