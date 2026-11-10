@@ -5191,3 +5191,6 @@ answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4
 - rpF-40: **52.4% / -4.5** (svamp 71 / -5.0, mbpp 52 / -6.2, ifeval 32 / -4.0, simple -3.1, multiple +1.1, no-fit -5.6), vs curve -1.1.
   The repair does not lift Run C: it stays on or below the curve (rpE lifted rc1-soup-30 from +0.95 to +1.45 full test). Run C's
   loss (stopped-early math and code) is not fixed by right-vs-wrong pairs at equal length.
+- rpF-80: **48.1% / -2.6** (svamp 63 / -3.5, mbpp 50 / -4.6, ifeval 31 / -0.8, simple -2.7, multiple +2.3, no-fit -2.5), vs curve -0.1:
+  80 steps moved Run C ALONG the curve (57 -> 48% saved, -4.7 -> -2.6), not above it.
+- od1 started on GPU 1 (round 1: rpE-80 answers 1,290 new questions x8).
