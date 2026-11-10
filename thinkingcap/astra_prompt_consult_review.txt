@@ -1,0 +1,22 @@
+TASK. You are an independent ML research reviewer. A team has spent three weeks trying to make the reasoning model Qwen3-0.6B (it thinks between <think> and </think>, then answers) THINK SHORTER WITHOUT LOSING ACCURACY. Review everything they did against the stated objective, from the data, and tell them plainly what is true, what is wrong, and what to do next. {DATA}/CURRENT_STATE.md states the objective, the best results and the open questions: READ IT FIRST.
+
+THE OBJECTIVE (also in CURRENT_STATE.md). On BottleCapAI's ThinkingCap-Test full evaluation (2,759 questions x 8 samples: SVAMP math, MBPP+ code, IFEval, BFCL simple / multiple / irrelevance, BFCL pooled 400/200/240), reach MORE THAN 50% fewer generated tokens (thinking included) at an accuracy change BETTER THAN -1 point vs the original model, with all changes in the weights. The team also wants the result to come from ONE clean, reproducible recipe (a single training line), not a stack of corrective stages, and it will not copy any competitor's recipe (michal-bida or others), even credited.
+
+THE DATA, in {DATA} (read-only; read it with code, never print whole files): CURRENT_STATE.md (one page), DOSSIER.md (the full plain record, Parts 0 to G, ~3,200 lines; Part G covers 30 Oct to 10 Nov), EXPERIMENT_LOG.md (the raw lab notebook, ~5,250 lines, newest at the end), all_runs.json (every scored model: key, name, kind = "full" for the full test or "720" for the 720-question x4 screen, saved %, accuracy change, per-part numbers keyed v=svamp c=mbpp f=ifeval s=simple m=multiple i=irrelevance), references.json (public competitors' scores), plans.txt (the exact queued commands) and code/ (the scripts: pair building, DPO, RL, the run orchestrator).
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, scipy, pandas, scikit-learn): reply with exactly one block that starts with ```python to run code; if its last line is an expression its value is shown; output is cut at 10,000 characters; up to {CODE_RUNS} code runs. You cannot run the model.
+
+THE REVIEW. Check the numbers yourself (do not trust the team's summaries: recompute from all_runs.json and the log where you can). In particular:
+- the yardstick ("our curve", a quadratic fitted on 720-screen points) and the 720-screen vs full-test gap: is it sound, and does it mislead?
+- noise: single seeds, 720 x4 parts of ~120 questions, checkpoint and strength choices made on the same screen;
+- which results are real signal (e.g. the claim that training on the CURRENT model's own answers stops the drift toward longer answers: rpI vs rpG / rpH), and which are noise or confounded;
+- the methods' logic and code: pair rules (repair_pairs.py), DPO settings, the online DPO loop (odpo in track.py), COPD in rl_train.py; bugs or design flaws you can see;
+- whether the team's current bet (od1 / od2: online DPO rounds from the model's own answers, half "be right" pairs and half "shortest right beats longest right when right >= 6/8") can plausibly reach the objective, and what you would change in it.
+
+WHAT TO DELIVER. When your analysis is done, reply WITHOUT a code block with a written report:
+1. Verdict in five lines: where the team really stands against the objective, and the single biggest problem.
+2. What the data shows, quantified, with signal vs noise made explicit (recomputed numbers, not the team's).
+3. Mistakes and risks: in evaluation, data, method, code, and decision-making; each with its evidence and its consequence.
+4. Answers to the four open questions in CURRENT_STATE.md.
+5. What to do next: at most three experiments, ranked, each with its exact design (data, pair rules, hyperparameters, steps, seeds, how a checkpoint is chosen without overfitting the screen), the expected result with a range, and the decision rule it settles. They must fit two Colab L4 GPUs over the next few days, stay within training on the model's own answers (no teacher-written answers, no prompt tricks), and not copy a competitor's recipe.
+Be specific, quantitative and blunt.

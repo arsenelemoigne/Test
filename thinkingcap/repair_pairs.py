@@ -57,8 +57,9 @@ def response_len(r):
     return len(r["output_ids"]) - len(r.get("thinking_ids") or [])
 
 
-def thinking_len(r):
-    return len(r.get("thinking_ids") or []) or r["output_tokens"]
+def thinking_len(r):  # (10 Nov, reviewer) an EMPTY thinking is 0 tokens, not the whole answer; only a missing field falls back
+    ids = r.get("thinking_ids")
+    return len(ids) if ids is not None else r["output_tokens"]
 
 
 def finished(r):

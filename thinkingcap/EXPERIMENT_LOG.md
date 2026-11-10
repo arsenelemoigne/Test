@@ -5215,3 +5215,19 @@ but 42% saved, below the 50% goal. Its 720 screen said 43.0 / +0.9: the screen r
   answer's thinking ids, else its whole length (output_tokens; slightly over-estimates thinking, the 0.5x threshold stays a proxy).
   cp1d does not use it. od1 round 1: 160 pairs (guard 80 / shorten 80, no shortfall: svamp 299 shorten candidates >= 1.5x),
   10 steps, pairs ordered right 75 -> 82%; round 2 answering.
+
+## 10 Nov — consult5: independent review by the Ivan worker (gpt-6-astra), cap $15 then $30 (user)
+27 analysis turns (26 code runs) on CURRENT_STATE.md, the dossier, the log, all_runs.json, plans and code; stopped at $12.86 (no
+notes kept, so the harness's fallback would have produced an empty report); one final call ($0.76) on the conversation with tool
+outputs trimmed wrote the report: consult5_review.md. Total about $13.6-14.6 (one in-flight turn may have been billed).
+Main points: objective not met; the biggest problem is reading moves on a repeatedly-used screen as frontier progress; the curve
+is descriptive (at 50% it predicts -2.9, so +1 above it still misses); rpI-120 vs rpE-80 is only +0.19 vs curve; fresh answers
+ATTENUATE the drift (rpI +14.9% more output vs rpG +35.7%) but do not stop it, and are confounded with pair counts; screen/full
+gaps are model-dependent (savings +1.2 mean, accuracy +0.4 mean, ranges -1.1..+1.5); 6/8 is not a safety certificate; IFEval
+deficit alone costs 0.65 pt of rpE-80's aggregate. Code issues found: (1) thinking_len() treats an empty thinking as the whole
+answer, FIXED; (2) dpo.py reference-cache fingerprint uses prefixes + lengths only (open); (3) a round with fewer than 160 pairs
+cannot reach step 10 in one epoch, FIXED in odpo (2 epochs allowed); (4) log the identities of rollout policy / init / reference
+separately (open); (5) od2 = 90,400 completions for 1,600 pairs: measure pair yield. Recommendation: ONE controlled experiment
+from the original Qwen: fresh-rollout vs frozen-rollout arms, identical mixed pairs (256 per round, half guard half shorten at
+>= 6/8 and 1.25x), 3 rounds x 32 updates, 2 seeds, a NEW 512-question dev set for selection (never the 720), predetermined final
+checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Advice: do not spend GPU days on more COPD variants.

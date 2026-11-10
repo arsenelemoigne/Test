@@ -3732,6 +3732,7 @@ def odpo(args):
         a.rp_round = (k, args.od_rounds)
         a.rp_init_from, a.rp_answers_model = prev, ("" if answerer == args.rp_base else answerer)
         a.rp_steps = args.od_steps
+        a.rp_epochs = max(args.rp_epochs, 2)  # (10 Nov, reviewer) a round short of 160 pairs still reaches step --od-steps
         a.rp_screen = [args.od_steps] if k + 1 in args.od_screen_rounds else []
         print(f"odpo {args.name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO from {prev}", flush=True)
         ptrepair(a)
