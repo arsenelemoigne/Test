@@ -5081,3 +5081,5 @@ Plan lines, in order:
   sometimes-wrong. Steps 1-6 (practice): accuracy 0.84 / 0.76 / 0.89 / 0.87 / 0.57 / 0.66 swinging with the draw's share of
   sometimes-wrong questions (7 / 12 / 7 / 8 / 13 / 10 of 16); sometimes-wrong mixed-now 4/7, 8/12, 2/7, 4/8, 12/13, 7/10 (right
   47-79%); always-right mixed-now 0-2 (right 96-100%). 24 min per 5-step block. GPU 1: rpE @40 full test running.
+- 10 Nov **rpE @ 40 FULL TEST: +50.6 / -1.9** (720 said 50.5 / -1.7). Step 80 full: 47.0 / -0.9. Step 60 full test next.
+- 10 Nov **COPD Run C (cp1c2) @ 10: +12.7 / -1.1** (720; Run A @10: 14.6 / -0.2). Training continues (scores at 20/25/30/35/40).
