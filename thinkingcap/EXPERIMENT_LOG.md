@@ -5098,3 +5098,9 @@ Plan lines, in order:
   ca1 364, rpE-80 379; responses on length-rule questions median 209 -> 145-161 tokens. Wrong answers with thinking under half
   the original's right-answer median: original 62 / 916, shortened models 626-815 / ~1,070. So IFEval's loss = counting /
   length requirements broken by shorter thinking AND shorter responses on exactly those questions.
+- 10 Nov (user) **repair improvements for rpF (repair of Run C @40)**: repair_pairs.py --count-rules: IFEval questions with a
+  counting rule (word / sentence / paragraph counts, keyword frequency, number of sections / bullets / placeholders) take as chosen
+  a right answer whose RESPONSE is at least the rejected's and whose THINKING is at most 1.2x the rejected's (else no pair): the
+  pair teaches "write the asked length", not "think more"; the summary prints counting-rule questions / pairs / skipped.
+  IFEval questions 600 -> 1,500 (rpE found only 154 IFEval pairs for a quota of 320). Fake-answer test: the 3 cases behave.
+  Queued: plan B = breakdown of rpE-80 full, then rpF; plan A = rpE 80 -> 120 (720 at 100 / 120).

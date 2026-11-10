@@ -14,6 +14,11 @@ shortest THINKING, never the shortest whole answer, so a pair never rewards a sh
 (what exactly is asked, the example / assert, the constraints, whether a tool fits; regex markers on its thinking) when one
 exists within 1.5x the shortest right answer's thinking, else the shortest: the shortened model's lost questions were
 right calculations of the wrong question, the re-check it had dropped.
+--count-rules (10 Nov, user): IFEval questions with a COUNTING rule (word / sentence / paragraph counts, keyword frequency,
+number of sections, bullets or placeholders) fail with responses that are too short (the full-test diagnostic): there the
+chosen right answer must have a RESPONSE at least as long as the rejected one's and THINKING no longer than 1.2x the
+rejected one's (the pair then differs in response length and correctness only: "write what is asked", not "think more");
+when no right answer fits, the question gives no pair.
 The output is ordered so that every --block consecutive pairs hold the intended part x kind mix (training reads it in
 order with dpo.py --keep-order: a checkpoint at step 5 has seen a representative slice, not one part).
 
@@ -39,6 +44,19 @@ REREAD = re.compile(r"\b(the (question|problem|task|user|prompt) (is )?(asks?|as
                     r"the (constraints?|requirements?|instructions?) (are|is|say|require))", re.I)
 
 
+COUNT_RULES = ("length_constraints:", "keywords:frequency", "keywords:letter_frequency", "detectable_format:number_",
+               "detectable_format:multiple_sections", "detectable_content:number_placeholders",
+               "change_case:capital_word_frequency")
+
+
+def counting(r):
+    return any(rule.startswith(COUNT_RULES) for rule in (r.get("instruction_id_list") or []))
+
+
+def response_len(r):
+    return len(r["output_ids"]) - len(r.get("thinking_ids") or [])
+
+
 def thinking_len(r):
     return len(r.get("thinking_ids") or []) or r["output_tokens"]
 
@@ -60,6 +78,8 @@ def main():
     ap.add_argument("--block", type=int, default=80)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--think-only", default="", help="parts (comma) whose shortness is the thinking only (ifeval)")
+    ap.add_argument("--count-rules", action="store_true",
+                    help="ifeval counting-rule questions: chosen response >= rejected's, chosen thinking <= 1.2x rejected's")
     ap.add_argument("--prefer-reread", action="store_true",
                     help="chosen = the shortest right answer that re-checks the question, within 1.5x the shortest's thinking")
     ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard"),
@@ -91,6 +111,17 @@ def main():
         if not rights or not wrongs:
             continue
         chosen = rights[0]
+        if args.count_rules and part == "ifeval" and counting(q[0]):
+            rej = wrongs[0]
+            fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
+            rereads[("ifeval", "counting-rule questions")] += 1
+            if not fit:
+                rereads[("ifeval", "counting-rule questions without a fitting right answer (no pair)")] += 1
+                continue
+            chosen = min(fit, key=thinking_len)
+            rereads[("ifeval", "counting-rule pairs")] += 1
+            cand[part]["guard"].append((qid, chosen, rej))
+            continue
         if decode:
             checked = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0]) and REREAD.search(decode(r))]
             chosen = checked[0] if checked else rights[0]
@@ -168,6 +199,12 @@ def main():
             lines.append(f"  {part}: median chosen / rejected tokens {med([p['chosen_tokens'] for p in ps])} / "
                          f"{med([p['rejected_tokens'] for p in ps])}; chosen longer in "
                          f"{sum(p['chosen_tokens'] > p['rejected_tokens'] for p in ps) / len(ps):.0%}")
+    for (part, what), n in sorted(rereads.items()):
+        if what.startswith("counting-rule"):
+            lines.append(f"  {part}: {what}: {n}")
+    ifeval_q = [q for q in groups.values() if part_of(q[0]) == "ifeval"]
+    if ifeval_q:
+        lines.append(f"  ifeval questions answered: {len(ifeval_q)}, with a counting rule: {sum(counting(q[0]) for q in ifeval_q)}")
     for part in quota:
         if rereads[(part, "guard questions")]:
             n = rereads[(part, "guard questions")]
