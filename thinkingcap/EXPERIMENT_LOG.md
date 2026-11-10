@@ -5155,3 +5155,7 @@ so neither effect is known), one seed, one run; gaps of ~1 pt are within 720 x4 
 720 score with a full-test score. Conclusion: the rerun does not show that better settings fail; it was not a fair test.
 od2 (queued after od1, user): the same online loop from the ORIGINAL Qwen (fresh LoRA, reference = the original in round 1),
 6 rounds x 10 steps, fp32 weights + fp16 compute (dpo.py --bida-precision, as every repair), 720 x4 after rounds 2, 4, 6.
+- rpG-40 (= repair step 120), 720 x4, official weighting: **32.7% saved, +0.5** (svamp 31% / +0.4, mbpp 23% / +2.5, ifeval 37% / -1.9,
+  simple 34% / -2.9, multiple 36% / -0.4, irrelevance 50% / +8.5). Step 100 official: 40.4 / +0.9. vs curve: step 80 +2.8,
+  step 100 +2.2, step 120 +0.9. **More steps of the same repair only make the model longer (code 46% -> 23% saved) and fall back
+  toward the curve: rpE step 80 stays the best stopping point.**
