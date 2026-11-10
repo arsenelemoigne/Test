@@ -685,6 +685,8 @@ def run_main(args, llm=None, forward=None):
     budget = Budget(args.cap_usd, st["spent_usd"])
     if args.provider == "google":  # Argon: exact cost from the native usage (cached / uncached / thinking), any context size
         budget.google = True
+    if args.provider == "openrouter" and "gemini" in args.llm:  # (10 Nov) Gemini 4 via OpenRouter: its worst-case prices
+        budget.price_in, budget.price_out = 4e-6, 20e-6        # (2x the $2 / $10 list, the >200k tier); exact cost comes back
     kernel = Kernel(args)
     if forward is None:
         forward = lambda request, k: run_forward_process(args, request, k)  # noqa: E731
