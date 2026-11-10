@@ -5115,3 +5115,20 @@ Plan lines, in order:
   and C per part (right / wrong lengths, cut at the limit, wrong answers that stopped early), the training logs side by side.
   **cp1d** (GPU 2, after rpH) = the ONE-CHANGE version of Run C: Run A's exact settings (64 x 2, lr 1e-5 -> 1e-6, solved >= 1/10)
   + only the correctness push (--copd-outcome 1.0); 720 at 10/20/25/30/35/40.
+
+## 10 Nov — COPD Runs A and C, read from the data (copdanalysis stage, GPU 1)
+
+1. **Wrong answers are longer than right ones** on the training questions (the original's 10 answers, questions with both):
+   svamp right 880 / wrong 1773 tokens, wrong longer on 72% of questions; mbpp 1449/2271 (62%); ifeval 643/1057 (57%);
+   irrelevance 330/448 (75%). So "push right up, wrong down" inside a group is also "push short up, long down".
+2. **720 screens.** Run C cuts much harder: at step 40, right-answer tokens are svamp 583->159 (A: 312), mbpp 1209->420 (A: 843),
+   ifeval 519->256 (A: 372). Its extra errors are answers that **stopped early** (thinking < half the original's median right-answer
+   thinking): svamp 54 of 73 wrong (A: 19/61), mbpp 68/272 (A: 26/257), ifeval 54/212 (A: 14/210), simple 25/96 (A: 9/83).
+   Cut-offs are not the issue (mbpp 8.5% -> 0.2%). At equal savings C is worse: A-40 34.1/-2.4 vs C-25 35.8/-3.6.
+3. **Training logs.** Run A's coach push stays at about -0.01 to -0.02 for all 40 steps. Run C's push fades from about -0.015 to 0 by
+   step 24, then turns positive (+0.015 at step 40), yet tokens keep falling (700 -> 250-300). From step 24 the correctness term
+   alone drives the shortening; the coach no longer does. Practice accuracy is noisy (0.57-0.92) because half the questions are
+   sometimes-wrong.
+**Reading:** the correctness push carries a hidden length reward, because wrong answers are longer, and it removes thinking that was
+needed. cp1d (Run A settings + the correctness push only) tests whether the 16x8 / constant-lr / 50%-mixed settings or the push
+itself causes it.
