@@ -553,5 +553,7 @@ ptrepair --name rpE --rp-base models/rc1-soup-30 --rp-own-data --rp-kinds guard 
 # 9 Nov (user): FULL tests (2,759 x 8, then the 720) of the repair's step 80 (720: 50.4 / -0.2) and step 40 (720: 50.5 / -1.7)
 fullmodel --name full-rpE --nothink-models models/rpE-80 models/rpE-40 --fm-merge models/rpE-80=models/rc1-soup-30:adapters/rpE-s0/step-80 models/rpE-40=models/rc1-soup-30:adapters/rpE-s0/step-40
 # 9 Nov (user): which IFEval rules break, per rule type (CPU, a few minutes)
-ifevalrules --bd-names full-rc1-soup-30 full-ca1-soup-10 full-rpE-80 full-rpE-40 s4-cp1a-20 s4-cp1a-25
+# 10 Nov (user): FULL test of the repair's step 60 (between step 40 and step 80), plus its 720
+fullmodel --name full-rpE60 --nothink-models models/rpE-60 --fm-merge models/rpE-60=models/rc1-soup-30:adapters/rpE-s0/step-60
+ifevalrules --bd-names full-rc1-soup-30 full-ca1-soup-10 full-rpE-80 full-rpE-40 full-rpE-60 s4-cp1a-20 s4-cp1a-25
 end
