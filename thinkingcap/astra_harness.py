@@ -491,7 +491,8 @@ def task_prompt(args):
     text = (Path(__file__).parent / ({"consult": "astra_prompt_consult.txt", "consult-dpo": "astra_prompt_consult_dpo.txt",
                                          "consult-merge": "astra_prompt_consult_merge.txt",
                                          "consult-fresh": "astra_prompt_consult_fresh.txt",
-                                         "consult-review": "astra_prompt_consult_review.txt"}.get(
+                                         "consult-review": "astra_prompt_consult_review.txt",
+                                         "consult-ladder": "astra_prompt_consult_ladder.txt"}.get(
                                          getattr(args, "task", "edit"), "astra_prompt.txt"))).read_text()
     note = ("\n\nTHIS IS A SHORT TEST SESSION ON A LAPTOP CPU: the practice set is 12 easy math word problems (graded by the "
             "final number); a generation pass takes at most 8 generations per model of at most 768 tokens; a teacher-forced "
@@ -698,7 +699,29 @@ def run_main(args, llm=None, forward=None):
         msgs_f.write_text(json.dumps(messages))
     while True:
         out_of_passes = st["passes"] >= args.passes
-        if not budget.allows(approx_tokens(messages), args.max_reply):
+        reserve = getattr(args, "report_reserve", 0.0)
+        if not final_sent and reserve and budget.spent + budget.worst_next(approx_tokens(messages), args.max_reply) > args.cap_usd - reserve:
+            # (10 Nov) stop analysing with money left for the report; the report call sees the whole conversation
+            trimmed = [messages[0], messages[1]]
+            n = len(messages)
+            for i, m in enumerate(messages[2:], start=2):
+                c = m["content"]
+                if m["role"] == "user" and len(c) > (3000 if i >= n - 4 else 1400):
+                    lim = 3000 if i >= n - 4 else 1400
+                    c = c[:lim - 500] + "\n[... output trimmed for length ...]\n" + c[-500:]
+                trimmed.append({"role": m["role"], "content": c})
+            draft = (work / "report_draft.md").read_text()[-12000:] if (work / "report_draft.md").exists() else ""
+            notes = (work / "notes.md").read_text()[-8000:] if (work / "notes.md").exists() else ""
+            trimmed[-1 if trimmed[-1]["role"] == "user" else len(trimmed):] = [{"role": "user", "content": (
+                (trimmed[-1]["content"] + "\n\n" if trimmed[-1]["role"] == "user" else "") +
+                "STOP ANALYSING NOW: the budget for analysis is used up. Earlier tool outputs above were trimmed for length; "
+                "rely on what you established. Your notes:\n" + (notes or "(none)") + "\n\nYour report draft:\n" +
+                (draft or "(none)") + "\n\nWrite your FINAL REPORT now, WITHOUT a code block, complete, following WHAT TO "
+                "DELIVER in the task.")}]
+            messages = trimmed
+            final_sent = True
+            print(f"astra: analysis budget used (${budget.spent:.2f}); final report call with the whole conversation", flush=True)
+        elif not budget.allows(approx_tokens(messages), args.max_reply):
             if final_sent or not budget.allows(approx_tokens(messages[:2]) + 4000, 4000):
                 print(f"astra: SPENDING STOP at ${budget.spent:.2f} (cap ${args.cap_usd}); edits in /work/edited stand", flush=True)
                 break
@@ -789,8 +812,9 @@ def run_main(args, llm=None, forward=None):
         if st["passes"] >= args.passes and not out_of_passes:
             reply += "\n\nThat was the last forward pass: make your final choice (the tensors in /work/edited are submitted) and reply without a code block."
         messages.append({"role": "user", "content": reply})
-        if (work / "notes.md").exists():
-            (run / "notes.md").write_text((work / "notes.md").read_text())
+        for name in ("notes.md", "report_draft.md"):  # (10 Nov) traced every turn: a forgotten report can be rebuilt
+            if (work / name).exists():
+                (run / name).write_text((work / name).read_text())
         save()
     save()
     return st
@@ -915,6 +939,9 @@ def main():
     p.add_argument("--passes", type=int, default=10)
     p.add_argument("--code-runs", type=int, default=120)
     p.add_argument("--cap-usd", type=float, default=8.0, help="HARD spending stop (user, 3 Nov: EUR 8; USD 8 is below it)")
+    p.add_argument("--report-reserve", type=float, default=0.0,
+                   help="(10 Nov) USD kept for the final report: analysis stops once spent + the next call's worst case passes "
+                        "cap - reserve; the report call then gets the whole conversation (tool outputs trimmed), not only notes")
     p.add_argument("--max-reply", type=int, default=8000, help="tokens per reply, reasoning included")
     p.add_argument("--handoff", type=int, default=60000, help="restart the conversation above this many context tokens")
     p.add_argument("--out-chars", type=int, default=10000, help="a code run's or a forward summary's output is cut here (the paper: 10,000)")
@@ -924,7 +951,7 @@ def main():
     p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
-    p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review"),
+    p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review", "consult-ladder"),
                    help="consult (4 Nov, user): strategy analysis only, no forward passes, our work never mentioned")
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
     p.add_argument("--cpu-items", type=int, default=8, help="--cpu: generations per model per pass")
