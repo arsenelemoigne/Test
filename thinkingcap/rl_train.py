@@ -195,6 +195,11 @@ def parse_arguments():
     parser.add_argument("--copd-outcome", type=float, default=0.0,
                         help="copd (9 Nov, user: real accuracy in the training): add w x (right - the mean of its question's "
                              "group) to every token of each reply, right = graded correct; 0 = COPD alone. Needs --group >= 2")
+    parser.add_argument("--copd-early", type=float, default=0.0,
+                        help="copd (10 Nov, user: fix 2): subtract w from every token of a WRONG reply whose thinking is under "
+                             "--copd-early-ratio x the original model's median thinking on its right answers to that question "
+                             "(the row's base_think); 0 = off")
+    parser.add_argument("--copd-early-ratio", type=float, default=0.5)
     parser.add_argument("--protect-sources", default="",
                         help="comma list of sources (e.g. math) given NO length pressure: right replies weighted equally "
                              "(drpo) / correctness-only reward (shorterbetter); they are still trained to stay right")
@@ -869,6 +874,17 @@ def main():
                             copd_adv[id(j[1])] = [a + bonus for a in copd_adv[id(j[1])]]
                 stats["copd_origin"] = origin
                 stats["copd_outcome_groups"] = with_signal
+            if args.copd_early:  # (10 Nov, user: fix 2) a wrong reply that gave up thinking too early is punished more
+                early, wrong = 0, 0
+                for j in scored:
+                    base_think = j[5].get("base_think")
+                    if j[2] or not base_think:
+                        continue
+                    wrong += 1
+                    if j[4] < args.copd_early_ratio * base_think:
+                        early += 1
+                        copd_adv[id(j[1])] = [a - args.copd_early for a in copd_adv[id(j[1])]]
+                stats["copd_early"] = [early, wrong]
             stats["copd_mean"] = sum(all_adv) / max(1, len(all_adv))
             stats["copd_negative"] = sum(a < 0 for a in all_adv) / max(1, len(all_adv))
             stats["copd_close"] = sum(close_adv) / len(close_adv) if close_adv else None
@@ -1059,6 +1075,8 @@ def main():
                 entry["copd"]["by_origin"] = {k: {"questions": v[0], "mixed_now": v[1],
                                                   "right": round(v[2] / v[3], 3) if v[3] else None}
                                               for k, v in stats["copd_origin"].items() if v[0]}
+        if args.objective == "copd" and args.copd_early:
+            entry["copd"]["early_penalised"] = stats["copd_early"]  # [wrong replies punished as too early, wrong replies]
         if stats["no_think_replies"]:
             entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
         log.append(entry)

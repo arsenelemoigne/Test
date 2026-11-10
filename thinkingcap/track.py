@@ -3756,9 +3756,12 @@ def thinkprune(args):
                 if not re.search(r"prostring|stringname|stringName", line):  # the "file" -> "string" corruption
                     rows[r["pool_id"]] = r
     by_q = defaultdict(list)
+    right_think = defaultdict(list)
     for line in open(answers):
         r = json.loads(line)
         by_q[r["id"]].append((bool(r["correct"]) and r["closed_thinking"] and not r["truncated"], r["output_tokens"]))
+        if bool(r["correct"]) and r["closed_thinking"] and not r["truncated"] and r.get("reasoning_tokens") is not None:
+            right_think[r["id"]].append(int(r["reasoning_tokens"]))  # (10 Nov) for --copd-early: the original's thinking
     from build_pool import part_of
     caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
     eligible = defaultdict(list)
@@ -3805,7 +3808,8 @@ def thinkprune(args):
             while credit[part] >= 1 and eligible.get(part):
                 credit[part] -= 1
                 q = rows[eligible[part].pop()]
-                pool.append(q | {"id": q["pool_id"], "cap": caps[part], "solve10": round(solve[q["pool_id"]], 2)})
+                pool.append(q | {"id": q["pool_id"], "cap": caps[part], "solve10": round(solve[q["pool_id"]], 2),
+                                 "base_think": statistics.median(right_think[q["pool_id"]]) if right_think[q["pool_id"]] else None})
     if args.tp_check:  # (6 Nov, user) the question selection only: counts per part vs what the run needs, no training
         need = args.tp_steps * args.tp_questions
         per = defaultdict(int)
@@ -3824,6 +3828,8 @@ def thinkprune(args):
         pool = pool[:args.tp_steps * args.tp_questions]
         some = sum(0 < q["solve10"] < 1 for q in pool)
         print(f"thinkprune {name}: {len(pool)} questions kept, {some} sometimes wrong ({some / max(1, len(pool)):.0%})", flush=True)
+    has_think = sum(q.get("base_think") is not None for q in pool)
+    print(f"thinkprune {name}: {has_think}/{len(pool)} questions carry the original's right-answer thinking (base_think)", flush=True)
     data = Path(f"data/tp-{name}.jsonl")
     data.write_text("".join(json.dumps(r) + "\n" for r in pool))
     base = "Qwen/Qwen3-0.6B"
