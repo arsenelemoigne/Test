@@ -104,7 +104,7 @@ def main():
         tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
         decode = lambda r: tok.decode(r.get("thinking_ids") or r["output_ids"], skip_special_tokens=True)  # noqa: E731
     rereads = Counter()
-    cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": []})
+    cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": []})
     for qid, q in groups.items():
         part = part_of(q[0])
         if part not in quota:
@@ -113,9 +113,12 @@ def main():
         rights = sorted((r for r in q if right(r)), key=size)
         wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
         if (args.kinds == "guard,shorten" and len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right
-                and size(rights[-1]) >= args.shorten_ratio * size(rights[0])
                 and not (part == "ifeval" and counting(q[0]))):  # (10 Nov, odpo) a counting rule needs its full response
-            cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+            spread = size(rights[-1]) / max(1, size(rights[0]))
+            if spread >= args.shorten_ratio:
+                cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+            elif spread >= 1.25:  # backup supply: used only if the clear (>= 1.5x) pairs run short
+                cand[part]["shorten_soft"].append((qid, rights[0], rights[-1]))
         if not rights or not wrongs:
             continue
         chosen = rights[0]
@@ -166,6 +169,10 @@ def main():
         if args.kinds == "guard,shorten":  # (10 Nov, odpo) half "be right", half "be shorter when sure"; no backfill
             g = take(part, "guard", cand[part]["guard"], n // 2)
             sh = take(part, "shorten", cand[part]["shorten"], n - n // 2)
+            soft = take(part, "shorten", cand[part]["shorten_soft"], n - n // 2 - len(sh))
+            counts[(part, "shorten from the 1.25-1.5x backup")] += len(soft)
+            counts[(part, "shorten candidates (>= 1.5x / 1.25-1.5x)")] = f"{len(cand[part]['shorten'])} / {len(cand[part]['shorten_soft'])}"
+            sh += soft
             by_part[part] = g + sh
             counts[(part, "guard")] += len(g)
             counts[(part, "shorten")] += len(sh)
