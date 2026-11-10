@@ -335,6 +335,10 @@ def main():
                              "GSM8K train+test at every difficulty in SVAMP wording; code / instructions / tools = pool-dp13 "
                              "rows minus MetaMath + the own top-ups nofit1, nofit2, tools1, code1; no michal-bida source")
     parser.add_argument("--rp-base-from", default="", help="ptrepair (10 Nov): BASE_MODEL:ADAPTER builds --rp-base when missing")
+    parser.add_argument("--rp-samples", type=int, default=4, help="ptrepair (10 Nov): answers per question")
+    parser.add_argument("--rp-seed", type=int, default=0, help="ptrepair (10 Nov): the own-question draw (another seed = new questions)")
+    parser.add_argument("--rp-answers-model", default="", help="ptrepair (10 Nov): the merged model that answers (default: --rp-base)")
+    parser.add_argument("--rp-init-from", default="", help="ptrepair (10 Nov): start DPO from this adapter (also DPO's reference)")
     parser.add_argument("--rp-epochs", type=int, default=1, help="ptrepair (10 Nov): passes over the pairs (steps past one "
                         "pass need 2; a finished run continues from its saved state)")
     parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
@@ -3616,7 +3620,7 @@ def ptrepair(args):
             by_part[part_of(rows[qid])]["mixed" if 0 < p < 1 else "right" if p == 1 else "wrong"].append(qid)
     chosen = []
     if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
-        for r in own_repair_questions(want):
+        for r in own_repair_questions(want, seed=args.rp_seed):
             rows[r["id"]] = r
             chosen.append(r["id"])
     for part, n in ({} if own else want).items():
@@ -3634,10 +3638,14 @@ def ptrepair(args):
     roll = BON / f"rp-{args.rp_from or name}"
     if not args.rp_from:
         drive_sync("restore", only=[str(roll)])
+    answerer = Path(args.rp_answers_model) if args.rp_answers_model else merged  # (10 Nov) who answers: a new round
+    if args.rp_answers_model:
+        drive_sync("restore", only=[str(answerer)])
+        assert (answerer / "config.json").exists(), f"{answerer} is not on Drive"
     if not args.rp_from and not (roll / "rollouts.jsonl").exists():
         py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
-           "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", 4,
-           "--model", merged, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+           "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.rp_samples,
+           "--model", answerer, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
            "--max-questions", len(chosen), "--seed", 53)
         drive_sync("save")
     pairs = BON / f"pairs-{args.rp_from or name}"
@@ -3649,9 +3657,11 @@ def ptrepair(args):
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / f"{name}-s0"
-    start = Path("adapters") / f"fresh-{name}"
+    start = Path(args.rp_init_from) if args.rp_init_from else Path("adapters") / f"fresh-{name}"  # (10 Nov) continue an adapter
     drive_sync("restore", only=[str(adapter), str(start)])
-    if not (start / "adapter_config.json").exists():
+    if args.rp_init_from:
+        assert (start / "adapter_config.json").exists(), f"{start} is not on Drive"
+    elif not (start / "adapter_config.json").exists():
         py("sft.py", "--init-only", "--model", merged, "--out", start)
     steps = 4 if smoke else args.rp_steps
     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():

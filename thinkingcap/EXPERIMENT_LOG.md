@@ -5104,3 +5104,9 @@ Plan lines, in order:
   pair teaches "write the asked length", not "think more"; the summary prints counting-rule questions / pairs / skipped.
   IFEval questions 600 -> 1,500 (rpE found only 154 IFEval pairs for a quota of 320). Fake-answer test: the 3 cases behave.
   Queued: plan B = breakdown of rpE-80 full, then rpF; plan A = rpE 80 -> 120 (720 at 100 / 120).
+- 10 Nov (user) **three continuations of repair step 80 (40 steps each = 80 -> 120), 8 answers per question**, all starting from
+  rpE step 80's adapter (also DPO's reference), 720 at their steps 20 / 40: **rpG** = rc1-soup-30 answers the repair's questions
+  x8, rpE's pair rules; **rpH** = rpG + IFEval counting-rule pairs (--count-rules) and 1,500 IFEval questions; **rpI** = a new
+  round: the repaired model (models/rpE-80) answers a new question draw (seed 1) x8, pairs from its current mistakes + the IFEval
+  fix. New ptrepair options: --rp-samples, --rp-seed, --rp-answers-model, --rp-init-from. GPU 1: breakdown rpE-80, rpI, rpF;
+  GPU 2: rpG, rpH (the plain resume 80 -> 120 replaced by rpG).
