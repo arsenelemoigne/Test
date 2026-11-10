@@ -1,0 +1,94 @@
+"""Score a model on Dev-512 against the original Qwen, the official way (11 Nov, consult6 protocol: choices on our own
+held-out questions, never the test or the 720).
+
+Both runs are probe_curve.py --generate-only outputs on the same dev questions (8 answers each). Per part: accuracy (right =
+graded correct and not cut at the token cap) and mean generated tokens per answer. Official headline: the 4 benchmarks equally
+weighted, BFCL's three parts pooled 400/200/240 (accuracy and tokens); tokens saved = 1 - geometric mean of the 4 token ratios.
+Uncertainty: a paired bootstrap over questions (resampled within each part, 1,000 draws), 95% interval for both numbers.
+
+    python dev_score.py --base runs/bon/dev512-base/rollouts.jsonl --cand runs/bon/dev512-rpJ-40/rollouts.jsonl --name rpJ-40
+"""
+import argparse
+import json
+import math
+import random
+from collections import defaultdict
+from pathlib import Path
+
+from build_pool import part_of
+
+BFCL_W = {"bfcl_simple_python": 400, "bfcl_multiple": 200, "bfcl_irrelevance": 240}
+PARTS = ("svamp", "mbpp", "ifeval", "bfcl_simple_python", "bfcl_multiple", "bfcl_irrelevance")
+
+
+def per_question(path):
+    out = defaultdict(list)
+    part = {}
+    for line in Path(path).read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            out[r["id"]].append((bool(r["correct"]) and not r["truncated"], r["output_tokens"]))
+            part[r["id"]] = part_of(r)
+    return {q: (sum(a for a, _ in v) / len(v), sum(t for _, t in v) / len(v)) for q, v in out.items()}, part
+
+
+def headline(base, cand, ids_by_part):
+    """(saved %, accuracy change pts, per-part rows) on the given question ids."""
+    rows = {}
+    for p, ids in ids_by_part.items():
+        if ids:
+            rows[p] = (sum(base[q][0] for q in ids) / len(ids), sum(cand[q][0] for q in ids) / len(ids),
+                       sum(base[q][1] for q in ids) / len(ids), sum(cand[q][1] for q in ids) / len(ids))
+    bench = {}
+    for p in ("svamp", "mbpp", "ifeval"):
+        if p in rows:
+            a0, a1, t0, t1 = rows[p]
+            bench[p] = (t1 / t0, a1 - a0)
+    bf = [p for p in BFCL_W if p in rows]
+    if bf:
+        w = sum(BFCL_W[p] for p in bf)
+        t0 = sum(BFCL_W[p] * rows[p][2] for p in bf) / w
+        t1 = sum(BFCL_W[p] * rows[p][3] for p in bf) / w
+        bench["bfcl"] = (t1 / t0, sum(BFCL_W[p] * (rows[p][1] - rows[p][0]) for p in bf) / w)
+    saved = 100 * (1 - math.exp(sum(math.log(r) for r, _ in bench.values()) / len(bench)))
+    acc = 100 * sum(a for _, a in bench.values()) / len(bench)
+    return saved, acc, rows
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--base", required=True)
+    ap.add_argument("--cand", required=True)
+    ap.add_argument("--name", required=True)
+    ap.add_argument("--out", default="")
+    ap.add_argument("--boot", type=int, default=1000)
+    args = ap.parse_args()
+    base, part = per_question(args.base)
+    cand, _ = per_question(args.cand)
+    ids_by_part = defaultdict(list)
+    for q in base:
+        if q in cand and part[q] in PARTS:
+            ids_by_part[part[q]].append(q)
+    saved, acc, rows = headline(base, cand, ids_by_part)
+    rng = random.Random(0)
+    boots = []
+    for _ in range(args.boot):
+        draw = {p: [rng.choice(ids) for _ in ids] for p, ids in ids_by_part.items()}
+        s, a, _ = headline(base, cand, draw)
+        boots.append((s, a))
+    ci = lambda xs: (sorted(xs)[int(0.025 * len(xs))], sorted(xs)[int(0.975 * len(xs)) - 1])  # noqa: E731
+    cs, ca = ci([b[0] for b in boots]), ci([b[1] for b in boots])
+    n = sum(len(v) for v in ids_by_part.values())
+    lines = [f"== {args.name} (Dev-512 x8, {n} questions): tokens saved {saved:+.1f}% [{cs[0]:+.1f}, {cs[1]:+.1f}], "
+             f"accuracy {acc:+.2f} pts [{ca[0]:+.2f}, {ca[1]:+.2f}] (official weighting, paired bootstrap 95%)"]
+    lines.append("   " + "; ".join(f"{p} {100 * (1 - r[3] / r[2]):+.0f}% / {100 * (r[1] - r[0]):+.1f}" for p, r in rows.items()))
+    print("\n".join(lines), flush=True)
+    if args.out:
+        Path(args.out).write_text(json.dumps({"name": args.name, "saved": round(saved, 2), "acc": round(acc, 2),
+                                              "saved_ci": cs, "acc_ci": ca, "questions": n,
+                                              "parts": {p: {"base_acc": r[0], "acc": r[1], "base_tokens": r[2], "tokens": r[3]}
+                                                        for p, r in rows.items()}}, indent=1))
+
+
+if __name__ == "__main__":
+    main()

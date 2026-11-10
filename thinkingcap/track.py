@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -343,6 +343,11 @@ def main():
                         "pass need 2; a finished run continues from its saved state)")
     parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
                         "--think-only,ifeval,--prefer-reread)")
+    parser.add_argument("--ds-name", default="", help="devscore (11 Nov): the name of the scored model's Dev-512 run")
+    parser.add_argument("--ds-model", default="", help="devscore: a merged model path / Hub id, or MERGED_OUT=BASE:ADAPTER to build it")
+    parser.add_argument("--rp-rollouts-from", default="", help="ptrepair (11 Nov): reuse this run's answers (runs/bon/rp-NAME), new pairs")
+    parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
+    parser.add_argument("--rp-exclude-dev", action="store_true", help="ptrepair / odpo (11 Nov): never draw the Dev/Confirm questions")
     parser.add_argument("--ld-questions", default="svamp=450,mbpp=300,ifeval=450,bfcl_simple_python=100,bfcl_multiple=100,"
                         "bfcl_irrelevance=100", help="ladder (10 Nov, user): own training questions per part")
     parser.add_argument("--ld-seed", type=int, default=11, help="ladder: the question draw's seed")
@@ -353,7 +358,7 @@ def main():
     parser.add_argument("--od-init", default="", help="odpo: the adapter round 1 starts from (and its reference)")
     parser.add_argument("--od-answers0", default="", help="odpo: the merged model = --rp-base + --od-init (answers round 1)")
     parser.add_argument("--od-screen-rounds", type=int, nargs="*", default=[2, 4], help="odpo: rounds scored on the 720 x4")
-    parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten"),
+    parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten", "mix"),
                         help="ptrepair: repair_pairs.py --kinds (guard = only shortest right > shortest finished wrong)")
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
                         help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
@@ -3515,7 +3520,7 @@ def polans(args):
 PT_MID = {"svamp": 0.30, "mbpp": 0.45, "ifeval": 0.60, "bfcl": 0.45}  # pt-mid = lpw-pertype merged at these strengths
 
 
-def own_repair_questions(want, seed=0):
+def own_repair_questions(want, seed=0, exclude=None):
     """(9 Nov, user: "100% not copying michal-bida") The repair's questions from the user's OWN sources only, want[part] per
     test part, drawn at random (the trained model's own 4 answers then decide which give pairs):
       math         GSM8K train + test at EVERY difficulty, in SVAMP's wording (prepare_types.py gsm8k_std; GSM8K is in the
@@ -3572,6 +3577,9 @@ def own_repair_questions(want, seed=0):
             dropped[(part, "already trained on")] += 1
             continue
         cands[part].append(r)
+    if exclude:  # (11 Nov) the Dev-512 / Confirm-512 questions are never drawn for training (only when asked: old draws stay)
+        for part in cands:
+            cands[part] = [r for r in cands[part] if r["id"] not in exclude]
     rng = random.Random(seed)
     chosen = []
     for part, n in want.items():
@@ -3624,15 +3632,16 @@ def ptrepair(args):
         drive_sync("restore", only=[str(pairs)])
         assert (pairs / "pairs.jsonl").exists(), f"{pairs} is not on Drive"
         print(f"repair {name}: pairs of {args.rp_from}", flush=True)
-    own = args.rp_own_data and not args.rp_from
+    reuse = getattr(args, "rp_rollouts_from", "")  # (11 Nov) another run's answers, new pairs: no draw, no generation
+    own = args.rp_own_data and not args.rp_from and not reuse
     rows = {}
-    for f in (() if args.rp_from or own else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
+    for f in (() if args.rp_from or own or reuse else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
         for line in f.read_text().splitlines():
             if line.strip():
                 r = json.loads(line)
                 rows[r.get("pool_id", r.get("id"))] = r
     solve = defaultdict(list)
-    for line in (() if args.rp_from or own else open(answers)):
+    for line in (() if args.rp_from or own or reuse else open(answers)):
         r = json.loads(line)
         solve[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
     from build_pool import part_of
@@ -3649,13 +3658,14 @@ def ptrepair(args):
     if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
         k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
         per_part = defaultdict(list)
-        for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed):
+        for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
+                                      exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None):
             per_part[part_of(r)].append(r)
         for part, n in want.items():
             for r in per_part[part][k * n:(k + 1) * n]:
                 rows[r["id"]] = r
                 chosen.append(r["id"])
-    for part, n in ({} if own else want).items():
+    for part, n in ({} if own or reuse else want).items():
         b = by_part[part]
         for k in b:
             rng.shuffle(b[k])
@@ -3665,16 +3675,19 @@ def ptrepair(args):
         print(f"repair {name}: {part} {len(take)} questions ({min(n, len(b['mixed']))} mixed of {len(b['mixed'])})", flush=True)
         chosen += take
     data = Path(f"data/repair-{name}.jsonl")
-    if not args.rp_from:
+    if not args.rp_from and not reuse:
         data.write_text("".join(json.dumps(rows[q] | {"id": q}) + "\n" for q in chosen))
-    roll = BON / f"rp-{args.rp_from or name}"
+    roll = BON / f"rp-{args.rp_from or reuse or name}"
     if not args.rp_from:
         drive_sync("restore", only=[str(roll)])
+    if reuse:
+        assert (roll / "rollouts.jsonl").exists(), f"{roll} has no rollouts on Drive"
+        print(f"repair {name}: the answers of {reuse} ({roll}), new pairs", flush=True)
     answerer = Path(args.rp_answers_model) if args.rp_answers_model else merged  # (10 Nov) who answers: a new round
     if args.rp_answers_model:
         drive_sync("restore", only=[str(answerer)])
         assert (answerer / "config.json").exists(), f"{answerer} is not on Drive"
-    if not args.rp_from and not (roll / "rollouts.jsonl").exists():
+    if not args.rp_from and not reuse and not (roll / "rollouts.jsonl").exists():
         py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
            "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.rp_samples,
            "--model", answerer, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
@@ -3705,6 +3718,12 @@ def ptrepair(args):
         drive_sync("save")
     if smoke:
         print(f"repair {name}: SMOKE done (answers, pairs, {steps} training steps)", flush=True)
+        return
+    if getattr(args, "rp_dev", False):  # (11 Nov) choices on Dev-512 only (consult6 protocol), never the 720
+        for step in args.rp_screen:
+            if args.rp_base:
+                spec = f"/content/lupin-models/{name}-{step}={args.rp_base}:{adapter / f'step-{step}'}"
+                print(dev_score_model(f"{name}-{step}", spec), flush=True)
         return
     for step in args.rp_screen:
         out = ROOT / f"s4-{name}-{step}"
@@ -3750,6 +3769,96 @@ def odpo(args):
                 drive_sync("save")
             answerer = str(nxt)
     print(f"odpo {args.name}: done; last adapter {prev}", flush=True)
+
+
+DEV_FILE = Path("data/dev512.jsonl")
+DEV_SOURCES = ("toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,"
+               "ifeval_like,ifeval_built")
+
+
+def dev_ids():
+    """(11 Nov) ids of the Dev-512 questions (never trained on once a run passes --rp-exclude-dev)."""
+    drive_sync("restore", only=[str(DEV_FILE)])
+    return {json.loads(l)["id"] for l in DEV_FILE.read_text().splitlines() if l.strip()} if DEV_FILE.exists() else set()
+
+
+def devset(args):
+    """Dev-512 (11 Nov, consult6 protocol): 512 own held-out questions for every choice (never the test, never the 720):
+    math 140, code 100, IFEval 132 (66 with a counting rule, 66 without), tools 140 (60 one function, 35 several, 45 no fit).
+    Drawn from the own pool OUTSIDE every question already drawn for training by rpE/rpG/rpH (seed 0), rpI (seed 1) and od1
+    (seed 7, 4 rounds); later runs exclude it with --rp-exclude-dev. Then the ORIGINAL Qwen answers it x8 (the reference)."""
+    from repair_pairs import counting
+    from build_pool import part_of
+    drive_sync("restore", only=[str(DEV_FILE)])
+    if not DEV_FILE.exists():
+        used = set()
+        sizes0 = {"svamp": 2400, "mbpp": 900, "ifeval": 1500, "bfcl_simple_python": 300, "bfcl_multiple": 300, "bfcl_irrelevance": 300}
+        od1 = {"svamp": 480 * 4, "mbpp": 180 * 4, "ifeval": 450 * 4, "bfcl_simple_python": 240, "bfcl_multiple": 240,
+               "bfcl_irrelevance": 240}
+        for seed, sizes in ((0, sizes0), (1, sizes0), (7, od1)):
+            used |= {r["id"] for r in own_repair_questions(sizes, seed=seed)}
+        every = own_repair_questions({p: 10 ** 6 for p in sizes0}, seed=99)
+        want = {"svamp": 140, "mbpp": 100, "bfcl_simple_python": 60, "bfcl_multiple": 35, "bfcl_irrelevance": 45}
+        picked, counts = [], defaultdict(int)
+        for r in every:
+            if r["id"] in used:
+                continue
+            p = part_of(r)
+            if p == "ifeval":
+                key = "ifeval-count" if counting(r) else "ifeval-plain"
+                if counts[key] < 66:
+                    counts[key] += 1
+                    picked.append(r)
+            elif counts[p] < want.get(p, 0):
+                counts[p] += 1
+                picked.append(r)
+        print(f"devset: {len(picked)} questions {dict(counts)} (outside {len(used)} questions already drawn for training)", flush=True)
+        DEV_FILE.parent.mkdir(exist_ok=True)
+        DEV_FILE.write_text("".join(json.dumps(r) + "\n" for r in picked))
+        drive_sync("save")
+    dev_generate("base", "Qwen/Qwen3-0.6B")
+
+
+def dev_generate(name, model):
+    rows = [l for l in DEV_FILE.read_text().splitlines() if l.strip()]
+    out = BON / f"dev512-{name}"
+    drive_sync("restore", only=[str(out)])
+    if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
+        py("probe_curve.py", "--data", DEV_FILE, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
+           "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+           "--max-questions", len(rows), "--seed", 53)
+        drive_sync("save")
+    return out
+
+
+def dev_score_model(name, spec):
+    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here)."""
+    dev_ids()
+    assert DEV_FILE.exists(), "run the devset stage first"
+    base = dev_generate("base", "Qwen/Qwen3-0.6B")
+    model = spec
+    if "=" in spec:
+        model, rest = spec.split("=")
+        merge_base, adapter = rest.split(":")
+        if not (Path(model) / "config.json").exists():
+            drive_sync("restore", only=[*([] if merge_base.startswith("Qwen/") else [merge_base]), adapter])
+            py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
+    else:
+        drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
+    out = dev_generate(name, model)
+    if "=" in spec and model.startswith("/content/"):
+        shutil.rmtree(model, ignore_errors=True)
+    res = out / "dev_score.json"
+    run(sys.executable, "dev_score.py", "--base", base / "rollouts.jsonl", "--cand", out / "rollouts.jsonl", "--name", name,
+        "--out", res)
+    drive_sync("save")
+    d = json.loads(res.read_text())
+    return (f"== {name} (Dev-512 x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "
+            f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
+
+
+def devscore(args):
+    print(dev_score_model(args.ds_name, args.ds_model), flush=True)
 
 
 def ladder(args):
@@ -5742,7 +5851,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
