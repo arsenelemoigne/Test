@@ -88,7 +88,7 @@ the original (one answer of slack). Nothing is carried over from earlier stages,
 4. IFEval: budgets count thinking only; on counting-rule questions no pair may shorten the final response.
 
 **Training per stage:** about 300-500 pairs = 20-30 DPO steps of 16 pairs, one pass, LoRA continued from the previous stage,
-lr 1e-5 constant, beta 0.1, the original Qwen as the reference throughout (so drift is measured against the start).
+lr 1e-5 constant, beta 0.1, the PREVIOUS stage as the reference (decided by the user, 10 Nov).
 
 **The tracking panel (user, 10 Nov) — the guard between stages.** One FIXED set of held-out questions (~300: 50 per type,
 never trained on, not the 720, not the test) is re-answered after EVERY stage, 8 times at every budget level, exactly like
@@ -156,7 +156,7 @@ moves left. Measured and plotted per type and per difficulty band (the original'
 | beta / NLL | 0.1 / none | 0.1 / none | 0.1 / none |
 | precision | fp32 weights + fp16 compute | fp32 + fp16 autocast | fp32 + fp16 |
 | answers per question | 4-8 | 4 | 8 per budget |
-| reference | the round's start | the original | the previous stage (each stage a small step; the panel guards drift) |
+| reference | the round's start | the original | **the previous stage — DECIDED (user, 10 Nov)**: each stage a small step; the panel + rollback guard drift |
 Evidence: on the same pairs, fp32/fp16 + cosine-to-0 (bidax6) cut 13-15 pts less and lost ~2.8 pts less than bf16 (bidax4):
 precision and schedule make DPO gentler. Equal-length right > wrong pairs at constant lr 1e-5 (rpE) lifted accuracy by
 +1 to +3 pts without a length push.
