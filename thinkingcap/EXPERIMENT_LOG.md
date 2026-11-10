@@ -5174,3 +5174,8 @@ include the coding agent's traces and the conversation with the harness, as a te
 ifeval 42 / -0.4, simple 39 / -2.5, multiple 42 / +0.2, no-fit 52 / +6.7). vs curve: +1.5 then **+2.6** (rpE-80 +2.8, rpG-100 +2.2,
 rpG-120 +0.9). Unlike rpG (same steps, old model's answers), rpI kept its length (43% at both steps) while gaining accuracy:
 answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4 at 42% saved (rpG-120: -1.9 at 37%).
+
+## 10 Nov — rpH (= rpG + IFEval counting rule, 1,500 IFEval questions; 1,598 pairs, 175 counting-rule)
+- rpH-20 (= step 100), 720 x4 official: **42.0% / -0.6** (svamp 44 / -0.2, mbpp 40 / +0.2, ifeval 43 / -2.5, simple 37 / -1.2,
+  multiple 40 / -0.6, no-fit 50 / +3.3); vs curve +1.0 (rpG-100 +2.2, rpI-100 +1.5). IFEval did NOT improve at step 100 (rpG-100:
+  38% / +0.2), but one part of the 720 is 120 questions x4 (CI about +/-4.4 pts): per-part gaps of 2-3 points are noise.
