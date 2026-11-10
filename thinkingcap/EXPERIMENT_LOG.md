@@ -5138,3 +5138,10 @@ itself causes it.
   multiple +39%/-1.1, simple +37%/-2.1, ifeval +38%/+0.2, mbpp +40%/+1.7, svamp +42%/+1.0.
 - vs rpE-80 on the same 720 (50.4 / -0.2): about 10 pts less saved for +1.2 pts accuracy. Distance above the curve is about the same
   (+2.35 vs +2.77 on the 720), so the model slid along the curve toward longer answers rather than improving.
+
+## 10 Nov — online DPO (odpo stage, queued on GPU 1 after rpF)
+od1: 4 rounds from rpE step 80 (base rc1-soup-30). Each round the CURRENT model answers a new slice of own questions x8
+(1,290 per round, no question twice), repair_pairs.py --kinds guard,shorten builds 160 pairs: half guard (shortest right >
+shortest wrong, + re-read / IFEval counting rules) and half shorten (shortest right > longest right, only on questions right
+>= 6/8 with the longest >= 1.5x the shortest; never on IFEval counting-rule questions); DPO 10 steps continuing the adapter,
+the round's start as the reference; 720 x4 after rounds 2 and 4. Tested on fake answers (pairs) and mocked rounds (loop).

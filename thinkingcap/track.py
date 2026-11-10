@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -343,7 +343,12 @@ def main():
                         "pass need 2; a finished run continues from its saved state)")
     parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
                         "--think-only,ifeval,--prefer-reread)")
-    parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard"),
+    parser.add_argument("--od-rounds", type=int, default=4, help="odpo (10 Nov, user): online DPO rounds")
+    parser.add_argument("--od-steps", type=int, default=10, help="odpo: training steps per round (16 pairs each)")
+    parser.add_argument("--od-init", default="", help="odpo: the adapter round 1 starts from (and its reference)")
+    parser.add_argument("--od-answers0", default="", help="odpo: the merged model = --rp-base + --od-init (answers round 1)")
+    parser.add_argument("--od-screen-rounds", type=int, nargs="*", default=[2, 4], help="odpo: rounds scored on the 720 x4")
+    parser.add_argument("--rp-kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten"),
                         help="ptrepair: repair_pairs.py --kinds (guard = only shortest right > shortest finished wrong)")
     parser.add_argument("--tp-score-steps", type=int, nargs="*", default=[],
                         help="thinkprune (5 Nov, step sensitivity): score the 720 at exactly these steps (multiples of 10) "
@@ -3636,9 +3641,14 @@ def ptrepair(args):
             by_part[part_of(rows[qid])]["mixed" if 0 < p < 1 else "right" if p == 1 else "wrong"].append(qid)
     chosen = []
     if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
-        for r in own_repair_questions(want, seed=args.rp_seed):
-            rows[r["id"]] = r
-            chosen.append(r["id"])
+        k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
+        per_part = defaultdict(list)
+        for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed):
+            per_part[part_of(r)].append(r)
+        for part, n in want.items():
+            for r in per_part[part][k * n:(k + 1) * n]:
+                rows[r["id"]] = r
+                chosen.append(r["id"])
     for part, n in ({} if own else want).items():
         b = by_part[part]
         for k in b:
@@ -3704,6 +3714,35 @@ def ptrepair(args):
             shutil.rmtree(model, ignore_errors=True)
             drive_sync("save")
         print(score_line(f"{name}-{step} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
+
+
+def odpo(args):
+    """Online DPO (10 Nov, user): --od-rounds rounds of: the CURRENT model (--rp-base + the adapter so far, merged) answers a
+    new slice of own questions x --rp-samples; repair_pairs.py builds BOTH kinds from those answers (--rp-kinds guard,shorten:
+    shortest right > shortest wrong, and shortest right > longest right on questions it gets right >= 6 of 8 times); DPO
+    --od-steps steps continuing the adapter, the round's start as the reference. Each round is a ptrepair run named
+    <name>-r<k>; the answering model of the next round is merged to models/<name>-r<k>. 720 x4 at --od-screen-rounds."""
+    import copy
+    prev, answerer = args.od_init, args.od_answers0
+    assert prev and answerer and args.rp_base, "odpo needs --rp-base, --od-init and --od-answers0"
+    for k in range(args.od_rounds):
+        a = copy.copy(args)
+        a.name = f"{args.name}-r{k + 1}"
+        a.rp_round = (k, args.od_rounds)
+        a.rp_init_from, a.rp_answers_model = prev, answerer
+        a.rp_steps = args.od_steps
+        a.rp_screen = [args.od_steps] if k + 1 in args.od_screen_rounds else []
+        print(f"odpo {args.name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO from {prev}", flush=True)
+        ptrepair(a)
+        prev = f"adapters/{a.name}-s0/step-{args.od_steps}"
+        if k + 1 < args.od_rounds:
+            nxt = Path("models") / a.name
+            drive_sync("restore", only=[str(nxt)])
+            if not (nxt / "config.json").exists():
+                py("merge.py", "--model", args.rp_base, "--out", nxt, "--adapters", f"{prev}:1")
+                drive_sync("save")
+            answerer = str(nxt)
+    print(f"odpo {args.name}: done; last adapter {prev}", flush=True)
 
 
 def mixscreen(args):
@@ -5659,7 +5698,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",

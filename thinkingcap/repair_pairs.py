@@ -82,7 +82,11 @@ def main():
                     help="ifeval counting-rule questions: chosen response >= rejected's, chosen thinking <= 1.2x rejected's")
     ap.add_argument("--prefer-reread", action="store_true",
                     help="chosen = the shortest right answer that re-checks the question, within 1.5x the shortest's thinking")
-    ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard"),
+    ap.add_argument("--shorten-min-right", type=float, default=0.75,
+                    help="guard,shorten: a shorten pair only where this share of the answers is right")
+    ap.add_argument("--shorten-ratio", type=float, default=1.5,
+                    help="guard,shorten: the longest right answer must be >= this x the shortest")
+    ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten"),
                     help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
     rng = random.Random(args.seed)
@@ -100,7 +104,7 @@ def main():
         tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
         decode = lambda r: tok.decode(r.get("thinking_ids") or r["output_ids"], skip_special_tokens=True)  # noqa: E731
     rereads = Counter()
-    cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": []})
+    cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": []})
     for qid, q in groups.items():
         part = part_of(q[0])
         if part not in quota:
@@ -108,6 +112,10 @@ def main():
         size = thinking_len if part in think_only else (lambda r: r["output_tokens"])
         rights = sorted((r for r in q if right(r)), key=size)
         wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
+        if (args.kinds == "guard,shorten" and len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right
+                and size(rights[-1]) >= args.shorten_ratio * size(rights[0])
+                and not (part == "ifeval" and counting(q[0]))):  # (10 Nov, odpo) a counting rule needs its full response
+            cand[part]["shorten"].append((qid, rights[0], rights[-1]))
         if not rights or not wrongs:
             continue
         chosen = rights[0]
@@ -144,17 +152,25 @@ def main():
             if len(got) >= n:
                 break
             key = (id(c), id(w))
-            if key in used or per_q[qid] >= 3 or (kind == "right" and right_q[qid] >= 2):
+            if key in used or per_q[qid] >= 3 or (kind != "guard" and right_q[qid] >= 2):
                 continue
             used.add(key)
             per_q[qid] += 1
-            right_q[qid] += kind == "right"
+            right_q[qid] += kind != "guard"
             got.append({"id": qid, "source": c["source"], "part": part, "kind": kind, "prompt_ids": c["prompt_ids"],
                         "chosen_ids": c["output_ids"], "rejected_ids": w["output_ids"],
                         "chosen_tokens": c["output_tokens"], "rejected_tokens": w["output_tokens"]})
         return got
     by_part = {}
     for part, n in quota.items():
+        if args.kinds == "guard,shorten":  # (10 Nov, odpo) half "be right", half "be shorter when sure"; no backfill
+            g = take(part, "guard", cand[part]["guard"], n // 2)
+            sh = take(part, "shorten", cand[part]["shorten"], n - n // 2)
+            by_part[part] = g + sh
+            counts[(part, "guard")] += len(g)
+            counts[(part, "shorten")] += len(sh)
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
         if args.kinds == "guard":
             by_part[part] = take(part, "guard", cand[part]["guard"], n)
             for p in by_part[part]:
@@ -175,7 +191,7 @@ def main():
     queues = {part: sorted(ps, key=lambda p: (p["kind"], rng.random())) for part, ps in by_part.items()}
     for part in queues:
         g = [p for p in queues[part] if p["kind"] == "guard"]
-        r = [p for p in queues[part] if p["kind"] == "right"]
+        r = [p for p in queues[part] if p["kind"] != "guard"]
         queues[part] = [x for pair in zip(g, r) for x in pair] + g[len(r):] + r[len(g):]
     total = sum(len(q) for q in queues.values())
     share = {part: len(q) / max(1, total) for part, q in queues.items()}
