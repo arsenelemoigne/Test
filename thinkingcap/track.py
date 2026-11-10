@@ -3800,8 +3800,13 @@ def thinkprune(args):
     for line in open(answers):
         r = json.loads(line)
         by_q[r["id"]].append((bool(r["correct"]) and r["closed_thinking"] and not r["truncated"], r["output_tokens"]))
-        if bool(r["correct"]) and r["closed_thinking"] and not r["truncated"] and r.get("reasoning_tokens") is not None:
-            right_think[r["id"]].append(int(r["reasoning_tokens"]))  # (10 Nov) for --copd-early: the original's thinking
+        if bool(r["correct"]) and r["closed_thinking"] and not r["truncated"]:  # (10 Nov) for --copd-early: the original's thinking
+            # the 10-answer file has no reasoning_tokens (cp1d printed 0/15407): fall back to the thinking ids, else the whole
+            # answer's length (an over-estimate by the short final answer: the 0.5x threshold stays a safe proxy)
+            think = r.get("reasoning_tokens")
+            if think is None:
+                think = len(r["thinking_ids"]) if r.get("thinking_ids") else r["output_tokens"]
+            right_think[r["id"]].append(int(think))
     from build_pool import part_of
     caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
     eligible = defaultdict(list)

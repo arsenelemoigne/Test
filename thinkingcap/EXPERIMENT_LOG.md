@@ -5210,3 +5210,8 @@ but 42% saved, below the 50% goal. Its 720 screen said 43.0 / +0.9: the screen r
 - **repair_pairs.py --kinds guard,shorten backup supply:** if "shorten" pairs (longest right >= 1.5x shortest) run short, questions
   with a 1.25-1.5x spread fill in; the summary prints both candidate counts per part.
 - Full test of rpI-120 queued on GPU 2 after rpH (user); done above.
+- cp1d started (GPU 2): its log printed **0/15407 questions carry base_think**: the original's 10-answer file stores no
+  reasoning_tokens, so cp1e's --copd-early would have done nothing. Fixed before cp1e starts: base_think falls back to the
+  answer's thinking ids, else its whole length (output_tokens; slightly over-estimates thinking, the 0.5x threshold stays a proxy).
+  cp1d does not use it. od1 round 1: 160 pairs (guard 80 / shorten 80, no shortfall: svamp 299 shorten candidates >= 1.5x),
+  10 steps, pairs ordered right 75 -> 82%; round 2 answering.
