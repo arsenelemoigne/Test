@@ -5609,3 +5609,4 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   validation, 200), tr_mmlu (MMLU test, 250), tr_humaneval (HumanEval, 164); none used or imitated in training. The original, rpE-80,
   rpK-40, rpL-60 and rpM-60 answer them x4; per set: saved %, accuracy change with a paired 95% interval, runaways. Not run locally
   (no `datasets` on the Mac): first run on the GPU.
+- 11 Nov ~21:00 (user: compare the competitors' generalisation) transfer check extended to the competitors' PUBLIC weights: basta/lightning-mcqwen3 (Hub LoRA, gate not used), matousek-martin Self-Replay 850 and 256 (GitHub release v0.1.2 zips), mrtineu/thinkingcap-test-submission (full model on the Hub). michal-bida and Herz1c published no weights. Measurement only (track.py competitor_model, kept off Drive).

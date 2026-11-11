@@ -4075,6 +4075,34 @@ def dev_score_model(name, spec, vs="", dev=""):
             f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
 
 
+def competitor_model(name, spec):
+    """(11 Nov, user: compare the competitors' generalisation) A merged model from a competitor's PUBLIC weights, measured only:
+    hf:REPO = a full model on the Hub; hflora:REPO = a LoRA adapter on the Hub, merged onto Qwen3-0.6B; zip:URL = a release
+    archive holding a LoRA adapter (adapter_config.json), merged onto Qwen3-0.6B. Kept under /content/competitors (never Drive)."""
+    import urllib.request
+    import zipfile
+    from huggingface_hub import snapshot_download
+    root = Path("/content/competitors") / name
+    merged = root / "merged"
+    if (merged / "config.json").exists():
+        return str(merged)
+    root.mkdir(parents=True, exist_ok=True)
+    kind, ref = spec.split(":", 1)
+    if kind == "hf":
+        return snapshot_download(ref, local_dir=str(root / "hub"),
+                                 allow_patterns=["config.json", "generation_config.json", "model.safetensors", "tokenizer*", "vocab.json", "merges.txt"])
+    if kind == "hflora":
+        adapter = Path(snapshot_download(ref, local_dir=str(root / "hub"), allow_patterns=["adapter_config.json", "adapter_model.safetensors"]))
+    else:
+        archive = root / "release.zip"
+        urllib.request.urlretrieve(ref, archive)
+        with zipfile.ZipFile(archive) as z:
+            z.extractall(root / "release")
+        adapter = next(p.parent for p in (root / "release").rglob("adapter_config.json"))
+    py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", merged, "--adapters", f"{adapter}:1")
+    return str(merged)
+
+
 TRANSFER_FILE = Path("data/transfer.jsonl")
 TRANSFER_SIZES = {"tr_math500": 200, "tr_skywork": 200, "tr_arc_c": 200, "tr_csqa": 200, "tr_mmlu": 250, "tr_humaneval": 164}
 
@@ -4107,7 +4135,9 @@ def transfer(args):
         drive_sync("restore", only=[str(out)])
         if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 4 * len(rows):
             model = spec
-            if "=" in spec:
+            if spec.startswith(("hf:", "hflora:", "zip:")):  # (11 Nov, user) a competitor's PUBLIC weights, for comparison only
+                model = competitor_model(name, spec)
+            elif "=" in spec:
                 model, rest = spec.split("=")
                 merge_base, adapter = rest.split(":")
                 if not (Path(model) / "config.json").exists():
