@@ -1,0 +1,15 @@
+TASK. You reviewed this project several times today (last: earlier_reviews/consult11_gemini_REPORT.md). Since then two more FULL tests printed: rpK step 40 = 51.2% saved / -0.8, the FIRST full test inside the goal box, and rpL step 60 = 59.3% / -1.7, the best point above the team's curve. Decide the next steps.
+
+The goal: make Qwen3-0.6B (thinking mode) generate MORE THAN 50% fewer tokens (thinking included) at an accuracy change BETTER THAN -1 point on BottleCapAI's ThinkingCap-Test (2,759 questions x 8: SVAMP math, MBPP+ code, IFEval, BFCL one function / several functions / none fits; 4 benchmarks equally weighted, BFCL pooled 400/200/240; tokens saved = 1 - geometric mean of the 4 token ratios). Constraints: the model's own answers only (no teacher text); no prompt tricks; no competitor recipe copied; two Colab L4 GPUs; LoRA; the model must still think before it answers. The team prefers ONE clean, reproducible recipe; the submission should show several checkpoints along the length / accuracy curve.
+
+THE DATA, in {DATA} (read with code, never print whole files):
+- NEW_RESULTS.md (READ FIRST): every full test of the repair line per type, with the two new ones, and what is running.
+- tables/ (per-question full tests and Dev-512, every pair file), EXPERIMENT_LOG.md (the whole lab notebook), REPAIR_IFEVAL_TOOLS.md, PATH1_FINAL.md, raw_logs/, earlier_reviews/ (all reviews, yours included), plans_and_docs/, code/ (as run; code/queued_lines.txt), README_PACK.md.
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, pandas, scipy): reply with exactly one block that starts with ```python to run code; output is cut at 10,000 characters; up to {CODE_RUNS} code runs. Keep notes in {WORK}/notes.md and a report draft in {WORK}/report_draft.md.
+
+WHAT TO DELIVER, WITHOUT a code block, under ~3,000 words, specific and blunt:
+1. How much to trust rpK-40 (51.2 / -0.8): luck versus real, given its neighbours (steps 20 and 60) and the noise of one full test. What would confirm it (a second seed? a re-run of the full test with another sampling seed is NOT allowed: the evaluation is fixed), and is it a submittable result as is?
+2. The repair strategy from here, in order: rpM as queued; an accuracy-only repair (your rpN) on top of rpL-60 (59.3 / -1.7, 9.3 points of saving to spend) versus on top of rpK-60 (54.4 / -1.4); anything else. Exact settings for the run you would start first, its decision rule, and expected full-test range. Aim: a model inside the box WITH margin (for example 53%+ at -0.6 or better).
+3. Path 1: does it still deserve GPU time? It was meant to be the clean recipe from the original model; its round 1 reached 43.4 / -1.5 on the full test, and its third round 1 (p1cr1s0) is queued. Given that the repair line works from rpE-80 (itself 3 DPO rounds + a cut-calibration round + a repair from the original), what is the shortest honest "clean recipe" to present, and should Path 1 be redesigned, run as queued, or dropped?
+4. The plan for the next 12 GPU-hours on two GPUs, in order, with the decision rule after each result.
