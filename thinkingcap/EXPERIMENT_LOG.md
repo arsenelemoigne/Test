@@ -5362,3 +5362,16 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   every plan and every earlier review. reviews/consult9_path1_results/. Dev-512 split, rpE-80 -> rpK-60 (thinking + response): math
   564+9 -> 517+9, code 954+66 -> 723+66, IFEval 146+245 -> 113+275, one function 83+21 -> 68+20, several 92+18 -> 74+18, no fit
   90+11 -> 72+5: code gives the largest part of rpK's extra saving (-24% tokens at flat Dev accuracy, 49.2 -> 49.4%).
+- 11 Nov ~10:25 **Runaway answers (found while following consult9's look at truncation; full-test records):** answers that loop
+  until the token cap (always graded wrong) hold a large share of the tokens. IFEval: original 3.60% of answers = 21.2% of its
+  tokens; rc1-soup-30 2.24% = 26.8%; **rpE-80 2.43% = 26.2% (mean 380 tokens, 287 without them)**; rpI-120 3.12% = 31.1%. Code (cap
+  8,192): original 7.80% = 30.1%; rpE-80 1.12% = 8.1%; rpI-120 1.69% = 10.5%. Math: original 1.74% = 10.4%, trained ~0.
+  In rpE-80's IFEval the loops are in the RESPONSE (98 of 105: repeated quotes, placeholders, "o*o*o*", a word repeated), on 51
+  questions, only 2 of them always (49 questions also have finished answers). Dev-512 shows the same: rpK's IFEval median response
+  is unchanged (81 tokens) while its mean rises 245 -> 275 because cut answers go 3.6% -> 4.6%; Path 1's round 1 raises both (median
+  96 -> 117, cut 3.9 -> 4.8%). On paper, rpE-80 without its IFEval runaways = IFEval 58.8% saved instead of 45.4% -> headline 50.4%
+  at the same or better accuracy; without the code runaways too: ~51.3%. **Our pair builder never uses an unfinished answer** (the
+  rejected answer must be finished), so no pair ever says "do not loop". Supply in rpE-80's own answers (rpI rollouts): 145 IFEval
+  questions with both an unfinished and a finished answer (94 with a right one), code 32, math 62. Caveat for the user's rule:
+  michal-bida's rejected side includes cut-off answers; a dedicated "a finished answer beats a runaway one" pair is generic, but
+  the overlap is flagged. Not built, not queued.
