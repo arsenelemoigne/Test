@@ -5624,3 +5624,8 @@ Per type (rpK-40's full test in brackets): math 58 / -1.5 (58 / -2.3), code 56 /
 - **Math protection worked on the full test**: math -1.5 (rpK-40 -2.3, rpE-80 -1.2) at the same 58% saving. The loss moved to code
   (-1.7 vs -0.1; code 4 points shorter) and IFEval (-2.5 vs -1.9).
 - Dev-512 had read it +5.7 / -0.46 vs rpE-80 -> estimate 52.7 / -1.36; measured 52.9 / -1.1: right.
+- **rpL step 80 (resumed from 60), Dev-512: 62.1% / -0.30**; paired vs rpE-80 +15.2 / -1.66 (step 60: +11.9 / -0.44). Per type: math 60 / -0.4,
+  code 67 / +1.5, IFEval 62 / -2.5 (91+181), one function 56 / -0.2, several 60 / **-6.4**, no fit 63 / +6.1. More saving, accuracy now
+  falling (several functions collapses). Training: pairs ordered right 88% at 80 and 100, 94% at 120.
+- **GPU 1 disconnected (~23:30) during the full test of rpM-60, at 16,896 of 22,072 answers** (Colab shows "Reconnect L4"). The test restarts
+  from zero on reconnection (evaluate() discards a run without results.json). Waiting for the user to reconnect.
