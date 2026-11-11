@@ -59,7 +59,10 @@ export async function chat(opts: {
         ...(opts.plugins ? { plugins: opts.plugins } : {}),
       }),
     });
-  const attempts: Attempt[] = [{ model: modelFor(opts.tier ?? "strong"), reasoning: Boolean(opts.reasoning) }];
+  // Messages with images go to the vision model when one is set (some text models cannot read images).
+  const hasImage = opts.messages.some((m) => Array.isArray(m.content) && m.content.some((p) => p.type === "image_url"));
+  const vision = hasImage ? process.env.OPENROUTER_MODEL_VISION : undefined;
+  const attempts: Attempt[] = [{ model: vision || modelFor(opts.tier ?? "strong"), reasoning: Boolean(opts.reasoning) }];
   let attempt = attempts[0];
   let res: Response | null = null;
   let text = "";
