@@ -5540,3 +5540,16 @@ IFEval saves only 23% (responses inflated by the pair rules, as found); math and
   (6) **p1cr1s0: run as is**; its round 2 only if Dev-512 >= 47.5% saved (IFEval >= 42%), accuracy >= +0.50 and Dev-SVAMP within 0.5
   of rpE-80. It advises dropping rpL-40's full test for a full test of rpM's best step, and gives 65% for rpM, 78% overall (its
   forecasts have run about half a point too kind on accuracy).
+
+## 11 Nov ~16:50 — rpL step 60, FULL TEST (2,759 x 8): **59.3% saved / -1.7** (official weighting)
+Per type (rpK-60's full test, then rpE-80's, in brackets): math 64 / -2.7 (61 / -2.3; 54 / -1.2), code 62 / -0.9 (55 / -1.2; 46 / -1.0),
+IFEval 58 / -3.4 (49 / -3.0; 45 / -2.6), one function 47 / -2.0 (45 / -1.5; 37 / +0.1), several 49 / -0.6 (48 / -1.0; 39 / +0.1), no fit
+62 / +4.6 (62 / +6.2; 50 / +3.4). **vs curve +3.20: by far the highest of any full test** (rpK-60 +2.38, rpI-120 +1.64). Our previous
+model at this saving, rc1-soup-30, read 57.4 / -3.5.
+- 12.3 points more saving than rpE-80 for 0.8 point of accuracy; 4.9 more than rpK-60 for 0.3. The forecasts held: mine 57-59% / -1.5 to
+  -2.2, consult10's 56.8-58.8 / -1.60 to -2.15; math came out better than consult10 feared (-2.7, not -3.4 to -4.2).
+- The IFEval fix and the anti-loop pairs are confirmed on the full test: IFEval 58% saved (rpK-60 49%, rpE-80 45%) for -0.4 more;
+  code 62% saved with better accuracy than rpK-60.
+- Outside the box on accuracy only, with 9.3 points of saving to spare. Where the accuracy sits: IFEval -3.4 (0.85 point of the
+  headline), math -2.7 (0.68), code -0.9 (0.22), one function -2.0. A straight line from rpE-80 to rpL-60 passes 50% saved at about
+  -1.1: mixing weights is not enough; an accuracy repair that spends part of the spare saving is the open route.
