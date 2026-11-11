@@ -540,6 +540,10 @@
 # each, then its 720 screen. Here the three rpK checkpoints (step 20 first: the one whose estimate sits in the goal box);
 # plan_line_b holds the same list plus Path 1's round 1 (a finished test is skipped, so no test runs twice).
 fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
+# 11 Nov ~11:45 (user: yes to consult9's rpL, incl. the anti-loop pair). rpL = rpK with the IFEval pairs fixed (they rewarded
+# writing MORE: the chosen response was longer in 76% of pairs) and a new pair "a finished right answer beats a runaway one"
+# (runaways hold 26% of rpE-80's IFEval tokens on the full test). Same start, answers, tool-call pairs and training as rpK.
+ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
 fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
 fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
 # after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without another reconnect

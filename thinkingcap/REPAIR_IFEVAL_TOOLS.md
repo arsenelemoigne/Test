@@ -130,3 +130,44 @@ the model write the answer itself, grade it (the budget ladder of 10 Nov, with F
 at ~90 tokens for tools and ~150 for IFEval, above the region that matters). Questions that stay right with the short think give
 "think less" pairs; questions that turn wrong give "don't stop early" pairs. Rule check: a short real think, never an empty one
 (the README wants a model "that thinks before it answers").
+
+## rpK's results and rpL (11 Nov, after consult9)
+
+rpK on Dev-512 (paired against rpE-80): step 20 +3.6 saved / +0.15 accuracy, step 40 +3.5 / -0.42, step 60 +6.8 / -0.60 (50.5 / 50.4 /
+53.8% saved). Tool calls shortened as intended; math and code did not hold in tokens (code 954 -> 723 thinking tokens) but held
+in accuracy; **IFEval's saving did not move**, for two reasons found in the pair file and the records:
+
+1. **rpK's IFEval pairs rewarded writing more.** Over its 320 IFEval pairs the chosen answer thinks 46 tokens less but its
+   response is 42 tokens LONGER (longer in 76% of pairs): the counting-rule pairs (half of IFEval, on every counting rule, with
+   no cap on the chosen response) and the response guard. Net: -4 tokens. Path 1's round 1 had the same flaw (76%, +47 tokens).
+2. **Runaway answers.** Answers that loop to the token cap (always wrong) hold 26% of rpE-80's IFEval tokens on the full test
+   (2.4% of answers; the original 3.6% = 21%; code: 8% for rpE-80, 30% for the original). In rpE-80 they are loops in the
+   RESPONSE (repeated quotes, placeholders, one word), on 51 questions of which 49 also have finished answers. Our pair builder
+   only ever used FINISHED answers as the rejected side, so nothing said "do not loop"; on Dev-512, rpK's finished responses did
+   not lengthen (median 81 tokens) while its runaways rose from 3.6% to 4.6% of answers.
+
+**rpL** (queued on GPU 2 after rpK step 20's full test; same start, answers, tool-call pairs and training as rpK; `--mix-preset
+typed2`):
+
+| type | pairs | "think less" | "be right" | counting rule | anti-loop | "don't stop early" |
+|---|---|---|---|---|---|---|
+| IFEval | 320 | 160 | 48 | 64 | 48 | 0 |
+| one function | 160 | 112 | 48 | | | |
+| several functions | 120 | 84 | 36 | | | |
+| no function fits | 140 | 84 | 56 | | | |
+| math | 160 | 0 | 112 | | 16 | 32 |
+| code | 160 | 0 | 114 | | 14 | 32 |
+
+- Counting-rule pairs only on rules that ask for a MINIMUM amount of text (at least N words / sentences / keyword or letter
+  occurrences, placeholders, highlighted sections), 20% of IFEval instead of 50%, the chosen response at most 1.35x the
+  rejected one's + 25 tokens.
+- "Think less" pairs on every other IFEval question: the chosen response is at least 0.85x the question's median right
+  response and at most 1.05x the rejected one's (thinking shorter, response neither clipped nor longer).
+- "Be right" pairs on IFEval: the chosen response at most 1.10x the rejected one's + 15 tokens.
+- **Anti-loop pairs:** a finished right answer beats a runaway answer of the same question (IFEval 48, math 16, code 14).
+  Overlap flagged to the user (michal-bida's rejected side also includes cut-off answers); approved as a generic pair.
+- Built on rpE-80's real answers: IFEval pairs without the anti-loop ones: thinking 105 vs 166, response 110 vs 113 (chosen longer
+  in 35%), total 214 vs 279; anti-loop pairs: 301 vs 4,014 tokens. Longest pair 8,380 tokens (cap 8,704).
+- Reading: Dev-512 at steps 20 / 40 / 60 paired against rpE-80, now with the share of runaway answers per type. consult9's pass
+  mark: saved >= 52.5% and accuracy >= +1.25 on Dev-512 with IFEval responses <= 245 tokens (its forecast: 53-55% / -0.4 to -0.9
+  on the full test; its last forecast was 7-9 points too high).

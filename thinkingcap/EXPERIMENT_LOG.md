@@ -5402,3 +5402,12 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   lr 5e-5, 150 steps; forecast 51.5-53.5% on Dev at about -3 to -3.7 full-test), round 2 = the typed repair on its own answers;
   round 1 alone costs ~1 GPU-hour (no generation). My caveat: 90% "shorter" pairs at lr 5e-5 is the regime where our log and the
   competitors' notes show accuracy collapsing; its forecasts have been 7-9 points off once already.
+- 11 Nov ~11:45 (user: "1. Yes 2. Yes 3. Yes keep it") **rpL built and queued; Path 1 seed 1 dropped; the full test of Path 1's round 1
+  kept.** repair_pairs.py: --mix-preset typed2, --count-mode atleast (new at_least()), --count-share, --count-resp-cap,
+  --resp-median, --resp-max, --right-resp-cap, and the anti-loop candidate list (a finished right answer > a runaway answer;
+  before, unfinished answers were never used). Built on rpE-80's real answers (rpI's rollouts): 1,060 pairs = 440 "think less",
+  478 be-right (64 counting-rule), 64 guards, 78 anti-loop (IFEval 48, math 16, code 14); IFEval without the anti-loop pairs:
+  thinking 105 vs 166, response 110 vs 113, chosen response longer in 35% (rpK: 76%), total 214 vs 279 (rpK: 270 vs 274). The stage
+  dry-run builds the identical file. dev_score.py also prints the share of runaway answers per type (rpK-60 on Dev: IFEval
+  3.9% -> 4.6%, math 7.8% -> 0.4%, code 6.0% -> 0.4%). Queues: GPU 2 = rpK-20 full test (running) -> rpL -> rpK-60 -> rpK-40 full
+  tests; GPU 1 = od2 (running) -> the full test of p1r1s0-200 only. REPAIR_IFEVAL_TOOLS.md has the rpL section.

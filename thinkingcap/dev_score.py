@@ -29,11 +29,13 @@ def per_question(path):
             r = json.loads(line)
             think = r.get("thinking_ids")
             out[r["id"]].append((bool(r["correct"]) and not r["truncated"], r["output_tokens"],
-                                 len(think) if think is not None else 0))
+                                 len(think) if think is not None else 0,
+                                 bool(r["truncated"]) or not r.get("closed_thinking", True)))
             part[r["id"]] = part_of(r)
     # per question: (share right, mean tokens, mean THINKING tokens); the response is tokens - thinking
-    return {q: (sum(a for a, _, _ in v) / len(v), sum(t for _, t, _ in v) / len(v), sum(k for _, _, k in v) / len(v))
-            for q, v in out.items()}, part
+    # ... and the share of RUNAWAY answers (cut at the token cap, or thinking never closed)
+    return {q: (sum(x[0] for x in v) / len(v), sum(x[1] for x in v) / len(v), sum(x[2] for x in v) / len(v),
+                sum(x[3] for x in v) / len(v)) for q, v in out.items()}, part
 
 
 def headline(base, cand, ids_by_part):
@@ -95,6 +97,10 @@ def main():
     # (11 Nov) where the tokens went: thinking vs response (the full-test records show IFEval's loss is a shortened RESPONSE)
     lines.append("   thinking + response tokens, original -> model: " + "; ".join(
         f"{p} {split[p][0]:.0f}+{r[2] - split[p][0]:.0f} -> {split[p][1]:.0f}+{r[3] - split[p][1]:.0f}" for p, r in rows.items()))
+    cut = {p: [100 * sum(m[q][3] for q in ids) / len(ids) for m in (base, cand)] for p, ids in ids_by_part.items() if ids}
+    # (11 Nov) runaway answers hold a quarter of rpE-80's IFEval tokens on the full test: watch them
+    lines.append("   runaway answers (cut at the cap), original -> model: " + "; ".join(
+        f"{p} {cut[p][0]:.1f}% -> {cut[p][1]:.1f}%" for p in rows))
     vs = None
     if ref is not None:
         s2, a2, _ = headline(base, ref, ids_by_part)
