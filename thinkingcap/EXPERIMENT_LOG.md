@@ -5592,3 +5592,4 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
 - **rpM step 40, Dev-512: 52.6% [49.8, 55.6] / +0.91**; paired vs rpE-80 **+5.7 / -0.46** (rpK-40 +3.5 / -0.42, rpL-40 +6.9 / -0.93). Per type:
   math 53 / +2.4, code 58 / +1.5, IFEval 48 / -2.9 (125+246, runaways 4.0%), one function 48 / +2.7, several 53 / +1.1, no fit 55 / +3.9.
   Dev-SVAMP-200 53.8 / +2.94 (paired +4.4 / -0.19). Better trade than rpL-40 at a similar saving; IFEval's runaways still not reduced.
+- 11 Nov ~19:45 (user) full tests of rpM steps 20 / 40 / 60 queued: step 40 on GPU 2 right after rpM (before rpL 80-120), steps 60 then 20 on GPU 1 after p1cr1s0 (before rpN).
