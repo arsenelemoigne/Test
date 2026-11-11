@@ -69,6 +69,7 @@ def main():
     ap.add_argument("--out", default="")
     ap.add_argument("--vs", default="", help="(11 Nov) a reference model's rollouts: paired interval of (candidate - reference)")
     ap.add_argument("--boot", type=int, default=1000)
+    ap.add_argument("--label", default="Dev-512", help="the dev set's name in the printed lines")
     args = ap.parse_args()
     base, part = per_question(args.base)
     cand, _ = per_question(args.cand)
@@ -90,7 +91,7 @@ def main():
     ci = lambda xs: (sorted(xs)[int(0.025 * len(xs))], sorted(xs)[int(0.975 * len(xs)) - 1])  # noqa: E731
     cs, ca = ci([b[0] for b in boots]), ci([b[1] for b in boots])
     n = sum(len(v) for v in ids_by_part.values())
-    lines = [f"== {args.name} (Dev-512 x8, {n} questions): tokens saved {saved:+.1f}% [{cs[0]:+.1f}, {cs[1]:+.1f}], "
+    lines = [f"== {args.name} ({args.label} x8, {n} questions): tokens saved {saved:+.1f}% [{cs[0]:+.1f}, {cs[1]:+.1f}], "
              f"accuracy {acc:+.2f} pts [{ca[0]:+.2f}, {ca[1]:+.2f}] (official weighting, paired bootstrap 95%)"]
     lines.append("   " + "; ".join(f"{p} {100 * (1 - r[3] / r[2]):+.0f}% / {100 * (r[1] - r[0]):+.1f}" for p, r in rows.items()))
     split = {p: [sum(m[q][2] for q in ids) / len(ids) for m in (base, cand)] for p, ids in ids_by_part.items() if ids}

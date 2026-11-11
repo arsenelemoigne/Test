@@ -71,6 +71,21 @@ def at_least(r):
     return False
 
 
+def length_rule(r):
+    """(11 Nov, rpM, consult10) An IFEval question where a SHORT response is what fails: at least N words / sentences, a keyword at
+    least N times, N paragraphs (N >= 2). Narrower than at_least(): in rpL, placeholders / highlighted sections / letter
+    frequency took two thirds of the counting pairs, and the true word-count questions fell from 37.5% to 19.6% right."""
+    for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+        kw = kw or {}
+        if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+            if kw.get("relation") == "at least":
+                return True
+        elif rule == "length_constraints:number_paragraphs":
+            if (kw.get("num_paragraphs") or 0) >= 2:
+                return True
+    return False
+
+
 def response_len(r):
     return len(r["output_ids"]) - len(r.get("thinking_ids") or [])
 
@@ -107,7 +122,7 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -116,13 +131,33 @@ def main():
                     help="--kinds mix, --think-only parts (IFEval): a 'shorter' pair's chosen answer must have a RESPONSE at "
                          "least this x the rejected one's (0.9); 0 = off. The full-test records show IFEval's loss is "
                          "shortened responses ('at least N words'), not shortened thinking")
-    ap.add_argument("--count-mode", default="all", choices=("all", "atleast"),
+    ap.add_argument("--count-mode", default="all", choices=("all", "atleast", "length"),
                     help="--kinds mix: which IFEval questions get the counting-rule pairs (and no 'shorter' pair): all = every "
                          "counting rule; atleast (11 Nov, rpL) = only rules asking for a MINIMUM amount of text")
     ap.add_argument("--count-share", type=float, default=0.5, help="--kinds mix: the counting-rule pairs' share of IFEval's quota")
     ap.add_argument("--count-resp-cap", type=float, default=0.0,
                     help="--kinds mix: a counting-rule pair's chosen RESPONSE is at most this x the rejected one's + 25 tokens "
                          "(1.35); 0 = no cap. Without a cap the pairs taught 'write more' (consult9)")
+    ap.add_argument("--count-resp-min", type=float, default=0.0,
+                    help="--kinds mix (rpM): a counting-rule pair's chosen RESPONSE is at least this x the rejected one's + 15 "
+                         "tokens (1.10): the pair teaches writing clearly MORE where a minimum length is asked; 0 = at least equal")
+    ap.add_argument("--count-resp-pad", type=int, default=25, help="--kinds mix: the tokens added to --count-resp-cap (rpM: 60)")
+    ap.add_argument("--no-shorten-counting", action="store_true",
+                    help="--kinds mix (rpM): no 'shorter' pair on ANY IFEval question with a counting rule (they keep be-right pairs)")
+    ap.add_argument("--resp-near-long", type=float, default=0.0,
+                    help="--kinds mix, --think-only parts (rpM): a 'shorter' pair's chosen RESPONSE is at least this x the "
+                         "rejected one's (0.95): with --resp-max 1.05 the response is held within 5%, only the thinking differs")
+    ap.add_argument("--loop-response-only", default="",
+                    help="--kinds mix (rpM): parts (comma) whose anti-loop pairs use only RESPONSE loops (thinking closed, cut at the cap)")
+    ap.add_argument("--easy-math-prefix", default="sv-",
+                    help="with a quota for svamp_hard: math questions whose id starts with this are 'svamp', the others 'svamp_hard'")
+    ap.add_argument("--guard-wide", default="",
+                    help="--kinds mix (rpM): parts (comma) whose 'don't stop early' guard is widened: the rejected wrong answer thinks "
+                         "under 0.95x the question's median right thinking (was 0.5x), the chosen right answer 0.95-1.25x. The "
+                         "full test showed the new math errors think 0.5-1.0x as long as a right answer (a skipped re-check)")
+    ap.add_argument("--right-hold", default="",
+                    help="--kinds mix (rpM): parts (comma) whose be-right pair takes a right answer thinking 0.95-1.25x as long as "
+                         "the rejected wrong one (else the right answer nearest the median), never the shortest right answer")
     ap.add_argument("--resp-median", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a 'shorter' pair's chosen RESPONSE is at least this x the question's "
                          "median right response (0.85); 0 = use --resp-guard")
@@ -157,29 +192,43 @@ def main():
     rereads = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
                                 "right_cr": [], "capguard": [], "right_count": [], "loop": []})  # mix: right_cr = counting-rule OR compact re-read pairs
+    loop_resp_only = set(filter(None, args.loop_response_only.split(",")))
+    guard_wide = set(filter(None, args.guard_wide.split(",")))
+    right_hold = set(filter(None, args.right_hold.split(",")))
     for qid, q in groups.items():
         part = part_of(q[0])
+        # (11 Nov, rpM) with a quota for "svamp_hard", math questions are two parts: "svamp" = the SVAMP-like questions
+        # answered for this run (their ids carry --easy-math-prefix), "svamp_hard" = every other math question (the
+        # full-difficulty GSM8K of earlier draws): math pairs can be mostly SVAMP-like with a set share of hard questions
+        if part == "svamp" and "svamp_hard" in quota and not str(qid).startswith(args.easy_math_prefix):
+            part = "svamp_hard"
         if part not in quota:
             continue
+        base_part = "svamp" if part == "svamp_hard" else part
         size = thinking_len if part in think_only else (lambda r: r["output_tokens"])
         rights = sorted((r for r in q if right(r)), key=size)
         wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
         if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
-            is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else counting(q[0]))
+            is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+                                          length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+            no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
             # (11 Nov, rpL) an answer that RUNS AWAY (loops to the token cap, or never closes its thinking) loses to a
             # finished right answer of the same question. Before, an unfinished answer was never used at all, so no pair
             # said "do not loop" (runaways hold 26% of rpE-80's IFEval tokens on the full test)
             runaway = [r for r in q if not finished(r)]
+            if base_part in loop_resp_only:  # (rpM) only loops in the RESPONSE (the thinking closed, then cut at the cap)
+                runaway = [r for r in runaway if r["closed_thinking"]]
             if rights and runaway:
                 cand[part]["loop"].append((qid, rights[0], runaway[0]))
-            if len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not is_cr:
+            if len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not no_shorten:
                 long, short = rights[-1], rights[0]
                 if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
                     # (11 Nov, rpL) thinking shorter, response neither clipped nor longer: at least --resp-median x the
                     # question's median right response, at most --resp-max x the rejected answer's response
                     rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
                     ok = [r for r in rights[:-1] if response_len(r) >= args.resp_median * rmed
-                          and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))]
+                          and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
+                          and response_len(r) >= args.resp_near_long * response_len(long)]
                     short = ok[0] if ok else long
                 elif part in think_only and args.resp_guard > 0:  # (11 Nov) never prefer a notably shorter RESPONSE
                     short = next(r for r in rights if response_len(r) >= args.resp_guard * response_len(long))
@@ -193,9 +242,11 @@ def main():
                 if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
                     taken = set()  # (11 Nov) up to 2 pairs per question, on different answers: counting-rule pairs are the
                     for rej in wrongs[:2]:  # scarce kind (244 for a half-quota of 400 on the original's real answers)
-                        fit = [r for r in rights if id(r) not in taken and response_len(r) >= response_len(rej)
+                        need = args.count_resp_min * response_len(rej) + 15 if args.count_resp_min > 0 else response_len(rej)
+                        fit = [r for r in rights if id(r) not in taken and response_len(r) >= need
                                and thinking_len(r) <= 1.2 * thinking_len(rej)
-                               and (args.count_resp_cap <= 0 or response_len(r) <= args.count_resp_cap * response_len(rej) + 25)]
+                               and (args.count_resp_cap <= 0
+                                    or response_len(r) <= args.count_resp_cap * response_len(rej) + args.count_resp_pad)]
                         if fit:
                             pick = min(fit, key=thinking_len)
                             taken.add(id(pick))
@@ -204,16 +255,38 @@ def main():
                     # the question (within 1.5x the shortest right's thinking), else the shortest right, over the shortest
                     # finished wrong; replaces the equal-length pairs (D6 / runa2: equal-length right>wrong halves the saving)
                     pool_r = rights
+                    tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # the question's median right thinking
                     if part in think_only and args.right_resp_cap > 0:  # (11 Nov, rpL) be right without writing more
                         pool_r = [r for r in rights if response_len(r) <= args.right_resp_cap * response_len(wrongs[0]) + 15]
-                    if pool_r:
+                    if base_part in right_hold:
+                        # (rpM) hold the length: the right / wrong pair of this question whose thinking lengths are closest,
+                        # kept only if the right answer thinks 0.95-1.25x as long as the wrong one (a pair about being
+                        # right, with no "be shorter" signal: the shortest right answer over a long wrong one taught math to
+                        # skip its re-check); among equally close pairs, a right answer that re-reads the question
+                        best = None
+                        for r in rights:
+                            for w in wrongs:
+                                ratio = thinking_len(r) / max(1, thinking_len(w))
+                                if 0.95 <= ratio <= 1.25:
+                                    key = (round(abs(ratio - 1.05), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+                                    if best is None or key < best[0]:
+                                        best = (key, r, w)
+                        if best:
+                            cand[part]["right_cr"].append((qid, best[1], best[2]))
+                    elif pool_r:
                         checked = [r for r in pool_r if decode and thinking_len(r) <= 1.5 * thinking_len(pool_r[0]) and REREAD.search(decode(r))]
                         cand[part]["right_cr"].append((qid, (checked or pool_r)[0], wrongs[0]))
                     # the capped "don't stop too early" guard (non-counting questions only: counting-rule questions belong
                     # to IFEval's counting half; consult8)
-                    tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # (11 Nov, review fix) on THINKING length
-                    capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
-                    early = sorted((w for w in wrongs if thinking_len(w) < 0.5 * tmed), key=thinking_len)
+                    if base_part in guard_wide:  # (rpM) the 0.5-1.0x band: a calculation that skipped its re-check
+                        capped = sorted((r for r in rights if 0.95 * tmed <= thinking_len(r) <= 1.25 * tmed), key=thinking_len)
+                        # the rejected answer: the wrong one nearest 0.75x the median right thinking (a clear, bounded gap),
+                        # listed last so that the line below takes it
+                        early = sorted((w for w in wrongs if thinking_len(w) < 0.95 * tmed),
+                                       key=lambda w: -abs(thinking_len(w) - 0.75 * tmed))
+                    else:
+                        capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
+                        early = sorted((w for w in wrongs if thinking_len(w) < 0.5 * tmed), key=thinking_len)
                     if capped and early:
                         pick = ([r for r in capped if decode and REREAD.search(decode(r))] or capped)[0]
                         cand[part]["capguard"].append((qid, pick, early[-1]))  # the LONGEST early stop: the smallest length gap
@@ -274,6 +347,7 @@ def main():
     by_part = {}
     for part, n in quota.items():
         if args.kinds == "mix":
+            base_part = "svamp" if part == "svamp_hard" else part
             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
             if args.mix_preset == "round1":
                 # (11 Nov, both reviews) shorten-dominant round 1: it must reach ~53-57% saved for round 2 to repair
@@ -308,6 +382,28 @@ def main():
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
                 count_share = 0.20
+            if args.mix_preset == "typed3":
+                # (11 Nov, rpM, consult10 after rpK-20's full test and rpL) math: NO "shorter", NO anti-loop, half widened guards
+                # and half length-held be-right; code as rpL; IFEval: 25% counting pairs (true length rules), 45% "shorter"
+                # (questions without a counting rule, response held), 22.5% be-right, 7.5% response loops; several functions 50 / 50
+                sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+                            {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+                            {"shorten": 0.60, "right": 0.30, "guard": 0.0, "loop": 0.10} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+                            {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.25
+            if args.mix_preset == "round1c":
+                # (11 Nov, Path 1's round 1 redesigned, consult10's edits to round1b) math 45% shorter / 35% be-right / 15% widened
+                # guards / 5% anti-loop (the first round 1 over-cut math); code 70 / 13 / 10 / 7; IFEval as rpM with 20% counting
+                # pairs; several functions 50 / 50; anti-loop pairs 144 instead of 360
+                sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
+                            {"shorten": 0.70, "right": 0.13, "guard": 0.10, "loop": 0.07} if part == "mbpp" else
+                            {"shorten": 0.55, "right": 0.375, "guard": 0.0, "loop": 0.075} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+                            {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.20
             sh_share.setdefault("loop", 0.0)
             # (11 Nov, user) HARD RULE: the PROPORTION is fixed, the total is not. Pairs are taken, then every side is cut
             # back to the scarcest one, so the final file holds exactly the set mix whatever ran short (a short supply, a
@@ -322,7 +418,9 @@ def main():
             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
             sh += take(part, "shorten", cand[part]["shorten_soft"], n_sh - len(sh))
             n_br = n_mix - n_sh
-            lp = take(part, "loop", cand[part]["loop"], min(n_br, int(round(sh_share["loop"] * n_mix))))
+            # (no call at all without a loop share: take() shuffles its pool, and an extra shuffle would change which pairs
+            # the older presets pick: rpK's and round 1's files must stay reproducible)
+            lp = take(part, "loop", cand[part]["loop"], min(n_br, int(round(sh_share["loop"] * n_mix)))) if sh_share["loop"] > 0 else []
             g = take(part, "guard", [c for c in cand[part]["capguard"] if c[0] not in {p["id"] for p in lp}],
                      min(n_br - len(lp), int(round(sh_share["guard"] * n_mix))))
             guarded = {p["id"] for p in g + lp}  # one be-right pair per question: a guarded / looping question gives no second one

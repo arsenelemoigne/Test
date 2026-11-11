@@ -5495,3 +5495,19 @@ IFEval saves only 23% (responses inflated by the pair rules, as found); math and
   (4) p1br1s0: three edits before it starts (math 45% shorter / 35% be-right / 15% widened guards / 5% loop; fewer loop pairs; the
   IFEval rules of rpM; several functions 50 / 50; gate margin 4).
   (5) It judges the box reachable with margin (53-55% at -0.6 to -0.8) through rpM.
+- 11 Nov ~16:40 **rpM built, tested and queued (GPU 2, after the rpK-40 full test, before rpL-40's); the redesigned round 1 becomes
+  p1cr1s0 (GPU 1, after the rpL-60 full test).** Code: repair_pairs.py --mix-preset typed3 / round1c, --count-mode length
+  (length_rule()), --count-resp-min / --count-resp-pad, --no-shorten-counting, --resp-near-long, --loop-response-only, --guard-wide,
+  --right-hold (length-matched right / wrong pair), a "svamp_hard" part beside "svamp" (--easy-math-prefix); the older pair files
+  (round 1, rpK, rpL) rebuild byte-identical. track.py: devsvamp stage (Dev-SVAMP-200), devscore --ds-dev / --ds-vs, ptrepair
+  --rp-extra-questions (new questions answered by the base model beside reused answers) and --rp-dev-svamp; every generated
+  question now carries its own id (before, questions without a pool id were named "source-line number": two answer files of one
+  run could share ids for different questions; this only threatened the fill-until-full path, never run).
+  Checked on rpE-80's real answers (math on the hard GSM8K answers only: the SVAMP-like ones are generated on the GPU): math guards
+  700 vs 487 thinking tokens (chosen longer in 100%), math be-right 612 vs 585; IFEval counting pairs 314 vs 217 response tokens,
+  "shorter" pairs thinking 99 vs 185 with the response 82 vs 82; IFEval 313 of 320 (141 "shorter" candidates for 144).
+  p1cr1s0 on the original's real stored answers: 3,025 pairs: math 360 shorter / 280 be-right / 120 widened guards / 40 anti-loop,
+  code 560 / 104 / 80 guards / 56, IFEval 310 shorter / 206 be-right / 141 counting / 48 anti-loop (705 of 800), several functions
+  100 / 100; 144 anti-loop pairs (p1br1s0 had 360). Whole flow dry-run with the queue lines (fake GPU answers).
+  Queues: GPU 2 = rpK-40 full test (running) -> devsvamp -> Dev-SVAMP scores of rpE-80, rpK-60, rpL-60 -> rpM -> rpL-40 full test.
+  GPU 1 = rpL-60 full test (running) -> devsvamp -> Dev-SVAMP score of p1r1s0-200 -> p1cr1s0.

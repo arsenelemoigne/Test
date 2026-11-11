@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -357,6 +357,13 @@ def main():
     parser.add_argument("--rp-dpo-seed", type=int, default=0, help="ptrepair (11 Nov): DPO seed (adapter init and pair order)")
     parser.add_argument("--rp-exclude-ids", default="", help="ptrepair (11 Nov): a JSON list of question ids never drawn (with --rp-exclude-dev)")
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
+    parser.add_argument("--rp-dev-svamp", action="store_true", help="ptrepair (11 Nov): with --rp-dev, also score each step on "
+                        "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
+    parser.add_argument("--rp-extra-questions", default="", help="ptrepair (11 Nov, rpM): with --rp-rollouts-from, ALSO draw these "
+                        "new own questions (part=n,..., public datasets, never a dev question) and let the base model answer "
+                        "them; their ids get the prefix sv- (repair_pairs.py: SVAMP-like math 'svamp' vs the reused hard 'svamp_hard')")
+    parser.add_argument("--ds-vs", default="", help="devscore: also the paired difference against this scored run")
+    parser.add_argument("--ds-dev", default="", choices=("", "svamp200"), help="devscore: the dev set ('' = Dev-512)")
     parser.add_argument("--rp-dev-vs", default="", help="ptrepair (11 Nov): with --rp-dev, also the PAIRED difference against "
                         "this scored run (runs/bon/dev512-NAME), e.g. rpE80 or p1r1s0-200")
     parser.add_argument("--rp-exclude-dev", action="store_true", help="ptrepair / odpo (11 Nov): never draw the Dev/Confirm questions")
@@ -3708,7 +3715,9 @@ def ptrepair(args):
         chosen += take
     data = Path(f"data/repair-{name}.jsonl")
     if not args.rp_from and not reuse:
-        data.write_text("".join(json.dumps(rows[q] | {"id": q}) + "\n" for q in chosen))
+        # (11 Nov) pool_id = the question's own id: probe_curve.py names an answer by pool_id, else by "source-line number",
+        # and two answer files of one run (a fill batch) would then share ids for different questions
+        data.write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": rows[q].get("pool_id") or q}) + "\n" for q in chosen))
     roll = BON / f"rp-{args.rp_from or reuse or name}"
     if not args.rp_from:
         drive_sync("restore", only=[str(roll)])
@@ -3730,6 +3739,21 @@ def ptrepair(args):
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
         rolls = [roll / "rollouts.jsonl"]
+        if getattr(args, "rp_extra_questions", "") and reuse:  # (11 Nov, rpM) new SVAMP-like math beside the reused answers
+            want_x = {k: int(v) for k, v in (x.split("=") for x in args.rp_extra_questions.split(","))}
+            roll_x = BON / f"rp-{name}-extra"
+            data_x = Path(f"data/repair-{name}-extra.jsonl")
+            drive_sync("restore", only=[str(roll_x), str(data_x)])
+            if not (roll_x / "rollouts.jsonl").exists():
+                ex = dev_ids() | dev_svamp_ids() | (excluded_ids(args) or set())
+                rows_x = own_repair_questions(want_x, seed=args.rp_seed, exclude=ex, public=True, avoid_grams=dev_gram_set())
+                data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
+                print(f"repair {name}: {len(rows_x)} extra questions (public datasets; ids sv-*), answered by {answerer}", flush=True)
+                py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+                   args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+                   "--max-questions", len(rows_x), "--seed", 54)
+                drive_sync("save")
+            rolls.append(roll_x / "rollouts.jsonl")
 
         def build():
             py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
@@ -3753,7 +3777,7 @@ def ptrepair(args):
             if not rows_x:
                 break
             data_x = Path(f"data/repair-{name}-x{extra}.jsonl")
-            data_x.write_text("".join(json.dumps(r) + "\n" for r in rows_x))
+            data_x.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in rows_x))
             roll_x = BON / f"rp-{name}-x{extra}"
             drive_sync("restore", only=[str(roll_x)])
             if not (roll_x / "rollouts.jsonl").exists():
@@ -3791,6 +3815,8 @@ def ptrepair(args):
             if args.rp_base:
                 spec = f"/content/lupin-models/{name}-{step}={args.rp_base}:{adapter / f'step-{step}'}"
                 print(dev_score_model(f"{name}-{step}", spec, vs=getattr(args, "rp_dev_vs", "")), flush=True)
+                if getattr(args, "rp_dev_svamp", False):
+                    print(dev_score_model(f"{name}-{step}", spec, vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
         return
     for step in args.rp_screen:
         out = ROOT / f"s4-{name}-{step}"
@@ -3839,6 +3865,8 @@ def odpo(args):
 
 
 DEV_FILE = Path("data/dev512.jsonl")
+DEV_SVAMP_FILE = Path("data/dev-svamp200.jsonl")  # (11 Nov) 200 SVAMP-like math questions: Dev-512's math is hard GSM8K
+DEV_SETS = {"": (DEV_FILE, "dev512", "Dev-512"), "svamp200": (DEV_SVAMP_FILE, "devsv", "Dev-SVAMP-200")}
 DEV_SOURCES = ("toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,"
                "ifeval_like,ifeval_built")
 
@@ -3847,7 +3875,7 @@ def excluded_ids(args):
     """(11 Nov) questions a new draw must skip: Dev-512 (--rp-exclude-dev) and a JSON id list (--rp-exclude-ids)."""
     out = set()
     if getattr(args, "rp_exclude_dev", False):
-        out |= dev_ids()
+        out |= dev_ids() | dev_svamp_ids()
     f = getattr(args, "rp_exclude_ids", "")
     if f:
         drive_sync("restore", only=[f])
@@ -3996,24 +4024,28 @@ def devset(args):
     dev_generate("base", "Qwen/Qwen3-0.6B")
 
 
-def dev_generate(name, model):
-    rows = [l for l in DEV_FILE.read_text().splitlines() if l.strip()]
-    out = BON / f"dev512-{name}"
+def dev_generate(name, model, dev=""):
+    dev_file, prefix, _ = DEV_SETS[dev]
+    rows = [l for l in dev_file.read_text().splitlines() if l.strip()]
+    out = BON / f"{prefix}-{name}"
     drive_sync("restore", only=[str(out)])
     if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
-        py("probe_curve.py", "--data", DEV_FILE, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
+        py("probe_curve.py", "--data", dev_file, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
            "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
            "--max-questions", len(rows), "--seed", 53)
         drive_sync("save")
     return out
 
 
-def dev_score_model(name, spec, vs=""):
-    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here).
-    vs (11 Nov): the name of an already scored run; dev_score.py then also prints the paired difference against it."""
+def dev_score_model(name, spec, vs="", dev=""):
+    """Score one model on a dev set x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here).
+    vs (11 Nov): the name of an already scored run; dev_score.py then also prints the paired difference against it.
+    dev (11 Nov): "" = Dev-512, "svamp200" = the SVAMP-like math slice (Dev-512's math is hard GSM8K and missed rpK's math loss)."""
+    dev_file, prefix, label = DEV_SETS[dev]
     dev_ids()
-    assert DEV_FILE.exists(), "run the devset stage first"
-    base = dev_generate("base", "Qwen/Qwen3-0.6B")
+    drive_sync("restore", only=[str(dev_file)])
+    assert dev_file.exists(), f"{dev_file} is missing: run the {'devsvamp' if dev else 'devset'} stage first"
+    base = dev_generate("base", "Qwen/Qwen3-0.6B", dev)
     model = spec
     if "=" in spec:
         model, rest = spec.split("=")
@@ -4023,34 +4055,48 @@ def dev_score_model(name, spec, vs=""):
             py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
     else:
         drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
-    out = dev_generate(name, model)
+    out = dev_generate(name, model, dev)
     if "=" in spec and model.startswith("/content/"):
         shutil.rmtree(model, ignore_errors=True)
     res = out / "dev_score.json"
-    ref = BON / f"dev512-{vs}" / "rollouts.jsonl" if vs else None
+    ref = BON / f"{prefix}-{vs}" / "rollouts.jsonl" if vs else None
     if ref is not None:
         drive_sync("restore", only=[str(ref.parent)])
         if not ref.exists():
-            print(f"devscore {name}: no Dev-512 answers of {vs} on Drive: scored without the paired difference", flush=True)
+            print(f"devscore {name}: no {label} answers of {vs} on Drive: scored without the paired difference", flush=True)
             ref = None
     run(sys.executable, "dev_score.py", "--base", base / "rollouts.jsonl", "--cand", out / "rollouts.jsonl", "--name", name,
-        "--out", res, *(["--vs", ref] if ref is not None else []))
+        "--out", res, "--label", label, *(["--vs", ref] if ref is not None else []))
     drive_sync("save")
     d = json.loads(res.read_text())
-    return (f"== {name} (Dev-512 x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "
+    return (f"== {name} ({label} x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "
             f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
 
 
-def hold(args):
-    """(11 Nov) Wait --hold-minutes, doing nothing: keeps a queue alive (the plan runner stops the runtime at `end`, and
-    after --wait-hours of an empty queue) while the next lines are being prepared and pushed."""
-    import time
-    print(f"hold: waiting {args.hold_minutes:g} minutes ({args.hold_tag})", flush=True)
-    time.sleep(args.hold_minutes * 60)
+def devsvamp(args):
+    """(11 Nov, consult10) Dev-SVAMP-200: 200 SVAMP-like math questions (the public pool's easy math, as the test's SVAMP)
+    never used in round 1 (data/p1-round1-ids.json), not in Dev-512 nor near one of its questions, not trained on in rounds 1-4
+    (own_repair_questions drops those). Dev-512's own math is full-difficulty GSM8K: it did not see rpK step 20's math loss.
+    The original answers them x8 (the reference). Rows keep their pool id in "id" (for exclusions) and answer under dsv-<id>."""
+    drive_sync("restore", only=[str(DEV_SVAMP_FILE), str(DEV_FILE), str(P1_IDS)])
+    if not DEV_SVAMP_FILE.exists():
+        ex = dev_ids() | (set(json.loads(P1_IDS.read_text())) if P1_IDS.exists() else set())
+        rows = own_repair_questions({"svamp": 200}, seed=97, exclude=ex, public=True, avoid_grams=dev_gram_set())
+        assert len(rows) >= 150, f"only {len(rows)} SVAMP-like questions left for Dev-SVAMP-200"
+        DEV_SVAMP_FILE.parent.mkdir(exist_ok=True)
+        DEV_SVAMP_FILE.write_text("".join(json.dumps(r | {"pool_id": f"dsv-{r['id']}"}) + "\n" for r in rows))
+        print(f"devsvamp: {len(rows)} questions; sources {dict(Counter(r['source'] for r in rows))}", flush=True)
+        drive_sync("save")
+    dev_generate("base", "Qwen/Qwen3-0.6B", "svamp200")
+
+
+def dev_svamp_ids():
+    drive_sync("restore", only=[str(DEV_SVAMP_FILE)])
+    return ({json.loads(l)["id"] for l in DEV_SVAMP_FILE.read_text().splitlines() if l.strip()} if DEV_SVAMP_FILE.exists() else set())
 
 
 def devscore(args):
-    print(dev_score_model(args.ds_name, args.ds_model), flush=True)
+    print(dev_score_model(args.ds_name, args.ds_model, vs=getattr(args, "ds_vs", ""), dev=getattr(args, "ds_dev", "")), flush=True)
 
 
 def ladder(args):
@@ -6043,7 +6089,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "p1src", "hold"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "p1src", "hold"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",

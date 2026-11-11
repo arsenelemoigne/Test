@@ -171,3 +171,52 @@ typed2`):
 - Reading: Dev-512 at steps 20 / 40 / 60 paired against rpE-80, now with the share of runaway answers per type. consult9's pass
   mark: saved >= 52.5% and accuracy >= +1.25 on Dev-512 with IFEval responses <= 245 tokens (its forecast: 53-55% / -0.4 to -0.9
   on the full test; its last forecast was 7-9 points too high).
+
+## Full tests of rpK, rpL's Dev-512 results, and rpM (11 Nov afternoon, after consult10)
+
+| model | full test | per type (saved / accuracy): math, code, IFEval, one function, several, no fit |
+|---|---|---|
+| rpE-80 (start) | 47.0 / -0.9 | 54 / -1.2, 46 / -1.0, 45 / -2.6, 37 / +0.1, 39 / +0.1, 50 / +3.4 |
+| rpK step 20 | 49.9 / -1.3 | 58 / -2.6, 51 / -0.3, 45 / -3.1, 40 / +0.3, 42 / -1.5, 54 / +3.6 |
+| rpK step 60 | **54.4 / -1.4** | 61 / -2.3, 55 / -1.2, 49 / -3.0, 45 / -1.5, 48 / -1.0, 62 / +6.2 |
+
+rpK step 60 is the highest point above our curve of any full test (+2.38). It misses the box on accuracy only; IFEval (-3.0) and
+math (-2.3) hold most of the loss.
+
+rpL on Dev-512 (paired vs rpE-80): step 20 +3.4 saved / -0.07, step 40 +6.9 / -0.93, step 60 +11.9 / -0.44 (58.9% saved). IFEval's
+saving rose to 57% and loops fell, but the 14 true "at least N words / sentences" questions fell from 37.5% right (rpE-80) to
+19.6%: my "at least N" rule let placeholders / highlighted sections / letter frequency take two thirds of the 64 counting pairs,
+the 1.35x cap rejected valid long answers, and the "shorter" pairs still clipped the response. Full tests of rpL steps 60 and 40
+are queued.
+
+Where rpK step 20 lost math (full-test records): its new wrong answers think 0.5-1.0x as long as rpE-80's median right answer
+on the question (+91 answers; under 0.5x only +24): a calculation that skips its re-check, on the longer questions. Our guard
+only caught wrong answers under 0.5x, and the math "be right" pair took the shortest right answer.
+
+**rpM** (`--mix-preset typed3`; consult10's design, checked on rpE-80's real answers; 1,140 pairs planned, 60 steps, lr 1e-5):
+
+| type | pairs | "think less" | "be right" | counting rule | anti-loop | "don't stop early" |
+|---|---|---|---|---|---|---|
+| math, SVAMP-like (rpE-80 answers 1,200 new questions x8) | 180 | 0 | 90 | | 0 | 90 |
+| math, hard GSM8K (the answers rpK and rpL used) | 60 | 0 | 30 | | 0 | 30 |
+| code | 160 | 0 | 114 | | 14 | 32 |
+| IFEval | 320 | 144 | 72 | 80 | 24 | 0 |
+| one function | 160 | 112 | 48 | | | |
+| several functions | 120 | 60 | 60 | | | |
+| no function fits | 140 | 84 | 56 | | | |
+
+- **Math "don't stop early", widened:** the rejected wrong answer thinks under 0.95x the question's median right thinking (the
+  one nearest 0.75x), the chosen right answer 0.95-1.25x (on hard math: 700 vs 487 tokens, chosen longer in 100%).
+- **Math "be right", length-matched:** the right / wrong pair of the question whose thinking lengths are closest (right 0.95-1.25x
+  the wrong): no "be shorter" signal (on hard math: 612 vs 585 tokens).
+- **IFEval counting pairs** only on true length rules (at least N words / sentences, a keyword at least N times, N paragraphs), the
+  chosen response 1.10x + 15 to 1.75x + 60 tokens of the rejected one's (on the real answers: 314 vs 217 tokens, always longer; 44
+  IFEval pairs have a chosen response of 300+ tokens, against 14 in rpL).
+- **IFEval "think less"** only on questions with no counting rule, the response held within 5% (thinking 99 vs 185, response 82 vs 82).
+- **IFEval anti-loop** pairs only for loops in the response, 24 instead of 48.
+- **Several functions** 50 / 50 (rpK lost 1.5 points there at 70 / 30).
+- **New dev slice, Dev-SVAMP-200:** 200 SVAMP-like math questions never used in training; rpE-80, rpK-60 and rpL-60 are scored
+  on it first (their full tests exist or are running), then rpM at steps 20 / 40 / 60 beside Dev-512, both paired against rpE-80.
+- consult10's pass mark: Dev-512 saving >= +6 points over rpE-80; on Dev-SVAMP-200 math accuracy >= -0.3 and math thinking within
+  -4% / +5% of rpE-80; IFEval "at least N" accuracy not below rpE-80's. Its forecast for the full test: 53.5-55.0% / -0.55 to
+  -0.85 (its forecasts have read about half a point too kind on accuracy).
