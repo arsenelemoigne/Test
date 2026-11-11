@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -362,6 +362,8 @@ def main():
     parser.add_argument("--rp-extra-questions", default="", help="ptrepair (11 Nov, rpM): with --rp-rollouts-from, ALSO draw these "
                         "new own questions (part=n,..., public datasets, never a dev question) and let the base model answer "
                         "them; their ids get the prefix sv- (repair_pairs.py: SVAMP-like math 'svamp' vs the reused hard 'svamp_hard')")
+    parser.add_argument("--tr-models", nargs="*", default=[], help="transfer (11 Nov): NAME=SPEC models to score (SPEC: merged model, "
+                        "Hub id, or OUT=BASE:ADAPTER)")
     parser.add_argument("--ds-vs", default="", help="devscore: also the paired difference against this scored run")
     parser.add_argument("--ds-dev", default="", choices=("", "svamp200"), help="devscore: the dev set ('' = Dev-512)")
     parser.add_argument("--rp-dev-vs", default="", help="ptrepair (11 Nov): with --rp-dev, also the PAIRED difference against "
@@ -4073,6 +4075,57 @@ def dev_score_model(name, spec, vs="", dev=""):
             f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
 
 
+TRANSFER_FILE = Path("data/transfer.jsonl")
+TRANSFER_SIZES = {"tr_math500": 200, "tr_skywork": 200, "tr_arc_c": 200, "tr_csqa": 200, "tr_mmlu": 250, "tr_humaneval": 164}
+
+
+def transfer(args):
+    """(11 Nov, user: "how much does this transfer ... or is it benchmark overfitting?") Benchmarks our training never used nor
+    imitated: MATH-500 (whole-number answers), Skywork-OR1 easy math, ARC-Challenge, CommonsenseQA, MMLU, HumanEval. Each model
+    in --tr-models (NAME=SPEC, SPEC as devscore's) answers them x4; transfer_score.py compares it with the original, per set."""
+    drive_sync("restore", only=[str(TRANSFER_FILE)])
+    if not TRANSFER_FILE.exists():
+        tmp = Path("data/transfer-all.jsonl")
+        py("prepare_types.py", "--sources", ",".join(TRANSFER_SIZES), "--per-source", 1000000, "--out", tmp)
+        rows = [json.loads(l) for l in tmp.read_text().splitlines() if l.strip()]
+        rng = random.Random(5)
+        by = defaultdict(list)
+        for r in rows:
+            by[r["source"]].append(r)
+        out = []
+        for src, n in TRANSFER_SIZES.items():
+            rng.shuffle(by[src])
+            out += by[src][:n]
+            print(f"transfer: {src} {min(n, len(by[src]))} of {len(by[src])}", flush=True)
+        TRANSFER_FILE.write_text("".join(json.dumps(r) + "\n" for r in out))
+        drive_sync("save")
+    rows = [l for l in TRANSFER_FILE.read_text().splitlines() if l.strip()]
+    outs = []
+    for item in ["base=Qwen/Qwen3-0.6B"] + list(args.tr_models):
+        name, spec = item.split("=", 1)
+        out = BON / f"transfer-{name}"
+        drive_sync("restore", only=[str(out)])
+        if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 4 * len(rows):
+            model = spec
+            if "=" in spec:
+                model, rest = spec.split("=")
+                merge_base, adapter = rest.split(":")
+                if not (Path(model) / "config.json").exists():
+                    drive_sync("restore", only=[*([] if merge_base.startswith("Qwen/") else [merge_base]), adapter])
+                    py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
+            else:
+                drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
+            py("probe_curve.py", "--data", TRANSFER_FILE, "--sources", ",".join(TRANSFER_SIZES), "--per-source", 1000000,
+               "--samples", 4, "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+               "--max-questions", len(rows), "--seed", 61)
+            drive_sync("save")
+        outs.append((name, out))
+    for name, out in outs[1:]:
+        run(sys.executable, "transfer_score.py", "--base", outs[0][1] / "rollouts.jsonl", "--cand", out / "rollouts.jsonl",
+            "--name", name, "--out", out / "transfer_score.json")
+    drive_sync("save")
+
+
 def devsvamp(args):
     """(11 Nov, consult10) Dev-SVAMP-200: 200 SVAMP-like math questions (the public pool's easy math, as the test's SVAMP)
     never used in round 1 (data/p1-round1-ids.json), not in Dev-512 nor near one of its questions, not trained on in rounds 1-4
@@ -6089,7 +6142,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "p1src", "hold"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",

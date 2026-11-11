@@ -56,7 +56,9 @@ def main():
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
                 "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
-                "gsm_plus": gsm_plus, "gsm_ic": gsm_ic}
+                "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
+                "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
+                "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval}
     for source in args.sources.split(","):
         build = builders[source]
         built = list(build(args, rng))
@@ -975,3 +977,74 @@ def ifeval_like(args, rng):
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# (11 Nov, user: "how much does this transfer ... or is it benchmark overfitting?") TRANSFER sets: benchmarks never trained on
+# and never imitated by our training data. Same answer formats as the training helpers (Final answer: lines; MBPP-style code).
+MATH_INSTRUCTION_TR = "Put the final answer on the last line, like: Final answer: 42"
+CHOICE_INSTRUCTION_TR = "Answer with the label of the correct option. Put it on the last line, like: Final answer: B"
+
+
+def _tr_row(question, instruction, answer, task, source, qid):
+    return {"prompt": [{"role": "user", "content": f"{question}\n\n{instruction}"}], "answer": answer, "task": task,
+            "source": source, "pool_id": qid}
+
+
+def tr_math500(args, rng):
+    """MATH-500 (competition math, harder than GSM8K / SVAMP), the problems with a whole-number answer."""
+    from datasets import load_dataset
+    for r in load_dataset("HuggingFaceH4/MATH-500", split="test"):
+        a = str(r["answer"]).strip()
+        if re.fullmatch(r"-?\d+", a):
+            yield _tr_row(r["problem"], MATH_INSTRUCTION_TR, a, "math", "tr_math500", f"tr-math500-{r['unique_id']}")
+
+
+def tr_skywork(args, rng):
+    """Skywork-OR1 math (the README's suggested 'maths with headroom'), the easy band with whole-number answers; never used."""
+    from datasets import load_dataset
+    for k, r in enumerate(load_dataset("Skywork/Skywork-OR1-RL-Data", split="math")):
+        gold = json.loads(r["reward_model"]["ground_truth"])
+        if len(gold) == 1 and re.fullmatch(r"-?\d+", gold[0].strip()) \
+                and r["extra_info"]["model_difficulty"]["DeepSeek-R1-Distill-Qwen-1.5B"] <= 8:
+            yield _tr_row(r["prompt"][-1]["content"], MATH_INSTRUCTION_TR, gold[0].strip(), "math", "tr_skywork", f"tr-sky-{k}")
+
+
+def _options(question, labels, texts):
+    return question + "\n\n" + "\n".join(f"{l}. {t}" for l, t in zip(labels, texts))
+
+
+def tr_arc_c(args, rng):
+    """ARC-Challenge (science questions; our training never had multiple choice), test split."""
+    from datasets import load_dataset
+    for r in load_dataset("allenai/ai2_arc", "ARC-Challenge", split="test"):
+        yield _tr_row(_options(r["question"], r["choices"]["label"], r["choices"]["text"]), CHOICE_INSTRUCTION_TR,
+                      r["answerKey"], "multiple_choice", "tr_arc_c", f"tr-arcc-{r['id']}")
+
+
+def tr_csqa(args, rng):
+    """CommonsenseQA, validation split."""
+    from datasets import load_dataset
+    for r in load_dataset("tau/commonsense_qa", split="validation"):
+        yield _tr_row(_options(r["question"], r["choices"]["label"], r["choices"]["text"]), CHOICE_INSTRUCTION_TR,
+                      r["answerKey"], "multiple_choice", "tr_csqa", f"tr-csqa-{r['id']}")
+
+
+def tr_mmlu(args, rng):
+    """MMLU (57 subjects of knowledge questions), test split."""
+    from datasets import load_dataset
+    for k, r in enumerate(load_dataset("cais/mmlu", "all", split="test")):
+        yield _tr_row(_options(f"({r['subject'].replace('_', ' ')}) {r['question']}", "ABCD", r["choices"]),
+                      CHOICE_INSTRUCTION_TR, "ABCD"[r["answer"]], "multiple_choice", "tr_mmlu", f"tr-mmlu-{k}")
+
+
+def tr_humaneval(args, rng):
+    """HumanEval (code from a different source than MBPP / KodCode), graded by its own check() in MBPP's harness."""
+    from datasets import load_dataset
+    from utils.eval.benchmarks import MBPP_INSTRUCTION, MBPP_NAME_REMINDER
+    for r in load_dataset("openai/openai_humaneval", split="test"):
+        name = r["entry_point"]
+        content = f"{MBPP_INSTRUCTION}\n\n{r['prompt']}\n{MBPP_NAME_REMINDER.format(name=name)}"
+        yield {"source": "tr_humaneval", "task": "code", "answer": "", "grader": "code", "entry_point": name,
+               "tests": [r["test"], f"check({name})"], "setup": r["prompt"].split("def " + name)[0],
+               "prompt": [{"role": "user", "content": content}], "pool_id": f"tr-he-{r['task_id']}"}

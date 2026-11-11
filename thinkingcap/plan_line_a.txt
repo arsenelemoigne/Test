@@ -564,6 +564,9 @@ fullmodel --fm-merge models/rpM-40=models/rpE-80:adapters/rpM-s0/step-40 --nothi
 # 11 Nov ~18:30 (user: "lets add the steps 80 100 120"): rpL resumed from its step-60 state (same pairs, same constant lr) to 120,
 # Dev-512 at 80 / 100 / 120 paired vs rpE-80
 ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 120 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 80 100 120 --rp-dev --rp-dev-vs rpE80
+# 11 Nov ~20:40 (user: "is it benchmark overfitting?"): TRANSFER check on benchmarks never trained on (MATH-500, Skywork math,
+# ARC-Challenge, CommonsenseQA, MMLU, HumanEval) x4: the original, rpE-80, rpK-40 (in the box), rpL-60, rpM-60
+transfer --tr-models rpE80=models/rpE-80 rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60 rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60
 # 11 Nov ~14:00 (user): rpL step 40's full test (now after rpM: consult10 judged this test the least informative of the queue)
 fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
 # after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without another reconnect

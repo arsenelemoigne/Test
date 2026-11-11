@@ -5603,3 +5603,9 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
 - **p1cr1s0 step 150, Dev-512: 32.4% / +2.51** (step 100: 34.6 / +2.03): the saving SHRINKS with more steps (math thinking 703 -> 802 tokens,
   code 1218 -> 1302); paired vs the first round 1 -13.5 / +2.39. Dev-SVAMP 28.1 / +2.62. The extra be-right / guard / anti-loop pairs in
   round 1 hold the model long: it moves along the curve toward accuracy, not toward 50%.
+- 11 Nov ~20:40 (user: "how much does this transfer ... or is it benchmark overfitting?") **Transfer check built and queued (GPU 2, after rpL
+  80-120, before rpL-40's full test):** track.py stage `transfer` + transfer_score.py + prepare_types.py builders tr_math500 (MATH-500,
+  whole-number answers, 200), tr_skywork (Skywork-OR1 easy band, 200), tr_arc_c (ARC-Challenge test, 200), tr_csqa (CommonsenseQA
+  validation, 200), tr_mmlu (MMLU test, 250), tr_humaneval (HumanEval, 164); none used or imitated in training. The original, rpE-80,
+  rpK-40, rpL-60 and rpM-60 answer them x4; per set: saved %, accuracy change with a paired 95% interval, runaways. Not run locally
+  (no `datasets` on the Mac): first run on the GPU.
