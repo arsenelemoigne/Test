@@ -5579,3 +5579,9 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
 - 11 Nov ~18:30 (user) rpL extended to steps 80 / 100 / 120 (resumed from step 60; Dev-512 at 80 / 100 / 120), queued on GPU 2 after rpM, before rpL-40's full test.
 - 11 Nov ~19:00 (user) **Next phase decided:** once rpM, rpN, rpL 80/100/120, p1cr1s0 and the rpL-40 full test are finished, ONE Argon call with all the data (newest included) to design a CLEAN recipe from scratch, simple, not combining many methods (the user likes 'overshoot the saving, then correct accuracy'; Argon free to propose anything); then build and run one or two clean routes.
 - 11 Nov (user): at most THREE clean routes.
+
+## 11 Nov evening — rpM (consult10's design: math protected on SVAMP-like questions, IFEval length rules), from rpE-80
+- **rpM step 20, Dev-512: 49.3% [46.7, 51.9] / +0.49**; paired vs rpE-80 **+2.3 saved / -0.87 accuracy**. Per type: math 49 / +1.7 (569+9 tokens),
+  code 55 / +2.0, IFEval 46 / -3.9 (138+247, runaways 3.9%), one function 44 / +2.5, several 49 / +1.4, no fit 51 / +2.2. Dev-SVAMP-200: 51.8 /
+  +3.44, paired vs rpE-80 +2.4 / +0.31 (math held, as designed). Worse than rpK-20 (+3.6 / +0.15) and rpL-20 (+3.4 / -0.07) at the same
+  step: IFEval's accuracy fell (-3.9) and its runaways did NOT fall (3.9%, rpL-20: 2.9%) with only 24 response-loop pairs.
