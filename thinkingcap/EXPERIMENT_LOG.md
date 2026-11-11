@@ -5466,3 +5466,10 @@ IFEval 49 / -3.0 (45 / -3.1; 45 / -2.6), one function 45 / -1.5 (40 / +0.3; 37 /
 - Dev-512 predicted it well this time: paired +6.8 / -0.60 against rpE-80 -> 53.8 / -1.5; measured 54.4 / -1.4.
 - Where the accuracy sits: IFEval -3.0 (0.75 point of the headline), math -2.3 (0.58), code -1.2 (0.30), one function -1.5; no
   fit +6.2 lifts the tool-call benchmark to +0.8. A straight line from rpE-80 to rpK-60 passes 50% saved at about -1.1.
+
+## 11 Nov ~15:20 — Path 1's round 1 (p1r1s0 step 200), FULL TEST (2,759 x 8): **43.4% saved / -1.5** (official weighting)
+Per type: math 59 / -3.2, code 44 / -3.3, IFEval 23 / +0.4, one function 40 / -0.2, several 42 / +1.2, no fit 45 / +0.4. vs curve +0.26: on
+the curve, dominated by rpE-80 (47.0 / -0.9) and rpI-120 (41.9 / +0.1). Dev-512 had read 45.9 / +0.12: for this model built straight
+from the original, Dev-512 reads the saving 2.5 points too HIGH (code: 52.6% on Dev, 44% on the test) and the accuracy 1.6 points too
+kind (the rc1 lineage: saving within ~1.3, accuracy +2.2): the Dev-512 offsets are not the same for every lineage.
+IFEval saves only 23% (responses inflated by the pair rules, as found); math and code carry the loss (-3.2, -3.3).
