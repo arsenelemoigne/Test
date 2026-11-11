@@ -5433,3 +5433,23 @@ function 40 / +0.3 (37 / +0.1), several 42 / -1.5 (39 / +0.1), no fit 54 / +3.6 
   50% / +1.2 for rpK-20): Dev-512's math is full-difficulty GSM8K (the original solves 75%), the test's is SVAMP (89%). rpK's math
   "hold" pairs were built on the same hard GSM8K questions (rpI's draw predates the public-dataset decision), so easy SVAMP-like
   math was not protected. **Dev-512 cannot be trusted for math accuracy; rpL (same math pairs) will carry the same risk.**
+
+## 11 Nov ~13:45 — rpL (rpK with the IFEval pairs fixed + anti-loop pairs), Dev-512 x8
+| step | saved [95%] | accuracy | paired vs rpE-80: saved | accuracy |
+| 20 | 50.3 [47.6, 53.0] | +1.30 | +3.4 [+1.6, +5.3] | -0.07 [-1.29, +1.22] |
+| 40 | 53.8 [50.8, 56.9] | +0.43 | +6.9 [+4.7, +9.4] | -0.93 [-2.34, +0.36] |
+| 60 | **58.9 [56.0, 61.8]** | **+0.92** | **+11.9 [+9.6, +14.4]** | **-0.44 [-1.95, +1.04]** |
+Per type at step 60 (saved / accuracy; thinking + response): math 56 / +1.4 (489+9), code 66 / +2.6 (620+65, runaways 0.1%), IFEval
+57 / -4.3 (104+199, runaways 2.9% vs rpE-80's 3.6%), one function 52 / +5.2 (66+21), several 57 / -0.7 (70+18), no fit 59 / +5.6 (70+5).
+Step 20: math 51 / +1.7, code 52 / +3.5, IFEval 50 / -2.7 (132+221), tools 45-51. Step 40: math 50 / +2.3, code 59 / +1.4, IFEval
+54 / -4.5 (118+209), tools 48-55. Training 75 / 74 / 79% pairs ordered right; ~4x slower than rpK (4,000-token rejected answers).
+- The two fixes work on tokens: IFEval's saving 44.7 (rpE-80) -> 50 / 54 / 57%, where rpK stayed at 45-48%; loops down.
+- **IFEval accuracy on Dev falls on the "at least N" questions only** (35 questions): rpE-80 50.4 -> rpL 47.5 / 44.3 / 42.1 (rpK: 53.9 at
+  step 20, 50.7 at step 60); no counting rule 65.3 -> 67.8 / 66.3 / 67.4; other counting rule 47.2 -> 45.6 / 44.8 / 46.0. The counting
+  pairs (20% of IFEval, response capped) no longer protect those questions enough against 160 "think less" pairs.
+- Code saves much more (954 -> 620 thinking tokens) at flat Dev accuracy; math reads fine on Dev, which is blind on SVAMP-style math.
+- Applying the paired differences to rpE-80's full test (47.0 / -0.9) gives rpL-60 ~58.9 / -1.3; rpK-20's full test came 0.55 point
+  below such an estimate, so a fair guess is 57-59% at -1.5 to -2.2: outside the box on accuracy, but far above our old frontier
+  (rc1-soup-30: 57.4 / -3.5) if it holds. No full test of rpL is queued (the user decides).
+- GPU 2 moved on to the full test of rpK-60. consult10 (Gemini, cap $8) relaunched with the rpK-20 full test per question and rpL's
+  per-question Dev-512 results; free to change approach; reviews/consult10_after_rpK20_full/.
