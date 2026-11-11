@@ -1,4 +1,15 @@
+import { logCall } from "../log";
 import { traceStep } from "../trace";
+
+export const INPI_BUSY = "L'INPI limite temporairement nos requêtes (trop d'appels rapprochés). Réessayez dans quelques minutes.";
+
+// Every INPI call of the server goes through this queue, with a small gap between calls.
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(fn, fn);
+  queue = run.then(() => new Promise((ok) => setTimeout(ok, 250)), () => new Promise((ok) => setTimeout(ok, 250)));
+  return run;
+}
 import type { Office, Right, RightType, Territory } from "../types";
 
 // INPI "API diffusion". Login needs a cookie jar and an anti-CSRF token that changes on each response.
@@ -27,6 +38,22 @@ export class InpiSession {
   }
 
   async request(method: "GET" | "POST", path: string, body?: unknown, accept = "application/json"): Promise<{ status: number; data: unknown }> {
+    // INPI throttles the account when calls arrive in bursts: one call at a time, spaced, and a short wait on 429.
+    return serial(async () => {
+      for (let attempt = 0; ; attempt++) {
+        const r = await this.once(method, path, body, accept);
+        if (r.status !== 429 || attempt >= 2) {
+          if (r.status === 429) void logCall("inpi", "quota", { path }, { retryAfter: r.retryAfter, body: typeof r.data === "string" ? r.data.slice(0, 500) : r.data }, 429, 0);
+          return { status: r.status, data: r.data };
+        }
+        const wait = Math.min(Math.max(Number(r.retryAfter) || 0, 5 * (attempt + 1)), 20);
+        traceStep({ kind: "api", name: "INPI · limite de requêtes", detail: `nouvel essai dans ${wait} s`, ok: false });
+        await new Promise((ok) => setTimeout(ok, wait * 1000));
+      }
+    });
+  }
+
+  private async once(method: "GET" | "POST", path: string, body: unknown, accept: string): Promise<{ status: number; data: unknown; retryAfter: string | null }> {
     const res = await fetch(`${BASE}${path}`, { method, headers: this.headers(body !== undefined, accept), body: body === undefined ? undefined : JSON.stringify(body), redirect: "manual" });
     this.remember(res);
     const text = await res.text();
@@ -36,7 +63,7 @@ export class InpiSession {
     } catch {
       // Keep non-JSON bodies (HTML error pages) as text.
     }
-    return { status: res.status, data };
+    return { status: res.status, data, retryAfter: res.headers.get("retry-after") };
   }
 
   // Returns the login HTTP status; the body is discarded because it may contain tokens.

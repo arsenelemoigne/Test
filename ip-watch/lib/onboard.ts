@@ -61,6 +61,7 @@ async function importTitles(client: Client, holders: string[], runId: string): P
         const position = page * PAGE_SIZE;
         const res = await inpi.search(s.kind, query, s.collections, position, PAGE_SIZE, s.fields);
         await store.saveRawImport({ run_id: runId, client_id: client.id, kind: s.kind, query, position, http_status: res.status, payload: res.data });
+        if (res.status === 429) throw new Error(inpi.INPI_BUSY);
         if (res.status >= 400) throw new Error(`INPI ${s.kind} ${res.status}`);
         for (const hit of res.hits) {
           const right = inpi.normalize(hit, s.type);
