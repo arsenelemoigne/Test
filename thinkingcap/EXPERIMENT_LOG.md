@@ -5576,3 +5576,4 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   (4) Drop rpL-40's full test (dominated); full-test the best of rpM and rpN.
 - **rpN built and queued on GPU 1 after p1cr1s0** (repair_pairs.py --mix-preset hold; on rpE-80's answers: IFEval 96 length-rule + 122
   be-right + 22 loops, code 86 / 24 guards / 10 loops, tool calls be-right only, every quota full; older pair files still identical).
+- 11 Nov ~18:30 (user) rpL extended to steps 80 / 100 / 120 (resumed from step 60; Dev-512 at 80 / 100 / 120), queued on GPU 2 after rpM, before rpL-40's full test.
