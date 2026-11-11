@@ -5511,3 +5511,11 @@ IFEval saves only 23% (responses inflated by the pair rules, as found); math and
   100 / 100; 144 anti-loop pairs (p1br1s0 had 360). Whole flow dry-run with the queue lines (fake GPU answers).
   Queues: GPU 2 = rpK-40 full test (running) -> devsvamp -> Dev-SVAMP scores of rpE-80, rpK-60, rpL-60 -> rpM -> rpL-40 full test.
   GPU 1 = rpL-60 full test (running) -> devsvamp -> Dev-SVAMP score of p1r1s0-200 -> p1cr1s0.
+- 11 Nov ~16:05 (user: "make a new argon review with the full scores") **consult11 launched** (Gemini 4 Argon, cap $6): the full tests of
+  rpK-60 and of Path 1's round 1 per question (records downloaded; tables rebuilt for 8 models), rpM and p1cr1s0 as built, and five
+  questions (what the full tests change; edits to rpM before it starts; a repair on top of rpK-60 instead of rpE-80, or an
+  interpolation; p1cr1s0; the next 12 GPU-hours). New facts from the records: IFEval "at least N words / sentences" (58 questions):
+  original 33.2% right, rpE-80 18.5, rpK-20 16.8, rpK-60 18.1, **Path 1's round 1 40.7** (its responses there are 981 tokens against the
+  original's 668), while its "fewer than N" falls to 60.1 from 72.9: response length moves both classes. SVAMP wrong answers by
+  thinking band (< 0.5x / 0.5-1.0x / >= 1.0x of rpE-80's median right thinking): rpE-80 82 / 284 / 396, rpK-20 106 / 375 / 395, rpK-60
+  155 / 396 / 315.

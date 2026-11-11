@@ -496,7 +496,8 @@ def task_prompt(args):
                                          "consult-path2": "astra_prompt_consult_path2.txt",
                                          "consult-path1final": "astra_prompt_consult_path1final.txt",
                                          "consult-path1results": "astra_prompt_consult_path1results.txt",
-                                         "consult-after-rpk20": "astra_prompt_consult_after_rpk20.txt"}.get(
+                                         "consult-after-rpk20": "astra_prompt_consult_after_rpk20.txt",
+                                         "consult-full-scores": "astra_prompt_consult_full_scores.txt"}.get(
                                          getattr(args, "task", "edit"), "astra_prompt.txt"))).read_text()
     note = ("\n\nTHIS IS A SHORT TEST SESSION ON A LAPTOP CPU: the practice set is 12 easy math word problems (graded by the "
             "final number); a generation pass takes at most 8 generations per model of at most 768 tokens; a teacher-forced "
@@ -964,7 +965,7 @@ def main():
     p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
-    p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review", "consult-ladder", "consult-path2", "consult-path1final", "consult-path1results", "consult-after-rpk20"),
+    p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review", "consult-ladder", "consult-path2", "consult-path1final", "consult-path1results", "consult-after-rpk20", "consult-full-scores"),
                    help="consult (4 Nov, user): strategy analysis only, no forward passes, our work never mentioned")
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
     p.add_argument("--cpu-items", type=int, default=8, help="--cpu: generations per model per pass")
