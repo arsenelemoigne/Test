@@ -5627,5 +5627,5 @@ Per type (rpK-40's full test in brackets): math 58 / -1.5 (58 / -2.3), code 56 /
 - **rpL step 80 (resumed from 60), Dev-512: 62.1% / -0.30**; paired vs rpE-80 +15.2 / -1.66 (step 60: +11.9 / -0.44). Per type: math 60 / -0.4,
   code 67 / +1.5, IFEval 62 / -2.5 (91+181), one function 56 / -0.2, several 60 / **-6.4**, no fit 63 / +6.1. More saving, accuracy now
   falling (several functions collapses). Training: pairs ordered right 88% at 80 and 100, 94% at 120.
-- **GPU 1 disconnected (~23:30) during the full test of rpM-60, at 16,896 of 22,072 answers** (Colab shows "Reconnect L4"). The test restarts
+- **GPU 1 disconnected (~21:40; its Drive log last saved 21:38, checked at 22:08) during the full test of rpM-60, at 16,896 of 22,072 answers** (Colab shows "Reconnect L4"). The test restarts
   from zero on reconnection (evaluate() discards a run without results.json). Waiting for the user to reconnect.
