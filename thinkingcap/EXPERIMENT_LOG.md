@@ -5255,3 +5255,10 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   is running.
 - Caveat: od2 started on GPU 1 before Dev-512 existed, so its question draws do NOT exclude Dev-512 (its --rp-exclude-dev found no
   file). od2 is screened on the 720, not judged on Dev-512; if it is ever scored on Dev-512, its overlap must be removed first.
+- **cp1d final:** step 35 39.5% / -2.8; **step 40 42.6% / -3.3** (svamp 63 / -4.0, mbpp 40 / -5.4, ifeval 27 / -1.7, simple 32 / -3.1,
+  multiple 32 / -0.2, no-fit 38 / -2.1); vs curve -1.8. COPD + right/wrong reward ends below the curve (Run A at 40: 34.1 / -2.4,
+  -1.4; Run C at 40: 57.1 / -4.7, -0.3). COPD line closed.
+- **Dev-512 built (11 Nov ~01:00):** 512 questions (svamp 140, mbpp 100, IFEval 66 counting + 66 other, simple 60, multiple 45 no-fit
+  / 35 several) outside the 11,360 questions drawn for training by rpE/rpG/rpH, rpI and od1; the original answers it x8.
+- Studies added (reference only, no copying): reviews/competitor_methods_study.md, reviews/rl_length_methods_study.md;
+  reviews/claude_path1_review.md (independent review of PATH1_PLAN.md: round 1 likely ~25-35% saved; rpJ dropped).
