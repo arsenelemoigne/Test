@@ -46,7 +46,12 @@ Path 1's model first answers ~2,400 unseen questions × 8; for each question:
 - Questions: solved ≥ 4/8 by Path 1's model (reference answers), in two bands: "mastered" (7–8/8, length spread ≥ 1.25×: they
   get the length pressure) and "shaky" (4–6/8: "just be right"). **Fixed proportion every step (user, 11 Nov):** each step's
   32 kept groups are 16 from each band (refilled from the same band when a group is dropped as uninformative), so the
-  balance between "think less" and "be right" never drifts as the model changes; type shares
+  balance between "think less" and "be right" never drifts as the model changes. **Fill until full (user, 11 Nov):** the
+  reference pools are built in batches — Path 1's model answers 1,000 new questions × 8 at a time, each question is sorted
+  (mastered 7–8/8, shaky 4–6/8, too hard < 4/8: set aside) — until both pools hold ~1,200 questions with the test's type
+  shares inside each (800 used + ~50% spare for dropped groups). Expected: shaky is the bottleneck (~15% of questions for a
+  model like rpE-80), so ~7,000–8,000 questions, ~3–4 GPU-hours; IFEval may need new prompts from our builder; a type that
+  cannot fill its quota is reported, never silently re-mixed. Type shares
   as the test (math 600, code 600, IFEval 600, one function 285, several 145, no fit 170); never Dev-512, the 720 or the test;
   each question used once.
 
