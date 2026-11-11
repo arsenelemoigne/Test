@@ -6,6 +6,8 @@ import { toHtml } from "./markdown";
 import { addMarks, onboard } from "./onboard";
 import * as store from "./store";
 import { startWatch } from "./watch";
+import { startVisualSearch } from "./visual";
+import { LEVEL_LABEL, levelCounts, MODE_LABEL, type VisualSearch } from "./visual-types";
 import { runInTrace, startTrace, traceStep } from "./trace";
 import type { Client } from "./types";
 
@@ -44,9 +46,9 @@ function matchClient(clients: Client[], name: string | null | undefined): Client
   return clients.find((c) => c.name.toLowerCase() === n || c.slug === n) ?? clients.find((c) => c.name.toLowerCase().includes(n) || n.includes(c.name.toLowerCase())) ?? null;
 }
 
-async function reply(to: string, subject: string, markdown: string, messageId: string | null) {
-  const from = process.env.RESEND_FROM || "Registre PI <assistant@getmanda.eu>";
-  const footer = `\n\n[Ouvrir le tableau de bord](${appUrl()})`;
+async function reply(to: string, subject: string, markdown: string, messageId: string | null, attachments?: { filename: string; content: Buffer }[], link = appUrl()) {
+  const from = process.env.RESEND_FROM || "PI Pilot <assistant@getmanda.eu>";
+  const footer = `\n\n[Ouvrir dans PI Pilot](${link})`;
   await resend().emails.send({
     from,
     to,
@@ -54,7 +56,36 @@ async function reply(to: string, subject: string, markdown: string, messageId: s
     html: `<div style="font-family:system-ui,sans-serif;font-size:14px;line-height:1.5;color:#1d1d1b">${toHtml(markdown + footer)}</div>`,
     text: markdown,
     headers: messageId ? { "In-Reply-To": messageId, References: messageId } : undefined,
+    ...(attachments?.length ? { attachments } : {}),
   });
+}
+
+// The first image attached to the email, if any (photos pasted inline count too).
+async function firstImage(emailId: string): Promise<Buffer | null> {
+  try {
+    const { data } = await resend().emails.receiving.attachments.list({ emailId });
+    const image = (data?.data ?? []).find((a) => a.content_type?.startsWith("image/") && a.size > 2000);
+    if (!image) return null;
+    const res = await fetch(image.download_url, { signal: AbortSignal.timeout(20_000) });
+    return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
+  } catch (e) {
+    void logCall("email", "attachments", { emailId }, e instanceof Error ? e.message : String(e), 500, 0);
+    return null;
+  }
+}
+
+// Summary sent back when a visual search started by email is finished, with the PDF report attached.
+function visualSummary(s: VisualSearch): string {
+  const counts = levelCounts(s.results);
+  const top = s.results.filter((r) => r.level === "tres_proche" || r.level === "proche").slice(0, 5);
+  return [
+    `**Recherche visuelle terminée** — ${MODE_LABEL[s.mode]}${s.analysis?.titre ? ` : ${s.analysis.titre}` : ""}.`,
+    "",
+    `${s.results.length} résultat(s) examiné(s) : ${counts.tres_proche} très proche(s), ${counts.proche} proche(s), ${counts.meme_theme} même thème.`,
+    ...(top.length ? ["", "Les plus proches :", ...top.map((r) => `- ${LEVEL_LABEL[r.level!]} — [${r.title.slice(0, 90)}](${r.url}) (${r.source}${r.date ? `, ${r.date}` : ""})`)] : []),
+    "",
+    "Le rapport PDF est joint ; le tableur et les visuels sont rangés dans le dossier du client. Les rapprochements sont proposés par l'IA et restent à vérifier.",
+  ].join("\n");
 }
 
 // Handles one received email: understand it, act, log a summary in the history and answer by email.
@@ -71,9 +102,50 @@ export async function handleInboundEmail(emailId: string): Promise<void> {
     return;
   }
 
+  // An image in the email starts a visual search; the report is sent back when it is ready.
+  const image = await firstImage(emailId);
+  if (image) {
+    await startVisualFromEmail(emailId, sender, subject, body, email.message_id ?? null, image);
+    return;
+  }
+
   const trace = await startTrace("email", subject, null);
   await runInTrace(trace, () => processEmail(emailId, sender, subject, body, email.message_id ?? null, trace.id));
   await trace.finish("done", null);
+}
+
+async function startVisualFromEmail(emailId: string, sender: string, subject: string, body: string, messageId: string | null, image: Buffer) {
+  const clients = await store.listClients();
+  const text = `${subject}\n${body}`;
+  const guess = await extractJson<{ client?: string | null; mode?: string; precisions?: string | null }>(
+    [
+      "Un avocat en propriété intellectuelle envoie une image par email pour une recherche visuelle.",
+      `Clients existants : ${clients.map((c) => c.name).join(", ") || "aucun"}.`,
+      "mode : « contrefacon » s'il cherche des copies d'un produit ou visuel de son client, sinon « anteriorite » (vérifier avant un lancement ce qui existe déjà).",
+      'Réponds en JSON : {"client":"nom ou null","mode":"anteriorite|contrefacon","precisions":"ce qu\'il dit de l\'image, une phrase, ou null"}.',
+    ].join("\n"),
+    text.slice(0, 4000),
+    "email-visual",
+  );
+  const client = matchClient(clients, guess?.client) ?? (clients.length === 1 ? clients[0] : null);
+  const mode = guess?.mode === "contrefacon" || /copie|contrefa|imitation|dupe|counterfeit/i.test(text) ? "contrefacon" : "anteriorite";
+  const note = guess?.precisions?.trim() || body.trim().slice(0, 400) || null;
+  const search = await startVisualSearch({
+    client,
+    mode,
+    note,
+    image,
+    origin: "email",
+    onDone: async (s, pdf) => {
+      const link = `${appUrl()}/recherche-visuelle?id=${s.id}`;
+      try {
+        await reply(sender, subject, visualSummary(s), messageId, pdf ? [{ filename: "rapport-recherche-visuelle.pdf", content: Buffer.from(pdf) }] : undefined, link);
+      } catch (e) {
+        void logCall("email", "reply", { to: sender }, e instanceof Error ? e.message : String(e), 500, 0);
+      }
+    },
+  });
+  await store.addEvent(client?.id ?? null, "email", subject, `Image reçue par email : recherche visuelle lancée (${MODE_LABEL[mode]}).`, { emailId, from: sender, intent: "recherche_visuelle", visualSearchId: search.id, traceId: search.traceId });
 }
 
 async function processEmail(emailId: string, sender: string, subject: string, body: string, messageId: string | null, traceId: string) {

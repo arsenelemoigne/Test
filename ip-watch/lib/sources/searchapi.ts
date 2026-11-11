@@ -12,7 +12,10 @@ export type Listing = { title: string; url: string; seller: string | null; price
 async function call(params: Record<string, string>): Promise<Record<string, unknown>> {
   const key = process.env.SEARCHAPI_API_KEY;
   if (!key) throw new Error("SEARCHAPI_API_KEY manquant");
-  const res = await fetch(`${BASE}?${new URLSearchParams({ ...params, api_key: key })}`, { headers: { Accept: "application/json" } });
+  // When a proxy injects the real key (local tests), it travels in the Authorization header instead of the URL.
+  const injected = key === "proxy-injected";
+  const qs = new URLSearchParams(injected ? params : { ...params, api_key: key });
+  const res = await fetch(`${BASE}?${qs}`, { headers: { Accept: "application/json", ...(injected ? { Authorization: `Bearer ${key}` } : {}) } });
   const text = await res.text();
   // No credits left, or none granted to the account: stop calling for this run.
   if ((res.status === 429 || res.status === 402 || res.status === 403) && /used all of the searches|upgrade your plan|credits?|allowance|subscription/i.test(text)) throw new Error(QUOTA_MESSAGE);
@@ -80,4 +83,24 @@ export async function ebay(q: string) {
 export async function google(q: string) {
   const r = await call({ engine: "google", q, gl: "fr", hl: "fr", num: "10" });
   return toListings(r.organic_results);
+}
+
+export type ImageHit = { title: string; url: string; image: string | null; source: string | null };
+
+// Google Images: campaign visuals, press articles and posts that show the same idea.
+export async function images(q: string): Promise<ImageHit[]> {
+  const r = await call({ engine: "google_images", q, gl: "fr", hl: "fr" });
+  const items = (r.images ?? r.images_results ?? []) as Record<string, unknown>[];
+  return items
+    .map((i): ImageHit | null => {
+      const source = (i.source ?? {}) as Record<string, unknown>;
+      const original = (i.original ?? {}) as Record<string, unknown>;
+      const url = (typeof source.link === "string" ? source.link : typeof i.link === "string" ? i.link : null) as string | null;
+      const title = typeof i.title === "string" ? i.title : null;
+      if (!url || !title) return null;
+      const image = typeof i.thumbnail === "string" ? i.thumbnail : typeof original.link === "string" ? original.link : null;
+      return { title, url, image, source: typeof source.name === "string" ? source.name : null };
+    })
+    .filter((x): x is ImageHit => x !== null)
+    .slice(0, 20);
 }

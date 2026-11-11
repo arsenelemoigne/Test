@@ -98,3 +98,14 @@ export async function downloadObject(bucket: string, path: string): Promise<Resp
   const c = required();
   return fetch(`${c.url}/storage/v1/object/${bucket}/${path}`, { headers: { apikey: c.key, Authorization: `Bearer ${c.key}` }, cache: "no-store" });
 }
+
+// Temporary public link to a private object, e.g. so an image search engine can fetch an uploaded image.
+export async function signedObjectUrl(bucket: string, path: string, expiresIn = 900): Promise<string> {
+  const c = required();
+  const res = await fetch(`${c.url}/storage/v1/object/sign/${bucket}/${path}`, { method: "POST", headers: headers(c.key), body: JSON.stringify({ expiresIn }) });
+  await check(res, "sign");
+  const json = (await res.json()) as { signedURL?: string; signedUrl?: string };
+  const rel = json.signedURL ?? json.signedUrl;
+  if (!rel) throw new Error("Supabase sign: pas d'URL renvoyée");
+  return `${c.url}/storage/v1${rel.startsWith("/") ? rel : `/${rel}`}`;
+}

@@ -1,5 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { Role } from "./types";
 
 export const SESSION_COOKIE = "ipw_session";
@@ -47,5 +47,9 @@ export function verifySession(value: string | undefined): Role | null {
 }
 
 export function currentRole(): Role | null {
-  return verifySession(cookies().get(SESSION_COOKIE)?.value);
+  const fromCookie = verifySession(cookies().get(SESSION_COOKIE)?.value);
+  if (fromCookie) return fromCookie;
+  // Scripted access (screenshots, end-to-end checks): the demo password in a header, never in a URL.
+  const key = headers().get("x-demo-key");
+  return key && checkPassword(key) ? "avocat" : null;
 }

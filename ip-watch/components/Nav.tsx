@@ -7,6 +7,7 @@ import { Scribble } from "./RoughBox";
 const LINKS = [
   { href: "/", label: "Tableau de bord" },
   { href: "/marques", label: "Marques" },
+  { href: "/recherche-visuelle", label: "Recherche visuelle" },
 ];
 
 export function Nav() {

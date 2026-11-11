@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
+import { readFileSync } from "fs";
 import * as sb from "./supabase";
 import type { Client, Conversation, ConversationMessage, FieldEdit, Finding, HistoryEvent, Mark, Right, Role, RunSummary, WatchRun } from "./types";
+import type { VisualSearch } from "./visual-types";
 import fixture from "@/data/dev-fixture.json";
 
 // Supabase in production; an in-memory store seeded with a fictitious client only for local development.
@@ -21,6 +23,11 @@ type FindingRow = {
 };
 
 type ConversationRow = { id: string; client_id: string | null; title: string; messages: ConversationMessage[]; created_at: string; updated_at: string };
+type VisualRow = {
+  id: string; client_id: string | null; mode: VisualSearch["mode"]; origin: VisualSearch["origin"]; note: string | null; image_path: string | null;
+  status: VisualSearch["status"]; analysis: VisualSearch["analysis"]; steps: VisualSearch["steps"]; results: VisualSearch["results"];
+  report_pdf_path: string | null; report_xlsx_path: string | null; trace_id: string | null; error: string | null; created_at: string; finished_at: string | null;
+};
 
 // Kept on globalThis so every route of the dev server sees the same local data.
 const g = globalThis as unknown as { __ipwStore?: typeof initial };
@@ -31,9 +38,17 @@ const initial = {
   runs: [] as RunRow[],
   findings: [] as FindingRow[],
   conversations: [] as ConversationRow[],
+  visual: [] as VisualRow[],
   seq: 1,
 };
 const mem = (g.__ipwStore ??= initial);
+mem.visual ??= [];
+
+// Local screenshots only: IPW_DEV_SNAPSHOT points to a JSON export of the real tables, loaded instead of the fixture.
+if (memory && mem.clients.length === 0 && process.env.IPW_DEV_SNAPSHOT) {
+  const snap = JSON.parse(readFileSync(process.env.IPW_DEV_SNAPSHOT, "utf8")) as Partial<typeof initial>;
+  Object.assign(mem, { ...initial, ...snap, seq: 100000 });
+}
 
 if (memory && mem.clients.length === 0) {
   const id = randomUUID();
@@ -366,4 +381,45 @@ export async function deleteConversation(id: string): Promise<void> {
     return;
   }
   await sb.remove("conversations", { id: `eq.${id}` });
+}
+
+// ---------- Visual searches
+
+const toVisual = (r: VisualRow): VisualSearch => ({
+  id: r.id, clientId: r.client_id, mode: r.mode, origin: r.origin, note: r.note, imagePath: r.image_path, status: r.status, analysis: r.analysis,
+  steps: r.steps ?? [], results: r.results ?? [], reportPdfPath: r.report_pdf_path, reportXlsxPath: r.report_xlsx_path, traceId: r.trace_id,
+  error: r.error, createdAt: r.created_at, finishedAt: r.finished_at,
+});
+
+export type VisualPatch = Partial<Pick<VisualRow, "status" | "analysis" | "steps" | "results" | "report_pdf_path" | "report_xlsx_path" | "error" | "finished_at" | "image_path">>;
+
+export async function createVisualSearch(row: Pick<VisualRow, "id" | "client_id" | "mode" | "origin" | "note" | "image_path" | "trace_id">): Promise<VisualSearch> {
+  const full: VisualRow = { ...row, status: "running", analysis: null, steps: [], results: [], report_pdf_path: null, report_xlsx_path: null, error: null, created_at: new Date().toISOString(), finished_at: null };
+  if (memory) {
+    mem.visual.push(full);
+    return toVisual(full);
+  }
+  const [created] = await sb.insert<VisualRow>("visual_searches", [row]);
+  return toVisual(created);
+}
+
+export async function updateVisualSearch(id: string, patch: VisualPatch): Promise<void> {
+  if (memory) {
+    Object.assign(mem.visual.find((v) => v.id === id) ?? {}, patch);
+    return;
+  }
+  await sb.update("visual_searches", { id: `eq.${id}` }, patch);
+}
+
+export async function getVisualSearch(id: string): Promise<VisualSearch | null> {
+  const rows = memory ? mem.visual.filter((v) => v.id === id) : await sb.select<VisualRow>("visual_searches", { id: `eq.${id}` });
+  return rows[0] ? toVisual(rows[0]) : null;
+}
+
+// Newest first; the list view does not need every result, but the register counts them.
+export async function listVisualSearches(clientId: string | null, limit = 100): Promise<VisualSearch[]> {
+  const rows = memory
+    ? mem.visual.filter((v) => v.client_id === clientId).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit)
+    : await sb.select<VisualRow>("visual_searches", { client_id: clientId ? `eq.${clientId}` : "is.null", order: "created_at.desc", limit: String(limit) });
+  return rows.map(toVisual);
 }

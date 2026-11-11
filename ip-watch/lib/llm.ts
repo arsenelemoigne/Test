@@ -48,7 +48,7 @@ export async function chat(opts: {
   const post = (a: Attempt) =>
     fetch(ENDPOINT, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Registre PI (demo)" },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "PI Pilot (demo)" },
       body: JSON.stringify({
         model: a.model,
         // Extended thinking only accepts the default temperature and needs room above its budget.

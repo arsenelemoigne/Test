@@ -80,7 +80,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Registre PI";
+  wb.creator = "PI Pilot";
   const ws = wb.addWorksheet((mark?.name ?? markId).slice(0, 31).replace(/[\\/*?:[\]]/g, " "));
   ws.columns = COLUMNS.map((c) => ({ header: c.header, width: c.width }));
   values.forEach((v) => ws.addRow(v));

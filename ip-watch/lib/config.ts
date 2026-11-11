@@ -1,5 +1,5 @@
-// Working name, to be replaced once the group picks the project name.
-export const APP_NAME = "Registre PI";
+// Name chosen by the LAB group for the service.
+export const APP_NAME = "PI Pilot";
 
 export const FIRM_NAME = "Cabinet fictif — Projet LAB EFB";
 
