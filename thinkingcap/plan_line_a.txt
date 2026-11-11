@@ -536,6 +536,10 @@ ptrepair --name p1r2s0 --rp-gate p1r1s0-200,rpE80,6 --rp-base models/p1r1s0 --rp
 # 11 Nov ~09:10: the queue ended at ~07:40 (Path 1 gate CLOSED: round 1 saved 45.9% on Dev-512, needs 52.9; round 2 skipped).
 # rpK (the IFEval + tool-call repair) reads 50.5 / +1.51 at step 20 and 53.8 / +0.76 at step 60 on Dev-512 (paired vs rpE-80:
 # +3.6 saved / +0.15 and +6.8 / -0.60). Proposed, WAITING for the user (no full test unless asked):
-# WAIT (user) fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
-# WAIT (user) fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
+# 11 Nov ~09:20 (user: "can we do full eval of" Path 1 round 1 step 200 and rpK steps 20 / 40 / 60): the FULL test (2,759 x 8) of
+# each, then its 720 screen. Here the three rpK checkpoints (step 20 first: the one whose estimate sits in the goal box);
+# plan_line_b holds the same list plus Path 1's round 1 (a finished test is skipped, so no test runs twice).
+fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
+fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
+fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
 end

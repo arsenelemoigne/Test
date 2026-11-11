@@ -574,6 +574,11 @@ odpo --name od2 --rp-exclude-dev --rp-base Qwen/Qwen3-0.6B --od-rounds 10 --od-s
 # ORIGINAL Qwen (stored 10 answers, own sources, 75% of the pool + 2,200 new GSM8K x8), 3,200 pairs, lr 2e-5 cosine to 5e-6,
 # 200 steps; GATE: round 2 only if round 1's Dev-512 saving >= rpE-80's + 6 pts; round 2 on-policy 25/60/15, 80 steps.
 devset
+# 11 Nov ~09:20 (user): the four FULL tests, after od2 and before Path 1's seed 1 (those GPU 2 has finished are skipped)
+fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
+fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
+fullmodel --fm-merge models/p1r1s0-200=Qwen/Qwen3-0.6B:adapters/p1r1s0-s0/step-200 --nothink-models models/p1r1s0-200
+fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
 # 11 Nov ~03:40 (user): HOLD lifted, same changes as plan_line_a (seed 1 runs here after od2).
 p1src
 ptrepair --name p1r1s1 --rp-base Qwen/Qwen3-0.6B --rp-own-data --rp-rollouts-from p1src --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.35,--shorten-min-right,0.80,--mix-preset,round1,--resp-guard,0.9 --rp-quota svamp=800,mbpp=800,ifeval=800,bfcl_simple_python=280,bfcl_multiple=200,bfcl_irrelevance=240 --rp-lr 2e-5 --rp-lr-min 5e-6 --rp-warmup 10 --rp-steps 200 --rp-epochs 2 --rp-dpo-seed 1 --rp-screen 100 150 200 --rp-dev --rp-dev-vs rpE80

@@ -2951,8 +2951,9 @@ def fullmodel(args):
         merge_base, adapter = rest.split(":")
         drive_sync("restore", only=[out_model])
         if not (Path(out_model) / "config.json").exists():
-            drive_sync("restore", only=[merge_base, adapter])
-            assert (Path(merge_base) / "config.json").exists(), f"{merge_base} not found"
+            hub = merge_base.startswith("Qwen/")  # (11 Nov) a Hub id as the base (a round-1 adapter trained on the original)
+            drive_sync("restore", only=[*([] if hub else [merge_base]), adapter])
+            assert hub or (Path(merge_base) / "config.json").exists(), f"{merge_base} not found"
             assert (Path(adapter) / "adapter_config.json").exists(), f"{adapter} not found"
             py("merge.py", "--model", merge_base, "--out", out_model, "--adapters", f"{adapter}:1")
             drive_sync("save")
