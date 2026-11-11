@@ -14,5 +14,9 @@ export function haguePassages(question: string, limit = 5): { maj: string; passa
     return { c, score: words.reduce((n, w) => n + (hay.includes(w) ? 1 : 0), 0) + (/renouvel|grace|surtaxe|duree|expir/.test(norm(question)) && /renouvel|duree|regle 24|bareme/.test(norm(c.titre)) ? 2 : 0) };
   });
   const passages = scored.sort((a, b) => b.score - a.score).slice(0, limit).map((x) => x.c);
+  // Renewal questions always get the rule and the fee schedule, so the grace period and surcharge are cited exactly.
+  if (/renouvel|grace|surtaxe|taxe|expir|echeance/.test(norm(question))) {
+    for (const c of CHUNKS) if ((/Règle 24|Barème/.test(c.titre)) && !passages.includes(c)) passages.push(c);
+  }
   return { maj: (data as { maj: string }).maj, passages };
 }
