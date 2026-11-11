@@ -5519,3 +5519,24 @@ IFEval saves only 23% (responses inflated by the pair rules, as found); math and
   original's 668), while its "fewer than N" falls to 60.1 from 72.9: response length moves both classes. SVAMP wrong answers by
   thinking band (< 0.5x / 0.5-1.0x / >= 1.0x of rpE-80's median right thinking): rpE-80 82 / 284 / 396, rpK-20 106 / 375 / 395, rpK-60
   155 / 396 / 315.
+- 11 Nov ~16:45 **consult11 (Gemini 4 Argon) done, $1.77: reviews/consult11_full_scores/REPORT.md** (its report draft: the final call
+  returned only a planning note). Main points:
+  (1) rpK-60 vs rpK-20 (+4.55 saved for -0.16): the math loss against rpE-80 was paid in the first 20 steps (questions where rpE-80
+  thinks longest); from 20 to 60 math held (+0.24) while IFEval's thinking fell 28 tokens and tool calls shortened; measured against
+  each model's OWN median right thinking the wrong-answer bands do not move between steps 20 and 60. One function's -1.75 from
+  step 20 to 60 is 82% NON-calls (call rate 97.19% -> 95.75%): 140 "no fit" pairs against 48 + 36 be-right pairs on one / several
+  functions pushed the model to decline. 93% of rpK-60's -1.44 sits in IFEval (-0.75 headline: "at least N" and other counting
+  rules, 2.70% runaways) and math (-0.59). 60 steps is the right dose.
+  (2) Path 1's round 1 proves IFEval's "at least N" deficit is a response-length effect (40.7% right with 981-token responses), and
+  that rewarding length everywhere costs "fewer than N" (-12.85 points). Dev-512 over-reads a from-the-original model (its code has
+  6% runaways in the original; its IFEval is 26.5% "at least N").
+  (3) **rpM: run as is** (the length-rule pairs cannot hurt "fewer than N": those questions get be-right pairs with a capped
+  response; math rules sized right). Its forecast: step 60 53.8-56.2% / -0.65 to -1.20 (central 55.0 / -0.90).
+  (4) Interpolating rpE-80 and rpK-60: rejected (the line crosses 50% at about -1.15, and the path is concave).
+  (5) **rpN** = an accuracy-only repair on top of rpK-60: rpK-60 answers 3,200 new questions x8 (~1.1 GPU-h), 800 pairs with NO "think
+  less" pair: math 240 (widened guards + length-held be-right, SVAMP-like), IFEval 240 (96 length-rule pairs, 120 be-right, 24 response
+  loops), code 120 (90 / 18 guards / 12 loops), tool calls be-right only (one function 80, several 80, no fit 40); 45 steps, Dev at
+  15 / 30 / 45 paired against rpK-60; expected 51.8-53.0% / -0.60 to -0.90.
+  (6) **p1cr1s0: run as is**; its round 2 only if Dev-512 >= 47.5% saved (IFEval >= 42%), accuracy >= +0.50 and Dev-SVAMP within 0.5
+  of rpE-80. It advises dropping rpL-40's full test for a full test of rpM's best step, and gives 65% for rpM, 78% overall (its
+  forecasts have run about half a point too kind on accuracy).
