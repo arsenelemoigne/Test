@@ -346,6 +346,8 @@ def main():
     parser.add_argument("--ds-name", default="", help="devscore (11 Nov): the name of the scored model's Dev-512 run")
     parser.add_argument("--ds-model", default="", help="devscore: a merged model path / Hub id, or MERGED_OUT=BASE:ADAPTER to build it")
     parser.add_argument("--rp-rollouts-from", default="", help="ptrepair (11 Nov): reuse this run's answers (runs/bon/rp-NAME), new pairs")
+    parser.add_argument("--rp-gate", default="", help="ptrepair (11 Nov): RUN,REF,MARGIN: run only if Dev-512 saved of RUN >= "
+                        "saved of REF + MARGIN (dev512-NAME/dev_score.json); a missing score = gate closed")
     parser.add_argument("--rp-warmup", type=int, default=2, help="ptrepair (11 Nov): DPO warm-up steps")
     parser.add_argument("--rp-lr-min", type=float, default=None, help="ptrepair (11 Nov): cosine floor (default = --rp-lr: constant)")
     parser.add_argument("--rp-dpo-seed", type=int, default=0, help="ptrepair (11 Nov): DPO seed (adapter init and pair order)")
@@ -3606,6 +3608,18 @@ def ptrepair(args):
     instead of the original's mixed-outcome dp13 questions; --rp-kinds guard keeps only the 21 Oct "be right" pair."""
     name = args.name
     smoke = args.rp_smoke
+    if getattr(args, "rp_gate", ""):  # (11 Nov) path 1: round 2 only if round 1 shortened enough (pre-registered)
+        run_n, ref_n, margin = args.rp_gate.split(",")
+        sc = {}
+        for n in (run_n, ref_n):
+            f = BON / f"dev512-{n}" / "dev_score.json"
+            drive_sync("restore", only=[str(f)])
+            sc[n] = json.loads(f.read_text())["saved"] if f.exists() else None
+        ok = None not in sc.values() and sc[run_n] >= sc[ref_n] + float(margin)
+        print(f"repair {name}: GATE {'OPEN' if ok else 'CLOSED'}: Dev-512 saved {run_n} {sc[run_n]} vs {ref_n} {sc[ref_n]} "
+              f"+ {margin}", flush=True)
+        if not ok:
+            return
     extras = ["nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2"]
     answers = BON / f"lupin-all-dp13-{'-'.join(extras)}-a4.jsonl"
     pt = {g: Path("adapters") / f"lpw-pertype-{g}" for g in PT_MID}
@@ -3702,6 +3716,7 @@ def ptrepair(args):
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
         py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+           "--seed", getattr(args, "rp_dpo_seed", 0),
            *[x for x in args.rp_pair_args.split(",") if x])
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
@@ -3711,7 +3726,7 @@ def ptrepair(args):
     if args.rp_init_from:
         assert (start / "adapter_config.json").exists(), f"{start} is not on Drive"
     elif not (start / "adapter_config.json").exists():
-        py("sft.py", "--init-only", "--model", merged, "--out", start)
+        py("sft.py", "--init-only", "--model", merged, "--out", start, "--seed", getattr(args, "rp_dpo_seed", 0))
     steps = 4 if smoke else args.rp_steps
     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
         py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
@@ -3799,30 +3814,51 @@ P1_IDS = Path("data/p1-round1-ids.json")
 
 
 def p1src(args):
-    """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen) Round 1's material without new generation: the original's 10
-    stored answers per pool question (runs/bon/P1_ANSWERS), keeping only our own sources (no metamath_*, none of the michal-bida
-    top-ups nofit4 / math1 / math2), never a Dev-512 question, and only 60% of the questions (a fixed hash of the id) so that
-    round 2 draws unseen ones (data/p1-round1-ids.json; round 2 passes --rp-exclude-ids). Written as runs/bon/rp-p1src/
-    rollouts.jsonl for ptrepair --rp-rollouts-from p1src."""
+    """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen; revised after both reviews) Round 1's material:
+    (a) the original's 10 STORED answers per pool question (runs/bon/P1_ANSWERS), own sources only (no metamath_*, none of the
+        michal-bida top-ups nofit4 / math1 / math2), never a Dev-512 question nor one sharing an 8-word sequence with Dev-512,
+        and 75% of the questions (a fixed hash of the id; the other 25% stay unseen for round 2);
+    (b) full-difficulty math: the pool's own math is ~660 mostly easy questions, so the original answers 2,200 NEW GSM8K
+        questions (gsm8k_std, SVAMP wording; never Dev-512) x 8 here (~3 GPU-hours).
+    Written as runs/bon/rp-p1src/rollouts.jsonl (+ data/p1-round1-ids.json: round 2 passes --rp-exclude-ids)."""
     import hashlib
+    from build_pool import ngrams, words
     out = BON / "rp-p1src"
     drive_sync("restore", only=[str(out), str(P1_IDS)])
     if (out / "rollouts.jsonl").exists() and P1_IDS.exists():
         print(f"p1src: already built ({sum(1 for _ in open(out / 'rollouts.jsonl'))} answers)", flush=True)
         return
-    banned = set()
-    tops = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit4", "math1", "math2")]
-    drive_sync("restore", only=[str(BON / P1_ANSWERS), *[str(t) for t in tops]])
-    for t in tops:
+    dev = dev_ids()
+    assert dev, "run devset first (Dev-512 must exist before round 1 is drawn)"
+    seen = Counter()  # rare 8-grams of Dev-512 only: shared templates (>= 3 dev questions) are not evidence of a duplicate
+    for l in DEV_FILE.read_text().splitlines():
+        if l.strip():
+            seen.update(ngrams(words(json.loads(l)["prompt"])))
+    dev_grams = {g for g, n in seen.items() if n < 3}
+
+    def near_dev(prompt):  # a near-duplicate: >= 30% of its 8-grams are rare Dev-512 8-grams (the project's contamination rule)
+        g = ngrams(words(prompt))
+        return bool(g) and len(g & dev_grams) / len(g) >= 0.3
+    tops_banned = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit4", "math1", "math2")]
+    tops_own = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit1", "tools1", "code1", "nofit2")]
+    pool = Path("data/pool-dp13.jsonl")
+    drive_sync("restore", only=[str(BON / P1_ANSWERS), str(pool), *[str(t) for t in tops_banned + tops_own]])
+    banned, prompt_of = set(), {}
+    for t in tops_banned:
         assert t.exists(), f"{t} is needed to drop the michal-bida top-ups"
         for l in t.read_text().splitlines():
             if l.strip():
                 q = json.loads(l)
                 banned.add(q.get("pool_id", q.get("id")))
-    dev = dev_ids()
+    for f in [pool, *tops_own]:
+        for l in (f.read_text().splitlines() if f.exists() else []):
+            if l.strip():
+                q = json.loads(l)
+                prompt_of[q.get("pool_id", q.get("id"))] = q.get("prompt")
     keep_ids, n_in, n_out, drop = set(), 0, 0, Counter()
+    near = {}
     out.mkdir(parents=True, exist_ok=True)
-    with open(BON / P1_ANSWERS) as src, open(out / "rollouts.jsonl", "w") as dst:
+    with open(BON / P1_ANSWERS) as src, open(out / "rollouts.part", "w") as dst:
         for line in src:
             if not line.strip():
                 continue
@@ -3832,24 +3868,51 @@ def p1src(args):
                 missing = [k for k in ("prompt_ids", "output_ids", "thinking_ids", "correct", "closed_thinking", "truncated",
                                        "output_tokens", "source") if k not in r]
                 assert not missing, f"the stored answers lack {missing}: cannot build pairs from them"
+            qid = r["id"]
             if str(r["source"]).startswith("metamath"):
                 drop["metamath (michal-bida source)"] += 1
                 continue
-            if r["id"] in banned:
+            if qid in banned:
                 drop["michal-bida top-ups"] += 1
                 continue
-            if r["id"] in dev:
+            if qid in dev:
                 drop["Dev-512"] += 1
                 continue
-            if int(hashlib.md5(str(r["id"]).encode()).hexdigest(), 16) % 10 >= 6:
-                drop["kept for round 2 (40%)"] += 1
+            if qid not in near:
+                pr = prompt_of.get(qid)
+                near[qid] = bool(pr is not None and near_dev(pr))
+            if near[qid]:
+                drop["shares an 8-gram with Dev-512"] += 1
                 continue
-            keep_ids.add(r["id"])
+            if int(hashlib.md5(str(qid).encode()).hexdigest(), 16) % 4 == 0:
+                drop["kept for round 2 (25%)"] += 1
+                continue
+            keep_ids.add(qid)
             dst.write(line if line.endswith("\n") else line + "\n")
             n_out += 1
+    print(f"p1src: {n_out} of {n_in} stored answers kept ({len(keep_ids)} questions); dropped {dict(drop)}", flush=True)
+    # (b) full-difficulty GSM8K math, answered now by the original x 8
+    math = [r for r in own_repair_questions({"svamp": 2200}, seed=31, exclude=dev)
+            if not near_dev(r["prompt"])]
+    data = Path("data/p1-math.jsonl")
+    data.write_text("".join(json.dumps(r) + "\n" for r in math))
+    mroll = BON / "p1-math"
+    drive_sync("restore", only=[str(mroll)])
+    py("probe_curve.py", "--data", data, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
+       "--model", "Qwen/Qwen3-0.6B", "--out", mroll, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+       "--max-questions", len(math), "--seed", 31)
+    drive_sync("save")
+    n_math = 0
+    with open(out / "rollouts.part", "a") as dst:
+        for line in open(mroll / "rollouts.jsonl"):
+            if line.strip():
+                dst.write(line if line.endswith("\n") else line + "\n")
+                n_math += 1
+    keep_ids |= {r["id"] for r in math}
+    (out / "rollouts.part").rename(out / "rollouts.jsonl")
     P1_IDS.parent.mkdir(exist_ok=True)
     P1_IDS.write_text(json.dumps(sorted(keep_ids)))
-    print(f"p1src: {n_out} of {n_in} stored answers kept ({len(keep_ids)} questions); dropped {dict(drop)}", flush=True)
+    print(f"p1src: + {n_math} answers on {len(math)} new GSM8K questions; round 1 = {len(keep_ids)} questions", flush=True)
     drive_sync("save")
 
 

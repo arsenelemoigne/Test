@@ -61,31 +61,43 @@ def main():
     ap.add_argument("--cand", required=True)
     ap.add_argument("--name", required=True)
     ap.add_argument("--out", default="")
+    ap.add_argument("--vs", default="", help="(11 Nov) a reference model's rollouts: paired interval of (candidate - reference)")
     ap.add_argument("--boot", type=int, default=1000)
     args = ap.parse_args()
     base, part = per_question(args.base)
     cand, _ = per_question(args.cand)
+    ref = per_question(args.vs)[0] if args.vs else None
     ids_by_part = defaultdict(list)
     for q in base:
-        if q in cand and part[q] in PARTS:
+        if q in cand and part[q] in PARTS and (ref is None or q in ref):
             ids_by_part[part[q]].append(q)
     saved, acc, rows = headline(base, cand, ids_by_part)
     rng = random.Random(0)
-    boots = []
+    boots, diffs = [], []
     for _ in range(args.boot):
         draw = {p: [rng.choice(ids) for _ in ids] for p, ids in ids_by_part.items()}
         s, a, _ = headline(base, cand, draw)
         boots.append((s, a))
+        if ref is not None:
+            s2, a2, _ = headline(base, ref, draw)
+            diffs.append((s - s2, a - a2))
     ci = lambda xs: (sorted(xs)[int(0.025 * len(xs))], sorted(xs)[int(0.975 * len(xs)) - 1])  # noqa: E731
     cs, ca = ci([b[0] for b in boots]), ci([b[1] for b in boots])
     n = sum(len(v) for v in ids_by_part.values())
     lines = [f"== {args.name} (Dev-512 x8, {n} questions): tokens saved {saved:+.1f}% [{cs[0]:+.1f}, {cs[1]:+.1f}], "
              f"accuracy {acc:+.2f} pts [{ca[0]:+.2f}, {ca[1]:+.2f}] (official weighting, paired bootstrap 95%)"]
     lines.append("   " + "; ".join(f"{p} {100 * (1 - r[3] / r[2]):+.0f}% / {100 * (r[1] - r[0]):+.1f}" for p, r in rows.items()))
+    vs = None
+    if ref is not None:
+        s2, a2, _ = headline(base, ref, ids_by_part)
+        ds, da = ci([d[0] for d in diffs]), ci([d[1] for d in diffs])
+        vs = {"ref": args.vs, "d_saved": round(saved - s2, 2), "d_acc": round(acc - a2, 2), "d_saved_ci": ds, "d_acc_ci": da}
+        lines.append(f"   vs {Path(args.vs).parent.name}: saved {saved - s2:+.1f} [{ds[0]:+.1f}, {ds[1]:+.1f}], "
+                     f"accuracy {acc - a2:+.2f} [{da[0]:+.2f}, {da[1]:+.2f}] (paired)")
     print("\n".join(lines), flush=True)
     if args.out:
         Path(args.out).write_text(json.dumps({"name": args.name, "saved": round(saved, 2), "acc": round(acc, 2),
-                                              "saved_ci": cs, "acc_ci": ca, "questions": n,
+                                              "saved_ci": cs, "acc_ci": ca, "questions": n, "vs": vs,
                                               "parts": {p: {"base_acc": r[0], "acc": r[1], "base_tokens": r[2], "tokens": r[3]}
                                                         for p, r in rows.items()}}, indent=1))
 

@@ -87,7 +87,7 @@ def main():
                     help="guard,shorten: a shorten pair only where this share of the answers is right")
     ap.add_argument("--shorten-ratio", type=float, default=1.5,
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
-    ap.add_argument("--mix-shares", default="shorten=0.30,right=0.55,guard=0.15",
+    ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
     ap.add_argument("--mix-preset", default="", choices=("", "round1"),
                     help="--kinds mix: per-type shares instead of --mix-shares; round1 (consult6 path 1, from the original): "
@@ -111,7 +111,7 @@ def main():
         decode = lambda r: tok.decode(r.get("thinking_ids") or r["output_ids"], skip_special_tokens=True)  # noqa: E731
     rereads = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
-                                "right_cr": [], "capguard": []})
+                                "right_cr": [], "capguard": []})  # mix: right_cr = counting-rule OR compact re-read pairs
     for qid, q in groups.items():
         part = part_of(q[0])
         if part not in quota:
@@ -121,21 +121,23 @@ def main():
         wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
         if args.kinds == "mix":  # (11 Nov) consult6 path 1, round 2: shorten / equal-length right / capped guard
             is_cr = part == "ifeval" and counting(q[0])
-            if (len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not is_cr
-                    and size(rights[-1]) >= args.shorten_ratio * size(rights[0])):
-                cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+            if len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not is_cr:
+                spread = size(rights[-1]) / max(1, size(rights[0]))
+                if spread >= args.shorten_ratio:
+                    cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+                elif spread >= 1.20:  # (11 Nov, consult6 2nd review) backup supply if clear shorten pairs run short
+                    cand[part]["shorten_soft"].append((qid, rights[0], rights[-1]))
             if rights and wrongs:
                 if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
                     rej = wrongs[0]
                     fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
                     if fit:
                         cand[part]["right_cr"].append((qid, min(fit, key=thinking_len), rej))
-                else:
-                    close = [(r, w) for r in rights for w in wrongs if max(size(r), size(w)) <= args.ratio * max(1, min(size(r), size(w)))]
-                    if decode:  # prefer a chosen answer that re-checks the question
-                        close.sort(key=lambda rw: not REREAD.search(decode(rw[0])))
-                    for r, w in close[:4]:
-                        cand[part]["right_long" if size(r) > size(w) else "right_short"].append((qid, r, w))
+                else:  # (11 Nov, both reviews) rpE's proven compact "be right" pair: the shortest right answer that re-checks
+                    # the question (within 1.5x the shortest right's thinking), else the shortest right, over the shortest
+                    # finished wrong; replaces the equal-length pairs (D6 / runa2: equal-length right>wrong halves the saving)
+                    checked = [r for r in rights if decode and thinking_len(r) <= 1.5 * thinking_len(rights[0]) and REREAD.search(decode(r))]
+                    cand[part]["right_cr"].append((qid, (checked or rights)[0], wrongs[0]))
                 med = sorted(size(r) for r in rights)[len(rights) // 2]
                 tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # (11 Nov, review fix) on THINKING length
                 capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
@@ -201,11 +203,13 @@ def main():
         if args.kinds == "mix":
             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
             if args.mix_preset == "round1":
-                sh_share = ({"shorten": 0.35, "right": 0.50, "guard": 0.15} if part in ("svamp", "bfcl_irrelevance") else
-                            {"shorten": 0.275, "right": 0.725, "guard": 0.0} if part == "ifeval" else
-                            {"shorten": 0.50, "right": 0.35, "guard": 0.15})
+                # (11 Nov, both reviews) shorten-dominant round 1: it must reach ~53-57% saved for round 2 to repair
+                sh_share = ({"shorten": 0.60, "right": 0.40, "guard": 0.0} if part in ("svamp", "bfcl_irrelevance") else
+                            {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "ifeval" else
+                            {"shorten": 0.70, "right": 0.30, "guard": 0.0})
             n_sh, n_g = round(sh_share["shorten"] * n), round(sh_share["guard"] * n)
             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
+            sh += take(part, "shorten", cand[part]["shorten_soft"], n_sh - len(sh))
             g = take(part, "guard", cand[part]["capguard"], n_g)
             n_r = n - len(sh) - len(g)  # equal-length right fills any shortfall of the two others
             r = take(part, "right", cand[part]["right_cr"], n_r)
