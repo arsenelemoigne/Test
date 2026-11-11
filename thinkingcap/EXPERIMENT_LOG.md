@@ -5353,3 +5353,12 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   53.8 / -1.5 (each +-1.3 saving, +-1.3 accuracy; three steps looked at). **rpK-20 is the first checkpoint whose estimate sits in
   the goal box**; only a full test can say. Not run: the user's rule is no full test unless asked.
 - GPU 1: od2 round 6 of 10 (720: round 2 11.0 / -0.8, round 4 29.3 / -1.0); Path 1 seed 1 is queued after it.
+- 11 Nov ~09:20-09:50 (user): **four FULL tests queued** (2,759 x 8, then the 720): rpK steps 20 / 60 / 40 on GPU 2 (stopped since ~07:40:
+  it needs the user's restart) and the same list plus Path 1 round 1 step 200 on GPU 1 after od2, before Path 1's seed 1 (a finished
+  test is skipped). fullmodel --fm-merge now accepts the original as base (round 1's adapter). **consult9 (Gemini 4 Argon, cap $10):**
+  analysis of Path 1's round 1 and of rpK with "as much detail as possible" (user): per-question Dev-512 tables for 8 models
+  (downloaded from Drive: the original, rpE-80, p1r1s0-100 / 150 / 200, rpK-20 / 40 / 60), the full test per question and IFEval rule
+  verdicts for 5 models, every pair of round 1 and of rpK (csv + decoded examples), the raw GPU logs, the whole notebook, the dossier,
+  every plan and every earlier review. reviews/consult9_path1_results/. Dev-512 split, rpE-80 -> rpK-60 (thinking + response): math
+  564+9 -> 517+9, code 954+66 -> 723+66, IFEval 146+245 -> 113+275, one function 83+21 -> 68+20, several 92+18 -> 74+18, no fit
+  90+11 -> 72+5: code gives the largest part of rpK's extra saving (-24% tokens at flat Dev accuracy, 49.2 -> 49.4%).
