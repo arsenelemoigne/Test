@@ -3720,9 +3720,40 @@ def ptrepair(args):
     drive_sync("restore", only=[str(pairs)])
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
-        py("repair_pairs.py", "--rollouts", roll / "rollouts.jsonl", "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
-           "--seed", getattr(args, "rp_dpo_seed", 0),
-           *[x for x in args.rp_pair_args.split(",") if x])
+        rolls = [roll / "rollouts.jsonl"]
+
+        def build():
+            py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+               "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
+        build()
+        # (11 Nov, user) fill until full: with --kinds mix the proportion is fixed, so a short part means fewer pairs; on an
+        # own-question draw, answer MORE new questions for the short parts (up to 2 extra batches) and rebuild
+        for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke else 1):
+            short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+            short = {k: v for k, v in short.items() if v > 0.1 * dict((x.split("=")[0], int(x.split("=")[1]))
+                                                                       for x in quota.split(",")).get(k, 0)}
+            if not short:
+                break
+            more = {k: max(100, 3 * v) for k, v in short.items()}
+            taken = {json.loads(l)["id"] for f in rolls for l in open(f) if l.strip()}
+            ex = (excluded_ids(args) or set()) | taken
+            rows_x = [r for r in own_repair_questions(more, seed=args.rp_seed + 100 * extra, exclude=ex,
+                                                       public=getattr(args, "rp_public", False))]
+            print(f"repair {name}: fill until full, batch {extra}: short {short}; answering {len(rows_x)} more questions", flush=True)
+            if not rows_x:
+                break
+            data_x = Path(f"data/repair-{name}-x{extra}.jsonl")
+            data_x.write_text("".join(json.dumps(r) + "\n" for r in rows_x))
+            roll_x = BON / f"rp-{name}-x{extra}"
+            drive_sync("restore", only=[str(roll_x)])
+            if not (roll_x / "rollouts.jsonl").exists():
+                py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+                   args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+                   "--max-questions", len(rows_x), "--seed", 53 + extra)
+                drive_sync("save")
+            rolls.append(roll_x / "rollouts.jsonl")
+            shutil.rmtree(pairs, ignore_errors=True)
+            build()
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
     adapter = Path("adapters") / f"{name}-s0"

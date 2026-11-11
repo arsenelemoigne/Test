@@ -111,7 +111,7 @@ def main():
         decode = lambda r: tok.decode(r.get("thinking_ids") or r["output_ids"], skip_special_tokens=True)  # noqa: E731
     rereads = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
-                                "right_cr": [], "capguard": []})  # mix: right_cr = counting-rule OR compact re-read pairs
+                                "right_cr": [], "capguard": [], "right_count": []})  # mix: right_cr = counting-rule OR compact re-read pairs
     for qid, q in groups.items():
         part = part_of(q[0])
         if part not in quota:
@@ -132,7 +132,7 @@ def main():
                     rej = wrongs[0]
                     fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
                     if fit:
-                        cand[part]["right_cr"].append((qid, min(fit, key=thinking_len), rej))
+                        cand[part]["right_count"].append((qid, min(fit, key=thinking_len), rej))
                 else:  # (11 Nov, both reviews) rpE's proven compact "be right" pair: the shortest right answer that re-checks
                     # the question (within 1.5x the shortest right's thinking), else the shortest right, over the shortest
                     # finished wrong; replaces the equal-length pairs (D6 / runa2: equal-length right>wrong halves the saving)
@@ -180,6 +180,7 @@ def main():
         for r, w in close:
             cand[part]["right_long" if r["output_tokens"] > w["output_tokens"] else "right_short"].append((qid, r, w))
     pairs, counts = [], Counter()
+    shortfall = {}  # (11 Nov) part -> pairs missing to reach the quota at the fixed mix (written to shortfall.json)
     per_q, right_q, used = Counter(), Counter(), set()
 
     def take(part, kind, pool, n):
@@ -207,14 +208,38 @@ def main():
                 sh_share = ({"shorten": 0.60, "right": 0.40, "guard": 0.0} if part in ("svamp", "bfcl_irrelevance") else
                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "ifeval" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
-            n_sh, n_g = round(sh_share["shorten"] * n), round(sh_share["guard"] * n)
+            # (11 Nov, user) the PROPORTION is fixed, the total is not: if one kind runs short, every kind shrinks with it
+            # (before: "be right" pairs silently filled a "shorter" shortfall, changing the mix)
+            # IFEval: counting-rule questions never get "shorter" pairs, so they hold their own fixed half of the quota
+            # (counting-rule be-right pairs); the mix below applies to the other half (non-counting questions)
+            cnt = take(part, "right", cand[part]["right_count"], n // 2) if cand[part]["right_count"] else []
+            n_full, n = n, n - len(cnt)
+            supply = {"shorten": len(cand[part]["shorten"]) + len(cand[part]["shorten_soft"]),
+                      "guard": len(cand[part]["capguard"]),
+                      "right": len(cand[part]["right_cr"]) + len(cand[part]["right_long"]) + len(cand[part]["right_short"])}
+            # the ratio that matters is "think less" : "be right"; the rare early-stop guards are part of the "be right" side
+            # (a part with few of them is not cut to zero: right pairs take their place inside that side)
+            total = n
+            if sh_share["shorten"] > 0:
+                total = min(total, int(supply["shorten"] / sh_share["shorten"]))
+            be_right = sh_share["right"] + sh_share["guard"]
+            if be_right > 0:
+                total = min(total, int((supply["right"] + supply["guard"]) / be_right))
+            n_sh = round(sh_share["shorten"] * total)
+            n_g = min(supply["guard"], round(sh_share["guard"] * total))
+            n_r = total - n_sh - n_g
             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
             sh += take(part, "shorten", cand[part]["shorten_soft"], n_sh - len(sh))
             g = take(part, "guard", cand[part]["capguard"], n_g)
-            n_r = n - len(sh) - len(g)  # equal-length right fills any shortfall of the two others
             r = take(part, "right", cand[part]["right_cr"], n_r)
             r_long = take(part, "right", cand[part]["right_long"], (n_r - len(r)) // 2)
             r += r_long + take(part, "right", cand[part]["right_short"], n_r - len(r) - len(r_long))
+            r += cnt
+            if total < n:
+                counts[(part, "MIX KEPT: total cut to")] = f"{total} of {n} (the scarcest kind limits it)"
+            if total + len(cnt) < n_full:
+                shortfall[part] = n_full - total - len(cnt)
+            n = n_full
             by_part[part] = sh + g + r
             for kind, got in (("shorten", sh), ("guard (capped)", g), ("right (equal length)", r)):
                 counts[(part, kind)] += len(got)
@@ -282,6 +307,7 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in pairs))
+    (out / "shortfall.json").write_text(json.dumps(shortfall))
     lines = [f"{len(pairs)} pairs ({len(per_q)} questions)"]
     for (part, what), n in sorted(counts.items()):
         lines.append(f"  {part} / {what}: {n}")
