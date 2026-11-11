@@ -5456,3 +5456,13 @@ Step 20: math 51 / +1.7, code 52 / +3.5, IFEval 50 / -2.7 (132+221), tools 45-51
 - 11 Nov ~14:00 (user: "run rpL full eval tests steps 60 and 40", "queue them for after"): queued without displacing a queued test:
   GPU 1 = full test of p1r1s0-200 (running) -> **full test of rpL-60** -> p1br1s0; GPU 2 = full test of rpK-60 (running) -> rpK-40 ->
   **full test of rpL-40**. od2 finished (GPU 1 moved on at ~13:20).
+
+## 11 Nov ~15:10 — rpK step 60, FULL TEST (2,759 x 8): **54.4% saved / -1.4** (official weighting)
+Per type (rpK-20's full test, then rpE-80's, in brackets): math 61 / -2.3 (58 / -2.6; 54 / -1.2), code 55 / -1.2 (51 / -0.3; 46 / -1.0),
+IFEval 49 / -3.0 (45 / -3.1; 45 / -2.6), one function 45 / -1.5 (40 / +0.3; 37 / +0.1), several 48 / -1.0 (42 / -1.5; 39 / +0.1), no fit
+62 / +6.2 (54 / +3.6; 50 / +3.4). **vs curve +2.38: the highest of any full test** (rpI-120 +1.64, rpK-20 +1.57, rpE-80 +1.45).
+- 4.5 points more saving than rpK-20 for 0.1 point of accuracy; 7.4 points more than rpE-80 for 0.5. Outside the box on accuracy
+  only (-1.4 for -1.0), with 4.4 points of saving to spare.
+- Dev-512 predicted it well this time: paired +6.8 / -0.60 against rpE-80 -> 53.8 / -1.5; measured 54.4 / -1.4.
+- Where the accuracy sits: IFEval -3.0 (0.75 point of the headline), math -2.3 (0.58), code -1.2 (0.30), one function -1.5; no
+  fit +6.2 lifts the tool-call benchmark to +0.8. A straight line from rpE-80 to rpK-60 passes 50% saved at about -1.1.
