@@ -5658,3 +5658,12 @@ Method note: every stage of the line (A1, A2, ca1, rc1, rpE, rpK / rpL / rpM) is
 no RL); close to iterative DPO / Iterative RPO (Pang et al. 2024) but rpK / rpL / rpM each ran ONE round on rpE-80's older answers.
 - 11 Nov ~23:50 (user) **clean-round strategy asked from the user's Delos worker (Gemini 4 Argon through its chat/completions endpoint,
   key in the Keychain as delos-worker-key-thinkingcap)**, with all the data so far; reviews/consult13_worker_clean/.
+- 11 Nov ~00:05 (user) consult13's spending cap removed (cap set to $100,000; report reserve $3 kept so the report is always written).
+
+### 11 Nov ~23:55 — rpL-40 full test (2,759 x 8, GPU 2)
+rpL-40 (rpE-80 + rpL step 40): **tokens saved +55.1% [54.0, 56.2], accuracy -1.37 pts [-2.09, -0.68]**.
+Per type: bfcl_irrelevance +58% / +3.9; bfcl_multiple +45% / -0.6; bfcl_simple_python +43% / -0.3; ifeval +55% / -3.0;
+mbpp +57% / -1.8; svamp +60% / -1.5. Same accuracy as rpK-60 (54.4 / -1.4) at +0.7 pts more saving; rpL-60 59.3 / -1.7.
+Outside the box (accuracy). IFEval remains the main loss.
+Note: the consult13 worker report (Gemini via the Delos worker endpoint, $0.78) was judged weak by the user and is discarded;
+the clean-recipe review goes back to the OpenRouter Argon harness (as consult6-12).
