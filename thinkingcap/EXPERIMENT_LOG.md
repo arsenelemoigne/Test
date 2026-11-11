@@ -5610,3 +5610,4 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   rpK-40, rpL-60 and rpM-60 answer them x4; per set: saved %, accuracy change with a paired 95% interval, runaways. Not run locally
   (no `datasets` on the Mac): first run on the GPU.
 - 11 Nov ~21:00 (user: compare the competitors' generalisation) transfer check extended to the competitors' PUBLIC weights: basta/lightning-mcqwen3 (Hub LoRA, gate not used), matousek-martin Self-Replay 850 and 256 (GitHub release v0.1.2 zips), mrtineu/thinkingcap-test-submission (full model on the Hub). michal-bida and Herz1c published no weights. Measurement only (track.py competitor_model, kept off Drive).
+- 11 Nov ~21:15 (user) transfer models: ours rpK-40, rpK-60, rpL-40, rpL-60; competitors basta, matousek 850 / 256 (mrtineu dropped). michal-bida and Herz1c: no public weights anywhere (Hub search, their GitHub repos incl. bida's thinking-compression branch, releases).
