@@ -498,7 +498,8 @@ def task_prompt(args):
                                          "consult-path1results": "astra_prompt_consult_path1results.txt",
                                          "consult-after-rpk20": "astra_prompt_consult_after_rpk20.txt",
                                          "consult-full-scores": "astra_prompt_consult_full_scores.txt",
-                                         "consult-box": "astra_prompt_consult_box.txt"}.get(
+                                         "consult-box": "astra_prompt_consult_box.txt",
+                                         "consult-clean": "astra_prompt_consult_clean.txt"}.get(
                                          getattr(args, "task", "edit"), "astra_prompt.txt"))).read_text()
     note = ("\n\nTHIS IS A SHORT TEST SESSION ON A LAPTOP CPU: the practice set is 12 easy math word problems (graded by the "
             "final number); a generation pass takes at most 8 generations per model of at most 768 tokens; a teacher-forced "
@@ -694,7 +695,7 @@ def run_main(args, llm=None, forward=None):
     budget = Budget(args.cap_usd, st["spent_usd"])
     if args.provider == "google":  # Argon: exact cost from the native usage (cached / uncached / thinking), any context size
         budget.google = True
-    if args.provider == "openrouter" and "gemini" in args.llm:  # (10 Nov) Gemini 4 via OpenRouter: its worst-case prices
+    if args.provider in ("openrouter", "delos") and "gemini" in args.llm:  # (10 Nov) Gemini 4 via OpenRouter: its worst-case prices
         budget.price_in, budget.price_out = 4e-6, 20e-6        # (2x the $2 / $10 list, the >200k tier); exact cost comes back
     kernel = Kernel(args)
     if forward is None:
@@ -966,7 +967,7 @@ def main():
     p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
-    p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review", "consult-ladder", "consult-path2", "consult-path1final", "consult-path1results", "consult-after-rpk20", "consult-full-scores", "consult-box"),
+    p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review", "consult-ladder", "consult-path2", "consult-path1final", "consult-path1results", "consult-after-rpk20", "consult-full-scores", "consult-box", "consult-clean"),
                    help="consult (4 Nov, user): strategy analysis only, no forward passes, our work never mentioned")
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
     p.add_argument("--cpu-items", type=int, default=8, help="--cpu: generations per model per pass")

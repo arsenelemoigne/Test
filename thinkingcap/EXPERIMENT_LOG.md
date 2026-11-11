@@ -5638,3 +5638,23 @@ Per type (rpK-40's full test in brackets): math 58 / -1.5 (58 / -2.3), code 56 /
 - 11 Nov ~22:45 (user note, verified in the READMEs) Herz1c's own held-out checks: 0.6B HumanEval (164 x4) 65.0% saved [62.0, 67.9] / -1.22 [-5.03, +2.74]; 1.7B HumanEval 58.4% / -0.76, MATH-500 (313 x4, graded format-independently) 11.4% / +4.8; both sizes save least and gain accuracy on the hardest MATH-500 levels. Our transfer check (HumanEval 164 x8, MATH-500 whole-number 200 x8) compares directly; our MATH-500 grading needs the 'Final answer:' line.
 - 11 Nov ~23:00 transfer check part 1 FAILED on GPU 2 (NameError: prepare_types.py defined the tr_* builders after its __main__ call); fixed (block moved before the guard) and re-queued on GPU 2 after the rpL-80 full test. GPU 1's part 2 will use the fixed code. rpL step 120, Dev-512: 66.4% / -4.59 (one function -40.8, several -13.9): collapse confirmed.
 - 11 Nov ~23:10 (user) transfer check: MATH-500 now ALL its whole-number problems (up to 500, was 200) and scored by difficulty level 1-5, as Herz1c reports it.
+
+## 11 Nov ~23:50 — state before the clean-recipe review (log update, user)
+Full tests (2,759 x 8) of the typed repair line (all from rpE-80 = 47.0 / -0.9):
+| model | saved / accuracy | math | code | IFEval | one function | several | no fit |
+| rpK-20 | 49.9 / -1.3 | 58 / -2.6 | 51 / -0.3 | 45 / -3.1 | 40 / +0.3 | 42 / -1.5 | 54 / +3.6 |
+| **rpK-40** | **51.2 / -0.8 (IN THE BOX)** | 58 / -2.3 | 52 / -0.1 | 46 / -1.9 | 41 / +0.3 | 45 / -0.8 | 58 / +4.7 |
+| rpK-60 | 54.4 / -1.4 | 61 / -2.3 | 55 / -1.2 | 49 / -3.0 | 45 / -1.5 | 48 / -1.0 | 62 / +6.2 |
+| rpM-40 | 52.9 / -1.1 | 58 / -1.5 | 56 / -1.7 | 50 / -2.5 | 41 / +0.3 | 44 / 0.0 | 57 / +4.1 |
+| rpL-60 | 59.3 / -1.7 | 64 / -2.7 | 62 / -0.9 | 58 / -3.4 | 47 / -2.0 | 49 / -0.6 | 62 / +4.6 |
+| Path 1 round 1 (from the original) | 43.4 / -1.5 | 59 / -3.2 | 44 / -3.3 | 23 / +0.4 | 40 / -0.2 | 42 / +1.2 | 45 / +0.4 |
+Dev-512 only so far: rpM-20 49.3 / +0.49, rpM-40 52.6 / +0.91, **rpM-60 54.9 / +2.24 (paired vs rpE-80 +8.0 / +0.87)**; rpL-80 62.1 / -0.30,
+rpL-100 66.2 / -3.95, rpL-120 66.4 / -4.59 (one function -31.9 / -40.8: the model stops calling tools); p1cr1s0 (Path 1 round 1, third
+version) 34.6 / 32.4 / 34.4 saved at +2.0 / +2.5 / +2.9 (steps 100 / 150 / 200): accurate but barely shortens.
+Running: full tests of rpL-40, rpL-80 (GPU 2), rpM-60 (restarted after GPU 1 disconnected), rpM-20 (GPU 1); then rpN (accuracy-only repair
+of rpL-60) and the transfer check (MATH-500 by level, Skywork, ARC-C, CSQA, MMLU, HumanEval x8: original, rpK-40, rpL-40, rpL-60, our
+michal-bida replica, basta, matousek 850).
+Method note: every stage of the line (A1, A2, ca1, rc1, rpE, rpK / rpL / rpM) is offline DPO on the model's own graded answers (no SFT,
+no RL); close to iterative DPO / Iterative RPO (Pang et al. 2024) but rpK / rpL / rpM each ran ONE round on rpE-80's older answers.
+- 11 Nov ~23:50 (user) **clean-round strategy asked from the user's Delos worker (Gemini 4 Argon through its chat/completions endpoint,
+  key in the Keychain as delos-worker-key-thinkingcap)**, with all the data so far; reviews/consult13_worker_clean/.
