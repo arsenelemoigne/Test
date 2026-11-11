@@ -5553,3 +5553,11 @@ model at this saving, rc1-soup-30, read 57.4 / -3.5.
 - Outside the box on accuracy only, with 9.3 points of saving to spare. Where the accuracy sits: IFEval -3.4 (0.85 point of the
   headline), math -2.7 (0.68), code -0.9 (0.22), one function -2.0. A straight line from rpE-80 to rpL-60 passes 50% saved at about
   -1.1: mixing weights is not enough; an accuracy repair that spends part of the spare saving is the open route.
+
+## 11 Nov ~17:05 — rpK step 40, FULL TEST (2,759 x 8): **51.2% saved / -0.8: THE FIRST FULL TEST INSIDE THE GOAL BOX** (> 50% at better than -1)
+Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0.3, several 45 / -0.8, no fit 58 / +4.7 (headline accuracy
+-0.75 before rounding). vs curve +2.33. rpK = rpE-80 + 40 steps of the typed repair ("think less" only on IFEval and tool calls).
+- Caution: its neighbours on the same run read 49.9 / -1.3 (step 20) and 54.4 / -1.4 (step 60); step 40's IFEval is -1.9 where
+  both neighbours are near -3.0. One full test carries about +-0.7 accuracy and +-1.2 saving: part of this is luck, and the
+  margin is thin (1.2 points of saving, 0.2 of accuracy). Dev-512 had ranked step 40 below step 20 on accuracy.
+- consult9 and consult10 both advised dropping this test as the least informative; the user asked for it.
