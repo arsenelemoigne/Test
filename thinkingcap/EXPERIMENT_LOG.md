@@ -5634,3 +5634,4 @@ Per type (rpK-40's full test in brackets): math 58 / -1.5 (58 / -2.3), code 56 /
   "think less" pairs over-train the tool-call threshold: the model declines real calls. rpL's useful range ends at step 60-80.
 - GPU 1 relaunched (~22:20, user reconnected): code at 657adbc, queue = rpM-60 full test (from zero) -> rpM-20 full test -> rpN -> transfer
   part 2.
+- 11 Nov ~22:35 (user) full test of rpL-80 queued on GPU 2 after rpL-40's.
