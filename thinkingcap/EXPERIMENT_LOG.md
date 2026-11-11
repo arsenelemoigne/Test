@@ -5599,3 +5599,7 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   read rpK-60's paired difference right (+6.8 / -0.60 -> full 54.4 / -1.4): applied to rpE-80's full test (47.0 / -0.9) this reads
   ~55 / ~0.0; rpK-20's case was 0.5 too kind, so a fair guess for the full test is 54-55% at -0.1 to -0.6.
 - p1cr1s0 step 100, Dev-SVAMP-200: 37.7 / +2.06 (paired vs p1r1s0-200 -17.2 / +3.44).
+- rpM step 60, Dev-SVAMP-200: 51.4 / +3.12 (paired vs rpE-80 ~0.0 accuracy, as rpK-60's). GPU 2 started the full test of rpM-40 (~20:15).
+- **p1cr1s0 step 150, Dev-512: 32.4% / +2.51** (step 100: 34.6 / +2.03): the saving SHRINKS with more steps (math thinking 703 -> 802 tokens,
+  code 1218 -> 1302); paired vs the first round 1 -13.5 / +2.39. Dev-SVAMP 28.1 / +2.62. The extra be-right / guard / anti-loop pairs in
+  round 1 hold the model long: it moves along the curve toward accuracy, not toward 50%.
