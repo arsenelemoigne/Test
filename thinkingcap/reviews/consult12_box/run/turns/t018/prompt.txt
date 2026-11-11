@@ -1,0 +1,8 @@
+ft_a_models: <StringArray>
+[   'base', 'nothink',     'rc1',   'rpE80',  'rpI120',   'rpK20',   'rpK40',
+   'rpK60',   'rpL60',  'p1r1s0']
+Length: 10, dtype: str
+ft_if_models: <StringArray>
+[   'base', 'nothink',     'rc1',   'rpE80',  'rpI120',   'rpK20',   'rpK40',
+   'rpK60',   'rpL60',  'p1r1s0']
+Length: 10, dtype: str

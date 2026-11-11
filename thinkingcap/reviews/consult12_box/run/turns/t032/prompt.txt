@@ -1,0 +1,30 @@
+
+=== bfcl_simple_python (N=400) ===
+  base   : acc 82.16% ( +0.00) | call 97.03% ( +0.00) | acc|call 84.67% | thk 170.6 + rsp 24.2
+  rpE80  : acc 82.25% ( +0.09) | call 97.00% ( -0.03) | acc|call 84.79% | thk  98.0 + rsp 24.1
+  rpI120 : acc 82.31% ( +0.16) | call 96.81% ( -0.22) | acc|call 85.02% | thk  99.0 + rsp 23.9
+  rpK20  : acc 82.44% ( +0.28) | call 97.19% ( +0.16) | acc|call 84.82% | thk  93.8 + rsp 24.1
+  rpK40  : acc 82.41% ( +0.25) | call 96.66% ( -0.38) | acc|call 85.26% | thk  88.8 + rsp 25.3
+  rpK60  : acc 80.69% ( -1.47) | call 95.75% ( -1.28) | acc|call 84.27% | thk  82.5 + rsp 23.8
+  rpL60  : acc 80.19% ( -1.97) | call 96.09% ( -0.94) | acc|call 83.45% | thk  79.5 + rsp 23.8
+  p1r1s0 : acc 81.91% ( -0.25) | call 97.34% ( +0.31) | acc|call 84.14% | thk  93.0 + rsp 24.0
+
+=== bfcl_multiple (N=200) ===
+  base   : acc 76.06% ( +0.00) | call 95.00% ( +0.00) | acc|call 80.07% | thk 192.2 + rsp 23.6
+  rpE80  : acc 76.12% ( +0.06) | call 96.56% ( +1.56) | acc|call 78.83% | thk 107.4 + rsp 23.4
+  rpI120 : acc 75.19% ( -0.88) | call 95.69% ( +0.69) | acc|call 78.58% | thk 109.6 + rsp 23.3
+  rpK20  : acc 74.56% ( -1.50) | call 96.06% ( +1.06) | acc|call 77.62% | thk 101.8 + rsp 23.5
+  rpK40  : acc 75.25% ( -0.81) | call 95.94% ( +0.94) | acc|call 78.44% | thk  95.8 + rsp 23.6
+  rpK60  : acc 75.06% ( -1.00) | call 95.81% ( +0.81) | acc|call 78.34% | thk  89.4 + rsp 23.5
+  rpL60  : acc 75.44% ( -0.62) | call 95.88% ( +0.88) | acc|call 78.68% | thk  86.3 + rsp 23.2
+  p1r1s0 : acc 77.31% ( +1.25) | call 97.56% ( +2.56) | acc|call 79.24% | thk 101.2 + rsp 23.9
+
+=== bfcl_irrelevance (N=240) ===
+  base   : acc 83.39% ( +0.00) | call 16.61% ( +0.00) | acc|call   nan% | thk 185.8 + rsp 27.0
+  rpE80  : acc 86.82% ( +3.44) | call 13.18% ( -3.44) | acc|call   nan% | thk  96.4 + rsp 11.0
+  rpI120 : acc 89.22% ( +5.83) | call 10.78% ( -5.83) | acc|call   nan% | thk  94.8 + rsp 10.7
+  rpK20  : acc 87.03% ( +3.65) | call 12.97% ( -3.65) | acc|call   nan% | thk  90.5 + rsp  7.8
+  rpK40  : acc 88.07% ( +4.69) | call 11.93% ( -4.69) | acc|call   nan% | thk  83.7 + rsp  5.4
+  rpK60  : acc 89.58% ( +6.20) | call 10.42% ( -6.20) | acc|call   nan% | thk  76.2 + rsp  4.9
+  rpL60  : acc 88.02% ( +4.64) | call 11.98% ( -4.64) | acc|call   nan% | thk  74.7 + rsp  5.2
+  p1r1s0 : acc 83.80% ( +0.42) | call 16.20% ( -0.42) | acc|call   nan% | thk  97.6 + rsp 20.1

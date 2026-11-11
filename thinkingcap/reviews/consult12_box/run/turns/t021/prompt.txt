@@ -1,0 +1,10 @@
+base     | prompt_pass (all):  58.73% | prompt_pass (no runaway):  57.76% | inst_pass:  68.54%
+nothink  | prompt_pass (all):  57.46% | prompt_pass (no runaway):  56.59% | inst_pass:  67.51%
+p1r1s0   | prompt_pass (all):  59.15% | prompt_pass (no runaway):  57.56% | inst_pass:  69.69%
+rc1      | prompt_pass (all):  56.24% | prompt_pass (no runaway):  55.57% | inst_pass:  67.12%
+rpE80    | prompt_pass (all):  56.17% | prompt_pass (no runaway):  55.38% | inst_pass:  67.42%
+rpI120   | prompt_pass (all):  57.16% | prompt_pass (no runaway):  56.26% | inst_pass:  67.94%
+rpK20    | prompt_pass (all):  55.66% | prompt_pass (no runaway):  54.85% | inst_pass:  66.97%
+rpK40    | prompt_pass (all):  56.86% | prompt_pass (no runaway):  55.91% | inst_pass:  67.84%
+rpK60    | prompt_pass (all):  55.73% | prompt_pass (no runaway):  54.76% | inst_pass:  67.07%
+rpL60    | prompt_pass (all):  55.36% | prompt_pass (no runaway):  54.97% | inst_pass:  66.73%

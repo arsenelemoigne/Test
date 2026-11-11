@@ -122,7 +122,7 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -404,6 +404,15 @@ def main():
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
                 count_share = 0.20
+            if args.mix_preset == "hold":
+                # (11 Nov, rpN, consult12) an ACCURACY-ONLY repair of an already shortened model: no "think less" pair on any
+                # type; math: widened guards + length-matched be-right; code: be-right / guards / loops; IFEval: 40% length-rule
+                # counting pairs, the rest be-right with 15% response loops; tool calls: be-right only
+                sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+                            {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+                            {"shorten": 0.0, "right": 0.85, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+                            {"shorten": 0.0, "right": 1.0, "guard": 0.0})
+                count_share = 0.40
             sh_share.setdefault("loop", 0.0)
             # (11 Nov, user) HARD RULE: the PROPORTION is fixed, the total is not. Pairs are taken, then every side is cut
             # back to the scarcest one, so the final file holds exactly the set mix whatever ran short (a short supply, a

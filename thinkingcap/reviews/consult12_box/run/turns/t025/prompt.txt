@@ -1,0 +1,21 @@
+Within-question sample correlation of accuracy (resid_r):
+model   base  rpE80  rpK20  rpK40  rpK60  rpL60
+model                                          
+base   1.000  0.022  0.025  0.009 -0.005 -0.002
+rpE80  0.022  1.000  0.185  0.115  0.077  0.072
+rpK20  0.025  0.185  1.000  0.225  0.093  0.101
+rpK40  0.009  0.115  0.225  1.000  0.214  0.163
+rpK60 -0.005  0.077  0.093  0.214  1.000  0.225
+rpL60 -0.002  0.072  0.101  0.163  0.225  1.000
+base   | Pure 8-sample MC SE (single model, fixed 2759 Qs): Saved +- 0.488% (95% CI +- 0.96%), Acc +- 0.196 pts (95% CI +- 0.38 pts)
+   Per part SE (saved%, acc_pts): {'bfcl_pooled': (np.float64(0.654), np.float64(0.274)), 'ifeval': (np.float64(1.193), np.float64(0.461)), 'mbpp': (np.float64(1.181), np.float64(0.516)), 'svamp': (np.float64(0.752), np.float64(0.248))}
+rpE80  | Pure 8-sample MC SE (single model, fixed 2759 Qs): Saved +- 0.327% (95% CI +- 0.64%), Acc +- 0.200 pts (95% CI +- 0.39 pts)
+   Per part SE (saved%, acc_pts): {'bfcl_pooled': (np.float64(0.135), np.float64(0.269)), 'ifeval': (np.float64(1.015), np.float64(0.44)), 'mbpp': (np.float64(0.761), np.float64(0.546)), 'svamp': (np.float64(0.353), np.float64(0.276))}
+rpK20  | Pure 8-sample MC SE (single model, fixed 2759 Qs): Saved +- 0.323% (95% CI +- 0.63%), Acc +- 0.195 pts (95% CI +- 0.38 pts)
+   Per part SE (saved%, acc_pts): {'bfcl_pooled': (np.float64(0.119), np.float64(0.26)), 'ifeval': (np.float64(1.092), np.float64(0.434)), 'mbpp': (np.float64(0.698), np.float64(0.522)), 'svamp': (np.float64(0.323), np.float64(0.285))}
+rpK40  | Pure 8-sample MC SE (single model, fixed 2759 Qs): Saved +- 0.340% (95% CI +- 0.67%), Acc +- 0.198 pts (95% CI +- 0.39 pts)
+   Per part SE (saved%, acc_pts): {'bfcl_pooled': (np.float64(0.307), np.float64(0.267)), 'ifeval': (np.float64(1.166), np.float64(0.433)), 'mbpp': (np.float64(0.722), np.float64(0.538)), 'svamp': (np.float64(0.299), np.float64(0.284))}
+rpK60  | Pure 8-sample MC SE (single model, fixed 2759 Qs): Saved +- 0.315% (95% CI +- 0.62%), Acc +- 0.199 pts (95% CI +- 0.39 pts)
+   Per part SE (saved%, acc_pts): {'bfcl_pooled': (np.float64(0.088), np.float64(0.271)), 'ifeval': (np.float64(1.077), np.float64(0.442)), 'mbpp': (np.float64(0.716), np.float64(0.534)), 'svamp': (np.float64(0.282), np.float64(0.283))}
+rpL60  | Pure 8-sample MC SE (single model, fixed 2759 Qs): Saved +- 0.272% (95% CI +- 0.53%), Acc +- 0.200 pts (95% CI +- 0.39 pts)
+   Per part SE (saved%, acc_pts): {'bfcl_pooled': (np.float64(0.079), np.float64(0.273)), 'ifeval': (np.float64(0.871), np.float64(0.433)), 'mbpp': (np.float64(0.573), np.float64(0.549)), 'svamp': (np.float64(0.264), np.float64(0.281))}

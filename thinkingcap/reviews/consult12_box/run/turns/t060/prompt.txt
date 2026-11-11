@@ -1,0 +1,55 @@
+381:                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
+382:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+383:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+384:                 count_share = 0.20
+385:             if args.mix_preset == "typed3":
+386:                 # (11 Nov, rpM, consult10 after rpK-20's full test and rpL) math: NO "shorter", NO anti-loop, half widened guards
+387:                 # and half length-held be-right; code as rpL; IFEval: 25% counting pairs (true length rules), 45% "shorter"
+388:                 # (questions without a counting rule, response held), 22.5% be-right, 7.5% response loops; several functions 50 / 50
+389:                 sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+390:                             {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+391:                             {"shorten": 0.60, "right": 0.30, "guard": 0.0, "loop": 0.10} if part == "ifeval" else
+392:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+393:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+394:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+395:                 count_share = 0.25
+396:             if args.mix_preset == "round1c":
+397:                 # (11 Nov, Path 1's round 1 redesigned, consult10's edits to round1b) math 45% shorter / 35% be-right / 15% widened
+398:                 # guards / 5% anti-loop (the first round 1 over-cut math); code 70 / 13 / 10 / 7; IFEval as rpM with 20% counting
+399:                 # pairs; several functions 50 / 50; anti-loop pairs 144 instead of 360
+400:                 sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
+401:                             {"shorten": 0.70, "right": 0.13, "guard": 0.10, "loop": 0.07} if part == "mbpp" else
+402:                             {"shorten": 0.55, "right": 0.375, "guard": 0.0, "loop": 0.075} if part == "ifeval" else
+403:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+404:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+405:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+406:                 count_share = 0.20
+407:             sh_share.setdefault("loop", 0.0)
+408:             # (11 Nov, user) HARD RULE: the PROPORTION is fixed, the total is not. Pairs are taken, then every side is cut
+409:             # back to the scarcest one, so the final file holds exactly the set mix whatever ran short (a short supply, a
+410:             # question's pair limit, or the same pair proposed by two kinds); nothing is ever refilled by another kind.
+411:             # IFEval: counting-rule questions never get "shorter" pairs; their be-right pairs hold a FIXED half of the quota
+412:             # and the mix below holds the other half, 1 : 1 (before: a short counting half let the other half grow)
+413:             want_cnt = int(round(count_share * n)) if cand[part]["right_count"] else 0
+414:             cnt = take(part, "right", cand[part]["right_count"], want_cnt)
+415:             n_full, n_mix = n, n - want_cnt
+416:             s_sh, s_br = sh_share["shorten"], sh_share["right"] + sh_share["guard"] + sh_share["loop"]
+417:             n_sh = int(round(s_sh * n_mix))
+418:             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
+419:             sh += take(part, "shorten", cand[part]["shorten_soft"], n_sh - len(sh))
+420:             n_br = n_mix - n_sh
+421:             # (no call at all without a loop share: take() shuffles its pool, and an extra shuffle would change which pairs
+422:             # the older presets pick: rpK's and round 1's files must stay reproducible)
+423:             lp = take(part, "loop", cand[part]["loop"], min(n_br, int(round(sh_share["loop"] * n_mix)))) if sh_share["loop"] > 0 else []
+424:             g = take(part, "guard", [c for c in cand[part]["capguard"] if c[0] not in {p["id"] for p in lp}],
+425:                      min(n_br - len(lp), int(round(sh_share["guard"] * n_mix))))
+426:             guarded = {p["id"] for p in g + lp}  # one be-right pair per question: a guarded / looping question gives no second one
+427:             r = take(part, "right", [c for c in cand[part]["right_cr"] if c[0] not in guarded], n_br - len(g) - len(lp))
+428:             g = g + lp  # from here the anti-loop pairs travel with the guards (both are the be-right side's rare kinds)
+429:             total = float(n_mix)
+430:             if s_sh > 0:
+431:                 total = min(total, len(sh) / s_sh)
+432:             if s_br > 0:
+433:                 total = min(total, (len(g) + len(r)) / s_br)
+434:             if want_cnt:
+435:                 total = min(total, len(cnt) * n_mix / want_cnt)

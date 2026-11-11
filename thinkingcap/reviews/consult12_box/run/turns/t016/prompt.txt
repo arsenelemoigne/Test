@@ -1,0 +1,8 @@
+base: 2759 non-null rows out of 2759
+rpE80: 2759 non-null rows out of 2759
+rpI120: 2759 non-null rows out of 2759
+rpK20: 2759 non-null rows out of 2759
+rpK40: 2759 non-null rows out of 2759
+rpK60: 2759 non-null rows out of 2759
+rpL60: 2759 non-null rows out of 2759
+p1r1s0: 2759 non-null rows out of 2759

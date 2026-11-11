@@ -1,0 +1,23 @@
+rpL_pairs columns: ['position', 'id', 'part', 'kind', 'chosen_thinking', 'chosen_response', 'rejected_thinking', 'rejected_response']
+
+rpL_pairs breakdown by part and kind:
+kind                guard  loop  right  shorten   All
+part                                                 
+bfcl_irrelevance        0     0     56       84   140
+bfcl_multiple           0     0     36       84   120
+bfcl_simple_python      0     0     48      112   160
+ifeval                  0    48    112      160   320
+mbpp                   32    14    114        0   160
+svamp                  32    16    112        0   160
+All                    64    78    478      440  1060
+
+rpM_pairs breakdown by part and kind:
+kind                guard  loop  right  shorten   All
+part                                                 
+bfcl_irrelevance        0     0     56       84   140
+bfcl_multiple           0     0     60       60   120
+bfcl_simple_python      0     0     48      112   160
+ifeval                  0    24    148      141   313
+mbpp                   32    14    114        0   160
+svamp_hard            120     0    120        0   240
+All                   152    38    546      397  1133

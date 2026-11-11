@@ -1,0 +1,94 @@
+=== raw_logs/gpu2_night_key_lines.txt (tail) ===
+ackup) / capped guard / be right / counting rule: 1565 + 52 / 174 / 1004 / 0
+  svamp / guard (capped): 32
+  svamp / shorten: 0
+  svamp: median chosen / rejected tokens 344 / 347; chosen longer in 50%
+  mbpp: median chosen / rejected tokens 525 / 507; chosen longer in 59%
+  ifeval: median chosen / rejected tokens 204 / 236; chosen longer in 45%
+  bfcl_simple_python: median chosen / rejected tokens 82 / 118; chosen longer in 12%
+  bfcl_multiple: median chosen / rejected tokens 91 / 120; chosen longer in 13%
+  bfcl_irrelevance: median chosen / rejected tokens 81 / 129; chosen longer in 7%
+  ifeval questions answered: 1500, with a counting rule: 865
+  first 80 pairs by part: {'ifeval': 25, 'svamp': 12, 'mbpp': 12, 'bfcl_simple_python': 12, 'bfcl_irrelevance': 10, 'bfcl_multiple': 9}
+training on 1060 pairs, 0 held out
+reference scored
+step 5/60  loss 0.6903  pairs ordered right 62%
+step 10/60  loss 0.6802  pairs ordered right 59%
+step 15/60  loss 0.6702  pairs ordered right 71%
+step 20/60  loss 0.6724  pairs ordered right 69%
+step 25/60  loss 0.6729  pairs ordered right 75%
+step 30/60  loss 0.6378  pairs ordered right 78%
+step 35/60  loss 0.6773  pairs ordered right 70%
+step 40/60  loss 0.6370  pairs ordered right 68%
+step 45/60  loss 0.6361  pairs ordered right 72%
+step 50/60  loss 0.6060  pairs ordered right 70%
+step 55/60  loss 0.5717  pairs ordered right 80%
+step 60/60  loss 0.5973  pairs ordered right 72%
+== rpK-20 (Dev-512 x8, 512 questions): tokens saved +50.5% [+48.2, +52.8], accuracy +1.51 pts [-0.28, +3.33] (official weighting, paired bootstrap 95%)
+   bfcl_multiple +49% / +1.4; bfcl_irrelevance +50% / +2.8; svamp +50% / +1.2; bfcl_simple_python +44% / +3.3; mbpp +57% / +2.8; ifeval +48% / -0.7
+   thinking + response tokens, original -> model: bfcl_multiple 186+18 -> 87+18; bfcl_irrelevance 155+28 -> 84+7; svamp 1115+20 -> 556+9; bfcl_simple_python 159+21 -> 80+21; mbpp 1934+80 -> 808+66; ifeval 436+273 -> 135+236
+   vs dev512-rpE80: saved +3.6 [+1.5, +5.6], accuracy +0.15 [-1.05, +1.35] (paired)
+== rpK-20 (Dev-512 x8): saved +50.5% [+48.2, +52.8], accuracy +1.51 [-0.28, +3.33]
+== rpK-40 (Dev-512 x8, 512 questions): tokens saved +50.4% [+47.6, +53.5], accuracy +0.95 pts [-0.74, +2.55] (official weighting, paired bootstrap 95%)
+   bfcl_multiple +52% / -0.4; bfcl_irrelevance +55% / +5.0; svamp +50% / +2.5; bfcl_simple_python +48% / +3.5; mbpp +55% / +0.6; ifeval +46% / -2.4
+   thinking + response tokens, original -> model: bfcl_multiple 186+18 -> 79+18; bfcl_irrelevance 155+28 -> 77+5; svamp 1115+20 -> 556+9; bfcl_simple_python 159+21 -> 74+20; mbpp 1934+80 -> 849+66; ifeval 436+273 -> 124+261
+   vs dev512-rpE80: saved +3.5 [+1.4, +5.5], accuracy -0.42 [-1.63, +0.80] (paired)
+== rpK-40 (Dev-512 x8): saved +50.4% [+47.6, +53.5], accuracy +0.95 [-0.74, +2.55]
+== rpK-60 (Dev-512 x8, 512 questions): tokens saved +53.8% [+51.2, +56.5], accuracy +0.76 pts [-1.05, +2.58] (official weighting, paired bootstrap 95%)
+   bfcl_multiple +55% / -1.8; bfcl_irrelevance +58% / +6.4; svamp +54% / +0.8; bfcl_simple_python +51% / +2.1; mbpp +61% / +3.3; ifeval +45% / -3.4
+   thinking + response tokens, original -> model: bfcl_multiple 186+18 -> 74+18; bfcl_irrelevance 155+28 -> 72+5; svamp 1115+20 -> 517+9; bfcl_simple_python 159+21 -> 68+20; mbpp 1934+80 -> 723+66; ifeval 436+273 -> 113+275
+   vs dev512-rpE80: saved +6.8 [+4.6, +9.1], accuracy -0.60 [-2.05, +0.82] (paired)
+== rpK-60 (Dev-512 x8): saved +53.8% [+51.2, +56.5], accuracy +0.76 [-1.05, +2.58]
+plan: ptrepair --name p1r2s0 --rp-gate p1r1s0-200,rpE80,6 --rp-base models/p1r1s0 --rp-base-from Qwen/Qwen3-0.6B:adapters/p1r1s0-s0/step-200 --rp-own-data --rp-exclude-dev --rp-exclude-ids data/p1-round1-ids.json --rp-public --rp-kinds mix --rp-samples 8 --rp-seed 21 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--resp-guard,0.9 --rp-questions svamp=10
+repair p1r2s0: GATE CLOSED: Dev-512 saved p1r1s0-200 45.9 vs rpE80 46.93 + 6
+
+
+=== raw_logs/gpu1_latest_raw.txt (tail) ===
+input: 668.04 toks/s, output: 246.12 toks/s]
+Processed prompts:   1%|          | 16/2400 [00:04<10:25,  3.81it/s, est. speed input: 1450.53 toks/s, output: 430.50 toks/s]
+Processed prompts:   1%|          | 24/2400 [00:05<06:09,  6.43it/s, est. speed input: 2643.51 toks/s, output: 625.43 toks/s]
+Processed prompts:   1%|?         | 32/2400 [00:05<03:56, 10.01it/s, est. speed input: 3205.40 toks/s, output: 800.96 toks/s]
+Processed prompts:   2%|?         | 56/2400 [00:06<02:57, 13.19it/s, est. speed input: 3536.14 toks/s, output: 1124.79 toks/s]
+Processed prompts:   3%|?         | 64/2400 [00:09<05:51,  6.65it/s, est. speed input: 2472.20 toks/s, output: 968.27 toks/s] 
+Processed prompts:   3%|?         | 72/2400 [00:10<04:41,  8.26it/s, est. speed input: 2451.26 toks/s, output: 1142.27 toks/s]
+Processed prompts:   3%|?         | 80/2400 [00:10<04:00,  9.66it/s, est. speed input: 2439.76 toks/s, output: 1237.82 toks/s]
+Processed prompts:   4%|?         | 88/2400 [00:11<03:52,  9.92it/s, est. speed input: 2313.56 toks/s, output: 1243.54 toks/s]
+Processed prompts:   4%|?         | 96/2400 [00:11<03:13, 11.90it/s, est. speed input: 2293.21 toks/s, output: 1386.13 toks/s]
+Processed prompts:   4%|?         | 104/2400 [00:12<03:59,  9.59it/s, est. speed input: 2126.75 toks/s, output: 1431.11 toks/s]
+Processed prompts:   5%|?         | 112/2400 [00:15<06:26,  5.92it/s, est. speed input: 1812.87 toks/s, output: 1329.73 toks/s]
+Processed prompts:   5%|?         | 120/2400 [00:17<06:46,  5.61it/s, est. speed input: 1685.34 toks/s, output: 1369.54 toks/s]
+Processed prompts:   5%|?         | 128/2400 [00:18<06:16,  6.04it/s, est. speed input: 1613.67 toks/s, output: 1438.30 toks/s]
+Processed prompts:   6%|?         | 136/2400 [00:18<05:18,  7.11it/s, est. speed input: 1591.23 toks/s, output: 1537.09 toks/s]
+Processed prompts:   6%|?         | 144/2400 [00:19<04:33,  8.23it/s, est. speed input: 1574.75 toks/s, output: 1595.28 toks/s]
+Processed prompts:   6%|?         | 152/2400 [00:21<05:30,  6.81it/s, est. speed input: 1606.97 toks/s, output: 1519.05 toks/s]
+Processed prompts:   7%|?         | 160/2400 [00:22<05:31,  6.76it/s, est. speed input: 1571.67 toks/s, output: 1556.61 toks/s]
+Processed prompts:   7%|?         | 168/2400 [00:22<04:01,  9.23it/s, est. speed input: 1592.96 toks/s, output: 1702.45 toks/s]
+Processed prompts:   7%|?         | 176/2400 [00:23<04:32,  8.15it/s, est. speed input: 1529.60 toks/s, output: 1673.28 toks/s]
+Processed prompts:   8%|?         | 184/2400 [00:24<04:03,  9.12it/s, est. speed input: 1517.76 toks/s, output: 1742.28 toks/s]
+Processed prompts:   8%|?         | 192/2400 [00:25<04:50,  7.61it/s, est. speed input: 1456.35 toks/s, output: 1738.56 toks/s]
+Processed prompts:   8%|?         | 200/2400 [00:25<03:31, 10.41it/s, est. speed input: 1471.56 toks/s, output: 1767.13 toks/s]
+Processed prompts:   9%|?         | 208/2400 [00:26<03:30, 10.41it/s, est. speed input: 1465.70 toks/s, output: 1831.29 toks/s]
+Processed prompts:   9%|?         | 216/2400 [00:27<03:23, 10.75it/s, est. speed input: 1453.74 toks/s, output: 1876.78 toks/s]
+Processed prompts:   9%|?         | 224/2400 [00:31<07:40,  4.72it/s, est. speed input: 1290.10 toks/s, output: 1742.70 toks/s]
+Processed prompts:  10%|?         | 232/2400 [00:32<06:20,  5.70it/s, est. speed input: 1284.53 toks/s, output: 1772.28 toks/s]
+Processed prompts:  10%|?         | 240/2400 [00:32<04:42,  7.64it/s, est. speed input: 1287.85 toks/s, output: 1817.71 toks/s]
+Processed prompts:  10%|?         | 248/2400 [00:32<03:59,  8.98it/s, est. speed input: 1292.17 toks/s, output: 1872.16 toks/s]
+Processed prompts:  11%|?         | 256/2400 [00:33<04:10,  8.55it/s, est. speed input: 1265.46 toks/s, output: 1947.99 toks/s]
+Processed prompts:  11%|??        | 272/2400 [00:36<05:21,  6.61it/s, est. speed input: 1181.43 toks/s, output: 1920.15 toks/s]
+Processed prompts:  12%|??        | 280/2400 [00:37<04:51,  7.27it/s, est. speed input: 1239.87 toks/s, output: 1922.80 toks/s]
+
+=== code/queued_lines.txt ===
+=== GPU 2 (plan_line_a.txt, tail) ===
+# plan_line_b holds the same list plus Path 1's round 1 (a finished test is skipped, so no test runs twice).
+fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
+# 11 Nov ~11:45 (user: yes to consult9's rpL, incl. the anti-loop pair). rpL = rpK with the IFEval pairs fixed (they rewarded
+# writing MORE: the chosen response was longer in 76% of pairs) and a new pair "a finished right answer beats a runaway one"
+# (runaways hold 26% of rpE-80's IFEval tokens on the full test). Same start, answers, tool-call pairs and training as rpK.
+ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
+fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
+fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
+# 11 Nov ~16:30 (user: "let's build another RP ... rpM ... let him [Argon] do whatever he wants", after rpL's results). rpM = consult10's
+# design, checked on the real answers: from rpE-80; math protected on SVAMP-like questions (rpE-80 answers 1,200 new ones;
+# widened "don't stop early" guards + length-matched be-right pairs, no "shorter", no anti-loop); IFEval: counting pairs only on
+# true length rules with the chosen answer writing clearly more, "shorter" pairs only on questions without a coun
+[output cut at 10,000 characters]

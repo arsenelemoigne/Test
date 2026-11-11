@@ -1,0 +1,136 @@
+Length of repair_pairs.py: 40117
+"""Track A pairs (GAME_PLAN.md v3, 5 Nov): "be right" pairs from a TRAINED model's own answers, no shortening pressure.
+
+Per question (the model's 4 answers), two kinds, each a right answer over a FINISHED wrong one (no cut rejections):
+  guard  the shortest right answer > the shortest finished wrong answer
+  right  a right answer > a finished wrong answer of similar length (max(Lc/Lr, Lr/Lc) <= --ratio), exactly half of each
+         part's right pairs with the right answer strictly LONGER (a correctness signal without a length signal)
+Quotas per part (--quota part=n), half guard / half right; <= 3 pairs per question, <= 2 right pairs per question; no
+sample pair used twice. --kinds guard (9 Nov): guard pairs only, the whole quota (the user's own 21 Oct rule, bon_pairs'
+guard; the similar-length "right" kind matches Lightning McQwen3's correctness DPO and is left out). A question gives at
+most one guard pair, so a part needs at least its quota of mixed-outcome questions. Mixed-outcome questions are the only source (a pair needs a right and a wrong answer).
+--think-only PARTS (9 Nov, user, from the rc1-soup-30 full-test diagnosis): for these parts (ifeval) "shortest" is the
+shortest THINKING, never the shortest whole answer, so a pair never rewards a shorter final response (length constraints:
+"at least 600 words"). --prefer-reread (same day): the chosen right answer is the shortest one that RE-CHECKS THE QUESTION
+(what exactly is asked, the example / assert, the constraints, whether a tool fits; regex markers on its thinking) when one
+exists within 1.5x the shortest right answer's thinking, else the shortest: the shortened model's lost questions were
+right calculations of the wrong question, the re-check it had dropped.
+--count-rules (10 Nov, user): IFEval questions with a COUNTING rule (word / sentence / paragraph counts, keyword frequency,
+number of sections, bullets or placeholders) fail with responses that are too short (the full-test diagnostic): there the
+chosen right answer must have a RESPONSE at least as long as the rejected one's and THINKING no longer than 1.2x the
+rejected one's (the pair then differs in response length and correctness only: "write what is asked", not "think more");
+when no right answer fits, the question gives no pair.
+The output is ordered so that every --block consecutive pairs hold the intended part x kind mix (training reads it in
+order with dpo.py --keep-order: a checkpoint at step 5 has seen a representative slice, not one part).
+
+    python repair_pairs.py --rollouts rp/rollouts.jsonl --out pairs-rp --quota svamp=640,mbpp=400,bfcl_irrelevance=240,...
+"""
+import argparse
+import json
+import random
+import re
+from array import array
+from collections import Counter, defaultdict
+from pathlib import Path
+
+from build_pool import part_of
+
+
+REREAD = re.compile(r"\b(the (question|problem|task|user|prompt) (is )?(asks?|asking|says|wants|wanted|states|requires|mentions)|"
+                    r"(re-?read|reading|read) (the|it) (question|problem|again|carefully)|let me re-?read|"
+                    r"(they('re| are)|it('s| is)|we('re| are)) (being )?asked|asked (for|to)|"
+                    r"(only|actually) (asks?|wants?)|wait,? (the|it) (question|problem|asks)|"
+                    r"(check|compare|verify|test)\w* (it )?(against|with)? ?the (example|assert|test|sample|constraints?)|"
+                    r"(none of the|no) (available )?(functions?|tools?) (fit|match|appl|is relevant|are relevant|can)|"
+                    r"(does|do) (the|this|these|any) (functions?|tools?) (fit|match|apply|help)|"
+                    r"the (constraints?|requirements?|instructions?) (are|is|say|require))", re.I)
+
+
+COUNT_RULES = ("length_constraints:", "keywords:frequency", "keywords:letter_frequency", "detectable_format:number_",
+               "detectable_format:multiple_sections", "detectable_content:number_placeholders",
+               "change_case:capital_word_frequency")
+
+
+def counting(r):
+    return any(rule.startswith(COUNT_RULES) for rule in (r.get("instruction_id_list") or []))
+
+
+def at_least(r):
+    """(11 Nov, rpL) An IFEval question with a rule that asks for a MINIMUM amount of text: at least N words / sentences, a
+    keyword or a letter at least N times, at least N placeholders or highlighted sections. The full-test records show these
+    (not every counting rule) are where a shortened response fails."""
+    for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+        kw = kw or {}
+        if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+            if kw.get("relation") == "at least":
+                return True
+        elif rule == "keywords:letter_frequency":
+            if kw.get("let_relation") == "at least":
+                return True
+        elif rule in ("detectable_content:number_placeholders", "detectable_format:number_highlighted_sections"):
+            return True
+    return False
+
+
+def length_rule(r):
+    """(11 Nov, rpM, consult10) An IFEval question where a SHORT response is what fails: at least N words / sentences, a keyword at
+    least N times, N paragraphs (N >= 2). Narrower than at_least(): in rpL, placeholders / highlighted sections / letter
+    frequency took two thirds of the counting pairs, and the true word-count questions fell from 37.5% to 19.6% right."""
+    for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+        kw = kw or {}
+        if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+            if kw.get("relation") == "at least":
+                return True
+        elif rule == "length_constraints:number_paragraphs":
+            if (kw.get("num_paragraphs") or 0) >= 2:
+                return True
+    return False
+
+
+def response_len(r):
+    return len(r["output_ids"]) - len(r.get("thinking_ids") or [])
+
+
+def thinking_len(r):  # (10 Nov, reviewer) an EMPTY thinking is 0 tokens, not the whole answer; only a missing field falls back
+    ids = r.get("thinking_ids")
+    return len(ids) if ids is not None else r["output_tokens"]
+
+
+def finished(r):
+    return r["closed_thinking"] and not r["truncated"]
+
+
+def right(r):
+    return bool(r["correct"]) and finished(r)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--rollouts", nargs="+", required=True)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--quota", required=True, help="part=n,... (pairs per part, half guard / half right)")
+    ap.add_argument("--ratio", type=float, default=1.25)
+    ap.add_argument("--block", type=int, default=80)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--think-only", default="", help="parts (comma) whose shortness is the thinking only (ifeval)")
+    ap.add_argument("--count-rules", action="store_true",
+                    help="ifeval counting-rule questions: chosen response >= rejected's, chosen thinking <= 1.2x rejected's")
+    ap.add_argument("--prefer-reread", action="store_true",
+                    help="chosen = the shortest right answer that re-checks the question, within 1.5x the shortest's thinking")
+    ap.add_argument("--shorten-min-right", type=float, default=0.75,
+                    help="guard,shorten: a shorten pair only where this share of the answers is right")
+    ap.add_argument("--shorten-ratio", type=float, default=1.5,
+                    help="guard,shorten: the longest right answer must be >= this x the shortest")
+    ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
+                    help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c"),
+                    help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
+                         "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
+                         "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
+                         "'think less' pair), IFEval's non-counting half 60/40/0, tool calls 50/50/0")
+    ap.add_argument("--resp-guard", type=float, default=0.0,
+                    help="--kinds mix, --think-only parts (IFEval): a 'shorter' pair's chosen answer must have a RESPONSE at "
+                         "least this x the rejected one's (0.9); 0 = off. The full-test records show IFEval's loss is "
+                         "shortened responses ('at least N words'), not shortened thinking")
+    ap.add_argument("--count-mode", default="all", choices=("all", "atleast", "length"),
+                    help="--kinds mix: which IFEval questions get the counting-rule pairs (and no 'shorter' pair): 

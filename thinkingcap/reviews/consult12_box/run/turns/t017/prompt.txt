@@ -1,0 +1,2 @@
+fulltest_per_answer cols: ['model', 'id', 'dataset', 'sample', 'right', 'runaway', 'thinking', 'response_tokens']
+fulltest_ifeval_rule_verdicts cols: ['model', 'id', 'sample', 'rule', 'passed', 'thinking', 'response_tokens', 'response_words', 'runaway']

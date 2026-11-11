@@ -1,0 +1,6 @@
+base {'bfcl_irrelevance': 83.39, 'bfcl_multiple': 76.06, 'bfcl_simple_python': 82.16, 'ifeval': 58.73, 'mbpp': 52.45, 'svamp': 88.7}
+rpE80 {'bfcl_irrelevance': 86.82, 'bfcl_multiple': 76.12, 'bfcl_simple_python': 82.25, 'ifeval': 56.17, 'mbpp': 51.42, 'svamp': 87.45}
+rpK20 {'bfcl_irrelevance': 87.03, 'bfcl_multiple': 74.56, 'bfcl_simple_python': 82.44, 'ifeval': 55.66, 'mbpp': 52.18, 'svamp': 86.11}
+rpK40 {'bfcl_irrelevance': 88.07, 'bfcl_multiple': 75.25, 'bfcl_simple_python': 82.41, 'ifeval': 56.86, 'mbpp': 52.31, 'svamp': 86.36}
+rpK60 {'bfcl_irrelevance': 89.58, 'bfcl_multiple': 75.06, 'bfcl_simple_python': 80.69, 'ifeval': 55.73, 'mbpp': 51.22, 'svamp': 86.35}
+rpL60 {'bfcl_irrelevance': 88.02, 'bfcl_multiple': 75.44, 'bfcl_simple_python': 80.19, 'ifeval': 55.36, 'mbpp': 51.59, 'svamp': 85.95}

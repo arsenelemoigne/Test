@@ -1,0 +1,147 @@
+l").exists(), f"{pairs} is not on Drive"
+        print(f"repair {name}: pairs of {args.rp_from}", flush=True)
+    reuse = getattr(args, "rp_rollouts_from", "")  # (11 Nov) another run's answers, new pairs: no draw, no generation
+    own = args.rp_own_data and not args.rp_from and not reuse
+    rows = {}
+    for f in (() if args.rp_from or own or reuse else (pool, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras])):
+        for line in f.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                rows[r.get("pool_id", r.get("id"))] = r
+    solve = defaultdict(list)
+    for line in (() if args.rp_from or own or reuse else open(answers)):
+        r = json.loads(line)
+        solve[r["id"]].append(bool(r["correct"]) and r["closed_thinking"] and not r["truncated"])
+    from build_pool import part_of
+    want = {k: int(v) for k, v in (x.split("=") for x in args.rp_questions.split(","))}
+    if smoke:
+        want = {k: 5 for k in want}
+    rng = random.Random(0)
+    by_part = defaultdict(lambda: {"mixed": [], "right": [], "wrong": []})
+    for qid, s in solve.items():
+        if qid in rows and part_of(rows[qid]) in want:
+            p = sum(s) / len(s)
+            by_part[part_of(rows[qid])]["mixed" if 0 < p < 1 else "right" if p == 1 else "wrong"].append(qid)
+    chosen = []
+    if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
+        k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
+        per_part = defaultdict(list)
+        for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
+                                      exclude=excluded_ids(args), public=getattr(args, "rp_public", False),
+                                      avoid_grams=dev_gram_set() if getattr(args, "rp_exclude_dev", False) else None):
+            per_part[part_of(r)].append(r)
+        for part, n in want.items():
+            for r in per_part[part][k * n:(k + 1) * n]:
+                rows[r["id"]] = r
+                chosen.append(r["id"])
+    for part, n in ({} if own or reuse else want).items():
+        b = by_part[part]
+        for k in b:
+            rng.shuffle(b[k])
+        take = b["mixed"][:n]
+        rest = [x for pair in zip(b["right"], b["wrong"]) for x in pair]
+        take += rest[:n - len(take)]
+        print(f"repair {name}: {part} {len(take)} questions ({min(n, len(b['mixed']))} mixed of {len(b['mixed'])})", flush=True)
+        chosen += take
+    data = Path(f"data/repair-{name}.jsonl")
+    if not args.rp_from and not reuse:
+        # (11 Nov) pool_id = the question's own id: probe_curve.py names an answer by pool_id, else by "source-line number",
+        # and two answer files of one run (a fill batch) would then share ids for different questions
+        data.write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": rows[q].get("pool_id") or q}) + "\n" for q in chosen))
+    roll = BON / f"rp-{args.rp_from or reuse or name}"
+    if not args.rp_from:
+        drive_sync("restore", only=[str(roll)])
+    if reuse:
+        assert (roll / "rollouts.jsonl").exists(), f"{roll} has no rollouts on Drive"
+        print(f"repair {name}: the answers of {reuse} ({roll}), new pairs", flush=True)
+    answerer = Path(args.rp_answers_model) if args.rp_answers_model else merged  # (10 Nov) who answers: a new round
+    if args.rp_answers_model:
+        drive_sync("restore", only=[str(answerer)])
+        assert (answerer / "config.json").exists(), f"{answerer} is not on Drive"
+    if not args.rp_from and not reuse and not (roll / "rollouts.jsonl").exists():
+        py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
+           "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.rp_samples,
+           "--model", answerer, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+           "--max-questions", len(chosen), "--seed", 53)
+        drive_sync("save")
+    pairs = BON / f"pairs-{args.rp_from or name}"
+    drive_sync("restore", only=[str(pairs)])
+    if not (pairs / "pairs.jsonl").exists():
+        quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
+        rolls = [roll / "rollouts.jsonl"]
+        if getattr(args, "rp_extra_questions", "") and reuse:  # (11 Nov, rpM) new SVAMP-like math beside the reused answers
+            want_x = {k: int(v) for k, v in (x.split("=") for x in args.rp_extra_questions.split(","))}
+            roll_x = BON / f"rp-{name}-extra"
+            data_x = Path(f"data/repair-{name}-extra.jsonl")
+            drive_sync("restore", only=[str(roll_x), str(data_x)])
+            if not (roll_x / "rollouts.jsonl").exists():
+                ex = dev_ids() | dev_svamp_ids() | (excluded_ids(args) or set())
+                rows_x = own_repair_questions(want_x, seed=args.rp_seed, exclude=ex, public=True, avoid_grams=dev_gram_set())
+                data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
+                print(f"repair {name}: {len(rows_x)} extra questions (public datasets; ids sv-*), answered by {answerer}", flush=True)
+                py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+                   args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+                   "--max-questions", len(rows_x), "--seed", 54)
+                drive_sync("save")
+            rolls.append(roll_x / "rollouts.jsonl")
+
+        def build():
+            py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+               "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
+        build()
+        # (11 Nov, user) fill until full: with --kinds mix the proportion is fixed, so a short part means fewer pairs; on an
+        # own-question draw, answer MORE new questions for the short parts (up to 2 extra batches) and rebuild
+        for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke else 1):
+            short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+            short = {k: v for k, v in short.items() if v > 0.1 * dict((x.split("=")[0], int(x.split("=")[1]))
+                                                                       for x in quota.split(",")).get(k, 0)}
+            if not short:
+                break
+            more = {k: max(100, 3 * v) for k, v in short.items()}
+            taken = {json.loads(l)["id"] for f in rolls for l in open(f) if l.strip()}
+            ex = (excluded_ids(args) or set()) | taken
+            rows_x = [r for r in own_repair_questions(more, seed=args.rp_seed + 100 * extra, exclude=ex,
+                                                       public=getattr(args, "rp_public", False),
+                                                       avoid_grams=dev_gram_set() if getattr(args, "rp_exclude_dev", False) else None)]
+            print(f"repair {name}: fill until full, batch {extra}: short {short}; answering {len(rows_x)} more questions", flush=True)
+            if not rows_x:
+                break
+            data_x = Path(f"data/repair-{name}-x{extra}.jsonl")
+            data_x.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in rows_x))
+            roll_x = BON / f"rp-{name}-x{extra}"
+            drive_sync("restore", only=[str(roll_x)])
+            if not (roll_x / "rollouts.jsonl").exists():
+                py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+                   args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+                   "--max-questions", len(rows_x), "--seed", 53 + extra)
+                drive_sync("save")
+            rolls.append(roll_x / "rollouts.jsonl")
+            shutil.rmtree(pairs, ignore_errors=True)
+            build()
+        drive_sync("save")
+    print((pairs / "summary.txt").read_text(), flush=True)
+    adapter = Path("adapters") / f"{name}-s0"
+    start = Path(args.rp_init_from) if args.rp_init_from else Path("adapters") / f"fresh-{name}"  # (10 Nov) continue an adapter
+    drive_sync("restore", only=[str(adapter), str(start)])
+    if args.rp_init_from:
+        assert (start / "adapter_config.json").exists(), f"{start} is not on Drive"
+    elif not (start / "adapter_config.json").exists():
+        py("sft.py", "--init-only", "--model", merged, "--out", start, "--seed", getattr(args, "rp_dpo_seed", 0))
+    steps = 4 if smoke else args.rp_steps
+    if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
+        py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+           "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", 0.1, "--batch", 16, "--lr", args.rp_lr,
+           "--lr-schedule", "cosine", "--warmup", getattr(args, "rp_warmup", 2),
+           "--lr-min", args.rp_lr if getattr(args, "rp_lr_min", None) is None else args.rp_lr_min, "--max-steps", steps, "--epochs", args.rp_epochs,
+           "--save-every",
+           1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype,
+           "--seed", getattr(args, "rp_dpo_seed", 0))
+        drive_sync("save")
+    if smoke:
+        print(f"repair {name}: SMOKE done (answers, pairs, {steps} training steps)", flush=True)
+        return
+    if getattr(args, "rp_dev", False):  # (11 Nov) choices on Dev-512 only (consult6 protocol), never the 720
+        for step in args.rp_screen:
+            if args.rp_base:
+                spec = f"/content/lupin-mode
+[output cut at 10,000 characters]

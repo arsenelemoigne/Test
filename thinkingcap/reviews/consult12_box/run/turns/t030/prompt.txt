@@ -1,0 +1,28 @@
+=== Rules sorted by rpL60 impact vs base ===
+                                               n_q    base  rpE80  rpK20  rpK40  rpK60  rpL60  p1r1s0  L60_impact
+rule                                                                                                             
+length_constraints:number_words                 52   56.49 -14.42 -14.18 -10.34 -12.50 -18.51   12.02       -1.78
+keywords:frequency                              42   64.58  -9.82  -9.52  -8.63  -9.52 -11.01   -1.49       -0.85
+length_constraints:number_sentences             52   72.36  -5.53  -6.01  -5.53  -7.45  -5.77   -1.20       -0.55
+detectable_format:number_highlighted_sections   48   91.15  -2.60  -5.21  -2.86  -2.60  -5.21    2.60       -0.46
+detectable_content:number_placeholders          27   93.06  -4.63  -7.41  -7.41  -7.87  -8.33   -4.63       -0.42
+combination:repeat_prompt                       41   47.26  -0.91  -1.52  -3.96  -3.66  -3.66   13.41       -0.28
+change_case:english_capital                     25   51.50  -0.50  -2.50   1.50   1.50  -5.50   -3.00       -0.25
+change_case:english_lowercase                   39   80.45  -2.56  -6.73  -4.81  -4.17  -3.53   -0.64       -0.25
+keywords:existence                              39   83.33  -0.64  -1.60  -2.24  -0.64  -3.21    6.73       -0.23
+keywords:letter_frequency                       33   48.86   0.38   5.30  -0.38   0.76  -2.65    6.82       -0.16
+detectable_format:constrained_response          10  100.00  -2.50  -5.00  -5.00  -2.50  -2.50   -2.50       -0.05
+length_constraints:nth_paragraph_first_word     12    9.38  -1.04   0.00   3.12   2.08  -2.08   -3.12       -0.05
+detectable_format:multiple_sections             14   91.96  -2.68   1.79   0.00  -0.89  -1.79   -5.36       -0.05
+detectable_format:number_bullet_lists           31   76.61   1.61  -2.02   0.81  -0.81  -0.81   -1.21       -0.05
+detectable_format:title                         37   95.61  -1.69  -1.01  -2.03  -1.35   0.00   -1.01        0.00
+combination:two_responses                       24   54.69  -2.60   0.52   3.65  -5.21   0.52   -3.12        0.02
+language:response_language                      31   62.10  -0.40   0.40   2.02  -3.23   0.40   -2.02        0.02
+detectable_format:json_format                   17   98.53   0.00   0.74   0.74   1.47   1.47    0.00        0.05
+change_case:capital_word_frequency              25   65.00   5.00   5.50   8.00   6.00   3.00    5.50        0.14
+startend:quotation                              41   86.89   3.66   0.00   2.74   2.13   2.13   -5.49        0.16
+detectable_content:postscript                   26   95.67   4.33   3.85   3.37   3.85   3.85    3.37        0.18
+startend:end_checker                            26   86.06   0.96   3.85   4.33   4.33   3.85   -1.44        0.18
+length_constraints:number_paragraphs            27   44.91   9.26   4.63   4.63   4.63   7.41    3.24        0.37
+keywords:forbidden_words                        49   59.95   3.83   5.36   5.10   3.83   6.12   -4.34        0.55
+punctuation:no_comma                            66   35.61   3.60   3.41   5.49   5.30   7.77    0.57        0.95

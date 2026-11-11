@@ -1,0 +1,23 @@
+=== GPU 2 (plan_line_a.txt, tail) ===
+# plan_line_b holds the same list plus Path 1's round 1 (a finished test is skipped, so no test runs twice).
+fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
+# 11 Nov ~11:45 (user: yes to consult9's rpL, incl. the anti-loop pair). rpL = rpK with the IFEval pairs fixed (they rewarded
+# writing MORE: the chosen response was longer in 76% of pairs) and a new pair "a finished right answer beats a runaway one"
+# (runaways hold 26% of rpE-80's IFEval tokens on the full test). Same start, answers, tool-call pairs and training as rpK.
+ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
+fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
+fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
+# 11 Nov ~16:30 (user: "let's build another RP ... rpM ... let him [Argon] do whatever he wants", after rpL's results). rpM = consult10's
+# design, checked on the real answers: from rpE-80; math protected on SVAMP-like questions (rpE-80 answers 1,200 new ones;
+# widened "don't stop early" guards + length-matched be-right pairs, no "shorter", no anti-loop); IFEval: counting pairs only on
+# true length rules with the chosen answer writing clearly more, "shorter" pairs only on questions without a counting rule with
+# the response held within 5%; several functions 50 / 50. Before it: the SVAMP-like dev slice (Dev-512's math is hard GSM8K and
+# missed rpK's math loss) and its reading of rpE-80, rpK-60 and rpL-60 (models whose full tests exist or are running).
+devsvamp
+devscore --ds-name rpE80 --ds-model models/rpE-80 --ds-dev svamp200
+devscore --ds-name rpK-60 --ds-model models/rpK-60 --ds-dev svamp200 --ds-vs rpE80
+devscore --ds-name rpL-60 --ds-model models/rpL-60 --ds-dev svamp200 --ds-vs rpE80
+ptrepair --name rpM --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-extra-questions svamp=1200 --rp-samples 8 --rp-seed 31 --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed3,--count-mode,length,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--resp-median,0.95,--resp-max,1.05,--resp-near-long,0.95,--right-resp-cap,1.15,--loop-response-only,ifeval,--guard-wide,svamp,--right-hold,svamp --rp-quota svamp=180,svamp_hard=60,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-svamp --rp-dev-vs rpE80
+# 11 Nov ~14:00 (user): rpL step 40's full test (now after rpM: consult10 judged this test the least informative of the queue)
+fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
+# after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without a

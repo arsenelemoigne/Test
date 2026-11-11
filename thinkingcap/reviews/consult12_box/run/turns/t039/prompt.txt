@@ -1,0 +1,36 @@
+=== Pair-Forming Potential (Questions with 1 <= right_of_8 <= 7 and >=1 right answer) on Full Test ===
+
+Dataset: svamp (N=1000)
+  rpE80 : mixed (1..7 right, builds right_cr/guard) =  327 (32.7%) | 8/8 right =  643 | 0/8 right =   30
+  rpK60 : mixed (1..7 right, builds right_cr/guard) =  341 (34.1%) | 8/8 right =  629 | 0/8 right =   30
+  rpL60 : mixed (1..7 right, builds right_cr/guard) =  337 (33.7%) | 8/8 right =  630 | 0/8 right =   33
+
+Dataset: mbpp (N=378)
+  rpE80 : mixed (1..7 right, builds right_cr/guard) =  170 (45.0%) | 8/8 right =   97 | 0/8 right =  111
+  rpK60 : mixed (1..7 right, builds right_cr/guard) =  156 (41.3%) | 8/8 right =  104 | 0/8 right =  118
+  rpL60 : mixed (1..7 right, builds right_cr/guard) =  164 (43.4%) | 8/8 right =  101 | 0/8 right =  113
+
+Dataset: ifeval (N=541)
+  rpE80 : mixed (1..7 right, builds right_cr/guard) =  232 (42.9%) | 8/8 right =  182 | 0/8 right =  127
+  rpK60 : mixed (1..7 right, builds right_cr/guard) =  228 (42.1%) | 8/8 right =  182 | 0/8 right =  131
+  rpL60 : mixed (1..7 right, builds right_cr/guard) =  219 (40.5%) | 8/8 right =  186 | 0/8 right =  136
+
+Dataset: bfcl_simple_python (N=400)
+  rpE80 : mixed (1..7 right, builds right_cr/guard) =  104 (26.0%) | 8/8 right =  266 | 0/8 right =   30
+  rpK60 : mixed (1..7 right, builds right_cr/guard) =  110 (27.5%) | 8/8 right =  256 | 0/8 right =   34
+  rpL60 : mixed (1..7 right, builds right_cr/guard) =  116 (29.0%) | 8/8 right =  245 | 0/8 right =   39
+
+Dataset: bfcl_multiple (N=200)
+  rpE80 : mixed (1..7 right, builds right_cr/guard) =   66 (33.0%) | 8/8 right =  118 | 0/8 right =   16
+  rpK60 : mixed (1..7 right, builds right_cr/guard) =   72 (36.0%) | 8/8 right =  110 | 0/8 right =   18
+  rpL60 : mixed (1..7 right, builds right_cr/guard) =   70 (35.0%) | 8/8 right =  112 | 0/8 right =   18
+
+Dataset: bfcl_irrelevance (N=240)
+  rpE80 : mixed (1..7 right, builds right_cr/guard) =   38 (15.8%) | 8/8 right =  185 | 0/8 right =   17
+  rpK60 : mixed (1..7 right, builds right_cr/guard) =   31 (12.9%) | 8/8 right =  199 | 0/8 right =   10
+  rpL60 : mixed (1..7 right, builds right_cr/guard) =   39 (16.2%) | 8/8 right =  188 | 0/8 right =   13
+
+=== Specifically on IFEval `at_least_N` (N=58) on Full Test ===
+  rpE80 : mixed (1..7 right) = 17/58 (29.3%) | 8/8 right =  3 | 0/8 right = 38 | mean rsp = 488.9
+  rpK60 : mixed (1..7 right) = 18/58 (31.0%) | 8/8 right =  4 | 0/8 right = 36 | mean rsp = 525.5
+  rpL60 : mixed (1..7 right) = 11/58 (19.0%) | 8/8 right =  3 | 0/8 right = 44 | mean rsp = 440.5

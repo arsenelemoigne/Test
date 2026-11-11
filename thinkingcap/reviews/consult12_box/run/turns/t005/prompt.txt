@@ -1,0 +1,53 @@
+=== consult11_gemini_REPORT.md (part 2) ===
+over `base` (`40.9% -> 59.5%`) and `combination:repeat_prompt` jumping `+13.4` pts (`47.3% -> 60.7%`).
+   - Simultaneously, because `p1r1s0` used `--count-mode all` (which classified `fewer_than_N` rules as counting rules requiring `chosen_response >= rejected_response`!), had no `--resp-max` on `shorten` pairs (`+18.8` rsp tokens), had no `--count-resp-cap`, and had zero anti-loop pairs, `fewer_than_N` responses doubled from `83` to **`163.5` tokens**, crashing `fewer_than_N` accuracy by **`-12.85` pts (`72.92% -> 60.07%`)**, inflating `no_counting` responses (`181 -> 213` tokens), raising IFEval runaways (`3.60% -> 4.09%`), and collapsing IFEval saving to **`22.54%`**.
+2. **Lineage Offset on `Dev-512`:**
+   - For the `rc1 -> rpE-80` lineage, `Dev-512` tracks full-test saving within `0.1?0.7` points (`rpE-80`: `47.0%` Dev vs `47.0%` Full; `rpK-20`: `50.6%` vs `49.9%`; `rpK-60`: `53.9%` vs `54.4%`) with a fixed `-2.25` pt absolute accuracy offset (`paired` delta on `rpK-60`: `+6.89% / -0.56` Dev vs `+7.39% / -0.53` Full?accurate to within `0.03` pts on accuracy!).
+   - For **`p1r1s0-200` (1 round straight from raw Qwen)**, `Dev-512` over-read saving by **`+2.46` points (`45.88%` Dev vs `43.42%` Full)** and accuracy by `-1.58` points (`+0.12` vs `-1.46`), because `Dev-512` MBPP+ has `6.0%` base runaways (`52.6%` saved on Dev vs `44.0%` on Full) and `Dev-512` IFEval has **26.5% `"at least N"` questions and only 5.3% `"fewer than N"` questions** (vs `10.7%` and `6.7%` on the Full Test).
+
+### 1.3 Audit of My `consult9` / `consult10` Forecasts Against These Full Tests
+- **`rpK-60`:** In `consult9`, I forecast **`53.2% [52.0, 54.5]` saved / `-1.45 [-2.00, -0.90]` accuracy**. Actual: **`54.43%` saved / `-1.44` accuracy** (`0.01` pt error on accuracy; saving at the top of my interval because IFEval thinking dropped `-28` tokens between steps 20 and 60).
+- **`p1r1s0-200`:** In `consult9`, I forecast **`45.8% [44.5, 47.1]` saved / `-2.10 [-2.70, -1.50]` accuracy** and advised canceling its full test. Actual: **`43.42%` saved / `-1.46` official (`-1.61` finished-only) accuracy**. My saving forecast was `2.4` points too high because I assumed `Dev-512`'s `52.6%` MBPP+ saving would hold on the full test (`44.0%`), while my accuracy forecast (`-1.50 to -2.70`) bracketed `-1.61` / `-1.46`.
+
+---
+
+## 2. `rpM` as Built: Pair Audit, Edits, and Full-Test Forecast
+
+### 2.1 Audit of `rpM`'s Built Pairs (`tables/rpM_pairs_local_build_math_on_hard_questions_only.csv` & `repair_pairs.py`)
+1. **Will `"fewer than N"` or runaways pay for `rpM`'s 78 IFEval counting pairs (`314 vs 217` response tokens)?**
+   - **No.** Comparing `rpM` against `p1r1s0` and `rpK-60` shows why every mechanism that hurt `fewer_than_N` in `p1r1s0` has been eliminated in `rpM`:
+     - First, in `p1r1s0` (`--count-mode all`), `fewer_than_N` prompts (`relation == "less than"`) were classified as `is_cr = True` and given pairs requiring `chosen_response >= rejected_response`. In `rpM`, `--count-mode length` (`length_rule()`) strictly requires `relation == "at least"` on words/sentences/keywords (or `num_paragraphs >= 2`), and `--no-shorten-counting` routes `fewer_than_N` and `other_counting` questions to `right_cr` (`70` pairs), where `--right-resp-cap 1.15` holds responses to **`68 vs 80` tokens (`chosen < rejected` in `56.1%` of pairs)**.
+     - Second, on `no_counting` (`141` `shorten` pairs), `--resp-near-long 0.95 --resp-max 1.05` holds responses strictly neutral at **`81.8 vs 81.9` tokens (`-0.1` token)**?fixing both `rpK`/`p1r1s0`'s `+11 to +19` token `shorten` response inflation and `rpL`'s `-11.8` token `shorten` response shrinkage.
+     - Third, `rpM` has half as many counting pairs as `rpK` (`78` = `25%` of IFEval vs `160` = `50%` in `rpK`), caps them at `1.75x + 60` (max response diff `+339` tokens vs `+1,245` in `rpK` and `+2,322` in `p1r1s0`), and includes **24 response-loop pairs (`219 vs 3,966` response tokens, `-3,748` tokens)** that suppress runaway loops. Even in `rpK-60` (with 160 uncapped counting pairs and 0 loop pairs), `fewer_than_N` only slipped `-0.69` pts vs `rpE-80` (`71.2% -> 70.5%`).
+2. **Are `rpM`'s Math Rules (`--guard-wide svamp --right-hold svamp`, `svamp=180,svamp_hard=60`) Sized Right?**
+   - **Yes.** The developer's implementation of `--right-hold` (matching `(r, w)` directly so `0.95 <= thinking_len(r) / thinking_len(w) <= 1.25` closest to `1.05` with `REREAD`, giving `612 vs 585` median tokens, `chosen > rejected` in `74?83%` of pairs) and `--guard-wide` (rejecting the wrong answer under `0.95 * tmed` nearest `0.75 * tmed`, giving `700 vs 487` median tokens, `chosen > rejected` in `100%` of pairs) is exact. Why won't `90%+` longer math pairs over-lengthen SVAMP? Because in `rpK-60`, cross-type shortening from the 740 IFEval/BFCL pairs pulled SVAMP thinking down by `-15.6%` (`307 -> 259` tokens) even with `0%` math `shorten` pairs. Having 240 math pairs (180 on `<600`-token SVAMP-like questions) with a bounded `+5%` (`right_cr`) to `+40%` (`guard`) pull is the exact counter-weight needed to hold SVAMP near `285?305` tokens (`55?58%` saved) while repairing the `0.50x?0.95x tmed` skipped-recheck errors.
+3. **Is the Dose of 60 Steps (`--rp-screen 20 40 60`) Right?**
+   - **Yes.** `rpK-60` (`+4.55%` saving over `rpK-20` for `-0.16` accuracy) and `rpL-60` (`+8.6%` Dev saving over `rpL-20`) proved that 60 steps (`0.85` epochs at `lr=1e-5`) is where tool-call and IFEval shortening mature.
+
+### 2.2 Verdict on Edits & Expected Full-Test Reading for `rpM`
+- **Verdict: Run `rpM` AS IS.** Do not delay GPU 2's queue.
+- **Expected Full-Test Reading (`rpM`):**
+  - **Which step will win:** **Step 60** (with **Step 40** as the lower-saving, slightly higher-accuracy bracket).
+  - **Expected Full-Test range at Step 60:** **`53.8% to 56.2% saved (central: 55.0%) / -0.65 to -1.20 accuracy (central: -0.90)`** (per benchmark: SVAMP `55.5?58.0% / -1.1 to -1.7`, MBPP+ `57.0?60.0% / -0.9 to -1.5`, IFEval `52.5?55.0% / -2.0 to -2.7`, BFCL pooled `50.5?52.5% / +0.9 to +1.5`).
+  - **Expected Full-Test range at Step 40:** **`51.5% to 53.5% saved (central: 52.5%) / -0.65 to -1.15 accuracy (central: -0.90)`**.
+
+---
+
+## 3. A Better Start Than `rpE-80`? Repairing `rpK-60` (`rpN`) vs `rpM`, and Weight Interpolation
+
+### 3.1 Judgment on Plain Weight Interpolation Between `rpE-80` and `rpK-60`
+- **Verdict: Reject?it cannot land inside the box.**
+- **Why (exact math):** On the full test, `rpE-80` sits at `47.04% saved / -0.95` official accuracy (`-0.90` finished-only) and `rpK-60` sits at `54.43% saved / -1.44` accuracy. Even on an idealized straight secant line between them, crossing `50.0%` saved requires weight $lpha \ge 0.401$ on `rpK-60`, where linear accuracy is already **`-1.15` (`-1.12` finished-only)**?outside the `-1.0` box. Worse, the actual LoRA trajectory between `rpE-80` and `rpK-60` is **concave**, as measured by `rpK-20` (`49.88% saved / -1.28` official, `-1.24` finished-only, which sits `-0.13` pts *below* the secant line) because SVAMP (`-1.34` pts) and IFEval (`-0.51` pts) paid their accuracy cost in the first 20 steps while IFEval/BFCL saving arrived between steps 20 and 60. *(Note: once `rpL-60`'s full test lands in ~1 hour, if `rpL-60` reads `~57.5% / -1.7`, even a secant to `rpE-80` crosses `50%` at `-1.12`; however, interpolating **`0.50 * rpM-60 + 0.50 * rpK-60`** or **`rpI-120` [`41.9% / +0.13`] + `rpL-60`** can cross `51%` at `~ -0.9` if needed as a zero-cost backup.)*
+
+### 3.2 Would a Short Accuracy-Only Repair on Top of `rpK-60` (`rpN`) Be a Shorter Route Into the Box Than `rpM`?
+- **Comparison (`rpM` from `rpE-80` vs `rpN` from `rpK-60`):**
+  - **Why `rpM` from `rpE-80` is faster to execute first (~1.3 GPU-hours vs ~1.85 GPU-hours):** `rpM` reuses `rpI`'s existing `4,500` $	imes 8$ non-math rollouts on Drive (0 generation time) and only generates 1,200 short SVAMP questions (~12 min), whereas `rpK-60` has no stored training rollouts on Drive yet (generating `3,200 x 8` fresh answers with `rpK-60` takes ~1.1 GPU-hours before DPO starts). Moreover, `rpM` prevents `rpK-60`'s `-1.56` `bfcl_simple` non-call loss and `-1.10` SVAMP loss from happening in the first place.
+  - **Why `rpN` on top of `rpK-60` is the single highest-probability follow-up / complementary route (and should run right after `rpM` on GPU 2, replacing the redundant `rpL-40` full test):**
+    1. `rpK-60` is **already verified on the full test at `54.43% saved / -1.44 accuracy`**. It has **4.43 points of excess saving to spend** and needs only **`+0.45 to +0.65` points of headline accuracy** (`< +0.20` pts per benchmark).
+    2. We already have full-test proof that accuracy-only repair on a model's own answers works: `rpI-120` (on `rpE-80`) gained **`+1.08` full-test accuracy points (`-0.95 -> +0.13`)** (`+1.27` SVAMP, `+1.56` MBPP+, `+0.99` IFEval, `+0.49` BFCL) at a slope of `+0.21` accuracy per `-1%` saving.
+    3. Better still, in `rpK-60`, `2.70%` IFEval runaways (`100` tokens/answer) and `0.53%` MBPP+ runaways (`43` tokens/answer) are pure waste. Including **24 IFEval response-loop pairs and 12 MBPP+ loop pairs** inside `rpN` cuts those runaways, **saving `+2.5%` on IFEval and `+1.5%` on MBPP+**, which offsets the token cost of longer `"at least N"` responses and SVAMP re-checks so `rpN` gives back only **`-1.5% to -2.5%` headline saving** (`54.4% -> 51.8?53.0%`) while recovering **`+0.55 to +0.85` headline accuracy (`-1.44 -> -0.60 to -0.90`)**!
+
+### 3.3 Exact Design of `rpN` (Short Accuracy + Loop Repair on Top of `rpK-60`)
+- **Base & Reference Model:** `models/rpK-60`, fresh LoRA ($r=16, lpha=32$, `--bida-precision`).
+- **Answers to Generate (~1.1 GPU-hours on 1 L4 GPU):** `models/rpK-60` answers **3,200 unseen questions $	imes 8$** (`--rp-own-data --rp-public --rp-exclude-dev` + excluding `dev_svamp_ids()` and `rpI` IDs, seed 41): `svamp=1200` (public SVAMP-like), `mbpp=450`, `ifeval=900`, `bfcl_simple_python=250`, `b
+[output cut at 10,000 characters]

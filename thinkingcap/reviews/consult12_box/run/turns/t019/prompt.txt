@@ -1,0 +1,73 @@
+Datasets in fulltest_per_question: {'svamp': 1000, 'ifeval': 541, 'bfcl_simple_python': 400, 'mbpp': 378, 'bfcl_irrelevance': 240, 'bfcl_multiple': 200}
+base     | Headline:   0.00% /  +0.00 (acc 69.99%)
+   svamp             : saved  0.00% | d_acc  +0.00 (acc 88.70%) | thk  676.5 + rsp   9.6 | run 1.74% | call   nan%
+   mbpp              : saved  0.00% | d_acc  +0.00 (acc 52.45%) | thk 2078.7 + rsp  46.7 | run 7.80% | call   nan%
+   ifeval            : saved  0.00% | d_acc  +0.00 (acc 57.76%) | thk  432.8 + rsp 263.1 | run 3.60% | call   nan%
+   bfcl_simple_python: saved  0.00% | d_acc  +0.00 (acc 82.16%) | thk  170.6 + rsp  24.2 | run 0.00% | call 97.03%
+   bfcl_multiple     : saved  0.00% | d_acc  +0.00 (acc 76.06%) | thk  192.2 + rsp  23.6 | run 0.00% | call 95.00%
+   bfcl_irrelevance  : saved  0.00% | d_acc  +0.00 (acc 83.39%) | thk  185.8 + rsp  27.0 | run 0.00% | call 16.61%
+   bfcl_pooled       : saved  0.00% | d_acc  +0.00 (acc 81.06%) | thk  180.1 + rsp  24.9 | run 0.00% | call  0.00%
+rc1      | Headline:  57.36% /  -3.41 (acc 66.58%)
+   svamp             : saved 66.88% | d_acc  -6.58 (acc 82.12%) | thk  218.7 + rsp   8.5 | run 0.01% | call   nan%
+   mbpp              : saved 63.41% | d_acc  -3.47 (acc 48.97%) | thk  732.0 + rsp  45.7 | run 0.69% | call   nan%
+   ifeval            : saved 50.81% | d_acc  -2.20 (acc 55.57%) | thk  141.4 + rsp 201.0 | run 2.24% | call   nan%
+   bfcl_simple_python: saved 40.96% | d_acc  -0.09 (acc 82.06%) | thk   91.0 + rsp  24.0 | run 0.00% | call 97.66%
+   bfcl_multiple     : saved 43.58% | d_acc  -0.81 (acc 75.25%) | thk   98.2 + rsp  23.6 | run 0.00% | call 96.81%
+   bfcl_irrelevance  : saved 50.85% | d_acc  -4.11 (acc 79.27%) | thk   91.7 + rsp  12.9 | run 0.00% | call 20.73%
+   bfcl_pooled       : saved 44.55% | d_acc  -1.41 (acc 79.64%) | thk   92.9 + rsp  20.7 | run 0.00% | call  0.00%
+rpE80    | Headline:  47.04% /  -0.90 (acc 69.09%)
+   svamp             : saved 54.13% | d_acc  -1.25 (acc 87.45%) | thk  306.7 + rsp   8.0 | run 0.04% | call   nan%
+   mbpp              : saved 46.31% | d_acc  -1.03 (acc 51.42%) | thk 1089.8 + rsp  51.4 | run 1.12% | call   nan%
+   ifeval            : saved 45.42% | d_acc  -2.38 (acc 55.38%) | thk  156.5 + rsp 223.3 | run 2.43% | call   nan%
+   bfcl_simple_python: saved 37.32% | d_acc  +0.09 (acc 82.25%) | thk   98.0 + rsp  24.1 | run 0.00% | call 97.00%
+   bfcl_multiple     : saved 39.41% | d_acc  +0.06 (acc 76.12%) | thk  107.4 + rsp  23.4 | run 0.00% | call 96.56%
+   bfcl_irrelevance  : saved 49.55% | d_acc  +3.44 (acc 86.82%) | thk   96.4 + rsp  11.0 | run 0.00% | call 13.18%
+   bfcl_pooled       : saved 41.47% | d_acc  +1.04 (acc 82.10%) | thk   99.8 + rsp  20.2 | run 0.00% | call  0.00%
+rpI120   | Headline:  41.91% /  +0.15 (acc 70.14%)
+   svamp             : saved 47.00% | d_acc  +0.02 (acc 88.72%) | thk  355.5 + rsp   8.1 | run 0.14% | call   nan%
+   mbpp              : saved 37.96% | d_acc  +0.53 (acc 52.98%) | thk 1269.0 + rsp  49.6 | run 1.69% | call   nan%
+   ifeval            : saved 40.99% | d_acc  -1.48 (acc 56.28%) | thk  163.2 + rsp 247.4 | run 3.12% | call   nan%
+   bfcl_simple_python: saved 36.90% | d_acc  +0.16 (acc 82.31%) | thk   99.0 + rsp  23.9 | run 0.00% | call 96.81%
+   bfcl_multiple     : saved 38.44% | d_acc  -0.88 (acc 75.19%) | thk  109.6 + rsp  23.3 | run 0.00% | call 95.69%
+   bfcl_irrelevance  : saved 50.46% | d_acc  +5.83 (acc 89.22%) | thk   94.8 + rsp  10.7 | run 0.00% | call 10.78%
+   bfcl_pooled       : saved 41.31% | d_acc  +1.53 (acc 82.59%) | thk  100.3 + rsp  20.0 | run 0.00% | call  0.00%
+rpK20    | Headline:  49.88% /  -1.24 (acc 68.75%)
+   svamp             : saved 57.57% | d_acc  -2.59 (acc 86.11%) | thk  281.6 + rsp   9.5 | run 0.04% | call   nan%
+   mbpp              : saved 51.13% | d_acc  -0.26 (acc 52.18%) | thk  991.2 + rsp  47.4 | run 0.63% | call   nan%
+   ifeval            : saved 45.28% | d_acc  -2.93 (acc 54.83%) | thk  151.2 + rsp 229.7 | run 2.73% | call   nan%
+   bfcl_simple_python: saved 39.50% | d_acc  +0.28 (acc 82.44%) | thk   93.8 + rsp  24.1 | run 0.00% | call 97.19%
+   bfcl_multiple     : saved 41.97% | d_acc  -1.50 (acc 74.56%) | thk  101.8 + rsp  23.5 | run 0.00% | call 96.06%
+   bfcl_irrelevance  : saved 53.83% | d_acc  +3.65 (acc 87.03%) | thk   90.5 + rsp   7.8 | run 0.00% | call 12.97%
+   bfcl_pooled       : saved 44.37% | d_acc  +0.82 (acc 81.88%) | thk   94.7 + rsp  19.3 | run 0.00% | call  0.00%
+rpK40    | Headline:  51.17% /  -0.77 (acc 69.22%)
+   svamp             : saved 58.30% | d_acc  -2.34 (acc 86.36%) | thk  278.1 + rsp   8.0 | run 0.01% | call   nan%
+   mbpp              : saved 52.45% | d_acc  -0.13 (acc 52.31%) | thk  962.7 + rsp  47.9 | run 0.66% | call   nan%
+   ifeval            : saved 45.66% | d_acc  -1.87 (acc 55.89%) | thk  136.8 + rsp 241.5 | run 3.03% | call   nan%
+   bfcl_simple_python: saved 41.46% | d_acc  +0.25 (acc 82.41%) | thk   88.8 + rsp  25.3 | run 0.03% | call 96.66%
+   bfcl_multiple     : saved 44.72% | d_acc  -0.81 (acc 75.25%) | thk   95.8 + rsp  23.6 | run 0.00% | call 95.94%
+   bfcl_irrelevance  : saved 58.11% | d_acc  +4.69 (acc 88.07%) | thk   83.7 + rsp   5.4 | run 0.00% | call 11.93%
+   bfcl_pooled       : saved 47.22% | d_acc  +1.26 (acc 82.32%) | thk   89.0 + rsp  19.2 | run 0.01% | call  0.00%
+rpK60    | Headline:  54.43% /  -1.44 (acc 68.56%)
+   svamp             : saved 61.11% | d_acc  -2.35 (acc 86.35%) | thk  258.8 + rsp   8.1 | run 0.00% | call   nan%
+   mbpp              : saved 55.43% | d_acc  -1.22 (acc 51.22%) | thk  896.8 + rsp  50.4 | run 0.53% | call   nan%
+   ifeval            : saved 49.35% | d_acc  -3.00 (acc 54.76%) | thk  123.0 + rsp 229.6 | run 2.70% | call   nan%
+   bfcl_simple_python: saved 45.45% | d_acc  -1.47 (acc 80.69%) | thk   82.5 + rsp  23.8 | run 0.00% | call 95.75%
+   bfcl_multiple     : saved 47.70% | d_acc  -1.00 (acc 75.06%) | thk   89.4 + rsp  23.5 | run 0.00% | call 95.81%
+   bfcl_irrelevance  : saved 61.88% | d_acc  +6.20 (acc 89.58%) | thk   76.2 + rsp   4.9 | run 0.00% | call 10.42%
+   bfcl_pooled       : saved 50.89% | d_acc  +0.83 (acc 81.89%) | thk   82.3 + rsp  18.4 | run 0.00% | call  0.00%
+rpL60    | Headline:  59.27% /  -1.55 (acc 68.44%)
+   svamp             : saved 63.81% | d_acc  -2.75 (acc 85.95%) | thk  240.2 + rsp   8.1 | run 0.01% | call   nan%
+   mbpp              : saved 62.21% | d_acc  -0.86 (acc 51.59%) | thk  753.4 + rsp  49.8 | run 0.33% | call   nan%
+   ifeval            : saved 57.94% | d_acc  -2.82 (acc 54.94%) | thk  112.2 + rsp 180.5 | run 1.78% | call   nan%
+   bfcl_simple_python: saved 47.00% | d_acc  -1.97 (acc 80.19%) | thk   79.5 + rsp  23.8 | run 0.00% | call 96.09%
+   bfcl_multiple     : saved 49.30% | d_acc  -0.62 (acc 75.44%) | thk   86.3 + rsp  23.2 | run 0.00% | call 95.88%
+   bfcl_irrelevance  : saved 62.46% | d_acc  +4.64 (acc 88.02%) | thk   74.7 + rsp   5.2 | run 0.00% | call 11.98%
+   bfcl_pooled       : saved 52.16% | d_acc  +0.24 (acc 81.29%) | thk   79.7 + rsp  18.3 | run 0.00% | call  0.00%
+p1r1s0   | Headline:  43.42% /  -1.61 (acc 68.38%)
+   svamp             : saved 59.35% | d_acc  -3.24 (acc 85.46%) | thk  270.4 + rsp   8.5 | run 0.04% | call   nan%
+   mbpp              : saved 44.00% | d_acc  -3.31 (acc 49.14%) | thk 1141.9 + rsp  48.2 | run 1.98% | call   nan%
+   ifeval            : saved 22.54% | d_acc  -0.21 (acc 57.56%) | thk  193.7 + rsp 345.3 | run 4.09% | call   nan%
+   bfcl_simple_python: saved 39.94% | d_acc  -0.25 (acc 81.91%) | thk   93.0 + rsp  24.0 | run 0.00% | call 97.34%
+   bfcl_multiple     : saved 42.07% | d_acc  +1.25 (acc 77.31%) | thk  101.2 + rsp  23.9 | run 0.00% | call 97.56%
+   bfcl_irrelevance  : saved 44.70% | d_acc  +0.42 (acc 83.80%) | thk   97.6 + rsp  20.1 | run 0.00% | call 16.20%
+   bfcl_pooled       : saved 41.89% | d_acc  +0.30 (acc 81.35%) | thk   96.3 + rsp  22.9 | run 0.00% | call  0.00%

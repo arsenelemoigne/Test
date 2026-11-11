@@ -1,0 +1,3 @@
+rpE80  (on 1000 FT SVAMP Qs): guard_wide = 179 (chosen 452.0 vs rej 311.3) | right_hold = 256 (chosen 428.2 vs rej 405.7)
+rpK60  (on 1000 FT SVAMP Qs): guard_wide = 190 (chosen 376.2 vs rej 252.8) | right_hold = 263 (chosen 340.8 vs rej 326.3)
+rpL60  (on 1000 FT SVAMP Qs): guard_wide = 195 (chosen 406.2 vs rej 289.9) | right_hold = 269 (chosen 336.3 vs rej 316.4)

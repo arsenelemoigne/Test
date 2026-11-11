@@ -1,0 +1,17 @@
+rpK40 vs rpK20 | Paired SE: Saved +- 0.808% (95% CI +- 1.58%), Acc +- 0.253 (95% CI +- 0.50)
+   Per part SE (rpK40 vs rpK20): {'bfcl_pooled': (np.float64(0.571), np.float64(0.303)), 'ifeval': (np.float64(2.717), np.float64(0.591)), 'mbpp': (np.float64(1.733), np.float64(0.682)), 'svamp': (np.float64(0.865), np.float64(0.339))}
+rpK40 vs rpK60 | Paired SE: Saved +- 0.977% (95% CI +- 1.92%), Acc +- 0.261 (95% CI +- 0.51)
+   Per part SE (rpK40 vs rpK60): {'bfcl_pooled': (np.float64(0.64), np.float64(0.354)), 'ifeval': (np.float64(3.044), np.float64(0.616)), 'mbpp': (np.float64(2.411), np.float64(0.672)), 'svamp': (np.float64(0.978), np.float64(0.361))}
+
+=== Bump of rpK-40 over 0.5*(rpK-20 + rpK-60) ===
+  bfcl_irrelevance   (N= 240): bump =  -0.23 pts | SE = 0.413 | z = -0.57 | thk: 90.5 -> 83.7 -> 76.2 | rsp: 7.8 -> 5.4 -> 4.9
+  bfcl_multiple      (N= 200): bump =  +0.44 pts | SE = 0.608 | z = +0.72 | thk: 101.8 -> 95.8 -> 89.4 | rsp: 23.5 -> 23.6 -> 23.5
+  bfcl_simple_python (N= 400): bump =  +0.84 pts | SE = 0.372 | z = +2.27 | thk: 93.8 -> 88.8 -> 82.5 | rsp: 24.1 -> 25.3 -> 23.8
+  ifeval             (N= 541): bump =  +1.17 pts | SE = 0.519 | z = +2.25 | thk: 151.2 -> 136.8 -> 123.0 | rsp: 229.7 -> 241.5 -> 229.6
+  mbpp               (N= 378): bump =  +0.61 pts | SE = 0.565 | z = +1.08 | thk: 991.3 -> 962.7 -> 896.8 | rsp: 47.4 -> 47.9 -> 50.4
+  svamp              (N=1000): bump =  +0.13 pts | SE = 0.298 | z = +0.44 | thk: 281.6 -> 278.1 -> 258.8 | rsp: 9.5 -> 8.0 -> 8.1
+  [Part4] bfcl_pooled  (N= 840): bump =  +0.44 pts | SE = 0.258 | z = +1.70
+  [Part4] ifeval       (N= 541): bump =  +1.17 pts | SE = 0.519 | z = +2.25
+  [Part4] mbpp         (N= 378): bump =  +0.61 pts | SE = 0.565 | z = +1.08
+  [Part4] svamp        (N=1000): bump =  +0.13 pts | SE = 0.298 | z = +0.44
+  [HEADLINE] bump =  +0.59 pts | SE = 0.216 | z = +2.72

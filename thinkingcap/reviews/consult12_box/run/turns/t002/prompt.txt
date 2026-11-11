@@ -1,0 +1,29 @@
+=== NEW_RESULTS.md ===
+# New since your last report (consult11) ? 11 Nov, ~17:15
+
+Your consult11 report was written BEFORE these two full tests printed. This note replaces the previous NEW_RESULTS.md.
+
+## All full tests of the repair line (2,759 x 8, official weighting; per type saved / accuracy)
+
+| model | headline | math | code | IFEval | one function | several | no fit |
+|---|---|---|---|---|---|---|---|
+| rpE-80 (start) | 47.0 / -0.9 | 54 / -1.2 | 46 / -1.0 | 45 / -2.6 | 37 / +0.1 | 39 / +0.1 | 50 / +3.4 |
+| rpK step 20 | 49.9 / -1.3 | 58 / -2.6 | 51 / -0.3 | 45 / -3.1 | 40 / +0.3 | 42 / -1.5 | 54 / +3.6 |
+| **rpK step 40 (NEW)** | **51.2 / -0.8 (-0.75): INSIDE THE BOX** | 58 / -2.3 | 52 / -0.1 | 46 / -1.9 | 41 / +0.3 | 45 / -0.8 | 58 / +4.7 |
+| rpK step 60 | 54.4 / -1.4 | 61 / -2.3 | 55 / -1.2 | 49 / -3.0 | 45 / -1.5 | 48 / -1.0 | 62 / +6.2 |
+| **rpL step 60 (NEW)** | **59.3 / -1.7** | 64 / -2.7 | 62 / -0.9 | 58 / -3.4 | 47 / -2.0 | 49 / -0.6 | 62 / +4.6 |
+| Path 1 round 1 (p1r1s0-200) | 43.4 / -1.5 | 59 / -3.2 | 44 / -3.3 | 23 / +0.4 | 40 / -0.2 | 42 / +1.2 | 45 / +0.4 |
+
+vs the team's curve: rpL-60 +3.20 (best ever), rpK-60 +2.38, rpK-40 +2.33, rpK-20 +1.57, rpE-80 +1.45.
+Your forecasts: rpL-60 56.8-58.8 / -1.60 to -2.15 (consult10): close. rpK-40: you advised not to full-test it; it is the only one in the box.
+Caution on rpK-40: its IFEval reads -1.9 where steps 20 and 60 both read about -3.0; one full test carries about +-0.7 accuracy and
++-1.2 saving, so part of its margin (1.2 saved, 0.25 accuracy) is likely luck.
+Per-question records of rpK-40 and rpL-60 are NOT in the tables yet (Drive had not listed them); per type above is exact. The
+tables hold per-question full tests for base, nothink, rc1, rpE80, rpI120, rpK20, rpK60, p1r1s0, and Dev-512 for rpL-20/40/60.
+
+## Running / queued now
+- GPU 2: Dev-SVAMP-200 being built, then the Dev-SVAMP scores of rpE-80, rpK-60, rpL-60, then rpM (your design; consult11: run as
+  is), then rpL-40's full test.
+- GPU 1: after the rpL-60 full test: Dev-SVAMP-200, then p1cr1s0 (Path 1's round 1, third version; consult11: run as is).
+- Not built yet: rpN (your accuracy-only repair on top of a shortened model, designed on rpK-60).
+

@@ -1,0 +1,41 @@
+=== SVAMP by rpE80 thinking quartiles ===
+
+Band: Q1_short (N=251, rpE80 thk range 81-152)
+  base   : acc 96.96% ( +0.00) | thk  283.3 | run 0.00%
+  rpE80  : acc 97.21% ( +0.25) | thk  128.0 | run 0.00%
+  rpI120 : acc 98.06% ( +1.10) | thk  137.7 | run 0.00%
+  rpK20  : acc 96.61% ( -0.35) | thk  123.3 | run 0.00%
+  rpK40  : acc 96.91% ( -0.05) | thk  121.5 | run 0.00%
+  rpK60  : acc 96.66% ( -0.30) | thk  114.4 | run 0.00%
+  rpL60  : acc 97.06% ( +0.10) | thk  109.0 | run 0.00%
+  p1r1s0 : acc 97.76% ( +0.80) | thk  140.1 | run 0.00%
+
+Band: Q2_med_short (N=249, rpE80 thk range 152-200)
+  base   : acc 94.13% ( +0.00) | thk  391.1 | run 0.00%
+  rpE80  : acc 92.02% ( -2.11) | thk  174.4 | run 0.00%
+  rpI120 : acc 94.33% ( +0.20) | thk  188.2 | run 0.00%
+  rpK20  : acc 92.17% ( -1.96) | thk  168.6 | run 0.00%
+  rpK40  : acc 92.57% ( -1.56) | thk  164.5 | run 0.00%
+  rpK60  : acc 92.42% ( -1.71) | thk  157.3 | run 0.00%
+  rpL60  : acc 92.12% ( -2.01) | thk  148.4 | run 0.00%
+  p1r1s0 : acc 91.47% ( -2.66) | thk  180.0 | run 0.00%
+
+Band: Q3_med_long (N=250, rpE80 thk range 201-322)
+  base   : acc 89.70% ( +0.00) | thk  574.6 | run 0.25%
+  rpE80  : acc 87.70% ( -2.00) | thk  251.3 | run 0.00%
+  rpI120 : acc 87.65% ( -2.05) | thk  289.7 | run 0.00%
+  rpK20  : acc 86.55% ( -3.15) | thk  242.6 | run 0.00%
+  rpK40  : acc 86.10% ( -3.60) | thk  233.5 | run 0.00%
+  rpK60  : acc 86.55% ( -3.15) | thk  219.6 | run 0.00%
+  rpL60  : acc 86.15% ( -3.55) | thk  207.0 | run 0.00%
+  p1r1s0 : acc 86.20% ( -3.50) | thk  241.8 | run 0.05%
+
+Band: Q4_long (N=250, rpE80 thk range 322-2574)
+  base   : acc 74.00% ( +0.00) | thk 1457.5 | run 6.70%
+  rpE80  : acc 72.85% ( -1.15) | thk  673.1 | run 0.15%
+  rpI120 : acc 74.85% ( +0.85) | thk  806.7 | run 0.55%
+  rpK20  : acc 69.10% ( -4.90) | thk  592.2 | run 0.15%
+  rpK40  : acc 69.85% ( -4.15) | thk  593.0 | run 0.05%
+  rpK60  : acc 69.75% ( -4.25) | thk  544.1 | run 0.00%
+  rpL60  : acc 68.45% ( -5.55) | thk  496.6 | run 0.05%
+  p1r1s0 : acc 66.40% ( -7.60) | thk  519.8 | run 0.10%

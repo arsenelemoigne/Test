@@ -5561,3 +5561,18 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   both neighbours are near -3.0. One full test carries about +-0.7 accuracy and +-1.2 saving: part of this is luck, and the
   margin is thin (1.2 points of saving, 0.2 of accuracy). Dev-512 had ranked step 40 below step 20 on accuracy.
 - consult9 and consult10 both advised dropping this test as the least informative; the user asked for it.
+- 11 Nov ~18:05 **Dev-SVAMP-200 (200 SVAMP-like math questions) does NOT see the math loss either:** rpE-80 49.4% / +3.12; rpK-60 55.8 / +3.12
+  (paired vs rpE-80: +6.4 / +0.00, full test said -1.1); rpL-60 59.3 / +2.38 (paired -0.75; full test -1.5); p1r1s0-200 54.7 / -1.88 (scored
+  on GPU 1, on its own copy of the original's reference answers). Saving reads right; 200 questions are too few for 1-point accuracy gaps.
+  The "hold" stage fails on GPU 2's runtime (KeyError: its track.py copy predates it); the 15-minute wait before rpM was skipped.
+- **consult12 (Gemini 4 Argon) done, $1.55: reviews/consult12_box/run/final_answer.md.** (1) rpK-40: the saving is real; of its accuracy
+  bump over its neighbours ~+0.22 is real (tool-call threshold, code, "at least N" responses) and ~+0.37 luck: true value ~51.2 / -1.10,
+  ~25% chance its true accuracy is better than -1; submittable as is (the evaluation is fixed); do NOT run a second seed of rpK. (2) rpN
+  on rpL-60 dominates rpN on rpK-60 (twice the saving to spend at -0.25 accuracy); the accuracy-only repair rpE-80 -> rpI-120 bought
+  +0.21 accuracy per point of saving; rpN from rpL-60 forecast 54.2-56.5 / -0.55 to -0.95; rpM forecast unchanged 53.8-56.2 / -0.65 to -1.20.
+  IFEval length-rule pairs should come from rpE-80's answers (rpL-60 writes too short to give many). (3) Path 1: let p1cr1s0 finish, then
+  stop Path 1 (no round 2, no full test unless rpM and rpN both fail). The clean recipe to present = two stages: iterative self-DPO
+  compression from the original (-> rc1-soup-30), then typed self-repair (rpE -> rpK / rpL / rpM / rpN), all on the model's own answers.
+  (4) Drop rpL-40's full test (dominated); full-test the best of rpM and rpN.
+- **rpN built and queued on GPU 1 after p1cr1s0** (repair_pairs.py --mix-preset hold; on rpE-80's answers: IFEval 96 length-rule + 122
+  be-right + 22 loops, code 86 / 24 guards / 10 loops, tool calls be-right only, every quota full; older pair files still identical).

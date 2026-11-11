@@ -1,0 +1,60 @@
+140, gsm_plus 74 / 92, kodcode 169 / 100, toolace 89 / 33, arc 32 / 3, csqa 71 / 26, ifeval-like 7 / 3; + guard pairs (bon_pairs, math shorten 0) + 133 KodCode right-beats-wrong.
+
+Process notes: serial grading of 144,640 answers > 1 h (code tests, GPU idle) -> check_vllm with 16 threads (~15 min); a killed check_vllm left an orphan vLLM engine holding 10.5 GB (RL smoke test OOM).
+
+### C9. rc1 cal-cut DPO (from ca1), 23 Oct
+
+1,489 training pairs (48 held out): shorten 691, guard 451, hard 397 (mix 0.45 / 0.29 / 0.26); 3 seeds, soups; seed 0 = 94 steps, pairs ordered right 71?86%.
+
+Choosing set (questions_val20261023) x4:
+
+| model | overall | per-benchmark |
+|---|---|---|
+| ca1 (start, reference) | +44.1 / -1.8 | mbpp +56% / -6.2, svamp +49% / +0.6, ifeval +30% / 0.0, bfcl +34?41% / -3.1..-0.6 |
+| soup step 10 | +52.5 / -0.1 | |
+| soup step 20 | +54.0 / -0.8 | |
+| soup step 30 (chosen) | +55.1 / -0.6 | svamp +63% / -2.5, mbpp +66% / +1.3, ifeval +40% / -1.3, bfcl +40?50% / -1.2..+1.9 |
+
+rc1-soup-30 x8:
+
+| set | overall | bfcl irr | bfcl mult | bfcl simple | ifeval | mbpp | svamp |
+|---|---|---|---|---|---|---|---|
+| usual x8 | +58.0 / -3.1 | +48% / -4.4 | +45% / +3.1 | +38% / -0.3 | +53% / -0.6 | +61% / -6.9 | +69% / -4.4 |
+| fresh x8 | +55.6 / -2.9 | +46% / -4.4 | +42% / -5.0 | +39% / +0.3 | +45% / -1.9 | +64% / -1.6 | +66% / -5.0 |
+
+vs ca1 on fresh (+48.6 / -1.8): +7.0 saving, -1.1 accuracy; mbpp 53% / -2.8 -> 64% / -1.6; svamp -4.1 -> -5.0; bfcl ~-0.6 -> -3.0 pooled. Choosing set x4 had shown -0.6 for the same model.
+
+### C10. rc1 RL (from rc1-soup-30), 23 Oct
+
+Reward = right x (1 - alpha_q ? sigmoid(z_thinking)), alpha 0.15 x solve rate; batch-normalized advantages; KL 1e-3; lr 1e-5; LoRA r16; 32 questions x 8 per step; pool = 782 round questions solved >= 4/8 by ca1, repeated ~every 24 steps. First steps: 80?89% right on training answers, thinking 200?340 tokens.
+
+Choosing set x2 quick checks:
+
+| block | overall | per-benchmark |
+|---|---|---|
+| block 1 (step 20) | +54.2 / -0.2 | svamp +59% / -2.5, mbpp +64% / 0.0, ifeval +44% / +2.5, bfcl +43?49% / -3.7..+1.2 |
+| block 2 (step 40) | +51.3 / +0.9 | 5 of 6 parts exactly equal to base accuracy (flagged suspicious) |
+| block 3 (step 60) | +48.5 / -0.6 | svamp +49% / -1.2, mbpp +56% / +1.3, ifeval +42% / -2.5, bfcl +42?50% / -3.7..+3.7 |
+
+Training-answer thinking rose from ~200?250 tokens (block 1) to 400?500 (block 4) at 82?96% right. Block 2 hit CUDA OOM on a long reply (vocabulary-wide log-probs per position; fixed with chunked, recomputed log-probs). RL stopped after block 3.
+
+All rc1 versions on fresh x8 (fresh set also used for selection from here, user's call):
+
+| version | overall | svamp | mbpp | ifeval | bfcl irr | bfcl mult | bfcl simple | choosing set x4 |
+|---|---|---|---|---|---|---|---|---|
+| DPO soup 10 | +48.6 / -3.0 | +62% / -6.2 | +55% / -2.2 | +35% / -1.9 | +38% / -3.4 | +38% / -2.2 | +34% / +0.3 | ? |
+| DPO soup 20 | +54.8 / -4.0 | +65% / -5.6 | +63% / -4.7 | +46% / -3.1 | +43% / -4.7 | +40% / -3.7 | +37% / +0.6 | ? |
+| DPO soup 30 | +55.6 / -2.9 | +66% / -5.0 | +64% / -1.6 | +45% / -1.9 | +39?46% / -5.0..+0.3 (pooled) | | | ? |
+| + RL 20 steps | +54.8 / -3.7 | +65% / -6.6 | +63% / -1.3 | +45% / -4.4 | +45% / -3.7 | +41% / -3.7 | +38% / 0.0 | +57.3 / -0.2 |
+| + RL 40 steps (rc1-rl-40) | +53.9 / -2.1 | +65% / -4.1 | +59% / -1.9 | +46% / -0.6 | +45% / -1.2 | +41% / -4.1 | +39% / -0.3 | +54.8 / -0.9 |
+| + RL 60 steps | +49.6 / -3.4 | +58% / -3.7 | +58% / -4.7 | +38% / -2.8 | +44% / -2.2 | +42% / -4.4 | +39% / -0.3 | ? |
+
+Observed: choosing set x4 was 1.2?3.5 pts higher in accuracy than fresh x8 for every version. Spread -2.1..-4.0 across the seven versions.
+
+### C11. MBPP audit of the gentle best-of-8 SFT rows
+
+74 MBPP rows in runs/bon/select-r1/sft.jsonl (the only MBPP exposure of the rounds 1?5 / balanced / repair lineage; DPO rounds used --drop-sources mbpp_train), mbpp_audit.py vs 378 MBPP+ tasks (runs/audit/mbpp74.txt):
+
+| check | count |
+|---|---|
+| 8-gr

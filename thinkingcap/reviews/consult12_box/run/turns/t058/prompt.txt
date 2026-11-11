@@ -1,0 +1,75 @@
+211:         if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
+212:             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+213:                                           length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+214:             no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
+215:             # (11 Nov, rpL) an answer that RUNS AWAY (loops to the token cap, or never closes its thinking) loses to a
+216:             # finished right answer of the same question. Before, an unfinished answer was never used at all, so no pair
+217:             # said "do not loop" (runaways hold 26% of rpE-80's IFEval tokens on the full test)
+218:             runaway = [r for r in q if not finished(r)]
+219:             if base_part in loop_resp_only:  # (rpM) only loops in the RESPONSE (the thinking closed, then cut at the cap)
+220:                 runaway = [r for r in runaway if r["closed_thinking"]]
+221:             if rights and runaway:
+222:                 cand[part]["loop"].append((qid, rights[0], runaway[0]))
+223:             if len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not no_shorten:
+224:                 long, short = rights[-1], rights[0]
+225:                 if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+226:                     # (11 Nov, rpL) thinking shorter, response neither clipped nor longer: at least --resp-median x the
+227:                     # question's median right response, at most --resp-max x the rejected answer's response
+228:                     rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
+229:                     ok = [r for r in rights[:-1] if response_len(r) >= args.resp_median * rmed
+230:                           and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
+231:                           and response_len(r) >= args.resp_near_long * response_len(long)]
+232:                     short = ok[0] if ok else long
+233:                 elif part in think_only and args.resp_guard > 0:  # (11 Nov) never prefer a notably shorter RESPONSE
+234:                     short = next(r for r in rights if response_len(r) >= args.resp_guard * response_len(long))
+235:                 if short is not long:
+236:                     spread = size(long) / max(1, size(short))
+237:                     if spread >= args.shorten_ratio:
+238:                         cand[part]["shorten"].append((qid, short, long))
+239:                     elif spread >= 1.20:  # (11 Nov, consult6 2nd review) backup supply if clear shorten pairs run short
+240:                         cand[part]["shorten_soft"].append((qid, short, long))
+241:             if rights and wrongs:
+242:                 if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
+243:                     taken = set()  # (11 Nov) up to 2 pairs per question, on different answers: counting-rule pairs are the
+244:                     for rej in wrongs[:2]:  # scarce kind (244 for a half-quota of 400 on the original's real answers)
+245:                         need = args.count_resp_min * response_len(rej) + 15 if args.count_resp_min > 0 else response_len(rej)
+246:                         fit = [r for r in rights if id(r) not in taken and response_len(r) >= need
+247:                                and thinking_len(r) <= 1.2 * thinking_len(rej)
+248:                                and (args.count_resp_cap <= 0
+249:                                     or response_len(r) <= args.count_resp_cap * response_len(rej) + args.count_resp_pad)]
+250:                         if fit:
+251:                             pick = min(fit, key=thinking_len)
+252:                             taken.add(id(pick))
+253:                             cand[part]["right_count"].append((qid, pick, rej))
+254:                 else:  # (11 Nov, both reviews) rpE's proven compact "be right" pair: the shortest right answer that re-checks
+255:                     # the question (within 1.5x the shortest right's thinking), else the shortest right, over the shortest
+256:                     # finished wrong; replaces the equal-length pairs (D6 / runa2: equal-length right>wrong halves the saving)
+257:                     pool_r = rights
+258:                     tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # the question's median right thinking
+259:                     if part in think_only and args.right_resp_cap > 0:  # (11 Nov, rpL) be right without writing more
+260:                         pool_r = [r for r in rights if response_len(r) <= args.right_resp_cap * response_len(wrongs[0]) + 15]
+261:                     if base_part in right_hold:
+262:                         # (rpM) hold the length: the right / wrong pair of this question whose thinking lengths are closest,
+263:                         # kept only if the right answer thinks 0.95-1.25x as long as the wrong one (a pair about being
+264:                         # right, with no "be shorter" signal: the shortest right answer over a long wrong one taught math to
+265:                         # skip its re-check); among equally close pairs, a right answer that re-reads the question
+266:                         best = None
+267:                         for r in rights:
+268:                             for w in wrongs:
+269:                                 ratio = thinking_len(r) / max(1, thinking_len(w))
+270:                                 if 0.95 <= ratio <= 1.25:
+271:                                     key = (round(abs(ratio - 1.05), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+272:                                     if best is None or key < best[0]:
+273:                                         best = (key, r, w)
+274:                         if best:
+275:                             cand[part]["right_cr"].append((qid, best[1], best[2]))
+276:                     elif pool_r:
+277:                         checked = [r for r in pool_r if decode and thinking_len(r) <= 1.5 * thinking_len(pool_r[0]) and REREAD.search(decode(r))]
+278:                         cand[part]["right_cr"].append((qid, (checked or pool_r)[0], wrongs[0]))
+279:                     # the capped "don't stop too early" guard (non-counting questions only: counting-rule questions belong
+280:                     # to IFEval's counting half; consult8)
+281:                     if base_part in guard_wide:  # (rpM) the 0.5-1.0x band: a calculation that skipped its re-check
+282:                         capped = sorted((r for r in rights if 0.95 * tmed <= thinking_len(r) <= 1.25 * tmed), key=thinking_len)
+283:                         # the rejected answer: the wrong one nearest 0.75x the median right thinking (a clear, bounded gap),
+284:                         # listed last so that the line below takes it
+285:                         early = sorted((w for w in wrongs if thinking_len(w) < 0.95 * tmed),

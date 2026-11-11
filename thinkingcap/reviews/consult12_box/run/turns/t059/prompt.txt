@@ -1,0 +1,85 @@
+286:                                        key=lambda w: -abs(thinking_len(w) - 0.75 * tmed))
+287:                     else:
+288:                         capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
+289:                         early = sorted((w for w in wrongs if thinking_len(w) < 0.5 * tmed), key=thinking_len)
+290:                     if capped and early:
+291:                         pick = ([r for r in capped if decode and REREAD.search(decode(r))] or capped)[0]
+292:                         cand[part]["capguard"].append((qid, pick, early[-1]))  # the LONGEST early stop: the smallest length gap
+293:             continue
+294:         if (args.kinds == "guard,shorten" and len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right
+295:                 and not (part == "ifeval" and counting(q[0]))):  # (10 Nov, odpo) a counting rule needs its full response
+296:             spread = size(rights[-1]) / max(1, size(rights[0]))
+297:             if spread >= args.shorten_ratio:
+298:                 cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+299:             elif spread >= 1.25:  # backup supply: used only if the clear (>= 1.5x) pairs run short
+300:                 cand[part]["shorten_soft"].append((qid, rights[0], rights[-1]))
+301:         if not rights or not wrongs:
+302:             continue
+303:         chosen = rights[0]
+304:         if args.count_rules and part == "ifeval" and counting(q[0]):
+305:             rej = wrongs[0]
+306:             fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
+307:             rereads[("ifeval", "counting-rule questions")] += 1
+308:             if not fit:
+309:                 rereads[("ifeval", "counting-rule questions without a fitting right answer (no pair)")] += 1
+310:                 continue
+311:             chosen = min(fit, key=thinking_len)
+312:             rereads[("ifeval", "counting-rule pairs")] += 1
+313:             cand[part]["guard"].append((qid, chosen, rej))
+314:             continue
+315:         if decode:
+316:             checked = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0]) and REREAD.search(decode(r))]
+317:             chosen = checked[0] if checked else rights[0]
+318:             rereads[(part, "chosen re-checks")] += bool(checked)
+319:             rereads[(part, "rejected re-checks")] += bool(REREAD.search(decode(wrongs[0])))
+320:             rereads[(part, "guard questions")] += 1
+321:         cand[part]["guard"].append((qid, chosen, wrongs[0]))
+322:         close = [(r, w) for r in rights for w in wrongs
+323:                  if max(r["output_tokens"], w["output_tokens"]) <= args.ratio * min(r["output_tokens"], w["output_tokens"])]
+324:         rng.shuffle(close)
+325:         for r, w in close:
+326:             cand[part]["right_long" if r["output_tokens"] > w["output_tokens"] else "right_short"].append((qid, r, w))
+327:     pairs, counts = [], Counter()
+328:     shortfall = {}  # (11 Nov) part -> pairs missing to reach the quota at the fixed mix (written to shortfall.json)
+329:     per_q, right_q, used = Counter(), Counter(), set()
+330: 
+331:     def take(part, kind, pool, n):
+332:         rng.shuffle(pool)
+333:         got = []
+334:         for qid, c, w in pool:
+335:             if len(got) >= n:
+336:                 break
+337:             key = (id(c), id(w))
+338:             if key in used or per_q[qid] >= 3 or (kind != "guard" and right_q[qid] >= 2):
+339:                 continue
+340:             used.add(key)
+341:             per_q[qid] += 1
+342:             right_q[qid] += kind != "guard"
+343:             got.append({"id": qid, "source": c["source"], "part": part, "kind": kind, "prompt_ids": list(c["prompt_ids"]),
+344:                         "chosen_ids": list(c["output_ids"]), "rejected_ids": list(w["output_ids"]),
+345:                         "chosen_tokens": c["output_tokens"], "rejected_tokens": w["output_tokens"]})
+346:         return got
+347:     by_part = {}
+348:     for part, n in quota.items():
+349:         if args.kinds == "mix":
+350:             base_part = "svamp" if part == "svamp_hard" else part
+351:             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
+352:             if args.mix_preset == "round1":
+353:                 # (11 Nov, both reviews) shorten-dominant round 1: it must reach ~53-57% saved for round 2 to repair
+354:                 sh_share = ({"shorten": 0.60, "right": 0.40, "guard": 0.0} if part in ("svamp", "bfcl_irrelevance") else
+355:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "ifeval" else
+356:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+357:             if args.mix_preset == "typed":
+358:                 # (11 Nov, the IFEval + tool-call repair) "think less" only where the full-test records show thinking is
+359:                 # worth little (IFEval without a counting rule, tool calls); math and code get NO "think less" pair, only
+360:                 # "be right" and "don't stop early" pairs (they hold the rest in place)
+361:                 sh_share = ({"shorten": 0.0, "right": 0.80, "guard": 0.20} if part in ("svamp", "mbpp") else
+362:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+363:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+364:             count_share = args.count_share
+365:             if args.mix_preset == "typed2":
+366:                 # (11 Nov, rpL = rpK + consult9's IFEval fixes + the anti-loop pair) tool calls as in "typed"; math and code
+367:                 # hold as in "typed", with a tenth of anti-loop pairs; IFEval: 20% counting-rule pairs (true "at least N" rules,
+368:                 # --count-mode atleast), 50% "shorter thinking", 15% be-right, 15% anti-loop
+369:                 sh_share = ({"shorten": 0.0, "right": 0.70, "guard": 0.20, "loop": 0.10} if part in ("svamp", "mbpp") else
+370:                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else

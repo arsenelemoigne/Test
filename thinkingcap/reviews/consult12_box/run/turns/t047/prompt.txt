@@ -1,0 +1,3 @@
+rpE80  (on 541 FT IFEval Qs): right_count pairs =  40 (chosen rsp 343.9 vs rej 245.3, >=300 tok: 19) | right_cr Qs = 171 | loop Qs = 31
+rpK60  (on 541 FT IFEval Qs): right_count pairs =  27 (chosen rsp 413.1 vs rej 264.8, >=300 tok: 12) | right_cr Qs = 165 | loop Qs = 38
+rpL60  (on 541 FT IFEval Qs): right_count pairs =  27 (chosen rsp 261.7 vs rej 191.1, >=300 tok:  7) | right_cr Qs = 165 | loop Qs = 21

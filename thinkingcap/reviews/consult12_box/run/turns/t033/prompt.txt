@@ -1,0 +1,9 @@
+=== Dev-512 vs Full Test Comparison ===
+rpE80      | Dev: 46.93% / +1.36 (vs rpE80: +0.00% / +0.00) | Full: 47.04% / -0.95 (vs rpE80: -0.00% / +0.00) | Full-Dev offset: +0.11% / -2.31
+rpK-20     | Dev: 50.52% / +1.51 (vs rpE80: +3.59% / +0.15) | Full: 49.88% / -1.28 (vs rpE80: +2.83% / -0.33) | Full-Dev offset: -0.64% / -2.79
+rpK-40     | Dev: 50.40% / +0.95 (vs rpE80: +3.47% / -0.42) | Full: 51.17% / -0.77 (vs rpE80: +4.12% / +0.18) | Full-Dev offset: +0.76% / -1.72
+rpK-60     | Dev: 53.78% / +0.76 (vs rpE80: +6.84% / -0.60) | Full: 54.43% / -1.44 (vs rpE80: +7.39% / -0.49) | Full-Dev offset: +0.66% / -2.20
+rpL-20     | Dev: 50.33% / +1.30 (vs rpE80: +3.39% / -0.07) | Full: [not run]
+rpL-40     | Dev: 53.81% / +0.43 (vs rpE80: +6.87% / -0.93) | Full: [not run]
+rpL-60     | Dev: 58.86% / +0.92 (vs rpE80: +11.93% / -0.44) | Full: 59.27% / -1.69 (vs rpE80: +12.23% / -0.74) | Full-Dev offset: +0.41% / -2.61
+p1r1s0-200 | Dev: 45.90% / +0.12 (vs rpE80: -1.03% / -1.25) | Full: 43.42% / -1.46 (vs rpE80: -3.62% / -0.51) | Full-Dev offset: -2.48% / -1.57

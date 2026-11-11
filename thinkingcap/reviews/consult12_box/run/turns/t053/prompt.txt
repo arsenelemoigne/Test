@@ -1,0 +1,158 @@
+G6), online DPO (G7), diagnostics (G8), competitors (G9), consultants (G10), infrastructure (G11), user decisions (G12), weight-space editing (G13)
+
+---
+
+## 0. Task and evaluation
+
+- **Model:** Qwen3-0.6B (thinking mode on, `enable_thinking=True`). Goal of the work: fewer generated tokens (mainly
+  thinking) at minimal accuracy loss. All changes live in the weights (LoRA adapters merged); no test-time switch.
+- **Official evaluation** (BottleCapAI ThinkingCap-Test, `evaluate.py` / `compare.py`): 2,759 questions, 8 samples each.
+  - Benchmarks: SVAMP (math), MBPP+ (code), IFEval (instruction following), BFCL (function calling; 3 parts: one
+    function "simple" 400 questions, "multiple" 200, "irrelevance"/no-fit 240).
+  - Sampling: temperature 0.6, top-p 0.95, top-k 20; token cap 8,192 for MBPP+, 4,096 otherwise.
+  - Score: per benchmark, accuracy change and token reduction vs the base model; the headline averages the **4**
+    benchmarks (BFCL's three parts pooled into one): accuracy change = arithmetic mean; tokens saved = 1 ? geometric mean
+    of the per-benchmark token ratios (candidate / base).
+- **Question subsets used in this work** (all drawn from the official 2,759; aggregate statistics only are used for
+  decisions):
+
+  | set | size | use |
+  |---|---|---|
+  | `questions_val20261023` ("choosing set") | 40 per part = 240 | screens and decisions, ?4 samples |
+  | `questions_40` | 40 per part = 240 | reference statistics (?2 samples) |
+  | `questions_ref20261024`, `questions_ref20261025` | 40 per part each | reference statistics (?4); the first also for cross-checks |
+  | `questions_fresh20261022` ("fresh set") | 40 per part = 240 | confirm scores only, ?8 samples; never used for any choice |
+
+- **Re-weighting:** subsets hold 40 questions per BFCL part (equal weights inside BFCL); the full evaluation holds
+  400/200/240. From 30 Oct ~12:45 every score is also printed with BFCL re-pooled at 400/200/240 ("full-eval
+  weighting"; tokens weighted by each part's base mean output length).
+- **Noise reference (measured earlier in the project):** run-to-run noise ~0.8 pt overall on the fresh set ?8; a 240 ?4
+  screen moves ~?1.5 pts overall and ~?5 pts per part (40 questions per part).
+- **External reference points (public repos, full evaluation ?8):** michal-bida/thinking-compression 47.0% saved /
+  ?0.78 pts (one DPO round on own graded samples, long2short-style pairs, per-domain cap shorten ? right-vs-wrong
+  pairs); basta/lightning-mcqwen3 43.2% / ?0.85 (47.3% / ?0.9 with a test-time gate; prompt-distillation SFT ? cut-oracle
+  pairs ? math-only right>wrong DPO). Earlier project model rc1-rl-40 (DPO + RL): 53.9% / ?2.1 on the fresh set ?8.
+
+---
+
+---
+
+## Part A ? Track 1 and Tracks 2?2e (before 20 Oct to 22 Oct)
+
+Source: `Test-mvt-fading/thinkingcap/EXPERIMENT_LOG.md`, lines 1-1002. All numbers copied from the log. "Tokens saved" and "accuracy change" are against the raw Qwen3-0.6B under the same evaluation setup; accuracy change is in percentage points (pp). Where the log reports an "average" saving it is reproduced as given (the log does not restate the aggregation formula in this range). "?" = not in the log.
+
+Dates: this part of the log has few explicit dates. Explicit ones: runtime A lost "about 11:07 Paris (2026-10-21)" (Track 2d end); `questions_fresh20261022` seed; Track 2f (outside this section) "queued 22 Oct 2026". Elsewhere the log uses relative references ("yesterday", "last night", "night-1"). Track 1 and Tracks 2-2b are therefore before 2026-10-21; Track 2e is 2026-10-21 to 2026-10-22.
+
+Project goal stated at top of log: cut tokens while losing at most 3 accuracy points. The log states 95% accuracy ranges on the 240-question subset are about +/-4 pp overall, and single-benchmark cells swing about +/-8 to +/-10 at 40 questions.
+
+---
+
+### Common evaluation setup
+
+| item | value |
+|---|---|
+| evaluator | official `evaluate.py` / `compare.py` |
+| question set (default) | `questions_40`: 40 questions per benchmark part, 240 total |
+| samples per question | 2 by default; "4-sample" / "8-sample" rechecks noted per row |
+| hardware | L4 GPU, bf16 (Track 1 Round 1 on T4) |
+| later held-out sets | `questions_fresh20261022` (40 per part, seed 20261022, disjoint from questions_40, 8 samples); questions 41-80 of every part (scored by the separate mvt-pertype session, 8 samples) |
+
+---
+
+### Track 1: SFT on pruned traces, then RL (date: ?; GPU: T4 for Round 1, L4 otherwise)
+
+#### Reference: raw model (Track 1 runtime, 2 samples)
+
+| benchmark | accuracy | mean tokens |
+|---|---|---|
+| SVAMP | 81.3% | 778 |
+| MBPP+ | 57.5% | 1,699 |
+| IFEval | 52.5% | 710 |
+| BFCL irrelevance / multiple / simple | 85.0 / 76.3 / 82.5% | 205 / 223 / 190 |
+
+#### Methods
+
+- Rounds 1-2 (SFT): the model's own traces on 450 fixed training questions (GSM8K, ARC-Easy, CSQA, 150 each), 2 samples, 2,048-token cap, pruned; SFT 2 epochs. Round 2 adds "margin + balanced" pruning.
+- RL loop 1: RL with a TokenProbe-KL anchor plus a ShorterBetter length reward, from the raw model; 12 steps x 32 fresh questions x 8 samples (384 questions, each seen once), pool = full training split (~40k questions, GSM8K/ARC-Easy/CSQA).
+- RL loop 2: continuation of loop 1 settings; stopped at step 4 (lengths not falling).
+- RL loop 3: continued from the loop 1 adapter with stronger length pressure; 20 x 32 x 8 (640 fresh questions, seed 1; GSM8K, Skywork, ARC-Easy, CSQA, balanced). Log shows only 2 steps, status "running".
+
+| hyperparameter | loop 1 | loop 3 |
+|---|---|---|
+| start from | raw model | loop 1 adapter |
+| LoRA rank / lr | 16 / 2e-5 | 16 / 2e-5 |
+| ShorterBetter alpha | 0.5 | 1.0 |
+| TokenProbe KL beta | 5e-3 | 5e-3 |
+| lam_decay (push on redundant tokens) | 0.2 | 0.5 |
+| token budget = core length x scale | 3.0 -> 1.5 | 2.0 -> 1.0 |
+| core windows | 10 windows of 10 tokens | same |
+| steps x questions x samples | 12 x 32 x 8 | 20 x 32 x 8 |
+| token cap | 2,048 | 2,048 |
+
+#### Results (240 q x 2 samples)
+
+| run | method | tokens saved | accuracy change |
+|---|---|---|---|
+| Round 1 (T4) | SFT on pruned traces | +39.1% | -6.3 |
+| Round 2 | SFT on pruned traces, margin + balanced | +59.6% | -8.0 |
+| RL loop 1 | RL, TokenProbe-KL + ShorterBetter, alpha 0.5 | +5.7% | -1.2 |
+| RL loop 2 | same, continued | stopped at step 4 | ? |
+| RL loop 3 | from loop 1, stronger pressure | running (no eval in log) | ? |
+
+Per benchmark (tokens saved / accuracy change):
+
+| benchmark | RL loop 1 | Round 2 (SFT) |
+|---|---|---|
+| BFCL irrelevance | +4.3% / -5.0 | BFCL +32-39% / -3.8 to -10.0 (range over 3 parts) |
+| BFCL multiple | +12.2% / +8.8 | (see above) |
+| BFCL simple | +9.0% / +1.3 | (see above) |
+| IFEval | +16.1% / -1.3 | +40.3% / +3.8 |
+| MBPP+ | -18.1% / -3.8 | +86.4% / -6.3 |
+| SVAMP | +12.6% / -1.3 | +48.8% / -23.8 |
+
+Per-step training numbers (on that step's 256 training answers):
+
+| RL loop 1 step | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| accuracy % | 41 | 50 | 49 | 51 | 59 | 58 | 54 | 61 | 64 | 71 | 63 | 61 |
+| mean tokens | 957 | 932 | 906 | 722 | 645 | 686 | 817 | 776 | 939 | 578 | 593 | 535 |
+
+RL loop 2 (4 steps): accuracy 57, 49, 52, 53%; tokens 946, 832, 847, 866.
+RL loop 3 (2 steps): accuracy 55, 49%; tokens 977, 830.
+
+---
+
+### Track 2: MVT cut, fading worked examples, marginal token analysis (branch `mvt-fading`; own Colab L4 runtime, bf16; date: ?)
+
+All runs via `track.py` from `mvt_fading_colab.ipynb`.
+
+#### Reference rerun of raw model on this runtime (2 samples)
+
+| benchmark | accuracy | mean tokens |
+|---|---|---|
+| SVAMP | 82.5% | 821 |
+| MBPP+ | 57.5% | 1,699 |
+| IFEval | 56.3% | 833 |
+| BFCL irrelevance / multiple / simple | 83.8 / 76.3 / 82.5% | 202 / 223 / 190 |
+
+Training data for all Track 2 runs (`track.py rollouts`): same slice as Track 1 SFT, 450 questions (GSM8K, ARC-Easy, CSQA, 150 each), 2 samples, 2,048-token cap, eval sampling settings.
+
+#### Experiment 1: Marginal Value Theorem (MVT) cut, one-shot SFT
+
+Method: each correct rollout is cut where an MVT leaving rule fires on p(gold answer) as a function of thinking tokens, with "travel cost" c; cut traces are checked by letting the model answer naturally (`--check-samples 4`). SFT LoRA r16, lr 1e-4, 2 epochs, `--max-per-source 70` (205 rows).
+- mvt256: 2-step look-ahead rule, c=256. Bug in rule: on GSM8K median p(gold) at the cut is 0.00 for every c (32 to 2,048) because p(gold) is step-shaped (near 0 until the computation ends); rule left immediately. A c=64 run with this rule was stopped after 20 questions.
+- Fix (commit `d96087f`): leave only when no later point pays better per token than g(t)/(t+c). Runs named `mvth<c>`.
+
+| run | targets | pruned / truncated / original | mean completion | per source | failed natural-answer check | settle vs MVT median thinking kept | MVT earlier / later / same |
+|---|---|---|---|---|---|---|---|
+| mvt256 | 302 | 236 / 5 / 61 | 576 -> 245 (-57%) | ARC -67%, CSQA -65%, GSM8K -43% | 112 of 512 | 214 / 0 | 52% / 0% / 48% |
+| mvth1024 | 302 | 285 / 8 / 9 | 576 -> 129 (-78%) | ARC -78%, CSQA -78%, GSM8K -77% (1,024 -> 239) | 17 of 512 | 214 / 51 | 34% / 4% / 63% |
+
+| benchmark (2 samples) | mvt256 saved / acc | mvth1024 saved / acc |
+|---|---|---|
+| BFCL irrelevance | +29% / +2.5 | -1% / -5.0 |
+| BFCL multiple | +29% / -7.5 | +27% / -2.5 |
+| BFCL simple | +25% / -1.3 | +24% / +2.5 |
+| IFEval | +67% / +6.3 | +59% / +3.7 |
+| MBPP+ | +85% / -8.8 | +64% / -8.7 |
+| SVAMP | +39% / -21.3 | +54% / -2

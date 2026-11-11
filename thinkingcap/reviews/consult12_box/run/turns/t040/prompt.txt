@@ -1,0 +1,4 @@
+Total length_rule questions in Full Test IFEval: 118 / 541 (21.8%)
+  rpE80 : mixed (1..7 right) =  51/118 (43.2%) | 8/8 right =  8 | 0/8 right = 59 | mean rsp = 352.9
+  rpK60 : mixed (1..7 right) =  51/118 (43.2%) | 8/8 right = 11 | 0/8 right = 56 | mean rsp = 356.2
+  rpL60 : mixed (1..7 right) =  47/118 (39.8%) | 8/8 right =  8 | 0/8 right = 63 | mean rsp = 320.6

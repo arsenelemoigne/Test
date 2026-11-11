@@ -1,0 +1,13 @@
+  model    id  sample  ...  response_tokens  response_words  runaway
+0  base  1108       0  ...               81               6        0
+1  base  1108       1  ...               25               3        0
+2  base  1108       2  ...               56               5        0
+3  base  1108       3  ...               24               4        0
+4  base  1108       4  ...               28               4        0
+5  base  1108       5  ...               28               3        0
+6  base  1108       6  ...               41               5        0
+7  base  1108       7  ...              223              20        0
+8  base  3478       0  ...                0               0        1
+9  base  3478       1  ...               89              45        0
+
+[10 rows x 9 columns]

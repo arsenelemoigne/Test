@@ -1,0 +1,4 @@
+svamp        | Obs bump:  +0.13 pts | Pure 8-sample MC SE of bump: 0.287 pts | z_MC = +0.46
+mbpp         | Obs bump:  +0.61 pts | Pure 8-sample MC SE of bump: 0.594 pts | z_MC = +1.03
+ifeval       | Obs bump:  +1.17 pts | Pure 8-sample MC SE of bump: 0.492 pts | z_MC = +2.37
+bfcl_pooled  | Obs bump:  +0.44 pts | Pure 8-sample MC SE of bump: 0.259 pts | z_MC = +1.69

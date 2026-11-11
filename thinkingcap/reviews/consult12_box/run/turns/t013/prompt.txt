@@ -1,0 +1,56 @@
+Length of gpu2_night_full.txt: 56692
+mance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+drive: save done
+<unknown>:4: SyntaxWarning: invalid escape sequence '\|'
+<unknown>:4: SyntaxWarning: invalid escape sequence '\|'
+drive: save done
+sampled 300/512 questions
+drive: save done
+sampled 512/512 questions
+drive: save done
+drive: light restore done (runs/bon/dev512-rpE80)
+$ /usr/bin/python3 dev_score.py --base runs/bon/dev512-base/rollouts.jsonl --cand runs/bon/dev512-rpK-40/rollouts.jsonl --name rpK-40 --out runs/bon/dev512-rpK-40/dev_score.json --vs runs/bon/dev512-rpE80/rollouts.jsonl
+== rpK-40 (Dev-512 x8, 512 questions): tokens saved +50.4% [+47.6, +53.5], accuracy +0.95 pts [-0.74, +2.55] (official weighting, paired bootstrap 95%)
+   bfcl_multiple +52% / -0.4; bfcl_irrelevance +55% / +5.0; svamp +50% / +2.5; bfcl_simple_python +48% / +3.5; mbpp +55% / +0.6; ifeval +46% / -2.4
+   thinking + response tokens, original -> model: bfcl_multiple 186+18 -> 79+18; bfcl_irrelevance 155+28 -> 77+5; svamp 1115+20 -> 556+9; bfcl_simple_python 159+21 -> 74+20; mbpp 1934+80 -> 849+66; ifeval 436+273 -> 124+261
+   vs dev512-rpE80: saved +3.5 [+1.4, +5.5], accuracy -0.42 [-1.63, +0.80] (paired)
+drive: save done
+== rpK-40 (Dev-512 x8): saved +50.4% [+47.6, +53.5], accuracy +0.95 [-0.74, +2.55]
+drive: light restore done (data/dev512.jsonl)
+drive: light restore done (runs/bon/dev512-base)
+drive: light restore done (models/rpE-80, adapters/rpK-s0/step-60)
+$ /usr/bin/python3 merge.py --model models/rpE-80 --out /content/lupin-models/rpK-60 --adapters adapters/rpK-s0/step-60:1
+I0000 00:00:1794377805.066386  199020 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+merged adapters/rpK-s0/step-60 at 1
+saved /content/lupin-models/rpK-60
+drive: light restore done (runs/bon/dev512-rpK-60)
+$ /usr/bin/python3 probe_curve.py --data data/dev512.jsonl --sources toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built --per-source 1000000 --samples 8 --model /content/lupin-models/rpK-60 --out runs/bon/dev512-rpK-60 --dtype bfloat16 --generate-only --chunk 300 --max-questions 512 --seed 53
+0 questions already sampled, 512 to go
+I0000 00:00:1794377822.185717  199137 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+drive: save done
+sampled 300/512 questions
+sampled 512/512 questions
+drive: save done
+drive: light restore done (runs/bon/dev512-rpE80)
+$ /usr/bin/python3 dev_score.py --base runs/bon/dev512-base/rollouts.jsonl --cand runs/bon/dev512-rpK-60/rollouts.jsonl --name rpK-60 --out runs/bon/dev512-rpK-60/dev_score.json --vs runs/bon/dev512-rpE80/rollouts.jsonl
+== rpK-60 (Dev-512 x8, 512 questions): tokens saved +53.8% [+51.2, +56.5], accuracy +0.76 pts [-1.05, +2.58] (official weighting, paired bootstrap 95%)
+   bfcl_multiple +55% / -1.8; bfcl_irrelevance +58% / +6.4; svamp +54% / +0.8; bfcl_simple_python +51% / +2.1; mbpp +61% / +3.3; ifeval +45% / -3.4
+   thinking + response tokens, original -> model: bfcl_multiple 186+18 -> 74+18; bfcl_irrelevance 155+28 -> 72+5; svamp 1115+20 -> 517+9; bfcl_simple_python 159+21 -> 68+20; mbpp 1934+80 -> 723+66; ifeval 436+273 -> 113+275
+   vs dev512-rpE80: saved +6.8 [+4.6, +9.1], accuracy -0.60 [-2.05, +0.82] (paired)
+drive: save done
+== rpK-60 (Dev-512 x8): saved +53.8% [+51.2, +56.5], accuracy +0.76 [-1.05, +2.58]
+drive: save done
+drive: save done
+scripts at 8059788 Record-analysis scripts behind REPAIR_IFEVAL_TOOLS.md
+plan: ptrepair --name p1r2s0 --rp-gate p1r1s0-200,rpE80,6 --rp-base models/p1r1s0 --rp-base-from Qwen/Qwen3-0.6B:adapters/p1r1s0-s0/step-200 --rp-own-data --rp-exclude-dev --rp-exclude-ids data/p1-round1-ids.json --rp-public --rp-kinds mix --rp-samples 8 --rp-seed 21 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--resp-guard,0.9 --rp-questions svamp=1000,mbpp=600,ifeval=960,bfcl_simple_python=340,bfcl_multiple=250,bfcl_irrelevance=330 --rp-quota svamp=320,mbpp=320,ifeval=320,bfcl_simple_python=100,bfcl_multiple=80,bfcl_irrelevan
+scripts at 8059788 Record-analysis scripts behind REPAIR_IFEVAL_TOOLS.md
+drive: light restore done (runs/bon/dev512-p1r1s0-200/dev_score.json)
+drive: light restore done (runs/bon/dev512-rpE80/dev_score.json)
+repair p1r2s0: GATE CLOSED: Dev-512 saved p1r1s0-200 45.9 vs rpE80 46.93 + 6
+drive: save done
+drive: save done
+scripts at 8059788 Record-analysis scripts behind REPAIR_IFEVAL_TOOLS.md
+

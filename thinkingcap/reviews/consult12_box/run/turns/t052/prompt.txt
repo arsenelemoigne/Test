@@ -1,0 +1,87 @@
+=== THINKINGCAP_FULL_DOSSIER.md (head) ===
+# ThinkingCap / Qwen3-0.6B shorter thinking ? complete experiment dossier (state 10 Nov 2026)
+
+Plain record for external analysis, from the first experiment to now: context, methods, training data, evaluation, every
+measured result (including failed and broken runs), bugs, and the decisions taken. No ranking or interpretation is intended;
+tables copy the lab notebook's numbers. Sources: `EXPERIMENT_LOG.md` (branch mvt-fading, 3,458 lines), the per-type clone's
+log (branch mvt-pertype), the specs and handoff notes in the same folder. Sections are in time order; Part F is the LUPIN
+round-1 work (27?30 Oct). Values not in the sources are "?". Runs still in progress are marked pending.
+
+## Contents
+
+0. Task, evaluation, metrics, question sets, noise, external reference points
+1. Part A ? Track 1 and Tracks 2?2e (before 20 Oct to 22 Oct)
+2. Part B ? Track 3 per-type clone (20?21 Oct, ran in parallel with Track 2b?2e)
+3. Part C ? Tracks 2f and 2g, first half (22?25 Oct)
+4. Part D ? Track 2g, second half, and the stop-classifier work (25?26 Oct)
+5. Part E ? 26?30 Oct: runs outside the LUPIN pool, analyses, literature, decisions
+6. Part F ? LUPIN round 1: pools dp1?dp15, pairs, screens, confirms, cross-checks, Wanda pruning
+7. Part G ? 30 Oct (afternoon) to 10 Nov: evaluation changes (G0), full tests (G1), per-type (G2), joint DPO / bida / D-screen (G3), GRPO (G4), COPD (G5), repair line (G6), online DPO (G7), diagnostics (G8), competitors (G9), consultants (G10), infrastructure (G11), user decisions (G12), weight-space editing (G13)
+
+---
+
+## 0. Task and evaluation
+
+- **Model:** Qwen3-0.6B (thinking mode on, `enable_thinking=True`). Goal of the work: fewer generated tokens (mainly
+  thinking) at minimal accuracy loss. All changes live in the weights (LoRA adapters merged); no test-time switch.
+- **Official evaluation** (BottleCapAI ThinkingCap-Test, `evaluate.py` / `compare.py`): 2,759 questions, 8 samples each.
+  - Benchmarks: SVAMP (math), MBPP+ (code), IFEval (instruction following), BFCL (function calling; 3 parts: one
+    function "simple" 400 questions, "multiple" 200, "irrelevance"/no-fit 240).
+  - Sampling: temperature 0.6, top-p 0.95, top-k 20; token cap 8,192 for MBPP+, 4,096 otherwise.
+  - Score: per benchmark, accuracy change and token reduction vs the base model; the headline averages the **4**
+    benchmarks (BFCL's three parts pooled into one): accuracy change = arithmetic mean; tokens saved = 1 ? geometric mean
+    of the per-benchmark token ratios (candidate / base).
+- **Question subsets used in this work** (all drawn from the official 2,759; aggregate statistics only are used for
+  decisions):
+
+  | set | size | use |
+  |---|---|---|
+  | `questions_val20261023` ("choosing set") | 40 per part = 240 | screens and decisions, ?4 samples |
+  | `questions_40` | 40 per part = 240 | reference statistics (?2 samples) |
+  | `questions_ref20261024`, `questions_ref20261025` | 40 per part each | reference statistics (?4); the first also for cross-checks |
+  | `questions_fresh20261022` ("fresh set") | 40 per part = 240 | confirm scores only, ?8 samples; never used for any choice |
+
+- **Re-weighting:** subsets hold 40 questions per BFCL part (equal weights inside BFCL); the full evaluation holds
+  400/200/240. From 30 Oct ~12:45 every score is also printed with BFCL re-pooled at 400/200/240 ("full-eval
+  weighting"; tokens weighted by each part's base mean output length).
+- **Noise reference (measured earlier in the project):** run-to-run noise ~0.8 pt overall on the fresh set ?8; a 240 ?4
+  screen moves ~?1.5 pts overall and ~?5 pts per part (40 questions per part).
+- **External reference points (public repos, full evaluation ?8):** michal-bida/thinking-compression 47.0% saved /
+  ?0.78 pts (one DPO round on own graded samples, long2short-style pairs, per-domain cap shorten ? right-vs-wrong
+  pairs); basta/lightning-mcqwen3 43.2% / ?0.85 (47.3% / ?0.9 with a test-time gate; prompt-distillation SFT ? cut-oracle
+  pairs ? math-only right>wrong DPO). Earlier project model rc1-rl-40 (DPO + RL): 53.9% / ?2.1 on the fresh set ?8.
+
+---
+
+---
+
+## Part A ? Track 1 and Tracks 2?2e (before 20 Oct to 22 Oct)
+
+Source: `Test-mvt-fading/thinkingcap/EXPERIMENT_LOG.md`, lines 1-1002. All numbers copied from the log. "Tokens saved" and "accuracy change" are against the raw Qwen3-0.6B under the same evaluation setup; accuracy change is in percentage points (pp). Where the log reports an "average" saving it is reproduced as given (the log does not restate the aggregation formula in this range). "?" = not in the log.
+
+Dates: this part of the log has few explicit dates. Explicit ones: runtime A lost "about 11:07 Paris (2026-10-21)" (Track 2d end); `questions_fresh20261022` seed; Track 2f (outside this section) "queued 22 Oct 2026". Elsewhere the log uses relative references ("yesterday", "last night", "night-1"). Track 1 and Tracks 2-2b are therefore before 2026-10-21; Track 2e is 2026-10-21 to 2026-10-22.
+
+Project goal stated at top of log: cut tokens while losing at most 3 accuracy points. The log states 95% accuracy ranges on the 240-question subset are about +/-4 pp overall, and single-benchmark cells swing about +/-8 to +/-10 at 40 questions.
+
+---
+
+### Common evaluation setup
+
+| item | value |
+|---|---|
+| evaluator | official `evaluate.py` / `compare.py` |
+| question set (default) | `questions_40`: 40 questions per benchmark part, 240 total |
+| samples per question | 2 by default; "4-sample" / "8-sample" rechecks noted per row |
+| hardware | L4 GPU, bf16 (Track 1 Round 1 on T4) |
+| later held-out sets | `questions_fresh20261022` (40 per part, seed 20261022, disjoint from questions_40, 8 samples); questions 41-80 of every part (scored by the separate mvt-pertype session, 8 samples) |
+
+---
+
+### Track 1: SFT on pruned traces, then RL (date: ?; GPU: T4 for Round 1, L4 otherwise)
+
+#### Reference: raw model (Track 1 runtime, 2 samples)
+
+| benchmark | accuracy | mean tokens |
+|---|---|---|
+| SVAMP | 81.3% | 778 |
+| M

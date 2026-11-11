@@ -1,0 +1,10 @@
+=== HEAD-TO-HEAD: rpK-60 vs rpL-60 on the Full Test ===
+svamp              | K60: 61.11% / -2.35 (thk 258.8+rsp   8.1, run 0.00%) | L60: 63.81% / -2.75 (thk 240.2+rsp   8.1, run 0.01%) | L60-K60: Sav +2.71%, Acc -0.40
+mbpp               | K60: 55.43% / -1.22 (thk 896.8+rsp  50.4, run 0.53%) | L60: 62.21% / -0.86 (thk 753.4+rsp  49.8, run 0.33%) | L60-K60: Sav +6.78%, Acc +0.36
+ifeval             | K60: 49.35% / -3.00 (fin -3.00, thk 123.0+rsp 229.6, run 2.70%) | L60: 57.94% / -3.37 (fin -2.82, thk 112.2+rsp 180.5, run 1.78%) | L60-K60: Sav +8.59%, Acc -0.37 (fin +0.18)
+bfcl_simple_python | K60: 45.45% / -1.47 (thk  82.5+rsp  23.8, run 0.00%) | L60: 47.00% / -1.97 (thk  79.5+rsp  23.8, run 0.00%) | L60-K60: Sav +1.55%, Acc -0.50
+bfcl_multiple      | K60: 47.70% / -1.00 (thk  89.4+rsp  23.5, run 0.00%) | L60: 49.30% / -0.62 (thk  86.3+rsp  23.2, run 0.00%) | L60-K60: Sav +1.59%, Acc +0.38
+bfcl_irrelevance   | K60: 61.88% / +6.20 (thk  76.2+rsp   4.9, run 0.00%) | L60: 62.46% / +4.64 (thk  74.7+rsp   5.2, run 0.00%) | L60-K60: Sav +0.57%, Acc -1.56
+bfcl_pooled        | K60: 50.89% / +0.83 (thk  82.3+rsp  18.4, run 0.00%) | L60: 52.16% / +0.24 (thk  79.7+rsp  18.3, run 0.00%) | L60-K60: Sav +1.27%, Acc -0.60
+
+Headline           | K60: 54.43% / -1.44 (fin -1.44) | L60: 59.27% / -1.69 (fin -1.55) | L60-K60: Sav +4.84%, Acc -0.25 (fin -0.11)

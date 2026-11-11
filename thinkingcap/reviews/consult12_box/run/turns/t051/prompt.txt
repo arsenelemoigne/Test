@@ -1,0 +1,11 @@
+IFEval right questions in rpL: 107
+IFEval right questions in rpM: 136
+Overlap: 43
+
+=== rpL vs rpM IFEval 'right' pairs (counting + be-right) ===
+rpL IFEval right: mean chosen_rsp = 149.70535714285714 vs rej_rsp = 140.96428571428572 | >=300 tok: 14
+rpM IFEval right: mean chosen_rsp = 183.47972972972974 vs rej_rsp = 136.68243243243242 | >=300 tok: 31
+
+=== rpL vs rpM Math pairs ===
+rpL svamp (all): mean chosen_thk = 519.18125 vs rej_thk = 871.85 | chosen > rej: 39.375
+rpM svamp_hard (all): mean chosen_thk = 679.4416666666667 vs rej_thk = 542.1375 | chosen > rej: 91.66666666666666

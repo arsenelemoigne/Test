@@ -1,0 +1,100 @@
+G6. Repair line ("be right" pairs on a shortened model)
+
+Common method (`track.py ptrepair`, `repair_pairs.py`): the base model answers training questions, pairs with no length signal are built
+from its own mistakes, a fresh LoRA is trained on the merged base (which is also DPO's reference), fp32 weights + fp16 autocast, ? 0.1,
+no NLL, batch 16, then 720 ? 4 screens. rpA?rpC (5 Nov, Track A of GAME_PLAN v3): base pt-mid; 5,400 questions ? 4 (4,372 used: svamp
+2,400 of which all 1,644 mixed, mbpp 900, no-fit 472, ifeval / simple / multiple 300 / 150 / 150); 1,600 pairs from 1,233 questions
+(half shortest right > shortest finished wrong, half similar-length right > wrong with half the right one longer; ? 3 per question;
+chosen longer in 43?52% per part). 9 Nov: `--rp-base` (any model), `--rp-own-data` (math = GSM8K train+test in SVAMP wording minus
+questions trained in rounds 1?4; other parts = pool-dp13 minus MetaMath and top-ups; nothing from michal-bida's sources), `--rp-kinds
+guard`. rpE = the repair of rc1-soup-30 (the plan lines name it rpD with base `<B>`; the log reports it as rpE); its pairs: chosen
+re-checks the question 51 / 77 / 94% (math / code / no-fit) vs rejected 41 / 57 / 82%, chosen and rejected about equal length
+(medians 271/278, 440/440, 185/183); lr cosine from 1e-5 to lr-min 1e-5, i.e. constant. 10 Nov additions: `--count-rules` (IFEval
+counting-rule questions: chosen = right answer with response ? the rejected's and thinking ? 1.2? the rejected's), 1,500 IFEval
+questions, `--rp-samples`, `--rp-seed`, `--rp-answers-model`, `--rp-init-from`.
+
+| run | base / start | dose | pairs | step | 720 ? 4 (official) | vs curve | full test |
+|---|---|---|---|---|---|---|---|
+| rpA | pt-mid | lr 5e-6 ? 40 | 1,600 | 5 | +53.9 / ?3.4 | +0.3 | |
+| | | | | 10 | +53.6 / ?2.7 | +0.9 | |
+| | | | | 20 | +54.1 / ?3.6 | +0.1 | |
+| | | | | 40 | +52.3 / ?2.8 | +0.5 | |
+| rpB | pt-mid | lr 2e-5 ? 40 | same | 10 | +52.4 / ?2.2 | +1.2 | |
+| | | | | 20 | +48.7 / ?1.1 | +1.55 | |
+| | | | | 40 | +43.4 / +0.3 (re-weighted +0.10) | +2.1 (re-weighted +1.9) | |
+| rpC | pt-mid | lr 1e-5 ? 80 | same | 10 | +53.6 / ?3.0 | +0.6 | |
+| | | | | 20 | +50.5 / ?1.8 | +1.2 | |
+| | | | | 40 | +51.2 / ?2.1 | +1.0 | |
+| | | | | 80 | +43.4 / +0.6 (re-weighted +0.43) | +2.4 (re-weighted +2.2) | |
+| rpE | rc1-soup-30 (720: +58.7 / ?3.8) | lr 1e-5 constant ? 80; own data | ? | 10 | +57.2 / ?3.0 (compare's average +57.4 / ?2.9) | "+0.6?" (as logged) | |
+| | | | | 20 | +54.8 / ?2.6 | ? | |
+| | | | | 40 | +50.5 / ?1.7 | ? | +50.6 / ?1.9 (+1.1) |
+| | | | | 45 | +52.9 / ?1.7 | ? | |
+| | | | | 50 | +49.5 / ?1.6 | ? | |
+| | | | | 60 | +48.6 / ?0.7 | ? | +47.8 / ?1.2 (+1.3) |
+| | | | | 80 | +50.4 / ?0.2 (compare's average +50.6 / ?0.1) | +2.8 (also logged +2.77) | +47.0 / ?0.9 (+1.45) |
+| rpG | rpE-80, continued 80 ? 120 | rc1-soup-30 answers ? 8, rpE's rules | 1,484 (IFEval 208/320) | 100 | +40.6 / +1.0 (BFCL-weighted +40.4 / +0.9) | +2.35 (later logged +2.2) | |
+| | | | | 120 | +32.7 / +0.5 | +0.9 | |
+| rpH | rpE-80 ? 120 | rpG + `--count-rules`, 1,500 IFEval q | 1,598 (175 counting-rule) | 100 | +42.0 / ?0.6 | +1.0 | |
+| | | | | 120 | +37.0 / ?0.3 | +0.6 | |
+| rpI | rpE-80 ? 120 | models/rpE-80 answers 5,700 new questions (seed 1) ? 8 | 1,579 guard (IFEval 320/320 incl. 152 counting-rule; no-fit 59/80) | 100 | +42.9 / ?0.2 | +1.5 | |
+| | | | | 120 | +43.0 / +0.9 | +2.6 | full test 41.9 / +0.1 (+1.64) |
+| rpF | COPD Run C step 40 (720: +57.1 / ?4.7) | as rpE + count rules; Run C answers ? 4, all 2,998 IFEval q | 1,446 (IFEval 320/320, 258 counting-rule; mbpp 287/400; tools 60?71/80) | 10 | +54.9 / ?4.0 | ?0.1 | |
+| | | | | 20 | +54.8 / ?3.8 | +0.1 | |
+| | | | | 40 | +52.4 / ?4.5 | ?1.1 | |
+| | | | | 80 | +48.1 / ?2.6 | ?0.1 | |
+
+Per-part numbers (as logged): rpA-5 svamp +61 / ?3.7, mbpp +64 / ?6.0, ifeval +46 / ?1.9, simple +37 / ?0.2, multiple +41 / +0.4,
+no-fit +42 / ?5.8; rpA no-fit ?5.8 ? ?5.2 ? ?3.7 ? ?1.7 over steps 5?40, training loss 0.693 ? 0.667. rpB-10 svamp +58 / ?5.8, mbpp
++63 / ?0.8, ifeval +46 / ?0.8, simple +37 / ?2.5, multiple +40 / +0.6, no-fit +42 / ?1.5 (loss 0.693 ? 0.578); rpB-20 svamp +53 / ?1.9,
+mbpp +56 / ?1.9, ifeval +45 / ?1.5, simple +35 / ?1.0, multiple +38 / +1.5, no-fit +41 / +2.1; rpB-40 svamp +45 / ?3.1, mbpp +48 / +1.0,
+ifeval +44 / +1.7, simple +31 / ?3.1, multiple +36 / +0.8, no-fit +41 / +7.3. rpC-20 svamp +57 / ?4.0, mbpp +61 / ?2.5, ifeval +41 / ?0.6,
+simple +36 / ?0.6, multiple +40 / +2.1, no-fit +42 / ?1.5; rpC-40 svamp +58 / ?4.0, mbpp +61 / ?4.4, ifeval +43 / ?1.3, simple +36 / ?0.2,
+multiple +39 / +1.1, no-fit +41 / +2.7; rpC-80 svamp +44 / ?1.7, mbpp +47 / +2.3, ifeval +46 / +0.6, simple +31 / ?2.7, multiple +35 /
++1.1, no-fit +39 / +5.4. rpE-10 accuracies svamp ?2.7, ifeval ?2.5, simple ?2.7, no-fit ?3.7, multiple +1.5, mbpp ?4.6; rpE-20 no-fit
+?1.9, simple ?1.0, mbpp ?2.5, ifeval ?2.9, svamp ?4.2, multiple +1.3; rpE-40 no-fit ?0.2, multiple +1.5, simple ?1.9, ifeval ?1.7, mbpp
+?2.7, svamp ?1.9 (saved svamp 60, mbpp 54, no-fit 50, multiple 43, ifeval 42, simple 40); rpE-45 no-fit +0.4, multiple +0.6, simple
+?2.1, ifeval ?3.1, mbpp ?1.7, svamp ?1.3; rpE-50 no-fit +2.3, multiple +1.5, simple ?1.7, ifeval ?1.9, mbpp ?3.3, svamp ?1.3; rpE-80
+no-fit +51 / +3.1, multiple +43 / +1.3, simple +39 / ?2.1, ifeval +50 / +0.4, mbpp +52 / +1.0, svamp +56 / ?2.5. rpG-100 no-fit +51 /
++6.9, multiple +39 / ?1.1, simple +37 / ?2.1, ifeval +38 / +0.2, mbpp +40 / +1.7, svamp +42 / +1.0; rpG-120 svamp 31 / +0.4, mbpp 23 /
++2.5, ifeval 37 / ?1.9, simple 34 / ?2.9, multiple 36 / ?0.4, no-fit 50 / +8.5. rpH-100 svamp 44 / ?0.2, mbpp 40 / +0.2, ifeval 43 / ?2.5,
+simple 37 / ?1.2, multiple 40 / ?0.6, no-fit 50 / +3.3; rpH-120 svamp 34 / ?0.6, mbpp 37 / +0.6, ifeval 36 / ?2.1, simple 35 / ?1.7,
+multiple 39 / ?1.1, no-fit 49 / +6.5. rpI-120 svamp 47 / ?0.4, mbpp 39 / +3.5, ifeval 42 / ?0.4, simple 39 / ?2.5, multiple 42 / +0.2,
+no-fit 52 / +6.7. rpF-10 svamp 73 / ?4.8, mbpp 57 / ?4.8, ifeval 36 / ?3.3, simple 43 / ?2.9, multiple 45 / ?0.2, no-fit 44 / ?5.6;
+rpF-20 ifeval 42 / ?0.8, svamp 72 / ?6.2, mbpp 55 / ?4.4, simple ?4.0, multiple ?1.5, no-fit ?5.4; rpF-40 svamp 71 / ?5.0, mbpp 52 /
+?6.2, ifeval 32 / ?4.0, simple ?3.1, multiple +1.1, no-fit ?5.6; rpF-80 svamp 63 / ?3.5, mbpp 50 / ?4.6, ifeval 31 / ?0.8, simple ?2.7,
+multiple +2.3, no-fit ?2.5.
+Logged readings: rpA "too gentle to repair"; rpB/rpC points lie on one frontier ("the repair trades length for accuracy"); rpE-80 "first
+model to meet > 50% / better than ?1 on the 720 screen", with the caveat that a full test was needed (full: 47.0 / ?0.9); rpG "more steps
+of the same repair only make the model longer ? rpE step 80 stays the best stopping point"; "only rpI (answers from the CURRENT model on
+new questions) keeps its length"; "the IFEval counting rule alone did not fix IFEval on the 720"; rpF "does not lift Run C ? Run C's loss
+(stopped-early math and code) is not fixed by right-vs-wrong pairs at equal length". rpE thinking vs response tokens: see G8.
+Planned and not run: rpD-smoke / rpD as written in the 9 Nov plan; consult2's "strength rescue" probes on rpB.
+
+### G7. Online DPO (odpo stage, 10 Nov)
+
+- **od1** (GPU 1, started 10 Nov after rpF; pending): 4 rounds from rpE step 80 (base rc1-soup-30). Each round the current model answers a
+  new slice of own questions ? 8 (1,290 per round, no question twice); `repair_pairs.py --kinds guard,shorten` builds 160 pairs: half
+  guard (shortest right > shortest wrong, + re-read / IFEval counting rules), half shorten (shortest right > longest right, only on
+  questions right ? 6/8 with the longest ? 1.5? the shortest; never on IFEval counting-rule questions); DPO 10 steps continuing the
+  adapter, the round's start as reference; 720 ? 4 after rounds 2 and 4. Tested on fake answers and mocked rounds. Logged state at the
+  log's end: round 1 (rpE-80 answering 1,290 new questions ? 8).
+- **od2** (queued after od1; pending): the same loop from the ORIGINAL Qwen (fresh LoRA, reference = the original in round 1), **10 rounds** ? 10
+  steps (changed from 6 by the user), IFEval 290 questions per round, fp32 weights + fp16 compute, 720 ? 4 after rounds 2, 4, 6, 8, 10.
+  repair_pairs `guard,shorten` has a 1.25?1.5? backup supply if clear shorten pairs run short.
+
+### G8. Diagnostics and analyses (no training)
+
+- **Question sets vs the full test (30 Oct ~19:15):** random 40-per-part draws (4,000), 5?95% range of the original's accuracy: svamp
+  82?94, mbpp 42?63, ifeval 49?68, simple 74?90, multiple 68?84, no-fit 75?91. Original's accuracy (percentile) / thinking (percentile)
+  on each set:
+
+  | set | svamp | mbpp | ifeval | simple | multiple | no-fit |
+  |---|---|---|---|---|---|---|
+  | fresh | 88 (p47) / 614 (p27) | 45 (p13) / 2112 (p57) | 69 (p97) / 447 (p63) | 88 (p91) / 169 (p47) | 75 (p41) / 180 (p17) | 79 (p17) / 168 (p16) |
+  | choosing | 92 (p84) / 589 (p19) | 48 (p21) / 2175 (p64) | 51 (p10) / 522 (p92) | 90 (p96) / 167 (p42) | 78 (p61) / 200 (p74) | 76 (p8) / 173 (p25) |
+  | questions_40 | 82 (p5) / 789 (p85) | 55 (p67) / 2163 (p63) | 53 (p19) / 468 (p75) | 82 (p50) / 160 (p19) | 81 (p83) / 194 (p59) | 85 (p65) / 180 (p38) |
+  | ref20261024 | 82 (p5) / 952 (p99) | 57 (p80) / 1933 (p33) | 48 (p4) / 408 (p36) | 82 (p53) / 163 (p29) | 79 (p75) / 202 (p79) | 95 (p100) / 169 (p17) |
+  | ref20261025 | 92 (p82) / 657 (p43) | 52 (p52) / 1938 (p33) | 60 (p59) / 374 (p15) | 79 (p28) / 176 (p68) | 68 (p5) / 186 (p35) | 86 (p70) / 199 (p78) |
+
+- **l

@@ -1,0 +1,9 @@
+base     | Saved:   0.00% | Official d_acc:  +0.00 (fin:  +0.00) | SVAMP +0.00, MBPP +0.00, IFEval_off +0.00 (fin +0.00), BFCL +0.00
+rc1      | Saved:  57.36% | Official d_acc:  -3.49 (fin:  -3.41) | SVAMP -6.58, MBPP -3.47, IFEval_off -2.50 (fin -2.20), BFCL -1.41
+rpE80    | Saved:  47.04% | Official d_acc:  -0.95 (fin:  -0.90) | SVAMP -1.25, MBPP -1.03, IFEval_off -2.56 (fin -2.38), BFCL +1.04
+rpI120   | Saved:  41.91% | Official d_acc:  +0.13 (fin:  +0.15) | SVAMP +0.02, MBPP +0.53, IFEval_off -1.57 (fin -1.48), BFCL +1.53
+rpK20    | Saved:  49.88% | Official d_acc:  -1.28 (fin:  -1.24) | SVAMP -2.59, MBPP -0.26, IFEval_off -3.07 (fin -2.93), BFCL +0.82
+rpK40    | Saved:  51.17% | Official d_acc:  -0.77 (fin:  -0.77) | SVAMP -2.34, MBPP -0.13, IFEval_off -1.87 (fin -1.87), BFCL +1.26
+rpK60    | Saved:  54.43% | Official d_acc:  -1.44 (fin:  -1.44) | SVAMP -2.35, MBPP -1.22, IFEval_off -3.00 (fin -3.00), BFCL +0.83
+rpL60    | Saved:  59.27% | Official d_acc:  -1.69 (fin:  -1.55) | SVAMP -2.75, MBPP -0.86, IFEval_off -3.37 (fin -2.82), BFCL +0.24
+p1r1s0   | Saved:  43.42% | Official d_acc:  -1.46 (fin:  -1.61) | SVAMP -3.24, MBPP -3.31, IFEval_off +0.42 (fin -0.21), BFCL +0.30

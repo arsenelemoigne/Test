@@ -1,0 +1,121 @@
+all = every "
+                         "counting rule; atleast (11 Nov, rpL) = only rules asking for a MINIMUM amount of text")
+    ap.add_argument("--count-share", type=float, default=0.5, help="--kinds mix: the counting-rule pairs' share of IFEval's quota")
+    ap.add_argument("--count-resp-cap", type=float, default=0.0,
+                    help="--kinds mix: a counting-rule pair's chosen RESPONSE is at most this x the rejected one's + 25 tokens "
+                         "(1.35); 0 = no cap. Without a cap the pairs taught 'write more' (consult9)")
+    ap.add_argument("--count-resp-min", type=float, default=0.0,
+                    help="--kinds mix (rpM): a counting-rule pair's chosen RESPONSE is at least this x the rejected one's + 15 "
+                         "tokens (1.10): the pair teaches writing clearly MORE where a minimum length is asked; 0 = at least equal")
+    ap.add_argument("--count-resp-pad", type=int, default=25, help="--kinds mix: the tokens added to --count-resp-cap (rpM: 60)")
+    ap.add_argument("--no-shorten-counting", action="store_true",
+                    help="--kinds mix (rpM): no 'shorter' pair on ANY IFEval question with a counting rule (they keep be-right pairs)")
+    ap.add_argument("--resp-near-long", type=float, default=0.0,
+                    help="--kinds mix, --think-only parts (rpM): a 'shorter' pair's chosen RESPONSE is at least this x the "
+                         "rejected one's (0.95): with --resp-max 1.05 the response is held within 5%, only the thinking differs")
+    ap.add_argument("--loop-response-only", default="",
+                    help="--kinds mix (rpM): parts (comma) whose anti-loop pairs use only RESPONSE loops (thinking closed, cut at the cap)")
+    ap.add_argument("--easy-math-prefix", default="sv-",
+                    help="with a quota for svamp_hard: math questions whose id starts with this are 'svamp', the others 'svamp_hard'")
+    ap.add_argument("--guard-wide", default="",
+                    help="--kinds mix (rpM): parts (comma) whose 'don't stop early' guard is widened: the rejected wrong answer thinks "
+                         "under 0.95x the question's median right thinking (was 0.5x), the chosen right answer 0.95-1.25x. The "
+                         "full test showed the new math errors think 0.5-1.0x as long as a right answer (a skipped re-check)")
+    ap.add_argument("--right-hold", default="",
+                    help="--kinds mix (rpM): parts (comma) whose be-right pair takes a right answer thinking 0.95-1.25x as long as "
+                         "the rejected wrong one (else the right answer nearest the median), never the shortest right answer")
+    ap.add_argument("--resp-median", type=float, default=0.0,
+                    help="--kinds mix, --think-only parts: a 'shorter' pair's chosen RESPONSE is at least this x the question's "
+                         "median right response (0.85); 0 = use --resp-guard")
+    ap.add_argument("--resp-max", type=float, default=0.0,
+                    help="--kinds mix, --think-only parts: a 'shorter' pair's chosen RESPONSE is at most this x the rejected "
+                         "one's (1.05): thinking shorter, response not longer; 0 = no cap")
+    ap.add_argument("--right-resp-cap", type=float, default=0.0,
+                    help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
+                         "one's + 15 tokens (1.10); 0 = no cap")
+    ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten", "mix"),
+                    help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
+    args = ap.parse_args()
+    rng = random.Random(args.seed)
+    quota = {k: int(v) for k, v in (x.split("=") for x in args.quota.split(","))}
+    groups = defaultdict(list)
+    for path in args.rollouts:
+        for line in open(path):
+            if line.strip():
+                r = json.loads(line)
+                for k in ("prompt_ids", "output_ids", "thinking_ids"):  # (11 Nov) compact: 4 bytes per token, not ~36
+                    if isinstance(r.get(k), list):
+                        r[k] = array("i", r[k])
+                for k in ("question", "final", "original_prompt"):  # text copies the pair builder never reads
+                    r.pop(k, None)
+                groups[r["id"]].append(r)
+    think_only = set(filter(None, args.think_only.split(",")))
+    decode = None
+    if args.prefer_reread:
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+        decode = lambda r: tok.decode(list(r.get("thinking_ids") or r["output_ids"]), skip_special_tokens=True)  # noqa: E731
+    rereads = Counter()
+    cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
+                                "right_cr": [], "capguard": [], "right_count": [], "loop": []})  # mix: right_cr = counting-rule OR compact re-read pairs
+    loop_resp_only = set(filter(None, args.loop_response_only.split(",")))
+    guard_wide = set(filter(None, args.guard_wide.split(",")))
+    right_hold = set(filter(None, args.right_hold.split(",")))
+    for qid, q in groups.items():
+        part = part_of(q[0])
+        # (11 Nov, rpM) with a quota for "svamp_hard", math questions are two parts: "svamp" = the SVAMP-like questions
+        # answered for this run (their ids carry --easy-math-prefix), "svamp_hard" = every other math question (the
+        # full-difficulty GSM8K of earlier draws): math pairs can be mostly SVAMP-like with a set share of hard questions
+        if part == "svamp" and "svamp_hard" in quota and not str(qid).startswith(args.easy_math_prefix):
+            part = "svamp_hard"
+        if part not in quota:
+            continue
+        base_part = "svamp" if part == "svamp_hard" else part
+        size = thinking_len if part in think_only else (lambda r: r["output_tokens"])
+        rights = sorted((r for r in q if right(r)), key=size)
+        wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
+        if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
+            is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+                                          length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+            no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
+            # (11 Nov, rpL) an answer that RUNS AWAY (loops to the token cap, or never closes its thinking) loses to a
+            # finished right answer of the same question. Before, an unfinished answer was never used at all, so no pair
+            # said "do not loop" (runaways hold 26% of rpE-80's IFEval tokens on the full test)
+            runaway = [r for r in q if not finished(r)]
+            if base_part in loop_resp_only:  # (rpM) only loops in the RESPONSE (the thinking closed, then cut at the cap)
+                runaway = [r for r in runaway if r["closed_thinking"]]
+            if rights and runaway:
+                cand[part]["loop"].append((qid, rights[0], runaway[0]))
+            if len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not no_shorten:
+                long, short = rights[-1], rights[0]
+                if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+                    # (11 Nov, rpL) thinking shorter, response neither clipped nor longer: at least --resp-median x the
+                    # question's median right response, at most --resp-max x the rejected answer's response
+                    rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
+                    ok = [r for r in rights[:-1] if response_len(r) >= args.resp_median * rmed
+                          and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
+                          and response_len(r) >= args.resp_near_long * response_len(long)]
+                    short = ok[0] if ok else long
+                elif part in think_only and args.resp_guard > 0:  # (11 Nov) never prefer a notably shorter RESPONSE
+                    short = next(r for r in rights if response_len(r) >= args.resp_guard * response_len(long))
+                if short is not long:
+                    spread = size(long) / max(1, size(short))
+                    if spread >= args.shorten_ratio:
+                        cand[part]["shorten"].append((qid, short, long))
+                    elif spread >= 1.20:  # (11 Nov, consult6 2nd review) backup supply if clear shorten pairs run short
+                        cand[part]["shorten_soft"].append((qid, short, long))
+            if rights and wrongs:
+                if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
+                    taken = set()  # (11 Nov) up to 2 pairs per question, on different answers: counting-rule pairs are the
+                    for rej in wrongs[:2]:  # scarce kind (244 for a half-quota of 400 on the original's real answers)
+                        need = args.count_resp_min * response_len(rej) + 15 if args.count_resp_min > 0 else response_len(rej)
+                        fit = [r for r in rights if id(r) not in taken and response_len(r) >= need
+                               and thinking_len(r) <= 1.2 * thinking_len(rej)
+                               and (args.count_resp_cap <= 0
+                                    or response_len(r) <= args.count_resp_cap * response_len(rej) + args.count_resp_pad)]
+                        if fit:
+                            pick = min(fit, key=thinking_len)
+                            taken.add(id(pick))
+                            cand[part]["right_count"].append((qid, pick, rej))
+                else:  # (11 Nov, both reviews) rpE's proven compact "be ri
+[output cut at 10,000 characters]

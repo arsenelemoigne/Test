@@ -1,0 +1,60 @@
+=== rpM_pairs_local_build_summary.txt ===
+1133 pairs (1100 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / anti-loop (finished right > runaway): 0
+  bfcl_irrelevance / be right (compact): 56
+  bfcl_irrelevance / be right (counting rule): 0
+  bfcl_irrelevance / candidates anti-loop: 0
+  bfcl_irrelevance / candidates shorten (clear + backup) / capped guard / be right / counting rule: 250 + 17 / 1 / 59 / 0
+  bfcl_irrelevance / guard (capped): 0
+  bfcl_irrelevance / shorten: 84
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / anti-loop (finished right > runaway): 0
+  bfcl_multiple / be right (compact): 60
+  bfcl_multiple / be right (counting rule): 0
+  bfcl_multiple / candidates anti-loop: 0
+  bfcl_multiple / candidates shorten (clear + backup) / capped guard / be right / counting rule: 140 + 41 / 3 / 99 / 0
+  bfcl_multiple / guard (capped): 0
+  bfcl_multiple / shorten: 60
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / anti-loop (finished right > runaway): 0
+  bfcl_simple_python / be right (compact): 48
+  bfcl_simple_python / be right (counting rule): 0
+  bfcl_simple_python / candidates anti-loop: 0
+  bfcl_simple_python / candidates shorten (clear + backup) / capped guard / be right / counting rule: 131 + 42 / 1 / 83 / 0
+  bfcl_simple_python / guard (capped): 0
+  bfcl_simple_python / shorten: 112
+  ifeval / MIX KEPT: total cut to: 313 of 320 (the scarcest kind limits it)
+  ifeval / SHORT of quota: 7
+  ifeval / anti-loop (finished right > runaway): 24
+  ifeval / be right (compact): 70
+  ifeval / be right (counting rule): 78
+  ifeval / candidates anti-loop: 90
+  ifeval / candidates shorten (clear + backup) / capped guard / be right / counting rule: 128 + 13 / 20 / 304 / 121
+  ifeval / guard (capped): 0
+  ifeval / shorten: 141
+  mbpp / SHORT of quota: 0
+  mbpp / anti-loop (finished right > runaway): 14
+  mbpp / be right (compact): 114
+  mbpp / be right (counting rule): 0
+  mbpp / candidates anti-loop: 14
+  mbpp / candidates shorten (clear + backup) / capped guard / be right / counting rule: 330 + 6 / 64 / 430 / 0
+  mbpp / guard (capped): 32
+  mbpp / shorten: 0
+  svamp_hard / SHORT of quota: 0
+  svamp_hard / anti-loop (finished right > runaway): 0
+  svamp_hard / be right (compact): 120
+  svamp_hard / be right (counting rule): 0
+  svamp_hard / candidates anti-loop: 40
+  svamp_hard / candidates shorten (clear + backup) / capped guard / be right / counting rule: 1565 + 52 / 598 / 739 / 0
+  svamp_hard / guard (capped): 120
+  svamp_hard / shorten: 0
+  svamp_hard: median chosen / rejected tokens 439 / 385; chosen longer in 92%
+  mbpp: median chosen / rejected tokens 540 / 584; chosen longer in 43%
+  ifeval: median chosen / rejected tokens 189 / 242; chosen longer in 35%
+  bfcl_simple_python: median chosen / rejected tokens 82 / 121; chosen longer in 13%
+  bfcl_multiple: median chosen / rejected tokens 96 / 120; chosen longer in 22%
+  bfcl_irrelevance: median chosen / rejected tokens 83 / 128; chosen longer in 6%
+  ifeval questions answered: 1500, with a counting rule: 865
+  first 80 pairs by part: {'ifeval': 23, 'svamp_hard': 17, 'mbpp': 11, 'bfcl_simple_python': 11, 'bfcl_irrelevance': 10, 'bfcl_multiple': 8}
+

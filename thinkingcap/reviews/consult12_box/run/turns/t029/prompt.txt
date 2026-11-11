@@ -1,0 +1,30 @@
+=== rpE80 IFEval breakdown vs base (weighted by N/541) ===
+  at_least_N      (w=0.107): d_acc = -15.30 -> contrib to IFEval d_acc =  -1.64 (contrib to Headline = -0.410)
+  fewer_than_N    (w=0.067): d_acc =  -1.74 -> contrib to IFEval d_acc =  -0.12 (contrib to Headline = -0.029)
+  no_counting     (w=0.488): d_acc =  -0.19 -> contrib to IFEval d_acc =  -0.09 (contrib to Headline = -0.023)
+  other_counting  (w=0.338): d_acc =  -2.12 -> contrib to IFEval d_acc =  -0.72 (contrib to Headline = -0.179)
+  TOTAL IFEval d_acc =  -2.56 (Headline contrib = -0.641)
+=== rpK20 IFEval breakdown vs base (weighted by N/541) ===
+  at_least_N      (w=0.107): d_acc = -17.24 -> contrib to IFEval d_acc =  -1.85 (contrib to Headline = -0.462)
+  fewer_than_N    (w=0.067): d_acc =  -3.47 -> contrib to IFEval d_acc =  -0.23 (contrib to Headline = -0.058)
+  no_counting     (w=0.488): d_acc =  -0.09 -> contrib to IFEval d_acc =  -0.05 (contrib to Headline = -0.012)
+  other_counting  (w=0.338): d_acc =  -2.80 -> contrib to IFEval d_acc =  -0.95 (contrib to Headline = -0.237)
+  TOTAL IFEval d_acc =  -3.07 (Headline contrib = -0.768)
+=== rpK40 IFEval breakdown vs base (weighted by N/541) ===
+  at_least_N      (w=0.107): d_acc = -12.93 -> contrib to IFEval d_acc =  -1.39 (contrib to Headline = -0.347)
+  fewer_than_N    (w=0.067): d_acc =  -1.04 -> contrib to IFEval d_acc =  -0.07 (contrib to Headline = -0.017)
+  no_counting     (w=0.488): d_acc =  +0.62 -> contrib to IFEval d_acc =  +0.30 (contrib to Headline = +0.075)
+  other_counting  (w=0.338): d_acc =  -2.12 -> contrib to IFEval d_acc =  -0.72 (contrib to Headline = -0.179)
+  TOTAL IFEval d_acc =  -1.87 (Headline contrib = -0.468)
+=== rpK60 IFEval breakdown vs base (weighted by N/541) ===
+  at_least_N      (w=0.107): d_acc = -14.87 -> contrib to IFEval d_acc =  -1.59 (contrib to Headline = -0.399)
+  fewer_than_N    (w=0.067): d_acc =  -2.08 -> contrib to IFEval d_acc =  -0.14 (contrib to Headline = -0.035)
+  no_counting     (w=0.488): d_acc =  +0.09 -> contrib to IFEval d_acc =  +0.05 (contrib to Headline = +0.012)
+  other_counting  (w=0.338): d_acc =  -3.89 -> contrib to IFEval d_acc =  -1.32 (contrib to Headline = -0.329)
+  TOTAL IFEval d_acc =  -3.00 (Headline contrib = -0.751)
+=== rpL60 IFEval breakdown vs base (weighted by N/541) ===
+  at_least_N      (w=0.107): d_acc = -20.69 -> contrib to IFEval d_acc =  -2.22 (contrib to Headline = -0.555)
+  fewer_than_N    (w=0.067): d_acc =  -4.17 -> contrib to IFEval d_acc =  -0.28 (contrib to Headline = -0.069)
+  no_counting     (w=0.488): d_acc =  +0.99 -> contrib to IFEval d_acc =  +0.49 (contrib to Headline = +0.121)
+  other_counting  (w=0.338): d_acc =  -4.03 -> contrib to IFEval d_acc =  -1.36 (contrib to Headline = -0.341)
+  TOTAL IFEval d_acc =  -3.37 (Headline contrib = -0.843)

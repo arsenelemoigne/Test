@@ -1,0 +1,5 @@
+rpE80  | IFEval off_acc: 56.17% | Pure 8-sample MC SE: 0.440 pts | rsp_tokens: 223.3
+rpK20  | IFEval off_acc: 55.66% | Pure 8-sample MC SE: 0.434 pts | rsp_tokens: 229.7
+rpK40  | IFEval off_acc: 56.86% | Pure 8-sample MC SE: 0.433 pts | rsp_tokens: 241.5
+rpK60  | IFEval off_acc: 55.73% | Pure 8-sample MC SE: 0.442 pts | rsp_tokens: 229.6
+rpL60  | IFEval off_acc: 55.36% | Pure 8-sample MC SE: 0.433 pts | rsp_tokens: 180.5

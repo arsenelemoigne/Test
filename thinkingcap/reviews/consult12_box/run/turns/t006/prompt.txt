@@ -1,0 +1,68 @@
+=== consult11_gemini_REPORT.md (part 3) ===
+nd `0.53%` MBPP+ runaways (`43` tokens/answer) are pure waste. Including **24 IFEval response-loop pairs and 12 MBPP+ loop pairs** inside `rpN` cuts those runaways, **saving `+2.5%` on IFEval and `+1.5%` on MBPP+**, which offsets the token cost of longer `"at least N"` responses and SVAMP re-checks so `rpN` gives back only **`-1.5% to -2.5%` headline saving** (`54.4% -> 51.8?53.0%`) while recovering **`+0.55 to +0.85` headline accuracy (`-1.44 -> -0.60 to -0.90`)**!
+
+### 3.3 Exact Design of `rpN` (Short Accuracy + Loop Repair on Top of `rpK-60`)
+- **Base & Reference Model:** `models/rpK-60`, fresh LoRA ($r=16, lpha=32$, `--bida-precision`).
+- **Answers to Generate (~1.1 GPU-hours on 1 L4 GPU):** `models/rpK-60` answers **3,200 unseen questions $	imes 8$** (`--rp-own-data --rp-public --rp-exclude-dev` + excluding `dev_svamp_ids()` and `rpI` IDs, seed 41): `svamp=1200` (public SVAMP-like), `mbpp=450`, `ifeval=900`, `bfcl_simple_python=250`, `bfcl_multiple=220`, `bfcl_irrelevance=180`.
+- **Exact Pairs (`800` pairs total, **0 `"think less"` (`shorten`) pairs on any type**, new `--mix-preset hold` in `repair_pairs.py`):**
+  - `svamp=240` (SVAMP-like): **50% widened `capguard` (`120` pairs, wrong `<0.95 * tmed` nearest `0.75 * tmed`, right `0.95?1.25x tmed` with `REREAD`) / 50% length-held `right_cr` (`120` pairs, right `0.95?1.25x` rejected thinking with `REREAD`)**.
+  - `ifeval=240`: **40% length-rule counting pairs (`96` pairs, `--count-mode length --count-resp-min 1.10 --count-resp-cap 1.75 --count-resp-pad 60`) / 50% compact `right_cr` (`120` pairs on `other_counting` + `fewer_than_N` + `no_counting`, `--right-resp-cap 1.15`) / 10% response-loop pairs (`24` pairs, `--loop-response-only ifeval`) / 0% `shorten`**.
+  - `mbpp=120`: **75% `right_cr` (`90`) / 15% `capguard` (`18`) / 10% `loop` (`12`) / 0% `shorten`**.
+  - `bfcl_simple_python=80, bfcl_multiple=80, bfcl_irrelevance=40`: **100% `right_cr` (`0% shorten`)**. Weighting `simple` (`80`) + `multiple` (`80`) at `4 : 1` against `irrelevance` (`40`) directly repairs `rpK-60`'s `-1.44%` non-call drop on `bfcl_simple_python` (`82.44% -> 80.69%`) and `-1.06%` drop on `bfcl_multiple`.
+- **Steps & Checkpoints (~15 min training + ~30 min Dev scoring = 1.85 GPU-hours total):** `lr=1e-5` constant (`--warmup 2`), batch 16, $eta=0.1$, **45 steps**, scored at **steps 15, 30, 45** on `Dev-512` + `Dev-SVAMP-200`, paired against `rpK-60`.
+- **Decision Rule for Full Test:** Full-test the checkpoint (expected: **step 30**) that achieves:
+  1. Paired `Dev-512` saving vs `rpK-60` **$\ge -2.5\%$** (so projected full-test saving is **$\ge 51.9\%$**),
+  2. Paired `Dev-SVAMP-200` math accuracy vs `rpK-60` **$\ge +0.80$ pts** (recovering SVAMP from `-2.35` to `>= -1.55`), and
+  3. Paired `Dev-512` headline accuracy vs `rpK-60` **$\ge +0.50$ pts** (with IFEval `at_least_N` up $\ge +5$ pts and `bfcl_simple` up $\ge +1.0$ pt).
+
+---
+
+## 4. Path 1's Third Round 1 (`p1cr1s0`) as Built
+
+1. **Verdict: Run `p1cr1s0` AS IS (0 edits needed).**
+   - Inspecting `tables/path1_round1_v3_p1cr1s0_pairs_local_build.csv` (`3,025` pairs) confirms that all three `consult10` fixes worked cleanly:
+     - On `ifeval` (`705` pairs: `310 shorten`, `206 right_cr`, `141 right_count` on `length_rule`, `48 response-loop`), all-pair saving rose from `28.5%` (`p1r1s0`) to **`48.3%`** (`162.9 vs 352.2` response tokens), `shorten` responses are strictly neutral (`101.4 vs 101.7` tokens, `-0.3` token vs `+18.8` in `p1r1s0`), and non-loop response diff fell from `+46.9` tokens (`75.7%` longer) to `+13.8` tokens (`50.4%` longer).
+     - On `svamp` (`800` pairs: `360 shorten`, `280 right_cr`, `120 widened guard`, `40 loop`), adding 120 widened guards (`1,019 vs 718` tokens) and cutting `shorten` from `60%` to `45%` dialed back non-loop pair shortening from `52.3%` (`475` thinking tokens) to **`41.2%` (`562` thinking tokens)**, preventing `p1r1s0`'s `-3.24` SVAMP over-compression while still compressing from raw Qwen's `677` tokens. (Note: omitting `--no-shorten-counting` and `--right-hold,svamp` on `p1cr1s0` was right?on raw Qwen rollouts, adding them would starve `shorten` candidates and under-compress math.)
+     - Cutting `loop` pairs from `360` to `144` (`40` math, `56` code, `48` IFEval) cuts training time in half while still targeting raw Qwen's `7.8%` code and `3.6%` IFEval runaways.
+2. **Expected Reading on `Dev-512` (and `Dev-SVAMP-200`) at Step 150 / 200:**
+   - **`Dev-512` Headline:** **`47.0% to 50.0% saved (central: 48.4%) / +0.10 to +1.05 accuracy (central: +0.50)`** (`+1.1% to +4.1%` more saving and `+0.1 to +1.0` pts higher accuracy than `p1r1s0-200`'s `45.88% / +0.04`).
+   - **Per part on `Dev-512`:** IFEval `42?47%` saved (`+16 to +21` pts over `p1r1s0-200`'s `25.6%`) at `-0.5 to -1.5` acc; MBPP+ `52?55%` saved at `-0.5 to +0.8` acc (`+2.7 to +4.0` pts over `p1r1s0-200`'s `-3.25`); Math `51?54%` saved at `-0.5 to -1.2` acc (`+1.2 to +1.9` pts over `p1r1s0-200`'s `-2.41`); BFCL pooled `41?43%` saved at `+3.0 to +4.0` acc.
+   - **On `Dev-SVAMP-200`:** Paired math accuracy **`+1.2 to +1.8` pts above `p1r1s0-200`** (`~53?56%` saved).
+   - **Implied Full-Test Equivalent (after applying the 1-round lineage offset):** **`45.2% to 48.2% saved / -0.70 to -1.35 accuracy`**?landing right alongside `rpE-80` (`47.0% / -0.90`), but achieved in **one clean round from raw `Qwen3-0.6B`**.
+3. **What Should Decide Whether Round 2 (`p1cr2s0`) Runs:**
+   - Do **not** require `p1cr1s0` to clear `51?53%` saved in Round 1 (`rpE-80` is only `47.0%` saved, and `rpK-60`/`rpL-60` gained `+7.4%` to `+11.9%` saving in Round 2 from `47.0%`!). Instead, `p1cr1s0`'s job is to be a **clean Round-1 base as good as `rpE-80`**.
+   - **Exact Gate for Round 2 (`p1cr2s0`):** Run `p1cr2s0` (using `rpM`'s exact `typed3` rules on `p1cr1s0`'s own answers, ~2.2 GPU-hours) **if and only if**:
+     1. `p1cr1s0` reaches **$\ge 47.5\%$ saved on `Dev-512`** (`\ge +1.6\%` paired over `p1r1s0-200`) with **IFEval saving $\ge 42.0\%$**,
+     2. `p1cr1s0` reaches **$\ge +0.50$ headline accuracy on `Dev-512`** (`\ge +0.45` paired over `p1r1s0-200`, with MBPP+ accuracy $\ge -0.80$), **AND**
+     3. On `Dev-SVAMP-200`, `p1cr1s0` is within **`-0.50` points of `rpE-80`'s math accuracy** (`\ge +1.20` pts paired over `p1r1s0-200`).
+     - If `p1cr1s0` fails this gate, **stop Path 1** and allocate GPU 1's remaining hours to full-testing `rpM` / `rpN`.
+
+---
+
+## 5. Plan for the Next 12 GPU-Hours on Two GPUs & Honest Probability
+
+### 5.1 Step-by-Step Schedule (6 Wall-Clock Hours $	imes$ 2 L4 GPUs = 12 GPU-Hours)
+
+#### **GPU 2 (The `rpE-80` / `rpK-60` Winning Line ? 6.0 Wall-Clock Hours)**
+1. **Hour 0.0 ? 0.8 (Running now):** Finish **`rpK-40` Full Test**.
+   - *Decision rule:* If by surprise `rpK-40` scores `> 50.0%` saved and `> -1.00` accuracy, we already have a checkpoint inside the box; still run `rpM` for a wider margin (`54%+ / -0.8`).
+2. **Hour 0.8 ? 1.2 (Queued):** Run **`devsvamp`** + **`devscore`** of `rpE-80`, `rpK-60`, and `rpL-60` on `Dev-SVAMP-200`.
+   - *Decision rule:* Verify that `Dev-SVAMP-200` reproduces the full-test SVAMP gap between `rpE-80` (`-1.25`) and `rpK-60` (`-2.35`, paired `~ -1.1` pts) and reveals `rpL-60`'s true SVAMP delta.
+3. **Hour 1.2 ? 2.5 (Queued):** Run **`rpM`** (1,200 SVAMP-like rollouts $	imes 8$ + 60 steps `typed3` DPO from `rpE-80` + `Dev-512` & `Dev-SVAMP-200` scoring at steps 20, 40, 60, paired vs `rpE-80`).
+   - *Decision rule after `rpM` Dev scores (at Hour 2.5):*
+     - **Pass criterion for `rpM` checkpoint (`step 60` or `step 40`):** Paired `Dev-512` saving vs `rpE-80` **$\ge +5.5\%$** (`\ge 52.5\%` Dev saved), paired `Dev-SVAMP-200` accuracy vs `rpE-80` **$\ge -0.40$ pts** (`\ge +0.70` pts better than `rpK-60`), and `Dev-512` IFEval `at_least_N` accuracy **$\ge 49.0\%$** (vs `rpE-80`'s `50.4%` and `rpL-60`'s `42.1%`).
+     - **Action:** **Drop `rpL-40`'s full test** from GPU 2's queue (`rpL-40` is `-0.93` paired accuracy vs `rpE-80` on `Dev-512` and has the same `19.6%` `"at least N words"` collapse as `rpL-60`; once `rpL-60` is full-tested on GPU 1, `rpL-40` has zero chance of beating `rpM`). In its place at Hour 2.5 on GPU 2, **immediately run the Full Test (`2,759 x 8`, ~1.7h) of the best passing `rpM` checkpoint (`rpM-60` or `rpM-40`)**.
+4. **Hour 2.5 ? 4.2:** **Full Test of `rpM-60` (or `rpM-40`)** on GPU 2 *(or, if `rpN` is run on GPU 1, GPU 2 runs the `rpM` full test while GPU 1 runs `rpN`)*.
+   - *Decision rule:* If `rpM` scores `> 50.0%` saved and `> -1.00` accuracy on the full test, **mission accomplished**.
+5. **Hour 4.2 ? 6.0:** Run **`rpN`** (the 45-step accuracy-only + anti-loop repair on top of `rpK-60`, Section 3.3; ~1.85h) **OR** (if `rpN` already ran on GPU 1) run the **Full Test of `rpN-30`** / **LoRA interpolation `0.50 * rpM-60 + 0.50 * rpK-60`**.
+
+#### **GPU 1 (The `rpL-60` Anchor, `p1cr1s0`, and `rpN` / Second Full Test ? 6.0 Wall-Clock Hours)**
+1. **Hour 0.0 ? 1.0 (Running now):** Finish **`rpL-60` Full Test** (expected: `56.8?58.8% saved / -1.60 to -2.15 accuracy`).
+   - *Decision rule when `rpL-60` lands (at Hour 1.0):*
+     - Check `rpL-60`'s exact per-type full-test numbers. If by surprise `rpL-60` is `> -1.0` accuracy, we win immediately.
+     - Otherwise, `rpL-60` confirms that anti-loop + response-neutral `shorten` unlocks `57%+` full-test saving and isolates the remaining loss to SVAMP and `"at least N"` (the exact two things fixed in `rpM`).
+2. **Hour 1.0 ? 1.2 (Queued):** Run **`devsvamp`** + **`devscore` of `p1r1s0-200`** on `Dev-SVAMP-200`.
+3. **Hour 1.2 ? 3.0 (Queued):** Run **`p1cr1s0`** (200 steps `round1c` from raw Qwen, scored at 100 / 150 / 200 on `Dev-512` + `Dev-SVAMP-200` vs `p1r1s0-200`).
+   - *Decision rule after `p1cr1s0` (at Hour 3.0):*
+     - **Branch A (Priority ? Maximize Box Probability):** Unless `rpM` on GPU 2 has *already* failed its Dev gate **and** `p1cr1s0` beat `rpE-80` across the board (`Dev-512` saved $\ge 48.0\%
+[output cut at 10,000 characters]

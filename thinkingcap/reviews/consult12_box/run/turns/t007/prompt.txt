@@ -1,0 +1,125 @@
+=== REPAIR_IFEVAL_TOOLS.md (tail) ===
+ 49 also have finished answers. Our pair builder
+   only ever used FINISHED answers as the rejected side, so nothing said "do not loop"; on Dev-512, rpK's finished responses did
+   not lengthen (median 81 tokens) while its runaways rose from 3.6% to 4.6% of answers.
+
+**rpL** (queued on GPU 2 after rpK step 20's full test; same start, answers, tool-call pairs and training as rpK; `--mix-preset
+typed2`):
+
+| type | pairs | "think less" | "be right" | counting rule | anti-loop | "don't stop early" |
+|---|---|---|---|---|---|---|
+| IFEval | 320 | 160 | 48 | 64 | 48 | 0 |
+| one function | 160 | 112 | 48 | | | |
+| several functions | 120 | 84 | 36 | | | |
+| no function fits | 140 | 84 | 56 | | | |
+| math | 160 | 0 | 112 | | 16 | 32 |
+| code | 160 | 0 | 114 | | 14 | 32 |
+
+- Counting-rule pairs only on rules that ask for a MINIMUM amount of text (at least N words / sentences / keyword or letter
+  occurrences, placeholders, highlighted sections), 20% of IFEval instead of 50%, the chosen response at most 1.35x the
+  rejected one's + 25 tokens.
+- "Think less" pairs on every other IFEval question: the chosen response is at least 0.85x the question's median right
+  response and at most 1.05x the rejected one's (thinking shorter, response neither clipped nor longer).
+- "Be right" pairs on IFEval: the chosen response at most 1.10x the rejected one's + 15 tokens.
+- **Anti-loop pairs:** a finished right answer beats a runaway answer of the same question (IFEval 48, math 16, code 14).
+  Overlap flagged to the user (michal-bida's rejected side also includes cut-off answers); approved as a generic pair.
+- Built on rpE-80's real answers: IFEval pairs without the anti-loop ones: thinking 105 vs 166, response 110 vs 113 (chosen longer
+  in 35%), total 214 vs 279; anti-loop pairs: 301 vs 4,014 tokens. Longest pair 8,380 tokens (cap 8,704).
+- Reading: Dev-512 at steps 20 / 40 / 60 paired against rpE-80, now with the share of runaway answers per type. consult9's pass
+  mark: saved >= 52.5% and accuracy >= +1.25 on Dev-512 with IFEval responses <= 245 tokens (its forecast: 53-55% / -0.4 to -0.9
+  on the full test; its last forecast was 7-9 points too high).
+
+## Full tests of rpK, rpL's Dev-512 results, and rpM (11 Nov afternoon, after consult10)
+
+| model | full test | per type (saved / accuracy): math, code, IFEval, one function, several, no fit |
+|---|---|---|
+| rpE-80 (start) | 47.0 / -0.9 | 54 / -1.2, 46 / -1.0, 45 / -2.6, 37 / +0.1, 39 / +0.1, 50 / +3.4 |
+| rpK step 20 | 49.9 / -1.3 | 58 / -2.6, 51 / -0.3, 45 / -3.1, 40 / +0.3, 42 / -1.5, 54 / +3.6 |
+| rpK step 60 | **54.4 / -1.4** | 61 / -2.3, 55 / -1.2, 49 / -3.0, 45 / -1.5, 48 / -1.0, 62 / +6.2 |
+
+rpK step 60 is the highest point above our curve of any full test (+2.38). It misses the box on accuracy only; IFEval (-3.0) and
+math (-2.3) hold most of the loss.
+
+rpL on Dev-512 (paired vs rpE-80): step 20 +3.4 saved / -0.07, step 40 +6.9 / -0.93, step 60 +11.9 / -0.44 (58.9% saved). IFEval's
+saving rose to 57% and loops fell, but the 14 true "at least N words / sentences" questions fell from 37.5% right (rpE-80) to
+19.6%: my "at least N" rule let placeholders / highlighted sections / letter frequency take two thirds of the 64 counting pairs,
+the 1.35x cap rejected valid long answers, and the "shorter" pairs still clipped the response. Full tests of rpL steps 60 and 40
+are queued.
+
+Where rpK step 20 lost math (full-test records): its new wrong answers think 0.5-1.0x as long as rpE-80's median right answer
+on the question (+91 answers; under 0.5x only +24): a calculation that skips its re-check, on the longer questions. Our guard
+only caught wrong answers under 0.5x, and the math "be right" pair took the shortest right answer.
+
+**rpM** (`--mix-preset typed3`; consult10's design, checked on rpE-80's real answers; 1,140 pairs planned, 60 steps, lr 1e-5):
+
+| type | pairs | "think less" | "be right" | counting rule | anti-loop | "don't stop early" |
+|---|---|---|---|---|---|---|
+| math, SVAMP-like (rpE-80 answers 1,200 new questions x8) | 180 | 0 | 90 | | 0 | 90 |
+| math, hard GSM8K (the answers rpK and rpL used) | 60 | 0 | 30 | | 0 | 30 |
+| code | 160 | 0 | 114 | | 14 | 32 |
+| IFEval | 320 | 144 | 72 | 80 | 24 | 0 |
+| one function | 160 | 112 | 48 | | | |
+| several functions | 120 | 60 | 60 | | | |
+| no function fits | 140 | 84 | 56 | | | |
+
+- **Math "don't stop early", widened:** the rejected wrong answer thinks under 0.95x the question's median right thinking (the
+  one nearest 0.75x), the chosen right answer 0.95-1.25x (on hard math: 700 vs 487 tokens, chosen longer in 100%).
+- **Math "be right", length-matched:** the right / wrong pair of the question whose thinking lengths are closest (right 0.95-1.25x
+  the wrong): no "be shorter" signal (on hard math: 612 vs 585 tokens).
+- **IFEval counting pairs** only on true length rules (at least N words / sentences, a keyword at least N times, N paragraphs), the
+  chosen response 1.10x + 15 to 1.75x + 60 tokens of the rejected one's (on the real answers: 314 vs 217 tokens, always longer; 44
+  IFEval pairs have a chosen response of 300+ tokens, against 14 in rpL).
+- **IFEval "think less"** only on questions with no counting rule, the response held within 5% (thinking 99 vs 185, response 82 vs 82).
+- **IFEval anti-loop** pairs only for loops in the response, 24 instead of 48.
+- **Several functions** 50 / 50 (rpK lost 1.5 points there at 70 / 30).
+- **New dev slice, Dev-SVAMP-200:** 200 SVAMP-like math questions never used in training; rpE-80, rpK-60 and rpL-60 are scored
+  on it first (their full tests exist or are running), then rpM at steps 20 / 40 / 60 beside Dev-512, both paired against rpE-80.
+- consult10's pass mark: Dev-512 saving >= +6 points over rpE-80; on Dev-SVAMP-200 math accuracy >= -0.3 and math thinking within
+  -4% / +5% of rpE-80; IFEval "at least N" accuracy not below rpE-80's. Its forecast for the full test: 53.5-55.0% / -0.55 to
+  -0.85 (its forecasts have read about half a point too kind on accuracy).
+
+
+=== PATH1_FINAL.md (tail) ===
+rule
+  question may now give up to 2 pairs on different answers (411 available).
+- **Share kept unseen for round 2, per type:** 25%, IFEval 33%, "several functions" 35% (round 2 needs ~1,000 IFEval questions
+  for its counting half and ~250 "several functions" questions; with a flat 25% it had 792 and 187).
+- **IFEval "shorter" pairs never prefer a shorter response** (--resp-guard 0.9: the chosen answer's response is at least 0.9x
+  the rejected one's). Reason: the full-test records show IFEval's loss in every trained model is shortened RESPONSES on "at
+  least N words / sentences" questions, not shortened thinking (REPAIR_IFEVAL_TOOLS.md).
+- **Round 2 never draws a near-duplicate of a Dev-512 question** (consult8's bug 1: Dev-512's math has gsm8k-std ids, round 2's
+  public math has pool ids for the same GSM8K problems; ids alone missed them; now the 8-gram rule of round 1 applies).
+- **Dev-512 scores** now also print the paired difference against a reference (round 1 vs rpE-80; round 2 vs round 1) and the
+  thinking / response token split per type.
+- **Memory:** repair_pairs.py stores token ids compactly (round 1's 1.3 GB answer file: 2 GB of RAM instead of ~10 GB).
+- consult8's "bug 4" (tool top-up source names) is a false alarm: those rows carry source glaive_tools / toolace + a category.
+  Not taken: its idea to prefer a non-early wrong answer in the be-right pair (it would change rpE's proven pair).
+
+**Round 1 on the real stored answers (both seeds built locally, identical to what the GPU will build):** 13,082 questions, 3,040
+pairs: math 480 shorter / 320 be-right, code 560 / 240, one function 196 / 84, several 140 / 60, no fit 144 / 96, IFEval 180
+shorter / 180 be-right / 360 counting-rule (720 of 800: the counting half is the limit). "Shorter" pairs = 56% of the file, in
+every prefix. The quotas sum to 3,120, not 3,200 as written above; 200 steps = 3,200 pairs, so the first 160 pairs are seen
+twice. Longest pair 8,339 tokens (cap 8,704). Seeds 0 and 1 share 1,237 of 3,040 pairs.
+
+**Round 2 draw:** math 1,000, code 600, IFEval 960, one function 340, several 250, no fit 330 new questions x 8.
+
+**Queue (HOLD lifted by the user):** GPU 2: calibration (rpI-120 last) -> p1src -> round 1 seed 0 (Dev-512 at 100 / 150 / 200)
+-> rpK (the independent IFEval + tool-call repair, ~1.2 h) -> gate -> round 2 seed 0. GPU 1: od2 (running, ~12 h left) -> seed 1.
+
+**What to watch (consult8):** pairs file: any non-IFEval type under 85% of its quota = stop; "chosen longer" must stay under
+~25% (math / code / tools) and ~35% (IFEval). Training: pairs ordered right 55 -> 72% by step 20, 82-88% at 150-200; over 96%
+before step 150 = over-fitting; under 65% at step 100 = stalled. Gate nuance: if step 150 passes rpE-80 + 6 and step 200 does
+not, the gate closes; point round 2 at step 150 by hand.
+
+## Expected (honest)
+
+Gemini: round 1 ~53?57% / ?2.2 to ?3.2; final 49.5?52.5% / ?0.7 to ?1.3. The Claude review was more cautious (the log has
+never shown a clean 2-round climb above the curve). The gate tells us after round 1 which of the two is right.
+
+## Open decisions for the user
+
+- Precision: fp32 weights + fp16 compute and a pair-length cap of 8,704 tokens are labelled in our code as michal-bida's
+  settings (where we first saw them); every repair since 5 Nov used them. Kept for now; switch back to bf16 if you prefer.
+- Seed 1 starts on GPU 1 only after od2 finishes (~10 rounds of the original's long answers, many hours); stop od2 to start it
+  sooner?
+

@@ -1,0 +1,26 @@
+Total entries in all_runs.json: 205
+Repair rpE ? step 50 720 49.5 None 
+Repair rpE ? step 80 720 50.4 None 
+Repair rpE ? step 80 full 47.0 None 
+COPD Run A ? step 10 720 14.6 None 
+COPD Run A ? step 20 720 20.8 None 
+COPD Run A ? step 25 720 25.6 None 
+COPD Run A ? step 30 720 29.2 None 
+COPD Run A ? step 35 720 29.8 None 
+COPD Run A ? step 40 720 34.1 None 
+Repair rpE ? step 40 full 50.6 None 
+Repair rpE ? step 60 full 47.8 None 
+Repair rpE ? step 60 720 48.6 None 
+COPD Run C ? step 10 720 12.6 None 
+COPD Run C ? step 20 720 28.0 None 
+COPD Run C ? step 25 720 35.8 None 
+COPD Run C ? step 30 720 43.2 None 
+COPD Run C ? step 35 720 49.7 None 
+COPD Run C ? step 40 720 57.1 None 
+Repair rpG (rpE 80 ? 120) ? step 100 720 40.4 None 
+Repair rpG (rpE 80 ? 120) ? step 120 720 32.7 None 
+Repair rpI (new round, rpE 80 ?) ? step 100 720 42.9 None 
+Repair rpI (new round, rpE 80 ?) ? step 120 720 43.0 None 
+Repair rpH (rpG + IFEval counting rule) ? step 100 720 42.0 None 
+Repair rpH (rpG + IFEval counting rule) ? step 120 720 37.0 None 
+Repair rpI ? step 120 full 41.9 None 

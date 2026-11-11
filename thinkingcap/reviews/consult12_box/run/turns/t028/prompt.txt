@@ -1,0 +1,37 @@
+=== IFEval by ifeval_class (Official Prompt Accuracy & Thinking+Response Tokens) ===
+
+Class: at_least_N (N=58)
+  base   : off 34.27% ( +0.00) | fin 33.19% | thk 373.9 + rsp 667.8 | run 4.31%
+  rpE80  : off 18.97% (-15.30) | fin 18.53% | thk 149.1 + rsp 488.9 | run 3.45%
+  rpK20  : off 17.03% (-17.24) | fin 16.81% | thk 141.7 + rsp 475.3 | run 3.23%
+  rpK40  : off 21.34% (-12.93) | fin 20.26% | thk 130.7 + rsp 560.6 | run 4.96%
+  rpK60  : off 19.40% (-14.87) | fin 18.10% | thk 116.5 + rsp 525.5 | run 4.53%
+  rpL60  : off 13.58% (-20.69) | fin 12.93% | thk 110.9 + rsp 440.5 | run 3.88%
+  p1r1s0 : off 44.40% (+10.13) | fin 40.73% | thk 196.9 + rsp 980.6 | run 8.84%
+
+Class: fewer_than_N (N=36)
+  base   : off 72.92% ( +0.00) | fin 72.92% | thk 258.1 + rsp  82.7 | run 0.00%
+  rpE80  : off 71.18% ( -1.74) | fin 71.18% | thk 100.7 + rsp  79.7 | run 0.35%
+  rpK20  : off 69.44% ( -3.47) | fin 69.44% | thk  94.7 + rsp  93.4 | run 0.69%
+  rpK40  : off 71.88% ( -1.04) | fin 71.53% | thk  86.5 + rsp  89.9 | run 0.69%
+  rpK60  : off 70.83% ( -2.08) | fin 70.49% | thk  78.6 + rsp  90.8 | run 0.69%
+  rpL60  : off 68.75% ( -4.17) | fin 68.75% | thk  74.4 + rsp  69.2 | run 0.35%
+  p1r1s0 : off 60.42% (-12.50) | fin 60.07% | thk 124.7 + rsp 163.5 | run 1.74%
+
+Class: no_counting (N=264)
+  base   : off 61.79% ( +0.00) | fin 60.65% | thk 423.4 + rsp 180.8 | run 2.94%
+  rpE80  : off 61.60% ( -0.19) | fin 60.61% | thk 166.7 + rsp 158.6 | run 1.85%
+  rpK20  : off 61.70% ( -0.09) | fin 60.65% | thk 169.7 + rsp 164.0 | run 2.41%
+  rpK40  : off 62.41% ( +0.62) | fin 61.27% | thk 149.6 + rsp 173.8 | run 2.60%
+  rpK60  : off 61.88% ( +0.09) | fin 60.84% | thk 133.0 + rsp 159.1 | run 2.08%
+  rpL60  : off 62.78% ( +0.99) | fin 62.41% | thk 121.8 + rsp 117.2 | run 1.14%
+  p1r1s0 : off 61.88% ( +0.09) | fin 60.56% | thk 205.2 + rsp 213.3 | run 2.94%
+
+Class: other_counting (N=183)
+  base   : off 59.29% ( +0.00) | fin 58.40% | thk 499.6 + rsp 289.1 | run 5.05%
+  rpE80  : off 57.17% ( -2.12) | fin 56.42% | thk 155.0 + rsp 260.8 | run 3.35%
+  rpK20  : off 56.49% ( -2.80) | fin 55.60% | thk 138.7 + rsp 273.3 | run 3.42%
+  rpK40  : off 57.17% ( -2.12) | fin 56.35% | thk 130.1 + rsp 267.7 | run 3.48%
+  rpK60  : off 55.40% ( -3.89) | fin 54.51% | thk 119.2 + rsp 264.6 | run 3.42%
+  rpL60  : off 55.26% ( -4.03) | fin 54.78% | thk 106.2 + rsp 211.4 | run 2.32%
+  p1r1s0 : off 59.63% ( +0.34) | fin 58.06% | thk 189.9 + rsp 370.3 | run 4.71%
