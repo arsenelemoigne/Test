@@ -7,6 +7,7 @@ import * as judilibre from "./sources/judilibre";
 import * as inpi from "./sources/inpi";
 import { searchCompanies } from "./sources/entreprises";
 import { searchAnnouncements } from "./sources/bodacc";
+import { haguePassages } from "./sources/ompi";
 import { pisteConfigured } from "./sources/piste";
 import { rightCountries } from "./territories";
 import { startWatch } from "./watch";
@@ -22,6 +23,7 @@ const SYSTEM = `Tu es l'assistant juridique d'un cabinet d'avocats en propriét�
 
 Sources
 - Utilise d'abord les outils : registre du client (ci-dessous), Légifrance, Judilibre, INPI, annuaire des entreprises, BODACC, droit de l'UE.
+- Dessins et modèles internationaux (numéros WODM…, système de La Haye : durée, renouvellement, délai de grâce, surtaxe, taxes) : appelle « ompi_la_haye » et cite ses textes officiels (Guide, règlement d'exécution, barème) avec leurs liens, plutôt que la recherche web.
 - La recherche web est un dernier recours : marque toute source web « (source web) ».
 - N'invente aucun article, décision, date ou lien. Ne cite que des liens renvoyés par les outils.
 - Avant de citer un article, récupère son texte avec legifrance_article. Si le résultat porte un champ « via », reprends cette mention entre parenthèses.
@@ -58,6 +60,7 @@ const TOOLS: ToolSpec[] = [
   fn("entreprise", "Fiche officielle d'une société française (SIREN, dirigeants, siège).", { requete: { type: "string" } }, ["requete"]),
   fn("bodacc", "Annonces légales BODACC d'une société (immatriculation, cession, procédure collective).", { requete: { type: "string", description: "Nom ou SIREN" } }, ["requete"]),
   fn("droit_ue", "Règlements, directives et arrêts de la CJUE (EUR-Lex, CURIA).", { requete: { type: "string" } }, ["requete"]),
+  fn("ompi_la_haye", "Textes officiels de l'OMPI sur le système de La Haye (dessins et modèles internationaux) : durée, renouvellement, délai de grâce, surtaxe, taxes, non-renouvellement. Cite le texte et son lien.", { question: { type: "string" } }, ["question"]),
   fn("recherche_web", "Dernier recours : recherche web générale. À signaler « (source web) ».", { requete: { type: "string" } }, ["requete"]),
   fn("lancer_recherche_contrefacon", "Lance la recherche d'atteintes en ligne pour une marque du portefeuille (uniquement si demandé).", { marque_id: { type: "string" } }, ["marque_id"]),
   fn("resultats_recherche", "Résultats de la dernière recherche d'atteintes pour une marque du portefeuille.", { marque_id: { type: "string" } }, ["marque_id"]),
@@ -72,6 +75,7 @@ const SOURCE_LABELS: Record<string, string> = {
   entreprise: "Annuaire des entreprises",
   bodacc: "BODACC",
   droit_ue: "EUR-Lex",
+  ompi_la_haye: "OMPI",
   recherche_web: "Web",
   lancer_recherche_contrefacon: "Veille",
   resultats_recherche: "Veille",
@@ -202,6 +206,8 @@ export async function runAgent(input: AgentInput): Promise<AgentOutput> {
         const r = await webSearch(`${q} site:eur-lex.europa.eu OR site:curia.europa.eu`, "agent-eu");
         return { resultats: r.results.filter((x) => /eur-lex\.europa\.eu|curia\.europa\.eu/.test(x.url)), note: "Sources officielles de l'UE trouvées par recherche web." };
       }
+      case "ompi_la_haye":
+        return { ...haguePassages(String(args.question ?? q)), note: "Extraits officiels de l'OMPI (texte exact) ; citer le lien de la source." };
       case "recherche_web": {
         const r = await webSearch(q, "agent-web");
         return { resultats: r.results, note: "Source web : à signaler comme telle." };

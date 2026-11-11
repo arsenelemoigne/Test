@@ -257,7 +257,7 @@ export function AssistantPanel({ marks, onRunStarted, className = "" }: Props) {
             )}
           </span>
         </div>
-        <p className="label">registre · Légifrance · Judilibre · INPI · annuaire · BODACC</p>
+        <p className="label">registre · Légifrance · Judilibre · INPI · OMPI · annuaire · BODACC</p>
 
         <div className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           {messages.length === 0 && (
