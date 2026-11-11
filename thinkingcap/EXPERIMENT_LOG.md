@@ -5635,3 +5635,4 @@ Per type (rpK-40's full test in brackets): math 58 / -1.5 (58 / -2.3), code 56 /
 - GPU 1 relaunched (~22:20, user reconnected): code at 657adbc, queue = rpM-60 full test (from zero) -> rpM-20 full test -> rpN -> transfer
   part 2.
 - 11 Nov ~22:35 (user) full test of rpL-80 queued on GPU 2 after rpL-40's.
+- 11 Nov ~22:45 (user note, verified in the READMEs) Herz1c's own held-out checks: 0.6B HumanEval (164 x4) 65.0% saved [62.0, 67.9] / -1.22 [-5.03, +2.74]; 1.7B HumanEval 58.4% / -0.76, MATH-500 (313 x4, graded format-independently) 11.4% / +4.8; both sizes save least and gain accuracy on the hardest MATH-500 levels. Our transfer check (HumanEval 164 x8, MATH-500 whole-number 200 x8) compares directly; our MATH-500 grading needs the 'Final answer:' line.
