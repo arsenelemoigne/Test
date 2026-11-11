@@ -5629,3 +5629,8 @@ Per type (rpK-40's full test in brackets): math 58 / -1.5 (58 / -2.3), code 56 /
   falling (several functions collapses). Training: pairs ordered right 88% at 80 and 100, 94% at 120.
 - **GPU 1 disconnected (~21:40; its Drive log last saved 21:38, checked at 22:08) during the full test of rpM-60, at 16,896 of 22,072 answers** (Colab shows "Reconnect L4"). The test restarts
   from zero on reconnection (evaluate() discards a run without results.json). Waiting for the user to reconnect.
+- **rpL step 100, Dev-512: 66.2% / -3.95** (paired vs rpE-80 +19.3 / -5.31): **one function collapses (-31.9; response 21 -> 12 tokens: it
+  stops calling)**, several functions -12.9; math 59 / 0.0, code 72 / +0.8, IFEval 69 / -0.3 (81+141), no fit 65 / +6.9. Past step 60 the typed
+  "think less" pairs over-train the tool-call threshold: the model declines real calls. rpL's useful range ends at step 60-80.
+- GPU 1 relaunched (~22:20, user reconnected): code at 657adbc, queue = rpM-60 full test (from zero) -> rpM-20 full test -> rpN -> transfer
+  part 2.
