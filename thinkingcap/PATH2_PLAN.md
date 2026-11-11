@@ -27,9 +27,10 @@ Path 1's model first answers ~2,400 unseen questions × 8; for each question:
 - **Target B(q)** = 35th percentile of its correct answers' length (thinking only for IFEval; total tokens otherwise). A correct
   answer at or below B(q) gets the full 1.0 — no pressure to cut further.
 - **Tail cap C(q)** = max(90th percentile, 1.35 × median) of its correct lengths, at most the type's 90th percentile.
-- **Correct answer, group solve rate ≥ 4/8:** 1.0 if ≤ B(q); 1.0 − α·min(1, (length − B(q)) / type mean length) between B and C;
+- **Correct answer, group solve rate ≥ 7/8 (user, 11 Nov: raised from Gemini's 4/8; a question solved half the time passes
+  7/8 by luck only ~4% of the time, vs 64% at 4/8):** 1.0 if ≤ B(q); 1.0 − α·min(1, (length − B(q)) / type mean length) between B and C;
   1.0 − α − 0.25 above C. α = 0.20 for math and no-fit, 0.35 for code, IFEval and function calls.
-- **Correct answer, group solve rate < 4/8:** 1.0 (no length pressure on questions the model struggles with).
+- **Correct answer, group solve rate < 7/8:** 1.0 (no length pressure: "just be right").
 - **Wrong or cut-off:** 0; **wrong and stopped early** (thinking < half the question's median right thinking): −0.20.
 - IFEval counting-rule questions: a correct answer whose response is < 90% of the usual response length loses its length bonus.
 - No format bonus for wrong answers.
@@ -42,7 +43,10 @@ Path 1's model first answers ~2,400 unseen questions × 8; for each question:
 - lr 1.5e-5, 4 warm-up steps, cosine to 5e-6 over 50 steps; KL 0.002 to Path 1's model; grad clip 0.5; LoRA r16 α32 on all
   linear layers; rollouts at the test's caps (4,096 / 8,192).
 - 50 steps, adapters every 10; 2 seeds.
-- Questions: solved ≥ 4/8 by Path 1's model, half "solved 6–8/8 with a length spread ≥ 1.25×", half "solved 4–6/8"; type shares
+- Questions: solved ≥ 4/8 by Path 1's model (reference answers), in two bands: "mastered" (7–8/8, length spread ≥ 1.25×: they
+  get the length pressure) and "shaky" (4–6/8: "just be right"). **Fixed proportion every step (user, 11 Nov):** each step's
+  32 kept groups are 16 from each band (refilled from the same band when a group is dropped as uninformative), so the
+  balance between "think less" and "be right" never drifts as the model changes; type shares
   as the test (math 600, code 600, IFEval 600, one function 285, several 145, no fit 170); never Dev-512, the 720 or the test;
   each question used once.
 
