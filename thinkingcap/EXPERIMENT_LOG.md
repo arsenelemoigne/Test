@@ -5453,3 +5453,6 @@ Step 20: math 51 / +1.7, code 52 / +3.5, IFEval 50 / -2.7 (132+221), tools 45-51
   (rc1-soup-30: 57.4 / -3.5) if it holds. No full test of rpL is queued (the user decides).
 - GPU 2 moved on to the full test of rpK-60. consult10 (Gemini, cap $8) relaunched with the rpK-20 full test per question and rpL's
   per-question Dev-512 results; free to change approach; reviews/consult10_after_rpK20_full/.
+- 11 Nov ~14:00 (user: "run rpL full eval tests steps 60 and 40", "queue them for after"): queued without displacing a queued test:
+  GPU 1 = full test of p1r1s0-200 (running) -> **full test of rpL-60** -> p1br1s0; GPU 2 = full test of rpK-60 (running) -> rpK-40 ->
+  **full test of rpL-40**. od2 finished (GPU 1 moved on at ~13:20).

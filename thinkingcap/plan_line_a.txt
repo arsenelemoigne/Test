@@ -546,6 +546,8 @@ fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothi
 ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
 fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
 fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
+# 11 Nov ~14:00 (user): rpL step 40's full test, after the rpK tests already queued (rpL step 60 runs on GPU 1)
+fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
 # after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without another reconnect
 hold --hold-minutes 30 --hold-tag after-full-tests-1
 hold --hold-minutes 30 --hold-tag after-full-tests-2
