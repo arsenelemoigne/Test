@@ -5667,3 +5667,11 @@ mbpp +57% / -1.8; svamp +60% / -1.5. Same accuracy as rpK-60 (54.4 / -1.4) at +0
 Outside the box (accuracy). IFEval remains the main loss.
 Note: the consult13 worker report (Gemini via the Delos worker endpoint, $0.78) was judged weak by the user and is discarded;
 the clean-recipe review goes back to the OpenRouter Argon harness (as consult6-12).
+
+### 12 Nov ~00:05 — rpM-60 full test (2,759 x 8, GPU 1): IN THE BOX
+rpM-60 (rpE-80 + rpM step 60): **tokens saved +54.1% [53.0, 55.3], accuracy -0.93 pts [-1.67, -0.17]** -> inside 50 / -1
+(point estimate; the CI still reaches -1.67). Best in-box result so far (rpK-40 51.2 / -0.8: +2.9 pts more saving at ~same accuracy).
+Per type: bfcl_irrelevance +61% / +4.2; bfcl_multiple +47% / -1.6; bfcl_simple_python +45% / -0.3; ifeval +50% / -2.3;
+mbpp +58% / -0.9; svamp +57% / -1.2. vs rpK-60 (54.4 / -1.4): same saving, +0.5 accuracy (math and code protected).
+Dev-512 read 54.9 / +2.24 (saving within 0.8; accuracy ~3.2 too kind).
+Decision (user, 11 Nov ~23:59): launch the clean-recipe Argon review (OpenRouter harness, as consult6-12) automatically once all runs finish.
