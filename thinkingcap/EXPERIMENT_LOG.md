@@ -5589,3 +5589,6 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   saved / +1.92 accuracy. Per type: math 37 / +1.2 (703+9 thinking + response), code 36 / +1.1, IFEval 29 / +0.8 (262+242), one function 35 /
   +6.2, several 37 / +2.1, no fit 35 / +5.3. Far less shortening than the first round 1 at step 100 (47.5%): the anti-loop pairs and widened
   guards (chosen LONGER) hold length; accuracy is better. (Dev-512 over-reads this lineage's saving by ~2.5 points.)
+- **rpM step 40, Dev-512: 52.6% [49.8, 55.6] / +0.91**; paired vs rpE-80 **+5.7 / -0.46** (rpK-40 +3.5 / -0.42, rpL-40 +6.9 / -0.93). Per type:
+  math 53 / +2.4, code 58 / +1.5, IFEval 48 / -2.9 (125+246, runaways 4.0%), one function 48 / +2.7, several 53 / +1.1, no fit 55 / +3.9.
+  Dev-SVAMP-200 53.8 / +2.94 (paired +4.4 / -0.19). Better trade than rpL-40 at a similar saving; IFEval's runaways still not reduced.
