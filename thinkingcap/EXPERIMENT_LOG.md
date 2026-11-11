@@ -5420,3 +5420,16 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   thinking 239 vs 527, response 127 vs 135, chosen response longer in 36% (last night: 76%). Anti-loop supply in the original's
   answers: math 539 questions, code 195, IFEval 146. Longest pair 8,386 tokens; pairs are ~40% longer on average (slower steps).
   Dev-512 at 100 / 150 / 200, paired against p1r1s0-200. Round 2 (rpL-style, on its own answers) only if it clears ~51% saved.
+
+## 11 Nov ~12:50 — rpK step 20, FULL TEST (2,759 x 8): **49.9% saved / -1.3** (official weighting)
+Per type (rpE-80's full test in brackets): math 58 / -2.6 (54 / -1.2), code 51 / -0.3 (46 / -1.0), IFEval 45 / -3.1 (45 / -2.6), one
+function 40 / +0.3 (37 / +0.1), several 42 / -1.5 (39 / +0.1), no fit 54 / +3.6 (50 / +3.4). vs curve +1.57 (rpE-80 +1.45, rpI-120 +1.64).
+- Outside the box on both sides, narrowly: 0.1 point of saving and 0.3 point of accuracy short. +2.9 points of saving over rpE-80 for
+  -0.4 of accuracy: a little better than our frontier's slope, the same distance above the curve as rpE-80 and rpI-120.
+- The forecasts were right on saving (mine 50.6, consult9's 50.1) and too kind on accuracy (mine -0.75, consult9's -0.80): the paired
+  Dev-512 difference said +0.15, the full test says -0.4.
+- **Where the accuracy went: math.** SVAMP lost 1.4 points against rpE-80 (-0.35 on the headline) while shortening 4 more points;
+  several functions -1.6 (-0.1), IFEval -0.5 (-0.13); code gained 0.7 (+0.18). Dev-512 did not see the math loss (its math read
+  50% / +1.2 for rpK-20): Dev-512's math is full-difficulty GSM8K (the original solves 75%), the test's is SVAMP (89%). rpK's math
+  "hold" pairs were built on the same hard GSM8K questions (rpI's draw predates the public-dataset decision), so easy SVAMP-like
+  math was not protected. **Dev-512 cannot be trusted for math accuracy; rpL (same math pairs) will carry the same risk.**
