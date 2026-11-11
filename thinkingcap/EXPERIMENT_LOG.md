@@ -5473,3 +5473,25 @@ the curve, dominated by rpE-80 (47.0 / -0.9) and rpI-120 (41.9 / +0.1). Dev-512 
 from the original, Dev-512 reads the saving 2.5 points too HIGH (code: 52.6% on Dev, 44% on the test) and the accuracy 1.6 points too
 kind (the rc1 lineage: saving within ~1.3, accuracy +2.2): the Dev-512 offsets are not the same for every lineage.
 IFEval saves only 23% (responses inflated by the pair rules, as found); math and code carry the loss (-3.2, -3.3).
+- 11 Nov ~15:25 **consult10 (Gemini 4 Argon) done, $2.64: reviews/consult10_after_rpK20_full/REPORT.md** (written before the rpK-60 and
+  p1r1s0-200 full tests arrived). Main points:
+  (1) rpK-20's math loss (-107 right answers of 8,000 vs rpE-80): all of it is NEW wrong answers whose thinking is 0.5-1.0x rpE-80's
+  median right thinking on the question (+115; under 0.5x only +24): a one-pass calculation that skips the final re-check, on the
+  long-thinking half of the questions. Our "don't stop early" guard only catches wrong answers under 0.5x, and the math "be right"
+  pair picks the SHORTEST right answer (chosen shorter than rejected in 59% of rpK's math pairs). Dev-512 hid it because its math
+  is hard GSM8K; on the 105 Dev math questions where rpE-80 thinks under 600 tokens, rpK-20 loses 1.43 points (full test: 1.34):
+  a free SVAMP-like check. It also proposes a new Dev-SVAMP-200 slice.
+  (2) rpL: real on saving and loops. The "at least N" collapse is on the 14 true word / sentence-count questions (37.5% -> 19.6%):
+  my at_least() rule let placeholders / highlighted sections / letter frequency take two thirds of the 64 counting pairs, the 1.35x
+  cap rejected valid long answers, the "shorter" pairs still shrink the response (chosen shorter in 67%), and steps 40-60 of loop
+  pairs compress normal long answers. rpL's 16 math anti-loop pairs turned its math pairs into a shortening signal (Dev math thinking
+  -17%): it forecasts rpL-60's full test at 56.8-58.8% / -1.60 to -2.15 (math 60-62% / -3.4 to -4.2) and advises to full-test rpL-60 only.
+  (3) **rpM** (typed3): from rpE-80; math protected on SVAMP-like questions (rpE-80 answers 1,200 new ones), 240 math pairs = half
+  widened guards (wrong thinking under 0.95x the median right thinking, chosen within 0.95-1.25x), half length-held be-right, no
+  "shorter", no loop; IFEval: counting pairs only on true length / keyword-count rules with the chosen response 1.10x+15 to 1.75x+60
+  of the rejected one's (25%), "shorter" pairs only on questions with no counting rule and with the response within 5% (45%), be-right
+  22.5%, response loops 7.5%; several functions 50 / 50; code as rpL; 60 steps, Dev at 30 / 45 / 60 on Dev-512 + Dev-SVAMP-200. Its
+  forecast: 53.5-55.0% / -0.55 to -0.85. Also a zero-training check: rpE-80 + 0.55 x rpL-60's adapter.
+  (4) p1br1s0: three edits before it starts (math 45% shorter / 35% be-right / 15% widened guards / 5% loop; fewer loop pairs; the
+  IFEval rules of rpM; several functions 50 / 50; gate margin 4).
+  (5) It judges the box reachable with margin (53-55% at -0.6 to -0.8) through rpM.
