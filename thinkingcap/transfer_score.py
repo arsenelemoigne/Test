@@ -29,7 +29,7 @@ def main():
     args = ap.parse_args()
     base, cand = load(args.base), load(args.cand)
     rng = random.Random(0)
-    res, lines = {}, [f"== transfer {args.name} (x4, vs the original):"]
+    res, lines = {}, [f"== transfer {args.name} (x8, vs the original):"]
     for src in sorted(base):
         ids = [q for q in base[src] if q in cand[src]]
         m = lambda d, q, i: sum(x[i] for x in d[src][q]) / len(d[src][q])  # noqa: E731

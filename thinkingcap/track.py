@@ -4110,7 +4110,7 @@ TRANSFER_SIZES = {"tr_math500": 200, "tr_skywork": 200, "tr_arc_c": 200, "tr_csq
 def transfer(args):
     """(11 Nov, user: "how much does this transfer ... or is it benchmark overfitting?") Benchmarks our training never used nor
     imitated: MATH-500 (whole-number answers), Skywork-OR1 easy math, ARC-Challenge, CommonsenseQA, MMLU, HumanEval. Each model
-    in --tr-models (NAME=SPEC, SPEC as devscore's) answers them x4; transfer_score.py compares it with the original, per set."""
+    in --tr-models (NAME=SPEC, SPEC as devscore's) answers them x8 (user: as the test); transfer_score.py compares it with the original, per set."""
     drive_sync("restore", only=[str(TRANSFER_FILE)])
     if not TRANSFER_FILE.exists():
         tmp = Path("data/transfer-all.jsonl")
@@ -4133,7 +4133,7 @@ def transfer(args):
         name, spec = item.split("=", 1)
         out = BON / f"transfer-{name}"
         drive_sync("restore", only=[str(out)])
-        if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 4 * len(rows):
+        if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
             model = spec
             if spec.startswith(("hf:", "hflora:", "zip:")):  # (11 Nov, user) a competitor's PUBLIC weights, for comparison only
                 model = competitor_model(name, spec)
@@ -4146,7 +4146,7 @@ def transfer(args):
             else:
                 drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
             py("probe_curve.py", "--data", TRANSFER_FILE, "--sources", ",".join(TRANSFER_SIZES), "--per-source", 1000000,
-               "--samples", 4, "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+               "--samples", 8, "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
                "--max-questions", len(rows), "--seed", 61)
             drive_sync("save")
         outs.append((name, out))
