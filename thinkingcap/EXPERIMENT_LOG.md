@@ -5375,3 +5375,30 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   questions with both an unfinished and a finished answer (94 with a right one), code 32, math 62. Caveat for the user's rule:
   michal-bida's rejected side includes cut-off answers; a dedicated "a finished answer beats a runaway one" pair is generic, but
   the overlap is flagged. Not built, not queued.
+- 11 Nov ~11:05 **consult9 (Gemini 4 Argon) done, $6.92, 201 turns: reviews/consult9_path1_results/REPORT.md.** Main points, with my
+  check against the pair tables (figures confirmed unless noted):
+  (1) Path 1's round 1 missed its forecast (53-57%) by 7-9 points for two reasons. IFEval: 25.6% saved vs rpE-80's 44.7% (math 57.7
+  vs 49.5 and code 52.6 vs 49.3 shortened MORE than rpE-80); in round 1's IFEval pairs the chosen answer's response is longer than
+  the rejected one's in 76% of pairs (+47 tokens; counting-rule pairs 201 vs 145 tokens, 81% longer; even the "shorter" pairs 118 vs
+  99, 61% longer, an effect of --resp-guard), only 25% of IFEval pairs were "shorter" pairs, and runaway answers rose. Structure:
+  the pairs' own chosen / rejected token ratio, weighted as the headline, is 46% saved, and the model landed at 45.9%: one offline
+  round on the original's answers under fp32 moves the model to its chosen answers' length (other fp32 single rounds in the log:
+  45-49%). It admits three errors of consult8: it never computed that ratio, it compared with bf16 runs and with rc1-soup-30
+  (4 stages), and it endorsed the count-rule and response-guard rules without checking their effect on response length.
+  (2) Path 1: stop as queued (drop seed 1; the fallback and round 2 as designed cannot reach the box); stop od2; drop the full test
+  of p1r1s0-200 (the user asked for it: kept unless told otherwise).
+  (3) rpK: the saving gain is real (paired +3.6 / +3.5 / +6.8, intervals of about +-1.6); in rpK's 320 IFEval pairs the chosen answer
+  thinks 46 tokens less but WRITES 42 tokens more (76% longer), net -4 tokens, which is why IFEval's saving did not move; rpK's
+  finished IFEval responses did not lengthen, the rise is runaways (36 -> 43 -> 49 of 1,056). Its full-test forecasts: rpK-20
+  50.1 / -0.80 (45% chance in the box), rpK-40 50.3 / -1.25 (25%), rpK-60 53.2 / -1.45 (15%). (Not confirmed: it says code's
+  be-right pairs carried a shortening signal; over ALL of rpK's code pairs the chosen answer is LONGER (776 vs 693 tokens), so
+  code's -24% is spill-over and fewer runaways, not its own pairs.)
+  (4) Next: NOT cut answers below the floor; **rpL** = rpK with three IFEval fixes (counting-rule pairs only on true "at least N"
+  rules with the chosen response capped at 1.35x + 25; "shorter" pairs guarded on the question's median response and never a
+  longer response than the rejected one; a finished answer beats a runaway one), IFEval 20% counting / 50% shorter / 30% be-right,
+  tools 50 / 50, 60 steps, Dev-512 at 25 / 40 / 55, pass = saved >= 52.5 and accuracy >= +1.25; then an interpolation of rpK-20 and
+  rpK-60 if the full tests bracket the box.
+  (5) Clean recipe from the original: two rounds: round 1 = 90% "shorter" / 10% be-right on the stored answers (bar 7/10, 1.40x,
+  lr 5e-5, 150 steps; forecast 51.5-53.5% on Dev at about -3 to -3.7 full-test), round 2 = the typed repair on its own answers;
+  round 1 alone costs ~1 GPU-hour (no generation). My caveat: 90% "shorter" pairs at lr 5e-5 is the regime where our log and the
+  competitors' notes show accuracy collapsing; its forecasts have been 7-9 points off once already.
