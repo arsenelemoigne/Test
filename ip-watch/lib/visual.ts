@@ -228,6 +228,14 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
         if (own) Object.assign(r, { level: "ecarte", score: null, similar: "Visuel ou produit du client déjà publié", differs: null, category: "visuel du client" });
       }
     }
+    // Looking for copies: the client's own photo republished elsewhere is a signal of its own, not a copy.
+    if (search.mode === "contrefacon") {
+      for (const r of items) {
+        if (!r.level && r.source === "Google Vision" && /identique|partielle/.test(r.foundBy)) {
+          Object.assign(r, { level: "meme_theme", score: null, similar: "Photo officielle du client reprise sur ce site : revendeur ou boutique suspecte, à vérifier", differs: null, category: "photo du client reprise" });
+        }
+      }
+    }
     const pending = items.filter((r) => !r.level);
     const withImage = pending.filter((r) => r.imagePath).slice(0, Math.max(0, MAX_COMPARED - compared));
     const textOnly = pending.filter((r) => !r.imagePath);
@@ -270,7 +278,7 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
       if (!r) continue;
       let level = (LEVELS as string[]).includes(o.niveau ?? "") ? (o.niveau as VisualLevel) : "meme_theme";
       if (!withImages && (level === "tres_proche" || level === "proche") && !(r.source === "Google Vision")) level = level === "tres_proche" ? "proche" : "meme_theme";
-      if (search.mode === "contrefacon" && (o.categorie === "officiel" || o.categorie === "sans_rapport")) level = "ecarte";
+      if (search.mode === "contrefacon" && (o.categorie === "officiel" || o.categorie === "revente" || o.categorie === "sans_rapport")) level = "ecarte";
       // A plain product photo is not a campaign: at most "same theme" when looking for past ads.
       if (search.mode === "anteriorite" && o.categorie === "produit" && (level === "tres_proche" || level === "proche")) level = "meme_theme";
       r.level = level;
@@ -366,8 +374,20 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
   // Press articles and campaign pages found by a web search; each page's preview image is used for the comparison.
   sources.push(
     step(S_WEB, async () => {
-      if (search.mode === "contrefacon") throw new Skip("réservé aux campagnes antérieures");
       if (!llmConfigured()) throw new Skip("IA non configurée");
+      if (search.mode === "contrefacon") {
+        const sys = "Trouve des pages qui vendent ou recommandent des copies, imitations ou « dupes » de ce produit (listes de dupes, boutiques en ligne, places de marché, réseaux sociaux). Pas les pages officielles de la marque. Réponds en 3 phrases maximum, en français.";
+        const qs = [queries.web, `${context.client ?? ""} dupe ${queries.produits}`.trim()];
+        const runs = await Promise.all(qs.map((q, i) => webSearch(q, `visual-dupe-${i + 1}`, { maxResults: 10, system: sys }).catch(() => ({ summary: "", results: [] }))));
+        const found = add(runs.flatMap((x) => x.results).map((w) => ({ source: "Web", kind: "page" as const, title: w.title, url: w.url, imageUrl: null, advertiser: hostOf(w.url), date: null, country: null, price: null, currency: null, foundBy: qs.join(" | ") })));
+        const preview = limiter(5);
+        await Promise.all(found.map((p) => preview(async () => {
+          const imgs = await pageImages(p.url, "", 1).catch(() => [] as string[]);
+          if (imgs[0]) Object.assign(p, { imageUrl: imgs[0], kind: "image" as const });
+        })));
+        feed(found);
+        return `${found.length} page(s) de dupes ou copies · ${qs.map((q) => `« ${q} »`).join(", ")}`;
+      }
       const system = "Trouve des campagnes publicitaires, films publicitaires, visuels de campagne ou articles de presse publicitaire (Ads of the World, Culture Pub, presse mode et luxe) qui correspondent à la description. Pas de fiches produits. Réponds en 3 phrases maximum, en français.";
       const runs = await Promise.all([queries.web, ...queries.images.slice(1, 2)].map((q, i) => webSearch(q, `visual-web-${i + 1}`, { maxResults: 10, system }).catch(() => ({ summary: "", results: [] }))));
       const r = { results: runs.flatMap((x) => x.results) };
@@ -480,7 +500,9 @@ async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx:
       mode === "anteriorite"
         ? "- images : 2 requêtes Google Images visant des CAMPAGNES publicitaires semblables (mots « campagne », « publicité », « ad campaign »), sans nom de marque, une en français puis une en anglais ;"
         : "- images : 2 requêtes Google Images visant des PRODUITS semblables vendus en ligne (une avec la marque du client et « dupe » ou « copie », une décrivant l'objet) ;",
-      "- web : une requête web pour trouver des campagnes publicitaires ou articles de presse sur des campagnes semblables.",
+      mode === "anteriorite"
+        ? "- web : une requête web pour trouver des campagnes publicitaires ou articles de presse sur des campagnes semblables."
+        : "- web : une requête web pour trouver des copies ou « dupes » de ce produit (ex. « dupe sac Furla 1927 », « sac inspiré Furla »).",
       mode === "anteriorite"
         ? `- concurrents : 6 à 8 marques concurrentes du même segment et du même marché que le client${ctx.client ? ` (${ctx.client})` : ""}, dont on veut vérifier les campagnes passées (noms de marque seuls, sans le client).`
         : "- concurrents : liste vide.",
@@ -538,6 +560,8 @@ function ratingIntro(mode: VisualMode, ctx: Context): string {
     "- proche : reprise des caractéristiques essentielles (forme, motif, combinaison de couleurs) ;",
     "- meme_theme : même type de produit, ressemblance faible ;",
     "- ecarte : sans rapport, ou produit officiel du client.",
+    "IMPORTANT : un produit AUTHENTIQUE du client (sa marque, vendu par lui ou par un revendeur) n'est PAS une copie : catégorie « officiel » (neuf) ou « revente » (occasion), niveau « ecarte ».",
+    "Une copie est un produit d'une AUTRE marque ou sans marque qui reprend la forme, le fermoir, le motif ou la combinaison de couleurs. « usage_du_signe » = le nom du client utilisé pour vendre un produit qui n'est pas de lui (« style Furla », « dupe Furla », « inspiré de »).",
     "categorie : copie, usage_du_signe (le signe du client utilisé par un tiers), officiel (le client ou un revendeur agréé), revente (produit authentique d'occasion), sans_rapport.",
     "score = ressemblance de 0 à 100. similaire / differe : forme, motif, matière, couleurs, signe, présentation.",
   ].join("\n");
