@@ -5593,3 +5593,9 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   math 53 / +2.4, code 58 / +1.5, IFEval 48 / -2.9 (125+246, runaways 4.0%), one function 48 / +2.7, several 53 / +1.1, no fit 55 / +3.9.
   Dev-SVAMP-200 53.8 / +2.94 (paired +4.4 / -0.19). Better trade than rpL-40 at a similar saving; IFEval's runaways still not reduced.
 - 11 Nov ~19:45 (user) full tests of rpM steps 20 / 40 / 60 queued: step 40 on GPU 2 right after rpM (before rpL 80-120), steps 60 then 20 on GPU 1 after p1cr1s0 (before rpN).
+- **rpM step 60, Dev-512: 54.9% [52.3, 57.3] / +2.24 — paired vs rpE-80 +8.0 saved / +0.87 ACCURACY (the first repair step on Dev-512 that is
+  MORE accurate than rpE-80 while saving 8 points more).** rpK-60 +6.8 / -0.60, rpL-60 +11.9 / -0.44. Per type: math 48 / +1.8 (581+9), code
+  63 / +4.9 (runaways 0.1%), IFEval 54 / -1.8 (114+209, runaways 2.8%), one function 50 / +5.0, several 54 / +2.1, no fit 57 / +4.2. Dev-512
+  read rpK-60's paired difference right (+6.8 / -0.60 -> full 54.4 / -1.4): applied to rpE-80's full test (47.0 / -0.9) this reads
+  ~55 / ~0.0; rpK-20's case was 0.5 too kind, so a fair guess for the full test is 54-55% at -0.1 to -0.6.
+- p1cr1s0 step 100, Dev-SVAMP-200: 37.7 / +2.06 (paired vs p1r1s0-200 -17.2 / +3.44).
