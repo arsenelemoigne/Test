@@ -153,6 +153,11 @@ function webUrl(url: string | null | undefined): string | null {
   return u;
 }
 
+// encodeURIComponent throws on lone surrogates (broken scraped text): replace them first.
+const encode = (s: string) => encodeURIComponent(s.toWellFormed());
+
+const ficheUrl = (appUrl: string, id: string) => `${appUrl.replace(/\/+$/, "")}/recherche-visuelle?id=${encode(id)}`;
+
 function domainOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -209,11 +214,23 @@ async function normalizeSource(buf: Buffer): Promise<Buffer | null> {
   }
 }
 
+// True when a JPEG carries an EXIF orientation other than "normal" (PDF viewers ignore EXIF).
+async function exifRotated(buf: Buffer): Promise<boolean> {
+  if (!buf.subarray(0, 4096).includes("Exif")) return false;
+  const sharp = await loadSharp();
+  if (!sharp) return false;
+  try {
+    return ((await sharp(buf, { failOn: "none" }).metadata()).orientation ?? 1) > 1;
+  } catch {
+    return false;
+  }
+}
+
 async function embedJpeg(doc: PDFDocument, buf: Buffer | null, normalize: boolean): Promise<PDFImage | null> {
   if (!buf || !buf.length) return null;
   let data = buf;
   if (normalize) data = (await normalizeSource(buf)) ?? buf;
-  else if (buf.length > 1_500_000) data = (await toJpeg(buf, 1200))?.data ?? buf;
+  else if (buf.length > 1_500_000 || (await exifRotated(buf))) data = (await toJpeg(buf, 1200))?.data ?? buf;
   try {
     return await doc.embedJpg(data);
   } catch {
@@ -410,8 +427,9 @@ class Kit {
     return bold ? this.bold : this.regular;
   }
 
+  // Width of safe text (newlines count as spaces).
   width(s: string, size: number, bold = false) {
-    return this.font(bold).widthOfTextAtSize(s, size);
+    return this.font(bold).widthOfTextAtSize(s.includes("\n") ? oneLine(s) : s, size);
   }
 
   // Longest prefix that fits with an ellipsis. Text must already be safe.
@@ -534,7 +552,7 @@ class Kit {
     const u = webUrl(url);
     if (!u || w <= 0 || h <= 0) return;
     // URI actions are 7-bit ASCII; written as a hex string so parentheses and backslashes need no escaping.
-    const ascii = u.replace(/[^\x21-\x7e]/g, (c) => encodeURIComponent(c));
+    const ascii = u.toWellFormed().replace(/[^\x21-\x7e]/gu, (c) => encodeURIComponent(c));
     const hexBytes = Array.from(ascii, (c) => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
     const ctx = this.doc.context;
     const annot = ctx.obj({
@@ -616,7 +634,7 @@ function drawCover(k: Kit, source: PDFImage | null) {
 
   // Title block
   let top = H - 66;
-  const titleLines = k.wrap(a?.titre || "Recherche visuelle", 24, true, CW, 2);
+  const titleLines = k.wrap(oneLine(safe(a?.titre)) || "Recherche visuelle", 24, true, CW, 2);
   titleLines.forEach((l, i) => p.drawText(l, { x: M, y: top - 20 - i * 28, size: 24, font: k.bold, color: C.ink }));
   top -= 20 + (titleLines.length - 1) * 28;
   const subtitle = `${MODE_LABEL[search.mode]} · ${ctx.clientName} · ${frenchDate(search.createdAt)}`;
@@ -646,7 +664,7 @@ function drawCover(k: Kit, source: PDFImage | null) {
   const statusLines = status ? k.wrap(status.text, 8.5, false, rw, 2) : [];
   const descAll = a?.description ? k.wrap(a.description, 9, false, rw) : [];
   const elements = a?.elements ?? [];
-  const elemLines = elements.map((e) => k.wrap(e.label, 8.5, false, rw - 26, 2));
+  const elemLines = elements.map((e) => k.wrap(oneLine(safe(e.label)), 8.5, false, rw - 26, 2));
   const steps = search.steps.slice(0, 8);
   const noteAll = search.note ? k.wrap(search.note, 8.5, false, rw, 3) : [];
 
@@ -722,7 +740,7 @@ function drawCover(k: Kit, source: PDFImage | null) {
   // Sources
   if (steps.length) {
     rt = k.label(p, "Sources consultées", rx, rt);
-    const nameW = Math.min(150, Math.max(...steps.map((s) => k.width(safe(s.name), 8.5, true))) + 10);
+    const nameW = Math.min(150, Math.max(...steps.map((s) => k.width(oneLine(safe(s.name)), 8.5, true))) + 10);
     for (const s of steps) {
       if (rt - 11.5 < floor) break;
       const y = rt - 7.5;
@@ -833,7 +851,7 @@ function drawDetail(k: Kit, r: VisualResult, source: PDFImage | null, img: PDFIm
   facts.push(["Trouvé par", r.foundBy || "—", 2]);
 
   for (const [label, value, max] of facts) {
-    const lines = k.wrap(value ?? "—", 8.5, false, vw, max ?? 1);
+    const lines = k.wrap(oneLine(safe(value)) || "—", 8.5, false, vw, max ?? 1);
     k.text(p, label.toUpperCase(), fx, t - 7, { size: 6.5, bold: true, color: C.muted, spacing: 0.5 });
     lines.forEach((l, i) => p.drawText(l, { x: fx + lw, y: t - 7 - i * 11, size: 8.5, font: k.regular, color: C.ink }));
     t -= Math.max(1, lines.length) * 11 + 5;
@@ -913,7 +931,7 @@ function drawTable(k: Kit, results: VisualResult[], images: Map<string, PDFImage
     const c = TABLE_COLUMNS[col];
     const x = o.x ?? xs[col] + padX;
     const w = xs[col] + c.w - padX - x;
-    const lines = k.wrap(text, size, o.bold ?? false, w, o.maxLines ?? 1);
+    const lines = k.wrap(oneLine(safe(text)), size, o.bold ?? false, w, o.maxLines ?? 1);
     const blockH = (lines.length - 1) * lh + size * 0.7;
     const first = rowTop - (rowH - blockH) / 2 - size * 0.7;
     lines.forEach((l, i) => page.drawText(l, { x, y: first - i * lh, size, font: k.font(o.bold), color: o.color ?? C.ink }));
@@ -1093,7 +1111,7 @@ const solid = (h: string): ExcelJS.Fill => ({ type: "pattern", pattern: "solid",
 const thinBottom: Partial<ExcelJS.Borders> = { bottom: { style: "thin", color: { argb: argb("#d0d4d9") } } };
 
 function hyperlink(text: string, url: string | null | undefined): ExcelJS.CellValue {
-  const u = webUrl(url);
+  const u = webUrl(xml(url));
   // Excel refuses very long hyperlink addresses; keep those as plain text.
   if (!u || u.length > 2000) return xml(url ?? "") || null;
   return { text: xml(text), hyperlink: u, tooltip: u.slice(0, 250) };
@@ -1267,7 +1285,7 @@ export async function buildVisualXlsx(search: VisualSearch, ctx: ReportContext):
     ["Texte visible", xml(a?.texteVisible)],
     ["Résultats", results.length],
     ...LEVEL_ORDER.map((l): [string, ExcelJS.CellValue] => [`  ${LEVEL_TEXT[l]}`, results.filter((r) => levelOf(r) === l).length]),
-    ["Fiche", hyperlink(`${ctx.appUrl.replace(/\/+$/, "")}/recherche-visuelle?id=${encodeURIComponent(search.id)}`, `${ctx.appUrl.replace(/\/+$/, "")}/recherche-visuelle?id=${encodeURIComponent(search.id)}`)],
+    ["Fiche", hyperlink(ficheUrl(ctx.appUrl, search.id), ficheUrl(ctx.appUrl, search.id))],
   ];
   let rowNo = 4;
   for (const [key, value] of pairs) {
@@ -1317,7 +1335,7 @@ const REGISTER_COLUMNS: { header: string; width: number; fill?: string }[] = [
 
 function fileUrl(appUrl: string, path: string | null): string | null {
   if (!path) return null;
-  return `${appUrl}/api/files/${path.replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/")}`;
+  return `${appUrl}/api/files/${path.replace(/^\/+/, "").split("/").map(encode).join("/")}`;
 }
 
 // One line per search, for the client's file ("registre des recherches").
@@ -1335,7 +1353,7 @@ export async function buildSearchRegister(searches: VisualSearch[], ctx: { clien
 
   sorted.forEach((s, i) => {
     const counts = levelCounts(s.results);
-    const fiche = `${appUrl}/recherche-visuelle?id=${encodeURIComponent(s.id)}`;
+    const fiche = ficheUrl(appUrl, s.id);
     const row = ws.getRow(HEADER + 1 + i);
     row.values = [
       excelDate(s.createdAt),
