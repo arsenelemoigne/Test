@@ -519,13 +519,18 @@ devscore --ds-name rpE80 --ds-model models/rpE-80
 devscore --ds-name rpE40 --ds-model /content/lupin-models/rpE40=models/rc1-soup-30:adapters/rpE-s0/step-40
 devscore --ds-name rpE60 --ds-model /content/lupin-models/rpE60=models/rc1-soup-30:adapters/rpE-s0/step-60
 devscore --ds-name rpI120 --ds-model models/rpI-120
-# HOLD (user, 11 Nov: calibration reviewed first) devset
-# HOLD (user, 11 Nov: calibration reviewed first) p1src
-# HOLD (user, 11 Nov: calibration reviewed first) ptrepair --name p1r1s0 --rp-base Qwen/Qwen3-0.6B --rp-own-data --rp-rollouts-from p1src --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.35,--shorten-min-right,0.80,--mix-preset,round1 --rp-quota svamp=800,mbpp=800,ifeval=800,bfcl_simple_python=280,bfcl_multiple=200,bfcl_irrelevance=240 --rp-lr 2e-5 --rp-lr-min 5e-6 --rp-warmup 10 --rp-steps 200 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 100 150 200 --rp-dev
-# HOLD (user, 11 Nov: calibration reviewed first) ptrepair --name p1r2s0 --rp-gate p1r1s0-200,rpE80,6 --rp-base models/p1r1s0 --rp-base-from Qwen/Qwen3-0.6B:adapters/p1r1s0-s0/step-200 --rp-own-data --rp-exclude-dev --rp-exclude-ids data/p1-round1-ids.json --rp-public --rp-kinds mix --rp-samples 8 --rp-seed 21 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.75 --rp-questions svamp=1000,mbpp=600,ifeval=750,bfcl_simple_python=300,bfcl_multiple=220,bfcl_irrelevance=330 --rp-quota svamp=320,mbpp=320,ifeval=320,bfcl_simple_python=100,bfcl_multiple=80,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 80 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 40 60 80 --rp-dev
-# 11 Nov ~03:20 (user asleep; "queue path 1 directly + the IFEval / tool-call repair"): the queue must not reach `end` (it
-# stops the runtime) while the final lines are being tested: short waits, replaced by the real lines in the next push
-hold --hold-minutes 15 --hold-tag wait-1
-hold --hold-minutes 15 --hold-tag wait-2
-hold --hold-minutes 15 --hold-tag wait-3
-hold --hold-minutes 15 --hold-tag wait-4
+# 11 Nov ~03:40 (user, before sleeping: "update the path 1 accordingly and queue it directly" + "independently plan and queue
+# the repair ... on ifeval and tool calls" + "make the changes you feel needed"). HOLD lifted. Changes after the Fable review and
+# consult8 (Gemini: GO for round 1), all tested on the REAL answer files (PATH1_FINAL.md, REPAIR_IFEVAL_TOOLS.md):
+# round 2's "shorter" bar 7/8; the mix is a hard rule (pairs cut back to the scarcest side, never refilled; IFEval's counting
+# half fixed 1:1, up to 2 counting pairs per question); round 2 never draws a near-duplicate of a Dev-512 question; IFEval
+# "shorter" pairs never prefer a shorter response; Dev-512 scores print the paired difference and the thinking / response split.
+devset
+p1src
+ptrepair --name p1r1s0 --rp-base Qwen/Qwen3-0.6B --rp-own-data --rp-rollouts-from p1src --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.35,--shorten-min-right,0.80,--mix-preset,round1,--resp-guard,0.9 --rp-quota svamp=800,mbpp=800,ifeval=800,bfcl_simple_python=280,bfcl_multiple=200,bfcl_irrelevance=240 --rp-lr 2e-5 --rp-lr-min 5e-6 --rp-warmup 10 --rp-steps 200 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 100 150 200 --rp-dev --rp-dev-vs rpE80
+# rpK = the IFEval + tool-call repair, independent of Path 1 (from rpE-80, its own answers of 10 Nov = rpI's rollouts, no new
+# generation): "think less" pairs ONLY on IFEval without a counting rule and on tool calls; math and code get "be right" and
+# "don't stop early" pairs only (they hold the rest in place). 60 steps, Dev-512 at 20 / 40 / 60, paired against rpE-80.
+ptrepair --name rpK --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed,--resp-guard,0.9 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
+ptrepair --name p1r2s0 --rp-gate p1r1s0-200,rpE80,6 --rp-base models/p1r1s0 --rp-base-from Qwen/Qwen3-0.6B:adapters/p1r1s0-s0/step-200 --rp-own-data --rp-exclude-dev --rp-exclude-ids data/p1-round1-ids.json --rp-public --rp-kinds mix --rp-samples 8 --rp-seed 21 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--resp-guard,0.9 --rp-questions svamp=1000,mbpp=600,ifeval=960,bfcl_simple_python=340,bfcl_multiple=250,bfcl_irrelevance=330 --rp-quota svamp=320,mbpp=320,ifeval=320,bfcl_simple_python=100,bfcl_multiple=80,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 80 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 40 60 80 --rp-dev --rp-dev-vs p1r1s0-200
+end

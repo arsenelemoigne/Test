@@ -27,9 +27,13 @@ def per_question(path):
     for line in Path(path).read_text().splitlines():
         if line.strip():
             r = json.loads(line)
-            out[r["id"]].append((bool(r["correct"]) and not r["truncated"], r["output_tokens"]))
+            think = r.get("thinking_ids")
+            out[r["id"]].append((bool(r["correct"]) and not r["truncated"], r["output_tokens"],
+                                 len(think) if think is not None else 0))
             part[r["id"]] = part_of(r)
-    return {q: (sum(a for a, _ in v) / len(v), sum(t for _, t in v) / len(v)) for q, v in out.items()}, part
+    # per question: (share right, mean tokens, mean THINKING tokens); the response is tokens - thinking
+    return {q: (sum(a for a, _, _ in v) / len(v), sum(t for _, t, _ in v) / len(v), sum(k for _, _, k in v) / len(v))
+            for q, v in out.items()}, part
 
 
 def headline(base, cand, ids_by_part):
@@ -87,6 +91,10 @@ def main():
     lines = [f"== {args.name} (Dev-512 x8, {n} questions): tokens saved {saved:+.1f}% [{cs[0]:+.1f}, {cs[1]:+.1f}], "
              f"accuracy {acc:+.2f} pts [{ca[0]:+.2f}, {ca[1]:+.2f}] (official weighting, paired bootstrap 95%)"]
     lines.append("   " + "; ".join(f"{p} {100 * (1 - r[3] / r[2]):+.0f}% / {100 * (r[1] - r[0]):+.1f}" for p, r in rows.items()))
+    split = {p: [sum(m[q][2] for q in ids) / len(ids) for m in (base, cand)] for p, ids in ids_by_part.items() if ids}
+    # (11 Nov) where the tokens went: thinking vs response (the full-test records show IFEval's loss is a shortened RESPONSE)
+    lines.append("   thinking + response tokens, original -> model: " + "; ".join(
+        f"{p} {split[p][0]:.0f}+{r[2] - split[p][0]:.0f} -> {split[p][1]:.0f}+{r[3] - split[p][1]:.0f}" for p, r in rows.items()))
     vs = None
     if ref is not None:
         s2, a2, _ = headline(base, ref, ids_by_part)
@@ -98,7 +106,8 @@ def main():
     if args.out:
         Path(args.out).write_text(json.dumps({"name": args.name, "saved": round(saved, 2), "acc": round(acc, 2),
                                               "saved_ci": cs, "acc_ci": ca, "questions": n, "vs": vs,
-                                              "parts": {p: {"base_acc": r[0], "acc": r[1], "base_tokens": r[2], "tokens": r[3]}
+                                              "parts": {p: {"base_acc": r[0], "acc": r[1], "base_tokens": r[2], "tokens": r[3],
+                                                            "base_thinking": split[p][0], "thinking": split[p][1]}
                                                         for p, r in rows.items()}}, indent=1))
 
 

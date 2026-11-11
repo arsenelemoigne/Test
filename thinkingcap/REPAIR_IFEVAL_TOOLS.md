@@ -1,0 +1,132 @@
+# The IFEval + tool-call repair (rpK) — why these two fail, in the data, and the run built from it (11 Nov 2026)
+
+User, 11 Nov: "Analyze why ifeval + no function fit fail exactly in the data, be very thorough" and "independently plan and
+queue the repair that you suggested on ifeval and tool calls". Independent of Path 1.
+
+## Data used (all real, downloaded from Drive; nothing estimated)
+
+- The full test's per-answer records (2,759 questions x 8 = 22,072 answers each) of five models: the original Qwen, the
+  original with thinking off, rc1-soup-30 (57.4 / -3.5), rpE-80 (47.0 / -0.9), rpI-120 (41.9 / +0.1).
+- The 2,759 test questions rebuilt locally with the challenge's own script (pinned revisions), and Google's official IFEval
+  checkers run rule by rule on every answer (re-grading matches the stored verdicts: 0-1 mismatch per model).
+- The training answers: the original's 10 stored answers (17,870 questions), rc1-soup-30's and rpE-80's own answers (5,700
+  questions x 8 each).
+
+Tokens = thinking + response, per answer, means.
+
+| type | original | thinking off | rc1-soup-30 | rpE-80 | rpI-120 |
+|---|---|---|---|---|---|
+| math | 677 + 10, 88.7% | 0 + 13, 20.6% | 219 + 9, 82.1% | 307 + 8, 87.5% | 356 + 8, 88.7% |
+| code | 2,079 + 47, 52.4% | 0 + 61, 40.8% | 732 + 46, 49.0% | 1,090 + 51, 51.4% | 1,269 + 50, 53.0% |
+| IFEval | 433 + 263, 57.8% | 0 + 262, 56.6% | 141 + 201, 55.6% | 156 + 223, 55.4% | 163 + 247, 56.3% |
+| one function | 171 + 24, 82.2% | 0 + 22, 71.4% | 91 + 24, 82.1% | 98 + 24, 82.2% | 99 + 24, 82.3% |
+| several functions | 192 + 24, 76.1% | 0 + 20, 55.3% | 98 + 24, 75.2% | 107 + 23, 76.1% | 110 + 23, 75.2% |
+| no function fits | 186 + 27, 83.4% | 0 + 8, 90.3% | 92 + 13, 79.3% | 96 + 11, 86.8% | 95 + 11, 89.2% |
+
+## IFEval: the loss is a shortened RESPONSE on 58 questions, not missing thinking
+
+IFEval's 541 questions fall in four classes. Contribution of each class to the change of IFEval accuracy (points):
+
+| class | questions | original | thinking off | rc1-soup-30 | rpE-80 | rpI-120 |
+|---|---|---|---|---|---|---|
+| "at least N words / sentences" | 58 (11%) | 33.2% right | -0.16 | -1.66 | -1.57 | -1.43 |
+| another counting rule (keyword count, placeholders, sections...) | 183 (34%) | 58.4% | -1.69 | -0.90 | -0.67 | -0.58 |
+| no counting rule | 264 (49%) | 60.7% | +0.65 | +0.46 | -0.02 | +0.90 |
+| "fewer than N words / sentences" | 36 (7%) | 72.9% | +0.02 | -0.09 | -0.12 | -0.37 |
+| **IFEval total** | 541 | 57.8% | **-1.18** | **-2.20** | **-2.38** | **-1.48** |
+
+1. **Two thirds of every trained model's IFEval loss sits in 58 "at least N" questions.** There the response is simply too
+   short: on "at least N words" (34 questions, N median 343) the original writes 0.89 x N words (median) and passes 37.5%;
+   rc1 / rpE-80 / rpI-120 write 0.57 / 0.63 / 0.65 x N and pass 10.7 / 11.4 / 16.9%. Response tokens on the class: 668
+   (original) -> 443 / 489 / 560. The thinking even says it ("Need to keep it around 400 words" for "400 or more words").
+   With thinking OFF the original still writes 0.83 x N and passes 34.9%: the words are lost by our training, not by the
+   missing thinking. Rule by rule (pass rate vs the original): number_words -11 to -15 points, number_sentences ("at least")
+   57% -> 36-41%, keyword frequency ("at least") 70% -> 52-56% (fewer words, fewer occurrences).
+2. **On half of IFEval (no counting rule, 264 questions) thinking is worth nothing**: thinking off scores +1.3 points on the
+   class; trained models are level with the original. Same for "fewer than N".
+3. **Thinking earns its keep only on the other counting rules** (183 questions): thinking off loses 5 points there (keyword
+   frequency -18.8 on the rule, placeholders -21.8, lower-case -12.2); the trained models lose 1.7-2.7.
+4. **Inside one question, right and wrong answers think the same length** (trained models: difference 0-4 tokens over ~225
+   mixed questions): thinking length does not decide correctness on IFEval.
+5. **The trained models never produce a short think**: thinking under 40 tokens = 0.2% of rpE-80's IFEval answers (5th
+   percentile 75 tokens, median 128). Pairs built from the model's own answers cannot prefer what never appears, which is why
+   no run of ours pushed IFEval past 58% saved.
+
+What an ideal IFEval looks like, in tokens (rpE-80 today: 156 + 223 = 380, 45% saved, -2.4): full-length responses on "at
+least N" (+19 tokens on average), thinking ~30 tokens on the 300 questions where it is worth nothing (-72 tokens), thinking
+kept on the other counting rules: ~327 tokens = **53% saved at about -0.5** instead of 45% at -2.4. With thinking also short on
+the other counting rules: ~292 (58%). The thinking-off point (62% / -1.2) is the outer limit.
+
+## No function fits: 28 near-fit questions carry everything; thinking only decides "call or not"
+
+- The only wrong reply on this type is a parseable function call (prose, "[]" or a malformed call all count as "no call").
+  Calls: original 16.6% of answers, thinking off 9.7%, rc1 20.7%, rpE-80 13.2%, rpI-120 10.8%.
+- **28 questions hold almost all the errors**: the offered function nearly fits ("Find me restaurants in London" with
+  `find_pois`; "latest trend in technology" with `get_social_trends`). On them: original 2% right, thinking off 59%, rc1 7%,
+  rpE-80 18%, rpI-120 27%. On the other 212: original 94.2%, thinking off 94.4%, rpE-80 95.9%, rpI-120 97.4%. The whole
+  +6.9 of thinking off comes from those 28: with no thinking the model declines by default; with thinking it talks itself
+  into the call (the original's wrong answers think 264 tokens, its right ones about 170; inside one question the right answers
+  think 64-86 tokens LESS).
+- So on 212 of 240 questions thinking can be cut with nothing to lose, and on the 28 more thinking makes it worse.
+- **Same floor as IFEval:** rpE-80's thinking is 66 tokens at the 5th percentile, 89 at the median, never under 40 (0.8% under
+  60). Its response is already minimal (11 tokens; "[]" in 53% of answers). 50% saved today = 96 + 11 tokens; 75-85% saved
+  needs thinking at 20-40 tokens.
+
+## One function / several functions: thinking decides whether to call, not how
+
+- With thinking off, when the model does call, the call is as good: one function 83.4% right among calls (84.7% with
+  thinking), several functions 76.9% (80.1%). The whole loss of thinking off (-10.8 / -20.8) is NOT calling: prose or "[]"
+  in 14% / 28% of answers (3% / 5% with thinking).
+- Accuracy is flat across thinking length (every quintile of rpE-80's thinking equals the original on the same questions), and
+  these two types were never pushed past 44% saved in any full test, with no loss (+0.1 / +0.1 for rpE-80).
+- Same floor: 68 / 73 tokens at the 5th percentile, 93 / 101 at the median.
+
+## What this says about the repair
+
+- The target is narrow and clear: (1) IFEval responses must not shrink, (2) thinking can drop on IFEval questions without a
+  counting rule and on all three tool types, (3) math and code must not move.
+- On paper, from rpE-80 (47.0 / -0.9), official weighting: IFEval at 53% saved and about -0.5 -> 48.7 / about -0.45; plus no-fit
+  thinking at ~30 tokens -> 50.9; plus one / several functions at ~60 tokens of thinking -> ~54. The tool types are the larger
+  lever, IFEval the safer one. None of it is measured in a trained model yet.
+- **The risk is the one the user named: keeping the rest stable.** The log's only direct evidence is against us: an adapter
+  trained on ONE type's pairs from the original cut every other type almost as much (lpt6, 5 Nov: "instructions only" ->
+  math +27% / -3.5, code +32% / -1.9; "think less is one shared habit"). Those runs had no pair at all on the other types. rpK
+  tests the opposite arrangement: the other types are in every batch, with pairs that pull the other way.
+
+## rpK — the run (queued on GPU 2 between Path 1's round 1 and round 2; ~1.2 GPU-hours, no new generation)
+
+- **Start:** rpE-80 (our best balanced model; full test and Dev-512 known). Fresh LoRA on it, reference = rpE-80.
+- **Answers:** rpE-80's OWN answers to 5,700 questions x 8 (made on 10 Nov for rpI; never a Dev-512 question).
+- **Pairs, 1,060 (built locally on the real answers; the GPU builds the same file):**
+
+  | type | pairs | "think less" | "be right" | "don't stop early" |
+  |---|---|---|---|---|
+  | IFEval | 320 | 112 (questions without a counting rule; thinking only; response never shorter than 0.9x) | 48 + 160 counting-rule pairs (the right answer writes at least as much) | 0 |
+  | one function | 160 | 112 | 48 | 0 |
+  | several functions | 120 | 84 | 36 | 0 |
+  | no function fits | 140 | 84 | 56 | 0 |
+  | math | 160 | **0** | 128 | 32 |
+  | code | 160 | **0** | 128 | 32 |
+
+  "Think less" = 37% of the file, all on IFEval and tool calls (bar 7/8 right, longest right >= 1.30x the shortest). Medians
+  thinking, chosen vs rejected: IFEval 90 vs 166 (response 65 vs 58), one function 61 vs 105, several 66 vs 108, no fit 71 vs
+  111. Math and code "be right" pairs are equal-length (286 vs 330, 427 vs 433 tokens); their "don't stop early" pairs prefer
+  the longer right answer (654 vs 355).
+- **Training:** 60 steps of 16, lr 1e-5 constant, beta 0.1 (rpE's settings).
+- **Reading (Dev-512 at steps 20 / 40 / 60, each PAIRED against rpE-80, with the thinking / response split per type):**
+  success = IFEval and tool-call tokens down, IFEval responses not shorter, math and code tokens within about +-5% of
+  rpE-80 and paired accuracy not below about -0.5. Failure = math or code shortened too (the shared habit wins) or
+  accuracy falling with it.
+- **Honest expectation:** pairs from the model's own answers can only walk the thinking floor down a step per round (to about
+  the current 10th-25th percentile), so one round is worth roughly +1 to +2 points of headline saving if the rest holds: enough
+  to show whether the allocation works, not enough alone to reach 50 / -1. If it works, the same pairs are repeated on fresh
+  answers (a second round) and folded into Path 1's round 2.
+
+## Next step if rpK holds the rest stable: go below the floor
+
+The model's own answers never show thinking under 40 tokens, so the larger prize (IFEval ~55-58%, tool calls ~60-70% saved)
+needs answers made on purpose: take a natural answer, close the thinking after its first sentences (20 / 40 / 60 tokens), let
+the model write the answer itself, grade it (the budget ladder of 10 Nov, with FIXED small budgets: its percentile rungs start
+at ~90 tokens for tools and ~150 for IFEval, above the region that matters). Questions that stay right with the short think give
+"think less" pairs; questions that turn wrong give "don't stop early" pairs. Rule check: a short real think, never an empty one
+(the README wants a model "that thinks before it answers").

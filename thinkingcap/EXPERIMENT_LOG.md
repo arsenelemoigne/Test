@@ -5284,3 +5284,37 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   0 / 30 / 60 first, then "short think" pairs per question; short real think, never empty). Red flags: round 2 shorter bar 6/8;
   Dev-512 too noisy to pick among round-2 steps; seed spread vs the gate; od2 low value; counting-rule shortfall refilled in
   repair_pairs.py L215; the README's own bar is long passed. Nothing changed in the queues (user decides).
+
+## 11 Nov ~03:00-03:45 — user asleep: "queue path 1 directly", "independently plan and queue the repair on ifeval and tool calls", "make the changes you feel needed"
+- **Dev-512 calibration, 3 of 5:** rpE-40 Dev +50.5% [47.9, 53.0] / +0.55 [-1.14, +2.11] (full test 50.6 / -1.9). With rc1-soup-30
+  (58.7 / -1.83 vs 57.4 / -3.5) and rpE-80 (46.9 / +1.36 vs 47.0 / -0.9): saving within ~1 point of the full test, accuracy
+  +1.7 to +2.5 high, ranking kept. rpE-60 and rpI-120 running.
+- **consult8 (Gemini 4 Argon) done, $3.64: GO for round 1.** Plan-vs-code table: everything verified except IFEval's counting
+  half (refill) and round 2's guard / be-right collision; 4 bugs (round 2 draws Dev-512 near-duplicates under other ids; guard
+  and be-right pairs collide and the shortfall is under-reported; counting half refilled; tool top-up source names = false
+  alarm, checked in prepare_types.py). reviews/consult8_path1_final/run/final_answer.md.
+- **Real data pulled from Drive to the Mac for testing** (Chrome downloads, read-only): the five full-test record files
+  (original, thinking off, rc1-soup-30, rpE-80, rpI-120), the original's 10 stored answers (1.7 GB, 17,870 questions), rc1-soup-30's
+  and rpE-80's own answers (rp-rpH, rp-rpI); the 2,759 test questions rebuilt with utils/eval/benchmarks.py.
+- **Why IFEval and no-fit fail (REPAIR_IFEVAL_TOOLS.md, official checkers re-run rule by rule):** IFEval's loss in every trained
+  model = shortened RESPONSES on 58 "at least N words / sentences" questions (-1.4 to -1.7 of the -1.5 to -2.4; words / N 0.89 ->
+  0.57-0.65), not missing thinking (thinking off: -0.16 on that class, +0.65 on the 264 questions without a counting rule); thinking
+  only matters on the other counting rules (thinking off -1.69). No-fit: 28 near-fit questions hold the errors (original 2%,
+  thinking off 59%, rpI-120 27%); the other 212 are at 94-97% whatever the thinking. One / several functions: without thinking
+  the calls are as good (83.4 vs 84.7%, 76.9 vs 80.1% among calls); the loss is not calling. Every trained model has a thinking
+  FLOOR (5th percentile 66-75 tokens on IFEval and tools, < 40 tokens in 0-0.2% of answers): own-answer pairs cannot go below it.
+- **Path 1 final changes (PATH1_FINAL.md "Final changes before launch"):** round 2 "shorter" bar 7/8; hard mix rule (cut back to
+  the scarcest side; guard and be-right never the same pair; real shortfall); IFEval counting half fixed 1:1 with up to 2 counting
+  pairs per question; reserve for round 2 per type (25%, IFEval 33%, several functions 35%); --resp-guard 0.9 on IFEval "shorter"
+  pairs; round 2 skips Dev-512 near-duplicates (8-grams); Dev-512 scores print the paired difference (--rp-dev-vs) and the thinking /
+  response split; token ids stored compactly (2 GB instead of ~10 GB on round 1's file). Round 1 built locally on the real stored
+  answers, both seeds: 13,082 questions, 3,040 pairs, exact mix per type, IFEval 720 / 800 (counting half), 56% "shorter" in every
+  prefix, longest pair 8,339 tokens. Round 2 dry-run on rc1-soup-30's real answers: every quota met at the exact mix.
+- **rpK (new, independent of Path 1): the IFEval + tool-call repair** from rpE-80 on its own answers (rpI's rollouts, no generation):
+  repair_pairs.py --mix-preset typed = "think less" pairs only on IFEval without a counting rule and on tool calls (7/8 bar),
+  math and code "be right" + "don't stop early" only; 1,060 pairs (37% "think less"), 60 steps lr 1e-5, Dev-512 at 20 / 40 / 60
+  paired against rpE-80. Tests whether IFEval / tools can be shortened while math and code hold (lpt6 said one-type adapters
+  spill over; those had no pairs on the other types).
+- **Queue:** GPU 2 was about to reach `end` (runtime stop) after the calibration: new `hold` stage + wait lines pushed first
+  (ccff1c2), then the real lines: devset, p1src, p1r1s0 (Dev at 100 / 150 / 200), rpK, p1r2s0 (gate rpE-80 + 6), end. GPU 1:
+  od2 (round 2 of 10, ~1.5-2 h per round) then p1src, p1r1s1, p1r2s1.

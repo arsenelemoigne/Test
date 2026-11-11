@@ -357,6 +357,8 @@ def main():
     parser.add_argument("--rp-dpo-seed", type=int, default=0, help="ptrepair (11 Nov): DPO seed (adapter init and pair order)")
     parser.add_argument("--rp-exclude-ids", default="", help="ptrepair (11 Nov): a JSON list of question ids never drawn (with --rp-exclude-dev)")
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
+    parser.add_argument("--rp-dev-vs", default="", help="ptrepair (11 Nov): with --rp-dev, also the PAIRED difference against "
+                        "this scored run (runs/bon/dev512-NAME), e.g. rpE80 or p1r1s0-200")
     parser.add_argument("--rp-exclude-dev", action="store_true", help="ptrepair / odpo (11 Nov): never draw the Dev/Confirm questions")
     parser.add_argument("--ld-questions", default="svamp=450,mbpp=300,ifeval=450,bfcl_simple_python=100,bfcl_multiple=100,"
                         "bfcl_irrelevance=100", help="ladder (10 Nov, user): own training questions per part")
@@ -3530,7 +3532,7 @@ def polans(args):
 PT_MID = {"svamp": 0.30, "mbpp": 0.45, "ifeval": 0.60, "bfcl": 0.45}  # pt-mid = lpw-pertype merged at these strengths
 
 
-def own_repair_questions(want, seed=0, exclude=None, public=False):
+def own_repair_questions(want, seed=0, exclude=None, public=False, avoid_grams=None):
     """(9 Nov, user: "100% not copying michal-bida") The repair's questions from the user's OWN sources only, want[part] per
     test part, drawn at random (the trained model's own 4 answers then decide which give pairs):
       math         GSM8K train + test at EVERY difficulty, in SVAMP's wording (prepare_types.py gsm8k_std; GSM8K is in the
@@ -3588,6 +3590,9 @@ def own_repair_questions(want, seed=0, exclude=None, public=False):
             continue
         if part == "svamp" and grams and len(grams & used_grams) / len(grams) > 0.3:
             dropped[(part, "already trained on")] += 1
+            continue
+        if avoid_grams and grams and len(grams & avoid_grams) / len(grams) >= 0.3:  # (11 Nov, consult8) the same question
+            dropped[(part, "near-duplicate of a Dev-512 question")] += 1           # under another id (GSM8K rewordings)
             continue
         cands[part].append(r)
     if exclude:  # (11 Nov) the Dev-512 / Confirm-512 questions are never drawn for training (only when asked: old draws stay)
@@ -3684,7 +3689,8 @@ def ptrepair(args):
         k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
         per_part = defaultdict(list)
         for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
-                                      exclude=excluded_ids(args), public=getattr(args, "rp_public", False)):
+                                      exclude=excluded_ids(args), public=getattr(args, "rp_public", False),
+                                      avoid_grams=dev_gram_set() if getattr(args, "rp_exclude_dev", False) else None):
             per_part[part_of(r)].append(r)
         for part, n in want.items():
             for r in per_part[part][k * n:(k + 1) * n]:
@@ -3740,7 +3746,8 @@ def ptrepair(args):
             taken = {json.loads(l)["id"] for f in rolls for l in open(f) if l.strip()}
             ex = (excluded_ids(args) or set()) | taken
             rows_x = [r for r in own_repair_questions(more, seed=args.rp_seed + 100 * extra, exclude=ex,
-                                                       public=getattr(args, "rp_public", False))]
+                                                       public=getattr(args, "rp_public", False),
+                                                       avoid_grams=dev_gram_set() if getattr(args, "rp_exclude_dev", False) else None)]
             print(f"repair {name}: fill until full, batch {extra}: short {short}; answering {len(rows_x)} more questions", flush=True)
             if not rows_x:
                 break
@@ -3782,7 +3789,7 @@ def ptrepair(args):
         for step in args.rp_screen:
             if args.rp_base:
                 spec = f"/content/lupin-models/{name}-{step}={args.rp_base}:{adapter / f'step-{step}'}"
-                print(dev_score_model(f"{name}-{step}", spec), flush=True)
+                print(dev_score_model(f"{name}-{step}", spec, vs=getattr(args, "rp_dev_vs", "")), flush=True)
         return
     for step in args.rp_screen:
         out = ROOT / f"s4-{name}-{step}"
@@ -3849,16 +3856,21 @@ def excluded_ids(args):
 
 P1_ANSWERS = "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl"  # the original Qwen's 10 answers per question
 P1_IDS = Path("data/p1-round1-ids.json")
+# (11 Nov) % of each type's questions kept UNSEEN for round 2 (a fixed hash of the id). Sized on real answers: round 2 needs
+# ~1,000 IFEval questions for its counting-rule half (2,998 exist) and ~250 "several functions" questions (716 exist)
+P1_RESERVE = {"ifeval": 33, "bfcl_multiple": 35}
+P1_RESERVE_DEFAULT = 25
 
 
 def p1src(args):
     """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen; revised after both reviews) Round 1's material:
     the original's 10 STORED answers per pool question (runs/bon/P1_ANSWERS), public datasets allowed (user, 11 Nov: MetaMath
     and the math1 / math2 / nofit4 top-ups; recipes stay off-limits), never a Dev-512 question nor a near-duplicate of one, and
-    75% of the questions (a fixed hash of the id; the other 25% stay unseen for round 2). No new generation.
+    75% of the questions (a fixed hash of the id; the rest stay unseen for round 2: 25%, IFEval 33%, several functions 35%,
+    P1_RESERVE). No new generation.
     Written as runs/bon/rp-p1src/rollouts.jsonl (+ data/p1-round1-ids.json: round 2 passes --rp-exclude-ids)."""
     import hashlib
-    from build_pool import ngrams, words
+    from build_pool import ngrams, part_of, words
     out = BON / "rp-p1src"
     drive_sync("restore", only=[str(out), str(P1_IDS)])
     if (out / "rollouts.jsonl").exists() and P1_IDS.exists():
@@ -3914,8 +3926,8 @@ def p1src(args):
             if near[qid]:
                 drop["shares an 8-gram with Dev-512"] += 1
                 continue
-            if int(hashlib.md5(str(qid).encode()).hexdigest(), 16) % 4 == 0:
-                drop["kept for round 2 (25%)"] += 1
+            if int(hashlib.md5(str(qid).encode()).hexdigest(), 16) % 100 < P1_RESERVE.get(part_of(r), P1_RESERVE_DEFAULT):
+                drop["kept for round 2"] += 1
                 continue
             keep_ids.add(qid)
             dst.write(line if line.endswith("\n") else line + "\n")
@@ -3926,6 +3938,18 @@ def p1src(args):
     P1_IDS.write_text(json.dumps(sorted(keep_ids)))
     print(f"p1src: round 1 = {len(keep_ids)} questions", flush=True)
     drive_sync("save")
+
+
+def dev_gram_set():
+    """(11 Nov) The rare 8-grams of Dev-512 (a template shared by >= 3 dev questions is not evidence of a duplicate): a
+    training question with >= 30% of its 8-grams in this set is a near-duplicate of a dev question."""
+    from build_pool import ngrams, words
+    dev_ids()
+    seen = Counter()
+    for l in (DEV_FILE.read_text().splitlines() if DEV_FILE.exists() else []):
+        if l.strip():
+            seen.update(ngrams(words(json.loads(l)["prompt"])))
+    return {g for g, n in seen.items() if n < 3}
 
 
 def dev_ids():
@@ -3983,8 +4007,9 @@ def dev_generate(name, model):
     return out
 
 
-def dev_score_model(name, spec):
-    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here)."""
+def dev_score_model(name, spec, vs=""):
+    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here).
+    vs (11 Nov): the name of an already scored run; dev_score.py then also prints the paired difference against it."""
     dev_ids()
     assert DEV_FILE.exists(), "run the devset stage first"
     base = dev_generate("base", "Qwen/Qwen3-0.6B")
@@ -4001,8 +4026,14 @@ def dev_score_model(name, spec):
     if "=" in spec and model.startswith("/content/"):
         shutil.rmtree(model, ignore_errors=True)
     res = out / "dev_score.json"
+    ref = BON / f"dev512-{vs}" / "rollouts.jsonl" if vs else None
+    if ref is not None:
+        drive_sync("restore", only=[str(ref.parent)])
+        if not ref.exists():
+            print(f"devscore {name}: no Dev-512 answers of {vs} on Drive: scored without the paired difference", flush=True)
+            ref = None
     run(sys.executable, "dev_score.py", "--base", base / "rollouts.jsonl", "--cand", out / "rollouts.jsonl", "--name", name,
-        "--out", res)
+        "--out", res, *(["--vs", ref] if ref is not None else []))
     drive_sync("save")
     d = json.loads(res.read_text())
     return (f"== {name} (Dev-512 x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "

@@ -51,7 +51,7 @@ reviewers' fallback is 60 more round-1 steps at lr 1.5e-5.
 
 - The round-1 model answers ~3,200 NEW questions × 8 (public datasets allowed; math SVAMP-like) (math 1,000, code 600, IFEval 750, one function 300, several 220, no
   fit 330; never a round-1 or Dev-512 question; seed 0 and seed 1 draw different questions).
-- **Pairs, 1,280:** 25% "shorter" (right ≥ 6/8, ≥ 1.30×) / 60% compact be-right (+ IFEval counting rule) / 15% "don't stop too
+- **Pairs, 1,280:** 25% "shorter" (right ≥ 7/8 since 11 Nov, ≥ 1.30×) / 60% compact be-right (+ IFEval counting rule) / 15% "don't stop too
   early" (a right answer at ≤ 1.15× the question's median right thinking beats the longest wrong answer under 0.5× of it).
 - **Training:** fresh LoRA on the round-1 model, reference = the round-1 model, lr 1e-5 constant, 80 steps; Dev-512 at 40,
   60, 80.
@@ -73,7 +73,53 @@ submission's length/accuracy curve.
 - **Fill until full (round 2):** if a type is short of pairs by more than 10%, the round-1 model answers more new questions for
   that type (3x the shortfall, at least 100; up to 2 extra batches) and the pairs are rebuilt. Round 1 uses a fixed pool of
   stored answers, so there it keeps the proportion with a smaller total.
-- **Hold:** Path 1 does not start before the user has reviewed the Dev-512 calibration (5 models with known full tests).
+- **Hold:** lifted by the user on 11 Nov ~03:20 ("queue it directly, I will check tomorrow"); calibration so far: saving reads within ~1 point of the full test, accuracy ~2 points high.
+
+## Final changes before launch (11 Nov ~03:40; user: "update the path 1 accordingly and queue it directly")
+
+After the Fable 5.2 review (reviews/fable_path1_review.md) and consult8 (Gemini 4 Argon, verdict **GO for round 1**,
+reviews/consult8_path1_final/run/final_answer.md, $3.64). Every change was tested on the REAL answer files downloaded from
+Drive (the original's 10 stored answers, rc1-soup-30's and rpE-80's own answers), not on mock data.
+
+- **Round 2's "shorter" bar raised to 7/8** (was 6/8: a half-solved question passed 14.5% of the time; 7/8: 3.5%; round 1 stays
+  8/10). Measured on rc1-soup-30's real answers (a round-1-like model): the "shorter" supply barely drops (-7 to -15%); the
+  scarce kind is "be right", not "shorter".
+- **The mix is a hard rule** (repair_pairs.py): pairs are taken, then every side is cut back to the scarcest one, so the final
+  file holds exactly the set mix whatever ran short. Fixes found by consult8 and the Fable review: the "don't stop early" pair
+  and the "be right" pair of one question could be the same pair (the supply was counted twice and the mix drifted in round 2);
+  a guarded question now gives no second be-right pair; counting-rule questions never give a guard; shortfall.json holds the
+  REAL gap (fill-until-full was reading an under-count).
+- **IFEval's counting half is fixed 1 : 1 with the other half** (before: a short counting half let the other half grow = the
+  silent refill). Counting-rule pairs are the scarce kind (244 for a half-quota of 400 on the real answers), so a counting-rule
+  question may now give up to 2 pairs on different answers (411 available).
+- **Share kept unseen for round 2, per type:** 25%, IFEval 33%, "several functions" 35% (round 2 needs ~1,000 IFEval questions
+  for its counting half and ~250 "several functions" questions; with a flat 25% it had 792 and 187).
+- **IFEval "shorter" pairs never prefer a shorter response** (--resp-guard 0.9: the chosen answer's response is at least 0.9x
+  the rejected one's). Reason: the full-test records show IFEval's loss in every trained model is shortened RESPONSES on "at
+  least N words / sentences" questions, not shortened thinking (REPAIR_IFEVAL_TOOLS.md).
+- **Round 2 never draws a near-duplicate of a Dev-512 question** (consult8's bug 1: Dev-512's math has gsm8k-std ids, round 2's
+  public math has pool ids for the same GSM8K problems; ids alone missed them; now the 8-gram rule of round 1 applies).
+- **Dev-512 scores** now also print the paired difference against a reference (round 1 vs rpE-80; round 2 vs round 1) and the
+  thinking / response token split per type.
+- **Memory:** repair_pairs.py stores token ids compactly (round 1's 1.3 GB answer file: 2 GB of RAM instead of ~10 GB).
+- consult8's "bug 4" (tool top-up source names) is a false alarm: those rows carry source glaive_tools / toolace + a category.
+  Not taken: its idea to prefer a non-early wrong answer in the be-right pair (it would change rpE's proven pair).
+
+**Round 1 on the real stored answers (both seeds built locally, identical to what the GPU will build):** 13,082 questions, 3,040
+pairs: math 480 shorter / 320 be-right, code 560 / 240, one function 196 / 84, several 140 / 60, no fit 144 / 96, IFEval 180
+shorter / 180 be-right / 360 counting-rule (720 of 800: the counting half is the limit). "Shorter" pairs = 56% of the file, in
+every prefix. The quotas sum to 3,120, not 3,200 as written above; 200 steps = 3,200 pairs, so the first 160 pairs are seen
+twice. Longest pair 8,339 tokens (cap 8,704). Seeds 0 and 1 share 1,237 of 3,040 pairs.
+
+**Round 2 draw:** math 1,000, code 600, IFEval 960, one function 340, several 250, no fit 330 new questions x 8.
+
+**Queue (HOLD lifted by the user):** GPU 2: calibration (rpI-120 last) -> p1src -> round 1 seed 0 (Dev-512 at 100 / 150 / 200)
+-> rpK (the independent IFEval + tool-call repair, ~1.2 h) -> gate -> round 2 seed 0. GPU 1: od2 (running, ~12 h left) -> seed 1.
+
+**What to watch (consult8):** pairs file: any non-IFEval type under 85% of its quota = stop; "chosen longer" must stay under
+~25% (math / code / tools) and ~35% (IFEval). Training: pairs ordered right 55 -> 72% by step 20, 82-88% at 150-200; over 96%
+before step 150 = over-fitting; under 65% at step 100 = stalled. Gate nuance: if step 150 passes rpE-80 + 6 and step 200 does
+not, the gate closes; point round 2 at step 150 by hand.
 
 ## Expected (honest)
 
