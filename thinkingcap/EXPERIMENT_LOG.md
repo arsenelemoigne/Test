@@ -5411,3 +5411,12 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   dry-run builds the identical file. dev_score.py also prints the share of runaway answers per type (rpK-60 on Dev: IFEval
   3.9% -> 4.6%, math 7.8% -> 0.4%, code 6.0% -> 0.4%). Queues: GPU 2 = rpK-20 full test (running) -> rpL -> rpK-60 -> rpK-40 full
   tests; GPU 1 = od2 (running) -> the full test of p1r1s0-200 only. REPAIR_IFEVAL_TOOLS.md has the rpL section.
+- 11 Nov ~12:10 (user: "where does Path 1 redesigned go?") **Path 1's round 1 redesigned = p1br1s0, queued on GPU 1 after od2** (before the
+  full test of p1r1s0-200). Not consult9's version (90% "shorter" pairs, lr 5e-5: the regime where the log shows accuracy
+  collapsing) but ONE change at a time: last night's round 1 (same stored answers, 60 / 40 and 70 / 30 mixes, lr 2e-5 cosine,
+  200 steps) with (a) IFEval's pairs as in rpL and (b) anti-loop pairs. repair_pairs.py --mix-preset round1b. Built on the real
+  stored answers: 3,120 pairs, every quota full: math 480 shorter / 200 be-right / 120 anti-loop, code 560 / 120 / 120, IFEval 400
+  shorter / 120 be-right / 160 counting ("at least N" only) / 120 anti-loop, tool calls as before. IFEval without the anti-loop pairs:
+  thinking 239 vs 527, response 127 vs 135, chosen response longer in 36% (last night: 76%). Anti-loop supply in the original's
+  answers: math 539 questions, code 195, IFEval 146. Longest pair 8,386 tokens; pairs are ~40% longer on average (slower steps).
+  Dev-512 at 100 / 150 / 200, paired against p1r1s0-200. Round 2 (rpL-style, on its own answers) only if it clears ~51% saved.

@@ -107,7 +107,7 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -293,6 +293,17 @@ def main():
                 # hold as in "typed", with a tenth of anti-loop pairs; IFEval: 20% counting-rule pairs (true "at least N" rules,
                 # --count-mode atleast), 50% "shorter thinking", 15% be-right, 15% anti-loop
                 sh_share = ({"shorten": 0.0, "right": 0.70, "guard": 0.20, "loop": 0.10} if part in ("svamp", "mbpp") else
+                            {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+                            {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.20
+            if args.mix_preset == "round1b":
+                # (11 Nov, Path 1 redesigned) round 1 as launched (60 / 40 on math and no fit, 70 / 30 on code and tool calls)
+                # with two changes: anti-loop pairs take 15 points of the be-right side on math and code (the original's
+                # runaways hold 30% of its code tokens and 10% of its math tokens), and IFEval uses rpL's rules (20% counting
+                # pairs on true "at least N" rules, 50% "shorter thinking", 15% be-right, 15% anti-loop)
+                sh_share = ({"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "svamp" else
+                            {"shorten": 0.70, "right": 0.15, "guard": 0.0, "loop": 0.15} if part == "mbpp" else
                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
