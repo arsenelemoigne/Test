@@ -5675,3 +5675,6 @@ Per type: bfcl_irrelevance +61% / +4.2; bfcl_multiple +47% / -1.6; bfcl_simple_p
 mbpp +58% / -0.9; svamp +57% / -1.2. vs rpK-60 (54.4 / -1.4): same saving, +0.5 accuracy (math and code protected).
 Dev-512 read 54.9 / +2.24 (saving within 0.8; accuracy ~3.2 too kind).
 Decision (user, 11 Nov ~23:59): launch the clean-recipe Argon review (OpenRouter harness, as consult6-12) automatically once all runs finish.
+- 12 Nov ~00:20 (user): rpM-60 added to the transfer (generalization) check, GPU 2 after the rpK40/rpL40/rpL60 transfer line
+  (base answers reused from Drive). Charts: rpK / rpL / rpM full tests now drawn as three branches from rpE-80 (they were one
+  zigzag line); Frontier page regained the README bar and a "no thinking" toggle.
