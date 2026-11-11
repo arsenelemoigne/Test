@@ -556,6 +556,8 @@ devsvamp
 devscore --ds-name rpE80 --ds-model models/rpE-80 --ds-dev svamp200
 devscore --ds-name rpK-60 --ds-model models/rpK-60 --ds-dev svamp200 --ds-vs rpE80
 devscore --ds-name rpL-60 --ds-model models/rpL-60 --ds-dev svamp200 --ds-vs rpE80
+# a short wait before rpM: consult11 (the review with the full-test scores) may ask for an edit
+hold --hold-minutes 15 --hold-tag before-rpM
 ptrepair --name rpM --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-extra-questions svamp=1200 --rp-samples 8 --rp-seed 31 --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed3,--count-mode,length,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--resp-median,0.95,--resp-max,1.05,--resp-near-long,0.95,--right-resp-cap,1.15,--loop-response-only,ifeval,--guard-wide,svamp,--right-hold,svamp --rp-quota svamp=180,svamp_hard=60,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-svamp --rp-dev-vs rpE80
 # 11 Nov ~14:00 (user): rpL step 40's full test (now after rpM: consult10 judged this test the least informative of the queue)
 fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
