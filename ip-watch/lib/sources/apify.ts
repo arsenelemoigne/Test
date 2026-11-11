@@ -62,7 +62,7 @@ export async function metaAds(queries: string[], opts: { country?: string; maxAd
         pageName: str(i.pageName) ?? str(i.page_name) ?? str(snapshot.page_name) ?? null,
         startDate: isoDate(i.startDate ?? i.start_date ?? i.startDateFormatted),
         endDate: isoDate(i.endDate ?? i.end_date),
-        image: firstString(i.imageUrls, i.images, i.imageUrl, i.thumbnailUrl, i.videoPreviewImageUrl, snapshot.images, snapshot.videos, snapshot.cards),
+        image: firstString(i.imageUrls, i.images, i.imageUrl, i.thumbnailUrl, i.videoPreviewUrls, i.videoPreviewImageUrl, snapshot.images, snapshot.videos, snapshot.cards),
         text: str(i.bodyText) ?? str(i.body) ?? str((snapshot.body as Record<string, unknown> | undefined)?.text) ?? str(i.title) ?? null,
         query: str(i.searchQuery) ?? str(i.query) ?? null,
       };
