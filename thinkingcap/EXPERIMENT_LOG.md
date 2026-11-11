@@ -5318,3 +5318,38 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
 - **Queue:** GPU 2 was about to reach `end` (runtime stop) after the calibration: new `hold` stage + wait lines pushed first
   (ccff1c2), then the real lines: devset, p1src, p1r1s0 (Dev at 100 / 150 / 200), rpK, p1r2s0 (gate rpE-80 + 6), end. GPU 1:
   od2 (round 2 of 10, ~1.5-2 h per round) then p1src, p1r1s1, p1r2s1.
+
+## 11 Nov morning — results of the night (GPU 2), read at 09:05
+- **Dev-512 calibration, 5 of 5:** rpE-60 Dev 46.5 [43.9, 49.0] / +1.05 (full 47.8 / -1.2); rpI-120 Dev 42.6 [39.9, 45.3] / +2.49
+  (full 41.9 / +0.1). All five (Dev - full): saving +1.3, -0.1, -1.3, -0.1, +0.7 (mean +0.1, within ~1.3); accuracy +1.7, +2.5,
+  +2.3, +2.3, +2.4 (mean +2.2). Dev-512 cannot order two models 1 point apart (rpE-60 vs rpE-80 swap).
+- **Path 1, round 1, seed 0 (p1r1s0; from the original, 12,668 questions after 318 Dev-512 questions and 289 near-duplicates were
+  dropped; 2,964 pairs, IFEval 644 / 800; 200 steps; pairs ordered right 82% at 100, 84% at 150, 91% at 200), Dev-512 x8:**
+  | step | saved | accuracy | paired vs rpE-80: saved | accuracy |
+  | 100 | 47.5 [44.8, 50.1] | -0.27 | +0.5 [-2.0, +3.3] | -1.63 [-3.15, -0.18] |
+  | 150 | 43.7 [41.1, 46.3] | -0.28 | -3.2 [-5.9, -0.4] | -1.65 [-3.28, -0.17] |
+  | 200 | 45.9 [43.2, 48.7] | +0.12 | -1.0 [-3.0, +1.2] | -1.25 [-2.92, +0.33] |
+  Step 200 per type: math +58% / -2.4, code +53 / -3.2, IFEval +26 / +1.8, one function +43 / +7.5, several +47 / +2.5, no fit +39 /
+  +0.6. Thinking + response tokens, original -> model: math 1115+20 -> 470+9, code 1934+80 -> 888+67, IFEval 436+273 -> 197+330,
+  one function 159+21 -> 82+21, several 186+18 -> 90+18, no fit 155+28 -> 92+20. IFEval's thinking halved but its RESPONSES grew
+  (273 -> 330 tokens), so IFEval saves only 26% (and gains accuracy): the response protections over-corrected.
+  **GATE CLOSED** (45.9 < rpE-80's 46.93 + 6): round 2 skipped, as pre-registered. Round 1 saves no more than rpE-80 and is 1.3-1.6
+  points less accurate (paired): it does not reach the shorten-hard point the plan needed (Gemini forecast 53-57%; the Claude and
+  Fable reviews expected less). The queue then reached `end`: GPU 2 stopped at ~07:40.
+- **rpK, the IFEval + tool-call repair (from rpE-80, 1,060 pairs, 60 steps), Dev-512 x8:**
+  | step | saved | accuracy | paired vs rpE-80: saved | accuracy |
+  | 20 | 50.5 [48.2, 52.8] | +1.51 | +3.6 [+1.5, +5.6] | +0.15 [-1.05, +1.35] |
+  | 40 | 50.4 [47.6, 53.5] | +0.95 | +3.5 [+1.4, +5.5] | -0.42 [-1.63, +0.80] |
+  | 60 | 53.8 [51.2, 56.5] | +0.76 | +6.8 [+4.6, +9.1] | -0.60 [-2.05, +0.82] |
+  Per type, saved / accuracy (rpE-80 on Dev: math 49 / +2.1, code 49 / +3.1, IFEval 45 / -2.8, one function 42 / +3.8, several 46 /
+  +3.9, no fit 45 / +1.4): step 20: math 50 / +1.2, code 57 / +2.8, IFEval 48 / -0.7, one function 44 / +3.3, several 49 / +1.4, no
+  fit 50 / +2.8; step 60: math 54 / +0.8, code 61 / +3.3, IFEval 45 / -3.4, one function 51 / +2.1, several 55 / -1.8, no fit 58 /
+  +6.4. Tokens at step 60 (thinking + response): no fit 72+5, one function 68+20, several 74+18, IFEval 113+275, math 517+9, code
+  723+66. Reading: tool calls shortened as intended (+9 to +13 points); IFEval's thinking fell (to 113) and its response came back
+  to the original's length (275 vs 273), so IFEval's saving is unchanged; **math and code did NOT hold in tokens** (code 49 -> 61%
+  saved, math 49 -> 54: the shared habit spills over even with holding pairs in every batch), but their accuracy held on Dev.
+  Net: +6.8 points of saving for -0.6 of accuracy (paired, interval -2.05 to +0.82), a far better trade than our curve (~-1.7 for
+  +6.8). Applying the paired differences to rpE-80's full test (47.0 / -0.9): rpK-20 ~ 50.6 / -0.75, rpK-40 ~ 50.5 / -1.3, rpK-60 ~
+  53.8 / -1.5 (each +-1.3 saving, +-1.3 accuracy; three steps looked at). **rpK-20 is the first checkpoint whose estimate sits in
+  the goal box**; only a full test can say. Not run: the user's rule is no full test unless asked.
+- GPU 1: od2 round 6 of 10 (720: round 2 11.0 / -0.8, round 4 29.3 / -1.0); Path 1 seed 1 is queued after it.
