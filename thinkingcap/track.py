@@ -4104,7 +4104,7 @@ def competitor_model(name, spec):
 
 
 TRANSFER_FILE = Path("data/transfer.jsonl")
-TRANSFER_SIZES = {"tr_math500": 200, "tr_skywork": 200, "tr_arc_c": 200, "tr_csqa": 200, "tr_mmlu": 250, "tr_humaneval": 164}
+TRANSFER_SIZES = {"tr_math500": 1000, "tr_skywork": 200, "tr_arc_c": 200, "tr_csqa": 200, "tr_mmlu": 250, "tr_humaneval": 164}
 
 
 def transfer(args):
@@ -4152,7 +4152,7 @@ def transfer(args):
         outs.append((name, out))
     for name, out in outs[1:]:
         run(sys.executable, "transfer_score.py", "--base", outs[0][1] / "rollouts.jsonl", "--cand", out / "rollouts.jsonl",
-            "--name", name, "--out", out / "transfer_score.json")
+            "--name", name, "--out", out / "transfer_score.json", "--questions", TRANSFER_FILE)
     drive_sync("save")
 
 

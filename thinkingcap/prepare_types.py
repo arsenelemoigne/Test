@@ -993,7 +993,7 @@ def tr_math500(args, rng):
     for r in load_dataset("HuggingFaceH4/MATH-500", split="test"):
         a = str(r["answer"]).strip()
         if re.fullmatch(r"-?\d+", a):
-            yield _tr_row(r["problem"], MATH_INSTRUCTION_TR, a, "math", "tr_math500", f"tr-math500-{r['unique_id']}")
+            yield _tr_row(r["problem"], MATH_INSTRUCTION_TR, a, "math", "tr_math500", f"tr-math500-{r['unique_id']}") | {"level": r["level"]}
 
 
 def tr_skywork(args, rng):

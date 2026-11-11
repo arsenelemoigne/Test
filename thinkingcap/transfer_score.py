@@ -26,6 +26,7 @@ def main():
     ap.add_argument("--cand", required=True)
     ap.add_argument("--name", required=True)
     ap.add_argument("--out", default="")
+    ap.add_argument("--questions", default="", help="the transfer questions: MATH-500 rows carry their difficulty level (1-5)")
     args = ap.parse_args()
     base, cand = load(args.base), load(args.cand)
     rng = random.Random(0)
@@ -44,6 +45,25 @@ def main():
         r = res[src]
         lines.append(f"   {src:13s} {r['n']:3d} q | saved {r['saved']:+5.1f}% ({t0:.0f} -> {t1:.0f} tokens) | accuracy {r['base_acc']:.1f} -> "
                      f"{r['acc']:.1f} ({r['d_acc']:+.1f} [{r['d_acc_ci'][0]:+.1f}, {r['d_acc_ci'][1]:+.1f}]) | runaway {r['base_runaway']:.1f} -> {r['runaway']:.1f}%")
+    if args.questions:  # (11 Nov, user) MATH-500 by difficulty level, as Herz1c reports it: does the model keep thinking on hard problems?
+        level = {}
+        for line in Path(args.questions).read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if "level" in r:
+                    level[r.get("pool_id") or r.get("id")] = r["level"]
+        src = "tr_math500"
+        if src in base and level:
+            res["math500_by_level"] = {}
+            for lv in sorted(set(level.values())):
+                ids = [q for q in base[src] if q in cand[src] and level.get(q) == lv]
+                if not ids:
+                    continue
+                m = lambda d, q, i: sum(x[i] for x in d[src][q]) / len(d[src][q])  # noqa: E731
+                a0 = sum(m(base, q, 0) for q in ids) / len(ids); a1 = sum(m(cand, q, 0) for q in ids) / len(ids)
+                t0 = sum(m(base, q, 1) for q in ids) / len(ids); t1 = sum(m(cand, q, 1) for q in ids) / len(ids)
+                res["math500_by_level"][lv] = {"n": len(ids), "base_acc": 100 * a0, "acc": 100 * a1, "saved": 100 * (1 - t1 / t0)}
+                lines.append(f"   MATH-500 level {lv}: {len(ids):3d} q | saved {100 * (1 - t1 / t0):+5.1f}% ({t0:.0f} -> {t1:.0f}) | accuracy {100 * a0:.1f} -> {100 * a1:.1f}")
     print("\n".join(lines), flush=True)
     if args.out:
         Path(args.out).write_text(json.dumps({"name": args.name, "sets": res}, indent=1))
