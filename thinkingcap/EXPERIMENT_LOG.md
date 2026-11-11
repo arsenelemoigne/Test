@@ -5585,3 +5585,7 @@ Per type: math 58 / -2.3, code 52 / -0.1, IFEval 46 / -1.9, one function 41 / +0
   code 55 / +2.0, IFEval 46 / -3.9 (138+247, runaways 3.9%), one function 44 / +2.5, several 49 / +1.4, no fit 51 / +2.2. Dev-SVAMP-200: 51.8 /
   +3.44, paired vs rpE-80 +2.4 / +0.31 (math held, as designed). Worse than rpK-20 (+3.6 / +0.15) and rpL-20 (+3.4 / -0.07) at the same
   step: IFEval's accuracy fell (-3.9) and its runaways did NOT fall (3.9%, rpL-20: 2.9%) with only 24 response-loop pairs.
+- **Path 1 round 1, third version (p1cr1s0) step 100, Dev-512: 34.6% [31.9, 37.5] / +2.03**; paired vs last night's round 1 (p1r1s0-200) -11.3
+  saved / +1.92 accuracy. Per type: math 37 / +1.2 (703+9 thinking + response), code 36 / +1.1, IFEval 29 / +0.8 (262+242), one function 35 /
+  +6.2, several 37 / +2.1, no fit 35 / +5.3. Far less shortening than the first round 1 at step 100 (47.5%): the anti-loop pairs and widened
+  guards (chosen LONGER) hold length; accuracy is better. (Dev-512 over-reads this lineage's saving by ~2.5 points.)
