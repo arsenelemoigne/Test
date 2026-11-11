@@ -569,7 +569,8 @@ ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI
 # replica of michal-bida's recipe (lpc-bidax5q seed 0 final, 720: 46.7 / -0.5), NOT his weights; competitors' PUBLIC weights: basta
 # (Lightning McQwen3 LoRA, without its test-time gate), matousek 850 (GitHub release).
 # michal-bida and Herz1c published no weights (checked: Hub, GitHub repos, branches, releases).
-transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60 bidaREPLICA=/content/lupin-models/bidaREPLICAt=Qwen/Qwen3-0.6B:adapters/lpc-bidax5q-s0 basta=hflora:basta/lightning-mcqwen3 matousek850=zip:https://github.com/matousek-martin/qwen3-self-replay/releases/download/v0.1.2/Qwen3-0.6B-Self-Replay-850.zip
+# 11 Nov ~21:40 (user: split so both GPUs finish together): here the original (the reference) + ours; GPU 1 runs the three others.
+transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60
 # 11 Nov ~14:00 (user): rpL step 40's full test (now after rpM: consult10 judged this test the least informative of the queue)
 fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
 # after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without another reconnect
