@@ -14,8 +14,8 @@ export const LEVEL_LABEL: Record<VisualLevel, string> = {
 };
 
 export const MODE_LABEL: Record<VisualMode, string> = {
-  anteriorite: "Antériorités avant lancement",
-  contrefacon: "Copies du client",
+  anteriorite: "Campagnes antérieures",
+  contrefacon: "Contrefaçons",
 };
 
 export type VisualResultKind = "publicite" | "produit" | "image" | "page";

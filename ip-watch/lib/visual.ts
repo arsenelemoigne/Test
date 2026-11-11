@@ -246,7 +246,7 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
     const out = await extractJson<{ resultats?: { n: number; niveau?: string; score?: number; similaire?: string; differe?: string; categorie?: string }[] }>(
       [
         "Tu réponds uniquement en JSON.",
-        'Format : {"resultats":[{"n":12,"niveau":"tres_proche|proche|meme_theme|ecarte","score":0,"similaire":"15 mots max","differe":"15 mots max","categorie":"copie|usage_du_signe|officiel|revente|sans_rapport|null"}]}',
+        'Format : {"resultats":[{"n":12,"niveau":"tres_proche|proche|meme_theme|ecarte","score":0,"similaire":"15 mots max","differe":"15 mots max","categorie":"${search.mode === "anteriorite" ? "campagne|publicite|editorial|produit|autre" : "copie|usage_du_signe|officiel|revente|sans_rapport"}"}]}',
         "Un objet par résultat reçu, avec le même numéro n. Écris en français.",
       ].join("\n"),
       parts,
@@ -259,11 +259,13 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
       let level = (LEVELS as string[]).includes(o.niveau ?? "") ? (o.niveau as VisualLevel) : "meme_theme";
       if (!withImages && (level === "tres_proche" || level === "proche") && !(r.source === "Google Vision")) level = level === "tres_proche" ? "proche" : "meme_theme";
       if (search.mode === "contrefacon" && (o.categorie === "officiel" || o.categorie === "sans_rapport")) level = "ecarte";
+      // A plain product photo is not a campaign: at most "same theme" when looking for past ads.
+      if (search.mode === "anteriorite" && o.categorie === "produit" && (level === "tres_proche" || level === "proche")) level = "meme_theme";
       r.level = level;
       r.score = typeof o.score === "number" ? Math.max(0, Math.min(100, Math.round(o.score))) : null;
       r.similar = o.similaire?.trim() || null;
       r.differs = o.differe?.trim() || null;
-      r.category = search.mode === "contrefacon" && o.categorie && o.categorie !== "null" ? o.categorie.replace(/_/g, " ") : null;
+      r.category = o.categorie && o.categorie !== "null" ? o.categorie.replace(/_/g, " ") : null;
     }
   }
 
@@ -298,10 +300,11 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
   const queries = await analysisDone;
   sources.push(
     step(S_META, async () => {
+      if (search.mode === "contrefacon") throw new Skip("réservé aux campagnes antérieures");
       if (!apify.apifyConfigured()) throw new Skip("jeton Apify absent");
-      const qs = queries.annonces.slice(0, 2);
+      const qs = queries.annonces.slice(0, 3);
       if (!qs.length) throw new Skip("aucune requête");
-      const ads = await traced("source", "apify.meta-ads", { requetes: qs.join(" | ") }, () => apify.metaAds(qs, { country: "FR", maxAds: 20 }), (x) => ({ publicites: x.length }));
+      const ads = await traced("source", "apify.meta-ads", { requetes: qs.join(" | ") }, () => apify.metaAds(qs, { country: "FR", maxAds: 25 }), (x) => ({ publicites: x.length }));
       feed(
         add(
           ads.slice(0, 30).map((a) => ({
@@ -324,6 +327,7 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
   );
   sources.push(
     step(S_SHOPPING, async () => {
+      if (search.mode === "anteriorite") throw new Skip("réservé aux contrefaçons");
       if (!searchapi.searchApiConfigured()) throw new Skip("clé SearchAPI absente");
       if (!queries.produits) throw new Skip("aucune requête");
       const hits = await traced("source", "searchapi.shopping", { q: queries.produits }, () => searchapi.shopping(queries.produits), (x) => ({ resultats: x.length }));
@@ -348,11 +352,11 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
   // Press articles and campaign pages found by a web search; each page's preview image is used for the comparison.
   sources.push(
     step(S_WEB, async () => {
+      if (search.mode === "contrefacon") throw new Skip("réservé aux campagnes antérieures");
       if (!llmConfigured()) throw new Skip("IA non configurée");
-      const r = await webSearch(queries.web, "visual-web", {
-        maxResults: 10,
-        system: "Trouve des campagnes publicitaires, articles de presse spécialisée ou produits existants qui correspondent à la description. Réponds en 3 phrases maximum, en français.",
-      });
+      const system = "Trouve des campagnes publicitaires, films publicitaires, visuels de campagne ou articles de presse publicitaire (Ads of the World, Culture Pub, presse mode et luxe) qui correspondent à la description. Pas de fiches produits. Réponds en 3 phrases maximum, en français.";
+      const runs = await Promise.all([queries.web, ...queries.images.slice(1, 2)].map((q, i) => webSearch(q, `visual-web-${i + 1}`, { maxResults: 10, system }).catch(() => ({ summary: "", results: [] }))));
+      const r = { results: runs.flatMap((x) => x.results) };
       const pages = add(r.results.map((w) => ({ source: "Web", kind: "page" as const, title: w.title, url: w.url, imageUrl: null, advertiser: hostOf(w.url), date: null, country: null, price: null, currency: null, foundBy: queries.web })));
       const preview = limiter(5);
       await Promise.all(
@@ -457,10 +461,12 @@ async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx:
         : `Il faut trouver en ligne des copies ou imitations de ce produit ou visuel du client${ctx.client ? ` (${ctx.client}${ctx.marks.length ? `, marques : ${ctx.marks.slice(0, 12).join(", ")}` : ""})` : ""}.`,
       "Décris l'image de façon factuelle et découpe-la en éléments : E0 est le concept global en une phrase ; E1 à E6 : sujet principal, décor, saison et lumière, cadrage et composition, texte ou slogan, personnes ou lieux (n'en garde que ce qui est visible).",
       "Prépare des requêtes courtes (2 à 6 mots), une idée chacune :",
-      "- annonces : 2 requêtes comme les mots d'un texte publicitaire (la bibliothèque publicitaire de Meta cherche dans le TEXTE des annonces, pas dans l'image), une en français puis une en anglais ;",
+      "- annonces : 3 requêtes de 2 ou 3 mots comme les mots d'un texte publicitaire du secteur et de la saison (la bibliothèque publicitaire de Meta cherche dans le TEXTE des annonces, pas dans l'image) : une sur l'objet, une sur le secteur et l'occasion (ex. « bijoux Noël »), une en anglais ;",
       "- produits : une requête Google Shopping décrivant l'objet (forme, matière, motif) ;",
-      `- images : 2 requêtes Google Images visant des campagnes ou visuels semblables${mode === "anteriorite" ? ", sans nom de marque" : " (une avec la marque du client, une décrivant l'objet)"} ;`,
-      "- web : une requête web pour trouver des campagnes ou articles de presse semblables.",
+      mode === "anteriorite"
+        ? "- images : 2 requêtes Google Images visant des CAMPAGNES publicitaires semblables (mots « campagne », « publicité », « ad campaign »), sans nom de marque, une en français puis une en anglais ;"
+        : "- images : 2 requêtes Google Images visant des PRODUITS semblables vendus en ligne (une avec la marque du client et « dupe » ou « copie », une décrivant l'objet) ;",
+      "- web : une requête web pour trouver des campagnes publicitaires ou articles de presse sur des campagnes semblables.",
       'Réponds en JSON : {"titre":"6 mots maximum","type":"publicite|produit|autre","description":"2 phrases","elements":[{"id":"E0","label":"..."}],"mots_cles":["..."],"keywords_en":["..."],"marques_visibles":[],"texte_visible":null,"requetes":{"annonces":["",""],"produits":"","images":["",""],"web":""}}',
     ].join("\n"),
     [
@@ -497,7 +503,8 @@ async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx:
 function ratingIntro(mode: VisualMode, ctx: Context): string {
   if (mode === "anteriorite") {
     return [
-      "Tu aides un avocat en propriété intellectuelle à vérifier, avant un lancement, ce qui existe déjà. L'image 0 est le projet du client (publicité, visuel ou produit).",
+      "Tu aides un avocat en propriété intellectuelle à vérifier, avant le lancement d'une campagne, si des CAMPAGNES ou PUBLICITÉS semblables existent déjà. L'image 0 est le projet de campagne du client.",
+      "On cherche des campagnes : visuel mis en scène, annonce, film publicitaire, éditorial de magazine. Une simple photo de produit (packshot sur fond uni, fiche e-commerce) n'est PAS une campagne : catégorie « produit », niveau « meme_theme » au plus.",
       "Compare chaque résultat numéroté à l'image 0 et classe-le :",
       "- tres_proche : même concept ET même mise en scène (même sujet dans le même décor), ou même slogan, ou même produit / même design ;",
       "- proche : au moins deux éléments en commun, ou même concept avec une autre exécution ;",

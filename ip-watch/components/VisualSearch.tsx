@@ -140,8 +140,8 @@ function NewSearch({ searches, assistantEmail }: { searches: VisualListItem[]; a
           <div>
             <div className="label mb-2">ce que l&apos;on cherche</div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <ModeCard active={mode === "anteriorite"} onClick={() => setMode("anteriorite")} title="Avant un lancement" text="Antériorités : une campagne ou un produit semblable existe-t-il déjà ?" />
-              <ModeCard active={mode === "contrefacon"} onClick={() => setMode("contrefacon")} title="Surveillance" text="Copies : quelqu'un reprend-il le produit ou le visuel du client ?" />
+              <ModeCard active={mode === "anteriorite"} onClick={() => setMode("anteriorite")} title="Campagnes antérieures" text="Avant de lancer une publicité : une campagne semblable a-t-elle déjà été diffusée ?" />
+              <ModeCard active={mode === "contrefacon"} onClick={() => setMode("contrefacon")} title="Contrefaçons" text="Des produits en vente copient-ils celui du client ?" />
             </div>
           </div>
 
@@ -164,7 +164,7 @@ function NewSearch({ searches, assistantEmail }: { searches: VisualListItem[]; a
           </div>
           {error && <p className="text-[13px] text-red-700">{error}</p>}
           <p className="text-[11.5px] text-[color:var(--pencil)]">
-            Sources : Google Vision (même image en ligne), Google Lens (images ressemblantes), bibliothèque publicitaire de Meta, Google Shopping, Google Images et presse en ligne ; l&apos;IA compare chaque visuel à votre image. Repérage exploratoire, à vérifier par l&apos;avocat.
+            Campagnes : bibliothèque publicitaire de Meta, presse et sites de campagnes, Google Images, Lens et Vision. Contrefaçons : Google Lens, Vision, Shopping et Images. L&apos;IA compare chaque visuel à votre image. Repérage exploratoire, à vérifier par l&apos;avocat.
           </p>
         </div>
       </RoughBox>
