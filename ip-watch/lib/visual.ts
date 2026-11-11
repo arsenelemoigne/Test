@@ -23,7 +23,7 @@ const IMAGE_BATCH = 8;
 const TEXT_BATCH = 30;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
-type Queries = { annonces: string[]; produits: string; images: string[]; web: string };
+type Queries = { annonces: string[]; produits: string; images: string[]; web: string; concurrents: string[] };
 type Done = (search: VisualSearch, pdf: Uint8Array | null) => Promise<void>;
 
 const appUrl = () => (process.env.APP_URL || "https://pi.getmanda.eu").replace(/\/$/, "");
@@ -158,6 +158,9 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
 
   // ---- 1. What the image shows, and the queries it suggests.
   const context = await clientContext(client, search.mode);
+  const brandTerms = Array.from(
+    new Set([client?.name ?? "", ...(client?.holderNames ?? [])].map((b) => b.toLowerCase().replace(/\b(s\.?p\.?a\.?|sas|sa|sarl|ltd|inc|france|group|groupe)\b/g, "").replace(/[^a-z0-9& ]/g, " ").trim()).filter((b) => b.length >= 3)),
+  );
   const analysisDone = (async () => {
     let queries: Queries | null = null;
     await step(S_ANALYSE, async () => {
@@ -214,6 +217,15 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
     for (const r of items) {
       if (r.source === "Google Vision" && r.foundBy.includes("identique") && !r.imagePath) {
         Object.assign(r, { level: "tres_proche", score: 95, similar: "Image identique publiée sur cette page (Google Vision)", differs: null });
+      }
+    }
+    // Looking for prior campaigns: the client's own visuals and products are set aside, not compared.
+    if (search.mode === "anteriorite") {
+      for (const r of items) {
+        if (r.level) continue;
+        const hay = `${r.title} ${r.url} ${r.advertiser ?? ""}`.toLowerCase();
+        const own = brandTerms.some((b) => new RegExp(`(^|[^a-z0-9])${b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`).test(hay)) || (r.source === "Google Vision" && /identique|partielle/.test(r.foundBy));
+        if (own) Object.assign(r, { level: "ecarte", score: null, similar: "Visuel ou produit du client déjà publié", differs: null, category: "visuel du client" });
       }
     }
     const pending = items.filter((r) => !r.level);
@@ -302,12 +314,13 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
     step(S_META, async () => {
       if (search.mode === "contrefacon") throw new Skip("réservé aux campagnes antérieures");
       if (!apify.apifyConfigured()) throw new Skip("jeton Apify absent");
-      const qs = queries.annonces.slice(0, 3);
+      // Ad search reads the ads' TEXT: generic queries, then the competitors' names (their own ads mention them).
+      const qs = [...queries.annonces.slice(0, 3), ...queries.concurrents.slice(0, 6)];
       if (!qs.length) throw new Skip("aucune requête");
-      const ads = await traced("source", "apify.meta-ads", { requetes: qs.join(" | ") }, () => apify.metaAds(qs, { country: "FR", maxAds: 25 }), (x) => ({ publicites: x.length }));
+      const ads = await traced("source", "apify.meta-ads", { requetes: qs.join(" | ") }, () => apify.metaAds(qs, { country: "FR", maxAds: 15 }), (x) => ({ publicites: x.length }));
       feed(
         add(
-          ads.slice(0, 30).map((a) => ({
+          ads.slice(0, 60).map((a) => ({
             source: "Meta Ad Library",
             kind: "publicite" as const,
             title: (a.text ?? a.pageName ?? "Publicité Meta").replace(/\s+/g, " ").slice(0, 160),
@@ -322,7 +335,7 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
           })),
         ),
       );
-      return `${ads.length} publicité(s) · ${qs.map((q) => `« ${q} »`).join(", ")}`;
+      return `${ads.length} publicité(s) · ${queries.annonces.slice(0, 3).map((q) => `« ${q} »`).join(", ")}${queries.concurrents.length ? ` · concurrents : ${queries.concurrents.slice(0, 6).join(", ")}` : ""}`;
     }),
   );
   sources.push(
@@ -338,7 +351,8 @@ async function execute(search: VisualSearch, client: Client | null, jpeg: Buffer
   sources.push(
     step(S_IMAGES, async () => {
       if (!searchapi.searchApiConfigured()) throw new Skip("clé SearchAPI absente");
-      const qs = queries.images.slice(0, 2);
+      const season = (analysis as VisualAnalysis | null)?.motsCles?.[0] ?? "";
+      const qs = [...queries.images.slice(0, 2), ...queries.concurrents.slice(0, 3).map((b) => `${b} campagne publicitaire ${season}`.trim())];
       if (!qs.length) throw new Skip("aucune requête");
       let n = 0;
       for (const q of qs) {
@@ -442,7 +456,7 @@ async function clientContext(client: Client | null, mode: VisualMode): Promise<C
 
 function fallbackQueries(note: string | null): Queries {
   const base = (note ?? "").split(/[.,;\n]/)[0].trim().slice(0, 60) || "campagne publicitaire";
-  return { annonces: [base], produits: base, images: [`${base} campagne`], web: `${base} campagne publicitaire` };
+  return { annonces: [base], produits: base, images: [`${base} campagne`], web: `${base} campagne publicitaire`, concurrents: [] };
 }
 
 async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx: Context): Promise<{ analysis: VisualAnalysis; queries: Queries }> {
@@ -451,7 +465,7 @@ async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx:
   if (!llmConfigured()) return { analysis: empty, queries: fallback };
   type Out = {
     titre?: string; type?: string; description?: string; elements?: { id?: string; label?: string }[]; mots_cles?: string[]; keywords_en?: string[];
-    marques_visibles?: string[]; texte_visible?: string | null; requetes?: { annonces?: string[]; produits?: string; images?: string[]; web?: string };
+    marques_visibles?: string[]; texte_visible?: string | null; requetes?: { annonces?: string[]; produits?: string; images?: string[]; web?: string; concurrents?: string[] };
   };
   const out = await extractJson<Out>(
     [
@@ -467,7 +481,10 @@ async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx:
         ? "- images : 2 requêtes Google Images visant des CAMPAGNES publicitaires semblables (mots « campagne », « publicité », « ad campaign »), sans nom de marque, une en français puis une en anglais ;"
         : "- images : 2 requêtes Google Images visant des PRODUITS semblables vendus en ligne (une avec la marque du client et « dupe » ou « copie », une décrivant l'objet) ;",
       "- web : une requête web pour trouver des campagnes publicitaires ou articles de presse sur des campagnes semblables.",
-      'Réponds en JSON : {"titre":"6 mots maximum","type":"publicite|produit|autre","description":"2 phrases","elements":[{"id":"E0","label":"..."}],"mots_cles":["..."],"keywords_en":["..."],"marques_visibles":[],"texte_visible":null,"requetes":{"annonces":["",""],"produits":"","images":["",""],"web":""}}',
+      mode === "anteriorite"
+        ? `- concurrents : 6 à 8 marques concurrentes du même segment et du même marché que le client${ctx.client ? ` (${ctx.client})` : ""}, dont on veut vérifier les campagnes passées (noms de marque seuls, sans le client).`
+        : "- concurrents : liste vide.",
+      'Réponds en JSON : {"titre":"6 mots maximum","type":"publicite|produit|autre","description":"2 phrases","elements":[{"id":"E0","label":"..."}],"mots_cles":["..."],"keywords_en":["..."],"marques_visibles":[],"texte_visible":null,"requetes":{"annonces":["","",""],"produits":"","images":["",""],"web":"","concurrents":[]}}',
     ].join("\n"),
     [
       { type: "text", text: note ? `Précisions de l'avocat : ${note}` : "Pas de précision de l'avocat." },
@@ -491,10 +508,11 @@ async function analyse(jpeg: Buffer, mode: VisualMode, note: string | null, ctx:
   };
   const q = out.requetes ?? {};
   const queries: Queries = {
-    annonces: clean(q.annonces, 2).length ? clean(q.annonces, 2) : fallback.annonces,
+    annonces: clean(q.annonces, 3).length ? clean(q.annonces, 3) : fallback.annonces,
     produits: typeof q.produits === "string" && q.produits.trim() ? q.produits.trim() : analysis.motsCles.slice(0, 3).join(" ") || fallback.produits,
     images: clean(q.images, 2).length ? clean(q.images, 2) : fallback.images,
     web: typeof q.web === "string" && q.web.trim() ? q.web.trim() : fallback.web,
+    concurrents: mode === "anteriorite" ? clean(q.concurrents, 8).filter((b) => !ctx.client || !b.toLowerCase().includes(ctx.client.toLowerCase())) : [],
   };
   traceStep({ kind: "etape", name: "Requêtes préparées", output: queries, ok: true });
   return { analysis, queries };
