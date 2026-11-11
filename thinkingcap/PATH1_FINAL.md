@@ -62,6 +62,19 @@ The 2-seed weight average at the best round-2 step on calibrated Dev-512 (highes
 saving), then one full test (2,759 × 8) with a paired bootstrap, both seeds reported; checkpoints along the line kept for the
 submission's length/accuracy curve.
 
+## Rules added on 11 Nov (user)
+
+- **Fixed proportion, never silently refilled:** in every type the ratio "think less" : "be right" is fixed (round 1: 60/40 for
+  math and no fit, 70/30 for code and function calls, 50/50 for IFEval's non-counting half; round 2: 25 / 75 with the
+  early-stop guards counted inside the "be right" side). If one kind runs short, the whole type shrinks with it (fewer pairs,
+  same mix) instead of filling the gap with the other kind. The shortfall is written to shortfall.json.
+- **IFEval:** counting-rule questions never get "shorter" pairs; they hold their own fixed half of IFEval's quota (counting-rule
+  be-right pairs); the mix applies to the other half.
+- **Fill until full (round 2):** if a type is short of pairs by more than 10%, the round-1 model answers more new questions for
+  that type (3x the shortfall, at least 100; up to 2 extra batches) and the pairs are rebuilt. Round 1 uses a fixed pool of
+  stored answers, so there it keeps the proportion with a smaller total.
+- **Hold:** Path 1 does not start before the user has reviewed the Dev-512 calibration (5 models with known full tests).
+
 ## Expected (honest)
 
 Gemini: round 1 ~53–57% / −2.2 to −3.2; final 49.5–52.5% / −0.7 to −1.3. The Claude review was more cautious (the log has

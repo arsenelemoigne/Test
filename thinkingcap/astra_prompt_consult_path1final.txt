@@ -1,0 +1,19 @@
+TASK. You are the final independent reviewer before a team launches a training run. The team is making Qwen3-0.6B (thinking mode) generate MORE THAN 50% fewer tokens (thinking included) at an accuracy change BETTER THAN -1 point on BottleCapAI's ThinkingCap-Test (2,759 questions x 8: SVAMP math, MBPP+ code, IFEval, BFCL one function / several / none fits; 4 benchmarks equally weighted, BFCL pooled 400/200/240; tokens saved = 1 - geometric mean of the token ratios). Constraints: one clean reproducible recipe from the original model; the model's own answers only; no prompt tricks; no competitor recipe copied (public DATASETS such as MetaMath / GSM8K / xLAM are allowed); two Colab L4 GPUs; LoRA.
+
+THE DATA, in {DATA} (read with code, never print whole files):
+- PATH1_FINAL.md: the final run description (READ FIRST, completely, including "Rules added on 11 Nov").
+- code/: the ACTUAL code that will run: repair_pairs.py (pair building; --kinds mix, --mix-preset round1, the fixed-proportion logic, IFEval counting half, shortfall.json), track_path1.py (excerpts of track.py: own_repair_questions, ptrepair with --rp-rollouts-from / --rp-gate / --rp-dev / fill-until-full, p1src, devset, dev_score_model, excluded_ids, the command-line options), dev_score.py, dpo.py, sft.py, probe_curve.py, build_pool.py, queued_lines.txt (the exact plan lines; "HOLD" = waiting for the user).
+- GEMINI_SECOND_REVIEW.md (your own earlier review of the previous version) and CLAUDE_REVIEW.md (another reviewer).
+- EXPERIMENT_LOG.md (the full lab notebook) and all_runs.json (every scored model).
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, pandas, scipy): reply with exactly one block that starts with ```python to run code; output is cut at 10,000 characters; up to {CODE_RUNS} code runs. You cannot run the model or the GPU code, but you CAN import and unit-test pure functions from the code folder on synthetic data (e.g. simulate repair_pairs.py's pair selection on fake rollouts) — please do. Keep notes in {WORK}/notes.md and a report draft in {WORK}/report_draft.md.
+
+THE QUESTION. Is Path 1, exactly as coded and queued, ready to launch? Verify that the code does what PATH1_FINAL.md says, step by step: round 1's material (p1src: which answers, which questions are dropped, the 75/25 split, the Dev-512 near-duplicate rule), the pair rules and proportions per type (round 1 preset and round 2 shares; shorter = right >= 8/10 and >= 1.35x; compact be-right with re-read preference within 1.5x; IFEval counting half; capped early-stop guard; fixed proportion with shrinking; interleaved order), the DPO settings actually passed to dpo.py (lr, schedule, warm-up, floor, steps, epochs, seeds, reference, precision), the Dev-512 screens and the gate, round 2's draw (exclusions, public datasets, fill-until-full), and the seeds. Look for bugs, silent failures, mismatches and anything that would waste the GPU day.
+
+WHAT TO DELIVER, WITHOUT a code block, under ~4,000 words:
+1. GO / NO-GO for launching round 1 (seed 0), with the single most important reason.
+2. Plan-vs-code check: a table of every rule with VERIFIED / MISMATCH / BUG (file and line, what happens, the fix).
+3. Bugs and risks found by your synthetic tests, ranked by impact.
+4. What to watch in round 1's logs and Dev-512 screens (numbers that mean "stop" or "continue"), and whether the gate (round 2 only if round 1's Dev-512 saving >= rpE-80's + 6 points) is the right rule.
+5. Any last change worth making before launch (only if clearly worth it), with the exact edit.
+Be specific and blunt.
