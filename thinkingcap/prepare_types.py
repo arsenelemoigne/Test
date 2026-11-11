@@ -975,10 +975,6 @@ def ifeval_like(args, rng):
         yield from kept
 
 
-if __name__ == "__main__":
-    main()
-
-
 # ---------------------------------------------------------------------------------------------------------------------------
 # (11 Nov, user: "how much does this transfer ... or is it benchmark overfitting?") TRANSFER sets: benchmarks never trained on
 # and never imitated by our training data. Same answer formats as the training helpers (Final answer: lines; MBPP-style code).
@@ -1048,3 +1044,8 @@ def tr_humaneval(args, rng):
         yield {"source": "tr_humaneval", "task": "code", "answer": "", "grader": "code", "entry_point": name,
                "tests": [r["test"], f"check({name})"], "setup": r["prompt"].split("def " + name)[0],
                "prompt": [{"role": "user", "content": content}], "pool_id": f"tr-he-{r['task_id']}"}
+
+
+if __name__ == "__main__":
+    main()
+
