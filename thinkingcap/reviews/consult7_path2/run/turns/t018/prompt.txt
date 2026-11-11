@@ -1,0 +1,71 @@
+    if lr_end is None:
+        return lr
+    cycle = max(1, math.ceil(steps / max(1, restarts)))
+    position = (step % cycle) / max(1, cycle - 1)
+    return lr_end + (lr - lr_end) * (1 + math.cos(math.pi * position)) / 2
+
+
+def split_groups(jobs, parts, rng):
+    """Jobs split into `parts` chunks of whole question groups (a group's advantages stay together)."""
+    groups = {}
+    for job in jobs:
+        groups.setdefault(id(job[5]), []).append(job)
+    order = list(groups.values())
+    rng.shuffle(order)
+    return [[j for g in order[i::parts] for j in g] for i in range(parts) if order[i::parts]]
+
+
+def smart_rewards(lengths, correct):
+    """SmartThinker (2603.08000, eq. 6-13): the length with the best chance of being right, from the group's lengths
+    (all answers ~ N(mu1, s1^2), right ones ~ N(mu2, s2^2): l* = (s1^2 mu2 - s2^2 mu1) / (s1^2 - s2^2), clipped to the
+    group's range); only right answers longer than it are penalized (-ReLU(l - l*)), with the largest coefficient that
+    keeps every right answer at or above the group mean (p_err / (mean(r_len) - min(r_len))). An all-right or nearly
+    all-wrong group (< 2 right answers) gets the plain 0/1 reward."""
+    acc = [1.0 if ok else 0.0 for ok in correct]
+    right = [n for n, ok in zip(lengths, correct) if ok]
+    if len(right) < 2 or len(right) == len(lengths):
+        return acc
+    mu1, s1 = statistics.fmean(lengths), statistics.pvariance(lengths)
+    mu2, s2 = statistics.fmean(right), statistics.pvariance(right)
+    if s1 > s2:
+        target = (s1 * mu2 - s2 * mu1) / (s1 - s2)
+    elif s1 == s2 and mu1 < mu2:
+        target = max(lengths)
+    else:
+        target = min(lengths)
+    target = min(max(target, min(lengths)), max(lengths))
+    r_len = [-max(0.0, n - target) if ok else 0.0 for n, ok in zip(lengths, correct)]
+    spread = statistics.fmean(r_len) - min(r_len)
+    coef = (1 - sum(acc) / len(acc)) / spread if spread > 0 else 0.0
+    return [a + coef * r for a, r in zip(acc, r_len)]
+
+
+def group_advantages(rewards, scale=True):
+    """GRPO: reward minus the group mean, over the group's standard deviation (0 if all equal); scale=False (Dr. GRPO) keeps
+    the plain difference to the mean."""
+    mean = sum(rewards) / len(rewards)
+    spread = statistics.pstdev(rewards)
+    if spread < 1e-8:
+        return [0.0] * len(rewards)
+    return [(r - mean) / spread if scale else r - mean for r in rewards]
+
+
+def confidence_redundant(logps, thinking_len, quantile):
+    """Thinking positions whose token the policy found least likely: the bottom quantile."""
+    thinking = logps[:thinking_len]
+    if not thinking:
+        return set()
+    cut = sorted(thinking)[max(0, int(len(thinking) * quantile) - 1)]
+    return {i for i, lp in enumerate(thinking) if lp <= cut}
+
+
+def settle_redundant(p_gold_by_cut, thinking_len, threshold):
+    """Thinking positions after the first cut from which p(gold) stays at or above threshold."""
+    settle = None
+    for cut, p in sorted(p_gold_by_cut.items()):
+        if p >= threshold:
+            settle = cut if settle is None else settle
+        else:
+            settle = None
+    return set() if settle is None else set(range(settle, thinking_len))
+

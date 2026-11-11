@@ -1,0 +1,87 @@
+  chosen / rejected 271/278, 440/440, 185/183), so they teach correctness inside the same length; the saving fell only over
+  steps 0-40. (2) IFEval's loss is NOT a shortened response: COPD and rpE @50 keep the response (247 -> 245); rpE @80 even shortens
+  it (-> 190) yet beats the original. The losses go with THINKING cuts (rc1 -69%, COPD -25%). IFEval is the noisiest part
+  (original 59%, 720 half-width +-3.6 pts vs svamp +-1.9). Which instructions fail needs records + questions (next).
+- 9 Nov **COPD cp1a @ 30: +29.2 / -1.3** (-1.2 vs curve): svamp +45 / -1.0, mbpp +33 / -0.8, ifeval +12 / -3.5, irrelevance +26 /
+  -0.6, multiple +24 / 0.0, simple +22 / +0.6. Saving still rising (20.8 -> 25.6 -> 29.2), accuracy steady near -1.4, IFEval the
+  loss. ifeval_rules.py + ifevalrules stage queued on GPU 1 after the full tests (full-rc1, full-ca1, full-rpE-80/40, s4-cp1a-20/25).
+- 9 Nov **COPD cp1a @ 35: +29.8 / -1.7** (svamp +48 / -1.9, mbpp +27 / -1.0, ifeval +15 / -2.5, irrelevance +26 / -0.8, multiple
+  +25 / -0.6, simple +23 / -2.1): the saving has flattened (29.2 -> 29.8) while accuracy drifts down; math now loses too (-1.9).
+- 9 Nov **COPD diagnostic (user: what is happening at step 35?)**. (a) The lr: cosine stretched to 40 steps, so 6.1e-6 at step 21,
+  4.5e-6 at 25, 2.7e-6 at 30, 1.4e-6 at 35, ~1e-6 at 40: the saving flattens as the lr reaches its floor. (b) The coach's signal
+  shrinks as the student becomes "brief": mean push -0.015 (steps 21-25) -> -0.008..-0.012 (31-38), tokens pushed down 34-37% ->
+  31-33%; entropy 0.29 -> 0.25-0.28; practice answers ~500 -> ~400 tokens, practice accuracy flat 0.83-0.91. (c) 720 @35 vs @25
+  (compare.json): svamp thinking 406 -> 353, acc 89.8 -> 88.1; mbpp 1,586 -> 1,501, 49.2 -> 49.8, still 4.4% cut at 8,192
+  (original 8.5%); ifeval thinking 317 -> 290, RESPONSE 245 -> 278 (longer), cut 3.1 -> 3.8%, acc 55.0 -> 56.5. The accuracy drift
+  is within the per-type noise except a slow math slide (-0.2 / -1.0 / -1.9 at 25 / 30 / 35); COPD has no correctness term to
+  stop it. Data-backed fix: the rpE repair (equal-length right>wrong pairs, constant lr) took rc1 from -3.8 to -0.2 at the same
+  length, so "COPD to compress, then the same repair" on a COPD checkpoint; and a constant lr for any further COPD.
+- 9 Nov (user) **COPD Run C (cp1c) queued on GPU 2 after Run A**: rl_train --copd-outcome w adds w x (right - the question's mean
+  right) to every token of each reply (GRPO-style group comparison, no std) on top of the coach's per-token push: correctness
+  trained in the same step; w = 1.0, 32 questions x 4 answers, CONSTANT lr 1e-5 after 4 warm-up steps, 40 steps, 720 at 10/20/30/40.
+  No per-type brake (user). Toy-model test passes.
+- 9 Nov (user: option 3, and keep data on the mix) Run C now uses --tp-mixed-share 0.5: per part, the questions alternate
+  "sometimes wrong" (the original solves 1-9 of its 10 stored answers) and "always right" (10/10); the counts available per
+  part are printed at the start, each pool row carries solve10, and every step logs per kind: questions, how many are MIXED NOW
+  (right and wrong among the 4 fresh answers: where the correctness push acts) and the share right.
+- 9 Nov ~21:30 **rpE @ 80 FULL TEST (2,759 x 8): +47.0 / -0.9** official (**+1.45 vs curve: our best full-test trade-off**):
+  irrelevance +50 / +3.4, multiple +39 / +0.1, simple +37 / +0.1, ifeval +45 / -2.6, mbpp +46 / -1.0, svamp +54 / -1.2.
+  Accuracy meets the goal (better than -1), the saving does not (47 < 50). Its 720 screen said 50.4 / -0.2: flattered by 3.4 pts
+  of saving and 0.7 pt of accuracy. Reference (not ours): michal-bida 47.0 / -0.78, Herz1c 43.4 / -0.97. rpE @ 40 full test
+  running. Run C rescheduled to Run A's checkpoints (10/20/25/30/35/40, 5-step blocks).
+- 9 Nov **COPD Run A @ 40 (final): +34.1 / -2.4** (svamp +51 / -2.7, mbpp +31 / -4.4, ifeval +22 / -1.9, irrelevance +30 / -1.5,
+  multiple +27 / -0.2, simple +25 / 0.0): saving 29.8 -> 34.1 at the lr floor, accuracy down to -2.4.
+- 9 Nov Run C (cp1c) stopped at step 3: its mix was not 50/50 (steps 1-3: 8/16, 2/16, 3/16 sometimes-wrong) because rl_train
+  re-orders the pool by source (balanced_order). Fix: with --tp-mixed-share, thinkprune keeps exactly steps x questions
+  questions in the mixed order (319 of 640 sometimes-wrong on the real pool sizes). Relaunched as cp1c2. Early mix data
+  (cp1c steps 1-3): sometimes-wrong questions mixed-now 6/8, 2/2, 3/3; always-right ones 2/8, 5/14, 2/13 (right 0.91-0.98).
+  Available per part (sometimes / always): svamp 2,597 / 4,001, mbpp 1,274 / 898, ifeval 1,015 / 1,098, simple 316 / 955,
+  multiple 239 / 360, irrelevance 401 / 2,253.
+- 9-10 Nov **Run C (cp1c2) started** (both runtimes restarted after the outage; plan start now light): 640 questions, 319
+  sometimes-wrong. Steps 1-6 (practice): accuracy 0.84 / 0.76 / 0.89 / 0.87 / 0.57 / 0.66 swinging with the draw's share of
+  sometimes-wrong questions (7 / 12 / 7 / 8 / 13 / 10 of 16); sometimes-wrong mixed-now 4/7, 8/12, 2/7, 4/8, 12/13, 7/10 (right
+  47-79%); always-right mixed-now 0-2 (right 96-100%). 24 min per 5-step block. GPU 1: rpE @40 full test running.
+- 10 Nov **rpE @ 40 FULL TEST: +50.6 / -1.9** (720 said 50.5 / -1.7). Step 80 full: 47.0 / -0.9. Step 60 full test next.
+- 10 Nov **COPD Run C (cp1c2) @ 10: +12.7 / -1.1** (720; Run A @10: 14.6 / -0.2). Training continues (scores at 20/25/30/35/40).
+- 10 Nov **rpE @ 60 FULL TEST: +47.8 / -1.2** (+1.3 vs curve; irrelevance +49 / +1.4, multiple +39 / -0.2, simple +38 / +0.1,
+  ifeval +46 / -3.0, mbpp +48 / -0.7, svamp +55 / -1.5); its 720: 48.6 / -0.7. **rpE @ 40 FULL: +50.6 / -1.9** (+1.1; irrelevance
+  -0.4, multiple -0.6, simple +0.4, ifeval -2.8, mbpp -1.7, svamp -3.0). Repair path on the full test: 40 -> 60 -> 80 = 50.6 / -1.9,
+  47.8 / -1.2, 47.0 / -0.9: each 20 steps buys ~0.5 pt of accuracy for ~1-3 pts of saving.
+- 10 Nov **COPD Run C (cp1c2, + correctness push, constant lr), 720**: @10 12.6 / -1.1, @20 28.0 / -2.0, @25 35.8 / -3.6, @30
+  43.2 / -3.2, @35 49.7 / -3.0, @40 57.1 / -4.7 (svamp +74 / -5.2, mbpp +60 / -7.5, irrelevance +46 / -6.5). With a constant lr
+  it shortens much further than Run A (57 vs 34%) but lands ON our DPO curve (-0.2 to -0.5 vs curve): the correctness push did
+  not keep accuracy. A shortener comparable to rc1-soup-30 (57.4 / -3.5 full), i.e. a candidate base for the same repair.
+- 10 Nov **IFEval rule-by-rule diagnostic (full tests, 541 questions x 8; ir-full/ifeval_rules.json)**: every shortened model
+  (rc1, ca1, rpE-40/60/80) loses on COUNTING rules: length_constraints:number_words -11 to -13 pts, keywords:frequency -8 to -10,
+  number_sentences -6 to -7, number_highlighted_sections -6 to -9, number_placeholders -5 to -11; gains on quotation, language,
+  capitals (+3 to +6). On length rules the wrong responses are mostly TOO SHORT: original 265 below the asked number, rc1 387,
+  ca1 364, rpE-80 379; responses on length-rule questions median 209 -> 145-161 tokens. Wrong answers with thinking under half
+  the original's right-answer median: original 62 / 916, shortened models 626-815 / ~1,070. So IFEval's loss = counting /
+  length requirements broken by shorter thinking AND shorter responses on exactly those questions.
+- 10 Nov (user) **repair improvements for rpF (repair of Run C @40)**: repair_pairs.py --count-rules: IFEval questions with a
+  counting rule (word / sentence / paragraph counts, keyword frequency, number of sections / bullets / placeholders) take as chosen
+  a right answer whose RESPONSE is at least the rejected's and whose THINKING is at most 1.2x the rejected's (else no pair): the
+  pair teaches "write the asked length", not "think more"; the summary prints counting-rule questions / pairs / skipped.
+  IFEval questions 600 -> 1,500 (rpE found only 154 IFEval pairs for a quota of 320). Fake-answer test: the 3 cases behave.
+  Queued: plan B = breakdown of rpE-80 full, then rpF; plan A = rpE 80 -> 120 (720 at 100 / 120).
+- 10 Nov (user) **three continuations of repair step 80 (40 steps each = 80 -> 120), 8 answers per question**, all starting from
+  rpE step 80's adapter (also DPO's reference), 720 at their steps 20 / 40: **rpG** = rc1-soup-30 answers the repair's questions
+  x8, rpE's pair rules; **rpH** = rpG + IFEval counting-rule pairs (--count-rules) and 1,500 IFEval questions; **rpI** = a new
+  round: the repaired model (models/rpE-80) answers a new question draw (seed 1) x8, pairs from its current mistakes + the IFEval
+  fix. New ptrepair options: --rp-samples, --rp-seed, --rp-answers-model, --rp-init-from. GPU 1: breakdown rpE-80, rpI, rpF;
+  GPU 2: rpG, rpH (the plain resume 80 -> 120 replaced by rpG).
+- 10 Nov (user) queued: **copdanalysis** (GPU 1, after the rpE-80 breakdown): copd_analysis.py = right vs wrong lengths on Runs A / C
+  training questions (the original's 10 answers: is "right up / wrong down" also "short up / long down"?), the 720 screens of A
+  and C per part (right / wrong lengths, cut at the limit, wrong answers that stopped early), the training logs side by side.
+  **cp1d** (GPU 2, after rpH) = the ONE-CHANGE version of Run C: Run A's exact settings (64 x 2, lr 1e-5 -> 1e-6, solved >= 1/10)
+  + only the correctness push (--copd-outcome 1.0); 720 at 10/20/25/30/35/40.
+
+## 10 Nov ? COPD Runs A and C, read from the data (copdanalysis stage, GPU 1)
+
+1. **Wrong answers are longer than right ones** on the training questions (the original's 10 answers, questions with both):
+   svamp right 880 / wrong 1773 tokens, wrong longer on 72% of questions; mbpp 1449/2271 (62%); ifeval 643/1057 (57%);
+   irrelevance 330/448 (75%). So "push right up, wrong down" inside a group is also "push short up, long down".
+2. **720 screens.** Run C cuts much harder: at step 40, right-answer tokens are svamp 583->159 (A: 312), mbpp 1209->420 (A: 843),
+   ifeval 519->256 (A: 372). Its extra errors are answers that **stopped early** (thinking < half the original's median right-answer
+   thinking): sva
+[output cut at 10,000 characters]

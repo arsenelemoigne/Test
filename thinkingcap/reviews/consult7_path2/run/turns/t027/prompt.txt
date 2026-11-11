@@ -1,0 +1,94 @@
+  curve, below bidax5q (46.7 / -0.5, +1.8): the math right>wrong pairs did not protect math. Dropped.
+
+### 5 Nov
+- ~00:30 **D3 lpd-route step 100: +7.5% / -1.0** (svamp +17 / -0.6, mbpp +1 / -1.0, ifeval -4 / -2.5, one function +10 / -1.9,
+  several +12 / -0.4, no fit +19 / +2.7), -1.1 vs curve. 13,430 pairs, most of them hard / right>wrong: they cancel the shortening
+  (like D2 hard). Steps 200 / final next. GPU 2: D6 simright step 250/334 after the restarts (fast restore now: f1580c2).
+- ~01:30 **D3 lpd-route step 200: +6.2% / -0.6** (-0.7 vs curve); **final: +9.4% / -0.7** (svamp +20 / -0.8, mbpp +5 / -0.4,
+  ifeval 0 / -3.1, one function +5 / +0.4, several +10 / +0.6, no fit +21 / +3.1), -0.9 vs curve. Hard + right pairs cancel the
+  shortening (as D2). Not a v1 candidate. GPU 1 now D4 budget (7,748 pairs); GPU 2 scoring D6 simright.
+- Consultant DPO session consult2 (Ivan, fresh session, best run / bida family / GRPO withheld): restarted once after the user
+  asked to hide the GRPO runs ($1.98 spent on the aborted start); running, cap $18.
+- **consult2 done** (Ivan, $4.17 + $1.98 aborted start): consult2_dpo_strategy.md. Recommends: six per-type DPO adapters from the
+  original (4,800 pairs: math 10/40/50 shorten/guard/right, code & ifeval 65/20/15, simple 45/25/30, multiple 20/35/45, no-fit
+  10/50/40), merged at per-type strengths (start 0.35/0.80/0.90/0.65/0.50/0.85), then ONE gated on-policy round (2,400 pairs,
+  no math / no-fit shorten). Key findings: our "longest wrong" guards are hidden length pressure (median rejected/chosen 1.3-1.9x);
+  wrong>wrong "hard" pairs cancel compression; the per-type merges (pt-*) are the strongest evidence (pt-mid 55.0 / -2.6:
+  code and ifeval tolerate strong doses, math and no-fit carry the loss). Forecast 51 / -0.5, P(both thresholds) ~1/3-1/2.
+  Fast alternative: repair pt-mid with a short correctness-heavy on-policy round.
+- consult2 follow-up (game plan grounding, session total $8.99 + $1.98 aborted): consult2_game_plan_review.md. GAME_PLAN.md v2
+  applies it: Track A repairs math + CODE + no-fit (code is -0.88 of pt-mid's loss), 1,600 pairs, NLL 0, lr 1e-5, 100 steps
+  max; Track B = 4 adapters (not 6) at the historical pt settings (bf16, NLL 1.0, constant 2e-5, batch 16), quotas verified
+  feasible from the existing store, merge search from the 3 historical vectors +-0.05/0.10; round-2 gate tightened to
+  48-52% and >= -0.5. Awaiting the user's approval; nothing queued.
+- consult2 objections reply ($10.38 total): consult2_objections_reply.md. Agrees with both user objections: fp32 + fp16
+  autocast for both tracks (switch only on a clear bidax6p result); short rounds at lr 5e-6 (2.5e-6 first step), pools as
+  reservoirs, early screens (A: 5/10/20, then 30/40; round 2: 4/8, then 16/24), save every 5 / 2 steps, one strength rescue
+  (0.25 / 0.5) on a promising checkpoint; batches kept (16 / 64). GAME_PLAN.md -> v3.
+- consult2 lpt6 reply ($15.81 total): consult2_lpt6_reply.md. lpt6 weakens Track B: the spill-over matrix is ~rank one
+  (first component 95% of the log-compression matrix; simple-only vs multiple-only profiles cosine 0.991), so separate
+  training isolates the gradient source, not the behaviour; Run A (joint) at 33.4 / +0.4 vs single-type adapters at
+  ~33 / -1.7..-2.8. New ranking: Track A first, then a joint adapter on the balanced recipe, per-type only if a bounded
+  lpt6 completion shows complementarity (13 screens: math adapter in historical bf16 settings, irrelevance solo, all six
+  at 0.5, five predeclared merges C / P / S6 / P+ / T, additivity residuals). 4 vs 6: neither by default; use six to
+  finish lpt6. Most informative cheap data: pt-mid's 4 adapters alone at their deployed strengths -> queued (4 screens)
+  after the 4 full-strength solos on GPU 2.
+- ~05:30 **D6 lpd-simright step 100: +34.1% / +0.7** (svamp +52 / -0.2, mbpp +16 / 0.0, ifeval +29 / +1.5, one function +30 /
+  -2.9, several +32 / +1.5, no fit +40 / +6.7), +1.3 vs curve; **step 200: +30.3% / +0.6** (svamp +40 / +0.6, mbpp +6 / +1.0,
+  ifeval +37 / -0.6, one function +31 / -4.0, several +30 / -1.5, no fit +40 / +9.4), +0.8. Accuracy kept or gained (no-fit
+  strongly) but the right pairs halve the shortening vs bidax5q (41.8 / +0.2 at step 100). Final screening next.
+  GPU 1: D4 budget step 55/337. Both tabs show "Connecting" while still progressing (cosmetic).
+- ~06:30 **D6 lpd-simright final: +28.1% / +1.7** (svamp +35 / +0.2, mbpp +10 / +2.7, ifeval +32 / +3.1, one function +30 / -5.8,
+  several +29 / -1.9, no fit +41 / +10.2), +1.8 vs curve (as high above the curve as v1, but at 28% saved): the similar-length
+  right pairs buy accuracy (no-fit +10) and cost shortening; one-function is hurt (-5.8). Not a v1 candidate on its own; a
+  candidate ingredient for the per-type design (Jasmin).
+
+### 5 Nov ? decisions of the day (user), state before the night
+- DPO screen so far (720 x4, finals): D9 adar1 65.3 / -6.8, D11 push2 52.4 / -3.0, D8 math 41.7 / -1.0, D1 dast 33.1 / -2.3,
+  D6 simright 28.1 / +1.7, D7 2stage 16.5 / +1.4, D2 hard 13.8 / -0.1, D3 route 9.4 / -0.7. None beats v1 (46.7 / -0.5).
+  Still to run: D4 budget (training, step 90/337), D5 margin, D10 l2s50e, D12 chain1 rounds 1-2 (GPU 1); bidax6p / 6s (GPU 2).
+- Consultant (Ivan / gpt-6-astra, consult2, ~$16 today): DPO strategy (consult2_dpo_strategy.md), game-plan grounding
+  (consult2_game_plan_review.md), the user's objections accepted (consult2_objections_reply.md: fp32 both tracks, lr 5e-6 short
+  rounds, early screens), lpt6 reply (consult2_lpt6_reply.md: per-type spill-over is ~one shared habit; Track A first).
+- GAME_PLAN.md v3 (not committed to GPUs beyond the solos): Track A = repair pt-mid (pt-mid answers 5,400 q x4 -> 1,600 "be
+  right" pairs on math / code / no-fit + maintenance, fresh LoRA on merged pt-mid, fp32, lr 5e-6, 40 steps, screens 5/10/20/40
+  first, fill gaps where interesting). Track B per-type adapters + merge + mixed-step merges, to be redesigned as "Jasmin".
+- Order agreed: (1) pt-mid's 4 adapters scored ALONE (8 screens: full strength + pt-mid strength), queued GPU 2, solo-svamp
+  started; (2) Track A (code to build and test on the Mac, then GPU 2); (3) one sandbox with EVERYTHING (raw Qwen, thinking off,
+  bida / v1 INCLUDED this time, all DPO rounds, all per-type LoRA runs, Track A) -> the consultant designs "Jasmin", the best
+  per-type LoRA from scratch.
+- GRPO: grA2 (grA + all trainer fixes, same data) and gr2 (consultant's recipe from v1) prepared, commented in plan_line_b;
+  gr2 now screened at steps 10 20 40 60 80 120 160 200 250 (step sensitivity, --tp-score-steps).
+- Ops: Chrome Memory Saver exception for Colab (user); finished plan stages commented out and old-line adapters no longer
+  restored at plan start (restarts now fast); "Connecting" on the tabs is cosmetic while steps advance.
+- ~07:30 **Track A built and queued** (GPU 2, after the 8 pt-mid solo screens): track.py ptrepair + repair_pairs.py + dpo.py
+  --keep-order. (1) pt-mid (lpw-pertype merged 0.30/0.45/0.60/0.45) answers 5,400 training questions x4 (math 2,400, code 900,
+  no-fit 1,500, ifeval 300, simple 150, multiple 150; the original's mixed-outcome questions first); (2) 1,600 be-right pairs
+  (half shortest right > shortest finished wrong, half similar-length right > wrong with exactly half the right one longer;
+  <= 3 per question, <= 2 right; no cut rejections) in a stratified order; (3) fresh LoRA on merged pt-mid, fp32 + fp16
+  autocast, beta 0.1, no NLL, batch 16, lr 2.5e-6 then 5e-6, 40 steps, saved every 5; (4) pt-mid + repair adapter on the 720
+  at 5 / 10 / 20 / 40. Tested on the Mac: pair builder (quotas, half longer, order) and 3 CPU DPO steps (keep-order, fp32).
+  GPU smoke line first (rpA-smoke: 5 questions per part, 4 steps).
+- ~08:30 **pt-mid adapters scored ALONE at full strength** (720 x4, no training):
+  - MATH adapter: **+41.7% / -2.1** (svamp +59 / -4.8, mbpp +51 / -1.0, ifeval +26 / +0.6, simple +21 / -1.7, multiple +24 / -1.3,
+    no-fit +25 / -6.0), -0.6 vs curve: trained on math pairs only, it shortens code almost as much as math (51 vs 59%) and
+    hurts no-fit most: the same shared-habit spill-over as lpt6.
+  - CODE adapter: **+16.5% / -1.3** (svamp +20 / -1.3, mbpp +25 / -0.2, ifeval +7 / -1.3, simple +14 / -1.5, multiple +14 /
+    -2.3, no-fit +11 / -3.5), -1.6 vs curve: more own-type than the others (code 25% vs 7-20% elsewhere) and keeps code
+    accuracy, unlike lpt6's code-only adapter (which did not shorten code).
+  IFEval and tools solos next, then the 4 at pt-mid strength.
+- ~09:30 pt-mid solos (720 x4, no training), continued:
+  - IFEVAL adapter (1.0): **+36.1% / -1.2** (svamp +34 / -2.7, mbpp +42 / +0.2, ifeval +40 / +0.6, simple +28 / -1.9, multiple
+    +29 / -1.3, no-fit +29 / -5.6), -0.4 vs curve: shortens code more than ifeval itself.
+  - TOOLS adapter (1.0): **+50.1% / -2.9** (svamp +53 / -4.0, mbpp +59 / -4.6, ifeval +44 / -3.7, simple +38 / +1.5, multiple
+    +43 / +2.5, no-fit +45 / -2.3), 0.0 vs curve: alone it already saves 50%; its own tools GAIN accuracy (simple +1.5,
+    multiple +2.5) while math, code and ifeval pay: the strongest "general shorten" push of the four.
+  - MATH adapter at its pt-mid strength 0.30: **+11.9% / -1.0** (svamp +20 / -1.5, mbpp +13 / +0.8, ifeval +4 / -1.5, simple
+    +9 / -1.5, multiple +10 / -2.3, no-fit +11 / -1.9), -1.3 vs curve.
+  Reading so far: every pt-mid adapter spills over (math -> code 51%, ifeval -> code 42%, tools -> code 59%); the merge's 55%
+  is mostly stacked general pushes, as lpt6 suggested; own types tend to KEEP accuracy (tools +1.5/+2.5, ifeval +0.6, code
+  -0.2), the loss lands on the OTHER types. Remaining: code / ifeval / tools at pt-mid strength.
+- ~10:30 **D4 lpd-budget step 100: +43.8% / -1.8** (svamp +58 / -4.6, mbpp +44 / -1.7, ifeval +31 / -0.8, simple +35 / -0.8, multiple
+  +39 / +0.6, no-fit +39 / -0.6), 0.0 vs curve; **step 200: +48.6% / -1.5** (svamp +61 / -3.1, mbpp +40 / -1.2, ifeval +46 / -0.8,
+  
+[output cut at 10,000 characters]

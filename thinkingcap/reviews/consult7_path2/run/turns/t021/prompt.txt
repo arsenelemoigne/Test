@@ -1,0 +1,121 @@
+Total lines in EXPERIMENT_LOG.md: 5264
+L1: # Experiment log (Qwen3-0.6B, shorter thinking)
+L7: ## Reference: the untouched model (raw Qwen3-0.6B)
+L16: ## Scoreboard (vs the raw model)
+L28: ## Training data
+L38: ## Hyperparameters
+L51: ## Per-step training numbers
+L72: ## Evaluation details
+L83: # Track 2: MVT cut, fading worked examples, marginal token analysis (branch `mvt-fading`)
+L88: ## Reference rerun on this runtime (raw Qwen3-0.6B)
+L97: ## Training data
+L102: ## Experiment 1: Marginal Value Theorem cut
+L104: ### Run mvt256 (2-step look-ahead rule; flawed, see below)
+L135: ### Run mvth1024 (full look-ahead rule, travel 1024)
+L156: ## Experiment 2: fading worked examples, paragraphs + words (LLMLingua-2 scores)
+L167: ### Round 1 (10% of paragraphs, 90% of words kept)
+L181: ### Round 2 (20% of paragraphs, 80% of words kept), from round 1's adapter
+L200: ## Experiment 3: marginal token analysis (words scored by our own model)
+L208: ### Round 1 (10% of paragraphs, 90% of words kept)
+L227: ## Experiment 1b: MVT cut on the easy sources, math kept whole
+L234: ### Run mvth1024-full-gsm8k
+L252: ### Run mvth256-full-gsm8k
+L267: ### 4-sample recheck of mvth1024-full-gsm8k
+L283: ### Run mvth1024-full-gsm8k-cap35 (a design mistake)
+L289: ### Why SVAMP still fails, and two fixes queued
+L297: ### 4-sample recheck of experiment 2 round 1 (fade-gain-words r1)
+L309: ### Run mvth1024-full-gsm8k-min2 (`--min-steps 2`)
+L324: ### Run mvth1024-full-gsm8k-xgsm8k2 (`--repeat gsm8k:2`, 270 rows)
+L336: ### 4-sample rechecks (continued)
+L347: ### Run mvth256-full-gsm8k-xgsm8k2 (2 samples)
+L352: ## Combination: MVT cut on the easy sources + math compacted by experiment 3
+L357: ### Run mix-mvt1024-marginal1-x2
+L372: ### Experiment 3 round 2 (run past the stop rule with `--ignore-limit`)
+L387: ### 4-sample rechecks (continued)
+L394: ### Queued: experiment 3's word scoring on the easy sources, math kept whole
+L401: ### Experiment 3's word scoring on the easy sources, math kept whole (2 samples)
+L414: ### 8-sample recheck of the winner (mvth1024-full-gsm8k-xgsm8k2)
+L429: ## Scoreboard, this track (vs the raw model on this runtime)
+L453: # Track 2b: per-type method grid (one runtime; the account allows 2 GPU sessions)
+L563: ### Grid table (`track.py gridtable`; tokens saved / accuracy change, 4 samples; > = own benchmark)
+L602: ## Combined models (4 samples vs the raw model)
+L626: ## Weight merging (queued)
+L635: # Track 2c: shortest-of-8 self-distillation, then on-policy verified MVT + DPO, then RL
+L637: ## Shortest-of-8 data (matched to the evaluation)
+L669: ### Track 2d: steering for brevity (`steer_dirs.py`, `track.py steer`)
+L747: ### Track 2e: rebuild after the lost runtime (half the best-of-8 data, Drive persistence)
+L801: ### Round 2 (on-policy): no-code step 30 answers the 750 unused questions x 8
+L837: ### Round 3 (fresh questions, seed 1): the gentle round-2 model answers 750 new questions x 8
+L901: ### Fresh test set (to remove the selection bias)
+L920: ### MBPP-free chains and a clean code source (queued)
+L943: ### Where the accuracy goes at 60%+ (fresh questions), and the balanced round (queued)
+L1003: ## Track 2f: MBPP-free line, full recipe, toward > 60% saved at better than -2 (queued 22 Oct 2026)
+L1080: ## Track 2g: calibrated cuts (confidence vs real outcome) + RL (rlcal), 23 Oct 2026
+L2255: ### 2026-10-26 ~20:40 ? mf1 pairs built, DPO under way; stopV3 seed 1 nearly done
+L2287: ### 2026-10-26 ~22:25 ? mf1 soup 25 (rc1-rl-40 + matched-math repair), fresh 240 x 8: **+45.6% / -1.4 (within the limit)
+L2314: ### 2026-10-27 ~00:00 ? mf1 soups 50/75 and stopV3 soup 25 (fresh 240 x 8)
+L2334: ### 2026-10-27 ~01:00 ? Drive cleanup (user: free ~40 GB; record everything first)
+L2371: ### 2026-10-27 ~01:30 ? mf1 soups 100/150, stopV3 soups 50/75 (fresh 240 x 8)
+L2382: ### 2026-10-27 ~02:00 ? ps1 queued: prompt search before prompt distillation (user)
+L2393: ### 2026-10-27 ~02:40 ? GPU 2 moved on; bp1 failed at start
+L2400: ### 2026-10-27 ? literature on building pairs for shorter thinking (research pass, for the "many pair strategies" step)
+L2418: ### 2026-10-27 ? dp1 queued: build the pool, then prove it behaves like the evaluation (user)
+L2428: ### 2026-10-27 ? PRIORITY (user): the final model, LUPIN
+L2440: ### 2026-10-27 ? RevThink checked (arXiv 2411.19865, NAACL 2025; Chen et al., UNC + Google)
+L2452: ### 2026-10-27 ? ALP checked (arXiv 2506.05256, "Just Enough Thinking", Stanford/SynthLabs, preprint)
+L2462: ### 2026-10-27 ? "backwards" research pass (user's idea: answer -> question for a stronger link, fewer tokens)
+L2476: ### 2026-10-27 ? LUPIN_SPEC.md written (user): full plan from data to RL
+L2485: ### 2026-10-27 ~02:55 ? both runtimes restarted ~02:11 (cause not seen here); the resume work held
+L2493: ### 2026-10-27 ~04:00 ? stopV3 soups 100/150/200 (fresh 240 x 8)
+L2507: ### 2026-10-27 ~05:50 ? ps1 prompt search (original Qwen, plotV2 lot, 50 questions x 4 per source, vs no prompt)
+L2529: ### 2026-10-27 ~06:45 ? dp1 (LUPIN step 0): pool built, representativeness check FAILS (15/24 measures OK)
+L2548: ### 2026-10-27 ~05:46 ? drpo3f-10 scored (fresh 240 x 8)
+L2557: ### 2026-10-27 ~06:20 ? gold1 scored: BROKEN at every checkpoint (fresh 240 x 8)
+L2576: ### 2026-10-27 ~06:41 ? bp1b: original Qwen + "Think briefly: keep your thinking under N tokens" (fresh 240 x 8)
+L2590: ### 2026-10-27 ~09:30 ? why dp1 failed (read in its 4,800 check answers) and dp2 (LUPIN step 0, user: "a big representat
+L2628: ### 2026-10-27 ~11:00 ? teach1c broken like gold1; dp2 first try crashed (bug fixed), IFEval mix now exact
+L2647: ### 2026-10-27 ~12:00 ? user: build and verify the dataset before any LUPIN step; keep the running stages
+L2657: ### 2026-10-27 ~10:55 ? sb2 and drpo2 checkpoints (fresh 240 x 8), dp2 candidates built
+L2689: ### 2026-10-27 ~11:20 ? drpo2-20/25/30; dp2 half a CRASHED
+L2698: ### 2026-10-27 ~14:00 ? dp2 half a crashed while answering; rebuilt as dp3
+L2716: ### 2026-10-27 ~15:30 ? drpo2 finished; dp3 candidates built on GPU 2 (half b answering)
+L2735: ### 2026-10-27 ~12:45 ? drpo2-60; dp3 candidate pool built (GPU 2)
+L2747: ### 2026-10-27 ~17:30 ? TokenSkip (arXiv 2502.12067) read, built, queued raw (tsk1, GPU 2 after dp3)
+L2766: ### 2026-10-27 night ? dp3 selection done (select_pool.py, GPU 1); held-out check running
+L2791: ### 2026-10-27 night ? user decisions for LUPIN (nothing built yet)
+L2802: ### 2026-10-28 ~00:00 ? data bug found while drawing the overlap chart: gsm8k_easy used the wrong answer instruction
+L2819: ### 2026-10-28 ? dp3 HELD-OUT CHECK (new answers, seed 7, 200 selected questions per part x4) ? FAILS on 3 parts
+L2848: ### 2026-10-28 ~02:00 ? overnight chain (user asleep): dp5 (IFEval) ? dp6 (no-fit + math) ? gated 10 answers
+L2860: ### 2026-10-28 ~02:30 ? dp4 held-out check + verified no-fit file + dp6 widened
+L2879: ### 2026-10-28 ~04:00 ? dp5 held-out check (first with p25/p75): IFEval FIXED; code tail found short; dp7 queued
+L2904: ### 2026-10-28 ~06:30 ? dp6 held-out check: 29/36 vs both (26/36 vs choosing alone, 35/36 vs questions_40 alone)
+L2913: ### 2026-10-28 ? Drive full: drivereport + drop2 (user: free ~40 GB; user empties the trash afterwards)
+L2927: ### 2026-10-28 ? SUMMARY: the LUPIN training dataset, dp1 ? dp7c (state at dp7c answering)
+L2951: ### 2026-10-28 ? dp7c HELD-OUT CHECK (new answers, seed 7, 200 per part x4): 32/36 vs both, 30/36 choosing, 35/36 q40
+L2963: ### 2026-10-28 ? dp8 queued (user: "yes prepare dp8")
+L2980: ### 2026-10-28 ~16:30 ? dp8 HELD-OUT CHECK (seed 9, 200 per part x4): 33/36 vs both, 30/36 choosing, 36/36 q40
+L3000: ### 2026-10-28 ~17:15 ? dp9 queued (user: "yes queue dp9 once haiku finishes")
+L3021: ### 2026-10-28 ~20:45 ? dp9 HELD-OUT CHECK (seed 13, 200 per part x4): 34/36 vs both, 30/36 choosing
+L3038: ### 2026-10-28 ~21:15 ? user: option A (dp10) + drop3 (keep the strong candidates of methods A-H)
+L3086: ### 2026-10-29 ~01:45 ? user: "run all these steps unless I interrupt or there is a clear red flag" (+ the pair variatio
+L3105: ### 2026-10-29 ~03:15 ? dp10 HELD-OUT CHECK (seed 17): 35/36 vs both
+L3125: ### 2026-10-29 ~07:00 ? dp11 HELD-OUT CHECK (seed 19): 30/36 vs both, 26/36 choosing, 36/36 q40 -> dp10 chosen
+L3144: ### 2026-10-29 ~13:15 ? 10 answers done; topic check dp10; first pairs too thin -> matching fixed
+L3286: ### 2026-10-29 ~22:45 ? user: data upgrade first, then iterate (rules x proportions x pairs), soup only the strong ones
+L3302: ### 2026-10-30 ~00:15 ? user: representative of the WHOLE eval (iterate the data step), log + plot every result, let all
+L3325: ### 2026-10-30 ~02:45 ? SPARSE arm C (Wanda) on the Mac (user: "run it on CPU in the meantime", "only if done properly")
+L3339: ### 2026-10-30 ~04:00 ? data loop results (160-per-part references) + Mac Wanda stopped
+L3359: ### 2026-10-30 ~05:40 ? SPARSE arm C (Wanda) on GPU 1: damage map + coverage check
+L3377: ### 2026-10-30 ~06:30 ? data loop: dp15 33/36; loop stopped (check noise), decision left to the user
+L3399: ### 2026-10-30 ~08:15 ? USER DECISION: accept dp13 (option A)
+L3460: ### 2026-10-30 ~14:00 ? lpc-press cross-check; researcher dossiers written (user)
+L3469: ### 2026-10-30 ~15:00 ? full evaluation speed; build spec Run A built and queued (user)
+L3487: ### 2026-10-30 ~15:20 ? lpc-math fresh soups 40/50 (3 seeds, fresh 240 x 8)
+L3496: ### 2026-10-30 ~16:00 ? user: train the spec's runs, compare at matched saving, check the 720 screen set's bias
+L3508: ### 2026-10-30 ~16:10 ? lpc-math soups 60/70; Run A stopped and restarted as lpc-runa2
+L3520: ### 2026-10-30 ~19:15 ? original Qwen full evaluation done (full-base, 2,759 x 8); our small sets vs the full evaluation
+L3537: ### 2026-10-30 ~20:25 ? FULL evaluation of lpc-l2s50e-soup-100; 720 screen set built and checked
+L3556: ### 2026-10-30 ~22:25 ? michal-bida control queued (user)
+L3570: ### 2026-10-30 ~23:40 ? lpc-l2s50e-soup-100 full evaluation per type (computed from both full runs' records)
+L3665: ### 2026-11-01 ~01:30 ? michal
+[output cut at 10,000 characters]

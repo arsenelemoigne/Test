@@ -1,0 +1,65 @@
+but 42% saved, below the 50% goal. Its 720 screen said 43.0 / +0.9: the screen read 1.1 pts high on saving and 0.8 on accuracy.
+
+## Items decided 10 Nov that were committed but not logged above (added for the record)
+- **cp1e** (queued on GPU 2 after cp1d): cp1d + `rl_train.py --copd-early 1.0` (new, "fix 2", user): every token of a WRONG reply whose
+  thinking is under 0.5 x the original model's median thinking on its right answers to that question (row field base_think, from the
+  original's 10 stored answers; track.py thinkprune prints how many questions carry it) gets -1.0 more. Logged per step as
+  copd.early_penalised = [punished, wrong]. Tested on mocked replies (only the too-short wrong reply is punished).
+- **od2 changed to 10 rounds** (user: "add more rounds of 160"): 10 rounds x 10 steps, IFEval 290 questions per round (2,900 of the
+  2,998 usable, no question reused), 720 x4 after rounds 2, 4, 6, 8, 10.
+- **repair_pairs.py --kinds guard,shorten backup supply:** if "shorten" pairs (longest right >= 1.5x shortest) run short, questions
+  with a 1.25-1.5x spread fill in; the summary prints both candidate counts per part.
+- Full test of rpI-120 queued on GPU 2 after rpH (user); done above.
+- cp1d started (GPU 2): its log printed **0/15407 questions carry base_think**: the original's 10-answer file stores no
+  reasoning_tokens, so cp1e's --copd-early would have done nothing. Fixed before cp1e starts: base_think falls back to the
+  answer's thinking ids, else its whole length (output_tokens; slightly over-estimates thinking, the 0.5x threshold stays a proxy).
+  cp1d does not use it. od1 round 1: 160 pairs (guard 80 / shorten 80, no shortfall: svamp 299 shorten candidates >= 1.5x),
+  10 steps, pairs ordered right 75 -> 82%; round 2 answering.
+
+## 10 Nov ? consult5: independent review by the Ivan worker (gpt-6-astra), cap $15 then $30 (user)
+27 analysis turns (26 code runs) on CURRENT_STATE.md, the dossier, the log, all_runs.json, plans and code; stopped at $12.86 (no
+notes kept, so the harness's fallback would have produced an empty report); one final call ($0.76) on the conversation with tool
+outputs trimmed wrote the report: consult5_review.md. Total about $13.6-14.6 (one in-flight turn may have been billed).
+Main points: objective not met; the biggest problem is reading moves on a repeatedly-used screen as frontier progress; the curve
+is descriptive (at 50% it predicts -2.9, so +1 above it still misses); rpI-120 vs rpE-80 is only +0.19 vs curve; fresh answers
+ATTENUATE the drift (rpI +14.9% more output vs rpG +35.7%) but do not stop it, and are confounded with pair counts; screen/full
+gaps are model-dependent (savings +1.2 mean, accuracy +0.4 mean, ranges -1.1..+1.5); 6/8 is not a safety certificate; IFEval
+deficit alone costs 0.65 pt of rpE-80's aggregate. Code issues found: (1) thinking_len() treats an empty thinking as the whole
+answer, FIXED; (2) dpo.py reference-cache fingerprint uses prefixes + lengths only (open); (3) a round with fewer than 160 pairs
+cannot reach step 10 in one epoch, FIXED in odpo (2 epochs allowed); (4) log the identities of rollout policy / init / reference
+separately (open); (5) od2 = 90,400 completions for 1,600 pairs: measure pair yield. Recommendation: ONE controlled experiment
+from the original Qwen: fresh-rollout vs frozen-rollout arms, identical mixed pairs (256 per round, half guard half shorten at
+>= 6/8 and 1.25x), 3 rounds x 32 updates, 2 seeds, a NEW 512-question dev set for selection (never the 720), predetermined final
+checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Advice: do not spend GPU days on more COPD variants.
+
+## 10-11 Nov night ? runtimes reconnected by the user; queues resumed from Drive
+- **od1 round 2** (rpE-80 + 2 online rounds = 20 steps; 160 pairs per round, guard 80 / shorten 80, no shortfall), 720 x4 official:
+  **51.5% / -1.2** (svamp 58 / -2.7, mbpp 54 / -2.5, ifeval 47 / +0.4, simple 41 / -3.1, multiple 44 / +0.8, no-fit 54 / +4.2);
+  vs curve +2.0 (rpE-80 on the 720: 50.4 / -0.2, +2.8). Rounds 3 done, round 4 answering.
+- **cp1d** (Run A settings + the right/wrong reward only), 720 x4: step 10 14.2 / -1.4; 20 30.4 / -2.1; 25 34.0 / -1.9.
+  vs curve: 20 -1.9, 25 -1.3 (Run A: 20 -0.7, 25 -1.6; Run C: 25 -2.8). The reward alone cuts faster than Run A, but cp1d does
+  not collapse like Run C: Run C's other settings (16x8, constant lr, 50% sometimes-wrong questions) explain part of its fall.
+- consult6 (Gemini 4 Argon via OpenRouter, cap $25, $3 report reserve): relaunched after an empty first turn (Gemini emitted a
+  native function call, MALFORMED_FUNCTION_CALL; fixed by a system note + provider errors retried); 27 turns, $0.34 so far.
+
+## 11 Nov ? od1 done, cp1d step 30, plan changes
+- **od1 round 4** (rpE-80 + 4 online rounds, 40 steps), 720 x4 official: **53.3% / -1.8** (svamp 63 / -4.4, mbpp 55 / +0.8, ifeval
+  44 / -3.7, simple 43 / -1.2, multiple 47 / -1.9, no-fit 58 / +4.4); vs curve +1.75 (round 2: +2.0; rpE-80 on the 720: +2.8).
+  The online loop moved rpE-80 ALONG the curve (more saving, less accuracy), not above it; differences within the 720's noise.
+- **cp1d step 30:** 39.5% / -2.0 (vs curve -0.8). Steps 35 / 40 next. cp1e dropped (consult5 + consult6: no more COPD variants).
+- consult6 (Gemini 4 Argon) review + independent fact-check (reviews/consult6_argon/REPORT.md, FACT_CHECK.md): transcription good,
+  ~10 interpretation errors. User decision: Path 1 only (2 rounds, compact-and-verify, clean from the original Qwen); Paths 2 and 3
+  dropped (Path 3 rested on a bida-pair run). PATH1_PLAN.md. Cheap test rpJ (rc1-soup-30 stand-in) queued on GPU 2 after cp1d,
+  after Dev-512 (own held-out questions) + calibration scores of rc1-soup-30 and rpE-80. The full clean run (p1src -> p1r1 -> p1r2,
+  seeds 0 / 1) is written and commented in both plans until rpJ passes. consult6's second analysis (of the fact-check and the plan)
+  is running.
+- Caveat: od2 started on GPU 1 before Dev-512 existed, so its question draws do NOT exclude Dev-512 (its --rp-exclude-dev found no
+  file). od2 is screened on the 720, not judged on Dev-512; if it is ever scored on Dev-512, its overlap must be removed first.
+- **cp1d final:** step 35 39.5% / -2.8; **step 40 42.6% / -3.3** (svamp 63 / -4.0, mbpp 40 / -5.4, ifeval 27 / -1.7, simple 32 / -3.1,
+  multiple 32 / -0.2, no-fit 38 / -2.1); vs curve -1.8. COPD + right/wrong reward ends below the curve (Run A at 40: 34.1 / -2.4,
+  -1.4; Run C at 40: 57.1 / -4.7, -0.3). COPD line closed.
+- **Dev-512 built (11 Nov ~01:00):** 512 questions (svamp 140, mbpp 100, IFEval 66 counting + 66 other, simple 60, multiple 45 no-fit
+  / 35 several) outside the 11,360 questions drawn for training by rpE/rpG/rpH, rpI and od1; the original answers it x8.
+- Studies added (reference only, no copying): reviews/competitor_methods_study.md, reviews/rl_length_methods_study.md;
+  reviews/claude_path1_review.md (independent review of PATH1_PLAN.md: round 1 likely ~25-35% saved; rpJ dropped).
+

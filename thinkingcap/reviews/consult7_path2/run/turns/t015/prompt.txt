@@ -1,0 +1,203 @@
+
+
+def type_of(question):
+    """A question's data type for logging and the guard: its source, split by category where one exists (ToolACE's
+    simple / multiple / irrelevance, so a loss on choosing among several functions is not hidden by the others)."""
+    source = question.get("source", "all")
+    return f"{source}/{question['category']}" if question.get("category") else source
+
+
+def protected_kind(question, protect):
+    """No length pressure for this question: its source (math) or its source/category (toolace/multiple) is listed."""
+    return question.get("source") in protect or type_of(question) in protect
+
+
+def balanced_order(rows, rng):
+    """Rows shuffled within each source, then spread so that EVERY stretch of the order (each step's batch) holds the
+    sources in their pool proportions from the first step to the last: row k of a source with n rows is placed at
+    (k + u) / n, u uniform in [0, 1), and all rows are sorted by that position. (The former round-robin gave every source
+    the same count per step until the smaller ones ran out, after which steps held only the larger sources: sb1's steps
+    22-30 were all math and instructions.)"""
+    by_source = {}
+    for row in rows:
+        by_source.setdefault(row["source"], []).append(row)
+    placed = []
+    for source in sorted(by_source):
+        group = by_source[source]
+        rng.shuffle(group)
+        placed += [((k + rng.random()) / len(group), row) for k, row in enumerate(group)]
+    placed.sort(key=lambda x: x[0])
+    return [row for _, row in placed]
+
+
+def batch_logps(model, rows, device, entropies=None):
+    """log pi(reply token | prefix) for each (prompt, reply) row, in one right-padded forward pass.
+
+    Logits are computed only on reply positions, through the output head, so memory grows with
+    the reply tokens rather than with batch x sequence x vocabulary.
+    """
+    import torch
+
+    from probe_curve import decoder_and_head
+    body, head = decoder_and_head(model)
+    width = max(len(p) + len(r) for p, r in rows)
+    ids = torch.zeros(len(rows), width, dtype=torch.long)
+    mask = torch.zeros(len(rows), width, dtype=torch.long)
+    for i, (prompt, reply) in enumerate(rows):
+        ids[i, :len(prompt) + len(reply)] = torch.tensor(prompt + reply)
+        mask[i, :len(prompt) + len(reply)] = 1
+    hidden = body(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False).last_hidden_state  # (9 Nov) no KV cache
+    from torch.utils.checkpoint import checkpoint
+
+    def piece(h, target):
+        # vocabulary-wide logits for a few hundred positions only, recomputed in the backward pass: a 3,000-token
+        # reply would otherwise keep 3,000 x 152k fp32 values alive (~1.8 GB) and run the GPU out of memory
+        logp = torch.log_softmax(head(h).float() / LOGIT_TEMP, dim=-1)
+        return logp.gather(1, target[:, None])[:, 0], -(logp.exp() * logp).sum(-1)
+
+    out = []
+    for i, (prompt, reply) in enumerate(rows):
+        positions = torch.arange(len(prompt) - 1, len(prompt) + len(reply) - 1, device=device)
+        target = torch.tensor(reply, device=device)
+        tokens, ents = [], []
+        for start in range(0, len(reply), 256):
+            h = hidden[i, positions[start:start + 256]]
+            t, e = checkpoint(piece, h, target[start:start + 256], use_reentrant=False) if h.requires_grad \
+                else piece(h, target[start:start + 256])
+            tokens.append(t)
+            ents.append(e)
+        out.append(torch.cat(tokens))
+        if entropies is not None:
+            entropies.append(torch.cat(ents))
+    return out
+
+
+def token_batches(jobs, budget):
+    """Jobs grouped so each group's padded size (rows x longest) stays within budget."""
+    jobs = sorted(jobs, key=lambda j: len(j[0]) + len(j[1]))
+    batches, current = [], []
+    for job in jobs:
+        longest = max([len(j[0]) + len(j[1]) for j in current] + [len(job[0]) + len(job[1])])
+        if current and longest * (len(current) + 1) > budget:
+            batches.append(current)
+            current = []
+        current.append(job)
+    if current:
+        batches.append(current)
+    return batches
+
+
+def norm_lp(logps):
+    """TokenProbe Eq. 1: each token's log-prob z-scored within its reply."""
+    mean = sum(logps) / len(logps)
+    spread = math.sqrt(sum((x - mean) ** 2 for x in logps) / len(logps))
+    return [(x - mean) / (spread + 1e-6) for x in logps]
+
+
+def core_positions(scores, window, windows):
+    """The best non-overlapping windows by summed score, greedily, at most `windows` of them."""
+    if len(scores) <= window:
+        return set(range(len(scores)))
+    sums = [sum(scores[i:i + window]) for i in range(len(scores) - window + 1)]
+    taken = set()
+    for start in sorted(range(len(sums)), key=lambda i: -sums[i]):
+        if len(taken) >= windows * window:
+            break
+        span = set(range(start, start + window))
+        if not span & taken:
+            taken |= span
+    return taken
+
+
+def rs_advantages(advantage, scores, core, budget, beta, alpha, lam):
+    """TokenProbe Eq. 6 on a correct reply: core tokens gain alpha * NormLP, redundant ones pay
+    lam * (T - L) / T when the reply is over budget."""
+    over = max(0, len(scores) - budget) / len(scores)
+    return [advantage + beta * (alpha * z if i in core else -lam * over) for i, z in enumerate(scores)]
+
+
+def kl_coefficients(length, core, budget, beta, lam_decay):
+    """TokenProbe Eq. 4: (beta_t, gamma_t) per token. Over budget, redundant tokens drop the KL
+    anchor and get gamma_t = lam_decay * (T - L) / T; everything else keeps beta."""
+    if length <= budget:
+        return [beta] * length, [0.0] * length
+    gamma = lam_decay * (length - budget) / length
+    return ([beta if i in core else 0.0 for i in range(length)],
+            [0.0 if i in core else gamma for i in range(length)])
+
+
+def token_advantages(advantage, length, redundant, lam):
+    """Every token gets the reply's advantage; redundant ones get -lam more."""
+    return [advantage - (lam if i in redundant else 0.0) for i in range(length)]
+
+
+def grade_all(questions, replies, tokenizer, eos, grader):
+    """Correct or not, per reply (an unfinished reply is wrong); typed grading runs code tests in parallel."""
+    from concurrent.futures import ThreadPoolExecutor
+    if grader == "typed":
+        import typed  # noqa: F401  (imported once here, not raced by the grading threads)
+    jobs = [(q, r) for q, group in zip(questions, replies) for r in group]
+
+    def grade(job):
+        question, reply = job
+        if not reply or reply[-1] != eos:
+            return False
+        if grader == "typed":
+            from typed import full_text, is_correct
+            return bool(is_correct(question, full_text(tokenizer, reply)))
+        return is_task_correct(tokenizer.decode(reply, skip_special_tokens=True), question["answer"], question["task"])
+    with ThreadPoolExecutor(8) as pool:
+        flat = list(pool.map(grade, jobs))
+    out, i = [], 0
+    for group in replies:
+        out.append(flat[i:i + len(group)])
+        i += len(group)
+    return out
+
+
+# ---------------------------------------------------------------- sampling
+
+NO_THINK = "<think>\n\n</think>\n\n"  # what Qwen3's chat template inserts with enable_thinking=False
+
+class Sampler:
+    """Replies from the current adapter: vLLM on a GPU (reloads the LoRA each step), HF otherwise."""
+
+    def __init__(self, args, tokenizer):
+        self.args, self.tokenizer = args, tokenizer
+        global LOGIT_TEMP
+        if getattr(args, "full_support", False):  # (4 Nov) full-support sampling; trained log-probs at the same temperature
+            self.sampling, self.sampling_hf = dict(SAMPLING, top_p=1.0, top_k=-1), dict(SAMPLING, top_p=1.0, top_k=0)
+            LOGIT_TEMP = SAMPLING["temperature"]
+        else:
+            self.sampling = self.sampling_hf = SAMPLING
+        if args.backend == "vllm":
+            os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+            from vllm import LLM
+            extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
+            self.engine = LLM(model=args.model, dtype=args.dtype, seed=args.seed, enable_lora=True,
+                              max_lora_rank=64, gpu_memory_utilization=args.gpu_memory,
+                              max_model_len=max(args.max_tokens, getattr(args, "max_tokens_code", 0)) + 1024, generation_config="vllm", **extra)
+
+    def sample(self, prompts, adapter_dir, step, model=None, no_think=0, caps=None):
+        """--group replies per prompt; the last `no_think` of each group start with an empty
+        thinking block, which is returned as part of the reply."""
+        eos = self.tokenizer.convert_tokens_to_ids("<|im_end|>")
+        prefix = self.tokenizer.encode(NO_THINK, add_special_tokens=False)
+        counts = [(self.args.group - no_think, []), (no_think, prefix)]
+        if self.args.backend == "vllm":
+            from vllm import SamplingParams
+            from vllm.lora.request import LoRARequest
+            lora = LoRARequest(f"step{step}", step + 1, str(Path(adapter_dir).resolve())) if adapter_dir else None
+            requests, params = [], []
+            for n, start in counts:
+                if n:
+                    requests += [{"prompt_token_ids": p + start} for p in prompts]
+                    # --reward cap (ThinkPrune, 2 Nov): each question's own token cap; generation stops there
+                    params += [SamplingParams(n=n, max_tokens=(caps[k] if caps else self.args.max_tokens) - len(start),
+                                              seed=self.args.seed + step, stop_token_ids=[eos],
+                                              **self.sampling) for k in range(len(prompts))]
+            outputs = self.engine.generate(requests, params, lora_request=lora)
+            replies = [[] for _ in prompts]
+            for index, out in enumerate(outputs):
+                start = counts[0][1] if index < len(pro
+[output cut at 10,000 characters]

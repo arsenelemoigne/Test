@@ -1,0 +1,134 @@
+
+Main files: [HERZ] `README.md`, `IDEA.md`, `stopping/train_grpo.py`, `stopping/train_lora.py`,
+`stopping/find_stop_points.py`, `stopping/verified_examples.py`, `stopping/give_up_examples.py`,
+`stopping/constraint_tasks.py`, `stopping/generate_rollouts.py`, `stopping/train_dpo.py`. Author: Jan Herza (IDEA.md).
+
+### 3.1 Data
+- Sources: GSM8K train, KodCode-Light-RL-10K, Glaive function calling v2, databricks-dolly-15k (README, IDEA.md).
+- 8-gram overlap check against every eval question; 11 Glaive rows removed. 39 KodCode tasks share a generic function
+  name with MBPP+ (none shares > 54% of words) (IDEA.md).
+- Instruction data: Dolly prompts + five format constraints IFEval does NOT use (no digits, every sentence ends "!",
+  Markdown table, at least N emoji, end with a question); one or two per prompt; prompts sharing >= 15% of an eval
+  question's 8-grams dropped; default 3,000 prompts (constraint_tasks.py).
+- "Grey zone" disclosed: 2,500 Dolly prompts with *other* wrappers (`<reply>` tags, brackets, fenced block) added to the
+  GRPO instruction pool only, after reading IFEval's "wrap in double quotes" loops (IDEA.md).
+- Rollout defaults: 1,500 questions per domain x 4 samples, eval sampling (generate_rollouts.py; code_tasks.py /
+  tool_tasks.py `--train 1500`). Exact SFT mix row counts: UNVERIFIED (not in the repo).
+
+### 3.2 Stage 1, stop-point distillation (SFT)
+- For each rollout (finished or truncated), binary search over paragraph boundaries ("\n\n") for the earliest one where
+  a forced `</think>` gives a verified-right answer: 2 probe answers must both "know" it, then 4 more, >= 3 must know
+  (find_stop_points.py). Training example = own reasoning up to the cut + `</think>` + the shortest of the 6 sampled
+  answers that passes the strict grader. Rollouts of never-solved questions skipped.
+- **Rule 1, code: stop only after the function is drafted** (`verified_examples.py --mode draft`: a `def` line or a
+  closed code block before the cut; then verified with 6 answers, >= 5 must know, one must pass strict; walk forward up
+  to 6 paragraphs). Plain oracle stops: drafting in reasoning 98% -> 8%, MBPP+ -5.4 pp.
+- **Rule 2, give up with a best guess**: rollouts that hit the cap are cut at the first paragraph boundary at/after
+  **2,048 thinking tokens** and end with the model's own forced answer (right if it knows, else a well-formed wrong
+  guess, never a refusal); max 600 examples, one per question (give_up_examples.py). Capped MBPP+ responses 49 -> 6 per
+  756 at no accuracy cost.
+- **Rule 3, instruction stops** on the constraint data above: IFEval median reasoning 296 -> 134 tokens, no loss.
+- SFT trainer (train_lora.py): LoRA **r 16, alpha 32, dropout 0.05**, all 7 projections; lr **1e-4**, cosine with 5%
+  warmup; **2 epochs**; **16 sequences per step**; max length 5,120; loss on the completion only.
+
+### 3.3 Stage 2, GRPO (train_grpo.py; README "Reproduce": `--steps 50 --prompts 24`)
+- **Reward:** `R = 1[correct] * (1 - alpha * L / m_domain)`, **alpha 0.2**; L = generated tokens of the answer (thinking
+  + reply); m_domain = mean length of that domain on the **first batch**, then frozen. Correct = strict grader AND
+  finish_reason == "stop" (a capped answer earns 0). Wrong earns 0 whatever its length.
+- **Advantage:** R minus the group mean, no division by std.
+- **Update:** one on-policy update per batch (ratio = 1, plain policy gradient), loss = -A * sum logprob / total tokens
+  of active samples (token-averaged over the batch); samples with |A| < 1e-6 skipped; grad clip 1.0; AdamW lr **1e-5**,
+  weight decay 0; **no KL**, no reference.
+- **Group 8** samples per prompt; **24 prompts per step**; **50 steps** (= 9,600 rollouts). Domain mix
+  **math 0.5, code 0.2, tool 0.15, instruction 0.15**. Generation caps: math 4,096, code 6,144, tool 2,048,
+  instruction 4,096. Eval sampling settings. bf16. vLLM shares the GPU (35%).
+- Starts from the stage-1 adapter (mix G), LoRA r16 continued. One run, no hyperparameter search. Checkpoint: the final
+  adapter at step 50 (every 10th step saved); UNVERIFIED whether an earlier step was compared.
+
+### 3.4 Results
+Final (README; run 1 = submitted results.json):
+| benchmark | tokens saved | acc change |
+|---|---|---|
+| MBPP+ | **64.7** | -1.72 |
+| IFEval | 38.9 | -0.65 |
+| BFCL simple / multiple / irrelevance | 25.8 / 35.3 / 33.9 | -1.00 / -0.56 / -0.83 |
+| SVAMP | 30.7 | -1.45 |
+| **average** | **43.3** (run 2: 43.5) | **-1.17** (run 2: -0.77) |
+Two-run means ([HERZ17] figures/scaling_report.md): BFCL +30.8/-0.94, IFEval +38.9/-0.61, MBPP +64.9/-0.98, SVAMP
++30.8/-1.33, average **+43.4 / -0.97**. Only 6,092 of 22,072 responses identical between the two runs (vLLM
+non-determinism) -> run-to-run spread ~0.4 pp in accuracy.
+
+Checkpoints along the way (full evaluations; README "Along the way"):
+| checkpoint | tokens saved | acc |
+|---|---|---|
+| SFT on shortest correct own answer (reference, quick eval) | 2.3 | -0.53 |
+| Mix C: oracle stops on math, code, tools | 37.2 | -1.80 |
+| Mix E: + code drafts, give-up | 29.4 | -0.45 |
+| Mix G: + instruction stops | 34.6 | -0.85 |
+| **GRPO from mix G** | **43.3 / 43.5** | **-1.17 / -0.77** |
+
+Held-out (analysis/heldout_eval.py): HumanEval 164x4 +65.0% / -1.22 [-5.03, +2.74]; GSM8K test 500x2 +44.3% and
++35 pp strict (format learning, not generalisation, by his account).
+
+Difficulty bins (0.6B base solve rate, [HERZ17] scaling_report.md): SVAMP loses on easy questions (8/8: -2.18, saved
+only 21.7%) and gains on hard (1-4/8: +7.97, 45.9% saved); MBPP loses on 5-7/8 (-4.65).
+
+### 3.5 What failed (2-sample quick evals, README/IDEA tables)
+- DPO on "later correct vs earlier wrong" stop pairs (train_dpo.py: beta 0.1, NLL weight 0.2, lr 1e-5, 8 pairs/step,
+  reference = starting LoRA): the learned stop collapsed (MBPP 762 -> 1,769 tokens).
+- Stops after a "check" cue: cues fired on restating the test case; no gain.
+- Math stops only after the answer is computed: SVAMP -6.1 pp. Later stops by fixed or difficulty margin: less saving,
+  same SVAMP loss. Math give-up at 1,024 tokens: SVAMP saving x2 at -1.5 pp. Distractor sentences in math: still -5 pp.
+- **Scaling the adapter to 0.75 / 0.5: the stop disappears entirely** ("a switch, not a dial").
+- Cutting looping wrapper replies: only 7 usable examples.
+- Every SFT stop-data variant that shortened SVAMP by 19-48% cost 1.5-6.1 pp; ~1 pp per 8 points of saving.
+
+### 3.6 His findings
+- The metric is a ratio of sums, so the capped tail dominates: 7.9% of MBPP+ responses hit the cap and hold 30.6% of
+  MBPP+ tokens; 98% of them cut off inside `<think>` (IDEA.md Motivation).
+- Longer is worse: accuracy from shortest to longest fifth MBPP+ 80% -> 14%, SVAMP 96% -> 69%.
+- With 60% of its GSM8K thinking the model answers right 80% of the time (87% with all).
+- "Where an oracle says the answer is right is not where the model knows it."
+- RL learned *when* re-checking pays: SVAMP saving 14% -> 31% at the same accuracy (-1.20 -> -1.21).
+- Quick 2-sample evals differ 1-2 pp per benchmark between identical-data runs; only 8 samples ranks close checkpoints.
+
+### 3.7 1.7B variant ([HERZ17] README)
+Same recipe, no re-tuning, difficulty-matched pools (mix in MATH levels 3-5 and KodCode medium/hard so the 1.7B base
+solves the same share as 0.6B did: math 70.8%, code 51.9% -> 40% hard math, 80% hard code). Result (2-run mean): +47.4% /
+-0.14 (MBPP +55.7/+4.12, IFEval +50.3/-0.23, BFCL +33.7/-0.84, SVAMP +47.4/-3.60). SVAMP's loss is ~90% answer format
+("Final answer: 5 + 3 = 8"), BFCL irrelevance -4.7. GRPO resumed from step 30 with a fresh optimiser after an
+interruption. ~70 GPU-hours.
+
+### 3.8 Compute
+One RTX 5060 Ti 16 GB (WSL2). ~65 GPU-hours for everything; final pipeline alone ~12 GPU-hours. PyTorch 2.11, vLLM
+0.23, transformers 4.57.1, peft 0.17.1 (IDEA.md).
+
+---
+
+## 4. matousek-martin, qwen3-self-replay (256: 31.2% / +0.21; 850: 41.6% / -1.17)
+
+Main files: [MAT] `README.md`, `IDEA.md`, `docs/METHOD.md`, `configs/self-replay-plan.json`,
+`provenance/training-data.json`, `studies/README.md`, `studies/self-replay/results/checkpoint-*/comparison.json`,
+`artifacts/ablation-results/{no-replay,no-length}/comparison.json`, `studies/self-replay/training/references.json`.
+
+### 4.1 Data (provenance/training-data.json)
+- Raw sources: GSM8K train (7,473), APPS (5,000), allenai/tulu-3-sft-personas-instruction-following (29,980),
+  Salesforce xlam-function-calling-60k (60,000) + Glaive function-calling v2 (no-call examples).
+- After screening: train 41,857 rows = tools 30,801 / math 6,134 / coding 3,396 / instructions 1,526; development 2,589;
+  confirmation 2,821. APPS difficulty in train: introductory 1,925 / interview 1,224 / competition 247.
+- Instruction checks actually present: no_comma 382, lowercase 384, title 277, quotation 216, uppercase 350,
+  postscript 3 (only 6 constraint types; 26,370 Tulu rows dropped as unsupported).
+- **No-call (irrelevance) examples: 79 in train, 2 in development** (self-replay-plan.json `no_call_counts`).
+- Screening: normalised exact + 5-token-shingle containment, threshold 0.8, against the benchmark prompts.
+- Frozen plan: 3,840 questions balanced across the 4 domains (plan.json `groups`), 256 dev questions; the trajectory
+  reached 1,280 questions.
+
+### 4.2 Method (docs/METHOD.md, IDEA.md, self-replay-plan.json)
+- **Reward:** `r_i = c_i * (1 - 0.1 * min(L_i / R_d, 1))`; correct >= 0.9, wrong = 0; the penalty saturates at the
+  domain reference. R_d = mean generated length (incl. failures) of the pinned base on 4 answers x 8 training questions
+  per domain, frozen: math 1,295, coding 2,044, tools 358, instructions 634 tokens (training/references.json).
+- **Advantage:** `A_i = r_i - mean(r)` over the group of 4, NOT divided by std (Dr.GRPO, `scale_rewards: false`).
+- **Policy loss:** `-1/(4*2048) * sum_i sum_t A_i * exp(l - stopgrad(l))` (fixed denominator = group size x max
+  completion length), one update per group, no PPO epochs, **no KL**. Log-probs at temperature 0.6.
+- *
+[output cut at 10,000 characters]

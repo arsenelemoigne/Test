@@ -1,0 +1,43 @@
+Total lines in competitor_methods_study.md: 560
+L1: # Public ThinkingCap Test entries: how the best ones got their scores
+L22: ## 1. One-page summary
+L39: ## 2. michal-bida, branch thinking-compression (arm Db, 47.0% / -0.78)
+L46: ### 2.1 Data (FINDINGS ?16-17, IDEA.md "Method", prepare_domains.py)
+L72: ### 2.2 Sampling and grading
+L80: ### 2.3 Pair rules (exact; train_dpo_offline.py `pairs()`)
+L100: ### 2.4 DPO hyperparameters (train_dpo_offline.py defaults + queue/a10-train-Db.sh `--balance`)
+L113: ### 2.5 All arms and scores
+L152: ### 2.6 His findings and failures (FINDINGS ?11-20, IDEA.md)
+L167: ### 2.7 Compute
+L171: ### 2.8 Check against our EXPERIMENT_LOG
+L180: ## 3. Herz1c, WhereTheThinkingStopsMattering (43.4% / -0.97) and DoesLearningToStopScale (1.7B)
+L186: ### 3.1 Data
+L198: ### 3.2 Stage 1, stop-point distillation (SFT)
+L214: ### 3.3 Stage 2, GRPO (train_grpo.py; README "Reproduce": `--steps 50 --prompts 24`)
+L228: ### 3.4 Results
+L256: ### 3.5 What failed (2-sample quick evals, README/IDEA tables)
+L266: ### 3.6 His findings
+L275: ### 3.7 1.7B variant ([HERZ17] README)
+L282: ### 3.8 Compute
+L288: ## 4. matousek-martin, qwen3-self-replay (256: 31.2% / +0.21; 850: 41.6% / -1.17)
+L294: ### 4.1 Data (provenance/training-data.json)
+L306: ### 4.2 Method (docs/METHOD.md, IDEA.md, self-replay-plan.json)
+L325: ### 4.3 Results (comparison.json per checkpoint; tokens saved / acc pp)
+L343: ### 4.4 Other experiments he ran (studies/README.md; mostly different protocols)
+L353: ### 4.5 His findings / caveats
+L362: ## 5. basta, Lightning McQwen3 (43.2% / -0.85 weights only; 47.3% / -0.88 with test-time gate)
+L367: ### 5.1 Data
+L373: ### 5.2 Stages (each a LoRA r16 / alpha 32 / dropout 0, all linear, continued from the previous; README, sft.py)
+L404: ### 5.3 Per-benchmark (README, with gate on BFCL)
+L408: ### 5.4 What did not work (IDEA.md)
+L425: ### 5.5 Compute
+L431: ## 6. Brief: mrtineu (28.7% / -1.71) and marek-krcal
+L433: ### 6.1 mrtineu / Martin Senkyr ([MRT] README.md, IDEA.md, data.md, code/thinkingcap/config.json)
+L451: ### 6.2 marek-krcal ([KRCAL] docs/experiments/preferences.md, tc/objectives.py, tc/preferences.py)
+L465: ## 7. Across entries
+L467: ### 7.1 Facts that recur (with sources)
+L501: ### 7.2 Hyperparameters that recur
+L524: ### 7.3 Where each entry is strongest (fact) and what that suggests (inference)
+L531: ### 7.4 What does not seem to work (facts)
+L540: ### 7.5 Inferences (mine, not tested by them)
+L554: ### 7.6 Gaps

@@ -1,0 +1,111 @@
+Total lines in rl_train.py: 1120
+L90: def parse_arguments():
+L92: parser.add_argument("--model", default="Qwen/Qwen3-0.6B")
+L93: parser.add_argument("--init-adapter", help="LoRA to continue from (the SFT warm start)")
+L94: parser.add_argument("--data", default="data/train.jsonl")
+L95: parser.add_argument("--sources", default="gsm8k,skywork,arc_easy,commonsense_qa")
+L96: parser.add_argument("--out", required=True)
+L97: parser.add_argument("--steps", type=int, default=6)
+L98: parser.add_argument("--questions", type=int, default=32, help="questions per step")
+L99: parser.add_argument("--group", type=int, default=8, help="replies per question")
+L100: parser.add_argument("--max-tokens", type=int, default=2048)
+L101: parser.add_argument("--alpha", type=float, default=0.5, help="weight of the distance to L*")
+L102: parser.add_argument("--lam", type=float, default=0.1, help="extra penalty per redundant token")
+L103: parser.add_argument("--redundant", default="confidence",
+L105: parser.add_argument("--window", type=int, default=10, help="TokenProbe core window W")
+L106: parser.add_argument("--windows", type=int, default=10, help="TokenProbe core windows K")
+L107: parser.add_argument("--scale-start", type=float, default=3.0, help="budget = core_len * scale")
+L108: parser.add_argument("--scale-end", type=float, default=1.5)
+L109: parser.add_argument("--rs-beta", type=float, default=1.0)
+L110: parser.add_argument("--rs-alpha", type=float, default=0.05)
+L111: parser.add_argument("--rs-lam", type=float, default=0.08)
+L112: parser.add_argument("--kl-beta", type=float, default=5e-3)
+L113: parser.add_argument("--lam-decay", type=float, default=0.2)
+L114: parser.add_argument("--redundant-quantile", type=float, default=0.2)
+L115: parser.add_argument("--settle-threshold", type=float, default=0.9)
+L116: parser.add_argument("--lr", type=float, default=2e-5)
+L117: parser.add_argument("--lr-end", type=float, help="cosine-decay the lr to this (default: constant)")
+L118: parser.add_argument("--restarts", type=int, default=1, help="cosine cycles over the run (warm restarts)")
+L119: parser.add_argument("--updates", type=int, default=1, help="optimizer steps per sampling step")
+L120: parser.add_argument("--entropy-coef", type=float, default=0.0, help="bonus on mean token entropy")
+L121: parser.add_argument("--no-think-share", type=float, default=0.0,
+L123: parser.add_argument("--no-think-bonus", type=float, default=0.0)
+L124: parser.add_argument("--batch-tokens", type=int, default=4096,
+L126: parser.add_argument("--rank", type=int, default=16, help="only used without --init-adapter")
+L127: parser.add_argument("--backend", choices=["vllm", "hf"], default="vllm")
+L128: parser.add_argument("--attention-backend", default=None, help="vLLM backend; TRITON_ATTN on a T4")
+L129: parser.add_argument("--gpu-memory", type=float, default=0.35, help="vLLM share of the GPU")
+L130: parser.add_argument("--dtype", default="bfloat16")
+L131: parser.add_argument("--seed", type=int, default=0)
+L132: parser.add_argument("--sb-alpha", type=float, default=2.0, help="shorterbetter: weight of the correctness term")
+L133: parser.add_argument("--sb-beta", type=float, default=0.005,
+L139: parser.add_argument("--gr-coef", type=float, default=0.30, help="gated: R = right x formed x finished x (1 - c L/(L+B))")
+L140: parser.add_argument("--gr-norms", default="svamp=512,mbpp=768,ifeval=416,bfcl_simple_python=160,bfcl_multiple=192,"
+L142: parser.add_argument("--gr-min-think", type=int, default=8, help="gated: fewer non-blank thinking tokens = not formed")
+L145: parser.add_argument("--gr-form", choices=("saturating", "linear"), default="saturating",
+L147: parser.add_argument("--gr-norms-from", default="",
+L150: parser.add_argument("--fixed-denominator", action="store_true",
+L152: parser.add_argument("--init-state", default="", help="resume.pt of the previous block: its AdamW state is loaded")
+L153: parser.add_argument("--warmup", type=int, default=0, help="linear warm-up steps (counted with --offset)")
+L154: parser.add_argument("--total-steps", type=int, default=0,
+L156: parser.add_argument("--max-tokens-code", type=int, default=0, help="rollout limit for code questions (the test: 8,192)")
+L157: parser.add_argument("--full-support", action="store_true",
+L159: parser.add_argument("--grad-clip", type=float, default=1.0)
+L160: parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen", "smart", "gated"], default="shorter",
+L163: parser.add_argument("--adaptive", action="store_true",
+L165: parser.add_argument("--advantage", choices=["group", "batch"], default="group",
+L167: parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
+L172: parser.add_argument("--lp-lam-start", type=float, default=1e-3)
+L173: parser.add_argument("--lp-lam-max", type=float, default=5e-2)
+L174: parser.add_argument("--lp-ramp", type=int, default=300)
+L175: parser.add_argument("--lp-norm", type=int, default=2048)
+L176: parser.add_argument("--lp-gate", type=float, default=0.0)
+L177: parser.add_argument("--format-bonus", type=float, default=0.1)
+L178: parser.add_argument("--dr-grpo", action="store_true",
+L181: parser.add_argument("--dynamic-sampling", type=float, default=0.0,
+L185: parser.add_argument("--objective", choices=["grpo", "drpo", "copd"], default="grpo")
+L188: parser.add_argument("--copd-teacher", default="Qwen/Qwen3-4B",
+L192: parser.add_argument("--copd-light", default="Reasoning Effort: Minimum viable, shortcuts strongly encouraged.")
+L193: parser.add_argument("--copd-heavy", default="Reasoning Effort: Absolute maximum with no shortcuts permitted.")
+L194: parser.add_argument("--copd-clip", type=float, default=10.0, help="copd: |A_t| cap (the paper: 10)")
+L195: parser.add_argument("--copd-outcome", type=float, default=0.0,
+L198: parser.add_argument("--copd-early", type=float, default=0.0,
+L202: parser.add_argument("--copd-early-ratio", type=float, default=0.5)
+L203: parser.add_argument("--protect-sources", default="",
+L206: parser.add_argument("--guard-drop", type=float, default=0.0,
+L209: parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight temperature (smaller: shorter)")
+L210: parser.add_argument("--drpo-solve-scale", action="store_true",
+L212: parser.add_argument("--drpo-tau", type=float, default=10.0, help="drpo: log-sum-exp temperature over wrong replies")
+L213: parser.add_argument("--drpo-delta", type=float, default=1e-4, help="drpo: trust region size")
+L214: parser.add_argument("--drpo-beta", type=float, default=1e3, help="drpo: trust region penalty")
+L215: parser.add_argument("--grader", choices=["task", "typed"], default="task",
+L217: parser.add_argument("--offset", type=int, default=0,
+L219: parser.add_argument("--save-every", type=int, default=0, help="also keep the LoRA every N steps (out/step-N)")
+L220: parser.add_argument("--eval-only", action="store_true",
+L227: def length_rewards(lengths, correct, alpha):
+L242: def shorterbetter_rewards(lengths, correct, alpha, beta):
+L251: def arora_rewards(thinking, correct, alpha):
+L264: def drpo_weights(lengths, correct, old_scores, lam, tau):
+L283: def copd_token_advantages(light, heavy, clip):
+L289: def copd_teacher_prompt(tokenizer, question, instruction):
+L299: def learning_rate(step, steps, lr, lr_end, restarts):
+L308: def split_groups(jobs, parts, rng):
+L318: def smart_rewards(lengths, correct):
+L343: def group_advantages(rewards, scale=True):
+L353: def confidence_redundant(logps, thinking_len, quantile):
+L362: def settle_redundant(p_gold_by_cut, thinking_len, threshold):
+L373: def type_of(question):
+L380: def protected_kind(question, protect):
+L385: def balanced_order(rows, rng):
+L403: def batch_logps(model, rows, device, entropies=None):
+L445: def token_batches(jobs, budget):
+L460: def norm_lp(logps):
+L467: def core_positions(scores, window, windows):
+L482: def rs_advantages(advantage, scores, core, budget, beta, alpha, lam):
+L489: def kl_coefficients(length, core, budget, beta, lam_decay):
+L499: def token_advantages(advantage, length, redundant, lam):
+L504: def grade_all(questions, replies, tokenizer, eos, grader):
+L532: class Sampler:
+L597: def held_out_eval(args):
+L635: def main():
+L1107: def probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question):

@@ -1,0 +1,58 @@
+bidax2-full               | full       | saved:  51.2 | acc: -3.00 | bida copy ? final | LUPIN data ? exact michal-bida recipe (4 answers, 1:1 pairs, no copying term) ? 
+lpt6-code                 | 720        | saved:  -3.2 | acc: -1.00 | per-type study ? code only | ONE type's pairs only (from bidax5s's pair set), our settings, 2 seeds averaged:
+grA-50                    | 720        | saved:   1.5 | acc: -0.96 | GRPO grA ? step 50 | GRPO from the raw Qwen ? khudgins/Ornith length-penalty reward (? ramp to 0.05 o
+bidax7-100                | 720        | saved:  41.3 | acc: -1.94 | bidax7 (+ his code & instructions) ? step 100 | bidax5q's data + instr2 (allenai IFEval-style, 2,000 q) + code2 (KodCode-V1 full
+bidax7-200                | 720        | saved:  43.1 | acc: -0.64 | bidax7 (+ his code & instructions) ? step 200 | bidax5q's data + instr2 (allenai IFEval-style, 2,000 q) + code2 (KodCode-V1 full
+bidax7-300                | 720        | saved:  45.3 | acc: -0.83 | bidax7 (+ his code & instructions) ? step 300 | bidax5q's data + instr2 (allenai IFEval-style, 2,000 q) + code2 (KodCode-V1 full
+bidax7-final              | 720        | saved:  43.5 | acc: -2.49 | bidax7 (+ his code & instructions) ? final | bidax5q's data + instr2 (allenai IFEval-style, 2,000 q) + code2 (KodCode-V1 full
+grB-50                    | 720        | saved:  -2.0 | acc: -0.50 | GRPO grB ? step 50 | GRPO from the raw Qwen ? khudgins length penalty 4x stronger (? ramp to 0.2 over
+grC-50                    | 720        | saved:  -0.3 | acc: +0.43 | GRPO grC ? step 50 | GRPO from the raw Qwen ? khudgins length penalty (? ramp to 0.05), NO leash (KL 
+grA-100                   | 720        | saved:  -2.3 | acc: -1.10 | GRPO grA ? step 100 | GRPO from the raw Qwen ? khudgins/Ornith length penalty (? ramp to 0.05 over 100
+grC-100                   | 720        | saved:  -3.0 | acc: -1.02 | GRPO grC ? step 100 | GRPO from the raw Qwen ? khudgins length penalty (? ramp to 0.05), NO leash (KL 
+grA-150                   | 720        | saved:  -5.8 | acc: -0.83 | GRPO grA ? step 150 (final) | GRPO from the raw Qwen ? khudgins/Ornith length penalty (? ramp to 0.05 over 100
+grC-150                   | 720        | saved:  -6.7 | acc: -0.37 | GRPO grC ? step 150 (final) | GRPO from the raw Qwen ? khudgins length penalty (? ramp to 0.05), NO leash (KL 
+grB-100                   | 720        | saved:   1.2 | acc: +0.11 | GRPO grB ? step 100 | GRPO from the raw Qwen ? khudgins length penalty 4x stronger (? ramp to 0.2 over
+grB-150                   | 720        | saved:  -0.6 | acc: -0.72 | GRPO grB ? step 150 (final) | GRPO from the raw Qwen ? khudgins length penalty 4x stronger (? ramp to 0.2 over
+ptsolo-code               | 720        | saved:  16.5 | acc: -1.27 | pt-mid's CODE adapter alone (strength 1.0) | one of pt-mid's 4 per-type adapters (lpw-pertype, lpv-base code pairs, Oct setti
+ptsolo-code-mid           | 720        | saved:  10.0 | acc: -2.43 | pt-mid's CODE adapter alone at its pt-mid strength 0.45 | pt-mid's code adapter alone at 0.45, no training
+lpt6-code-half            | 720        | saved:  -0.8 | acc: +0.37 | per-type study ? code only ? strength 0.5 | lpt6 code adapter (2 seeds averaged) at half strength: its own effect + spill-ov
+pt-nocode                 | 720        | saved:  50.8 | acc: -2.72 | Per-type merge ? pt-mid without code | pt family adapters merged at math .30 / code 0 / instr .60 / tools .45 (consulta
+pt-mid-full               | full       | saved:  53.6 | acc: -3.30 | Per-type merge ? mid ? FULL TEST | pt-mid (October's 4 per-type adapters merged at .30/.45/.60/.45, no repair) on t
+lpt6mix-Ccode             | 720        | saved:  39.5 | acc: -2.80 | lpt6 merge C + code ? instr, one fn, several, code at 0.5 | November per-type adapters (2-seed averages) merged, no training
+lpk-code-s19              | 720        | saved:  16.6 | acc: -1.90 | October rerun (new data + fp32) ? code adapter alone ? step 19 | October's per-type rule and matching on the new pool, fp32 weights + fp16 comput
+lpk-code-s10              | 720        | saved:  10.9 | acc: -1.30 | October rerun (new data + fp32) ? code adapter alone ? step 10 | same adapter at step 10 (dose curve)
+lpk-code-mid-s19          | 720        | saved:   8.8 | acc: -0.80 | October rerun ? code adapter alone at 0.45 ? step 19 | rerun adapter at its pt-mid strength
+lpk-code-s30              | 720        | saved:  16.3 | acc: -2.50 | October rerun ? code adapter alone ? step 30 | dose curve
+gr2f-10                   | 720        | saved:   4.0 | acc: -0.40 | GRPO gr2f ? from the original Qwen ? step 10 | RL, reward 0 if wrong, shorter-is-better per type (linear, B = the original's me
+gr2f-20                   | 720        | saved:  11.4 | acc: -0.60 | GRPO gr2f ? from the original Qwen ? step 20 | RL, reward 0 if wrong, shorter-is-better per type (linear, B = the original's me
+gr2f-30                   | 720        | saved:   6.8 | acc: -0.40 | GRPO gr2f ? from the original Qwen ? step 30 | RL, reward 0 if wrong, shorter-is-better per type (linear, B = the original's me
+gr2f-40                   | 720        | saved:  11.3 | acc: +0.30 | GRPO gr2f ? from the original Qwen ? step 40 (final) | RL, reward 0 if wrong, shorter-is-better per type (linear, B = the original's me
+cleanA-ca1-full           | full       | saved:  49.1 | acc: -2.40 | ca1-soup-10 (clean line A, round 3) | clean line A DPO round 3 ? 3 seeds averaged ? full test 2,759 x 8
+cleanA-rc1-full           | full       | saved:  57.4 | acc: -3.50 | rc1-soup-30 | clean line A: ca1 (DPO round 3) + one 'stop as soon as you're sure' round (calib
+cleanA-rc1-720            | 720        | saved:  58.7 | acc: -3.80 | rc1-soup-30 | clean line A: ca1 (DPO round 3) + one 'stop as soon as you're sure' round (calib
+rpe-10                    | 720        | saved:  57.2 | acc: -3.00 | Repair rpE ? step 10 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-20                    | 720        | saved:  54.8 | acc: -2.60 | Repair rpE ? step 20 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-40                    | 720        | saved:  50.5 | acc: -1.70 | Repair rpE ? step 40 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-45                    | 720        | saved:  52.9 | acc: -1.70 | Repair rpE ? step 45 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-50                    | 720        | saved:  49.5 | acc: -1.60 | Repair rpE ? step 50 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-80                    | 720        | saved:  50.4 | acc: -0.20 | Repair rpE ? step 80 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-80full                | full       | saved:  47.0 | acc: -0.90 | Repair rpE ? step 80 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+copda-10                  | 720        | saved:  14.6 | acc: -0.20 | COPD Run A ? step 10 | COPD Run A: on-policy distillation from the raw Qwen, Qwen3-4B coach (light minu
+copda-20                  | 720        | saved:  20.8 | acc: -0.40 | COPD Run A ? step 20 | COPD Run A: on-policy distillation from the raw Qwen, Qwen3-4B coach (light minu
+copda-25                  | 720        | saved:  25.6 | acc: -1.50 | COPD Run A ? step 25 | COPD Run A: on-policy distillation from the raw Qwen, Qwen3-4B coach (light minu
+copda-30                  | 720        | saved:  29.2 | acc: -1.30 | COPD Run A ? step 30 | COPD Run A: on-policy distillation from the raw Qwen, Qwen3-4B coach (light minu
+copda-35                  | 720        | saved:  29.8 | acc: -1.70 | COPD Run A ? step 35 | COPD Run A: on-policy distillation from the raw Qwen, Qwen3-4B coach (light minu
+copda-40                  | 720        | saved:  34.1 | acc: -2.40 | COPD Run A ? step 40 | COPD Run A: on-policy distillation from the raw Qwen, Qwen3-4B coach (light minu
+rpe-40full                | full       | saved:  50.6 | acc: -1.90 | Repair rpE ? step 40 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-60full                | full       | saved:  47.8 | acc: -1.20 | Repair rpE ? step 60 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+rpe-60                    | 720        | saved:  48.6 | acc: -0.70 | Repair rpE ? step 60 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest 
+copdc-10                  | 720        | saved:  12.6 | acc: -1.10 | COPD Run C ? step 10 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers per 
+copdc-20                  | 720        | saved:  28.0 | acc: -2.00 | COPD Run C ? step 20 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers per 
+copdc-25                  | 720        | saved:  35.8 | acc: -3.60 | COPD Run C ? step 25 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers per 
+copdc-30                  | 720        | saved:  43.2 | acc: -3.20 | COPD Run C ? step 30 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers per 
+copdc-35                  | 720        | saved:  49.7 | acc: -3.00 | COPD Run C ? step 35 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers per 
+copdc-40                  | 720        | saved:  57.1 | acc: -4.70 | COPD Run C ? step 40 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers per 
+rpg-100                   | 720        | saved:  40.4 | acc: +0.90 | Repair rpG (rpE 80 ? 120) ? step 100 | rpE step 80 trained 20 more steps, same recipe, 8 answers per question (1,484 pa
+rpg-120                   | 720        | saved:  32.7 | acc: +0.50 | Repair rpG (rpE 80 ? 120) ? step 120 | rpE step 80 trained 40 more steps, same recipe, 8 answers per question ? Screen 
+rpi-1
+[output cut at 10,000 characters]

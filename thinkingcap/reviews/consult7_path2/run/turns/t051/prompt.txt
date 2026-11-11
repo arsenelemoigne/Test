@@ -1,0 +1,90 @@
+"""RL stage: reward correct answers that are as short as the model's own shortest correct one,
+and push length pressure onto the thinking tokens that carry no information.
+
+Each step samples --group replies to each of --questions training questions with the current
+LoRA, then takes one policy-gradient step (GRPO-style group advantages, on-policy):
+
+  reward    a correct reply gets 1 - alpha * |len - L*| / L*, a wrong or cut-off one
+            -alpha * |len - L*| / L*, where L* is the length of the shortest correct reply in its
+            group, or the group mean when none is correct (ShorterBetter's "sample optimal
+            length"): every question sets its own budget.
+  advantage reward minus the group mean, over the group's standard deviation.
+  per token on correct replies, thinking tokens marked redundant get an extra -lambda. Two
+            markers: "confidence" (tokens the policy itself found unlikely, in the bottom
+            --redundant-quantile of the reply: exploratory filler, as in TokenProbe), or
+            "settle" (tokens after the point where p(correct answer) settled, read with
+            probe_curve.probe_scores: the model already knew).
+  TokenProbe ("On the Token Value Inequality in Efficient Reasoning", --redundant tokenprobe-rs or
+            tokenprobe-kl): each reply's token log-probs are z-scored (NormLP); the K best
+            non-overlapping W-token windows by summed NormLP are "core", the rest redundant.
+            Redundant tokens are pressed only when the reply is over budget L = core_len * scale,
+            scale annealed from --scale-start to --scale-end.
+              rs: A_t += beta * (alpha_core * NormLP_t [core] - lam * max(0, T - L) / T [redundant])
+              kl: core tokens (and in-budget replies) are anchored to the base model with a KL
+                  term beta_kl; over-budget redundant tokens lose the anchor and get
+                  -gamma_t * log pi with gamma_t = lam_decay * (T - L) / T.
+            Wrong replies get the plain update (plus the KL anchor in kl mode).
+
+Stability knobs (DLER: the penalty matters less than stable training): --lr-end with
+--restarts gives a cosine decay that restarts --restarts times; --updates splits each step's
+groups into that many optimizer steps; --entropy-coef adds a bonus on the policy's mean token
+entropy, which is logged every step so a collapse (the model no longer exploring) shows.
+
+AdaptThink (--no-think-share): that share of each group starts with an empty
+"<think>\n\n</think>\n\n", the prefix Qwen3's own non-thinking mode uses, as part of the reply.
+The policy is trained on those prefix tokens too, so it learns when skipping the thinking still
+gives a correct answer; that reply is the group's shortest, so the length reward favours it
+whenever it is right. --no-think-bonus adds AdaptThink's delta to correct no-think replies.
+
+DRPO (--objective drpo; Li, Chen, Lin, Yang, ICLR 2026, arXiv 2510.04474): the right and wrong replies of a group
+are never compared with each other. Each reply is scored s = its mean token log-prob; right replies are all pushed up,
+each with weight w = softmax over the group's RIGHT replies of r_l / lambda, r_l = 1 - len / (the group's longest
+reply), so shorter right replies get more and a long right reply is never pushed down; wrong replies are all pushed
+down with weight softmax(s / tau) over the group's wrong replies (length plays no part). Relative length (not their
+len / 8k) gives a tool call and a code task the same pressure. A trust region pens updates that drift from the
+sampling policy: beta0 * max(0, KL_hat - delta)^2, KL_hat the mean per-token log-ratio to the step's start (only
+non-zero with --updates > 1). --reward and --advantage are ignored.
+--drpo-solve-scale (ALP, Xiang et al. 2025, arXiv 2506.05256; LUPIN1.0): the length pressure follows the question's solve
+rate p in its own group: lambda_q = lambda / max(p, 1/group size), so a question solved 8/8 gets the full pressure and one
+solved 1/8 eight times less (a softer softmax over its right replies): easy questions are shortened, hard ones keep
+their thinking.
+
+COPD (--objective copd; Ruan et al., arXiv 2607.19046, 9 Nov, user): no reward at all. A frozen teacher (--copd-teacher,
+e.g. Qwen3-4B, or 'self' = the starting weights) re-reads each sampled reply twice, with a light-effort and a heavy-effort
+instruction in front of the question, and gives each reply token A_t = log p(y_t | light) - log p(y_t | heavy), clipped to
++-10: tokens only a thorough teacher would write (re-checks, filler) are pushed down, tokens a brief teacher would also
+write are pushed up, ending the thinking early included. Loss = -mean over replies of (1/T) sum_t A_t log pi(y_t), one update
+per step (on-policy). Grading still runs, for the log only. The student never sees the instructions.
+--copd-outcome w (9 Nov, user): real accuracy in the same step: each reply also gets w x (right - its question's mean right)
+on every token (GRPO's group comparison, no std), so right replies are pushed up and wrong ones down while the coach trims.
+
+Start from the SFT adapter (--init-adapter) so the model already knows how to stop.
+
+    python rl_train.py --init-adapter adapters/pruned_v2 --out adapters/rl --steps 6
+    python evaluate.py --adapter adapters/rl --out runs/rl
+"""
+
+import argparse
+from collections import defaultdict
+import json
+import math
+import os
+import random
+import statistics
+from pathlib import Path
+import subprocess
+import sys
+
+try:  # the IFEval grader imports langdetect lazily, at the first language constraint (3 Nov: grA died at step 51)
+    import langdetect  # noqa: F401
+except ImportError:
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "langdetect"], check=True)
+
+from probe_curve import read_jsonl
+from utils.eval.recipe import SAMPLING
+
+LOGIT_TEMP = 1.0  # --full-support: the sampling temperature, so the trained log-probs are those of the sampled policy
+from utils.train.rewards import is_task_correct
+
+
+def parse_arguments():

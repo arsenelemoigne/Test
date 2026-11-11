@@ -5262,3 +5262,13 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   / 35 several) outside the 11,360 questions drawn for training by rpE/rpG/rpH, rpI and od1; the original answers it x8.
 - Studies added (reference only, no copying): reviews/competitor_methods_study.md, reviews/rl_length_methods_study.md;
   reviews/claude_path1_review.md (independent review of PATH1_PLAN.md: round 1 likely ~25-35% saved; rpJ dropped).
+- **Path 1 final queued (11 Nov ~02:00; PATH1_FINAL.md):** user decisions: public datasets allowed (MetaMath, math1/math2/nofit4;
+  recipes stay off-limits), shorten bar 8/10 in round 1, rpJ dropped. Round 1 from the original (stored 10 answers, 75% of the
+  pool, Dev-512 near-dupes dropped), 3,200 pairs shorten-dominant (60-70% shorter, rest compact re-read be-right), lr 2e-5 cosine
+  to 5e-6, 200 steps; automatic gate (Dev-512 saving >= rpE-80's + 6) before round 2 (on-policy, 25/60/15, 80 steps). Seed 0 on GPU 2
+  after the Dev-512 calibration (rc1-soup-30, rpE-40/60/80, rpI-120); seed 1 on GPU 1 after od2.
+- **consult6 second analysis** (reviews/consult6_argon/run/final_answer.md) and the Claude review agreed: the first round-1 design
+  (39% shorter) would land at 20-33% saved; round 1 must reach ~53-57%.
+- **consult7 (Gemini): Path 2 RL design** (reviews/consult7_path2/run/final_answer.md; PATH2_PLAN.md with my caveats): budget-gated
+  GRPO from Path 1's final model, per-question target = P35 of its own correct lengths, batch-wise advantage normalisation,
+  clip-higher, dynamic sampling, lr 1.5e-5 cosine to 5e-6, 50 steps, 2 seeds; runs only after Path 1. Gemini spend so far ~$8.6.

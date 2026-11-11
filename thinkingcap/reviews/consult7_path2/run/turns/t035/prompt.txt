@@ -1,0 +1,66 @@
+L3973: thinkprune: caps per part from the original's right answers in the 4-answer pool file (math q0.95, others q0.70),
+L3978: fails = every checkpoint on or below the curve after ~300 steps. Smoke test (tp0) queued on GPU 1 after the per-type
+L4023: - RL SMOKE TEST tp0 (thinkprune, from the original, 5 steps x 16 questions x 8 answers, lr 5e-6, KL 1e-3): ran clean,
+L4095: Queued: GPU 1 after bidax5q seed 1: gr0 smoke, grA (his recipe), grB (penalty up to 0.2); GPU 2 after bidax7: grC (no
+L4096: KL), grD (gate 0.5). All from raw, 150 steps, the 720 at 50/100/150, ~4-4.5 h each.
+L4097: - ~02:30 (user): GRPO from the raw Qwen as RL, 5 variations, ONE setting changed each from grA (lr 2e-6, KL 0.04,
+L4098: penalty up to 0.05, no gate): grB penalty 0.2, grC KL 0, grD gate 0.5 (GRPO-lambda), grE lr 5e-6. 150 steps each,
+L4099: 12 questions x 8 answers, Dr. GRPO normalization, the 720 at 50/100/150. GPU 1: gr0 smoke -> grA -> grB -> grE;
+L4100: GPU 2 after bidax7: grC -> grD. Then adapt.
+L4101: - ~02:40: GRPO screens now draw the SAME questions as v1's DPO data: pool dp13 + nofit4 + math1 + math2 (thinkprune
+L4111: GPU 1 had pulled the plan before the GRPO lines and started bidax6s: interrupted and restarted so gr0 / grA / grB /
+L4112: grE run first.
+L4113: - ~01:45 (user): sixth GRPO variation grF = SmartThinker reward (arXiv 2603.08000). rl_train.py --reward smart: per
+L4118: lands exactly on the mean. Everything else = grA (the one change is the reward). Queued on GPU 2 after grD, behind a
+L4121: ### 3 Nov: grF aligned with the SmartThinker paper (read in full)
+L4122: Before it ran, grF had three settings borrowed from grA that the paper does not use. Now: plain GRPO advantages
+L4124: it), constant lr. New `track.py --tp-max-solve`: grF keeps only questions the original Qwen misses at least once in 4,
+L4126: (the paper itself says difficulty-based sampling would cut the steps needed). lr stays 2e-6 like grA (LoRA r32; the
+L4151: too close to the final at 339). GPU 1: grA -> D11 push2 -> grB -> D1 dast -> grE -> D2 hard, D3 route, D4 budget, D5 margin,
+L4152: D10 l2s50e -> old re-scores, bidax6s. GPU 2: code2 -> bidax7 -> grC -> D9 adar1 -> grD -> gs0, grF -> D7 st1 + 2stage,
+L4212: ### 3 Nov ~04:00: grA step 50 (720 x4) + grA crash fixed
+L4213: **grA-50** (GRPO from the raw Qwen, khudgins/Ornith length penalty, ? ramping to 0.05 over 100 steps, so ~0.025 at step 50;
+L4220: was missing on this runtime). Fixed: rl_train.py installs langdetect if missing (same fix protects grC / grD / grF).
+L4221: grA re-queued on GPU 1 right after D11 lpd-push2 (now training), resuming from its saved step 50. GPU 2: code2 answers
+L4236: GPU 1 moved on to grB (GRPO, 4x penalty).
+L4241: improve on bidax5q; one seed, so within seed noise. GPU 2 moved on to grC (GRPO, no leash).
+L4283: loops and pairs come from those fresh answers. Inserted on GPU 1 between grB and D1 (chs0 smoke, then ch1). Tests:
+L4287: - ~11:25 **grB step 50** (GRPO, 4x length penalty: ? ramping to 0.2 over 100 steps, ~0.1 at step 50): **-2.0% / -0.5**
+L4289: several +4 / -0.6, no fit 0 / -1.5. Like grA at step 50 (+1.5 / -1.0): 50 GRPO steps at 12 questions x 8 answers move
+L4290: nothing yet, even at 4x the penalty. Steps 100 / 150 next. GPU 2: grC at step 50, scoring.
+L4357: - ~13:40 **grC step 50** (GRPO, no leash: KL 0): **-0.3% / +0.4** (svamp +2 / -0.2, mbpp +3 / +3.5, ifeval -8 / -1.3, one
+L4358: function -1 / +0.6, several +4 / -2.1, no fit -1 / -0.2). Like grA / grB at step 50: unchanged from the raw Qwen. Both
+L4359: runtimes resumed after the ~12:40 reconnect (grA from step 50 on GPU 1, grC from its last block on GPU 2).
+L4360: - ~15:30 **grA step 100: -2.3% / -1.2** (svamp -1 / -2.5, mbpp -4 / +2.5, ifeval -3 / -2.5, one function -4 / -0.8, several 0 / -3.6,
+L4361: no fit 0 / -2.3); **grC step 100: -3.0% / -1.0** (svamp +1 / +0.4, mbpp -5 / -1.2, ifeval -4 / -1.7, one function -3 / -1.9,
+L4365: length signal; the reward is nearly pure "be right" and GRPO drifts. grB (4x penalty) and grE (lr x2.5) test exactly
+L4366: this lever; step 150 of grA / grC next.
+L4367: - ~15:45 (user: don't run useless GRPO): queued GRPO changed. grD (gate) -> **grS** = standard GRPO scaling (no Dr. GRPO),
+L4368: penalty 0.05 (rescaling alone); grE (lr x2.5) -> **grP** = standard scaling + penalty 0.5 reached at step 50. grB (0.2,
+L4369: running), grF (SmartThinker, standard scaling) unchanged; grA / grC finish their 150 steps as the confirmation.
+L4370: - ~17:00 **grA step 150 (final): -5.8% / -0.9** (svamp -5 / -1.0, mbpp -1 / +1.0, ifeval -13 / -3.3, one function -3 / 0.0,
+L4371: several -5 / -1.3, no fit -4 / +1.0); **grC step 150 (final): -6.7% / -0.3** (svamp -5 / -1.5, mbpp -14 / +1.5, ifeval -7 / -1.7,
+L4373: raw Qwen makes thinking LONGER over training (step 50 / 100 / 150: grA +1.5 / -2.3 / -5.8%, grC -0.3 / -3.0 / -6.7%) at
+L4374: about -0.5 to -1 point: the "be right" reward dominates and longer thinking is what it rewards. The leash (grA KL 0.04 vs
+L4375: grC 0) changes little. grS / grP (standard scaling; 10x penalty) test the fix. GPU 1: grB resumed; GPU 2: D9 Ada-R1 DPO.
+L4376: - ~18:00 **grB step 100** (4x penalty, full at step 100): **+1.2% / 0.0** (svamp +2 / +0.2, mbpp +1 / +2.3, ifeval +3 / -1.5, one
+L4377: function +1 / +0.4, several -2 / -3.4, no fit -3 / +0.2). The 4x penalty stops the drift to longer thinking seen in grA / grC
+L4380: - ~18:15 (user): **GRPO stopped.** No GRPO run shortened thinking (grA / grC finals 6-7% longer, grB +1.2% at step 100).
+L4381: grB finishes its 150 steps; grS, grP, gs0 and grF (SmartThinker) are taken out of the queues (kept as comments). The
+L4383: - ~19:30 **grB step 150 (final): -0.6% / -0.7** (svamp 0 / -1.9, mbpp -4 / +0.6, ifeval +1 / -1.0, one function -2 / -0.6,
+L4473: - Against our grA (khudgins): per-step length pressure ~10x weaker (0.05 x thinking/2048 vs 0.30 x L/(L+B)), and smaller than the
+L4479: trace's thinking = +0.0016 reward in grA); ramp = only ~100 full-strength-equivalent steps; thinking-only penalty (IFEval waste
+L4480: is answer-side) saturating at 2,048; grC shows KL was not the blocker; grS / grP / grF untested, not failures. Confirmed two
+L4488: Gated reward gives a signal in all-right groups (2/2 groups every step; grA's reward gave ~0 there); code question got its
+L4504: - Bug found: my --nt-full code (3 Nov) was inserted into drpo() instead of nothink(), so "ntfull" re-printed the old fresh-240
+L4590: - GRPO: grA2 (grA + all trainer fixes, same data) and gr2 (consultant's recipe from v1) prepared, commented in plan_line_b;
+L4591: gr2 now screened at steps 10 20 40 60 80 120 160 200 250 (step sensitivity, --tp-score-steps).
+L4867: (grA/B/C-rl steps 50 / 100) were listed (adapter "grA-rl" vs results "grA-*"), and GRPO resume files were counted twice.
+L4868: Fixed (name suffixes -rl / -drpo / -teach / ... stripped; D skips files inside C items); a second dry run is queued.
+L4884: not dominate the penalty). Prepared as the commented plan line gr2n next to gr2; GRPO stays off.
+L4885: - ~03:35 (user) gr2n set to start from the ORIGINAL Qwen (not v1), 40 steps x 32 questions x 8 answers, scored at 10 / 20 / 30 / 40, per-typ
+L4886: - ~03:45 (user) gr2n selects questions and length means from the original's 10 answers per question (thinkprune --tp-answers10, new), not 4;
+L4890: - ~04:20 (user) thinkprune --tp-check (new: eligible questions per part vs 40 x 32 needed, no training) queued on GPU 2 as the next stage, b
+L4922: (training log: mean tokens 620 -> 464 in 10 steps). Fix: thinkprune --tp-norm-means computes B per part inside the stage from the
+L5075: re-orders the pool by source (balanced_order). Fix: with --tp-mixed-share, thinkprune keeps exactly steps x questions
+L5206: original's 10 stored answers; track.py thinkprune prints how many questions carry it) gets -1.0 more. Logged per step as

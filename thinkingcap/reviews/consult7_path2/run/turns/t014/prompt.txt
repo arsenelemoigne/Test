@@ -1,0 +1,158 @@
+        if args.objective == "copd":  # the teacher reads every reply twice (light, heavy); no gradient
+            student_temp, LOGIT_TEMP = LOGIT_TEMP, 1.0  # the teacher's own distribution, not the sampling temperature
+            scored = [j for j in jobs if j[1]]
+            reads = {}
+            model.eval()
+            if teacher is not None:
+                import gc
+                gc.collect()
+                torch.cuda.empty_cache()
+                teacher.to(device)
+            for effort, instruction in (("light", args.copd_light), ("heavy", args.copd_heavy)):
+                rows = [(copd_teacher_prompt(tokenizer, j[5], instruction), j[1], j) for j in scored]
+                for batch in token_batches(rows, args.batch_tokens):
+                    with torch.no_grad(), torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        if teacher is None:
+                            with model.disable_adapter():
+                                lps = batch_logps(model, [(r[0], r[1]) for r in batch], device)
+                        else:
+                            lps = batch_logps(teacher, [(r[0], r[1]) for r in batch], device)
+                    for r, lp in zip(batch, lps):
+                        reads[(effort, id(r[2][1]))] = lp.float().tolist()
+                    del lps
+            LOGIT_TEMP = student_temp
+            if teacher is not None:
+                teacher.to("cpu")
+            if device == "cuda":
+                torch.cuda.empty_cache()  # the reads' activations must not stay cached through the backward pass
+            all_adv, close_adv = [], []
+            for j in scored:
+                adv = copd_token_advantages(reads[("light", id(j[1]))], reads[("heavy", id(j[1]))], args.copd_clip)
+                copd_adv[id(j[1])] = adv
+                all_adv += adv
+                close_adv += [a for a, t in zip(adv, j[1]) if t == close_id]
+                j[3] = 1.0  # every sampled reply is trained (no reward filter)
+            if args.copd_outcome:  # (9 Nov) the right/wrong signal, relative to the other replies to the same question
+                groups_of = defaultdict(list)
+                for j in scored:
+                    groups_of[id(j[5])].append(j)
+                with_signal = 0
+                origin = {"sometimes": [0, 0, 0, 0], "always": [0, 0, 0, 0]}  # [questions, mixed now, right, answers]
+                for members in groups_of.values():
+                    mean_right = sum(bool(j[2]) for j in members) / len(members)
+                    with_signal += 0 < mean_right < 1
+                    s10 = members[0][5].get("solve10")
+                    if s10 is not None:  # (9 Nov) the question's kind from the original's 10 stored answers
+                        o = origin["always" if s10 >= 1 else "sometimes"]
+                        o[0] += 1
+                        o[1] += 0 < mean_right < 1
+                        o[2] += sum(bool(j[2]) for j in members)
+                        o[3] += len(members)
+                    for j in members:
+                        bonus = args.copd_outcome * (float(bool(j[2])) - mean_right)
+                        if bonus:
+                            copd_adv[id(j[1])] = [a + bonus for a in copd_adv[id(j[1])]]
+                stats["copd_origin"] = origin
+                stats["copd_outcome_groups"] = with_signal
+            if args.copd_early:  # (10 Nov, user: fix 2) a wrong reply that gave up thinking too early is punished more
+                early, wrong = 0, 0
+                for j in scored:
+                    base_think = j[5].get("base_think")
+                    if j[2] or not base_think:
+                        continue
+                    wrong += 1
+                    if j[4] < args.copd_early_ratio * base_think:
+                        early += 1
+                        copd_adv[id(j[1])] = [a - args.copd_early for a in copd_adv[id(j[1])]]
+                stats["copd_early"] = [early, wrong]
+            stats["copd_mean"] = sum(all_adv) / max(1, len(all_adv))
+            stats["copd_negative"] = sum(a < 0 for a in all_adv) / max(1, len(all_adv))
+            stats["copd_close"] = sum(close_adv) / len(close_adv) if close_adv else None
+            stats["signal"] = len(scored)
+        if args.objective == "drpo":  # coefficients per reply, from the sampling policy's scores (no gradient)
+            model.eval()
+            with torch.no_grad():
+                for batch in token_batches([tuple(j) for j in jobs if j[1]], args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        lps = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                    for j, lp in zip(batch, lps):
+                        old_logps[id(j[1])] = lp.detach().float()
+            by_group = defaultdict(list)
+            for job in jobs:
+                by_group[id(job[5])].append(job)
+            stats["signal"] = 0
+            for members in by_group.values():
+                scores = [float(old_logps[id(j[1])].mean()) if j[1] else 0.0 for j in members]
+                protected = protected_kind(members[0][5], protect)
+                lam = args.drpo_lambda
+                if args.drpo_solve_scale:  # ALP: easy questions (high solve rate) get the full length pressure
+                    lam = lam / max(sum(j[2] for j in members) / len(members), 1 / len(members))
+                coef = drpo_weights([len(j[1]) for j in members], [j[2] for j in members], scores,
+                                    1e9 if protected else lam, args.drpo_tau)
+                for j, c in zip(members, coef):
+                    j[3] = c
+                stats["signal"] += any(c != 0 for c in coef)
+        elif args.advantage == "batch":  # DLER: center per group, scale by the whole batch's spread
+            centered = [[r - sum(g) / len(g) for r in g] for g in groups]
+            spread = statistics.pstdev([c for g in centered for c in g]) or 1.0
+            for job in jobs:
+                g, i = job[3]
+                job[3] = centered[g][i] / spread
+            stats["signal"] = sum(any(abs(c) > 1e-8 for c in g) for g in centered)
+        jobs = [tuple(j) for j in jobs]
+
+        # on-policy update(s): loss = -sum_t A_t log pi(token_t), averaged over the chunk's tokens
+        if args.total_steps:  # one schedule across 10-step blocks: warm-up, then cosine to --lr-end over the whole run
+            g = args.offset + step
+            lr = args.lr * (g + 1) / args.warmup if g < args.warmup else learning_rate(
+                g - args.warmup, args.total_steps - args.warmup, args.lr, args.lr_end, 1)
+        else:
+            lr = learning_rate(step, args.steps, args.lr, args.lr_end, args.restarts)
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr
+        model.train()
+        loss_sum, entropy_sum, entropy_count = 0.0, 0.0, 0
+        active = [j for j in jobs if j[1] and not (j[3] == 0 and not j[2])]
+        for chunk in split_groups(active, args.updates, rng):
+            total_tokens = max(1, sum(len(j[1]) for j in chunk))
+            if args.dr_grpo:  # a constant denominator: long wrong answers no longer get a smaller per-token push
+                total_tokens = max(1, len(chunk) * args.max_tokens)
+            if args.fixed_denominator:  # (4 Nov) every reply of the step counts, active or not: filtering keeps the scale
+                total_tokens = max(1, len(jobs) * max(args.max_tokens, args.max_tokens_code) // max(1, args.updates))
+            n_questions = max(1, len({id(j[5]) for j in chunk}))
+            if args.objective == "drpo":
+                kl_sum, kl_terms = 0.0, []
+                for batch in token_batches(chunk, args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                    loss = 0.0
+                    for j, logps in zip(batch, batch_lp):
+                        loss = loss - j[3] * logps.float().mean() / n_questions
+                        kl_terms.append(float((old_logps[id(j[1])].to(logps.device) - logps.float()).sum()))
+                    scaler.scale(loss).backward()
+                    loss_sum += float(loss)
+                kl_hat = sum(kl_terms) / total_tokens
+                if kl_hat > args.drpo_delta:  # trust region: a second pass adds the penalty's gradient
+                    scale_kl = 2 * args.drpo_beta * (kl_hat - args.drpo_delta)
+                    for batch in token_batches(chunk, args.batch_tokens):
+                        with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                            batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                        penalty = sum((old_logps[id(j[1])].to(lp.device) - lp.float()).sum()
+                                      for j, lp in zip(batch, batch_lp)) * scale_kl / total_tokens
+                        scaler.scale(penalty).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                continue
+            if args.objective == "copd":  # Eq. 5 on-policy: loss = -mean over replies of (1/T) sum_t A_t log pi(y_t)
+                for batch in token_batches(chunk, args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        entropies = []
+                        batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
+                    refs = None
+                    if args.kl_coef:
+                        with torch.no_grad(), model.disable_adapter():
+    
+[output cut at 10,000 characters]

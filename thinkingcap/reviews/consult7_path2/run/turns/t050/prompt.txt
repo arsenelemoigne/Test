@@ -1,0 +1,47 @@
+L29: --restarts gives a cosine decay that restarts --restarts times; --updates splits each step's
+L44: len / 8k) gives a tool call and a code task the same pressure. A trust region pens updates that drift from the
+L45: sampling policy: beta0 * max(0, KL_hat - delta)^2, KL_hat the mean per-token log-ratio to the step's start (only
+L46: non-zero with --updates > 1). --reward and --advantage are ignored.
+L54: instruction in front of the question, and gives each reply token A_t = log p(y_t | light) - log p(y_t | heavy), clipped to
+L84: from utils.eval.recipe import SAMPLING
+L86: LOGIT_TEMP = 1.0  # --full-support: the sampling temperature, so the trained log-probs are those of the sampled policy
+L119:     parser.add_argument("--updates", type=int, default=1, help="optimizer steps per sampling step")
+L138:     # --max-tokens-code, --full-support (top_p 1, no top_k; log-probs at the sampling temperature), --grad-clip
+L143:     # (6 Nov, user, after Herz1c's write-up) the official metric is a ratio of summed tokens PER BENCHMARK, so the length
+L159:     parser.add_argument("--grad-clip", type=float, default=1.0)
+L194:     parser.add_argument("--copd-clip", type=float, default=10.0, help="copd: |A_t| cap (the paper: 10)")
+L200:                              "--copd-early-ratio x the original model's median thinking on its right answers to that question "
+L202:     parser.add_argument("--copd-early-ratio", type=float, default=0.5)
+L283: def copd_token_advantages(light, heavy, clip):
+L284:     """COPD Eq. 3-4: A_t = log p_teacher(y_t | light prompt) - log p_teacher(y_t | heavy prompt), clipped to +-clip.
+L286:     return [max(-clip, min(clip, a - b)) for a, b in zip(light, heavy)]
+L295:     ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, enable_thinking=True)
+L320:     (all answers ~ N(mu1, s1^2), right ones ~ N(mu2, s2^2): l* = (s1^2 mu2 - s2^2 mu1) / (s1^2 - s2^2), clipped to the
+L425:         logp = torch.log_softmax(head(h).float() / LOGIT_TEMP, dim=-1)
+L537:         global LOGIT_TEMP
+L539:             self.sampling, self.sampling_hf = dict(SAMPLING, top_p=1.0, top_k=-1), dict(SAMPLING, top_p=1.0, top_k=0)
+L540:             LOGIT_TEMP = SAMPLING["temperature"]
+L542:             self.sampling = self.sampling_hf = SAMPLING
+L549:                               max_model_len=max(args.max_tokens, getattr(args, "max_tokens_code", 0)) + 1024, generation_config="vllm", **extra)
+L565:                     # --reward cap (ThinkPrune, 2 Nov): each question's own token cap; generation stops there
+L605:     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
+L636:     global LOGIT_TEMP  # --objective copd reads the teacher at temperature 1
+L693:         if args.updates != 1:  # on-policy only: one update per sampling step, so the PPO ratio is 1 and needs no clip
+L694:             raise SystemExit("--objective copd needs --updates 1")
+L739:         prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
+L800:             advantages = group_advantages(rewards, scale=not args.dr_grpo) if args.advantage == "group" else None
+L819:         old_logps = {}
+L822:             student_temp, LOGIT_TEMP = LOGIT_TEMP, 1.0  # the teacher's own distribution, not the sampling temperature
+L843:             LOGIT_TEMP = student_temp
+L850:                 adv = copd_token_advantages(reads[("light", id(j[1]))], reads[("heavy", id(j[1]))], args.copd_clip)
+L884:                     if j[4] < args.copd_early_ratio * base_think:
+L899:                         old_logps[id(j[1])] = lp.detach().float()
+L905:                 scores = [float(old_logps[id(j[1])].mean()) if j[1] else 0.0 for j in members]
+L936:         for chunk in split_groups(active, args.updates, rng):
+L938:             if args.dr_grpo:  # a constant denominator: long wrong answers no longer get a smaller per-token push
+L941:                 total_tokens = max(1, len(jobs) * max(args.max_tokens, args.max_tokens_code) // max(1, args.updates))
+L951:                         kl_terms.append(float((old_logps[id(j[1])].to(logps.device) - logps.float()).sum()))
+L960:                         penalty = sum((old_logps[id(j[1])].to(lp.device) - lp.float()).sum()
+L964:                 torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+L995:                 torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+L1050:             torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)

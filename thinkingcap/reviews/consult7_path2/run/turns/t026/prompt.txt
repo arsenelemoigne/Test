@@ -1,0 +1,85 @@
+  would have been missing on Colab (the Argon run would have crashed at start). It now also copies astra_*.txt and astra_*.md.
+- ~04:00 **Astra sandbox test (Delos worker Ivan = gpt-6-astra, Mac CPU, small local data folder, 4 passes, $3 cap):**
+  22 turns, $2.59 COUNTED (token counts at Astra's list price with no cache discount: an upper bound; the real Delos bill
+  is on Ivan's credits page). Worked: the data folder (it read raw.jsonl, summary, test_card, recipe, pairs and flagged the
+  empty local v1.jsonl), the kernel (an edit of layers.25.mlp.down_proj), two teacher-forced reads (log-probs, top-k, MLP
+  inputs at layers 18 / 22 / 25), the generation pass (all answers cut at the 256-token CPU limit: a test limit), the
+  spending stop (stopped at $2.59 / $3 keeping the reserve). Not testable on the Mac: checkpoint:step-N (no peft). Harness
+  bugs found and fixed: the refusal filter matched "pty" inside "empty" (6 harmless blocks refused; now only real imports
+  and calls), two blocks in one reply wasted the turn (now the first runs and the rest are reported ignored), a closing and
+  an opening fence fused on one line broke the code (now split); the budget-end final message now carries the last
+  forward results and the edit list (the final report had only the notes and could not state what the edit did).
+
+### 2026-11-04 ? consult1: independent strategy analysis (Ivan / gpt-6-astra, Mac CPU, raw-Qwen data only)
+- Given only the raw Qwen's 71,480 training answers (numbers + 2,806 texts), the test profile and thinking on/off; nothing of our work. 13 turns, 12 code runs, $2.83 (cap $4). Report: consult1_report.md.
+- Findings we had not isolated: 80% of IFEval cuts had ALREADY closed </think> (~71% of their tokens are answer-side loops, e.g. repeated quotes); code cuts 24% repeated 8-word windows vs 5% in right code; BFCL irrelevance is 56% of training tool questions vs 29% on the test.
+- Limits it computed: deleting every cut answer = ~15% saving; halving all thinking = ~44%; shortest-of-4 right = 17-25% per part. So >50% needs denser reasoning on ordinary right answers, not only tail cuts.
+- Ranking: A compact verified SFT (rewritten dense traces + 20-30% original replay; est. 46-67% / -1.2..+1.5), B correctness-constrained DPO/GRPO after A (42-68%), C learned readiness head for </think> (32-57%). A+B est. 52-72%.
+- consult1 follow-up 1 (GRPO recipe, our runs not shown; $5.09 total): consult1_grpo_recipe.md. Start from a modest compact-SFT adapter;
+  reward = right x formed x not-cut x (1 - 0.30 L/(L+B_type)), B = median right length per type (svamp 512, mbpp 768, ifeval 416,
+  bfcl 160/192/192), wrong/cut/empty = 0, NO format bonus; group 8 x 32 questions, 252 steps; mean-centred advantages (no std),
+  Dr. GRPO constant denominator; lr 1e-5 warm-up 12 + cosine to 1e-6; KL 0.01; clip 0.8-1.2, grad clip 0.5; LoRA r16 a32;
+  mbpp rollouts 8,192; keep all-right groups (they carry the length signal). Ladder: penalty 0.45 / 0.15, lr 5e-6, KL 0.003, temp 0.8.
+- Against our grA (khudgins): per-step length pressure ~10x weaker (0.05 x thinking/2048 vs 0.30 x L/(L+B)), and smaller than the
+  0.1 format bonus that wrong answers also get; lr 5x lower (2e-6 constant) with KL 4x higher (0.04); 96 vs 256 completions per
+  step and 150 vs 252 steps (14k vs 64k completions); code rollouts cut at 4,096; fresh AdamW every 10-step block. Sent our runs
+  (consult1_our_grpo_runs.md) + the Strategy A question as follow-up 2 (cap $11).
+- consult1 follow-up 2 (our GRPO runs shown + Strategy A detail; session total $10.52): consult1_grpo_diagnosis_and_sft.md.
+  Diagnosis: the length contrast in our lenpen reward was 115-1,035x smaller than the right/wrong contrast (halving a tool
+  trace's thinking = +0.0016 reward in grA); ramp = only ~100 full-strength-equivalent steps; thinking-only penalty (IFEval waste
+  is answer-side) saturating at 2,048; grC shows KL was not the blocker; grS / grP / grF untested, not failures. Confirmed two
+  trainer issues in rl_train.py: never-solved questions excluded (min_solve < rate), and the Dr. GRPO denominator counts ACTIVE
+  replies only (changes with filtering). Plus fresh AdamW every 10-step block and 4,096 code rollouts. Revised first run =
+  compact-SFT start, its reward on ALL tokens, KL 0.005, persistent optimizer, step-84 go/no-go (>= 5% shorter than the SFT start).
+  Strategy A: rewrite verified right answers with a $2/$10 teacher (prompts per type in the file), verify (re-grade, check the
+  computation/plan/argument mapping, student NLL triage), 6,048 examples (75% compact, 25% original replay, ~15% hard repairs),
+  LoRA r16 a32, lr 8e-5 cosine, 2 epochs, loss on the whole reply; rewriting cost ~$45-65; go to B at >= 20% saved, >= -0.3 pt.
+- ~03:30 GRPO v2 plumbing CPU smoke (Mac, hf backend, 6 easy math questions, 2 blocks x 2 steps, 2 questions x 4): passes.
+  Gated reward gives a signal in all-right groups (2/2 groups every step; grA's reward gave ~0 there); code question got its
+  own rollout limit; lr warm-up + cosine follows the global step across blocks (1e-5, 1e-5, 5.5e-6, 1e-6); block 2 loaded
+  block 1's AdamW ("optimizer state continued"). Untested on CPU: the vLLM path with --full-support (top_k -1): smoke on GPU first.
+
+### 4 Nov ~05:20 ? D9 lpd-adar1 step 100 (720 x4)
+**lpd-adar1-s0-100: +68.3% / -6.6** (full-eval weighting +68.2 / -6.7). svamp +79 / -11.7, mbpp +74 / -7.9, ifeval +58 / -1.0,
+one function +52 / -6.9, several +56 / -4.6, no fit +59 / -5.6. Curve at 68.3% = -7.3, so +0.7 above it (on the curve).
+Beyond D11 push2's range (max 52%); far outside the 1-point limit. Ada-R1 pairs cut very hard by step 100 (svamp, mbpp worst).
+- ~06:20 **D9 lpd-adar1 step 200: +69.4% / -7.6** (svamp +80 / -13.1, mbpp +74 / -9.4, ifeval +58 / -3.3, one function +56 / -9.0,
+  several +58 / -4.6, no fit +64 / -0.2), on the curve (0.0). **Final (338): +65.3% / -6.8** (svamp +79 / -10.8, mbpp +63 / -9.4,
+  ifeval +55 / -1.7, one function +56 / -9.4, several +58 / -5.3, no fit +63 / -1.2), -0.3 vs curve. Ada-R1 pairs = far too much
+  shortening; svamp / mbpp / one-function lose 9-13 points. Not a v1 candidate.
+- **D1 lpd-dast step 100: +39.5% / -2.6** (svamp +57 / -1.9, mbpp +33 / -3.5, ifeval +22 / -3.3, one function +33 / -5.4, several
+  +38 / -3.2, no fit +47 / +4.2), -1.4 vs curve. **Step 200: +30.8% / -2.0** (svamp +48 / -3.7, mbpp +22 / -2.1, ifeval +8 / -1.0,
+  one function +34 / -6.0, several +37 / -2.1, no fit +45 / +5.2), -1.7 vs curve: DAST gets LONGER with training and stays below
+  the curve; worse than bidax5q (46.7 / -0.5). Final pending.
+- Bug found: my --nt-full code (3 Nov) was inserted into drpo() instead of nothink(), so "ntfull" re-printed the old fresh-240
+  numbers. Moved into nothink(); re-queued as ntfull2 on GPU 2 (next after lpd-st1).
+- ~07:20 **D1 lpd-dast final (335): +33.1% / -2.3** (svamp +48 / -3.1, mbpp +24 / -2.5, ifeval +16 / -2.3, one function +33 / -6.9,
+  several +37 / -2.9, no fit +47 / +5.6), -1.8 vs curve. DAST closes below the curve at every checkpoint: dropped.
+- **ntfull2: the original Qwen with thinking OFF on the FULL test (2,759 x 8)** (measurement for the blog curves; not allowed as a
+  solution): svamp 88.7 -> 20.6 (-68.1), mbpp 52.4 -> 40.8 (-11.6), ifeval 58.7 -> 57.5 (-1.3), one function 82.2 -> 71.4
+  (-10.7), several 76.1 -> 55.3 (-20.8), no fit 83.4 -> 90.3 (+6.9); tokens saved 89-98% (ifeval 62%: its answers stay long).
+  Data in runs/mvtf/full-base-nothink (Drive).
+- ~08:20 **D7 lpd-st1 final (stage 1: right-beats-wrong pairs only, 50 steps): -4.6% / +0.8** (svamp +7 / +1.0, mbpp -15 / 0.0,
+  ifeval -7 / +1.5, one function -9 / 0.0, several -5 / -1.5, no fit 0 / +3.3); +1.7 vs curve. As intended: accuracy up a little,
+  answers slightly longer (code 15% longer); it is the start point for lpd-2stage (bida's 1:1 pairs on top), now training.
+- ~13:20 **D2 lpd-hard step 100: +9.4% / +0.1** (svamp +20 / 0.0, mbpp +7 / +0.2, ifeval -1 / +0.8, one function +9 / -0.6, several
+  +9 / -2.3, no fit +12 / +1.5), -0.1 vs curve. The hard "keep trying" pairs hold length back a lot (bidax5q step 100: 41.8 / +0.2).
+- **D7 lpd-2stage step 100: +16.2% / +1.7** (svamp +24 / +0.8, mbpp -5 / +2.3, ifeval +23 / +0.4, one function +13 / -1.7, several
+  +9 / +0.8, no fit +36 / +10.6), +1.4 vs curve: accuracy up (no-fit +10.6) but shortening slow; steps 200 / final decide.
+- ~15:20 **D2 lpd-hard step 200: +13.4% / -0.2** (-0.5 vs curve); **final: +13.8% / -0.1** (svamp +29 / -0.6, mbpp +4 / +1.0,
+  ifeval +2 / -1.7, one function +14 / +0.4, several +13 / -0.2, no fit +26 / +2.3), -0.4 vs curve. The "keep trying on hard
+  questions" pairs almost cancel the shortening: accuracy kept, saving tiny. Dropped.
+- **D7 lpd-2stage step 200: +19.4% / +1.0** (+0.7); **final: +16.5% / +1.4** (svamp +20 / +2.3, mbpp -19 / +4.0, ifeval +35 /
+  -1.7, one function +14 / -7.5, several +9 / -1.7, no fit +42 / +12.3), +1.1 vs curve. Starting from the right-beats-wrong
+  stage makes the same bida pairs shorten 3x less (bidax5q 46.7%); one-function -7.5, code longer. Not a v1 candidate.
+- D3 lpd-route started: 13,430 pairs (the hard + right-below pairs add many).
+- ~19:20 **D8 lpd-math step 100: +40.9% / -1.6** (svamp +47 / -3.1, mbpp +39 / -2.1, ifeval +40 / -2.1, one function +34 / -2.5,
+  several +38 / +2.3, no fit +41 / +2.7), -0.2 vs curve. The extra right>wrong pairs on hard math did not protect math
+  (bidax5q step 100: 41.8 / +0.2, svamp -1.5). Steps 200 / final next. GPU 1: D3 route step 130/336.
+- ~20:00 **D8 lpd-math step 200: +43.3% / -1.8** (-0.1 vs curve; svamp +50 / -4.6); **final: +41.7% / -1.0** (svamp +44 / -3.3,
+  mbpp +29 / +1.3, ifeval +48 / -2.1, one function +41 / -2.9, several +44 / -1.5, no fit +44 / +5.4), +0.5 vs curve. On the
+  curve, below bidax5q (46.7 / -0.5, +1.8): the math right>wrong pairs did not protect math. Dropped.
+
+### 5 Nov
+- ~00:30 **D3 lpd-route step 100: +7.5% / -1.0** (svamp +17 / -0.6, mbpp +1 / -1.0, ifeval -4 / -2.5, one function +10 /
+[output cut at 10,000 characters]

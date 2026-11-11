@@ -1,0 +1,79 @@
+  3 Nov): 28.7% / -1.71 full test** (math 40 / -2.3, code 16 / -2.0, ifeval 31 / -1.1, simple 24 / -1.2, multiple 28 / -4.3,
+  no-fit 26 / +0.2), -1.6 vs our curve, +4.0 vs the README bar: one extra MLP layer after layer 13 (198k trained params) on
+  short answers the model wrote with Qwen3-8B hints. Added as a reference to FullEval and the DPO story page.
+- ~22:50 (user) **consult4** started: the consultant FROM SCRATCH (no earlier reports, none of our decisions) on all per-type data: raw Qwen per full-test question, thinking off, 144 checkpoints, run summaries, references, per-type families, every run command + code; question = best strategy for > 50% / better than -1 with our compute. Cap $25, 60 code runs.
+- ~23:05 **consult4 report** (from scratch, $8.56, 20 code runs): consult4_strategy.md. Audit: our screen totals weight the
+  three BFCL parts equally, not 400/200/240 (rpC-80 +0.6 -> +0.43, rpB-40 +0.3 -> +0.10, bidax5q -0.5 -> -0.59; the
+  "full-eval weighting" line is the official one); --bida-exact sets held-out pairs to 0 (no tripwire). Strategy: NOT six
+  specialists; J = a joint DPO adapter on all six types (5,424 pairs = 339 steps x 16: shorten = shortest right > longest
+  right >= 1.5x, solve >= .75 for math / multiple / no-fit and >= .5 elsewhere, no easy ratio; guard = shortest right >
+  longest wrong incl. capped; ~7% length-balanced right pairs; <= 2 pairs per question; fp32 + fp16 autocast, beta 0.1,
+  NLL 0, lr 2e-5 warm-up 16 + cosine to 0, 2 seeds averaged in weight space) + a bida-style control; I = an
+  instruction-only adapter (80 steps) merged at 0.25-0.5 as a compression booster; R = one balanced repair on the merged
+  model (1,280 pairs: 50% length-balanced right, 25% anti-overcut, 25% shortening replay; lr 1e-5, NLL 0.1, <= 80 steps,
+  strength 0 / .5 / 1). Selection on a NON-benchmark dev set (600) + a locked confirmation set (600), at most 12 screens,
+  one frozen candidate, one full test. Expected ~50-52% / -0.8, P(both thresholds) 25-40%. Alternatives: (1) joint + one
+  on-policy round; (2) October 4-adapter reproduction + balanced repair.
+- ~23:15 **Official weighting adopted** (consult4 audit, checked: recomputing each 720 score with BFCL pooled 400/200/240
+  reproduces the printed "full-eval weighting" lines within 0.1). All 117 screen scores in FullEval / ModelTree / the DPO
+  story page now carry the official overall accuracy (old equal-BFCL value kept as acc_screen_eq); shifts -0.5 to +0.1.
+  Key runs: rpC-80 +0.43 (+2.2 vs curve), rpB-40 +0.10 (+1.9), bidax5q final -0.59 (+1.7), pt-mid -2.58 (+1.3). Still 0
+  checkpoints in the target box. The yardstick formula is unchanged (fixed 2 Nov); FullEval's own live fit refits itself.
+  From now on the log uses the full-eval-weighting line as the overall accuracy.
+- ~23:45 (user) queued on GPU 2 after chain1 answers half b: FULL TEST of pt-mid (pertype --pt-full, new option: merge + official 2,759 x 8 against full-base).
+- ~00:00 (user) queued on GPU 1 after chain1 round 2: five lpt6 merges (C, C+code, C+weak no-fit .25, tools-only 3 slices, C at .7), 2-seed averages, no math.
+- ~00:10 (user) chain1 round 2 POSTPONED on both GPUs (pc1 answers so far kept on Drive: ~4,000 of 17,000, resumable); GPU 2 -> pt-mid full test now, GPU 1 -> the five lpt6 merges now.
+- ~00:30 6 Nov (user) **October per-type run redone with only two changes** queued on GPU 1 after the lpt6 merges: the new
+  training data (jpa = October's lpv-base rule and matching on dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2,
+  10 answers) and float32 (dpo.py --dtype float32: pure fp32); same 4 groups, NLL 1, constant lr 2e-5, 16 pairs/step, one
+  pass, 48 held out, seed 0; each group x kind cut at random to lpv-base's count (pertype --pt-cap-like, new option) so each
+  adapter takes October's number of steps; scored like October: 4 solos at 1.0, 4 at pt-mid strength, softer / soft / mid.
+- ~00:50 (user) jpa built and its capped counts CHECKED before training (pertype --pt-check, new: prints available / October / kept pairs and steps per group, no training), right after lpt6mix-C on GPU 1.
+- ~00:20 6 Nov **lpt6mix-C (instructions + one function + several functions, each 0.5, 2-seed averages): +41.3 / -1.3** official
+  (screen-equal -1.3; svamp +41 / -1.7, mbpp +45 / -1.0, ifeval +41 / -0.6, simple +36 / -0.2, multiple +39 / +3.6, no-fit +37 / -9.4),
+  +0.15 vs curve. The merge saves MORE than its solos predict (token ratios multiplied: 36.2%; consult3 guessed 40 / -2.5); accuracy
+  close to the solos' sum (about -1.1); the whole cost is no-fit -9.4 (no no-fit adapter, two call-making adapters).
+- ~00:45 (user) the October rerun's adapters save a checkpoint every 5 steps (pertype --pt-save 5, new; adapters/lpj-<group>/step-N, synced to Drive) so any step can be scored or restored later.
+- ~01:10 BUG (mine): lupin --lp-pairs-only had been inserted into balround(), not lupin(); jpa built its pairs (2,812 matched: math 802, code 780, instr 799, simple 335, multiple 182, no-fit 210; vs ~1,400 in October) then started an unwanted joint training (jpa-s0). Fixed (moved into lupin).
+- ~01:35 6 Nov **FULL TEST of pt-mid** (October 4-adapter merge .30/.45/.60/.45, rebuilt from the saved adapters, no repair; 2,759 x 8):
+  **+53.6 / -3.3** official (svamp +61 / -6.0, mbpp +62 / -3.9, ifeval +50 / -1.7, simple +35 / +0.2, multiple +38 / +0.4, no-fit
+  +40 / -5.6), +0.3 vs curve. Its 720 screen re-ran in the same stage: 55.1 / -2.6 (= Oct 31's 55.0 / -2.6). The 720 read 1.4 high on
+  saving and 0.7 favourable on accuracy: the October strengths were picked on screens. On the full test pt-mid sits just above
+  the curve, below michal-bida (47.0 / -0.78, +1.6); the loss is math and no-fit, as on the screen, plus code.
+- jpa cap CHECK (lpj, before training): every group reaches October's exact counts, no shortfall: math shorten 299 / guard 47 /
+  right 7 (available 599 / 87 / 17), code 251 / 79 / 23 (497 / 156 / 50), instructions 218 / 86 / 49 (454 / 146 / 103), tools 284 /
+  44 / 25 (574 / 89 / 40); 353 pairs per adapter = 19 steps at 16 pairs/step after 48 held out, as in October.
+- ~01:40 (user) the October rerun is EXTENDED instead of stopped: per adapter the October-count pairs first (shuffled, seed 0),
+  then the remaining matched jpa pairs (~703 in all), trained in that order (--mix all --keep-order), constant lr, float32,
+  checkpoints every 5 steps + step 19 (dpo.py --save-at, new) = the capped run's last full step. GPU 2 (idle) trains it now and
+  scores the October comparison at step 19 (pertype --pt-step 19: solos at 1.0 and pt-mid strength, softer / soft / mid);
+  GPU 1 after its merges scores each adapter alone at steps 25 and 40 (pertype --pt-no-train --pt-wait 3). New pertype
+  options: --pt-extend, --pt-step, --pt-wait.
+- ~01:50 (user) dose scores changed to steps 10 and 30 (+ the full October comparison at step 19 on GPU 2); every 5th step stays stored on Drive.
+- ~02:00 (user) drivereport extended (sub-folders > 100 MB and files > 300 MB with dates, read only) and queued on GPU 1 between two merges: Drive clean-up list first, nothing deleted.
+- ~02:30 lpt6 merges: **C + code .5: +39.5 / -2.8** (svamp +42 / -1.9, mbpp +40 / -3.1, ifeval +37 / -3.3, simple +37 / -2.1, multiple +40
+  / +1.7, no-fit +39 / -8.1), -1.6 vs curve: the lpt6 code adapter (useless alone) hurts in the merge, unlike pt's code adapter.
+  **C + no-fit .25: +43.3 / -1.2** (svamp +42 / -1.3, mbpp +48 / -0.4, ifeval +42 / -2.7, simple +37 / 0.0, multiple +41 / +1.1, no-fit +41
+  / -2.1), +0.5 vs curve: the weak no-fit adapter repairs no-fit (-9.4 -> -2.1) WITHOUT breaking the call types and adds saving:
+  the best lpt6 merge so far. drivereport: Drive project folder ~197 GB = adapters 120 (never-scored checkpoints), runs 61,
+  models 13.3, data 2.7; drivetidy (new, dry run) queued to list exact clean-up items.
+- ~02:30 lpt6mix-tools (one fn + several + no-fit, each 0.5): **+31.0 / -2.3** official (svamp +31 / -5.0, mbpp +31 / -2.1, ifeval +25 / -1.7,
+  simple +32 / -4.0, multiple +37 / +2.9, no-fit +39 / +2.1): the three tool slices merged shorten everything ~31% but lose
+  one-function and math; weaker than pt's single pooled tools adapter at a similar dose (tools@.45 28.6 / -1.1).
+- The extended October rerun in PURE fp32 ran out of GPU memory on the code adapter (8,192-token answers on an L4); the math
+  adapter (lpj-svamp) trained. Rerun as lpk with --bida-precision (fp32 weights + fp16 autocast, as bidax6p / Track A), new
+  pertype --pt-dpo pass-through; everything else unchanged.
+- drivetidy first dry run: 108 GB listed, but two flaws found in review BEFORE anything moved: scored GRPO checkpoints
+  (grA/B/C-rl steps 50 / 100) were listed (adapter "grA-rl" vs results "grA-*"), and GRPO resume files were counted twice.
+  Fixed (name suffixes -rl / -drpo / -teach / ... stripped; D skips files inside C items); a second dry run is queued.
+- ~02:45 (user found it) new competitor **matousek-martin/qwen3-self-replay** (non-fork, created 5 Nov; "An independent submission to
+  BottleCapAI's ThinkingCap Test"): LoRA on Qwen3-0.6B, correctness-gated length reward + supervised replay of its own short
+  verified solutions, no teacher. Full test 2,759 x 8: Self-Replay-256 **31.23% / +0.21** (CI -0.48..+0.88; +0.5 vs our curve),
+  Self-Replay-850 **41.60% / -1.17** (+0.3), checkpoint 1280 46.58% / -2.35 (-0.1). No-fit -4.17 / -6.88 pp; one seed;
+  checkpoints chosen on the benchmark (stated). Added to FullEval as references (per-part numbers not copied).
+- ~03:00 **lpt6mix-C7 (instructions + one fn + several, each 0.7): +51.3 / -3.6** official (svamp +55 / -4.2, mbpp +55 / -2.7, ifeval +50 /
+  -3.7, simple +42 / -2.1, multiple +46 / +1.7, no-fit +45 / -11.7), -0.5 vs curve: the higher dose saves more but no-fit
+  collapses without a no-fit adapter. lpt6 merge summary: C 41.3 / -1.3, C + code 39.5 / -2.8, C + weak no-fit 43.3 / -1.2 (best),
+  tools only 31.0 / -2.3, C at .7 51.3 / -3.6.
+- drivetidy
+[output cut at 10,000 characters]

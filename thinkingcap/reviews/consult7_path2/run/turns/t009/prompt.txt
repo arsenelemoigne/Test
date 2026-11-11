@@ -1,0 +1,144 @@
+def thinkprune(args):
+    """ThinkPrune-style RL (2 Nov, user): reward = 1 if right AND finished under the question's own token cap, else 0
+    (rl_train.py --reward cap), group advantages, a small KL anchor, nothing else. Caps per test part from the ORIGINAL
+    model's right answers in the pool (math generous: --tp-cap-math quantile; the rest --tp-cap-other), printed with the
+    share of questions keeping a right answer under the cap. Questions the original gets right > half the time, mixed
+    like the test (25% each; BFCL 400/200/240). Starts from --tp-start ("raw" or an adapter, merged first). 10-step
+    blocks (resumable), the 720 every --tp-score-every steps. --tp-smoke: 5 steps, small batch, no scoring, timed."""
+    import statistics
+    import time
+    name = args.name
+    # the same questions as v1's DPO data (3 Nov, user: same data for the DPO and GRPO comparisons): pool dp13 + top-ups
+    extra = [x for x in args.tp_extra.split(",") if x]
+    # (6 Nov, user) --tp-answers10: the original model's 10 answers per question (better solve rates / length means)
+    answers = BON / (f"lupin-all-dp13-nofit1-tools1-code1-nofit2-{'-'.join(extra)}" + ("" if args.tp_answers10 else "-a4") + ".jsonl")
+    drive_sync("restore", only=[str(answers), "data/pool-dp13.jsonl", *[str(BON / f"tooltop-{x}") for x in extra], SCREEN,
+                                str(ROOT / "s4-base")])
+    rows = {}
+    for f in (Path("data/pool-dp13.jsonl"), *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extra]):
+        for line in f.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if not re.search(r"prostring|stringname|stringName", line):  # the "file" -> "string" corruption
+                    rows[r["pool_id"]] = r
+    by_q = defaultdict(list)
+    right_think = defaultdict(list)
+    for line in open(answers):
+        r = json.loads(line)
+        by_q[r["id"]].append((bool(r["correct"]) and r["closed_thinking"] and not r["truncated"], r["output_tokens"]))
+        if bool(r["correct"]) and r["closed_thinking"] and not r["truncated"]:  # (10 Nov) for --copd-early: the original's thinking
+            # the 10-answer file has no reasoning_tokens (cp1d printed 0/15407): fall back to the thinking ids, else the whole
+            # answer's length (an over-estimate by the short final answer: the 0.5x threshold stays a safe proxy)
+            think = r.get("reasoning_tokens")
+            if think is None:
+                think = len(r["thinking_ids"]) if r.get("thinking_ids") else r["output_tokens"]
+            right_think[r["id"]].append(int(think))
+    from build_pool import part_of
+    caps, lines = {}, [f"thinkprune {name}: caps from the original's right answers (math q{args.tp_cap_math:g}, rest q{args.tp_cap_other:g})"]
+    eligible = defaultdict(list)
+    for qid, got in by_q.items():
+        rate = sum(ok for ok, _ in got) / len(got)
+        low_ok = rate >= args.tp_min_solve if args.tp_include_unsolved else rate > args.tp_min_solve
+        if qid in rows and low_ok and rate <= args.tp_max_solve:
+            eligible[rows[qid]["part"]].append(qid)
+    for part, ids in sorted(eligible.items()):
+        lens = sorted(n for q in ids for ok, n in by_q[q] if ok)
+        cap = lens[min(len(lens) - 1, int(len(lens) * (args.tp_cap_math if part == "svamp" else args.tp_cap_other)))]
+        caps[part] = cap
+        keep = statistics.fmean(any(ok and n < cap for ok, n in by_q[q]) for q in ids)
+        lines.append(f"  {part}: cap {cap} tokens; {len(ids)} questions right > half the time; {keep:.0%} keep a right answer under the cap")
+    print("\n".join(lines), flush=True)
+    weights = {"svamp": 1, "mbpp": 1, "ifeval": 1, "bfcl_simple_python": 400 / 840, "bfcl_multiple": 200 / 840,
+               "bfcl_irrelevance": 240 / 840}
+    rng = random.Random(args.data_seed)
+    for ids in eligible.values():
+        rng.shuffle(ids)
+    solve = {qid: sum(ok for ok, _ in got) / len(got) for qid, got in by_q.items()}
+    if args.tp_mixed_share is not None:  # (9 Nov, user) a set share of "sometimes wrong" questions (solved 1-9 of 10)
+        mix_lines = [f"thinkprune {name}: questions per part, sometimes wrong (1-9/10) / always right (10/10), "
+                     f"{args.tp_mixed_share:.0%} sometimes-wrong in the order used"]
+        for part, ids in eligible.items():
+            some = [q for q in ids if 0 < solve[q] < 1]
+            always = [q for q in ids if solve[q] >= 1]
+            order, credit_some = [], 0.0
+            while some or always:  # the share holds until one kind runs out, then the other fills in
+                credit_some += args.tp_mixed_share
+                if some and (credit_some >= 1 or not always):
+                    order.append(some.pop())
+                    credit_some -= 1
+                elif always:
+                    order.append(always.pop())
+            eligible[part] = order[::-1]  # popped from the end: the first chosen is order[0]
+            n_some = sum(0 < solve[q] < 1 for q in ids)
+            mix_lines.append(f"  {part}: {n_some} sometimes wrong, {len(ids) - n_some} always right")
+        print("\n".join(mix_lines), flush=True)
+    pool, credit = [], defaultdict(float)  # interleaved by the test's shares
+    while any(eligible.values()):
+        for part, w in weights.items():
+            credit[part] += w
+            while credit[part] >= 1 and eligible.get(part):
+                credit[part] -= 1
+                q = rows[eligible[part].pop()]
+                pool.append(q | {"id": q["pool_id"], "cap": caps[part], "solve10": round(solve[q["pool_id"]], 2),
+                                 "base_think": statistics.median(right_think[q["pool_id"]]) if right_think[q["pool_id"]] else None})
+    if args.tp_check:  # (6 Nov, user) the question selection only: counts per part vs what the run needs, no training
+        need = args.tp_steps * args.tp_questions
+        per = defaultdict(int)
+        for q in pool:
+            per[q["part"]] += 1
+        shares = {p: w / sum(weights.values()) for p, w in weights.items()}
+        print(f"thinkprune CHECK {name}: {len(pool)} eligible questions for {args.tp_steps} steps x {args.tp_questions} = {need} needed "
+              f"({len(pool) / max(1, need):.1f}x)", flush=True)
+        for p in weights:
+            want = round(need * shares[p])
+            print(f"thinkprune CHECK {name}:   {p}: {per[p]} eligible, ~{want} used" + ("  SHORT" if per[p] < want else ""), flush=True)
+        return
+    if args.tp_mixed_share is not None and not args.tp_smoke:
+        # (9 Nov) rl_train re-orders its pool by source (balanced_order), which undid the 50/50 ORDER: keep exactly the
+        # questions the run uses (steps x questions, taken in the mixed order), so the share holds whatever the order
+        pool = pool[:args.tp_steps * args.tp_questions]
+        some = sum(0 < q["solve10"] < 1 for q in pool)
+        print(f"thinkprune {name}: {len(pool)} questions kept, {some} sometimes wrong ({some / max(1, len(pool)):.0%})", flush=True)
+    has_think = sum(q.get("base_think") is not None for q in pool)
+    print(f"thinkprune {name}: {has_think}/{len(pool)} questions carry the original's right-answer thinking (base_think)", flush=True)
+    data = Path(f"data/tp-{name}.jsonl")
+    data.write_text("".join(json.dumps(r) + "\n" for r in pool))
+    base = "Qwen/Qwen3-0.6B"
+    if args.tp_start != "raw":  # the trained start merged into the weights; RL trains a new LoRA on top
+        base = str(Path("models") / f"{args.tp_start}-merged")
+        drive_sync("restore", only=[base, str(Path("adapters") / args.tp_start)])
+        if not (Path(base) / "config.json").exists():
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", base, "--adapters", f"adapters/{args.tp_start}:1")
+            drive_sync("save")
+    steps, questions, group = (5, 16, 8) if args.tp_smoke else (args.tp_steps, args.tp_questions, args.tp_group)
+    norm_args = []
+    if args.tp_norm_means:  # (6 Nov) the gated reward's B per part = the original's mean generated tokens on the pool's
+        # questions, using the POOL's part labels (gr2e's --gr-norms-from re-derived parts and got svamp = 82 tokens: wrong)
+        tot, cnt = defaultdict(int), defaultdict(int)
+        for qid, got in by_q.items():
+            if qid in rows:
+                for _, n in got:
+                    tot[rows[qid]["part"]] += n
+                    cnt[rows[qid]["part"]] += 1
+        means = {p: round(tot[p] / cnt[p]) for p in tot if cnt[p]}
+        print(f"thinkprune {name}: gated B = the original's mean generated tokens per part: " +
+              ", ".join(f"{p} {v}" for p, v in sorted(means.items())), flush=True)
+        assert all(v >= 100 for p, v in means.items()), f"implausible mean lengths {means}"
+        norm_args = ["--gr-norms", ",".join(f"{p}={v}" for p, v in sorted(means.items()))]
+    rl = Path("adapters") / f"{name}-rl"
+    drive_sync("restore", only=[str(rl)])
+    previous = None
+    block = steps if args.tp_smoke else args.tp_block
+    # (9 Nov) --tp-block: blocks of any size; checkpoints already on disk (e.g. a run extended from 20 to 40 steps with
+    # 5-step blocks after 10-step ones) are kept and the next block continues from the latest of them
+    have = sorted(int(d.name[5:]) for d in rl.glob("step-*") if (d / "adapter_config.json").exists())
+    dones = [d for d in have if d <= steps] + [d for d in range(block, steps + 1, block) if d > max(have, default=0)]
+    for done in dones:
+        ckpt = rl / f"step-{done}"
+        if not (ckpt / "adapter_config.json").exists():
+            began = time.time()
+            size = done - (previous_done if previous else 0) if not args.tp_smoke else steps
+            py("rl_train.py", "--model", base, "--data", data, "--sources", "all", "--out", ckpt,
+               "--steps", size, "--offset", done - size,
+               *(["--init-adapter", previous] if previous else []), "--questions", questions, "--grou
+[output cut at 10,000 characters]

@@ -1,0 +1,81 @@
+                            + torch.tensor(gammas, device=device) * logps
+                    if args.entropy_coef:
+                        per_token = per_token - args.entropy_coef * entropies[index]
+                    entropy_sum += float(entropies[index].detach().sum())
+                    entropy_count += len(reply)
+                    loss = loss + per_token.sum() / total_tokens
+                scaler.scale(loss).backward()
+                loss_sum += float(loss)
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
+        model.save_pretrained(current)
+        if args.save_every and (step + 1) % args.save_every == 0:
+            model.save_pretrained(out / f"step-{step + 1}")
+
+        entry = {"step": step + 1, "accuracy": stats["correct"] / stats["replies"],
+                 "mean_tokens": stats["tokens"] / stats["replies"],
+                 "mean_thinking_tokens": stats["thinking"] / stats["replies"],
+                 "questions_with_signal": stats["signal"], "dropped_groups": dropped, "loss": loss_sum, "lr": lr,
+                 "entropy": entropy_sum / max(1, entropy_count)}
+        entry["by_type"] = {k: {"accuracy": round(c / max(1, n), 3), "thinking": round(t / max(1, n)), "replies": n}
+                            for k, (c, n, t) in sorted(by_type.items())}
+        if args.objective == "copd" and device == "cuda":  # (9 Nov) memory after the step, to see a leak before it bites
+            import gc
+            gc.collect()
+            torch.cuda.empty_cache()
+            entry["gpu_gb"] = round(torch.cuda.memory_allocated() / 1e9, 2)
+        if args.objective == "copd":  # the teacher's verdict: mean advantage, share of tokens pushed down, at </think>
+            entry["copd"] = {"mean": round(stats["copd_mean"], 4), "negative": round(stats["copd_negative"], 3),
+                             "close_think": None if stats["copd_close"] is None else round(stats["copd_close"], 3)}
+            if args.copd_outcome:
+                entry["copd"]["questions_mixed"] = stats["copd_outcome_groups"]
+                entry["copd"]["by_origin"] = {k: {"questions": v[0], "mixed_now": v[1],
+                                                  "right": round(v[2] / v[3], 3) if v[3] else None}
+                                              for k, v in stats["copd_origin"].items() if v[0]}
+        if args.objective == "copd" and args.copd_early:
+            entry["copd"]["early_penalised"] = stats["copd_early"]  # [wrong replies punished as too early, wrong replies]
+        if stats["no_think_replies"]:
+            entry["no_think_accuracy"] = stats["no_think_correct"] / stats["no_think_replies"]
+        log.append(entry)
+        print(json.dumps(entry), flush=True)
+        (out / "rl_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in log))
+        torch.save({"step": step + 1, "optimizer": optimizer.state_dict(), "scaler": scaler.state_dict(),
+                    "rng": rng.getstate(), "torch_rng": torch.get_rng_state(), "log": log}, state_path)
+        if args.guard_drop > 0 and len(log) >= 10:  # per-type accuracy guard (user: strict checks per data type)
+            def acc(entries, kind):
+                c = sum(e["by_type"][kind]["accuracy"] * e["by_type"][kind]["replies"] for e in entries if kind in e["by_type"])
+                n = sum(e["by_type"][kind]["replies"] for e in entries if kind in e["by_type"])
+                return c / n if n >= 40 else None
+            fallen = []
+            for kind in sorted({k for e in log for k in e["by_type"]}):
+                first, last = acc(log[:5], kind), acc(log[-5:], kind)
+                if first is not None and last is not None and last < first - args.guard_drop:
+                    fallen.append(f"{kind} {first:.2f} -> {last:.2f}")
+            if fallen:
+                print(f"guard: stopping at step {step + 1}, accuracy fell: {'; '.join(fallen)}", flush=True)
+                model.save_pretrained(out / f"step-{step + 1}")
+                break
+
+    model.save_pretrained(out)
+    (out / "rl_log.jsonl").write_text("".join(json.dumps(e) + "\n" for e in log))
+    print(f"saved {out}")
+
+
+def probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question):
+    """{cut: raw p(gold answer)} every 32 thinking tokens, with probe_curve's packed scorer."""
+    from probe_curve import BRIDGE, probe_scores
+    eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
+    gold = tokenizer.encode(" " + question["answer"].strip(), add_special_tokens=False)
+    suffix = gold if question["task"] == "multiple_choice" else gold + [eos]
+    closing = tokenizer.encode(BRIDGE, add_special_tokens=False)
+    closings = {cut: closing for cut in range(1, thinking_len + 1, 32)}
+    scores = probe_scores(model, prompt, reply[:thinking_len], closings, [suffix], model.device)
+    return {cut: math.exp(scores[(cut, 0)]) for cut in closings}
+
+
+if __name__ == "__main__":
+    main()
+

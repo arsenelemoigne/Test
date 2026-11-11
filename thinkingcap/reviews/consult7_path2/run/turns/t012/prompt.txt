@@ -1,0 +1,114 @@
+    # (4 Nov, consult1_grpo_diagnosis_and_sft.md) the consultant's recipe: --reward gated, --fixed-denominator,
+    # --init-state (one AdamW across 10-step blocks), --warmup/--total-steps (one schedule across blocks),
+    # --max-tokens-code, --full-support (top_p 1, no top_k; log-probs at the sampling temperature), --grad-clip
+    parser.add_argument("--gr-coef", type=float, default=0.30, help="gated: R = right x formed x finished x (1 - c L/(L+B))")
+    parser.add_argument("--gr-norms", default="svamp=512,mbpp=768,ifeval=416,bfcl_simple_python=160,bfcl_multiple=192,"
+                        "bfcl_irrelevance=192", help="gated: B per test part, in ALL generated tokens")
+    parser.add_argument("--gr-min-think", type=int, default=8, help="gated: fewer non-blank thinking tokens = not formed")
+    # (6 Nov, user, after Herz1c's write-up) the official metric is a ratio of summed tokens PER BENCHMARK, so the length
+    # term is normalised by each type's own mean length (long code answers must not dominate), and may be linear
+    parser.add_argument("--gr-form", choices=("saturating", "linear"), default="saturating",
+                        help="gated: saturating = 1 - c L/(L+B); linear = max(0, 1 - c L/B)")
+    parser.add_argument("--gr-norms-from", default="",
+                        help="gated: set every B to the mean generated length per test part in this rollouts file "
+                             "(the ORIGINAL model's answers to TRAINING questions, never test questions)")
+    parser.add_argument("--fixed-denominator", action="store_true",
+                        help="Dr. GRPO denominator = ALL replies of the step x max tokens (not only the active ones)")
+    parser.add_argument("--init-state", default="", help="resume.pt of the previous block: its AdamW state is loaded")
+    parser.add_argument("--warmup", type=int, default=0, help="linear warm-up steps (counted with --offset)")
+    parser.add_argument("--total-steps", type=int, default=0,
+                        help="the schedule's length across blocks (with --lr-end: cosine over offset + step)")
+    parser.add_argument("--max-tokens-code", type=int, default=0, help="rollout limit for code questions (the test: 8,192)")
+    parser.add_argument("--full-support", action="store_true",
+                        help="sample with top_p 1 and no top_k, and score log-probs at the sampling temperature")
+    parser.add_argument("--grad-clip", type=float, default=1.0)
+    parser.add_argument("--reward", choices=["shorter", "arora", "shorterbetter", "cap", "lenpen", "smart", "gated"], default="shorter",
+                        help="arora: correct x (1 - alpha_q * sigmoid(z)), z = the reply's thinking length "
+                             "standardized among the group's correct replies; wrong or cut off = 0")
+    parser.add_argument("--adaptive", action="store_true",
+                        help="arora: alpha_q = alpha x the group's solve rate (ALP): hard questions keep their thinking")
+    parser.add_argument("--advantage", choices=["group", "batch"], default="group",
+                        help="batch: reward minus the group mean, over the whole batch's spread (DLER), not each group's")
+    parser.add_argument("--kl-coef", type=float, default=0.0, help="k3 KL to the model without the LoRA, per token")
+    # --reward lenpen (3 Nov; khudgins' ThinkingCap reproduction): right = 1 - lam_t * min(1, thinking / --lp-norm), wrong = 0,
+    # + --format-bonus for a closed thinking block with an answer after it; lam_t ramps --lp-lam-start -> --lp-lam-max over
+    # --lp-ramp steps (counted with --offset); --lp-gate G (GRPO-lambda, 2505.18086): no length penalty in a group whose
+    # share of right answers is below G
+    parser.add_argument("--lp-lam-start", type=float, default=1e-3)
+    parser.add_argument("--lp-lam-max", type=float, default=5e-2)
+    parser.add_argument("--lp-ramp", type=int, default=300)
+    parser.add_argument("--lp-norm", type=int, default=2048)
+    parser.add_argument("--lp-gate", type=float, default=0.0)
+    parser.add_argument("--format-bonus", type=float, default=0.1)
+    parser.add_argument("--dr-grpo", action="store_true",
+                        help="Dr. GRPO (2503.20783): advantages not divided by the group's spread, and the loss divided by a "
+                             "constant (replies x --max-tokens) instead of the chunk's token count")
+    parser.add_argument("--dynamic-sampling", type=float, default=0.0,
+                        help="DLER's dynamic sampling: draw this many times --questions per step and train only on groups "
+                             "with at least one right reply (an all-wrong group carries no correctness signal), keeping "
+                             "--questions of them (0: off)")
+    parser.add_argument("--objective", choices=["grpo", "drpo", "copd"], default="grpo")
+    # --objective copd (9 Nov, user; Ruan et al., arXiv 2607.19046): no reward; a frozen teacher re-reads each sampled reply
+    # under a light- and a heavy-effort instruction and the per-token log-prob gap is the advantage (see copd_token_advantages)
+    parser.add_argument("--copd-teacher", default="Qwen/Qwen3-4B",
+                        help="copd: the frozen teacher (same tokenizer as --model), or 'self' = the base model without the "
+                             "LoRA (COPSD: a frozen snapshot of the starting weights; with --init-adapter that is the raw "
+                             "model, not the init adapter)")
+    parser.add_argument("--copd-light", default="Reasoning Effort: Minimum viable, shortcuts strongly encouraged.")
+    parser.add_argument("--copd-heavy", default="Reasoning Effort: Absolute maximum with no shortcuts permitted.")
+    parser.add_argument("--copd-clip", type=float, default=10.0, help="copd: |A_t| cap (the paper: 10)")
+    parser.add_argument("--copd-outcome", type=float, default=0.0,
+                        help="copd (9 Nov, user: real accuracy in the training): add w x (right - the mean of its question's "
+                             "group) to every token of each reply, right = graded correct; 0 = COPD alone. Needs --group >= 2")
+    parser.add_argument("--copd-early", type=float, default=0.0,
+                        help="copd (10 Nov, user: fix 2): subtract w from every token of a WRONG reply whose thinking is under "
+                             "--copd-early-ratio x the original model's median thinking on its right answers to that question "
+                             "(the row's base_think); 0 = off")
+    parser.add_argument("--copd-early-ratio", type=float, default=0.5)
+    parser.add_argument("--protect-sources", default="",
+                        help="comma list of sources (e.g. math) given NO length pressure: right replies weighted equally "
+                             "(drpo) / correctness-only reward (shorterbetter); they are still trained to stay right")
+    parser.add_argument("--guard-drop", type=float, default=0.0,
+                        help="stop training when a data type's batch accuracy (mean of its last 5 steps) falls more than "
+                             "this below its mean over the first 5 steps (e.g. 0.06); the last checkpoint is kept")
+    parser.add_argument("--drpo-lambda", type=float, default=0.2, help="drpo: length weight temperature (smaller: shorter)")
+    parser.add_argument("--drpo-solve-scale", action="store_true",
+                        help="drpo: lambda / solve rate per question (ALP): length pressure only where it is solved often")
+    parser.add_argument("--drpo-tau", type=float, default=10.0, help="drpo: log-sum-exp temperature over wrong replies")
+    parser.add_argument("--drpo-delta", type=float, default=1e-4, help="drpo: trust region size")
+    parser.add_argument("--drpo-beta", type=float, default=1e3, help="drpo: trust region penalty")
+    parser.add_argument("--grader", choices=["task", "typed"], default="task",
+                        help="typed: typed.is_correct (math, multiple choice, code tests, tools, instructions)")
+    parser.add_argument("--offset", type=int, default=0,
+                        help="steps already done in earlier blocks: question slice and seed continue from there")
+    parser.add_argument("--save-every", type=int, default=0, help="also keep the LoRA every N steps (out/step-N)")
+    parser.add_argument("--eval-only", action="store_true",
+                        help="no training: score --init-adapter (or the base model) on the first --questions of --data")
+    return parser.parse_args()
+
+
+# ---------------------------------------------------------------- rewards (pure, tested)
+
+def length_rewards(lengths, correct, alpha):
+    """ShorterBetter-style rewards for one group.
+
+    L* is the shortest correct reply's length, or the group's mean length when none is correct
+    (ShorterBetter's neutral fallback: without it, its shortest-length variants collapsed).
+    A correct reply gets 1 - alpha * |len - L*| / L*, floored at 0; a wrong one gets
+    -alpha * |len - L*| / L*, so a wrong reply never beats a correct one.
+    """
+    lengths_correct = [n for n, ok in zip(lengths, correct) if ok]
+    target = min(lengths_correct) if lengths_correct else sum(lengths) / len(lengths)
+    target = max(target, 1)
+    return [max(0.0, 1 - alpha * abs(n - target) / target) if ok else -alpha * abs(n - target) / target
+            for n, ok in zip(lengths, correct)]
+
+
+def shorterbetter_rewards(lengths, correct, alpha, beta):
+    """ShorterBetter (arXiv 2504.21370, Eq. 1) exactly: r = alpha * correct - beta * |len - SOL|, SOL = the shortest correct
+    reply's length in the group, or the group's mean length when none is correct (its neutral fallback; the shortest-reply
+    target collapsed in its ablation). Absolute token lengths, not relative ones as in length_rewards."""
+    lengths_correct = [n for n, ok in zip(lengths, correct) if ok]
+    sol = min(lengths_correct) if lengths_correct else sum(lengths) / len(lengths)
+    return [alpha * float(o
+[output cut at 10,000 characters]

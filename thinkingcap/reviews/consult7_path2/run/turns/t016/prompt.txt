@@ -1,0 +1,151 @@
+            if args.reward == "smart":
+                rewards = smart_rewards([len(r) for r in group], correct)
+            elif args.reward == "lenpen":
+                lam = args.lp_lam_start + (args.lp_lam_max - args.lp_lam_start) * min(1.0, (args.offset + step) / max(1, args.lp_ramp))
+                if sum(correct) / len(correct) < args.lp_gate:
+                    lam = 0.0
+                think = [r.index(close_id) if close_id in r else len(r) for r in group]
+                formed = [close_id in r and len(r) > r.index(close_id) + 2 for r in group]
+                rewards = [(1.0 - lam * min(1.0, n / args.lp_norm) if ok else 0.0) + (args.format_bonus if fm else 0.0)
+                           for n, ok, fm in zip(think, correct, formed)]
+            elif args.reward == "gated":  # (4 Nov, consultant) right x formed x finished x (1 - c L/(L+B)), wrong = 0
+                norms = dict(kv.split("=") for kv in args.gr_norms.split(","))
+                norms.update(GR_MEANS)
+                b = float(norms.get(question.get("part", ""), 512))
+                rewards = []
+                for r, ok in zip(group, correct):
+                    think = r[:r.index(close_id)] if close_id in r else r
+                    answer = r[r.index(close_id) + 1:] if close_id in r else []
+                    blank = sum(1 for x in think if tokenizer.decode([x]).strip())
+                    formed = close_id in r and blank >= args.gr_min_think and len(answer) > 2
+                    finished = bool(r) and r[-1] == eos
+                    shape = (max(0.0, 1.0 - args.gr_coef * len(r) / b) if args.gr_form == "linear"
+                             else 1.0 - args.gr_coef * len(r) / (len(r) + b))
+                    rewards.append(shape if ok and formed and finished else 0.0)
+            elif args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
+                cap = int(question["cap"])
+                rewards = [1.0 if ok and len(r) < cap - 1 else 0.0 for r, ok in zip(group, correct)]  # cut at the cap = 0
+            elif args.reward == "arora":
+                thinking = [r.index(close_id) if close_id in r else len(r) for r in group]
+                alpha = args.alpha * (sum(correct) / len(correct) if args.adaptive else 1.0)
+                rewards = arora_rewards(thinking, correct, alpha)
+            elif args.reward == "shorterbetter":
+                rewards = shorterbetter_rewards([len(r) for r in group], correct, args.sb_alpha,
+                                                0.0 if protected_kind(question, protect) else args.sb_beta)
+            else:
+                rewards = length_rewards([len(r) for r in group], correct, args.alpha)
+            skipped = [i >= len(group) - no_think for i in range(len(group))]
+            rewards = [r + (args.no_think_bonus if ok and skip else 0.0)
+                       for r, ok, skip in zip(rewards, correct, skipped)]
+            advantages = group_advantages(rewards, scale=not args.dr_grpo) if args.advantage == "group" else None
+            groups.append(rewards)
+            stats["no_think_correct"] += sum(ok for ok, skip in zip(correct, skipped) if skip)
+            stats["no_think_replies"] += sum(skipped)
+            stats["thinking"] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
+            stats["correct"] += sum(correct)
+            kind = type_of(question)  # per data type: a collapse of one type shows even in a mixed batch
+            by_type.setdefault(kind, [0, 0, 0])
+            by_type[kind][0] += sum(correct)
+            by_type[kind][1] += len(group)
+            by_type[kind][2] += sum(r.index(close_id) if close_id in r else len(r) for r in group)
+            stats["replies"] += len(group)
+            stats["tokens"] += sum(map(len, group))
+            if advantages and any(a != 0 for a in advantages):
+                stats["signal"] += 1
+            for index, (reply, ok) in enumerate(zip(group, correct)):
+                thinking_len = reply.index(close_id) if close_id in reply else len(reply)
+                jobs.append([prompt, reply, ok, advantages[index] if advantages else (len(groups) - 1, index),
+                             thinking_len, question])
+        old_logps = {}
+        copd_adv = {}
+        if args.objective == "copd":  # the teacher reads every reply twice (light, heavy); no gradient
+            student_temp, LOGIT_TEMP = LOGIT_TEMP, 1.0  # the teacher's own distribution, not the sampling temperature
+            scored = [j for j in jobs if j[1]]
+            reads = {}
+            model.eval()
+            if teacher is not None:
+                import gc
+                gc.collect()
+                torch.cuda.empty_cache()
+                teacher.to(device)
+
+=== PART 2 ===
+                                      for j, lp in zip(batch, batch_lp)) * scale_kl / total_tokens
+                        scaler.scale(penalty).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                continue
+            if args.objective == "copd":  # Eq. 5 on-policy: loss = -mean over replies of (1/T) sum_t A_t log pi(y_t)
+                for batch in token_batches(chunk, args.batch_tokens):
+                    with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                        entropies = []
+                        batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
+                    refs = None
+                    if args.kl_coef:
+                        with torch.no_grad(), model.disable_adapter():
+                            with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                                refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                    loss = 0.0
+                    for index, j in enumerate(batch):
+                        logps = batch_lp[index].float()
+                        per_token = -torch.tensor(copd_adv[id(j[1])], device=device) * logps
+                        if refs is not None:
+                            gap = refs[index].float() - logps
+                            per_token = per_token + args.kl_coef * (torch.exp(gap) - gap - 1)
+                        if args.entropy_coef:
+                            per_token = per_token - args.entropy_coef * entropies[index]
+                        entropy_sum += float(entropies[index].detach().sum())
+                        entropy_count += len(j[1])
+                        loss = loss + per_token.sum() / len(j[1]) / len(chunk)
+                    scaler.scale(loss).backward()
+                    loss_sum += float(loss)
+                    del batch_lp, entropies, refs, loss, per_token, logps  # nothing of the graph survives the batch
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(trainable, args.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                continue
+            for batch in token_batches(chunk, args.batch_tokens):
+                with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                    entropies = []
+                    batch_lp = batch_logps(model, [(j[0], j[1]) for j in batch], device, entropies)
+                refs = None
+                if args.redundant == "tokenprobe-kl" or args.kl_coef:
+                    with torch.no_grad(), model.disable_adapter():
+                        with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+                            refs = batch_logps(model, [(j[0], j[1]) for j in batch], device)
+                loss = 0.0
+                for index, (prompt, reply, ok, advantage, thinking_len, question) in enumerate(batch):
+                    logps = batch_lp[index]
+                    redundant = set()
+                    betas = gammas = None
+                    if args.redundant.startswith("tokenprobe"):
+                        scores = norm_lp(logps.tolist())
+                        core = core_positions(scores, args.window, args.windows)
+                        budget = len(core) * scale
+                        if args.redundant == "tokenprobe-rs":
+                            advantages_t = (rs_advantages(advantage, scores, core, budget, args.rs_beta,
+                                                          args.rs_alpha, args.rs_lam) if ok else [advantage] * len(reply))
+                        else:
+                            advantages_t = [advantage] * len(reply)
+                            betas, gammas = (kl_coefficients(len(reply), core, budget, args.kl_beta, args.lam_decay)
+                                             if ok else ([args.kl_beta] * len(reply), [0.0] * len(reply)))
+                    else:
+                        if ok and args.redundant == "confidence":
+                            redundant = confidence_redundant(logps.tolist(), thinking_len, args.redundant_quantile)
+                        elif ok and args.redundant == "settle":
+                            redundant = settle_redundant(
+                                probe_p_gold(model, tokenizer, prompt, reply, thinking_len, question),
+                                thinking_len, args.settle_threshold)
+                        advantages_t = token_advantages(advantage, len(reply), redundant, args.lam)
+                    per_token = -torch.tensor(advantages_t, device=device) * logps
+                    if betas is None and args.kl_coef:
+                        betas = [args.kl_coef] * len(reply)
+                        gammas = [0.0] * len(reply)
+                    if betas is not None:
+                        gap = refs[index] - logp
+[output cut at 10,000 characters]

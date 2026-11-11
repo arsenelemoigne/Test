@@ -1,0 +1,88 @@
+  stronger dose (lr 2e-5, as D7 stage 1; or 1e-5 x 80 steps), screens 10 / 20 / 40; the pairs and pt-mid's answers are reused.
+  GPU 2 moved on to bidax6p (the precision-only test); GPU 1 D5 margin trained, screening.
+- ~13:45 (user) Track A stronger doses queued, same pt-mid answers and pairs as rpA (ptrepair --rp-from): rpB lr 2e-5 x 40
+  steps (screens 10 / 20 / 40) on GPU 1 right after the D5 margin screens; rpC lr 1e-5 x 80 steps (screens 10 / 20 / 40 / 80)
+  on GPU 2 right after the bidax6p screens.
+- ~14:30 **D5 lpd-margin** (narrowest 15% of each pair kind dropped): step 100 **+55.0 / -3.1** (+0.8 vs curve), step 200 **+56.9 /
+  -3.8** (+0.5), **final +53.3 / -2.6** (svamp +65 / -4.2, mbpp +50 / -2.7, ifeval +50 / -2.7, simple +42 / -3.5, multiple +46 /
+  -0.8, no-fit +49 / +2.3), +1.0. Keeping only wide-margin pairs = more shortening at more accuracy cost (on the curve, below
+  v1). Not a v1 candidate.
+- Queue note: GPU 1 had already re-read its plan before rpB was pushed, so it started D10 l2s50e first; rpB runs right after
+  D10 (~5 h later than intended). rpC stays after bidax6p on GPU 2 (bidax6p at step 190/336).
+- ~15:30 **bidax6p (bidax4's pairs, our settings, ONLY the precision switched to fp32 + fp16 autocast)**: step 100 **+45.7 / -1.8**
+  (svamp +55 / -2.3, mbpp +43 / -2.3, ifeval +40 / -2.9, simple +39 / -2.7, multiple +44 / -0.4, no-fit +45 / +3.7), +0.3 vs curve;
+  step 200 **+48.9 / -2.0** (svamp +52 / -3.5, mbpp +45 / -0.6, ifeval +53 / -3.1, simple +43 / -5.0, multiple +46 / -0.8, no-fit
+  +49 / +3.1), +0.7. Same pairs in bf16 (bidax4): 100 +57.1 / -5.1, 200 +54.6 / -3.7; with ALL of his settings (bidax6): 100
+  +44.4 / -2.2, 200 +40.1 / -0.9. Reading: the precision alone accounts for most of the change his settings made (much gentler,
+  -11 pts saving and +3 pts accuracy at step 100): float32 + fp16 autocast trains less aggressively than our bf16 path. It moves
+  the model along the curve (from below to slightly above) rather than giving a big jump above it. Final next; then rpC.
+- ~16:30 bidax6p step 300: **+47.8 / -1.4** (svamp +57 / -1.7, mbpp +39 / -0.4, ifeval +48 / -1.9, simple +42 / -6.5, multiple
+  +46 / -0.8, no-fit +48 / +2.5), +1.1 vs curve. Final next, then rpC on GPU 2.
+- ~17:30 (user) **Finish lpt6 queued** (GPU 2, after rpC; the consultant's 13-screen design): (a) train the missing math adapter
+  (typeonly lpt6 --to-parts svamp, bidax5s pairs, 2 seeds, lpt6's exact historical settings); (b) solos at 1.0: math + no-fit;
+  (c) all six solos at 0.5 (rescreen --cx-scale 0.5); (d) five merges via the new mixscreen stage (math / code / ifeval / simple /
+  multiple / no-fit): C 0/0/.5/.5/.5/0, P .5/0/.5/.5/.5/.5, S6 all .5, P+ 1/0/.5/.5/.5/1, T .5/0/.5/0/1/.5. Purpose: a second,
+  differently-trained per-type family (6 adapters, rule-B pairs, no NLL, cosine) to compare with pt-mid's (4 adapters, LUPIN
+  pairs, NLL 1.0, constant lr): solos, dose and merges, as data for the Jasmin battle plan.
+- Deep research for Jasmin (107 agents, 24 sources, 23 of 25 claims confirmed): research_jasmin_merging.md. No source tests
+  0.6B, per-type DPO LoRA merging, or non-math tasks. Supported: separate-then-merge beats data mixing for 2-5 sources at 3-13B
+  (DEM, Cohere Aya, LoRA Soups), DPO merges more consistent than SFT merges; the advantage fades with more skills (3+: data mix
+  won; TIES collapses with merge count; Task Arithmetic the only reliable method); plain shortest-vs-longest DPO cuts ~17-30%
+  only; -50% at < 1 pt at 1.5B came from on-policy RL with correctness-aware length rewards (DRPO; AdaptThink uses skipping
+  thinking = not allowed here) or SEARCHED / layer-wise merge coefficients (Evo-L2S -52% at +4.6 pts, FIM-TIES); uniform merges
+  degrade at 1.5B ("smaller models struggle to learn from model merging"); DARE needs drop < 0.5.
+- ~19:30 **bidax6p final: +48.8 / -2.3** (svamp +57 / -3.1, mbpp +39 / -0.6, ifeval +52 / -5.2, simple +42 / -5.2, multiple +46 /
+  +0.2, no-fit +48 / +3.7), +0.4 vs curve. Precision alone: best at step 300 (+1.1); his schedule (bidax6s) still to come.
+- **rpB-10 (pt-mid + repair at lr 2e-5, step 10): +52.4 / -2.2** (svamp +58 / -5.8, mbpp +63 / -0.8, ifeval +46 / -0.8, simple +37 /
+  -2.5, multiple +40 / +0.6, no-fit +42 / -1.5), +1.2 vs curve: code and no-fit repaired (mbpp -6.0 -> -0.8, no-fit -5.8 -> -1.5
+  vs rpA-5), math still -5.8. Training moved this time (loss 0.693 -> 0.578, 75% ordered right at step 40). Steps 20 / 40 next.
+  rpC (lr 1e-5 x 80) training on GPU 2, step 25/80.
+- ~21:30 **Track A rpB (lr 2e-5) curve**: step 10 +52.4 / -2.2 (+1.2), **step 20 +48.7 / -1.1** (svamp +53 / -1.9, mbpp +56 / -1.9,
+  ifeval +45 / -1.5, simple +35 / -1.0, multiple +38 / +1.5, no-fit +41 / +2.1), **+1.55 vs curve**; **step 40 +43.4 / +0.3** (svamp
+  +45 / -3.1, mbpp +48 / +1.0, ifeval +44 / +1.7, simple +31 / -3.1, multiple +36 / +0.8, no-fit +41 / +7.3), **+2.1 vs curve: the
+  highest above the curve of any model on the current data** (v1 +1.8). The repair works at this dose: accuracy comes back
+  (code, ifeval, no-fit fully), but so does length (55 -> 43% saved); the points move ALONG a frontier above v1's. Not yet
+  >= 50 / -1. Natural next probes: strength rescue (rpB-40 at 0.5, rpB-20 at 0.5 / 0.75) to land between 20 and 40 at ~50 / -1,
+  and a second seed. rpC-10 (lr 1e-5): +53.6 / -3.0 (+0.6); rpC 20 / 40 / 80 next.
+- ~22:30 rpC (lr 1e-5 x 80): **step 20 +50.5 / -1.8** (svamp +57 / -4.0, mbpp +61 / -2.5, ifeval +41 / -0.6, simple +36 / -0.6, multiple
+  +40 / +2.1, no-fit +42 / -1.5), +1.2 vs curve; **step 40 +51.2 / -2.1** (svamp +58 / -4.0, mbpp +61 / -4.4, ifeval +43 / -1.3, simple
+  +36 / -0.2, multiple +39 / +1.1, no-fit +41 / +2.7), +1.0. Gentler than rpB: keeps ~51% saved but math (-4.0) and code stay
+  damaged; step 80 next. GPU 1: D10 l2s50e step 250/332.
+- 5 Nov ~13:50 Claude session restart: both Colab tabs lost their output; the user reconnected, plans re-run from a47f4cf
+  (rs-bidax6p, rpB commented as done). GPU 1 resumed D10 l2s50e after step 310; GPU 2 skipped the finished rpC screens.
+- **rpC-80 (lr 1e-5, step 80): +43.4 / +0.6** (svamp +44 / -1.7, mbpp +47 / +2.3, ifeval +46 / +0.6, simple +31 / -2.7, multiple
+  +35 / +1.1, no-fit +39 / +5.4), **+2.4 vs curve: new highest above the curve** (rpB-40 +2.1 at the same 43.4% saved, +0.3 pts).
+  rpC's four points (53.6/-3.0, 50.5/-1.8, 51.2/-2.1, 43.4/+0.6) and rpB's lie on one frontier: the repair trades length for
+  accuracy, the gentler lr lands slightly higher at the end. Still no point at >= 50 / -1. Track A done; finish-lpt6 started
+  (svamp adapter seed 1 training, 241 steps).
+- ~15:20 **D10 lpd-l2s50e** (bidax5q s0 settings, l2s50e pair rule: shorten only where solve >= 50%, easy ratio 1.2, shorten cap 2):
+  **step 100 +54.4 / -3.6** (svamp +71 / -7.9, mbpp +59 / -3.7, ifeval +37 / -0.2, simple +41 / -2.5, multiple +45 / +0.4, no-fit +44 /
+  -5.4), +0.2 vs curve; **step 200 +49.7 / -3.0** (svamp +64 / -6.0, mbpp +46 / -1.5, ifeval +40 / -4.0, simple +42 / -2.5, multiple +45
+  / +0.0, no-fit +47 / +1.2), -0.2 vs curve. On the curve, no better than D11 push2 at the same saving (push2-200 49.7 / -2.9); math
+  hit hardest. Final screen next. GPU 2: lpt6 svamp seed 1 step 200/241.
+- ~15:50 **D10 lpd-l2s50e final: +53.5 / -2.7** (svamp +68 / -5.4, mbpp +50 / -3.1, ifeval +46 / -1.0, simple +43 / -3.3, multiple +46
+  / -2.1, no-fit +48 / +1.2), +0.8 vs curve; beats D11 push2 final (52.4 / -3.0) slightly at a bit more saving. Math still the cost.
+  GPU 1 now trains D12 lpd-chain1 (333 steps x 18 pairs). GPU 2: lpt6 svamp merged and screening.
+- ~16:15 **Finish lpt6, missing solos at full strength** (2 seeds souped, bfloat16, our Nov 2 settings, bidax5s's pair set):
+  - **math only (lpt6-svamp): -38.1 / -3.1** (answers LONGER: svamp -78% / -16.2; mbpp -17 / +2.3, ifeval -39 / +1.5, simple -23 /
+    -1.7, multiple -23 / 0.0, no-fit -29 / +2.5). bidax5s's math pairs (shorten 1510, guard 2387) lengthen math, as bidax5s itself
+    did (svamp -13 to -36%); the spill-over lengthens every type. Off the curve's range (fitted above 15% saved).
+  - **no-fit only (lpt6-bfcl_irrelevance): +11.9 / -1.9** (no-fit +36 / +11.7 but simple +18 / -20.6, multiple +17 / -16.6; ifeval
+    +3 / -0.4, mbpp +9 / +1.0, svamp +11 / +0.2), -2.2 vs curve: it teaches "no function fits" and the model then refuses calls on
+    the other tool types.
+  Both are poor merge ingredients at 1.0; the half-strength solos (rs-lpt6h) are screening now, merges after.
+- ~17:10 (user: let the consultant redesign the lpt6 merges) **consult3** (new session; consult2's state was lost with the
+  scratchpad; data-only pack: all_runs.json 132 runs, per_type.md, test card, thinking-off, his lpt6 reply; $3.17, 11 code
+  runs): consult3_merge_design.md. Cancel P / S6 / Pplus / T (lpt6 math and no-fit are not protectors), keep C as a
+  diagnostic; 10 ranked screens mostly on the pt family (drop code; shift strength from math/code to instructions/tools;
+  cross-family swaps of tools and instructions; a weak no-fit 0.25; pt-math in C; a repair on the redistributed base), with
+  decision rules on the half-strength lpt6 solos. Jasmin default: 4 groups (pooled tools) + the 3 tool slices as
+  challengers (7 adapters), pt pair rule, NLL 1.0, constant lr 2e-5, float32, ~N/16 steps with checkpoints every 10,
+  task arithmetic starting at math .20 / code .15 / instr .60 / tools .55. Supports the user's candidate with 2 changes.
+  Awaiting the user's decision; the merges stay paused.
+- ~17:20 lpt6 math solo at 0.5: **-12.2 / -0.5** (svamp -26% / -2.9, ifeval -15 / +1.5, mbpp -3 / -0.4, simple -6 / -1.2,
+  multiple -6 / -0.8, no-fit -6 / +1.9): still longer everywhere and worse on math -> by consult3's rule A, out of all merges.
+  GPU 1: D12 chain1 step 250/333.
+- ~17:40 (user OK) queued on GPU 2 after rs-lpt6h: consult3 screens #1 pt-nocode (math .30 / code 0 / instr .60 / tools .45)
+  and #2 pt-shift (.15 / 0 / .65 / .65), no training; then the Ja
+[output cut at 10,000 characters]

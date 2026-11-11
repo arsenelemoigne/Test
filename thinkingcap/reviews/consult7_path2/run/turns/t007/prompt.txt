@@ -1,0 +1,117 @@
+- **Mechanism (p.6), for GRPO's response-level bias:**
+  - Positive advantage: "greater gradient updates for shorter responses" (favours short correct answers).
+  - Negative advantage: "longer responses are penalized less" (favours long wrong answers).
+  - Separately, std normalisation up-weights very easy and very hard prompts.
+  - The authors also note that many PPO implementations carry the same length bias.
+- **Shown on:** Qwen2.5-Math-1.5B/7B and Qwen2.5-1.5B base (Oat, MATH data). Result: better token efficiency because long *incorrect* responses stop growing.
+- **[inference]** Combined with Arora's finding in ?2.6, moving to Dr. GRPO also removes the implicit "shorter correct gets bigger per-token update" push. Under Dr. GRPO, any shortening must come from an explicit length term or a cap.
+
+### 2.9 DAPO (2503.14476, ByteDance Seed)
+- **Model:** Qwen2.5-32B base (not small).
+- **Ingredients:** clip-higher (?_low 0.2, ?_high 0.28); dynamic sampling (drop all-0 and all-1 groups); token-level loss (normalise over all tokens in the batch); overlong reward shaping; no KL.
+- **Soft Overlong Punishment (eq. 13):** 0 if |y| ? L_max ? L_cache; ((L_max ? L_cache) ? |y|)/L_cache inside the cache window; ?1 beyond L_max. Used with L_max ? L_cache = 16,384, L_cache = 4,096, L_max = 20,480.
+- **Settings:** lr 1e-6 constant with 20-step warm-up; 512 prompts ? 16 responses; mini-batch 512 (16 gradient updates per rollout step).
+- **Relevance:** the clip-higher and dynamic-sampling settings that DLER and "Art" reuse come from here.
+
+### 2.10 Laser / Laser-D / Laser-DE (2505.15612)
+- **Models:** R1-Distill-1.5B, 7B, 32B. **?2B: yes.**
+- **Reward (step bonus):**
+  - LASER: R = correct + ??1[correct and L ? L_T], with ? = 0.5.
+  - Laser-D: L_T is set per difficulty bucket (3 classes) and adapted during training.
+  - Laser-DE: also rewards *incorrect long* responses (an exploration bonus).
+- **Their truncation baseline on 1.5B (Table 3, avg of 4 benchmarks):**
+
+  | Run | Avg length | Accuracy |
+  |---|---|---|
+  | Base | 10,177 | 56.9 |
+  | T8192 | 2,915 | 55.3 |
+  | T4096 | 1,646 | **49.4** |
+  | Arora-style "Group" ? = 0.2 | 3,085 | 54.7 |
+  | LASER L_T = 4096 | 3,636 (?64%) | 58.7 (+1.8) |
+  | LASER-D L_T = 4096 | 3,520 | 60.3 |
+
+  - Truncation at 4k with plain GRPO loses badly. DLER (?2.1) argues this is an optimizer problem.
+
+### 2.11 ALP: Adaptive Length Penalty (2506.05256, "Just Enough Thinking")
+- **Model:** DeepScaleR-1.5B. **?2B: yes.**
+- **Reward:** r = 1[correct] ? ??N?max(p_solved(q), 1/K). p_solved is the online solve rate over K rollouts, so easy prompts pay more per token. Read with 2602.09591's restatement, the penalty is ???len(y)?max(acc(x), 1/G), i.e. a per-token cost.
+- **Settings:** GRPO in veRL; 100 steps; batch 512; context 16,384; ? = 1e-7 (1e-8 also tried).
+- **Result:** "cuts average token usage by 50% without significantly dropping performance". It moves tokens from easy to hard prompts.
+
+### 2.12 DRPO: Decoupled Reward Policy Optimization (2510.04474)
+- **Models:** R1-Distill-1.5B, 7B, R1-Distill-Llama-8B. **?2B: yes.**
+- **Diagnosis:** "when rewards for correct but long rollouts are penalized, GRPO's group-relative advantage function can assign them negative advantages".
+- **Method:** builds on DisCO, a discriminative objective with a KL trust-region constraint. Correct rollouts are re-weighted by exp(r_l(o)/?), normalised **only within the correct group**, with r_l = 1 ? |o|/C. ? = +? recovers DisCO with no length pressure.
+- **Settings:** AdamW, weight decay 0.01; lr 2e-6 (1.5B), 1e-6 (7B), 5e-7 (8B); batch 128; mini-batch 32; 8 responses per question; 8k generation budget for training *and* eval; 1000 steps; ? ? {0.5, 0.2, 0.1}.
+- **Results:**
+  - 1.5B on GSM8K: "77% length reduction with only 1.1% performance loss", versus 68% / ?4.3% for the next baseline.
+  - 7B: 3,053 ? 1,502 tokens (?51%) at ?2.6%.
+
+### 2.13 "The Art of Efficient Reasoning: Data, Reward, and Optimization" (2602.20945, HKU/Tencent, 2026)
+The only paper I found with a **Qwen3-0.6B** run. **?2B: yes (0.6B, 1.7B, plus 1.5B ablations).**
+- **Reward:** truncation, R = 1[correct]?1[L ? L_T]. In their re-implementation, Kimi-style and Laser rewards use ? = 0.4.
+- **Main protocol:** GRPO; lr 1e-6; clip-high 0.28; batch 128; N = 8; L_R = 16k; L_T = 4k; R1-Distill-1.5B; DeepScaleR data; about 0.2M GPU-hours of ablations.
+- **Qwen3 settings (App. E):** L_R = L_T (rollout cap equals target); **8k for Qwen3-0.6B**, 10k for 1.7B; **N = 24**; prompts = **DeepScaleR-Easy (pass rate > 0.5 over 8 rollouts)**; on-policy; batch 128 for 0.6B and 1.7B.
+- **Results (Table 2, AIME'25):**
+
+  | Model | Mean@8 | Pass@8 | Length |
+  |---|---|---|---|
+  | Qwen3-0.6B | 13.33 ? 24.58 | 26.67 ? 36.67 | 14.9k ? 8.9k (?40%), step 640 |
+  | Qwen3-1.7B | 35.00 ? 38.75 | ? | 17.7k ? 11.2k (?37%), step 560 |
+
+  - Across Qwen3 0.6B?30B, length falls 15?47%.
+- **Findings (with evidence):**
+  - **Two stages.** First length adaptation: length falls roughly exponentially, ~6k?2k, and entropy drops. Then reasoning refinement: length is flat while accuracy and entropy recover.
+  - **Hard prompts only:** "catastrophic failure", with entropy spiking and length collapsing.
+  - **Larger N** (8?24) speeds adaptation and improves refinement on math, with little effect on code.
+  - **Masking all incorrect rollouts** (penalising only long-correct ones) is the "short-is-correct trap": entropy explodes after ~400 steps and length collapses.
+  - **Masking long-correct rollouts** (the "-L&C" variant) gives better accuracy at longer length.
+  - **L_R = L_T = 4k gave the best Pareto front.** Their explanation: negative samples stay short, which avoids the trap.
+  - **Kimi-style reward:** best at a 2k eval budget, "suffers from a reasoning collapse issue" at 32k.
+  - **Off-policy staleness up to 16** is faster but brings entropy explosion and length rebound. They recommend on-policy.
+  - **Math-only training transfers the length bias to LiveCodeBench code.**
+  - **Adaptive L_T at the 90th percentile of correct lengths:** shorter, and better at a 4k budget (App. G, Qwen3-0.6B, Fig. 8).
+
+### 2.14 Other 2025?2026 entries (shorter notes)
+
+| Paper | What it does | Size ?2B? | Key numbers / settings |
+|---|---|---|---|
+| **GFPO** (2508.09726, Microsoft) | Sample G = 24, train only on the k = 8 shortest (or best reward/token). Adaptive-k: 4/6/8 by difficulty | No (Phi-4-reasoning 14B) | 46?71% less length inflation vs GRPO; 71?85% with reward/token. lr 1e-7, 100 steps |
+| **Thinkless** (2505.13379) | `<short>`/`<think>` control token; Decoupled GRPO weights the mode-token loss by ? = 1/1000 to prevent mode collapse; distillation warm-up first | Yes (R1-Distill-1.5B) | 50?90% less long-mode use on Minerva Algebra / MATH-500 / GSM8K |
+| **LAPO** (2507.15758) | Two stages. Stage 1 rewards length inside the [P30, P70] band of correct lengths (? = 0.7). Stage 2 puts the per-problem median length into the prompt (? = 0.7) | Yes (R1-1.5B, DeepScaleR-1.5B) | Up to ?40.9% tokens, +2.3 accuracy; GRPO; 4,096 train cap; 10k problems; 3 episodes per stage |
+| **S-GRPO** (2505.07686) | One path, several forced early-exit points; reward decays with exit position | No (Qwen3-8B/14B, R1-7B/14B) | ?35.4% to ?61.1% length with an accuracy gain |
+| **Optimal Reasoning Length** (2602.09591) | Sweeps RLOO-LP, ALP, DRPO; DAPO config with no overlong shaping, fully on-policy, 16K cap, FP16 | Yes (R1-1.5B, **Qwen3-1.7B**) | Accuracy is **non-monotonic** in length. On Qwen3-1.7B the unconstrained token-average baseline "matches or slightly exceeds the within-sweep peak", so length penalties bought little accuracy there. 180 steps on Qwen3-1.7B |
+| **CARE** (2609.29664) | Per-question contrastive length reward inside GRPO, no extra hyperparameters | Yes (Qwen3-1.7B) | lr 1e-6; 256 questions ? 16; temperature 1.0; **train cap 6,144**; KL 0.001; ? 0.2; MATH data. Qwen3-1.7B average: base 40.06 / 11,586 tokens; **plain GRPO 41.18 / 9,049 (?22%)**; CARE 43.82 / 8,154. Explicit short rewards on Qwen3 caused incorrect responses to grow later (p.6, 4B example) |
+| **Correct, Concise and Complete** (2601.02972) | SFT then GRPO; penalty = fraction of tokens after the *first correct answer*, ? = 1 | Yes (Qwen3-1.7B) | GRPO group 8; batch 256; 50 iterations; lr 1e-6; KL 0.001; 16,384 cap. Qwen3-1.7B ?22% length with < 2.5 pt drop; the reduction grows with model size |
+| **Length penalties and monitorability** (2607.09786) | Length-penalised RL at 60%?30% of baseline CoT length | No (Qwen3-4B, 14B) | Accuracy near baseline at 30%, but hint-verbalising faithfulness ?35% (4B) |
+| **NAT** (2603.06619) | Trains on a subset of tokens to save *training* compute | n/a | Not about output length; not relevant |
+
+---
+
+## 3. What the evidence says for a 0.6B model
+
+### 3.1 Facts (from the papers above)
+
+1. **Small-scale evidence exists, but almost all of it is on R1-Distill-Qwen-1.5B, which overthinks heavily** (5?16k tokens on math, 32k evaluation). These papers report ?50% fewer tokens with ? ?1 pt accuracy at ?2B:
+   - DLER (?77%, accuracy up)
+   - ShorterBetter (?77%, +2.5 in-domain / ?0.8 out-of-domain)
+   - ThinkPrune on the distill model (?65%, +0.6)
+   - AdaptThink (?51% to ?64%, accuracy up)
+   - Arora ? = 0.05 on MATH500 (?51%, +0.2)
+   - ALP (?50%)
+   - DRPO on GSM8K (?77%, ?1.1)
+
+   On **Qwen3** small models the reported cuts are smaller:
+   - Qwen3-0.6B: ?40% (Art, AIME'25)
+   - Qwen3-1.7B: ?37% (Art), ?22% (Correct-Concise-Complete, plain GRPO in CARE)
+   - Qwen3-1.7B: penalties beat the unconstrained baseline only marginally (2602.09591)
+2. **Reward forms with ?2B evidence:**
+   - truncation / hard cap (ThinkPrune, DLER, Art, Laser baseline)
+   - step bonus (LASER)
+   - per-prompt z-scored sigmoid (Arora)
+   - deviation from the shortest correct answer (ShorterBetter)
+   - solve-rate-weighted per-token cost (ALP)
+   - target length in the prompt (L1)
+   - think/no-think mode bonus (AdaptThink, Thinkless)
+   - correct-on
+[output cut at 10,000 characters]

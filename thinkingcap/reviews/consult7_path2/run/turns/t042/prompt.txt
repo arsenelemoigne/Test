@@ -1,0 +1,68 @@
+Type of all_runs: <class 'list'>, length: 205
+Keys of first item: dict_keys(['key', 'name', 'kind', 'what', 'saved', 'acc', 'parts', 'acc_screen_eq'])
+per-type study ? code only | eval:            | saved: -3.2 | acc: -1.0 | vs_curve: None
+GRPO grA ? step 50        | eval:            | saved: 1.5 | acc: -0.96 | vs_curve: None
+bidax7 (+ his code & instructions) ? step 100 | eval:            | saved: 41.3 | acc: -1.94 | vs_curve: None
+bidax7 (+ his code & instructions) ? step 200 | eval:            | saved: 43.1 | acc: -0.64 | vs_curve: None
+bidax7 (+ his code & instructions) ? step 300 | eval:            | saved: 45.3 | acc: -0.83 | vs_curve: None
+bidax7 (+ his code & instructions) ? final | eval:            | saved: 43.5 | acc: -2.49 | vs_curve: None
+GRPO grB ? step 50        | eval:            | saved: -2.0 | acc: -0.5 | vs_curve: None
+GRPO grC ? step 50        | eval:            | saved: -0.3 | acc: 0.43 | vs_curve: None
+GRPO grA ? step 100       | eval:            | saved: -2.3 | acc: -1.1 | vs_curve: None
+GRPO grC ? step 100       | eval:            | saved: -3.0 | acc: -1.02 | vs_curve: None
+GRPO grA ? step 150 (final) | eval:            | saved: -5.8 | acc: -0.83 | vs_curve: None
+GRPO grC ? step 150 (final) | eval:            | saved: -6.7 | acc: -0.37 | vs_curve: None
+GRPO grB ? step 100       | eval:            | saved: 1.2 | acc: 0.11 | vs_curve: None
+GRPO grB ? step 150 (final) | eval:            | saved: -0.6 | acc: -0.72 | vs_curve: None
+pt-mid's CODE adapter alone (strength 1.0) | eval:            | saved: 16.5 | acc: -1.27 | vs_curve: None
+pt-mid's CODE adapter alone at its pt-mid strength 0.45 | eval:            | saved: 10.0 | acc: -2.43 | vs_curve: None
+Track A rpB ? pt-mid + repair LoRA (lr 2e-5) ? step 10 | eval:            | saved: 52.4 | acc: -2.22 | vs_curve: None
+Track A rpB ? pt-mid + repair LoRA (lr 2e-5) ? step 20 | eval:            | saved: 48.7 | acc: -1.2 | vs_curve: None
+Track A rpB ? pt-mid + repair LoRA (lr 2e-5) ? step 40 | eval:            | saved: 43.4 | acc: 0.1 | vs_curve: None
+Track A rpC ? pt-mid + repair LoRA (lr 1e-5) ? step 10 | eval:            | saved: 53.6 | acc: -3.03 | vs_curve: None
+Track A rpC ? pt-mid + repair LoRA (lr 1e-5) ? step 20 | eval:            | saved: 50.5 | acc: -1.83 | vs_curve: None
+Track A rpC ? pt-mid + repair LoRA (lr 1e-5) ? step 40 | eval:            | saved: 51.2 | acc: -2.19 | vs_curve: None
+Track A rpC ? pt-mid + repair LoRA (lr 1e-5) ? step 80 (final) | eval:            | saved: 43.4 | acc: 0.43 | vs_curve: None
+per-type study ? code only ? strength 0.5 | eval:            | saved: -0.8 | acc: 0.37 | vs_curve: None
+Per-type merge ? pt-mid without code | eval:            | saved: 50.8 | acc: -2.72 | vs_curve: None
+lpt6 merge C + code ? instr, one fn, several, code at 0.5 | eval:            | saved: 39.5 | acc: -2.8 | vs_curve: None
+October rerun (new data + fp32) ? code adapter alone ? step 19 | eval:            | saved: 16.6 | acc: -1.9 | vs_curve: None
+October rerun (new data + fp32) ? code adapter alone ? step 10 | eval:            | saved: 10.9 | acc: -1.3 | vs_curve: None
+October rerun ? code adapter alone at 0.45 ? step 19 | eval:            | saved: 8.8 | acc: -0.8 | vs_curve: None
+October rerun ? code adapter alone ? step 30 | eval:            | saved: 16.3 | acc: -2.5 | vs_curve: None
+GRPO gr2f ? from the original Qwen ? step 10 | eval:            | saved: 4.0 | acc: -0.4 | vs_curve: None
+GRPO gr2f ? from the original Qwen ? step 20 | eval:            | saved: 11.4 | acc: -0.6 | vs_curve: None
+GRPO gr2f ? from the original Qwen ? step 30 | eval:            | saved: 6.8 | acc: -0.4 | vs_curve: None
+GRPO gr2f ? from the original Qwen ? step 40 (final) | eval:            | saved: 11.3 | acc: 0.3 | vs_curve: None
+ca1-soup-10 (clean line A, round 3) | eval:            | saved: 49.1 | acc: -2.4 | vs_curve: None
+rc1-soup-30               | eval:            | saved: 57.4 | acc: -3.5 | vs_curve: None
+rc1-soup-30               | eval:            | saved: 58.7 | acc: -3.8 | vs_curve: None
+Repair rpE ? step 10      | eval:            | saved: 57.2 | acc: -3.0 | vs_curve: None
+Repair rpE ? step 20      | eval:            | saved: 54.8 | acc: -2.6 | vs_curve: None
+Repair rpE ? step 40      | eval:            | saved: 50.5 | acc: -1.7 | vs_curve: None
+Repair rpE ? step 45      | eval:            | saved: 52.9 | acc: -1.7 | vs_curve: None
+Repair rpE ? step 50      | eval:            | saved: 49.5 | acc: -1.6 | vs_curve: None
+Repair rpE ? step 80      | eval:            | saved: 50.4 | acc: -0.2 | vs_curve: None
+Repair rpE ? step 80      | eval:            | saved: 47.0 | acc: -0.9 | vs_curve: None
+COPD Run A ? step 10      | eval:            | saved: 14.6 | acc: -0.2 | vs_curve: None
+COPD Run A ? step 20      | eval:            | saved: 20.8 | acc: -0.4 | vs_curve: None
+COPD Run A ? step 25      | eval:            | saved: 25.6 | acc: -1.5 | vs_curve: None
+COPD Run A ? step 30      | eval:            | saved: 29.2 | acc: -1.3 | vs_curve: None
+COPD Run A ? step 35      | eval:            | saved: 29.8 | acc: -1.7 | vs_curve: None
+COPD Run A ? step 40      | eval:            | saved: 34.1 | acc: -2.4 | vs_curve: None
+Repair rpE ? step 40      | eval:            | saved: 50.6 | acc: -1.9 | vs_curve: None
+Repair rpE ? step 60      | eval:            | saved: 47.8 | acc: -1.2 | vs_curve: None
+Repair rpE ? step 60      | eval:            | saved: 48.6 | acc: -0.7 | vs_curve: None
+COPD Run C ? step 10      | eval:            | saved: 12.6 | acc: -1.1 | vs_curve: None
+COPD Run C ? step 20      | eval:            | saved: 28.0 | acc: -2.0 | vs_curve: None
+COPD Run C ? step 25      | eval:            | saved: 35.8 | acc: -3.6 | vs_curve: None
+COPD Run C ? step 30      | eval:            | saved: 43.2 | acc: -3.2 | vs_curve: None
+COPD Run C ? step 35      | eval:            | saved: 49.7 | acc: -3.0 | vs_curve: None
+COPD Run C ? step 40      | eval:            | saved: 57.1 | acc: -4.7 | vs_curve: None
+Repair rpG (rpE 80 ? 120) ? step 100 | eval:            | saved: 40.4 | acc: 0.9 | vs_curve: None
+Repair rpG (rpE 80 ? 120) ? step 120 | eval:            | saved: 32.7 | acc: 0.5 | vs_curve: None
+Repair rpI (new round, rpE 80 ?) ? step 100 | eval:            | saved: 42.9 | acc: -0.2 | vs_curve: None
+Repair rpI (new round, rpE 80 ?) ? step 120 | eval:            | saved: 43.0 | acc: 0.9 | vs_curve: None
+Repair rpH (rpG + IFEval counting rule) ? step 100 | eval:            | saved: 42.0 | acc: -0.6 | vs_curve: None
+Repair rpH (rpG + IFEval counting rule) ? step 120 | eval:            | saved: 37.0 | acc: -0.3 | vs_curve: None
+Repair rpI ? step 120     | eval:            | saved: 41.9 | acc: 0.1 | vs_curve: None

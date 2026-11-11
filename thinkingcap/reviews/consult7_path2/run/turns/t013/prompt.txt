@@ -1,0 +1,160 @@
+
+GR_MEANS = {}  # --gr-norms-from: mean generated tokens per test part, filled in main()
+
+
+def main():
+    global LOGIT_TEMP  # --objective copd reads the teacher at temperature 1
+    args = parse_arguments()
+    if args.gr_norms_from:
+        from build_pool import part_of
+        tot, cnt = {}, {}
+        with open(args.gr_norms_from) as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    part = part_of(r)
+                    tot[part] = tot.get(part, 0) + r["output_tokens"]
+                    cnt[part] = cnt.get(part, 0) + 1
+        GR_MEANS.update({p: f"{tot[p] / cnt[p]:.0f}" for p in tot if p})
+        print("gated: B = mean generated tokens per part from " + args.gr_norms_from + ": " +
+              ", ".join(f"{p} {v}" for p, v in sorted(GR_MEANS.items())), flush=True)
+    if args.eval_only:
+        return held_out_eval(args)
+    import torch
+    from peft import LoraConfig, PeftModel, get_peft_model
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
+    base = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype).to(device)
+    base.gradient_checkpointing_enable()
+    base.enable_input_require_grads()
+    out_dir = Path(args.out)
+    state_path = out_dir / "resume.pt"
+    done_steps = sorted((int(d.name[5:]) for d in out_dir.glob("step-*") if (d / "adapter_config.json").exists()),
+                        reverse=True)
+    resume_from = None  # a lost runtime resumes here (state saved every step), not from step 0
+    if state_path.exists() and (out_dir / "current" / "adapter_config.json").exists():
+        resume_from = out_dir / "current"
+    elif done_steps:  # older runs saved checkpoints but no optimizer state: continue from the latest one
+        resume_from = out_dir / f"step-{done_steps[0]}"
+    if resume_from:
+        model = PeftModel.from_pretrained(base, str(resume_from), is_trainable=True)
+    elif args.init_adapter:
+        model = PeftModel.from_pretrained(base, args.init_adapter, is_trainable=True)
+    else:
+        model = get_peft_model(base, LoraConfig(
+            r=args.rank, lora_alpha=2 * args.rank, lora_dropout=0.0, task_type="CAUSAL_LM",
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
+    trainable = [p for p in model.parameters() if p.requires_grad]
+    for parameter in trainable:  # fp16 gradients cannot be unscaled: keep the LoRA weights in fp32
+        parameter.data = parameter.data.float()
+    optimizer = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.0)
+    scaler = torch.amp.GradScaler(enabled=dtype == torch.float16)
+    close_id = tokenizer.convert_tokens_to_ids("</think>")
+    eos = tokenizer.convert_tokens_to_ids("<|im_end|>")
+    teacher = None
+    if args.objective == "copd":
+        if args.updates != 1:  # on-policy only: one update per sampling step, so the PPO ratio is 1 and needs no clip
+            raise SystemExit("--objective copd needs --updates 1")
+        if args.copd_teacher != "self":
+            teacher_tokenizer = AutoTokenizer.from_pretrained(args.copd_teacher)
+            probe = "Tom has 5 apples. <think>\nWait, 5 - 2 = 3.\n</think>\n\ndef f(x): return x"
+            if teacher_tokenizer.encode(probe) != tokenizer.encode(probe) or len(teacher_tokenizer) != len(tokenizer):
+                raise SystemExit(f"{args.copd_teacher}: tokenizer differs from {args.model}; COPD scores the student's tokens")
+            # (9 Nov) kept in CPU memory and moved to the GPU only for its two reads each step: resident, the 4B teacher
+            # (~8 GB) plus the student's backward pass and the sampler ran a 22 GB L4 out of memory
+            teacher = AutoModelForCausalLM.from_pretrained(args.copd_teacher, dtype=dtype).eval()
+            for p in teacher.parameters():
+                p.requires_grad_(False)
+        print(f"copd: teacher {args.copd_teacher}; light = {args.copd_light!r}; heavy = {args.copd_heavy!r}", flush=True)
+
+    keep = set(args.sources.split(","))
+    pool = balanced_order([r for r in read_jsonl(Path(args.data)) if args.sources == "all" or r["source"] in keep],
+                          random.Random(args.seed))
+    current = out / "current"
+    sampler = Sampler(args, tokenizer)
+    log = []
+    rng = random.Random(args.seed)
+    start = 0
+    if resume_from and state_path.exists():
+        state = torch.load(state_path, weights_only=False)
+        optimizer.load_state_dict(state["optimizer"])
+        scaler.load_state_dict(state["scaler"])
+        rng.setstate(state["rng"])
+        torch.set_rng_state(state["torch_rng"])
+        log, start = state["log"], state["step"]
+        print(f"resuming after step {start} (adapter, optimizer and log restored)", flush=True)
+    elif args.init_state and Path(args.init_state).exists():  # (4 Nov) the previous block's AdamW, not a fresh one
+        state = torch.load(args.init_state, weights_only=False)
+        optimizer.load_state_dict(state["optimizer"])
+        scaler.load_state_dict(state["scaler"])
+        print(f"optimizer state continued from {args.init_state}", flush=True)
+    elif resume_from:
+        start = done_steps[0]
+        log_path = out / "rl_log.jsonl"
+        log = [json.loads(l) for l in log_path.read_text().splitlines() if l.strip()][:start] if log_path.exists() else []
+        print(f"resuming after step {start} from {resume_from.name} (no optimizer state saved: fresh AdamW)", flush=True)
+    model.save_pretrained(current)
+
+    for step in range(start, args.steps):
+        scale = args.scale_start + (args.scale_end - args.scale_start) * step / max(1, args.steps - 1)
+        drawn = math.ceil(args.questions * args.dynamic_sampling) if args.dynamic_sampling else args.questions
+        questions = [pool[((args.offset + step) * drawn + i) % len(pool)] for i in range(drawn)]
+        prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
+                                                 enable_thinking=True) for q in questions]
+        prompts = [list(p["input_ids"]) if hasattr(p, "keys") else p for p in prompts]  # newer transformers: an encoding
+        no_think = round(args.group * args.no_think_share)
+        caps = [int(q["cap"]) for q in questions] if args.reward == "cap" else None
+        if args.max_tokens_code and caps is None:  # code gets the test's 8,192, the rest --max-tokens
+            caps = [args.max_tokens_code if (q.get("part") == "mbpp" or q.get("source") == "kodcode") else args.max_tokens
+                    for q in questions]
+        replies = sampler.sample(prompts, current, args.offset + step, model, no_think, caps)
+
+        by_type = {}
+        protect = set(filter(None, args.protect_sources.split(",")))
+        jobs, stats = [], {"correct": 0, "replies": 0, "tokens": 0, "signal": 0, "thinking": 0,
+                           "no_think_correct": 0, "no_think_replies": 0}
+        grades = grade_all(questions, replies, tokenizer, eos, args.grader)
+        dropped = 0
+        if args.dynamic_sampling:  # keep informative groups only, up to --questions of them
+            keep = [k for k in range(len(questions)) if any(grades[k])][:args.questions]
+            dropped = len(questions) - len(keep)
+            questions, prompts, replies, grades = ([xs[k] for k in keep] for xs in (questions, prompts, replies, grades))
+        groups = []
+        for question, prompt, group, correct in zip(questions, prompts, replies, grades):
+            if args.reward == "smart":
+                rewards = smart_rewards([len(r) for r in group], correct)
+            elif args.reward == "lenpen":
+                lam = args.lp_lam_start + (args.lp_lam_max - args.lp_lam_start) * min(1.0, (args.offset + step) / max(1, args.lp_ramp))
+                if sum(correct) / len(correct) < args.lp_gate:
+                    lam = 0.0
+                think = [r.index(close_id) if close_id in r else len(r) for r in group]
+                formed = [close_id in r and len(r) > r.index(close_id) + 2 for r in group]
+                rewards = [(1.0 - lam * min(1.0, n / args.lp_norm) if ok else 0.0) + (args.format_bonus if fm else 0.0)
+                           for n, ok, fm in zip(think, correct, formed)]
+            elif args.reward == "gated":  # (4 Nov, consultant) right x formed x finished x (1 - c L/(L+B)), wrong = 0
+                norms = dict(kv.split("=") for kv in args.gr_norms.split(","))
+                norms.update(GR_MEANS)
+                b = float(norms.get(question.get("part", ""), 512))
+                rewards = []
+                for r, ok in zip(group, correct):
+                    think = r[:r.index(close_id)] if close_id in r else r
+                    answer = r[r.index(close_id) + 1:] if close_id in r else []
+                    blank = sum(1 for x in think if tokenizer.decode([x]).strip())
+                    formed = close_id in r and blank >= args.gr_min_think and len(answer) > 2
+                    finished = bool(r) and r[-1] == eos
+                    shape = (max(0.0, 1.0 - args.gr_coef * len(r) / b) if args.gr_form == "linear"
+                             else 1.0 - args.gr_coef * len(r) / (len(r) + b))
+                    rewards.append(shape if ok and formed and finished else 0.0)
+            elif args.reward == "cap":  # ThinkPrune: 1 if right AND finished under the question's cap, else 0; nothing else
+                cap = int(question["cap"])
+                rewards = [1.0 if ok and len(r) < cap - 1 else 0.0 for r, ok in zip(group, correct)]  # cut at the cap = 0
+            elif args.reward == "arora":
+                thinking = [r.index(close_id) if clo
+[output cut at 10,000 characters]

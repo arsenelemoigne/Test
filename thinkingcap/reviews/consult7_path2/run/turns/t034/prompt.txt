@@ -1,0 +1,85 @@
+L1435: so tool calls and code feel the same pressure) instead of 1 - len / 8k. rl_train.py --objective drpo (drpo_weights
+L1436: tested: Figure-1 group -> [0.62, 0.33, 0.05 | -1/3 x3]); stage `drpo`: fresh shuffled pool mixed like the evaluation
+L1446: `mixed_pool` with drpo: benchmark-like, contamination-checked, earlier draws removed); the judge scores up to 16
+L1456: mbpp_train (targeted_pairs makes no pair for unlisted sources), and the drpo pool's 6% MBPP share moved to KodCode (16%).
+L1484: mounted but its queue sat in a FULL restore (benchlot/drpo/teach were not on the light-restore list, so every run, adapter and
+L1612: track.py drpo --rl-variant shorterbetter. Queued sb1 (runtime 2, after drpo1): from rc1-rl-40, same fresh MBPP-free pool size
+L1675: all-wrong group carries no correctness signal), keeping --questions of them; logged as dropped_groups. track drpo --rl-dynamic
+L1734: **25 Oct ~18:15 (CET), drpo1 training finished (60 steps; 48 new questions x 8 replies per step; rl_train.py --objective drpo
+L1735: --drpo-lambda 0.2 --lr 1e-5 --updates 2 --max-tokens 4096, from rc1-rl-40).** Training-batch averages per 10 steps:
+L1753: (40 and 60 queued for scoring); queued a second drpo1 line with --drpo-score 20 40 60 (training skipped, 40/60 already scored,
+L1754: adds step 20). track.py drpo now saves every 10 steps and scores 20/40/60 by default (sb1, drpo0 and later runs).
+L1757: **25 Oct (user): RL checkpoints tested one by one, then a soup chosen from their scores.** track.py drpo --drpo-soup S1 S2 ...
+L1771: drpo1's step-20 scoring, before sb1): the original Qwen and rc1-rl-40 answer the fresh set x8 with thinking switched off (a copy
+L1780: -4.8 vs its own start. Fix for sb1 / drpo0 (not started yet): rl_train.py logs per-type batch accuracy and thinking every step
+L1781: ("by_type"); track.py drpo scores every saved checkpoint (10, 20, ..., 60) on fresh x8 by default (~7 min each for these
+L1831: - drpo1 step 20 at HALF strength (runtime 1, after nt2): track.py drpo --drpo-weighted 20:0.5 merges the step-20 LoRA at weight
+L1832: 0.5 into rc1-rl-40 (the delta halved: halfway between the start and step 20) and scores it on fresh x8. The drpo stage now
+L1834: - drpo2 (runtime 2, after sb1): DRPO from rc1-rl-40 again, gentler: lambda 0.5 (was 0.2; larger = softer length preference)
+L1845: drpo --rl-protect / --rl-guard. Queued drpo3 (runtime 2, after drpo2): from the RAW Qwen, math protected (gsm_ic, gsm_plus,
+L1864: step 20 at half strength -> lot B5 -> stopB5 -> bal0. Runtime 2: sb1 (running, step 9; every 10-step checkpoint scored) ->
+L1873: sb1 (running) -> drpo3 -> teach1 -> drpo2. GPU 1 relaunched by the user/assistant at ~22:00 on the reordered queue (drpo0
+L1906: **26 Oct ~00:30 (CET), sb1 (ShorterBetter reward, from rc1-rl-40) is collapsing (per-type batch logging, step 33 of 60).**
+L1910: type mix is not even along the run). No guard was set on sb1; its 10/20/30 checkpoints are saved and are scored after step 60.
+L1914: was built with), and once the smaller sources ran out, the remaining steps held only the larger ones (sb1 steps 22-30: math and
+L1915: instructions only). drpo1 and sb1 were trained this way (their later steps were skewed). Now each row of a source with n rows is
+L1920: **26 Oct ~01:45 (CET), sb1 (ShorterBetter reward, beta 0.005, from rc1-rl-40; stopped at step 33), fresh x8:**
+L1932: **26 Oct, queued (user): ShorterBetter rerun, sb2 (runtime 1, before bal0).** From rc1-rl-40 like sb1, with the paper's beta
+L1933: 0.001 (sb1 used 0.005, reasoning that our replies are shorter; but the penalty is per token and advantages are normalized per group,
+L1935: checkpoints every 10 steps scored. track.py drpo --rl-sb-beta passes the weight.
+L1938: score steps 5, 10, 15, 20, 25, 30, 40, 50, 60 on fresh x8 (~7 min each, ~1 h per run): the first 30 steps, where drpo1 and sb1
+L1939: overshot, are seen every 5 steps. sb2 also halves its learning rate (5e-6, as drpo2 / drpo3). drpo3 (already running) keeps its
+L1953: model (drpo, teach) no longer drop questions drawn by earlier experiments (the raw model never trained on them; the 30% 8-gram /
+L1978: **26 Oct, queued (user): DATA V2 in place of stopB6 (GPU 1, after lot B5, before sb2).** Why: stopB5 trained on 928 pairs,
+L2024: on gsm_ic/gsm_plus (rc1, drpo*) may have seen paraphrases of some held-out matched-math test questions. SVAMP is unaffected.
+L2052: confidence. sb2 and drpo2 (from rc1-rl-40, which only draw unused questions; every matched question is now in a lot):
+L2053: MetaMathQA; sb2 protects it like the other math. drpo3b keeps its built pool (GSM-IC/Plus, protected).
+L2327: **27 Oct ~00:40, sp1 queued (GPU 1, after teach1c, before sb2; user):** one big self-preference round from the original
+L2345: - `drpo1-<N>`: `python merge.py --model models/rc1-rl-40 --out models/drpo1-<N> --adapters adapters/drpo1-drpo/step-<N>:1`
+L2352: stopB2, rc2, rr1, sb1: Drive search did not show stopB-s0 / rc2-s0 / sb1-drpo; to verify before any later deletion).
+L2353: **Moved to the Drive trash (19 models, ~21.5 GB; adapters confirmed on Drive: ca1-s0..2, ca2-s0..2, drpo1-drpo, rc1-rl,
+L2365: (rc2-s0), rr1-rl-20 (rr1-rl), sb1-10/20/30 (sb1-drpo); the last four families are removed only if their adapters are found.
+L2366: Extra recipes: sb1-<N> = merge(models/rc1-rl-40, adapters/sb1-drpo/step-<N>); rc2-soup-<N> = merge(models/rc1-rl-40,
+L2368: 31.1/-2.3, 54.2/-3.6; stopB2-20 34.6/-2.1; rc2 soups 10/20/30/60 in density_points (63-64% / -4.9 for 20/30); sb1 10/20/30
+L2433: - Step 3: LUPIN1.0 = LUPIN0 + our guarded online RL (drpo).
+L2458: (DAST / Difficulty-Aware DLER agree); (2) step 3 RL (LUPIN1.0): scale our drpo length penalty by the solve rate p instead of
+L2459: a flat lambda. Our drpo penalizes length only among right answers (Arora-Zanette style); ALP also pushes wrong answers
+L2483: rl_train.py --drpo-solve-scale (RL2).
+L2489: Next on GPU 1: drop1, ps1, dp1, gold1, bp1b, teach1c, sb2.
+L2500: rc2-soup-10/20/30/60, rr1-rl-20); kept sb1-10/20/30 (adapters/sb1-drpo not on Drive). All rebuildable from their adapters
+L2644: - Queue: GPU 1 is now on sb2 (60 RL steps); dp2 a + select re-queued right after it (distinct lines, a failed line is
+L2648: - No restart: GPU 1 finishes sb2 (scoring its checkpoints), GPU 2 finishes drpo2 (scoring), then each runs dp2
+L2649: (GPU 2: half b, next line after drpo2; GPU 1: half a + select, re-added after sb2 with different spelling because its
+L2655: - All run results keep being logged here as they arrive (drpo2, sb2 checkpoints).
+L2657: ### 2026-10-27 ~10:55 ? sb2 and drpo2 checkpoints (fresh 240 x 8), dp2 candidates built
+L2659: - **sb2** (ShorterBetter, beta 0.001, math protected, guard 0.06): the guard stopped it at step 10 (ifeval_like 0.75 -> 0.69).
+L2660: - sb2-5: +53.7% / -2.9 (irrelevance +45/-2.2, multiple +41/-5.9, simple +39/0.0, ifeval +46/-3.1, mbpp +61/-2.2, svamp +63/-3.7)
+L2661: - sb2-10: +52.6% / -3.2 OUTSIDE (irrelevance +45/-2.8, multiple +41/-5.0, simple +39/-0.6, ifeval +47/-2.8, mbpp +59/-4.1, svamp +60/-3.1)
+L2708: (sb2 commented out so a rerun does not resume its RL past the guard stop).
+L2920: - drpo2-{5..60} = rc1-rl-40 + adapters/drpo2-drpo/step-N; sb2-{5,10} = rc1-rl-40 + adapters/sb2-shorterbetter/step-N
+L2923: Kept models: rc1-rl-40, rc1-soup-30, ca1-soup-10, stopB3-soup-25, stopB5 soups, sb1-*, drpo3b-*, drpo3d-*, drpo3f-*,
+L3042: - sb1-{10,20} = rc1-rl-40 + adapters/sb1-shorterbetter/step-N (strong RL, H)
+L3044: - drpo3b-{5,10,15} = drpo3b's start + adapters/drpo3b-drpo/step-N; drpo3d-{5..20} = drpo3b-20 + adapters/drpo3d-drpo/step-N;
+L3045: drpo3f-5 = drpo3d-23 + adapters/drpo3f-drpo/step-5; drpo1-{20,40,60} = drpo1's start + adapters/drpo1-drpo/step-N
+L3051: H strong RL: sb1-30. (B self-preference, C balanced, D clean have adapters only.) Adapters, runs, data untouched.
+L3973: thinkprune: caps per part from the original's right answers in the 4-answer pool file (math q0.95, others q0.70),
+L3978: fails = every checkpoint on or below the curve after ~300 steps. Smoke test (tp0) queued on GPU 1 after the per-type
+L4023: - RL SMOKE TEST tp0 (thinkprune, from the original, 5 steps x 16 questions x 8 answers, lr 5e-6, KL 1e-3): ran clean,
+L4095: Queued: GPU 1 after bidax5q seed 1: gr0 smoke, grA (his recipe), grB (penalty up to 0.2); GPU 2 after bidax7: grC (no
+L4096: KL), grD (gate 0.5). All from raw, 150 steps, the 720 at 50/100/150, ~4-4.5 h each.
+L4097: - ~02:30 (user): GRPO from the raw Qwen as RL, 5 variations, ONE setting changed each from grA (lr 2e-6, KL 0.04,
+L4098: penalty up to 0.05, no gate): grB penalty 0.2, grC KL 0, grD gate 0.5 (GRPO-lambda), grE lr 5e-6. 150 steps each,
+L4099: 12 questions x 8 answers, Dr. GRPO normalization, the 720 at 50/100/150. GPU 1: gr0 smoke -> grA -> grB -> grE;
+L4100: GPU 2 after bidax7: grC -> grD. Then adapt.
+L4101: - ~02:40: GRPO screens now draw the SAME questions as v1's DPO data: pool dp13 + nofit4 + math1 + math2 (thinkprune
+L4111: GPU 1 had pulled the plan before the GRPO lines and started bidax6s: interrupted and restarted so gr0 / grA / grB /
+L4112: grE run first.
+L4113: - ~01:45 (user): sixth GRPO variation grF = SmartThinker reward (arXiv 2603.08000). rl_train.py --reward smart: per
+L4118: lands exactly on the mean. Everything else = grA (the one change is the reward). Queued on GPU 2 after grD, behind a
+L4121: ### 3 Nov: grF aligned with the SmartThinker paper (read in full)
+L4122: Before it ran, grF had three settings borrowed from grA that the paper does not use. Now: plain GRPO advantages
+L4124: it), constant lr. New `track.py --tp-max-solve`: grF keeps only questions the original Qwen misses at least once in 4,
+L4126: (the paper itself says difficulty-based sampling would cut the steps needed). lr stays 2e-6 like grA (LoRA r32; the
+L4151: too close to the final at 339). GPU 1: grA -> D11 push2 -> grB -> D1 dast -> grE -> D2 hard, D3 route, D4 budget, D5 margin,
+L4152: D10 l2s50e -> old re-scores, bidax6s. GPU 2: code2 ->
+[output cut at 10,000 characters]

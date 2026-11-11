@@ -1,0 +1,93 @@
+  -2.4, several functions -1.7, one function -1.2, code only no effect): "think less" is learned as one shared habit,
+  and a type trained alone loses the other types' right-beats-wrong protection, so the spill-over lands unopposed on
+  math and no-fit. Dial-mixing per-type adapters would only mix general pushes. lpt6b and the step-50 screens dropped.
+  Effort goes to: michal-bida's settings (bidax6), his data (bidax5q tonight, bidax7 tomorrow), then the on-policy
+  four-signal round (its same-model be-right pairs for every type are the protection this showed is needed).
+- ~16:40: per-type no-fit only: +11.9 / -1.9 (no-fit +36/+11.7 but multiple +17/-16.6, simple +18/-20.6: it learned to
+  refuse calls; spill on math/code/ifeval small). Per-type study complete; direction dropped (see 16:00).
+- RL SMOKE TEST tp0 (thinkprune, from the original, 5 steps x 16 questions x 8 answers, lr 5e-6, KL 1e-3): ran clean,
+  6.6 min for the 5 steps (~80 s per 128-answer step incl. loading). Caps (original's right answers; share of questions
+  right > half the time that keep a right answer under the cap): math 1,147 tokens 99%; code 1,022 84%; instructions
+  528 84%; tools one fn 171 89%, several 196 91%, none fits 223 88%. Per step: batch accuracy 62-84%, thinking 302-415
+  tokens, entropy 0.47-0.58 (stable), only 6-9 of 16 questions had both right and wrong answers (the rest teach
+  nothing: dynamic sampling needed). "Gradients will be None" warning checked: the step-5 LoRA's B matrices are all
+  non-zero (196/196, norm ~0.002), so the adapter trains.
+  Sizing: the planned 64 x 16 = 1,024 answers per step would be ~8-10 min per step, ~45-50 h for 300 steps per run.
+  32 x 8 with dynamic sampling (draw 2x, keep informative groups) ~3-4 min per step, ~15-20 h per run incl. the 720
+  every 40 steps. Decision (size, start model, which GPU) pending with the user.
+- ~17:20: bidax6 step 300 DIAL on the 720 (merge strength): 0.5 +22.5 / -0.8 (svamp +24/-2.1, ifeval +19/-0.8, no-fit
+  +29/+1.7); 0.75 +30.9 / -0.7 (svamp +39/-2.5, mbpp +15/-2.1, ifeval +33/+1.5, no-fit +37/+2.7); 1.0 = +41.7 / -1.0.
+  bidax6's own curve is nearly flat: from 22% to 42% saved it costs only ~0.2 points, so full strength is its best
+  point (+0.5 vs the reference curve; 0.75 -0.4; 0.5 -1.0). The ~-0.7 floor is mostly math (-2.1 to -2.7 at every
+  strength): math loses accuracy as soon as it is touched at all. bidax5q (his math questions) at step 310/337.
+- ~17:50: old-run re-score on the 720 (yardstick): drpo3d-23 (gentle DRPO RL from raw, old RL pool, 26 Oct) +21.7 / -0.4
+  (svamp +28/-0.2, mbpp +25/+0.2, ifeval +10/-2.1, simple +17/-0.4, multiple +23/+1.5, no-fit +26/+0.8): about 0.6
+  BELOW the reference curve (its old fresh-240 reading was +21.2 / +0.2). Not on the visuals (older data, user rule).
+  drpo3f-15, stopB3-soup-25, lpw-2stage next. bidax5q training done (335/337), its 720 screens starting.
+- ~18:30 **lpc-bidax5q** (bida-exact settings + math1/math2 = michal-bida's GSM8K/MetaMath math, plain bida pairs, 339
+  steps) on the 720: step 100 **+41.8 / +0.2** (svamp +47/-1.5, mbpp +36/+1.3, ifeval +43/+0.2, simple +37/-2.5, multiple
+  +40/+1.7, no-fit +42/+3.1); step 200 **+48.5 / -0.9** (svamp +61/-3.5, mbpp +39/+0.6, ifeval +45/-1.0, simple +41/-1.7,
+  multiple +46/+0.4, no-fit +47/+2.1). Both about **+1.7 above the reference curve**: the first run past the 1-point bar
+  (needs a second seed, then the full test). Step 200 is at michal-bida's own level (47.0 / -0.78 full; the 720 reads
+  saving ~0.6 high, accuracy ~0.3 low). His math data + his settings together close the gap that neither closed alone
+  (bidax6 = settings only: 41.7 / -1.0; bidax5m/s = our math fix: math rambled).
+  drpo3f-15 re-scored: +26.5 / +0.1 (on the curve, +0.1). GPU 1 DISCONNECTED (Reconnect) during the re-scores; waiting
+  for the user's OK.
+- ~18:45: lpc-bidax5q step 300 +47.9 / -1.5 (svamp +60/-4.8, mbpp +38/-1.7, ifeval +47/-0.6, simple +41/-1.2, multiple
+  +44/+1.5, no-fit +47/+3.5): +1.0 vs the curve; step 200 (+48.5 / -0.9, +1.7) stays its best point. Final screening.
+  GPU 1 still disconnected (waiting for the user).
+- ~19:10: both runtimes were reconnected by the user (GPU 1 had hung on "Reconnecting"; GPU 2's bidax5q final screen
+  was lost and re-runs). GPU 1 queue: bidax5q SEED 1 (same recipe) -> its 720 at 100/200/300/final -> stopB3 / lpw
+  re-scores -> bidax6s. Full test of the best bidax5q step only after seed 1 confirms, and with the user's OK.
+- ~19:45 **lpc-bidax5q FINAL** (seed 0) on the 720: **+46.7 / -0.5** (svamp +58/-1.9, mbpp +37/+0.4, ifeval +45/-0.8,
+  simple +41/-2.3, multiple +44/+0.6, no-fit +47/+3.1): **+1.8 vs the reference curve**, our best point; at
+  michal-bida's saving (47.0) with better accuracy than his -0.78 on the 720 (which reads accuracy ~0.3 low, saving ~0.6
+  high). The final adapter is what bida scores. Seed 1 training on GPU 1 (the confirmation); full test after it, with
+  the user's OK. GPU 2: newtop instr2 (his instruction sources) started.
+- ~22:05: BOTH runtimes disconnected again. Before: GPU 1 bidax5q seed 1 at step 150/337 (checkpoint every 10 steps,
+  dpo.py resumes from the last one); GPU 2 newtop instr2 DONE (michal-bida's instruction sources: 2,000 questions x4,
+  mean solve 65%, always 1,016 / sometimes 528 / never 456: harder than our pool's instructions), then code2 had built
+  33,401 usable KodCode-V1 candidates (1,747 dropped as already used) and was answering. Waiting for the user's OK.
+- 3 Nov ~00:40: lpc-bidax5q SEED 1 step 100: +42.8 / -1.9 (svamp +52/-3.7, mbpp +40/-1.9, ifeval +39/-1.5, simple
+  +36/-2.7, multiple +40/+0.6, no-fit +41/+1.0): on the curve (-0.2), vs seed 0 step 100 +41.8 / +0.2 (+1.7). Seed
+  spread at step 100 ~2 pts of accuracy; steps 200/300/final decide. code2 answering: 300/1,500 done (~1 h per chunk).
+- ~00:45: bidax5q SEED 1 step 200: +51.8 / -1.9 (svamp +62/-5.2, mbpp +48/-0.2, ifeval +51/-1.9, simple +40/-2.3,
+  multiple +43/+0.4, no-fit +47/+1.0): +1.3 vs the curve (seed 0 step 200: +48.5 / -0.9, +1.7). Both seeds clear the
+  1-point bar at step 200; seed 1 cuts ~3 pts more and loses ~1 more (math -5.2). Steps 300 / final next.
+- 3 Nov ~01:00 (user): v1 = lpc-bidax5q. Queued: FULL TEST of both seeds' final adapters (fullsoup now names a
+  single-seed run full-<name>-s<seed>-<step>, so the two seeds get separate scores), then v1 (seed 0) answers the
+  training pool x8 (polans pa5q, half b on GPU 1 after the full tests, half a on GPU 2 after bidax7). Next, per the
+  user's plan: (1) visualize v1 vs the original (per type, length bands, 720 + training questions), (2) its answers,
+  (3) pairs aimed at where it cuts and loses, compared on training vs evaluation questions, (4) iterate with the
+  yardstick, watching for over-pushing.
+- ~01:25 (user): no full test until v1 is really good; full tests of bidax5q and v1's answers PAUSED. Pair combinations
+  first, all on bidax5q's data (dp13 + nofit4 + math1 + math2) with michal-bida's settings, 339 steps, 720 at
+  100/200/300/final, judged by the yardstick. GPU 1 after bidax5q seed 1: lpc-b5four (four signals from the original's
+  answers: loop / length-balanced be-right / shorten only on >= 80% solved, dose 1x / no think-enough without trained
+  answers; prostring rows and near-identical tool pairs dropped), lpc-b5diff (difficulty rule, no shorten under 50%
+  solved), lpc-b5cap2 (up to 2 shorten per guard). GPU 2: lpc-bidax7 widened to bidax5q + instr2 + code2 (all of his
+  sources) after the code top-up. BottleCap's own ThinkingCap method is not public (third-party pages guess RL with a
+  length-aware reward); their "collapse of self-trained LMs" paper warns about repeated self-training.
+- ~02:00 (user): three tasks. (1) a stronger v1 from pair techniques compared at equal accuracy (pending the user's
+  list); (2) GRPO from the raw Qwen to learn how it behaves vs DPO; (3) RL on v1 with the winning reward.
+  Built for (2): rl_train.py --reward lenpen (khudgins' ThinkingCap reproduction, read from github.com/khudgins/
+  ornith-thinking-cap: right = 1 - lam * min(1, thinking / 2048), wrong = 0, + 0.1 format bonus; lam ramps 1e-3 ->
+  lam_max), --lp-gate (GRPO-lambda: no length penalty where a group is right < G of the time), --dr-grpo (advantages not
+  divided by the group spread; loss divided by replies x max tokens). His settings: G 8, 12 prompts, lr 2e-6, KL 0.04,
+  temperature 0.9 (we keep the evaluation's sampling), LoRA r32 a64, 500-1000 steps. Papers: lr ~1e-6 typical at
+  0.5-1.5B full fine-tune (LoRA usually higher); KL 0 (TRL default, Dr. GRPO / DAPO) to 0.04; GRPO-lambda reports a
+  uniform length penalty losing accuracy after ~40 steps.
+  Queued: GPU 1 after bidax5q seed 1: gr0 smoke, grA (his recipe), grB (penalty up to 0.2); GPU 2 after bidax7: grC (no
+  KL), grD (gate 0.5). All from raw, 150 steps, the 720 at 50/100/150, ~4-4.5 h each.
+- ~02:30 (user): GRPO from the raw Qwen as RL, 5 variations, ONE setting changed each from grA (lr 2e-6, KL 0.04,
+  penalty up to 0.05, no gate): grB penalty 0.2, grC KL 0, grD gate 0.5 (GRPO-lambda), grE lr 5e-6. 150 steps each,
+  12 questions x 8 answers, Dr. GRPO normalization, the 720 at 50/100/150. GPU 1: gr0 smoke -> grA -> grB -> grE;
+  GPU 2 after bidax7: grC -> grD. Then adapt.
+- ~02:40: GRPO screens now draw the SAME questions as v1's DPO data: pool dp13 + nofit4 + math1 + math2 (thinkprune
+  --tp-extra, default nofit4,math1,math2; answers from bidax5q's 4-answer file, used for the eligibility filter only).
+  The plan (user): 10 DPO pair strategies (all else = bidax5q) -> v1; 5 GRPO variations from the raw Qwen; then v1
+  answers its own questions and both DPO and GRPO are tried on it. All judged on the 720 with the yardstick.
+- 01:30 (real clock; earlier "~02:xx" stamps tonight were estimates): bidax5q SEED 1 final +48.5 / -2.2 (svamp
+  +58/-2.9, mbpp +39/-4.6, ifeval +51/-0.4, simple +40/-2.5, multiple +44/-0.4, no-fit +45/+0.8): +0.4 vs the curve
+  (seed 0 final +46.7 / -0.5, +1
+[output cut at 10,000 characters]

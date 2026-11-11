@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/astra_harness.py", line 138, in kernel_main
+    tree = ast.parse(code)
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/ast.py", line 50, in parse
+    return compile(source, filename, mode, flags,
+                   _feature_version=feature_version, optimize=optimize)
+  File "<unknown>", line 1
+    elif args.reward == "p2budget":
+IndentationError: unexpected indent
+
+
+[Only your first block was run; 1 more block(s) in that reply were ignored. Send exactly one block per reply.]

@@ -1,0 +1,156 @@
+## 2. Methods catalogue
+
+Unless stated otherwise, "1.5B" means DeepSeek-R1-Distill-Qwen-1.5B: a heavy over-thinker, roughly 5?16k tokens on math. That is a different starting point from Qwen3-0.6B.
+
+### 2.1 DLER: truncation + optimizer fixes (2510.15110, NVIDIA, Oct 2025)
+- **Models:** DeepSeek-R1-1.5B and 7B (also Nemotron-Nano-8B). **Shown at ?2B: yes (1.5B).**
+- **Reward:** truncation. A response over the target length gets reward 0. Target 4,000 tokens (?4.1, p.8).
+- **Algorithm:** a GRPO-style clipped objective with three changes:
+  - **Batch-wise advantage normalisation:** A_i = R_i ? mean_group(R); A_norm = (A ? mean_batch)/std_batch (eq. 3, p.4). This replaces GRPO's per-group std.
+  - **Clip-higher:** ?_low 0.2, ?_high 0.28.
+  - **Dynamic sampling:** "discard prompts whose rollouts all yield zero reward or all yield positive reward and resample until the target batch size is reached" (p.6).
+- **Hyperparameters (Table 4, p.21, veRL):**
+
+  | Setting | Value |
+  |---|---|
+  | train batch | 512 prompts |
+  | PPO mini-batch | 64 |
+  | PPO epochs | 1 |
+  | lr | 1e-6 |
+  | rollout temperature | 1 |
+  | rollouts per prompt | 16 |
+  | clip | 0.2 / 0.28 |
+  | filter_groups | on (seq_reward) |
+  | KL loss | coef 0.0005, type mse |
+  | max prompt | 1024 |
+  | training | 450 steps on 7B (?3.4) |
+  | data | DeepScaleR-Preview, 40K competition math problems |
+
+  For Nemotron-8B: target 6,000 tokens and ?_high 0.36.
+- **Why each piece is there (paper's findings):**
+  - Truncation raises per-prompt advantage variance: {0.4, 0.32, 0.3, 0.29} for caps {4k, 8k, 12k, 16k} (p.4).
+  - Clipped tokens are low-probability, high-entropy "transitional" words. Clip-higher stops entropy collapse (Key Finding 2, p.6).
+  - About half the prompts start out all-zero (all 16 rollouts too long). Late in training about 40% are all-one, and the model "overfits to over-shorter responses", plateauing at about 2k under a 4k cap (p.6).
+- **Results (Table 1, p.9; average over MATH, AIME-24, AMC, Minerva, Olympiad; eval at 32k, 16 samples):**
+
+  | Model | Avg length | Accuracy | AIME-24 | Olympiad |
+  |---|---|---|---|---|
+  | 1.5B base | 10,499 | ? | 29.79 | 44.07 |
+  | DLER-1.5B | 2,466 (**?77%**) | MATH 84.31?86.95 | 34.38 | 48.31 |
+  | DA-DLER-1.5B | 2,106 (?80%) | ? | ? | ? |
+  | DLER-7B | 2,405 (?69%) | ? base on every benchmark | ? | ? |
+  | DA-DLER-7B | 2,167 (?73%) | ? | ? | ? |
+
+  - DA-DLER (difficulty-aware): correctness ratio threshold 0.5, cap 2,000 for easy and 4,000 for hard, run for 150 more steps.
+- **Other findings:**
+  - Run under the DLER recipe, penalty shape (truncation, cosine, L1-Max, Laser) "no longer push[es] the accuracy?efficiency frontier" (?4.5). Truncation is also cheapest, because rollouts stop at the cap.
+  - Update-selective merge, for weak public data: keep the top 25% largest-update deltas, scale them by 0.7 and add them to the base. This recovered accuracy at ?46% length (?4.6).
+
+### 2.2 ThinkPrune: iterative length-limit RL (2504.01296)
+- **Models:** R1-Distill-Qwen-1.5B, DeepScaleR-1.5B-Preview, QwQ-32B. **?2B: yes.**
+- **Reward:** DeepSeek-R1 correctness reward computed on clip(Y, L). Any answer past the limit L is discarded, so reward = 0 (p.4).
+- **Algorithm:** GRPO in veRL; batch 128; 16 rollouts per question. lr and KL are not given in the main text **[unverified]**.
+- **Data:** 2,470 AIME+AMC problems (the PRIME subset).
+- **Schedule:** one-shot runs at 4k, 3k or 2k, or iterative runs 4k?3k?2k. Checkpoint rule: "the shortest average output length while maintaining a relative 10% accuracy drop."
+- **Results (Table 1; average of MATH500, AIME24, AMC, Olympiad; eval at 32k):**
+
+  | Model | Before | After |
+  |---|---|---|
+  | R1-Distill-1.5B, 4k?3k?2k | 10,355 tokens, 56.8 | 3,574 tokens (**?65%**), 57.4 (**+0.6**) |
+  | DeepScaleR-1.5B, 4k?3k?2k | 5,914 tokens, 65.7 | 3,370 (?43%), 63.2 (**?2.5**) |
+  | DeepScaleR-1.5B, one-shot 2k | ? | 3,429, 61.7 |
+  | QwQ-32B | ? | ?2.7 accuracy; iterating did not help |
+
+  - Iterating beats one-shot at the same final cap for the 1.5B models. "Saturated" models (already RL-trained) lose more accuracy.
+
+### 2.3 L1 / LCPO: length control through the prompt (2503.04697, COLM 2025)
+- **Model:** DeepScaleR-1.5B-Preview; a 7B variant in App. A.9. **?2B: yes.**
+- **Reward:**
+  - L1-Exact: r = 1[correct] ? ??|n_gold ? n_y|, with ? = 0.0003. The prompt adds "Think for n_gold tokens." with n_gold ~ U(100, 4000).
+  - L1-Max: r = 1[correct] ? clip(??(n_gold ? n_y) + ?, 0, 1), with ? = 0.5. The L1-Max ? is not stated in the text I read **[unverified]**.
+- **Algorithm:** GRPO in veRL; lr 1e-6; batch 128; training context 4K (eval 8K). L1-Exact ran 700 steps; L1-Max ran 120 more steps. Data: DeepScaleR.
+- **Result:** controllable length. About 1% below DeepScaleR-4K at matched budgets. Its "Short Reasoning Models" beat GPT-4o by 2% at equal length. This is a controllability method rather than a fixed reduction figure.
+
+### 2.4 ShorterBetter: Sample Optimal Length (2504.21370)
+- **Models:** R1-Distill-1.5B and 7B. **?2B: yes.**
+- **Reward:** r = ??1[correct] ? ??|?(y) ? ?_SOL|. The absolute-value bars are lost in the PDF text, but the "deviation" reading is consistent with the text. ?_SOL is the length of the *shortest correct* response in the group, or the group mean length if none is correct (eq. 1, p.5).
+- **Algorithm:** GRPO in veRL.
+
+  | Setting | Value |
+  |---|---|
+  | batch | 64 |
+  | group size | n = 8 |
+  | lr | 1e-6 |
+  | steps | 300 (1.5B), 200 (7B) |
+  | max train length | 6K (1.5B), 5K (7B) |
+  | ? | 1 or 2 |
+  | ? | 0.001 |
+  | KL ? | 0.001 |
+  | ? | 0.2 |
+  | data | DeepScaleR |
+
+- **Results (?5.1):**
+  - 1.5B in-domain math: ?77.6% / ?79.2% length, accuracy +2.5 / +3.2 (? = 1 / 2).
+  - 1.5B out-of-domain: ?77.0% / ?75.5% length, accuracy ?0.8 / ?1.6.
+  - 7B: ?62% length, +7.1 in-domain and ?0.48 out-of-domain.
+  - Caveat: evaluation uses **one sample per problem**, so these numbers are noisy.
+
+### 2.5 "Concise Reasoning via RL" (Fatemi et al., 2504.05185)
+- **Models:** R1-Distill-1.5B and 7B; Qwen2.5-Math-1.5B-Instruct. **?2B: yes.**
+- **Reward:** no explicit length term.
+  - PPO: +1 correct and boxed, ?0.5 boxed but wrong, ?1 no box.
+  - GRPO: 1/0.
+- **Claim:** RL with a per-token-averaged loss makes responses *longer* when reward is negative and *shorter* when positive (Theorems 1?2). So a short second RL phase on problems the model can **occasionally solve** shortens outputs with no penalty at all.
+- **Settings (App. A.7):**
+  - PPO: ? = 1, ?_GAE = 0.95; 8 samples, temperature 0.6, max length 20,000; actor lr 5e-7, critic lr 9e-6.
+  - GRPO: 8 samples, max length 24,576, lr 1e-6.
+  - Second stage: 8 MATH problems, "fewer than 60 training steps".
+- **Results:** "over 54% and 40% reduction in response length for the R1 1.5B and R1 7B models, respectively, while preserving accuracy" (?8).
+- **Failure modes they documented on 1.5B:**
+  - GRPO on 4 *unsolvable* problems "quickly converged to extremely short outputs (fewer than 80 tokens)", because the advantages are zero and only the KL term acts.
+  - On all-solvable problems, KL dominates again and progress stalls (p.12).
+  - They recommend PPO over GRPO for this second stage.
+
+### 2.6 Arora & Zanette, "Training Language Models to Reason Efficiently" (2502.04463)
+- **Models:** R1-Distill-1.5B and 7B. **?2B: yes.**
+- **Reward:** r = 1[correct] ? (1 ? ???((LEN ? MEAN(x))/STD(x))). MEAN and STD are the per-prompt mean and std of *correct* response lengths, estimated online. ? ? {0.05, 0.1, 0.2, 0.4} (eq. 5).
+- **Algorithm:** PPO with the RLOO advantage, in OpenRLHF.
+
+  | Setting | Value |
+  |---|---|
+  | samples per prompt | 8 |
+  | prompts per iteration | 32 |
+  | global batch | 128 (2 gradient steps per iteration) |
+  | lr | 5e-6 (1.5B), 2e-6 (7B) |
+  | KL | 1e-3 |
+  | generation | temperature 1, 32K context |
+  | training | about 100 RL steps (~200 gradient updates) |
+  | data | 3.2k Numina prompts |
+
+- **Results, 1.5B, MATH500 (App. Tables 3?5, base 5,278 tokens / 0.833):**
+
+  | ? | Tokens | Accuracy |
+  |---|---|---|
+  | 0 | 3,077 | 0.840 |
+  | 0.05 | 2,606 (**?51%**) | 0.835 (**+0.2**) |
+  | 0.1 | 2,536 | 0.819 |
+  | 0.4 | 1,395 | 0.749 |
+
+  - 7B: "a reduction of 50% in tokens with less than 5% reduction in accuracy."
+- **Key side finding (p.9):** at ? = 0, length still dropped. This is "because of the recently discovered biased nature of RLOO's implementation ? which normalizes the loss by the length of the response. We find that removing the length bias from the implementation leads to no change in the response length".
+
+### 2.7 AdaptThink: learn to skip thinking (2505.13417)
+- **Models:** R1-Distill-1.5B and 7B. **?2B: yes.**
+- **Objective:** advantage A = 1[first token = `</think>`]?? + R(x,y) ? R?_ref(x). R?_ref is the mean reward of K reference samples drawn before training. The loss is PPO-style with no KL (eq. 7).
+- **Importance sampling:** the first token is forced 50/50 between `</think>` (NoThinking) and a thinking opener ("Alright"). This solves the cold start.
+- **Settings:** veRL; context 16K; batch 128; lr 2e-6; K = 16; ? = 0.05; ? = 0.2; 1 epoch (314 steps); DeepScaleR data. Checkpoint at step 300 (1.5B).
+- **Results, 1.5B:** length ?50.9% / ?63.5% / ?44.7% on GSM8K / MATH500 / AIME24, with accuracy +4.1 / +1.4 / +1.6. Even at ? = 0 the model picks NoThinking on more than 50% of GSM8K/MATH500.
+
+### 2.8 Dr. GRPO: length-bias analysis (2503.20783, COLM 2025)
+- **Not a length-reduction method.** It removes GRPO's 1/|o_i| and 1/std(R) terms, normalising instead by a constant (the generation budget, MAX_TOKENS).
+- **Mechanism (p.6), for GRPO's response-level bias:**
+  - Positive advantage: "greater gradient updates for shorter responses" (favours short correct answers).
+  - Negative advantage: "longer responses are penalized less" (favours long wrong answers).
+  - Separately, std normalisation up-weights very easy and very hard prompts.
+  - The authors also note that many PPO implementations carry the
+[output cut at 10,000 characters]

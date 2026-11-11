@@ -1,0 +1,111 @@
+### 6.2 marek-krcal ([KRCAL] docs/experiments/preferences.md, tc/objectives.py, tc/preferences.py)
+- Objectives: SimPO (length-normalised log-prob margin, **beta 2, gamma 1**, no reference) and DPO (summed log-probs,
+  frozen adapter-disabled reference, **beta 0.1**; lower-KL control **beta 0.05**).
+- Data: 2,287 GSM8K groups x 8 answers ("original" pairs); planned external mixture of 2,000 audited questions (575
+  code: 158 MBPP + 417 KodCode; 718 IF_multi_constraints; 707 ToolACE), 1,000 groups selected and added.
+- Pairings: `correct-longer` = shortest correct positive vs strictly longer wrong and >= 1.5x longer correct;
+  `all-longer` = every negative >= 1.5x.
+- Recipe: 982 optimiser updates, 7,852 four-response views; checkpoints 737 / 860 / 982 screened; Colab A100 for
+  generation, L4 for training.
+- Numbers: none published. The plan's success bar ("saves at least 29.36% ... loses at most 2 pp ... not dominated by
+  Qwen/737/982") suggests an earlier SimPO point near 29% saved: **UNVERIFIED**.
+
+---
+
+## 7. Across entries
+
+### 7.1 Facts that recur (with sources)
+1. **Train only on the model's own text.** bida: rule-edited own traces failed (-6 to -10 pp, loops) while selected own
+   traces did not (FINDINGS ?15). basta: "Fine-tuning on another model's thinking did poorly"; a larger model choosing
+   the cuts reached only ~40 / -0.8 (IDEA.md). Herz1c: every example is own reasoning, only the stop point moves.
+   matousek: all replay targets are student answers; teacher replay -12.4 pp. mrtineu: the teacher only gives hints,
+   the student writes the target.
+2. **Imitating your own shortest right answer barely shortens.** bida S2 +4.5%, A -2%; Herz1c +2.3%; mrtineu control
+   0-2%; basta SFT on oracle cuts 11.4%. Every entry above 40% has a contrastive or RL signal (DPO rejected side,
+   advantage) on top.
+3. **Pure "shorter beats longer" collapses accuracy fast.** bida Dl: 83.6% / -13.0. basta shortest>longest: 90% / -27 pp
+   in 50 steps. ShorterBetter (matousek): 63.7% / -4.7 at iteration 30.
+4. **Every working recipe has an explicit accuracy anchor next to the length push:** wrong-sample pairs (bida, balanced
+   1:1 per domain); guard + hard pairs (basta, 40/40/20); reward 0 for any wrong or capped answer (Herz1c, matousek);
+   NLL on right traces (basta correctness DPO, weight 1; matousek replay NLL, weight 0.1). Unanchored right>wrong DPO lost
+   5.2 pp (basta); DPO with both sides sharing an answer scaffold collapsed into empty answers (basta).
+5. **Dose matters and the best point is early.** basta stopped oracle DPO at step 100 of 561; matousek's best balance at
+   256 of 1,280 questions, then nearly linear (256 -> 1280: +15.4 points saved for -2.56 pp, ~ -0.17 pp per point); mrtineu best at half an epoch;
+   Herz1c only 50 GRPO steps x 24 prompts. bida is the exception: 1 full epoch, final adapter, but with a 1:1 anchor.
+6. **Per-domain normalisation / balancing.** bida caps long pairs per domain at the wrong-pair count; Herz1c divides
+   length by each domain's mean length; matousek uses a per-domain frozen reference. Herz1c's reason: the metric is a
+   ratio of sums per benchmark.
+7. **SVAMP is where everyone pays.** SVAMP accuracy: bida -2.41, Herz1c -1.33, basta -3.8, matousek -0.62 (256) to -1.29
+   (850), mrtineu -2.26. Herz1c: the 0.6B's re-checks after the answer are partly useful; SFT stop data cost ~1 pp per 8
+   points of SVAMP saving, RL broke that trade.
+8. **BFCL irrelevance swings with training data on "no call".** bida (45% of tool prompts are no-fit/decline): +6.04.
+   matousek (79 no-call rows of 30,801 tool rows): -4.2 to -10.2. Herz1c (Glaive): -0.83. basta's gate trained into
+   weights called tools on irrelevance (-3.3 pp).
+9. **The truncated tail is a large share of tokens.** MBPP+ base: 7.9% capped, 30.6% of MBPP+ tokens (Herz1c). All top
+   entries cut truncation: bida MBPP+ 7.3 -> 3.8%, matousek 8.6 -> 3.7%, Herz1c capped 49 -> 6 per 756 (give-up rule).
+10. **Offline policy gradient on stored samples failed** (bida G1: -13.8% / -9.4, half the tokens clipped); **online**
+    GRPO with a small lr and few steps worked (Herz1c, matousek).
+11. **Run-to-run noise is ~0.4 pp** on the full test with the same adapter (Herz1c 43.3/-1.17 vs 43.5/-0.77); 2-sample
+    evals are 0.5-1 pp optimistic (basta) and differ 1-2 pp per benchmark (Herz1c).
+
+### 7.2 Hyperparameters that recur
+| setting | values seen |
+|---|---|
+| DPO beta | 0.1 everywhere (bida, basta x2, Herz1c's failed DPO, marek); marek tests 0.05 |
+| DPO lr | 2e-5 (bida, basta); 1e-5 (Herz1c's failed DPO) |
+| DPO batch | 16 pairs/step (bida, basta); 8 (Herz1c) |
+| DPO reference | base with adapter off (bida, marek); the starting adapter (basta, Herz1c) |
+| DPO NLL anchor | 0 (bida); 1.0 on the right>wrong stage only (basta); 0.2 (Herz1c, failed) |
+| DPO length | 1 epoch (bida 367 steps; basta correctness 42 steps) or stopped early (basta 100/561) |
+| LoRA | r32/a64 (bida); r16/a32 (Herz1c, basta, matousek); r8/a16 q,v only (mrtineu, weakest); all 7 linear layers in the top 4 |
+| LoRA dropout | 0 (bida, basta); 0.05 (Herz1c SFT) |
+| SFT lr / epochs | 1e-4, 1-2 epochs (bida, Herz1c, basta) |
+| RL lr | 1e-5 (Herz1c, matousek); 1e-6 full weights (ShorterBetter) |
+| RL group size | 8 (Herz1c), 4 (matousek) |
+| RL KL | none (Herz1c, matousek) |
+| RL advantage | r - group mean, no std division (Herz1c, matousek; bida's offline G1 too) |
+| Length penalty size | alpha 0.2 x L/domain mean (Herz1c), 0.1 x min(L/ref,1) (matousek): small next to the correctness reward of 1 |
+| Warmup | 5% (bida DPO, Herz1c SFT, basta SFT), 10% (basta DPO), cosine everywhere |
+| Samples per prompt for offline data | 4 (bida, basta oracle, Herz1c rollouts, mrtineu) |
+| Pair ratio thresholds | long >= 1.5x (bida, marek); right/wrong within +-25% length (basta) |
+| Prompt count | ~11k (bida), ~10k oracle questions + 20k distill (basta), ~1.5k per domain (Herz1c), 1,280 processed (matousek) |
+| Seeds | 1 everywhere |
+
+### 7.3 Where each entry is strongest (fact) and what that suggests (inference)
+Per-benchmark tokens saved at the submitted point: SVAMP basta 66 / bida 56; IFEval bida 55; MBPP+ Herz1c 65; BFCL
+basta-with-gate 45, bida 35-46 per subset. **Inference:** the four entries each found a different benchmark's lever
+(bida: per-domain DPO with matched data; Herz1c: give-up + draft-before-stop on code; basta: terse-draft SFT on math);
+if the best per-benchmark ratios could coexist (0.34 / 0.45 / 0.35 / 0.55), the geometric mean would be ~59% saved (accuracy not accounted for).
+Nobody has shown they do coexist.
+
+### 7.4 What does not seem to work (facts)
+- Editing or rewriting traces (bida T/V, basta "another model's thinking").
+- SFT alone on own shortest answers or oracle cuts.
+- Length-only preference pairs, or right>wrong pairs without an NLL anchor.
+- Offline GRPO on stored samples.
+- Scaling a learned-stop LoRA down (Herz1c: the stop disappears) or merging LoRAs (basta: -3.9 pp).
+- Permissive replay admission / adaptive length targets (matousek: outputs got longer).
+- Bigger adapters for the same data (mrtineu: smaller MLP compressed more; LoRA r8 q,v compressed least).
+
+### 7.5 Inferences (mine, not tested by them)
+- **The accuracy anchor seems to matter more than the length signal.** In matousek's runs removing the length reward
+  cost only 3.7 points of saving, while removing the replay of shortest right answers removed almost all of it; in bida
+  the 1:1 anchor kept accuracy at a 1-epoch dose. Both suggest the "be right, in your own short form" signal is doing a
+  lot of the work.
+- **One round of DPO with a balanced anchor is the cheapest strong point** (bida: ~25 h sampling + 2 h training on an
+  11 GB card for 47 / -0.78); RL entries spend more compute for similar or lower points.
+- **A large share of the remaining accuracy loss is in two places:** SVAMP (all entries) and BFCL irrelevance (data
+  dependent). The 1.7B Herz1c result says SVAMP loss can be mostly answer *format* rather than arithmetic, which is
+  worth checking in any SVAMP loss.
+- **Benchmark-shaped prompts help but are not required:** basta reached MBPP 39% / IFEval 32% with only math and
+  multiple-choice training data, so terse reasoning transfers across domains to a degree; bida's matched data gave
+  higher IFEval (55%) and BFCL savings.
+
+### 7.6 Gaps
+- Herz1c: exact row counts of SFT mixes C/E/G and the GRPO checkpoint choice (step 50 assumed).
+- matousek: LR schedule; whether ShorterBetter runs used protocol.json as written.
+- basta: per-benchmark numbers for each stage and ungated BFCL accuracy (the blog may have them; not read).
+- mrtineu: training question source and count.
+- marek-krcal: any scored result.
+- bida: per-domain pair counts of arm D other than math.
+

@@ -1,0 +1,69 @@
+   - ALP (?50%)
+   - DRPO on GSM8K (?77%, ?1.1)
+
+   On **Qwen3** small models the reported cuts are smaller:
+   - Qwen3-0.6B: ?40% (Art, AIME'25)
+   - Qwen3-1.7B: ?37% (Art), ?22% (Correct-Concise-Complete, plain GRPO in CARE)
+   - Qwen3-1.7B: penalties beat the unconstrained baseline only marginally (2602.09591)
+2. **Reward forms with ?2B evidence:**
+   - truncation / hard cap (ThinkPrune, DLER, Art, Laser baseline)
+   - step bonus (LASER)
+   - per-prompt z-scored sigmoid (Arora)
+   - deviation from the shortest correct answer (ShorterBetter)
+   - solve-rate-weighted per-token cost (ALP)
+   - target length in the prompt (L1)
+   - think/no-think mode bonus (AdaptThink, Thinkless)
+   - correct-only normalised weighting (DRPO)
+   - post-first-answer fraction (2601.02972)
+   - none at all, just training on occasionally solvable problems (Fatemi)
+3. **Kimi-style min-max group reward at small scale.** Only the Art paper re-ran it, on 1.5B with ? = 0.4. It was strongest under a strict 2k evaluation budget and collapsed at a 32k budget. Kimi never published its weight.
+4. **Optimizer choices with small-model evidence:**
+   - **Batch-level instead of group-level std normalisation:** DLER, 7B ablation used on 1.5B; Dr. GRPO removes the std entirely.
+   - **Clip-higher ?_high = 0.28:** DLER, Art.
+   - **Dynamic sampling** (drop all-0 / all-1 groups): DLER.
+   - **No or very small KL:** 5e-4 MSE in DLER; 1e-3 in Arora, ShorterBetter, CARE, 2601.02972. With zero-advantage groups, KL can drive the 1.5B model to under 80 tokens (Fatemi).
+   - **Length normalisation:** per-response 1/|o| (GRPO, OpenRLHF RLOO) is itself a hidden shortening force for correct answers. Removing it removed the shortening at ? = 0 (Arora).
+5. **Typical hyperparameters at 1.5B-ish scale** (all full fine-tuning, none LoRA):
+
+   | Setting | Range seen |
+   |---|---|
+   | lr | 1e-6 to 2e-6 (Arora 5e-6) |
+   | group size | 8?16 (Art used 24 for Qwen3) |
+   | prompts per step | 64?512 |
+   | steps | 100?700; length usually drops in the first ~50?150 steps (Art Stage I; Fatemi < 60 steps; Arora ~100 steps) |
+   | training cap | 4k?8k (L1 4k, ThinkPrune 2?4k, DLER 4k, ShorterBetter 6k, Art 8k for 0.6B, CARE 6,144) |
+   | sampling temperature | 0.6?1.0 |
+
+6. **Documented failure modes:**
+   - **Collapse to short wrong answers:** hard-only prompts (Art); GRPO on unsolvable problems (Fatemi, <80 tokens); masking incorrect rollouts ("short-is-correct trap", Art).
+   - **Over-shortening and a plateau below the cap** from all-correct groups dominating the batch (DLER, ~2k under a 4k cap).
+   - **Entropy collapse** without clip-higher (DLER); entropy explosion with high staleness (Art).
+   - **Incorrect answers growing later in training** (CARE, Qwen3).
+   - **Length-overfitting:** the model cannot use more budget later (K2.5).
+   - **Accuracy loss on hard problems** with tight one-shot caps (Laser T4096: ?7.5 pts; ThinkPrune on saturated models: ?2.5).
+   - **Less faithful CoT** (2607.09786).
+7. **Cross-domain transfer of length habits:**
+   - math+code ? GPQA/MMLU-Pro (K2.5 Toggle)
+   - math ? LiveCodeBench (Art)
+   - MATH ? MMLU-STEM (Fatemi)
+   - Kimi K2 instead uses a **per-task-type** budget.
+
+### 3.2 Inferences for our setting (not tested by anyone on our benchmark)
+
+- **[inference] Our scoring rule makes truncation the natural reward.** We score at a fixed 4,096 / 8,192 cap, so a rollout over the cap is already wrong at evaluation time. Truncation with **rollout cap = target = our eval cap or a bit below** (Art's L_R = L_T) aligns the training reward with the metric. It is the cheapest option, because rollouts stop at the cap. DLER's claim that penalty shape matters little once the optimizer is fixed argues against spending effort on fancy penalties.
+- **[inference] Optimizer settings for rl_train.py**, in order of evidence:
+  1. Clip-higher 0.28.
+  2. Dynamic sampling, dropping groups that are all-correct or all-wrong.
+  3. Batch-level advantage std (DLER) instead of group std. Dr. GRPO's no-std is also defensible; DLER's argument is that group std is unstable under truncation noise.
+  4. KL ? 1e-3 or off.
+  5. With Dr. GRPO-style constant normalisation, expect **no** implicit shortening. The cap or an explicit term must do all the work. This may partly explain why our past GRPO runs "barely moved" **[inference, unverified against our logs]**.
+- **[inference] Prompt selection matters more than the penalty at 0.6B.** Train on prompts the model passes more than half the time (Art: pass rate > 0.5, N = 24). Keep some partially solvable ones (Fatemi: occasionally solvable problems shorten outputs on their own). Keep hard prompts out of the length phase. For us, per-type pools from SVAMP, MBPP+, IFEval and BFCL with measured pass rates at the cap.
+- **[inference] Tighten the cap in stages** (ThinkPrune 4k?3k?2k beat one-shot on 1.5B) rather than going straight to the target. Select checkpoints by "shortest length within an accuracy tolerance", as ThinkPrune does, but with our ?1 pt tolerance instead of their 10%.
+- **[inference] Difficulty awareness is cheap to add** once a group has K samples: DA-DLER thresholds, ALP's solve-rate weight, or K2.5's "only enforce the budget when mean accuracy > ?". It targets exactly the easy-prompt waste that dominates SVAMP-style data.
+- **[inference] LoRA is untested.** No paper here uses LoRA. All lr values (1e-6 to 2e-6) are for full fine-tuning. A LoRA run needs a higher lr, typically 10? or more, and that value is not established for this task.
+- **[inference] Per-type budgets.** Our four task types have very different natural lengths (BFCL/IFEval answers are short, MBPP+ code is longer). A single cap may over-penalise code. Kimi K2's per-task-type budget, or a per-prompt budget like K2.5's ?-percentile of correct lengths or K3's ??b0(x), fits better.
+- **[inference] Small models lose less than large ones but gain less too.** k1.5 found larger models more token-efficient, and 2601.02972 found smaller relative reductions on Qwen3-1.7B (?22%) than on 32B (?40%). Reaching ">50% at ?1 pt" on Qwen3-0.6B by RL alone is **not yet demonstrated anywhere**. The closest result is ?40% on AIME'25 with accuracy *up* (Art), at a 32k budget, not at a fixed 4k/8k cap.
+
+### Sources (all fetched 11 Nov 2026)
+arXiv: 2501.12599, 2507.20534, 2602.02276, 2607.24653, 2510.15110, 2504.01296, 2503.04697, 2504.21370, 2504.05185, 2502.04463, 2505.13417, 2503.20783, 2503.14476, 2505.15612, 2506.05256, 2510.04474, 2602.20945, 2508.09726, 2505.13379, 2507.15758, 2505.07686, 2602.09591, 2609.29664, 2601.02972, 2607.09786, 2603.06619. Found via web search: [The Art of Efficient Reasoning](https://www.alphaxiv.org/abs/2602.20945), [Optimal Reasoning Length](https://arxiv.org/html/2602.09591v3), [To Think or Not to Think](https://arxiv.org/html/2609.29664v1), [DRPO](https://arxiv.org/pdf/2510.04474), [Length Penalties and Monitorability](https://arxiv.org/pdf/2607.09786), [2601.02972](https://arxiv.org/pdf/2601.02972v1), [NAT](https://arxiv.org/pdf/2603.06619).
+

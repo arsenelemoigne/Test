@@ -1,0 +1,81 @@
+  verified solutions, no teacher. Full test 2,759 x 8: Self-Replay-256 **31.23% / +0.21** (CI -0.48..+0.88; +0.5 vs our curve),
+  Self-Replay-850 **41.60% / -1.17** (+0.3), checkpoint 1280 46.58% / -2.35 (-0.1). No-fit -4.17 / -6.88 pp; one seed;
+  checkpoints chosen on the benchmark (stated). Added to FullEval as references (per-part numbers not copied).
+- ~03:00 **lpt6mix-C7 (instructions + one fn + several, each 0.7): +51.3 / -3.6** official (svamp +55 / -4.2, mbpp +55 / -2.7, ifeval +50 /
+  -3.7, simple +42 / -2.1, multiple +46 / +1.7, no-fit +45 / -11.7), -0.5 vs curve: the higher dose saves more but no-fit
+  collapses without a no-fit adapter. lpt6 merge summary: C 41.3 / -1.3, C + code 39.5 / -2.8, C + weak no-fit 43.3 / -1.2 (best),
+  tools only 31.0 / -2.3, C at .7 51.3 / -3.6.
+- drivetidy second dry run (fixed): **99.1 GB** (A 4.8, B 2.6, C 51.7 = 1,009 never-scored checkpoints, D 7.5, E 16.9 + 6.6,
+  F 2.6, G 6.3); reviewed: scored GRPO steps 50 / 100 now kept, no results folder, nothing from 5-6 Nov, no input of a
+  queued run. User approved A-G: drivetidy --dt-apply queued on GPU 1 (moves to Drive trash; the user empties it).
+- ~03:20 (user) GRPO v2 option after Herz1c's write-up: rl_train.py --gr-form linear (R = max(0, 1 - c L/B) for a right, formed,
+  finished answer, else 0) and --gr-norms-from FILE (B = the original model's mean generated tokens per test part on TRAINING
+  answers, never test questions; the official metric is a ratio of summed tokens per benchmark, so long code answers must
+  not dominate the penalty). Prepared as the commented plan line gr2n next to gr2; GRPO stays off.
+- ~03:35 (user) gr2n set to start from the ORIGINAL Qwen (not v1), 40 steps x 32 questions x 8 answers, scored at 10 / 20 / 30 / 40, per-type mean-length normalisation from the 4-answer training file thinkprune already restores; still OFF.
+- ~03:45 (user) gr2n selects questions and length means from the original's 10 answers per question (thinkprune --tp-answers10, new), not 4; GRPO itself samples 8 fresh answers per question per step (group 8).
+- ~04:00 (user) GRPO launched: gr2n (from the original Qwen, 40 steps x 32 questions x 8 answers, scored at 10/20/30/40, gated linear per-type reward) queued on GPU 2 after the October rerun's step-19 scores, preceded by a 5-step smoke test (gr2nsmoke).
+- (user) just one GRPO run: the smoke test removed; gr2n alone.
+- ~04:10 (user) the single GRPO run is now gr2e: gr2n restricted to questions the original solves at least half the time (10 stored answers, --tp-min-solve 0.5 with --tp-include-unsolved = rate >= 0.5); everything else unchanged.
+- ~04:20 (user) thinkprune --tp-check (new: eligible questions per part vs 40 x 32 needed, no training) queued on GPU 2 as the next stage, before gr2e.
+- ~04:20 6 Nov **gr2e selection check OK**: 14,001 questions solved >= 5/10 for 1,280 needed (10.9x): svamp 6,141, mbpp 1,835,
+  ifeval 1,758, simple 1,216, multiple 540, no-fit 2,511 (each >= 5x its share); gr2e stays queued as is.
+- **Drive clean-up applied** (drivetidy --dt-apply, user-approved A-G): 99.1 GB moved to the Drive trash; the user empties it.
+- **October rerun (lpk = October rule + matching on the new data, fp32 weights + fp16 compute), adapters alone at 1.0:**
+  - math @ step 19 (= October's count): **+40.9 / -2.3** (svamp +60 / -2.3, mbpp +44 / -3.3, ifeval +29 / -1.0, simple +23 / -2.3,
+    multiple +25 / -1.9, no-fit +24 / -4.0), -0.9 vs curve. October's math adapter: 41.7 / -2.1 with svamp 59 / -4.8 and no-fit
+    -6.0: same overall, but math itself loses half as much (-2.3 vs -4.8); code pays more (-3.3 vs -1.0).
+  - math @ step 10: **+26.6 / -1.1** (svamp +48 / -0.8; no-fit -3.1, multiple -2.5), -1.1 vs curve.
+  - code @ step 19: **+16.6 / -1.9** (mbpp +26 / +1.3; ifeval -4.6, svamp -3.5), -2.2 vs curve. October's: 16.5 / -1.3 (mbpp 25 / -0.2).
+- ~05:20 lpk adapters alone at 1.0: **instructions @19 +27.7 / -1.2** (ifeval +34 / -2.3; no-fit -2.7, simple -2.3), -1.2 vs curve
+  (October: 36.1 / -1.2, ifeval 40 / +0.6: the rerun shortens instructions LESS and costs ifeval more); **tools @19 +42.8 / -1.6**
+  official (simple +38 / -4.0, multiple +44 / +1.1, no-fit +42 / 0.0; svamp -2.1, ifeval -1.3), +0.1 vs curve (October: 50.1 / -2.9 with
+  math -4.0, code -4.6: less saving, much less spill-over cost); code @10 +10.9 / -1.3 (mbpp +16 / +2.1); instructions @10 +14.0 /
+  -1.4. So far the rerun's adapters are gentler than October's (less saving, less damage); merges at step 19 next.
+- ~06:20 lpk scores. Alone at pt-mid strength (step 19): math @.30 **+12.1 / -1.1** (Oct 11.9 / -1.0), code @.45 **+8.8 / -0.8** (Oct 10.0 / -2.5),
+  instructions @.60 **+17.7 / -0.7** (Oct 23.1 / -1.2). Dose curve at 1.0: math 10 / 19 / 30 = 26.6 / -1.1, 40.9 / -2.3, **33.9 / -1.4**
+  (saving FALLS after 19: the extra matched pairs past October's count pull length back; svamp 60 -> 50% while svamp acc -2.3 -> -3.5);
+  code 10.9 / -1.3, 16.6 / -1.9, **16.3 / -2.5** (saturates, accuracy worsens); tools @10 **+22.0 / -1.1** (@19 42.8 / -1.6).
+  Reading: step 19 (= October's count) is the sweet spot for math and tools; code past 10 only loses accuracy.
+- ~07:20 lpk: tools @.45 (step 19) **+20.2 / -1.2** (Oct 28.6 / -1.1); **softer merge @19 (.20/.25/.35/.25): +32.0 / -1.4** (svamp +38 / -1.9,
+  no-fit +28 / -4.2, multiple -2.1), -1.0 vs curve: below October's softer (39.2 / -0.8); instructions @30 **+36.5 / -0.6**, +0.2 vs curve
+  (better than @19, 27.7 / -1.2: instructions keeps improving with the extra pairs); tools @30 **+45.3 / -2.4** (ifeval -4.8, svamp -3.3).
+  GPU 1's queue ended -> GRPO gr2e moved to GPU 1 to start now (soft / mid merges still on GPU 2).
+- ~08:00 lpk merges @19 (GPU 2's queue now ended): **soft +40.3 / -2.3** (-1.0 vs curve; October soft 48.4 / -1.9),
+  **mid +48.5 / -2.1** (+0.5 vs curve; October pt-mid 55.0 / -2.6 on the 720). **Verdict on the October rerun: the new data + fp32
+  does NOT beat October**: every merge saves 6-8 points less; mid sits a little better on the curve (+0.5 vs pt-mid's +0.3 full-test),
+  but at less saving. Best single change seen: instructions at step 30 (36.5 / -0.6).
+- ~08:30 **BUG in GRPO gr2e, run stopped after 10 steps**: rl_train's --gr-norms-from re-derived each answer's type with
+  build_pool.part_of and set the svamp length scale B to **82 tokens** (other parts plausible: irrelevance 231, multiple 208,
+  simple 180, ifeval 669, mbpp 1,818), while the stage's own caps show svamp answers up to 1,423 tokens. With the linear reward
+  (max(0, 1 - 0.3 L/B)) every right math answer above ~273 tokens earned 0, i.e. math was trained to be cut, not to be right
+  (training log: mean tokens 620 -> 464 in 10 steps). Fix: thinkprune --tp-norm-means computes B per part inside the stage from the
+  pool's own labels over the original's 10 answers, asserts every B >= 100 tokens, and passes it as --gr-norms. Restarted as
+  **gr2f** on GPU 1 (same settings otherwise: original Qwen, solved >= 5/10, 40 steps x 32 x 8, scored at 10/20/30/40);
+  gr2e's step-10 adapter is discarded (its 720 score was interrupted).
+- ~08:45 gr2f started on GPU 1 with the corrected scale: B = irrelevance 231, multiple 208, simple 180, ifeval 669, mbpp 1,818,
+  **svamp 824** (was 82). Scores due at steps 10 / 20 / 30 / 40 (~35 min of training per 10 steps + a 720 screen each).
+- ~09:30 (user) Ivan's joint plan J rejected: its core is bida's pair rules + settings; nothing built on another candidate's recipe will be run or submitted.
+- ~10:00 **gr2f @ step 10: +4.0 / -0.4** official (-0.3 vs curve; svamp +7 / -0.4, multiple +6 / -1.1, ifeval +3 / -1.7, mbpp +3 / +0.8):
+  barely moved after 10 steps (training answers 600 -> 450 tokens, but that is on the training questions); step 20 training done, its score next.
+- ~11:00 **gr2f @ step 20: +11.4 / -0.6** official (-0.9 vs curve): math and code shorten with accuracy UP (svamp +18 / +0.6,
+  mbpp +16 / +0.8), but instructions barely shorten and lose (ifeval +2 / -2.5) and tool calls lose (multiple +10 / -2.3,
+  simple +7 / -1.9; no-fit +9 / 0.0). Step 30 trained (29.7 min), its score running.
+- ~12:00 **gr2f @ step 30: +6.8 / -0.4** official (-0.5 vs curve): saving FELL from step 20 (11.4): ifeval now LONGER than the
+  original (-7% / -1.7), svamp +12 / 0.0, mbpp +11 / +0.8, tools +9-11 / -0.4 to -0.8. Step 40 trained, its score running.
+- ~13:00 **gr2f @ step 40 (final): +11.3 / +0.3** official (0.0 vs curve; multiple +12 / -2.7, ifeval +3 / +2.5, svamp +17 / -0.4).
+  **GRPO verdict:** 40 steps x 32 x 8 from the raw model save 4 -> 11 -> 7 -> 11% at about -0.5 to +0.3: accuracy holds, but the
+  saving is small and does not grow steadily; on the curve, not above it. Both GPUs' queues have now ended.
+
+### 2026-11-09 ? repair stage opened to any model and to own data only (code, no run)
+Plan (user): full-test round 3 (ca1-soup-10) and round 4 before RL (rc1-soup-30), then a "be right" repair on the one closest
+to > 50% / better than -1, with nothing from michal-bida (no MetaMath, math1, math2, instr2, code2, nofit4).
+- `track.py ptrepair --rp-base models/<X>`: repair any merged model instead of pt-mid (it answers, is DPO's reference, and
+  every screen merges onto it).
+- `track.py ptrepair --rp-own-data` (new `own_repair_questions()`): math = GSM8K train+test at every difficulty in SVAMP wording
+  (prepare_types gsm8k_std), minus questions already trained on in rounds 1-4; code / instructions / tools = pool-dp13 rows
+  minus MetaMath + own top-ups nofit1, nofit2, tools1, code1; 8-gram check against every evaluation question.
+- `repair_pairs.py --kinds guard` / `ptrepair --rp-kinds guard`: only the 21 Oct pair (shortest right > shortest finished
+  wrong); the similar-length right>wrong kind (Lightning McQwen3's) left out.
+- Checked here without a GPU: guard-only pairs on synthetic answers; own_repair_questions on stand-in files (MetaMath and easy
+

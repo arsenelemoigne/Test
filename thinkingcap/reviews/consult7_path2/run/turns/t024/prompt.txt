@@ -1,0 +1,95 @@
+  min(r_len)), the largest that keeps every right answer at or above the group mean; groups with < 2 right answers or
+  all right get plain 0/1. Unit check on a toy group: right answers >= mean, wrong <= mean, the 900-token right answer
+  lands exactly on the mean. Everything else = grA (the one change is the reward). Queued on GPU 2 after grD, behind a
+  5-step smoke test (gs0).
+
+### 3 Nov: grF aligned with the SmartThinker paper (read in full)
+Before it ran, grF had three settings borrowed from grA that the paper does not use. Now: plain GRPO advantages
+(reward minus group mean, divided by the group's spread; token-mean loss, no Dr. GRPO), no KL leash (the paper omits
+it), constant lr. New `track.py --tp-max-solve`: grF keeps only questions the original Qwen misses at least once in 4,
+because an all-right group gets ? = p_err/... = 0, so no signal, and the paper uses 64 questions a step against our 12
+(the paper itself says difficulty-based sampling would cut the steps needed). lr stays 2e-6 like grA (LoRA r32; the
+paper's 1e-6 is a full fine-tune). Paper facts worth keeping: the longest right answer always gets advantage 0 (never
+pushed down); the fixed-? ablation saved more (?63%) but lost 3.2 pts on the 1.5B model, so the dynamic ? is the
+accuracy guard; SmartThinker on top of an already-pruned model (ThinkPrune-4k ? SmartThinker) was its best result,
+which fits the plan to try GRPO on v1.
+
+### 3 Nov: the DPO pair-strategy screen (task 1), queued on two new runtimes
+User: try many pair strategies now that the settings are fixed; more compute added. Everything = bidax5q seed 0
+(--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+New lupin_pairs.py flags: `--add-hard P` (DAST's "keep trying": longest > shortest finished wrong, questions solved < P),
+`--budget` (DAST's per-question length target replaces the fixed 1.5x), `--margin-any` (drop each kind's weakest 15%
+for any recipe), recipe `simright` (similar-length right > wrong + think less, 1:1). Tested on synthetic answers.
+Runtime 3 (third_colab.ipynb, plan_line_c.txt): D1 lpd-dast, D2 lpd-hard, D3 lpd-route, D4 lpd-budget, D5 lpd-margin.
+Runtime 4 (fourth_colab.ipynb, plan_line_d.txt): D7 lpd-st1 -> lpd-2stage, D8 lpd-math, D6 lpd-simright, D9 lpd-adar1,
+D10 lpd-l2s50e. Phase 2 (new code / answers): SimPO / LD-DPO, Ada-R1 with no-thinking answers, concise-prompt winners,
+SFT warm-up, stop pairs. Seed noise: bidax5q s0 +1.8 vs s1 +0.4, so a winner needs a second seed.
+**3 Nov, revised (user: some strategies will not shorten enough):** D3, D6 and D8 now keep bida's FULL pairs and only add
+their protective pairs (new `--add-right-below SPEC`: similar-length right > wrong on questions solved below a share, all
+parts or per part). D3 = bida + right & keep-trying pairs below 75% solved; D6 = bida + similar-length (?15%) right > wrong
+everywhere; D8 = bida + right pairs on math / no-fit below 80%. D7's "be right" round cut to 50 steps (as the original),
+its second round is bida's full pairs. New D11 lpd-push2 = bidax5q with up to 2x shorten pairs per guard (the 1:1 cap binds
+in every part of bidax5q), the push-harder control every protective strategy must beat at the same saving. A strategy
+counts only if it saves >= 40%. Unchanged: D1 DAST, D2 bida + keep trying, D4 budget, D5 margin, D9 Ada-R1, D10 l2s50e.
+**3 Nov ~02:00:** only 2 GPUs on the Colab account (user), so runtimes 3/4 are dropped (plan_line_c/d and the two notebooks
+removed) and the DPO screen alternates with GRPO on the two queues, scored at steps 100 / 200 / final (step 300 dropped:
+too close to the final at 339). GPU 1: grA -> D11 push2 -> grB -> D1 dast -> grE -> D2 hard, D3 route, D4 budget, D5 margin,
+D10 l2s50e -> old re-scores, bidax6s. GPU 2: code2 -> bidax7 -> grC -> D9 adar1 -> grD -> gs0, grF -> D7 st1 + 2stage,
+D8 math, D6 simright -> bidax6p.
+**3 Nov ~02:45, all-else-equal audit of the DPO screen.** Every lpd-* line differs from bidax5q's only in its pair flags
+(checked token by token). The edited lupin_pairs.py builds exactly bidax5q's pairs (byte-identical to the old code at a
+fixed hash seed). Found: which shorten pairs survive the 1:1 cap depended on Python's per-process set order (the parts
+were walked in random order before rng.shuffle), so bidax5q's exact subset can't be rebuilt; fixed (sorted), every new
+run is reproducible. That subset noise is part of the ~1.4-pt seed noise. Known differences kept: one pass in 339 steps
+means more pairs = more pairs per step (bidax5q ~16); D7 trains 50 extra steps and uses stage 1 as its reference.
+
+### 3 Nov: idea parked: weight-space editing (Astra) and a contrastive Wanda test (discussion only, nothing built)
+Source: "Sparks of Weight-Space Programming" (Takehi, Teoh, Zhang, Khattab, MIT, 2 Nov 2026,
+rikiyat.github.io/blog/weight-space-programming; logs github.com/RikiyaT/lm_understand-logs). A frontier LLM ("GPT-6
+Astra"), with a Python sandbox and up to 50 forward-pass batches, reads and edits weights by reasoning, no gradient descent.
+Closest to us, Exp 8: Qwen3.5-0.8B looped to the 32k cap on 93% of MATH-500; Astra traced the loop to one direction written
+by the MLPs of layers 15 and 19 and removed it from 64 output columns each (0.016% of weights): cap hits 93 -> 33%, MATH-500
+7.9 -> 48.1, IFEval x3. On Gemma 3 270M (rarely loops) no gain: "editing could remove an obstacle that hid an ability, but
+it could not add an ability the model lacked". So: it removes a bad habit, it does not add skill; math is spread over the
+weights (no "math weights" to pick out), but a habit (re-checking a settled answer) is a direction / a few heads.
+How it relates to ours: closer to Track 2d steering (October: 'short vs long' direction, ~18% saved at -0.1, stronger pushes
+broke accuracy) than to Wanda. Wanda (30 Oct: 10% pruned free, 20-30% make the model think LONGER) keeps what the model
+does on its usual answers; Astra finds the part that CAUSES a behaviour and removes only that. Our per-type length
+directions are nearly unrelated (cosines -0.18 to 0.39), so a math-only edit might spare the other types (DPO spills over).
+Hard part: some re-checks catch real errors; a column removal acts on every question alike, so keeping accuracy needs the
+model to "know" inside when it is already right (cf. "Reasoning Models Know When They're Right", 2025).
+How much waste is there to remove (our 25-26 Oct cut measurements, original Qwen, benchmark questions, small samples:
+51-148 replies): earliest cut whose 20 forced answers are as right as finishing, right replies only: SVAMP 41%, IFEval
+49%, MBPP+ 72%, BFCL 49% of the thinking. But on SVAMP the answer builds up LATE (success 0.34 at 20-40% kept vs 0.73
+full), so math has the least "re-check after a settled answer" and code the most; we never labelled re-checks directly.
+Cheap tests first, no API cost, ~1 GPU-h each, after the GRPO / DPO screens: (1) label re-checks in our math answers
+(did the answer change?) and fit a probe on hidden states: can the 0.6B tell useful from wasted re-checks? (2)
+contrastive Wanda: score weights on wasted vs useful stretches (wanda_prune.py), dampen those used only by wasted ones.
+Only if (1) shows a signal: an Astra harness (OpenRouter key; cost unknown, user's call), judged on the 720 / full test.
+**3 Nov, Astra repo read in full (later project, nothing built).** Correction: run.json token usage accumulates within a
+conversation (the repo README says not to sum it over turns); the real p50c total is ~5.4M input (5.2M cached) + 0.15M
+output over 4 conversations (turns 16-40 may be under-reported), not 86.8M. Time: 1.8 h of model calls, 9.1 h of generation
+passes (34 of 50 passes were generations, 16 teacher-forced reads; 19 requests failed and did not count).
+How p50c found the edit: 4 hand-written matched pairs (same correct start, then a productive check vs a 3-4x repeated
+phrase), teacher-forced; direction = mean residual difference over the last 36 tokens; per-layer attribution picked the MLP
+writers of layers 15 and 19; edit W' = W0 - a u(u^T W0) on down_proj, kept to the top-64 columns per layer by
+(u.W[:,j]) x activation difference; dose a = 1 / 2 / 3 / 6; controls: random direction +1.6 +-3.5 pp, premature-close
+log-prob unchanged; frozen edit confirmed on 1,152 fresh problems: +49.8 +-1.5 pp, 579 rescues vs 5 losses, accuracy on
+answers that had finished unchanged (93.9 -> 93.9). Answer length: mean drops only because fewer answers are cut; FINISHED
+answers got LONGER (MATH-500 5,631 -> 16,740 tokens, GSM8K 4,954 -> 10,372). The task prompt forbade "making the model skip
+its thinking or close it early regardless of the problem". p10c / p25c failed: wrong components (copying heads, one
+neuron) and too small a dose. Gemma follow-up (no looping): every budget within ~1 SE, MATH-500 6.8 -> 7.0-7.7. Released:
+prompts, every turn, eval code, edits; missing: the kernel prelude, the forward-pass server, the driver loop.
+**3 Nov ~03:25, where the thinking tokens go (720 set x4, records.jsonl of s4-base and s4-lpc-bidax5q-s0-final).**
+| type | raw: thinking / capped / repeated 8-grams | v1: thinking / capped / repeated 8-grams |
+|---|---|---|
+| svamp | 685 / 2.1% / 2.3% | 281 / 0.0% / 0.6% |
+| mbpp | 2,077 / 8.5% / 7.2% | 1,300 / 2.9% / 3.5% |
+| ifeval | 420 / 2.9% / 2.2% | 176 / 1.5% / 0.2% |
+| bfcl (3 parts) | 175-206 / 0% / 0.1-0.3% | 94-104 / 0% / 0% |
+Capped answers: raw 65 (2.3%) holding 22% of all thinking tokens; v1 21 (0.7%: 14 code, 7 instructions, 1 right)
+holding **12% of all v1 thinking**, median 18% repeated 8-grams (14% of them > 30%). Code is 63% of v1's thinking.
+Re-check words (wait / let me check / verify / alternatively / hmm) per 1,000 words barely move (raw 10-17, v1 8-15):
+v1 thinks less but hesitates at the same rate. Right SVAMP answers: the final number first appears with 53% (raw) / 39%
+(v1) of the thinking still to come (a rough "after the answer" proxy: the number may first appear as
+[output cut at 10,000 characters]

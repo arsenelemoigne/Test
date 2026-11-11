@@ -1,0 +1,93 @@
+
+### 3 Nov ~04:00: grA step 50 (720 x4) + grA crash fixed
+**grA-50** (GRPO from the raw Qwen, khudgins/Ornith length penalty, ? ramping to 0.05 over 100 steps, so ~0.025 at step 50;
+leash 0.04, lr 2e-6): **+1.5% / -1.0** (vs curve about -0.7; saving under 15%, below the yardstick's range). svamp +1.7 /
+-0.2, mbpp +3.3 / 0.0, ifeval +0.4 / -2.1, one function -4.1 / -1.2, several +1.6 / -2.9, no fit +2.8 / -1.0. Training: batch
+accuracy 83-95%, thinking 400-730 tokens per step with no trend, every question with signal (12/12): at this penalty
+strength the reward is almost all "be right", so 50 steps change nearly nothing. As expected for this recipe (khudgins
+trains 500-1,000 steps); the stronger half of the ramp (steps 50-100) is where saving should show.
+**Crash:** at step 51 rl_train's IFEval grader hit a language constraint and `import langdetect` failed (the package
+was missing on this runtime). Fixed: rl_train.py installs langdetect if missing (same fix protects grC / grD / grF).
+grA re-queued on GPU 1 right after D11 lpd-push2 (now training), resuming from its saved step 50. GPU 2: code2 answers
+done (1,500 questions), bidax7 training.
+- ~07:00 **D11 lpd-push2 step 100** (bidax5q + up to 2x 'think less' pairs): **+49.2% / -3.7** (full-eval weighting; the
+  720 print: +49.3 / -3.5), **-1.0 vs the curve** (curve -2.7 at 49%). svamp +62 / -5.4, mbpp +49 / -5.2, ifeval +41 / -2.5,
+  one function +40 / -4.4, several +42 / +2.9, no fit +43 / -1.2. Against bidax5q s0 at the same step (41.8 / +0.2, +1.7):
+  doubling the push buys ~7 points of saving for ~4 points of accuracy, so the 1:1 cap is protecting accuracy, as
+  michal-bida intended. Steps 200 / final scoring.
+- ~08:00 **D11 lpd-push2** step 200 **+49.7 / -2.9 (on the curve, -0.1)**; final **+52.4 / -3.0 (+0.4)**: svamp +64 / -3.7,
+  mbpp +44 / -4.4, ifeval +53 / -3.3, one function +44 / -2.5, several +48 / +1.1, no fit +48 / +1.2. The push-harder control
+  reaches the highest saving of the screen so far but only rides the reference curve: extra 'think less' pairs move the
+  model ALONG the curve, they do not lift it (bidax5q s0: +1.0 to +1.8). This is the bar for the protective strategies:
+  beat ~-3.0 at ~52%, or -2.9 at ~50%.
+- ~08:00 **bidax7 step 100** (bidax5q + instr2 + code2, michal-bida's own instruction and code sources): **+41.3 / -1.9,
+  -0.5 vs the curve**: svamp +49 / -4.6, mbpp +38 / -1.7, ifeval +40 / -0.8, one function +36 / -1.9, several +39 / +0.8, no
+  fit +41 / +0.2. Below bidax5q s0 at step 100 (41.8 / +0.2, +1.7) at the same saving; steps 200 / 300 / final scoring.
+  GPU 1 moved on to grB (GRPO, 4x penalty).
+- ~09:00 **bidax7** (bidax5q + instr2 + code2): step 200 **+43.1 / -0.6 (+1.1 vs curve)**, step 300 **+45.3 / -0.8 (+1.3)**,
+  final +43.5 / -2.5 (-0.7). Step 300: svamp +49 / -1.3, mbpp +39 / +0.8, ifeval +51 / -2.9, one function +38 / -1.0,
+  several +42 / +0.6, no fit +46 / +1.5. Steps 200-300 clear the 1-point bar (like bidax5q s0: +1.7 / +1.0 at 200 / 300) but at
+  ~3 points less saving, and the final checkpoint drops (mbpp +30 / -4.4, svamp -3.5). His code / instruction questions do not
+  improve on bidax5q; one seed, so within seed noise. GPU 2 moved on to grC (GRPO, no leash).
+
+### 3 Nov: "Chirurgical" edits (built, tested on CPU, queued after the DPO / GRPO screens)
+User: replicate "Sparks of Weight-Space Programming" Exp 8 ourselves (no Astra, no API) on the raw Qwen, then v1, then a
+subtler habit than looping. Technique, from the run notes (logs github.com/RikiyaT/lm_understand-logs):
+- **Loop direction (p50c, the 50-round run):** 4 matched contexts (same correct start, then a productive check or a repeated
+  phrase), teacher-forced; u = mean(loop - productive) of the hidden state after the layer; the MLPs of layers 15 and 19
+  write it most; edit W = W0 - a u (mask64 * u^T W0) on down_proj, mask = the 64 columns writing the most loop-specific
+  signal (u.W[:,j] x activation difference), chosen once on the first probe; a = 6 (10.6% / 8.1% of those matrices).
+  Checks: loop text -0.103 vs productive -0.009 nats/token, transfer cosine 0.84 on 6 new contexts, premature close stays at
+  parts per billion, random direction +1.6 +-3.5 pp. Confirmed on 1,152 fresh problems: +49.8 +-1.5 pp.
+- **Copying head (p25c, the 25-round run):** found by attention, not weights: per head, the attention a token pays to what
+  followed its previous occurrence ("previous-matching-continuation"); L15H7 0.887 on loops vs 0.082 productive. Edit:
+  zero its 256 o_proj columns (also x0.5, x-0.5). Proof: dose-response, x1.5 makes loops MORE likely, a same-layer
+  low-copy head does much less. 768 fresh problems: +8.3 +-1.4 pp (95 rescued, 31 broken). "do NOT claim perfect
+  selectivity": some productive likelihood loss. p50c found head edits less selective than the direction.
+- **Correction:** the "loop removal shortens finished answers" figure was a small first-sample side computation
+  (13 / 23 problems); the run notes say rescued answers stayed long (median ~8,100 tokens) and finished answers got longer
+  on average. Whether our edit trims repetition inside normal answers is ours to measure.
+**chirurgical.py** (phases mine / probe / mech / gen, each resumable): mines capped answers with >= 30% repeated 8-grams
+from the original's own pool answers (lupin-all-...-a4: dp13 + top-ups, prostring rows dropped), cuts each before its
+first repeated 32-token stretch (loop branch = the real next 48 tokens; productive branch = the most novel of 8 sampled
+continuations of the same prefix, novelty >= 0.8), one pair per question, half to find / half to check; 300 finished right
+answers; fixed dev 256 / holdout 512 questions never used for pairs. Probe: direction per layer + split-half cosine,
+MLP writers, copy score for every head (Qwen3-0.6B: 28 layers x 16 heads of 128). Candidates: top-3 copy heads x {0, 0.5},
+direction on the top-2 writer layers x {1, 2, 4, 6}, a random orthogonal direction (same mask, a = 6). Mech gate: loop
+log-prob < -0.01, productive and normal > -0.02, premature-close odds < 2x. Gen: paired dev answers (same seeds, eval
+sampling, 8,192 tokens, typed.py grading): accuracy +- SE, thinking saved, cap share, saving on answers both finished,
+per type; pick = most saved at >= -1 point, confirmed on holdout, then the 720 x4 (s4-chir-NAME). float32 reads and edits,
+bfloat16 for generation (as the paper's evaluation). Tests: chirurgical_test.py (helpers + probe / candidates / mech on a
+tiny random Qwen3, CPU) pass; chirurgical_cpu_check.py runs the real 0.6B on CPU (bfloat16) with 6 hand-written matched pairs.
+Queued at the end of GPU 1 (after bidax6s): chirurgical chs0 --ch-smoke, then ch1.
+**3 Nov ~11:40, Chirurgical CPU check on the real Qwen3-0.6B (Mac, bfloat16, 6 hand-written matched pairs, 3 to find /
+3 to check; no Astra, no API; plumbing + sanity only):** copy heads L16H14 0.60 vs 0.18, L18H5 0.39 vs 0.05, L6H11, L21H8,
+L21H9; loop-direction writers L22, L26, L19, L21; split-half direction cosine <= 0.55 (3 pairs per half: too few to trust).
+Mech (loop / productive / normal log-prob per token, close): L16H14 x0 -0.035 / -0.001 / -0.000 PASS, x0.5 -0.019 PASS;
+L18H5 x0 -0.064 / -0.005 / +0.011 PASS, x0.5 -0.028 PASS; direction L22+L26 a2 -0.019 / -0.001 PASS, a6 -0.059 / -0.007
+PASS; random direction a6 +0.008 (loop MORE likely) -> dropped. Dose-response and the random control behave as in the
+paper. No accuracy or length evidence yet (needs the GPU generation phase).
+**3 Nov ~12:30, Chirurgical revised (user): generate from scratch, like the paper, but ask the questions we already know
+loop.** mine now fixes dev 256 / holdout 512 first, then the ORIGINAL model answers 1,500 fresh practice questions (75% of
+them questions where a stored answer was capped with >= 30% repeated 8-grams, 25% random for the normal answers), graded;
+loops and pairs come from those fresh answers. Inserted on GPU 1 between grB and D1 (chs0 smoke, then ch1). Tests:
+helpers, probe / candidates / mech on a tiny Qwen3, and mine's selection with a stand-in generator all pass.
+**~12:40 (user: "it's ok if it takes more time"):** sizes raised toward the paper's: 3,000 fresh practice answers, dev 512
+(paired SE ~+-1.8 pts), holdout 1,024 (the paper confirmed on 1,152), 200 held-out pairs and 400 normal answers for the checks.
+- ~11:25 **grB step 50** (GRPO, 4x length penalty: ? ramping to 0.2 over 100 steps, ~0.1 at step 50): **-2.0% / -0.5**
+  (thinks 2% LONGER; below the yardstick's range): svamp -2 / -1.0, mbpp 0 / +2.9, ifeval -8 / -2.5, one function +1 / -1.7,
+  several +4 / -0.6, no fit 0 / -1.5. Like grA at step 50 (+1.5 / -1.0): 50 GRPO steps at 12 questions x 8 answers move
+  nothing yet, even at 4x the penalty. Steps 100 / 150 next. GPU 2: grC at step 50, scoring.
+**3 Nov ~13:30, Chirurgical CPU check with 20 hand-written pairs (10 find / 10 check; real Qwen3-0.6B, bfloat16; no
+Astra):** go (top copy-head gap 0.43; direction split-half cosine up to 0.77, from 0.55 with 3 pairs per half). Same top
+copy heads as the 6-pair batch: L16H14 0.58 vs 0.15, L18H5 0.36 vs 0.04. Writers L19, L22, L26, L27. Mech (loop /
+productive / normal): L16H14 x0 -0.025 / +0.006 / -0.000, x0.5 -0.013; L18H5 x0 -0.044 / +0.005 / +0.011; direction
+L19+L22 a2 -0.058 / +0.006 / +0.008, **a6 -0.196 / +0.009 / +0.025** (the paper's a6: -0.103 vs -0.009); random a6 +0.001
+-> dropped. The paper's mechanism (copy head + MLP loop direction, selective, dose-dependent, random control null) shows up
+in our model, weaker on heads (0.58 vs 0.15 here, 0.887 vs 0.082 in the paper). Likelihood only; no length / accuracy yet.
+
+### 3 Nov: the Astra harness (the paper as it was run), built and tested without spending
+astra_harness.py: kernel (persistent CPU Python over Qwen3-0.6B's weights: NAMES / load / load_original / save_edit /
+drop_edit / edited / tok; save_edit refuses the embedding, lm_head, the final norm, non-finite tensors and whole-tensor
+scaling; scrubbed environment), forward tool (fres
+[output cut at 10,000 characters]

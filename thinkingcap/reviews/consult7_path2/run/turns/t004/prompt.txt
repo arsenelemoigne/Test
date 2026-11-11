@@ -1,0 +1,27 @@
+Total lines in rl_length_methods_study.md: 388
+L1: # RL methods that shorten reasoning: verification of the Kimi summary and a methods catalogue for a 0.6B model
+L9: ## 1. Verification of the pasted Kimi summary
+L18: ### Claim 1: Kimi k1.5 (2501.12599)
+L31: ### Claim 2: Kimi K2 (2507.20534)
+L37: ### Claim 3: Kimi K2.5 (2602.02276)
+L50: ### Claim 4: Kimi K3 (2607.24653)
+L60: ### Claim 5: DLER (2510.15110)
+L71: ## 2. Methods catalogue
+L75: ### 2.1 DLER: truncation + optimizer fixes (2510.15110, NVIDIA, Oct 2025)
+L119: ### 2.2 ThinkPrune: iterative length-limit RL (2504.01296)
+L136: ### 2.3 L1 / LCPO: length control through the prompt (2503.04697, COLM 2025)
+L144: ### 2.4 ShorterBetter: Sample Optimal Length (2504.21370)
+L168: ### 2.5 "Concise Reasoning via RL" (Fatemi et al., 2504.05185)
+L184: ### 2.6 Arora & Zanette, "Training Language Models to Reason Efficiently" (2502.04463)
+L212: ### 2.7 AdaptThink: learn to skip thinking (2505.13417)
+L219: ### 2.8 Dr. GRPO: length-bias analysis (2503.20783, COLM 2025)
+L229: ### 2.9 DAPO (2503.14476, ByteDance Seed)
+L236: ### 2.10 Laser / Laser-D / Laser-DE (2505.15612)
+L255: ### 2.11 ALP: Adaptive Length Penalty (2506.05256, "Just Enough Thinking")
+L261: ### 2.12 DRPO: Decoupled Reward Policy Optimization (2510.04474)
+L270: ### 2.13 "The Art of Efficient Reasoning: Data, Reward, and Optimization" (2602.20945, HKU/Tencent, 2026)
+L295: ### 2.14 Other 2025?2026 entries (shorter notes)
+L311: ## 3. What the evidence says for a 0.6B model
+L313: ### 3.1 Facts (from the papers above)
+L371: ### 3.2 Inferences for our setting (not tested by anyone on our benchmark)
+L387: ### Sources (all fetched 11 Nov 2026)

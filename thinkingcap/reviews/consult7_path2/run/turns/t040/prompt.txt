@@ -1,0 +1,127 @@
+  "iteration" (checkpoint number = questions processed); saves every 32 questions. 2 x A100-SXM4-80GB for training
+  (the 4 answers split across 2 GPUs); evals on RTX 4090 with one reused base run.
+- Schedule shape / warmup: UNVERIFIED (not in the plan file).
+
+### 4.3 Results (comparison.json per checkpoint; tokens saved / acc pp)
+| ckpt | total | BFCL irr | BFCL mult | BFCL simple | IFEval | MBPP+ | SVAMP |
+|---|---|---|---|---|---|---|---|
+| 128 | 27.10 / +0.03 | 23.7 / -4.11 | 21.2 / +2.37 | 21.8 / +0.25 | 25.0 / -0.23 | 26.5 / +0.60 | 34.1 / +0.24 |
+| **256** | **31.23 / +0.21** | 25.8 / -4.17 | 26.1 / +3.31 | 23.5 / -0.03 | 25.9 / +1.02 | 31.3 / +0.86 | 41.6 / -0.62 |
+| 576 | 36.85 / -1.35 | 29.2 / -6.20 | 28.7 / +3.94 | 25.9 / -1.47 | 33.7 / -0.90 | 36.7 / -1.52 | 47.6 / -1.46 |
+| 768 | 39.54 / -1.16 | 31.9 / -6.56 | 30.2 / +3.31 | 27.6 / -1.50 | 36.8 / +0.07 | 40.7 / -0.56 | 49.3 / -2.35 |
+| **850** | **41.60 / -1.17** | 33.4 / -6.87 | 30.4 / +2.44 | 28.4 / -2.00 | 38.1 / +0.18 | 42.3 / -1.26 | 53.2 / -1.29 |
+| 1024 | 43.87 / -1.77 | 34.3 / -8.70 | 32.9 / +1.75 | 29.1 / -1.53 | 40.5 / +0.14 | 44.2 / -1.85 | 56.3 / -2.55 |
+| 1280 | 46.58 / -2.35 | 36.4 / -10.21 | 35.0 / +1.31 | 31.0 / -2.19 | 41.4 / -0.07 | 49.4 / -2.45 | 58.6 / -3.24 |
+Base MBPP+ truncation 8.6% -> 3.7% at 256, 2.5% at 1280; SVAMP 1.7% -> 0.2%.
+
+**Ablations** (one seed, same start, compared with the combined run at the same iteration; README):
+| arm | total | per benchmark |
+|---|---|---|
+| no replay, 128 | **1.85 / +0.13** (combined: 27.10 / +0.03) | all benchmarks 0-3.5% saved |
+| no length reward, 256 | 27.52 / +0.37 (combined: 31.23 / +0.21) | BFCL irr -3.39, SVAMP 34.7 / +0.60, MBPP 25.6 / +1.26 |
+
+### 4.4 Other experiments he ran (studies/README.md; mostly different protocols)
+- **ShorterBetter** (arXiv 2504.21370, SOL reward = alpha*correct - 0.001*|L - shortest correct in group|; full weights,
+  lr 1e-6, KL 0.001, 8 generations/prompt, DeepScaleR math data per protocol.json): full evals at iterations 5-30
+  for alpha 2 / alpha 5: e.g. iter 10: 24.1 / -0.89; iter 15: 35.9 / -1.58; iter 20: 46.2 / -2.64; iter 30: 63.7 /
+  -4.70 (alpha 2). Very fast compression, accuracy falls in step. (Whether the run matched protocol.json exactly:
+  UNVERIFIED.)
+- Replay selection (more permissive admission, 3 seeds): outputs got longer (-6.35% "savings"). Adaptive replay:
+  -4.07%, +0.59 pp. On-policy distillation: longer outputs. Teacher replay pilot: 47.8% saved, -12.4 pp on its
+  validation. Coding A/B/C and curriculum branches: no gain over parent.
+
+### 4.5 His findings / caveats
+- Replay drives most of the shortening; the length reward alone does very little in his setup (Inference from the
+  no-replay arm; he says the no-length arm still replays the shortest answer, so length preference is not fully removed).
+- **BFCL no-call is the hidden regression**: -4.17 at 256, -6.88 at 850 (only 79 no-call training rows, 2 in dev).
+- The 4/4 gate may starve hard coding questions; the 2,048 training cap may make it worse (hypotheses, not tested).
+- One seed; checkpoint selection used the benchmarks; CIs do not include seed variance.
+
+---
+
+## 5. basta, Lightning McQwen3 (43.2% / -0.85 weights only; 47.3% / -0.88 with test-time gate)
+
+Main files: [BASTA] `README.md`, `IDEA.md`, `scripts/reproduce.sh`, `mcqwen/{distill,sft,oracle,dpo,correctness,gate}.py`,
+`utils/train/prepare_data.py`. Commits 14 Oct 2026.
+
+### 5.1 Data
+Only the challenge's suggested `data/train.jsonl` (prepare_data.py): **GSM8K, Skywork-OR1 math (integer answers,
+DeepSeek-R1-Distill-1.5B difficulty <= 8), CommonsenseQA, ARC-Easy**. No code, tool or instruction training data in
+any weight-training step. The gate alone uses 1,500 ToolACE prompts. (Our log said "math = GSM8K + Skywork"; correct,
+and the oracle pairs also use CSQA and ARC.)
+
+### 5.2 Stages (each a LoRA r16 / alpha 32 / dropout 0, all linear, continued from the previous; README, sft.py)
+1. **Prompt distillation SFT.** Chain-of-Draft system prompt ("only keep a minimum draft for each thinking step, with 5
+   words at most" + two worked examples; found by an overnight prompt search) answers 5,000 questions per source x 2.
+   One random correct trace per question, prompt removed, traces mentioning the examples dropped, math answers must
+   parse under SVAMP's grader -> **11,247 SFT targets**. SFT from base: **lr 1e-4, 1 epoch, batch 16, cosine with 5%
+   warmup**, loss per target token. Score: **26.5% / -1.27**.
+2. **On-policy truncation oracle.** The distilled model answers 2,500 *other* questions per source x 4. Every correct
+   trace cut at the sentence ends nearest 10%, 20% ... 90% of its thinking, closed with `</think>`, re-answered 4 times
+   (197k cuts; re-answer cap 1,024). Cut "safe" = all 4 re-answers right; "stable run" = safe cuts that reach the end.
+3. **Oracle DPO.** Pairs (oracle.py), at most one per question and kind, both sides continue the same trace:
+   - *shorten*: stable run's **second** cut + its shortest right re-answer > the full trace (second, not first, as a
+     margin against lucky cuts);
+   - *guard*: the same chosen > the unsafe cut just before the run + a wrong re-answer;
+   - *hard* (no stable run): full trace > its unsafe cut nearest half the thinking + a wrong re-answer.
+   10,000 drawn, **40 / 40 / 20** by kind, evenly across sources -> **9,034 pairs**. DPO from the distilled adapter
+   (reference = starting adapter, precomputed): **beta 0.1, lr 2e-5, batch 16, cosine with 10% warmup, 1 epoch = 561
+   steps planned, STOPPED at step 100** (`--stop-at 100`, LR schedule of the full run). Score: **42.5% / -1.45**.
+4. **Anchored correctness DPO.** From step 2's traces: own right math trace (GSM8K, Skywork) > own wrong one, same
+   question, closed and untruncated, lengths within **+-25%**, up to 2 pairs per question on disjoint traces ->
+   **732 pairs**. DPO + **NLL on the chosen side (mean token NLL, weight 1)**, 1 epoch = **42 steps**, beta 0.1,
+   lr 2e-5. Score: **43.2% / -0.85** (weights-only result).
+5. **Think gate (test-time, in evaluate.py).** L2 logistic probe on the layer-21 hidden state at the end of the prompt
+   + "<think>\n"; labels = whether 4 sampled calls with thinking and 4 without agree; 1,500 ToolACE prompts; threshold
+   fires on half of ToolACE; when it fires on a tools prompt the reply starts with an empty think block (forced tokens
+   counted). Only changes BFCL: 25.3% -> 44.6% saved. Headline 47.3 / -0.88 combines ungated SVAMP/MBPP/IFEval runs with
+   a gated BFCL run; a full gated rerun read 46.6 / -1.33. **Note:** this is a test-time change to evaluate.py, not in
+   the weights.
+
+DPO tripwire: scores 64 held-out pairs every 25 steps and warns when P(`<|endoftext|>` right after `</think>`) rises
+(the signature of the collapse below) (README, dpo.py).
+
+### 5.3 Per-benchmark (README, with gate on BFCL)
+SVAMP **66.3 / -3.8**, MBPP+ 39.1 / -1.9, IFEval 32.0 / +1.4, BFCL 44.6 / +0.8 (gated; ungated BFCL 25.3% saved,
+accuracy UNVERIFIED). **Inference:** without the gate the BFCL saving (25%) is the weak spot; SVAMP carries the average.
+
+### 5.4 What did not work (IDEA.md)
+| idea | result |
+|---|---|
+| Truncation oracle as a measurement on base traces (hindsight) | 34.5% / +1.08 (BFCL 55%) |
+| SFT on the oracle's cuts | 11.4% / -0.34: "safe but timid"; more epochs collapse accuracy |
+| Shortest-over-longest DPO pairs alone | 90% saved, -27 pp within 50 steps |
+| DPO on oracle pairs from the BASE model, to the end | collapsed ~step 200 (`<|endoftext|>` right after `</think>`); with anchor: 47.8% / -4.15 |
+| Right>wrong pairs at matched length without NLL | -5.2 pp (with NLL: +0.6 pp at the same length) |
+| SFT on the full trace when no cut was stable | 5% saved |
+| More SFT data (15x) or a second cutting round | no further shortening |
+| Fine-tuning the oracle-DPO model on distilled math | 28.6 / -1.09 (2-sample) |
+| Merging the two LoRAs | 51.0 / -3.93 (2-sample) |
+| Gating math/code too | skipping easiest 5% of SVAMP: -1.1 pp |
+| Gate trained into the weights with DPO | -3.3 pp (called tools on irrelevance) |
+| A larger model choosing cut points | ~40% / -0.8 (pilot) |
+2-sample evals ran 0.5-1 pp optimistic against 8 (his note). Side effects: more sycophancy, invents missing context.
+
+### 5.5 Compute
+One RTX 4070 SUPER 12 GB for all DPO (~5.5 s/step oracle DPO, 11-14 s correctness DPO), gate, most evals (~1.5 h per
+8-sample eval); sampling and oracle on MetaCentrum (8 shards on 40 GB GPUs, a few hours each); SFT on a 24 GB GPU.
+
+---
+
+## 6. Brief: mrtineu (28.7% / -1.71) and marek-krcal
+
+### 6.1 mrtineu / Martin Senkyr ([MRT] README.md, IDEA.md, data.md, code/thinkingcap/config.json)
+- **Targets:** student answers a question; Qwen3-8B sees one correct student trace (never the gold) and writes hints on
+  what to skip (hints containing the answer are rejected and re-asked, 3 attempts); student answers 4 more times with
+  hints in the prompt; shortest correct answer = target; trained on the plain question. Baseline 4 samples, keep
+  questions with >= 2 right; 13-gram overlap filter. Training data source: UNVERIFIED (seed config only; probably the
+  challenge's train.jsonl, since hint checks mention option letters).
+- **Architecture:** a copy of layer 13 inserted after it with attention off, zero-init output, only 64 MLP channels
+  trained (197,632 params); 29-layer plain Qwen3 checkpoint. lr 3e-4; batch 32 sequences; warmup 3%; 2 epochs planned;
+  best at step 170 = half an epoch.
+- **Results (data.md, full test):** extra-mlp-64 @170: **28.7 / -1.71** (SVAMP 40.4/-2.26, MBPP 15.7/-1.98, IFEval
+  31.0/-1.06, BFCL mult 28.2/-4.31). LoRA r8/a16 on q,v (1.1M params, lr 2e-4) @170: 22.5 / -1.58, falling to 13.9 at 1
+  epoch. Control (no hints, shortest own answer = 0.65x length) LoRA: 0.1-2.3% saved. Full inserted block (15.7M):
+  25.1 / -2.16; full-width MLP (9.4M): 25.8 / -1.92; same MLP after layer 20: 19.5 / -1.11; after layer 17: 21.9 / -1.64.
+  Forced first token "To" (decodi
+[output cut at 10,000 characters]

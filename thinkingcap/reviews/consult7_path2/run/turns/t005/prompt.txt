@@ -1,0 +1,74 @@
+# RL methods that shorten reasoning: verification of the Kimi summary and a methods catalogue for a 0.6B model
+
+Written 11 Nov 2026. Every number below comes from the paper's PDF, downloaded from arxiv.org/pdf/<ID> and read as text. Page numbers are the PDF page counter. A claim I could not confirm is marked **[unverified]**. My own reasoning is marked **[inference]**.
+
+Context: Qwen3-0.6B in thinking mode. The goal is more than 50% fewer tokens at better than -1 point accuracy on ThinkingCap-Test (SVAMP, MBPP+, IFEval, BFCL), scored at a fixed 4,096 / 8,192 token cap with 8 samples. We already have a GRPO / Dr. GRPO + LoRA trainer (rl_train.py).
+
+---
+
+## 1. Verification of the pasted Kimi summary
+
+All five arXiv IDs exist and are the papers the summary names:
+- 2501.12599: *Kimi k1.5: Scaling RL with LLMs*, v4 of 3 Jun 2025.
+- 2507.20534: *Kimi K2: Open Agentic Intelligence*.
+- 2602.02276: *Kimi K2.5: Visual Agentic Intelligence*.
+- 2607.24653: *Kimi K3: Open Frontier Intelligence*.
+- 2510.15110: *DLER: Doing Length pEnalty Right*, NVIDIA, v1 of 16 Oct 2025.
+
+### Claim 1: Kimi k1.5 (2501.12599)
+
+| Sub-claim | Verdict | Exact text / source |
+|---|---|---|
+| Min-max relative length reward inside the group: ? = 0.5 ? (len(i) ? min_len)/(max_len ? min_len); ? if correct, min(0, ?) if wrong; zero when max_len = min_len | **VERIFIED** (one location detail) | ?2.3.3 "Length Penalty". The section starts on p.5 but the formula is on **p.6**: "If max_len = min_len, we set length reward zero for all responses ? len_reward(i) = ? If r(x, y_i, y*) = 1; min(0, ?) If r(x, y_i, y*) = 0, where ? = 0.5 ? (len(i) ? min_len)/(max_len ? min_len)." |
+| Added to the task reward with a weight | **VERIFIED** | p.6: "This length-based reward is then added to the original reward with a weighting parameter." |
+| "standard policy optimization without length penalty, followed by a constant length penalty for the rest of training" | **VERIFIED** (exact quote) | p.6: "length penalty may slow down training during the initial phases ? we propose to gradually warm up the length penalty ? Specifically, we employ standard policy optimization without length penalty, followed by a constant length penalty for the rest of training." |
+| Separate long2short RL phase (?2.4) with the length penalty and a shorter max rollout | **VERIFIED** | ?2.4, "Long2short RL", p.8: "we select a model that offers the best balance between performance and token efficiency to serve as the base model, and conduct a separate long2short RL training phase. In this second phase, we apply the length penalty introduced in Section 2.3.3, and significantly reduce the maximum rollout length to further penalize responses that exceed the desired length while possibly correct." |
+| 60.8 on AIME2024 at an average of 3,272 tokens (?3.4) | **VERIFIED** | ?3.4, "Long2short", p.13: "k1.5-short w/ rl achieves a Pass@1 score of 60.8 on AIME2024 (averaged over 8 runs) while utilizing only 3,272 tokens on average." |
+| Optimizer = mean-reward baseline + squared log-ratio penalty (eq. 3), not GRPO | **VERIFIED** | ?2.3.2, p.5. This is online mirror descent with surrogate loss (r ? ? log Z ? ? log ?_?/?_?i)?. ? log Z is approximated by the mean sampled reward. Eq. 3 gradient: (1/k) ?_j [?log ?_?(y_j)(r(x,y_j) ? r?) ? (?/2) ?(log ?_?/?_?i)?]. Details the summary leaves out: samples come from the reference policy ?_?i (off-policy); there is no std normalisation and no value network; "we also reset the optimizer at the start of each iteration." |
+| Weight, switch time and reduced rollout length not published | **VERIFIED (absence)** | I found no numeric value for the penalty weight, the warm-up switch point or the long2short max length anywhere in the paper. |
+| "the larger model generally shows better token efficiency than the smaller model" (?3.5 p.14) | **VERIFIED** (exact quote) | ?3.5, "Scaling of model size and context length", p.14. Next sentence: "if test-time compute has a budget, training smaller models with a larger context length may be viable solutions." The two model sizes are not given. |
+
+### Claim 2: Kimi K2 (2507.20534)
+
+| Sub-claim | Verdict | Exact text / source |
+|---|---|---|
+| ?3.2.3 p.13, per-sample max token budget set by task type; over-budget responses are truncated and penalised; values not given | **VERIFIED** | ?3.2.3 "RL Algorithm", paragraph "Budget Control", p.13: "we enforce a per-sample maximum token budget throughout RL training, where the budget is determined based on the type of task. Responses that exceed this token budget are truncated and assigned a penalty". No budgets or penalty values are given. The same section confirms K2 reuses the k1.5 objective, with the Muon optimizer, a PTX loss and temperature decay. |
+
+### Claim 3: Kimi K2.5 (2602.02276)
+
+| Sub-claim | Verdict | Exact text / source |
+|---|---|---|
+| ?4.4.2 p.9, "Toggle": phases alternate every m iterations | **VERIFIED** | ?4.4.2 "Reinforcement Learning", paragraph "Token Efficient Reinforcement Learning", p.9: "the algorithm alternates between two optimization phases every m iterations". Phase 0 applies when ?t/m? mod 2 = 0. |
+| Phase 0: r? = r ? 1[mean_i r(x,y_i) < ? or \|y\| ? budget(x)]; Phase 1: r? = r | **VERIFIED** | Same page. The budget constraint "is only enforced when the model's mean accuracy for a given problem exceeds the threshold ?." |
+| budget(x) = ?-th percentile of correct-answer lengths, estimated once at the start | **VERIFIED** | Eq. 2, p.9: "This budget is estimated once at the beginning of training and remains fixed thereafter." |
+| "Toggle decreases output tokens by 25~30% with a negligible impact on performance" on K2 Thinking | **VERIFIED** (exact quote) | p.9: "We evaluate the effectiveness of Toggle on K2 Thinking ? On average, Toggle decreases output tokens by 25?30% with a negligible impact on performance." |
+| Transfer to GPQA / MMLU-Pro when trained on math + code | **VERIFIED** | p.9: "when trained exclusively on mathematics and programming tasks, the model still achieves consistent token reductions on GPQA and MMLU-Pro with only marginal degradation in performance (Figure 5)." |
+| Token-level gradient masking for log-ratios outside [?, ?] | **VERIFIED** (one nuance) | Eq. 1 and text, p.8: "policy gradients are computed normally for tokens with log-ratios within the interval [?,?], while gradients for tokens falling outside this range are zeroed out ? regardless of the sign of the advantages." Nuance: eq. 1 is printed as Clip(ratio, ?, ?), while the prose says log-ratio. The loss is also normalised by N, the total number of tokens in the batch. |
+| ?, m and ? not published | **VERIFIED (absence)** | No values appear in the paper. |
+| Motivation (not in the summary but useful) | ? | p.9: "models trained under rigid budget constraints often fail to generalize to higher compute scales ? defaulting to truncated reasoning patterns" ("length-overfitting"). |
+
+### Claim 4: Kimi K3 (2607.24653)
+
+| Sub-claim | Verdict | Exact text / source |
+|---|---|---|
+| ?4.1.2 p.13: reward overridden with ?1 above ??b0(x), where b0 is estimated from the cold-start model | **VERIFIED** | ?4.1.2, "Reasoning Effort RL", p.13: "We associate each problem x with an initial token budget b0(x) estimated from the cold-start model, and override the task reward with ?1 for trajectories whose total token budget T(y) exceeds a scaled threshold ? ? b0(x)." T(y) counts thinking tokens for general tasks. For agentic tasks it counts all output tokens, including tool arguments. |
+| ? annealed per domain to produce low / high / max experts | **VERIFIED** | Same page: "We first train a max-budget variant with a relatively large ? ? We then anneal ? to smaller values to obtain the high- and low-effort expert models. The adjustment of ? is configured per domain under human-in-the-loop guidance." |
+| 9 experts distilled into one model | **VERIFIED** | p.12: "Crossing these three domain experts with three reasoning effort levels in {low, high, max} yields a total of nine expert models." Consolidation uses SFT plus Multi-Teacher On-Policy Distillation (?4.1.3, p.13). |
+| Effort given as a plain-language option, not a token count (App. F p.47) | **VERIFIED** | p.47: "Instead of modifying the generation prefix or exposing a token budget, the message states the requested level in natural language". The schema reserves four levels (low, medium, high, max), and K3 supports a subset. |
+| Extra (not in the summary) | ? | p.13: a verbosity control for the generative reward model: "a candidate whose output length exceeds ? ? ?0 automatically loses the binary comparison." |
+
+### Claim 5: DLER (2510.15110)
+
+| Sub-claim | Verdict | Exact text / source |
+|---|---|---|
+| Truncation-based length penalty works ? only with batch-wise reward normalisation, higher clipping and dynamic sampling | **PARTLY WRONG (overstated / mis-scoped)** | The recipe is the four parts named (abstract p.1): "batch-wise reward normalization, higher clipping, dynamic sampling, and simple truncation length penalty". Two corrections. (a) The paper is not about "DeepSeek-R1-1.5B only". It trains DeepSeek-R1-**1.5B and 7B** (?4.1, p.8), plus Llama-3.1-Nemotron-Nano-8B (?4.6). (b) The ablations that justify each ingredient (Figs. 2, 5, 6) were run on **DeepSeek-R1-7B**, not on 1.5B. The paper never states that truncation works *only* with these ingredients. It says plain GRPO + truncation keeps losing accuracy (Fig. 2, 7B), and that each ingredient fixes one identified problem. |
+| Quote "It is not the sophisticated design of the length penalty that determines performance, but rather the choice of RL optimization algorithm." | **VERIFIED** (exact) | Key Insight 1, p.2. |
+
+**Bottom line:** claims 1?4 hold, with small page/location fixes for claim 1. Claim 5's quote is exact, but "on DeepSeek-R1-1.5B only" is wrong: the paper covers 1.5B and 7B, and the ablations are on 7B.
+
+---
+
+## 2. Methods catalogue
+
+Unless stated otherwise, "1.5B" means DeepSeek-
+[output cut at 10,000 characters]
