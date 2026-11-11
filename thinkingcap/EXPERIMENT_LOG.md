@@ -5276,3 +5276,11 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
   (full test 57.4 / -3.5); rpE-80 Dev +46.9% [44.2, 49.8] / +1.36 [-0.28, +2.99] (full test 47.0 / -0.9). Saving reads
   ~0 to +1.3 high; accuracy reads ~+1.7 to +2.3 high on Dev (ranking kept). Gate bar = 46.9 + 6 = 52.9% Dev saving.
   rpE-40 / rpE-60 / rpI-120 next. GPU 1: od2 round 2/10. consult8 (Gemini final Path 1 review) running, cap raised to $15 (user).
+- 11 Nov ~03:30 **Independent review by Claude Fable 5.2** (user switched models; reviews/fable_path1_review.md): Path 1 = a clean
+  rewrite of rc1 -> rpE with no new ingredient, expected on the existing frontier (47 / -0.9 .. 50.6 / -1.9), ~1 in 6 to land in
+  the box; round 1 still worth running (cheap, gated). Unexploited lever: IFEval and no-fit (raw Qwen thinking OFF on the full
+  test: IFEval 62% saved / -1.3, no-fit 96% / +6.9; every trained full test is worse on IFEval at 41-53% saved); on paper IFEval
+  at 57-62% saved lifts rpE-80 to 49.9-51.5 / about -0.6. Proposal: the user's budget ladder, minimal version (measure budgets
+  0 / 30 / 60 first, then "short think" pairs per question; short real think, never empty). Red flags: round 2 shorter bar 6/8;
+  Dev-512 too noisy to pick among round-2 steps; seed spread vs the gate; od2 low value; counting-rule shortfall refilled in
+  repair_pairs.py L215; the README's own bar is long passed. Nothing changed in the queues (user decides).
