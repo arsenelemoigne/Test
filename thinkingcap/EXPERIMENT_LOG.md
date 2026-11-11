@@ -5272,3 +5272,7 @@ checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Adv
 - **consult7 (Gemini): Path 2 RL design** (reviews/consult7_path2/run/final_answer.md; PATH2_PLAN.md with my caveats): budget-gated
   GRPO from Path 1's final model, per-question target = P35 of its own correct lengths, batch-wise advantage normalisation,
   clip-higher, dynamic sampling, lr 1.5e-5 cosine to 5e-6, 50 steps, 2 seeds; runs only after Path 1. Gemini spend so far ~$8.6.
+- 11 Nov ~02:35 **Dev-512 calibration, first 2 of 5** (GPU 2): rc1-soup-30 Dev +58.7% [56.3, 61.0] / -1.83 [-3.70, -0.20]
+  (full test 57.4 / -3.5); rpE-80 Dev +46.9% [44.2, 49.8] / +1.36 [-0.28, +2.99] (full test 47.0 / -0.9). Saving reads
+  ~0 to +1.3 high; accuracy reads ~+1.7 to +2.3 high on Dev (ranking kept). Gate bar = 46.9 + 6 = 52.9% Dev saving.
+  rpE-40 / rpE-60 / rpI-120 next. GPU 1: od2 round 2/10. consult8 (Gemini final Path 1 review) running, cap raised to $15 (user).
