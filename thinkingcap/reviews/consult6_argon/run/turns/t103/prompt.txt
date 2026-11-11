@@ -1,0 +1,1 @@
+Calculated exact question & pair supply in p1src across all 6 parts!

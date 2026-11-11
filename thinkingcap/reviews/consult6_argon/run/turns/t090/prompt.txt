@@ -1,0 +1,56 @@
+L4948: - `repair_pairs.py --kinds guard` / `ptrepair --rp-kinds guard`: only the 21 Oct pair (shortest right > shortest finished
+L4952: DPO and screens; --kinds guard; smoke quota). Not run: tests/test_pipeline.py (needs the challenge's utils package).
+L5012: - 9 Nov **rpE (repair of rc1-soup-30) @ step 10: +57.4 / -2.9** (compare's average; official 57.2 / -3.0). rc1-soup-30's own
+L5017: - 9 Nov **rpE (repair of rc1-soup-30) @ 20: +54.8 / -2.6** (irrelevance -1.9, simple -1.0, mbpp -2.5, ifeval -2.9, svamp -4.2,
+L5021: - 9 Nov **rpE @ 80: +50.4 / -0.2** official (720 x 4; compare's average 50.6 / -0.1; **+2.8 vs curve**): irrelevance +51 / +3.1,
+L5025: - 9 Nov ~19:45 (after Colab's provisioning outage; both runtimes restarted) **rpE @ 45: +52.9 / -1.7** official (irrelevance +0.4,
+L5028: - 9 Nov **rpE @ 50: +49.5 / -1.6** (irrelevance +2.3, multiple +1.5, simple -1.7, ifeval -1.9, mbpp -3.3, svamp -1.3). Full tests
+L5029: of rpE-80 then rpE-40 started on GPU 1 (both models built by fullmodel --fm-merge).
+L5036: | rpE @ 50 | 59.0 -> 57.1 | 420 -> 153 | 247 -> 245 | 90.0 -> 88.8 / 685 -> 274 | 50.8 -> 47.5 / 2077 -> 968 |
+L5037: | rpE @ 80 | 59.0 -> 59.4 | 420 -> 146 | 247 -> 190 | 90.0 -> 87.5 / 685 -> 297 | 50.8 -> 51.9 / 2077 -> 981 |
+L5042: steps 0-40. (2) IFEval's loss is NOT a shortened response: COPD and rpE @50 keep the response (247 -> 245); rpE @80 even shortens
+L5047: loss. ifeval_rules.py + ifevalrules stage queued on GPU 1 after the full tests (full-rc1, full-ca1, full-rpE-80/40, s4-cp1a-20/25)
+L5057: stop it. Data-backed fix: the rpE repair (equal-length right>wrong pairs, constant lr) took rc1 from -3.8 to -0.2 at the same
+L5067: - 9 Nov ~21:30 **rpE @ 80 FULL TEST (2,759 x 8): +47.0 / -0.9** official (**+1.45 vs curve: our best full-test trade-off**):
+L5070: of saving and 0.7 pt of accuracy. Reference (not ours): michal-bida 47.0 / -0.78, Herz1c 43.4 / -0.97. rpE @ 40 full test
+L5083: 47-79%); always-right mixed-now 0-2 (right 96-100%). 24 min per 5-step block. GPU 1: rpE @40 full test running.
+L5084: - 10 Nov **rpE @ 40 FULL TEST: +50.6 / -1.9** (720 said 50.5 / -1.7). Step 80 full: 47.0 / -0.9. Step 60 full test next.
+L5086: - 10 Nov **rpE @ 60 FULL TEST: +47.8 / -1.2** (+1.3 vs curve; irrelevance +49 / +1.4, multiple +39 / -0.2, simple +38 / +0.1,
+L5087: ifeval +46 / -3.0, mbpp +48 / -0.7, svamp +55 / -1.5); its 720: 48.6 / -0.7. **rpE @ 40 FULL: +50.6 / -1.9** (+1.1; irrelevance
+L5095: (rc1, ca1, rpE-40/60/80) loses on COUNTING rules: length_constraints:number_words -11 to -13 pts, keywords:frequency -8 to -10,
+L5098: ca1 364, rpE-80 379; responses on length-rule questions median 209 -> 145-161 tokens. Wrong answers with thinking under half
+L5101: - 10 Nov (user) **repair improvements for rpF (repair of Run C @40)**: repair_pairs.py --count-rules: IFEval questions with a
+L5105: IFEval questions 600 -> 1,500 (rpE found only 154 IFEval pairs for a quota of 320). Fake-answer test: the 3 cases behave.
+L5106: Queued: plan B = breakdown of rpE-80 full, then rpF; plan A = rpE 80 -> 120 (720 at 100 / 120).
+L5108: rpE step 80's adapter (also DPO's reference), 720 at their steps 20 / 40: **rpG** = rc1-soup-30 answers the repair's questions
+L5109: x8, rpE's pair rules; **rpH** = rpG + IFEval counting-rule pairs (--count-rules) and 1,500 IFEval questions; **rpI** = a new
+L5110: round: the repaired model (models/rpE-80) answers a new question draw (seed 1) x8, pairs from its current mistakes + the IFEval
+L5111: fix. New ptrepair options: --rp-samples, --rp-seed, --rp-answers-model, --rp-init-from. GPU 1: breakdown rpE-80, rpI, rpF;
+L5112: GPU 2: rpG, rpH (the plain resume 80 -> 120 replaced by rpG).
+L5113: - 10 Nov (user) queued: **copdanalysis** (GPU 1, after the rpE-80 breakdown): copd_analysis.py = right vs wrong lengths on Runs A 
+L5116: **cp1d** (GPU 2, after rpH) = the ONE-CHANGE version of Run C: Run A's exact settings (64 x 2, lr 1e-5 -> 1e-6, solved >= 1/10)
+L5136: ## 10 Nov ? rpG (rpE-80 continued 80->120, normal method, 8 answers/question, 1484 pairs; IFEval 208/320 pairs)
+L5137: - rpG-20 (= repair step 100), 720 screen: **40.6% saved, +1.0 pts** (BFCL-weighted 40.4 / +0.9). Per part: irrelevance +51%/+6.9,
+L5139: - vs rpE-80 on the same 720 (50.4 / -0.2): about 10 pts less saved for +1.2 pts accuracy. Distance above the curve is about the sa
+L5143: od1: 4 rounds from rpE step 80 (base rc1-soup-30). Each round the CURRENT model answers a new slice of own questions x8
+L5144: (1,290 per round, no question twice), repair_pairs.py --kinds guard,shorten builds 160 pairs: half guard (shortest right >
+L5158: - rpG-40 (= repair step 120), 720 x4, official weighting: **32.7% saved, +0.5** (svamp 31% / +0.4, mbpp 23% / +2.5, ifeval 37% / -
+L5161: toward the curve: rpE step 80 stays the best stopping point.**
+L5172: ## 10 Nov ? rpI (new round: rpE-80 answers 5,700 new questions x8 itself; 1,579 guard pairs, IFEval 320/320 incl. 152 counting-rul
+L5174: ifeval 42 / -0.4, simple 39 / -2.5, multiple 42 / +0.2, no-fit 52 / +6.7). vs curve: +1.5 then **+2.6** (rpE-80 +2.8, rpG-100 +2.2
+L5175: rpG-120 +0.9). Unlike rpG (same steps, old model's answers), rpI kept its length (43% at both steps) while gaining accuracy:
+L5176: answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4 at 42% saved (rpG-120: -1.9 at 37%).
+L5178: ## 10 Nov ? rpH (= rpG + IFEval counting rule, 1,500 IFEval questions; 1,598 pairs, 175 counting-rule)
+L5179: - rpH-20 (= step 100), 720 x4 official: **42.0% / -0.6** (svamp 44 / -0.2, mbpp 40 / +0.2, ifeval 43 / -2.5, simple 37 / -1.2,
+L5180: multiple 40 / -0.6, no-fit 50 / +3.3); vs curve +1.0 (rpG-100 +2.2, rpI-100 +1.5). IFEval did NOT improve at step 100 (rpG-100:
+L5182: - rpH-40 (= step 120): **37.0% / -0.3** (svamp 34 / -0.6, mbpp 37 / +0.6, ifeval 36 / -2.1, simple 35 / -1.7, multiple 39 / -1.1,
+L5183: no-fit 49 / +6.5); vs curve +0.6. **The three continuations at step 120 (vs curve): rpG +0.9, rpH +0.6, rpI +2.6.** Only rpI
+L5192: The repair does not lift Run C: it stays on or below the curve (rpE lifted rc1-soup-30 from +0.95 to +1.45 full test). Run C's
+L5196: - od1 started on GPU 1 (round 1: rpE-80 answers 1,290 new questions x8).
+L5198: ## 10 Nov ? rpI step 120, FULL TEST (2,759 x 8): **41.9% saved / +0.1** (official weighting)
+L5200: highest of any full test so far (rpE-80 +1.45, rc1-soup-30 +0.95; michal-bida 47.0 / -0.78, about +1.6). No accuracy loss at all,
+L5210: - **repair_pairs.py --kinds guard,shorten backup supply:** if "shorten" pairs (longest right >= 1.5x shortest) run short, question
+L5212: - Full test of rpI-120 queued on GPU 2 after rpH (user); done above.
+L5224: is descriptive (at 50% it predicts -2.9, so +1 above it still misses); rpI-120 vs rpE-80 is only +0.19 vs curve; fresh answers
+L5225: ATTENUATE the drift (rpI +14.9% more output vs rpG +35.7%) but do not stop it, and are confounded with pair counts; screen/full
+L5227: deficit alone costs 0.65 pt of rpE-80's aggregate. Code issues found: (1) thinking_len() treats an empty thinking as the whole

@@ -1,0 +1,28 @@
+--- L3940-3955 ---
+- ~16:50 (user): bidax5s seed 1 dropped. Queued the one-change tests on bidax4's pairs: lpc-bidax6p = his precision only
+  (dpo.py --bida-precision) at the end of GPU 2's queue; lpc-bidax6s = his schedule only (--bida-schedule: warm-up
+  steps//20, cosine to 0) at the end of GPU 1's. Both 720 at 100/200/300/final vs bidax4 (ours) and bidax6 (all four).
+- ~17:30: DATASET.md written (sources, selection, answers, pair rules, counts, settings, decoded example pairs per type).
+  Found while writing it: our dp13 math is mostly EASY (of 2,999: metamath_easy 1,865 + gsm8k_easy 420 = 1-2 calculation
+  problems; metamath_sv 473; gsm8k_matched 241); michal-bida's math is GSM8K + MetaMath at all difficulties. Fits our
+  larger math loss; lpc-bidax5q (his math sources on his settings) tests it. Pending results: bidax6 final (re-running
+  after the disconnect), lpt6 per-type screens, bidax5q. Open user decisions: math fix option A; on-policy round from
+  bidax6 (when, and what gives way).
+- ~18:40 (user): analysis of the "four signals" critique (checked against our files): right-beats-wrong pairs push
+  shorter too (shortest right vs longest wrong; math1 band 175 of 216); the original's mistakes are not the trained
+  model's (too short); mixed-model "think enough" pairs failed. Tool references hold ONE accepted value per argument
+  ("km" vs "kilometers" can lose). IFEval langdetect coin-flip claim REFUTED: the official grader sets
+  DetectorFactory.seed = 0. "prostring" bug CONFIRMED: 99 ToolACE rows in dp13 contain prostring / stringname /
+  stringName ("file" -> "string" inside words; not from our type clean-up, which renames types only; source not yet traced).
+  Built: lupin_pairs.py --recipe four (loop -> guard kind, length-balanced same-model right, shorten only on >= 80%
+
+--- L4945-4952 ---
+- `track.py ptrepair --rp-own-data` (new `own_repair_questions()`): math = GSM8K train+test at every difficulty in SVAMP wording
+  (prepare_types gsm8k_std), minus questions already trained on in rounds 1-4; code / instructions / tools = pool-dp13 rows
+  minus MetaMath + own top-ups nofit1, nofit2, tools1, code1; 8-gram check against every evaluation question.
+- `repair_pairs.py --kinds guard` / `ptrepair --rp-kinds guard`: only the 21 Oct pair (shortest right > shortest finished
+  wrong); the similar-length right>wrong kind (Lightning McQwen3's) left out.
+- Checked here without a GPU: guard-only pairs on synthetic answers; own_repair_questions on stand-in files (MetaMath and easy
+  pool math excluded, used and test-overlapping GSM8K dropped); a mocked ptrepair smoke run (base model passed to answering,
+  DPO and screens; --kinds guard; smoke quota). Not run: tests/test_pipeline.py (needs the challenge's utils package).
+

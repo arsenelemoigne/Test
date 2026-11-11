@@ -1,0 +1,34 @@
+Num msgs_curr: 38
+0 system 272 Answer the user's request. You have NO tools and NO function calling in this conversation: never call a function. When you want code run, write it as plain text in a markdown ```python block inside your reply; the user runs it and sends you the output in the next message.
+1 user 11822 TASK. You are an independent ML research reviewer and strategist. A team is trying to make the reasoning model Qwen3-0.6B (it thinks between <think> and </think>, then answers) THINK SHORTER WITHOUT LOSING ACCURACY, and has designed a new method, the "budget ladder": build the thinking from the bottom up, starting from no thinking and raising a per-type thinking budget stage by stage. Review that design against everything the team has measured, and give them an analysis and a strategy.
+
+THE DATA
+2 assistant 411 ```python
+import os
+work_dir = "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult6_argon/work"
+pack_dir = "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult6_argon/pack"
+print("Work dir:", os.listdir(work_dir))
+print("Pack dir:", os.listdir(pack_dir))
+for f in os.listdir(work_dir):
+    p = os.path.join(work_dir, f)
+    print(f, os.path.getsize(p))
+```
+3 user 241 Work dir: ['edited', 'notes.md', 'report_draft.md']
+Pack dir: ['LADDER_DESIGN_FOR_REVIEW.md', 'code', 'CLAUDE_REVIEW.md', 'EXPERIMENT_LOG.md', 'PATH1_PLAN.md', 'all_runs.json', 'FACT_CHECK.md']
+edited 64
+notes.md 18156
+report_draft.md 44398
+
+4 assistant 183 ```python
+with open(os.path.join(work_dir, "notes.md")) as f:
+    notes_text = f.read()
+print("NOTES HEAD:\n", notes_text[:2500])
+print("\n---\nNOTES TAIL:\n", notes_text[-1500:])
+```
+5 user 4033 NOTES HEAD:
+ # Consult 6 (Argon) - Quantitative Research Notes
+
+## 1. Task & Official Evaluation Math
+- Model: Qwen3-0.6B, thinking mode ON (`<think>...</think>` + final answer).
+- Target: > 50.0% tokens saved (thinking + answer combined) AND > -1.00 pp accuracy change on the full test (2,759 questions x 8 samples = 22,072 generations), using ONE clean, reproducible recipe (single training line, own answers only, no competitor copying, no test-time prompt/switch).
+- Official evaluation breakdown

@@ -1,0 +1,96 @@
+--- Fact check 3: L4660-4688 ---
+- Queue note: GPU 1 had already re-read its plan before rpB was pushed, so it started D10 l2s50e first; rpB runs right after
+  D10 (~5 h later than intended). rpC stays after bidax6p on GPU 2 (bidax6p at step 190/336).
+- ~15:30 **bidax6p (bidax4's pairs, our settings, ONLY the precision switched to fp32 + fp16 autocast)**: step 100 **+45.7 / -1.8**
+  (svamp +55 / -2.3, mbpp +43 / -2.3, ifeval +40 / -2.9, simple +39 / -2.7, multiple +44 / -0.4, no-fit +45 / +3.7), +0.3 vs curve;
+  step 200 **+48.9 / -2.0** (svamp +52 / -3.5, mbpp +45 / -0.6, ifeval +53 / -3.1, simple +43 / -5.0, multiple +46 / -0.8, no-fit
+  +49 / +3.1), +0.7. Same pairs in bf16 (bidax4): 100 +57.1 / -5.1, 200 +54.6 / -3.7; with ALL of his settings (bidax6): 100
+  +44.4 / -2.2, 200 +40.1 / -0.9. Reading: the precision alone accounts for most of the change his settings made (much gentler,
+  -11 pts saving and +3 pts accuracy at step 100): float32 + fp16 autocast trains less aggressively than our bf16 path. It moves
+  the model along the curve (from below to slightly above) rather than giving a big jump above it. Final next; then rpC.
+- ~16:30 bidax6p step 300: **+47.8 / -1.4** (svamp +57 / -1.7, mbpp +39 / -0.4, ifeval +48 / -1.9, simple +42 / -6.5, multiple
+  +46 / -0.8, no-fit +48 / +2.5), +1.1 vs curve. Final next, then rpC on GPU 2.
+- ~17:30 (user) **Finish lpt6 queued** (GPU 2, after rpC; the consultant's 13-screen design): (a) train the missing math adapter
+  (typeonly lpt6 --to-parts svamp, bidax5s pairs, 2 seeds, lpt6's exact historical settings); (b) solos at 1.0: math + no-fit;
+  (c) all six solos at 0.5 (rescreen --cx-scale 0.5); (d) five merges via the new mixscreen stage (math / code / ifeval / simple /
+  multiple / no-fit): C 0/0/.5/.5/.5/0, P .5/0/.5/.5/.5/.5, S6 all .5, P+ 1/0/.5/.5/.5/1, T .5/0/.5/0/1/.5. Purpose: a second,
+  differently-trained per-type family (6 adapters, rule-B pairs, no NLL, cosine) to compare with pt-mid's (4 adapters, LUPIN
+  pairs, NLL 1.0, constant lr): solos, dose and merges, as data for the Jasmin battle plan.
+- Deep research for Jasmin (107 agents, 24 sources, 23 of 25 claims confirmed): research_jasmin_merging.md. No source tests
+  0.6B, per-type DPO LoRA merging, or non-math tasks. Supported: separate-then-merge beats data mixing for 2-5 sources at 3-13B
+  (DEM, Cohere Aya, LoRA Soups), DPO merges more consistent than SFT merges; the advantage fades with more skills (3+: data mix
+  won; TIES collapses with merge count; Task Arithmetic the only reliable method); plain shortest-vs-longest DPO cuts ~17-30%
+  only; -50% at < 1 pt at 1.5B came from on-policy RL with correctness-aware length rewards (DRPO; AdaptThink uses skipping
+  thinking = not allowed here) or SEARCHED / layer-wise merge coefficients (Evo-L2S -52% at +4.6 pts, FIM-TIES); uniform merges
+  degrade at 1.5B ("smaller models struggle to learn from model merging"); DARE needs drop < 0.5.
+- ~19:30 **bidax6p final: +48.8 / -2.3** (svamp +57 / -3.1, mbpp +39 / -0.6, ifeval +52 / -5.2, simple +42 / -5.2, multiple +46 /
+  +0.2, no-fit +48 / +3.7), +0.4 vs curve. Precision alone: best at step 300 (+1.1); his schedule (bidax6s) still to come.
+- **rpB-10 (pt-mid + repair at lr 2e-5, step 10): +52.4 / -2.2** (svamp +58 / -5.8, mbpp +63 / -0.8, ifeval +46 / -0.8, simple +37 /
+  -2.5, multiple +40 / +0.6, no-fit +42 / -1.5), +1.2 vs curve: code and no-fit repaired (mbpp -6.0 -> -0.8, no-fit -5.8 -> -1.5
+  vs rpA-5), math still -5.8. Training moved this time (loss 0.693 -> 0.578, 75% ordered right at step 40). Steps 20 / 40 next.
+
+--- Fact check 4: L1538-1628 ---
+
+**zbench, first lines (judge trained on lots B+B2+B3 = 2,616 questions / 23,657 cuts; TEST = the 240 benchmark questions'
+1,812 cuts):** position dev AUC 0.722 -> test 0.508; linear dev 0.875 -> test 0.674; linear on the real success rate 0.822 ->
+0.609. A large drop from practice questions to the benchmark (rest of the zoo pending).
+
+**25 Oct ~08:20 (CET), zbench complete: the original Qwen's judge trained on lots B+B2+B3 (2,616 practice questions / 23,657
+cuts), TESTED on the 240 benchmark questions (1,812 cuts; svamp = gsm_plus, ifeval = ifeval_like, mbpp = kodcode, bfcl =
+toolace columns).** ALL AUC dev -> TEST: MLP 0.893 -> 0.736; MLP all layers 0.885 -> 0.738; attention layer 28 0.835 ->
+0.714; linear 0.875 -> 0.674; own confidence (least likely token) 0.728 -> 0.717; position 0.722 -> 0.508.
+Per benchmark (TEST AUC): SVAMP: own confidence 0.87-0.88 BEATS every hidden-state judge (MLP 0.74-0.75; dev math 0.94-0.95);
+IFEval: MLP all layers 0.711, others 0.55-0.65; MBPP+: judges 0.73-0.77 (own confidence 0.68-0.72); BFCL: MLP 0.772.
+Calibration (soft k/20 target): MLP all layers best (log loss 0.82, Brier 0.217, ECE 0.14).
+Trade-off, one threshold chosen on development: the budgets do NOT transfer: MLP all layers "<= 0.5 pt" gives 64% saved at a
+real 6.6-pt loss on the benchmark; own confidence (least likely token) 16-25% saved at ~0 loss. Per-type simulation: MBPP+ 92-94%
+saved at ~1 pt (judges and own confidence alike); BFCL ~44% at 0.4 (MLP all layers); IFEval 43% at -0.4 (linear) to 58% at
+4.0; SVAMP: every judge over-stops (8-24 pt losses).
+Reading: the judge learned practice math, whose answers settle at 20-40% of the thinking; benchmark math (SVAMP) settles late
+(benchlot: 0.34 at 20-40% vs 0.73 full), so the judge stops SVAMP far too early, while the model's own confidence ranks SVAMP
+cuts well. Code transfers, tools mostly, instructions weakly. Before stop-token training: math needs SVAMP-like (not
+SVAMP) training problems or the own-confidence signal; thresholds must be set per type and checked on benchmark-like data.
+
+**25 Oct ~09:10 (CET), both queues ended on errors, both runtimes released themselves (last cell).** Runtime 1: zoo B4 and
+stopB4 failed (runs/bon/pairs-plotB3/cal/verdicts.jsonl missing: lot B3 finished on runtime 2 after runtime 1's start-up restore,
+which had copied the half-made folder). Runtime 2: drpo1 failed in rl_train.py (IFEval grader: No module named 'langdetect'; the
+mixed pool was built, 48 x 60 MBPP-free), teach1 failed in mixed_pool (KeyError 'prompt': a data file of another format
+contains the word "prompt"). Fixes: ensure_lots() restores a lot from Drive when its verdicts are missing (probezoo, targeted);
+setup installs langdetect; mixed_pool parses rows and skips non-chat ones. The failed lines stay in the queues and rerun on the
+next launch (finished stages are skipped).
+
+**25 Oct, queued (user): per-type stop from the benchmark findings.** stopB5 (runtime 1, after zoo B4, before stopB4): the
+original Qwen trained on stop pairs from lots B..B4 for code and tools ONLY (kodcode, toolace, hermes_tools; earliest safe cut
+beats the full reply, per-question rule on the 20-try lots), no math / instructions / multiple choice, 3 seeds, soups 10-30
+scored on fresh x8. Rationale: on the 240 benchmark questions MBPP+ thinking is removable almost anywhere (perfect stop 84%,
+judge stops 92-94% at ~1 pt) and BFCL early cuts are safe, while SVAMP settles late and IFEval early cuts cost points.
+Expected: large code saving (MBPP+), some BFCL saving, svamp/ifeval near zero; compare with stopB3 soup 25 (34.6 / -0.4).
+DRPO (drpo1, runtime 2) stays queued unchanged (it does not use the judge).
+
+**25 Oct, measurement fix (user: "are we measuring the right thing?").** The zoo's AUC pools every cut, so it mixes two skills:
+which questions/replies will be right at all (question difficulty) and WHEN inside a reply the answer has settled (what a stop
+needs). Own confidence is strong on the first (SVAMP 0.87-0.88 is largely "this easy question is known"); in the stopping
+simulation on SVAMP it only wins by stopping rarely (15% saved / -3.8; least-likely-token 8% / -1.9; judge 63% / -23.8;
+oracle 30% / +1.3). probe_zoo.py now also reports a TIMING-ONLY AUC (pairs of cuts from the same reply only; toy check: rising
+1.0, difficulty-only 0.5, falling 0.0) for every classifier, dev and test, per type; and three new classifiers: own confidence
+LEARNED (its 5 readings + position, same fit as the probes), linear + own confidence, MLP + own confidence. zbench2 (runtime 2,
+before drpo1) reruns the benchmark test with these; zoo B4 uses them too.
+Context for math cuts: trained models already shorten SVAMP far beyond the 30% "oracle" (that is truncation of the original
+replies with all 20 forced answers right): rc1-rl-40 svamp +65% / -4.1; earlier rounds +67-69% at -0.6..+3.1 (x4);
+competitor Lightning McQwen3 SVAMP 66% / -3.8. Benchlot's best-cut ceiling on SVAMP (best cut vs natural stop) is 53% / +8.9.
+
+**25 Oct ~10:30 (CET), both runtimes relaunched by the user (scripts 36a4a86).** User: every classifier must be tested on the
+real eval sample so they can be compared. zbench2 (runtime 2: lots B+B2+B3) and the new zB4bench (runtime 1, right after zoo
+B4: lots B..B4, MBPP dropped) both test on the 240 choosing benchmark questions (measure only, never trained on), with the
+timing-only AUC and the own-confidence combos; zoo B4 itself keeps the held-out practice test, for the practice-vs-benchmark gap.
+
+**25 Oct, experiment 5 protects math (user).** After zbench (the judge stops SVAMP far too early), teach_stop trains math answers
+(gsm_ic, gsm_plus, gsm8k) toward "keep thinking" (target 0) at every paragraph end instead of following the judge, so the
+spill-over seen in every stop model cannot teach early math stops; code, tools and instructions follow the judge (fixed:0.9)
+or the relative rule (rel:0.05). Math shortening is left to length training (DRPO) and to a math-specific signal (pending
+zbench2's timing-only AUC for own confidence and the combined judges).
+
+**25 Oct, ideas from the papers (user asked why ESTAR / ShorterBetter succeed).** Reading: both use far longer-thinking models
+(ESTAR Qwen3-8B, 2.4-6k tokens; ShorterBetter R1-Distill 1.5B/7B, 5-11k tokens; ours ~360 tokens when right), stay mostly in
+one domain (math / medical MC), and ESTAR ke
+[output cut at 10,000 characters]

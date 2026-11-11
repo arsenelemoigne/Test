@@ -1,0 +1,12 @@
+L4579: Still to run: D4 budget (training, step 90/337), D5 margin, D10 l2s50e, D12 chain1 rounds 1-2 (GPU 1); bidax6p / 6s (GPU 2).
+L4715: GPU 1 now trains D12 lpd-chain1 (333 steps x 18 pairs). GPU 2: lpt6 svamp merged and screening.
+L4735: GPU 1: D12 chain1 step 250/333.
+L4747: shortening at all, as at 1.0. GPU 1: D12 chain1 trained (333 steps), screens at 100 / 200 / final starting.
+L4764: (at 1.0: 32.6 / -2.8). GPU 1: D12 chain1 step-100 screen grading.
+L4767: - **D12 lpd-chain1 step 100: +21.7 / +0.4** (svamp +36 / -0.6, mbpp +11 / +0.2, ifeval +10 / +1.7, simple +25 / -1.0, multiple
+L4770: - ~19:20 **D12 lpd-chain1 step 200 +18.4 / +0.4** (svamp +26 / -0.2, mbpp +9 / -0.4, ifeval +8 / +1.0, simple +27 / -2.1, multiple
+L4773: the 40% bar, below D11 push2 in saving. Round 2 (polans pc1 a + b, then lpd-chain1r2) running.
+L4791: GPU 2 is IDLE. GPU 1: polans pc1-a (chain1 answers 10,068 questions x4), then pc1-b, chain1r2.
+L4823: - ~23:45 (user) queued on GPU 2 after chain1 answers half b: FULL TEST of pt-mid (pertype --pt-full, new option: merge + official 
+L4824: - ~00:00 (user) queued on GPU 1 after chain1 round 2: five lpt6 merges (C, C+code, C+weak no-fit .25, tools-only 3 slices, C at .7
+L4825: - ~00:10 (user) chain1 round 2 POSTPONED on both GPUs (pc1 answers so far kept on Drive: ~4,000 of 17,000, resumable); GPU 2 -> pt

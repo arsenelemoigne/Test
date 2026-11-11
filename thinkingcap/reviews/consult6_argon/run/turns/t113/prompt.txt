@@ -1,0 +1,100 @@
+--- L3550-3620 (lpc-runa2, runb, runac, lpc-bida) ---
+- Seen in the soup's full-run output: some replies degenerate into repeated "1. 1. 1. ..." and text in another script
+  (to be counted per part).
+- GPU 2 queue ended. Run B moved to GPU 2 (with its 720 rescreen); GPU 1: Run A2 -> rescreen 720 -> Run D -> rescreen.
+- 21:51: lpc-runa2 3 seeds trained (275 steps each). Fresh x8 soup-100: +31.0 / -0.5 (svamp +34/-0.3, mbpp +33/+0.9,
+  ifeval +30/-1.6, simple +27/-1.9, multiple +28/-1.9, no-fit +25/+0.3). SVAMP saves 34% with no math shorten pairs.
+
+### 2026-10-30 ~22:25 ? michal-bida control queued (user)
+- Question: is the gap to michal-bida (full eval 47.0 / -0.78 vs our lpc-l2s50e 48.0 / -2.08) the recipe or the data?
+  lpc-bida = his recipe on our pool dp13 (10 answers per question): long2short (guard = shortest right > longest wrong or
+  capped; shorten = shortest right > longest right if >= 1.5x), shorten capped at the guard count per part (1:1), no
+  min-solve rule, no easy-ratio, NO lupin_select matching (track --lp-no-match: the raw pairs as they come). Our training
+  settings (LoRA r32, beta 0.1, lr 2e-5 constant, NLL 1.0, 1 epoch), 3 seeds, fresh soups + 720 rescreen at
+  100-300. Replaces lpw-pressmath / lpw-p4tools on GPU 2 (after Run B). Not reproduced from his side: his own data mix
+  (GSM8K 70 / MetaMath SV 15 / FOBAR 15 for math) and his training settings.
+- 22:35 (user): the control keeps the eval's difficulty mix: lpc-bida now uses lupin_select matching (160-per-part
+  references, cells solve x thinking), then michal-bida's 1:1 balance re-imposed per part after matching (--lp-balance 1:
+  at most one shorten pair per be-right pair), no-fit loose, target 4,800 pairs; still no min-solve rule.
+- 22:59: lpc-runa2 fresh x8 soups: 100 +31.0 / -0.5; 150 +28.7 / -1.5; 200 +27.9 / -0.2; 250 +23.3 / -0.9. Saving FALLS
+  with more steps (cosine lr; 26% right + 23% guard pairs). 720 rescreen started (soup-100 first).
+
+### 2026-10-30 ~23:40 ? lpc-l2s50e-soup-100 full evaluation per type (computed from both full runs' records)
+| part | n | saved | acc | broke / fixed (>=6 -> <=2 of 8) | by thinking fifth (saved / acc), shortest -> longest |
+|---|---|---|---|---|---|
+| svamp | 1000 | 55.9 | -3.2 | 14 / 3 | 30/+0.1, 34/-0.9, 40/-4.2, 52/-6.7, 69/-4.4 |
+| mbpp | 378 | 51.9 | -2.2 | 1 / 1 | 35/-2.7, 41/-2.3, 49/-3.8, 59/-4.1, 53/+2.0 |
+| ifeval | 541 | 45.8 | -1.6 | 6 / 3 | 33/+1.0, 39/-0.3, 36/-4.4, 45/-2.9, 53/-1.4 |
+| simple | 400 | 33.4 | -0.8 | 6 / 3 | 16/+0.5, 20/-0.9, 25/-1.2, 33/-3.9, 51/+1.9 |
+| multiple | 200 | 36.6 | -0.2 | 3 / 3 | 21/+3.4, 30/+0.9, 32/-1.6, 36/-1.6, 50/-2.2 |
+| no-fit | 240 | 40.9 | -3.3 | 3 / 0 | 16/0.0, 20/-0.5, 30/-1.3, 39/-3.1, 61/-11.5 |
+Repeated-text replies (same short token repeated 40+ times at the end): ifeval 10 (original Qwen: 13), mbpp 1 (1), others 0,
+so the degenerate replies seen in the log are not new with training. Capped replies: svamp 139 -> 1, mbpp 236 -> 28, ifeval
+156 -> 52. Visual: canvas section "Trained models, measured without the noise".
+- 23:16: lpc-runa2-soup-100 on questions_screen720 x 4: +33.5 / +0.5 (full-eval weighting +33.4 / +0.4); svamp +33/-1.5,
+  mbpp +32/+1.9, ifeval +36/+0.4, simple +31/+1.3, multiple +34/+2.9, no-fit +33/-1.2. (Fresh x8 had said +31.0 / -0.5.)
+  Canvas page rebuilt simply ("Are our tests like the real test?": the sets, one set vs the full test, training data vs
+  the full test, trained models measured on the full test or the 720 only).
+- 00:41 (31 Oct): lpc-runa2-soup-150 on the 720 x 4: +32.4 / -0.1 (full-eval weighting +32.3 / -0.1); svamp +24/+1.0,
+  mbpp +37/-0.4, ifeval +34/-1.5, simple +33/+0.2, multiple +36/+2.7, no-fit +33/-1.5.
+- ~00:45 (31 Oct): both runtimes stopped progressing. GPU 1 page shows "Reconnect L4" (it was scoring lpc-runa2-soup-200
+  on the 720, 256 / 2,876 answers); GPU 2 page no longer answers scripts (Run B seed 1 at step ~205 / 275, last Drive log
+  step 195). Not reconnected (standing rule: ask the user before opening or reconnecting a Colab runtime). On reconnect:
+  run cells 1-6; dpo.py resumes after its last checkpoint (every 10 steps), finished evaluations are skipped.
+- ~11:00-12:45 (31 Oct): runtimes reconnected by the user. Both restarted plans began RETRAINING lpc-runa2-s0 and
+  lpc-runb-s0 from scratch (the lupin stage checked the local disk, empty on a fresh runtime, before restoring adapters
+  from Drive). Stopped at step 75: only checkpoints step-10..70 (and the resume state) of those two seeds were
+  overwritten on Drive; the final adapters and steps 80+ are intact. Fix: the lupin stage light-restores every seed's
+  adapter folder before checking. GPU 1 plan: lpc-runa2 line commented (done), so it starts with the 720 rescreen.
+- ~13:05: fix 155fc81 (seed adapters and the fresh start restored from Drive before the check). Both runtimes re-cloned it
+  and are re-running setup; then GPU 1 starts the 720 rescreen of lpc-runa2 (soups 200/250/270 left), GPU 2 lpc-runb
+  (seed 0 done, seed 1 resumes from its Drive checkpoint ~step 200).
+- ~13:25: after the interrupt + cell re-run, both runners started with "drive: NOT mounted" (the mount was gone): GPU 1
+  skipped the 720 rescreen (no adapters), fullmodel failed (models/rc1-rl-40 not found) and lpc-rund was starting; GPU 2
+  started lpc-runb locally. Both interrupted before any training; cells 1 (drive.mount), 3-6 re-queued; the user
+  approves the Drive popups.
+- ~14:30: lpc-runb seed 1 resumed after step 190 with loss 8-10 (was ~0.6) and 56-62% pairs ordered right. Cause: the
+  restarted stage rebuilt the pair files (raw + matched) instead of restoring them; the rebuilt file's rows came out in
+  another order, and dpo.py reused the seed's saved reference scores (ref.json, matched by position) on the new rows.
+  Interrupted at step ~230. Fixes: (1) the lupin stage restores pairs-<name>-raw and pairs-<name> from Drive before
+  building; (2) dpo.py fingerprints the pair rows into ref.json and refuses to resume on a mismatch (old-style ref files
+  with a resume point also refuse); (3) track --lp-reset-seeds: delete a damaged seed (local + Drive) once, with a marker.
+  lpc-runb seed 1 is retrained from scratch (seed 0 trained before the restart, unaffected). GPU 1 (720 rescreen of
+  lpc-runa2) uses finished adapters only: unaffected.
+- 14:44: lpc-runa2-soup-200 on the 720 x 4: +33.0 / -0.3 (full-eval weighting +32.9 / -0.4); svamp +21/-0.2, mbpp
+  +34/-0.4, ifeval +43/-1.0, simple +32/-1.2, multiple +35/+3.6, no-fit +32/-0.4. GPU 2: lpc-runb seed 1 reset (marker
+  written), retraining from scratch.
+- 15:44: lpc-runa2 on the 720 x 4 (full-eval weighting): soup-250 +32.3 / -1.0 (svamp +17/0.0, ifeval +45/-3.5); soup-270
+  +32.5 / +0.4 (svamp +16/+1.0, mbpp +33/+1.0, ifeval +46/-1.0, simple +32/-0.2, multiple +34/+3.4, no-fit +30/-1.0).
+  All five Run A2 soups sit at 32-33% saved, accuracy -1.0..+0.4: math saving falls with steps (33 -> 16%), IFEval rises
+  (36 -> 46%). GPU 1 now on the rc1-rl-40 full evaluation; GPU 2 lpc-runb seed 1 step 160/275 (loss 0.56, healthy).
+- 16:00 (user): Run D replaced by lpc-runac = Run A's pairs and kind mix, constant lr 2e-5 (no cosine decay), beta 0.1 (no
+  stronger tie to the original); 3 seeds, fresh soups + 720 rescreen. Single change vs lpc-runa2: the learning-rate
+
+--- L4560-4585 (D6 simright, D2, D3, D4, D5) ---
+  training isolates the gradient source, not the behaviour; Run A (joint) at 33.4 / +0.4 vs single-type adapters at
+  ~33 / -1.7..-2.8. New ranking: Track A first, then a joint adapter on the balanced recipe, per-type only if a bounded
+  lpt6 completion shows complementarity (13 screens: math adapter in historical bf16 settings, irrelevance solo, all six
+  at 0.5, five predeclared merges C / P / S6 / P+ / T, additivity residuals). 4 vs 6: neither by default; use six to
+  finish lpt6. Most informative cheap data: pt-mid's 4 adapters alone at their deployed strengths -> queued (4 screens)
+  after the 4 full-strength solos on GPU 2.
+- ~05:30 **D6 lpd-simright step 100: +34.1% / +0.7** (svamp +52 / -0.2, mbpp +16 / 0.0, ifeval +29 / +1.5, one function +30 /
+  -2.9, several +32 / +1.5, no fit +40 / +6.7), +1.3 vs curve; **step 200: +30.3% / +0.6** (svamp +40 / +0.6, mbpp +6 / +1.0,
+  ifeval +37 / -0.6, one function +31 / -4.0, several +30 / -1.5, no fit +40 / +9.4), +0.8. Accuracy kept or gained (no-fit
+  strongly) but the right pairs halve the shortening vs bidax5q (41.8 / +0.2 at step 100). Final screening next.
+  GPU 1: D4 budget step 55/337. Both tabs show "Connecting" while still progressing (cosmetic).
+- ~06:30 **D6 lpd-simright final: +28.1% / +1.7** (svamp +35 / +0.2, mbpp +10 / +2.7, ifeval +32 / +3.1, one function +30 / -5.8,
+  several +29 / -1.9, no fit +41 / +10.2), +1.8 vs curve (as high above the curve as v1, but at 28% saved): the similar-length
+  right pairs buy accuracy (no-fit +10) and cost shortening; one-function is hurt (-5.8). Not a v1 candidate on its own; a
+  candidate ingredient for the per-type design (Jasmin).
+
+### 5 Nov ? decisions of the day (user), state before the night
+- DPO screen so far (720 x4, finals): D9 adar1 65.3 / -6.8, D11 push2 52.4 / -3.0, D8 math 41.7 / -1.0, D1 dast 33.1 / -2.3,
+  D6 simright 28.1 / +1.7, D7 2stage 16.5 / +1.4, D2 hard 13.8 / -0.1, D3 route 9.4 / -0.7. None beats v1 (46.7 / -0.5).
+  Still to run: D4 budget (training, step 90/337), D5 margin, D10 l2s50e, D12 chain1 rounds 1-2 (GPU 1); bidax6p / 6s (GPU 2).
+- Consultant (Ivan / gpt-6-astra, consult2, ~$16 today): DPO strategy (consult2_dpo_strategy.md), game-plan grounding
+  (consult2_game_plan_review.md), the user's objections accepted (consult2_objections_reply.md: fp32 both tracks, lr 5e-6 short
+  rounds, early screens), lpt6 reply (consult2_lpt6_reply.md: per-type spill-over is ~one shared habit; Track A first).
+- GAME_PLAN.md v3 (not committed to GPUs beyond the solos): Track A = repair pt-mid (pt-mid answers 5,400 q x4 -> 1,600 "be
+  right" pairs on math / code / no-fit + maintenance, 
+[output cut at 10,000 characters]

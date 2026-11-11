@@ -1,0 +1,7 @@
+Files in run: ['final_answer_first.md', 'state.json', 'messages.json', 'notes.md', 'turns', 'messages_before_second_analysis.json', 'report_draft.md']
+final_answer_first.md 44103
+state.json 252
+messages.json 67785
+notes.md 18156
+messages_before_second_analysis.json 527999
+report_draft.md 44398

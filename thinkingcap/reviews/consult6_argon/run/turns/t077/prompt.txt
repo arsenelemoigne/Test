@@ -1,0 +1,126 @@
+=== repair_pairs.py (Part 3) ===
+      cand[part]["guard"].append((qid, chosen, wrongs[0]))
+        close = [(r, w) for r in rights for w in wrongs
+                 if max(r["output_tokens"], w["output_tokens"]) <= args.ratio * min(r["output_tokens"], w["output_tokens"])]
+        rng.shuffle(close)
+        for r, w in close:
+            cand[part]["right_long" if r["output_tokens"] > w["output_tokens"] else "right_short"].append((qid, r, w))
+    pairs, counts = [], Counter()
+    per_q, right_q, used = Counter(), Counter(), set()
+
+    def take(part, kind, pool, n):
+        rng.shuffle(pool)
+        got = []
+        for qid, c, w in pool:
+            if len(got) >= n:
+                break
+            key = (id(c), id(w))
+            if key in used or per_q[qid] >= 3 or (kind != "guard" and right_q[qid] >= 2):
+                continue
+            used.add(key)
+            per_q[qid] += 1
+            right_q[qid] += kind != "guard"
+            got.append({"id": qid, "source": c["source"], "part": part, "kind": kind, "prompt_ids": c["prompt_ids"],
+                        "chosen_ids": c["output_ids"], "rejected_ids": w["output_ids"],
+                        "chosen_tokens": c["output_tokens"], "rejected_tokens": w["output_tokens"]})
+        return got
+    by_part = {}
+    for part, n in quota.items():
+        if args.kinds == "mix":
+            sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
+            if args.mix_preset == "round1":
+                sh_share = ({"shorten": 0.35, "right": 0.50, "guard": 0.15} if part in ("svamp", "bfcl_irrelevance") else
+                            {"shorten": 0.275, "right": 0.725, "guard": 0.0} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.35, "guard": 0.15})
+            n_sh, n_g = round(sh_share["shorten"] * n), round(sh_share["guard"] * n)
+            sh = take(part, "shorten", cand[part]["shorten"], n_sh)
+            g = take(part, "guard", cand[part]["capguard"], n_g)
+            n_r = n - len(sh) - len(g)  # equal-length right fills any shortfall of the two others
+            r = take(part, "right", cand[part]["right_cr"], n_r)
+            r_long = take(part, "right", cand[part]["right_long"], (n_r - len(r)) // 2)
+            r += r_long + take(part, "right", cand[part]["right_short"], n_r - len(r) - len(r_long))
+            by_part[part] = sh + g + r
+            for kind, got in (("shorten", sh), ("guard (capped)", g), ("right (equal length)", r)):
+                counts[(part, kind)] += len(got)
+            counts[(part, "right of them on counting rules")] += sum(1 for p in r if counting(groups[p["id"]][0]))
+            counts[(part, "candidates shorten / capped guard / right")] = (
+                f"{len(cand[part]['shorten'])} / {len(cand[part]['capguard'])} / "
+                f"{len(cand[part]['right_cr']) + len(cand[part]['right_long']) + len(cand[part]['right_short'])}")
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
+        if args.kinds == "guard,shorten":  # (10 Nov, odpo) half "be right", half "be shorter when sure"; no backfill
+            g = take(part, "guard", cand[part]["guard"], n // 2)
+            sh = take(part, "shorten", cand[part]["shorten"], n - n // 2)
+            soft = take(part, "shorten", cand[part]["shorten_soft"], n - n // 2 - len(sh))
+            counts[(part, "shorten from the 1.25-1.5x backup")] += len(soft)
+            counts[(part, "shorten candidates (>= 1.5x / 1.25-1.5x)")] = f"{len(cand[part]['shorten'])} / {len(cand[part]['shorten_soft'])}"
+            sh += soft
+            by_part[part] = g + sh
+            counts[(part, "guard")] += len(g)
+            counts[(part, "shorten")] += len(sh)
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
+        if args.kinds == "guard":
+            by_part[part] = take(part, "guard", cand[part]["guard"], n)
+            for p in by_part[part]:
+                counts[(part, "guard")] += 1
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
+        g = take(part, "guard", cand[part]["guard"], n // 2)
+        r_long = take(part, "right", cand[part]["right_long"], (n - n // 2) // 2)
+        r_short = take(part, "right", cand[part]["right_short"], n - n // 2 - len(r_long))
+        if len(g) < n // 2:  # a short guard supply is filled with right pairs, never with another kind
+            r_short += take(part, "right", cand[part]["right_short"], n // 2 - len(g))
+        by_part[part] = g + r_long + r_short
+        for p in by_part[part]:
+            counts[(part, p["kind"] + ("" if p["kind"] == "guard" else
+                                       " (right longer)" if p["chosen_tokens"] > p["rejected_tokens"] else " (right shorter)"))] += 1
+        counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+    # stratified order: interleave the parts by their shares, kinds alternating inside each part
+    queues = {part: sorted(ps, key=lambda p: (p["kind"], rng.random())) for part, ps in by_part.items()}
+    for part in queues:
+        g = [p for p in queues[part] if p["kind"] == "guard"]
+        r = [p for p in queues[part] if p["kind"] != "guard"]
+        queues[part] = [x for pair in zip(g, r) for x in pair] + g[len(r):] + r[len(g):]
+    total = sum(len(q) for q in queues.values())
+    share = {part: len(q) / max(1, total) for part, q in queues.items()}
+    credit = Counter()
+    while any(queues.values()):  # each round adds every part's share; a part emits a pair per whole unit of credit
+        for part, q in queues.items():
+            credit[part] += share[part]
+            while credit[part] >= 1 and q:
+                pairs.append(q.pop(0))
+                credit[part] -= 1
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in pairs))
+    lines = [f"{len(pairs)} pairs ({len(per_q)} questions)"]
+    for (part, what), n in sorted(counts.items()):
+        lines.append(f"  {part} / {what}: {n}")
+    for part in quota:
+        ps = by_part[part]
+        if ps:
+            med = lambda xs: sorted(xs)[len(xs) // 2]  # noqa: E731
+            lines.append(f"  {part}: median chosen / rejected tokens {med([p['chosen_tokens'] for p in ps])} / "
+                         f"{med([p['rejected_tokens'] for p in ps])}; chosen longer in "
+                         f"{sum(p['chosen_tokens'] > p['rejected_tokens'] for p in ps) / len(ps):.0%}")
+    for (part, what), n in sorted(rereads.items()):
+        if what.startswith("counting-rule"):
+            lines.append(f"  {part}: {what}: {n}")
+    ifeval_q = [q for q in groups.values() if part_of(q[0]) == "ifeval"]
+    if ifeval_q:
+        lines.append(f"  ifeval questions answered: {len(ifeval_q)}, with a counting rule: {sum(counting(q[0]) for q in ifeval_q)}")
+    for part in quota:
+        if rereads[(part, "guard questions")]:
+            n = rereads[(part, "guard questions")]
+            lines.append(f"  {part}: re-check of the question in the chosen answer {rereads[(part, 'chosen re-checks')] / n:.0%}, "
+                         f"in the rejected {rereads[(part, 'rejected re-checks')] / n:.0%} ({n} guard questions)")
+    first = Counter(p["part"] for p in pairs[:args.block])
+    lines.append(f"  first {args.block} pairs by part: {dict(first)}")
+    (out / "summary.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
+
+
+if __name__ == "__main__":
+    main()
+

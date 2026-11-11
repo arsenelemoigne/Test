@@ -1,0 +1,47 @@
+**25 Oct ~13:00 (CET), zbench2: TIMING-ONLY AUC (cuts compared only within the same reply) on the 240 benchmark questions.**
+Only 83 test replies hold both a safe and an unsafe cut (SVAMP 36, IFEval 6, MBPP+ 16, BFCL 25): small, read with care.
+
+| classifier | dev timing ALL (practice) | TEST timing ALL | SVAMP | IFEval | MBPP+ | BFCL |
+|---|---|---|---|---|---|---|
+| position ("later = safer") | 0.603 | **0.814** | 0.836 | 0.800 | 0.829 | 0.721 |
+| own confidence | 0.806 | 0.845 | **0.963** | 0.550 | **0.850** | 0.574 |
+| own confidence, 5 least likely | 0.807 | **0.871** | **0.977** | 0.625 | 0.833 | 0.721 |
+| linear (hidden state) | 0.828 | 0.710 | 0.768 | 0.525 | 0.666 | 0.698 |
+| mlp (hidden state) | **0.847** | 0.774 | 0.815 | 0.650 | 0.721 | **0.806** |
+| mlp, all layers | 0.825 | 0.690 | 0.807 | 0.625 | 0.561 | 0.651 |
+| own confidence, learned (+ position) | 0.826 | 0.813 | 0.937 | 0.475 | 0.735 | 0.721 |
+| mlp + own confidence | n/a | 0.844 | 0.963 | 0.400 | 0.787 | 0.752 |
+
+Pooled AUC (unchanged from zbench): mlp + own confidence 0.753 (best), mlp all layers 0.738, mlp 0.736, own conf. least likely 0.717.
+Reading: (1) on the benchmark, inside a reply the hidden-state judges know LESS about timing than "later is safer" (0.71-0.77
+vs 0.81); on practice they knew more (0.85 vs 0.60): what they learned about timing is practice-specific. (2) The model's own
+confidence carries real TIMING information on the benchmark, strongest on SVAMP (0.96-0.98) and code (0.85): the earlier worry
+that its SVAMP score was only question difficulty is wrong. (3) Its poor SVAMP stopping (15% / -3.8) therefore comes from the
+THRESHOLD chosen on practice data, not from the ranking: per-type thresholds set on benchmark-like data are the fix. (4) Tools are
+the one type where the hidden-state MLP leads (0.81). (5) Learning own confidence on practice data (with position) lowers its
+benchmark timing (0.813 vs 0.845-0.871 raw): fitting to practice hurts transfer.
+
+**25 Oct, queued (user): the benchmark test for rc1-rl-40.** All benchmark judge tests so far read the ORIGINAL Qwen (its
+replies, hidden states and own confidence); rc1-rl-40's own confidence was only tested on practice questions (0.79 vs the
+original's 0.74 pooled). Runtime 1, after zB4bench: benchlot benchA40 (rc1-rl-40's replies to the 240 choosing questions, cuts
+x 20 forced answers, measure only; benchlot now restores a models/ start itself), then zAbench (rc1-rl-40's judge on lots A + A2
+and its own confidence, tested on benchA40, with the timing-only AUC, own-confidence combos, ESTAR trajectory and label).
+Compare with zbench2 / zB4bench (original Qwen).
+
+**25 Oct, experiment 5 redesigned from zbench2 (user).** Teacher per type: the model's own confidence (geometric mean of its 5
+least likely answer tokens, read with own_conf.py at every scored paragraph end and at the full thinking of the 3,000 teacher
+answers) for math and code (benchmark timing SVAMP 0.977, MBPP+ 0.833); the soft hidden-state judge for tool calls (BFCL 0.806);
+instructions and multiple choice protected (keep thinking). Targets use only the relative rule, within the same answer
+(teacher value here >= its value at the full thinking - margin, floor 0.3): it uses the signal's timing, which transferred to
+the benchmark, and no absolute threshold, which did not. Two models: margins 0.05 and 0.1. Extra cost: one greedy forced
+answer per scored point (~30-50k short generations, ~1 GPU-hour).
+
+**25 Oct ~15:00 (CET), zoo B4: the original Qwen's judge on lots B+B2+B3+B4 (MBPP dropped: 198 cuts; dev 2,447 questions /
+21,539 cuts; TEST = 1,072 held-out PRACTICE questions / 9,571 cuts).** TEST AUC ALL: position 0.681, own confidence 0.721
+(5 least likely 0.740), linear 0.858, MLP 0.879, MLP all layers 0.872, attention 0.80-0.83, own confidence learned 0.812,
+linear + own 0.868, **MLP + own confidence 0.892** (zoo B2 MLP 0.864: +0.015 for twice the data, smaller than earlier
+doublings). Per type (MLP): gsm 0.94-0.95, hermes 0.91, ifeval_like 0.86, kodcode 0.80, toolace 0.74, mc 0.59-0.62.
+Timing-only TEST (429 replies with both): own confidence 0.833 vs MLP math 0.94 / code 0.76 / toolace ~0.5 / hermes 0.81;
+own confidence leads on code (0.86) and toolace (0.74). Pooled trade-off on the practice test: MLP all layers 64% saved at
+-0.2 (gain) for a 0.5-pt budget; MLP 70% / 2.6. (Started before the ESTAR features were pushed: zB4bench has them.)
+

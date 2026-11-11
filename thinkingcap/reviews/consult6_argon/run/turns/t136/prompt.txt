@@ -1,0 +1,7 @@
+Files in pack/code: ['dev_score.py', 'queued_lines.txt', 'repair_pairs.py', 'track_ptrepair_odpo_dev.py']
+Traceback (most recent call last):
+  File "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/astra_harness.py", line 140, in kernel_main
+    exec(compile(tree, "<block>", "exec"), env)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<block>", line 10, in <module>
+IsADirectoryError: [Errno 21] Is a directory: '/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult6_argon/work/edited'

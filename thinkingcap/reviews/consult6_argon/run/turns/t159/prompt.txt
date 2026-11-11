@@ -1,0 +1,50 @@
+PART 5:
+  `fp32` from raw Qwen lands at **~20?33% saved**. From a 30%-saved Round-1 model, Round 2 cannot reach >50% saved without cranking up shorten pairs and crashing accuracy below ?2.0 pp (as `od1` just demonstrated).
+
+**The cure is simple and already proven by `rc1 ? rpE` and `D10 lpd-l2s50e`:**
+- **Round 1 must be a Shorten-Dominant + Compact-Guard pass (`65% shorten / 35% rpE-guard`, `0% capguard`, `0% right_long`)** that pushes saving to **53?57% saved** on `Dev-512` (calibrated) while using `--prefer-reread` and `--count-rules` to avoid the worst math/IFEval traps up front.
+- **Round 2 then samples ?8 on-policy from that 53?57% saved Round-1 model** and applies the **25% Shorten Anchor + 60% Compact Re-Read/`--count-rules` Guard + 15% Capped Anti-Early-Stop Guard** mix to trade ~3?4 points of excess saving (`55% ? 51?52%`) for `+1.5 to +2.2 pp` of accuracy, landing at **49.5?52.5% saved / ?0.7 to ?1.3 pp** on the full test.
+
+### 5.2 Step-by-Step Execution Checklist (Exact Code Changes & Commands)
+
+1. **Apply the 5 Mandatory Code Patches Before Running Step 1 / Step 2 (~20 minutes of coding):**
+   - **`track.py` (`ptrepair`):**
+     - Line 70: `exclude=excluded_ids(args)` (so `--rp-exclude-ids` and `Confirm-512` are respected).
+     - Line 108, 118, 125: pass `--seed args.rp_dpo_seed` to `repair_pairs.py`, `sft.py --init-only`, and `dpo.py`; name the adapter `f"{name}-s{args.rp_dpo_seed}"`.
+     - Line 123: pass `"--warmup", args.rp_warmup, "--lr-min", args.rp_lr_min or args.rp_lr` to `dpo.py`.
+   - **`track.py` (`devset` & `p1src`):**
+     - In `devset`: draw both `data/dev512.jsonl` (512 q) and `data/confirm512.jsonl` (512 q), and in `dev_ids()` return the union of their IDs **plus** any pool question sharing an 8-gram with either file.
+     - In `p1src`: either keep the non-`metamath` (`gsm8k_matched`) rows of `math1`/`math2` and `nofit4` (`Option A`, 0 GPU-h), or generate 2,200 `gsm8k_std` questions ? 8 with raw Qwen (`Option B`, ~3 GPU-h) so Round 1 has ?1,500 full-difficulty GSM8K questions and ?1,000 `no-fit` questions.
+   - **`repair_pairs.py` (`--kinds mix`):**
+     - Replace `right_long`/`right_short` in `--kinds mix` with compact re-read right>wrong pairs: `compact_r = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0])]`, paired with `w in wrongs` where `thinking_len(r) <= args.ratio * max(1, thinking_len(w))`, drawing pairs where `REREAD.search(decode(r))` is true **first** before non-reread pairs.
+     - Add `shorten_soft` (`spread >= 1.20` on `>= 8/10` right) as backup for `shorten` in `--kinds mix`.
+     - Change `--mix-preset round1` to:
+       ```py
+       sh_share = ({"shorten": 0.60, "right": 0.40, "guard": 0.0} if part in ("svamp", "bfcl_irrelevance") else
+                   {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "ifeval" else
+                   {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+       ```
+       and change default `--mix-shares` (for Round 2) to `"shorten=0.25,right=0.60,guard=0.15"`.
+   - **`dev_score.py`:** Add `--vs` to output the paired bootstrap 95% CI of `(cand ? vs)` directly.
+
+2. **Step 0 (`Dev-512` + 5-Model Calibration, ~3 GPU-hours):**
+   - Run `devset`, then `devscore` on **`rc1-soup-30`, `rpe-40`, `rpe-60`, `rpe-80`, and `ca1-soup-10`**. Fit the per-part and headline `Dev-512 ? Full-Test` calibration offsets.
+
+3. **Step 1 + Step 2A in Parallel Across the Two GPUs (~3.5 GPU-hours):**
+   - **GPU 2 (`rpJ` Fixed Round-2 Mix Test on `rc1-soup-30`, ~2.5 GPU-h):**
+     ```
+     ptrepair --name rpJ --rp-base models/rc1-soup-30 --rp-own-data --rp-rollouts-from rpH --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--ratio,1.25,--shorten-ratio,1.3,--shorten-min-right,0.75 --rp-quota svamp=400,mbpp=280,ifeval=280,bfcl_simple_python=110,bfcl_multiple=90,bfcl_irrelevance=120 --rp-lr 1e-5 --rp-steps 80 --rp-epochs 1 --rp-screen 40 60 80 --rp-dev
+     ```
+     Score `rpJ-{40,60,80}` with `dev_score.py --vs runs/bon/dev512-rpE80/rollouts.jsonl`.
+     - **Tune Round 2's shorten share from `rpJ`:** If `rpJ-60` saves `< 50.5%` (calibrated), raise Round 2's shorten share from `0.25` to `0.35`; if `rpJ-60` saves `> 54.0%` at `< ?1.5 pp`, lower Round 2's shorten share to `0.15`.
+   - **GPU 1 (`p1r1s0` Shorten-Dominant Round 1 Seed 0, ~3.5 GPU-h):**
+     ```
+     ptrepair --name p1r1s0 --rp-base Qwen/Qwen3-0.6B --rp-own-data --rp-rollouts-from p1src --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--ratio,1.25,--shorten-ratio,1.35,--shorten-min-right,0.60,--mix-preset,round1 --rp-quota svamp=800,mbpp=800,ifeval=800,bfcl_simple_python=280,bfcl_multiple=200,bfcl_irrelevance=320 --rp-lr 2.0e-5 --rp-lr-min 5e-6 --rp-warmup 10 --rp-steps 200 --rp-epochs 1 --rp-dpo-seed 0 --rp-screen 100 150 200 --rp-dev
+     ```
+     - **Hard Gate on `p1r1s0`:** Check `p1r1s0` at steps `100, 150, 200` on calibrated `Dev-512`. It **must reach `? 53.0%` calibrated saving** (expected: `53.5?56.5% saved / ?2.2 to ?3.0 pp`). If saving is `< 52.0%` at step 200, run 60 additional steps at `lr = 1.5e-5` before launching Round 2.
+
+4. **Step 2B (Round 1 Seed 1 + Round 2 On-Policy Seeds 0 & 1, ~28 GPU-hours across 2 GPUs):**
+   - Train `p1r1s1` (`--rp-dpo-seed 1`), merge `models/p1r1s0` and `models/p1r1s1` at the chosen Round-1 step (`150` or `200`).
+   - Run `p1r2s0` on GPU 2 (`--rp-seed 21 --rp-dpo-seed 0`) and `p1r2s1` on GPU 1 (`--rp-seed 22 --rp-dpo-seed 1`) on **3,200 unseen own questions ? 8** (`svamp=1000,mbpp=600,ifeval=750,bfcl_simple_python=300,bfcl_multiple=220,bfcl_irrelevance=330`), `80 steps`, `lr = 1e-5` constant.
+   - Score the 2-seed weight-averaged soups at Round-2 steps `40, 60, 80` on `Dev-512 ? 8`, lock the single checkpoint with highest calibrated accuracy at `? 50.8%` calibrated saving, verify once on `Confirm-512 ? 8`, and run the official **Full Test (2,759 ? 8)** on the 2-seed soup and one earlier curve checkpoint.
+

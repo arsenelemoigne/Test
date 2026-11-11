@@ -1,0 +1,1 @@
+Verified all 5 bugs/mismatches inside repair_pairs.py --kinds mix!

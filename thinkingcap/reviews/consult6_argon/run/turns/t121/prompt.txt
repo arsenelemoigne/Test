@@ -1,0 +1,1 @@
+Verified exact mechanism of D12 lpd-chain1 (17.8-21.7% saved) vs D10 lpd-l2s50e (53.5-54.4% saved)!

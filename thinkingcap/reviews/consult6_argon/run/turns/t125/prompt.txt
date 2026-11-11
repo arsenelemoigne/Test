@@ -1,0 +1,1 @@
+Calculated exact Dev-512 paired bootstrap math for (cand - base) vs (cand - rpE80)!

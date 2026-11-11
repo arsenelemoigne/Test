@@ -1,0 +1,37 @@
+DRAFT LENGTH: 43963
+DRAFT HEAD:
+ # Second Independent Review & Hardening of `PATH1_PLAN.md` (11 Nov 2026)
+
+## 1. Response to `FACT_CHECK.md` & `CLAUDE_REVIEW.md`: What We Accept, Where We Nuance, and How Our Estimates Change
+
+### 1.1 Point-by-Point Verdict on `FACT_CHECK.md`
+We accept **9 of the 10 corrections** in `FACT_CHECK.md` without reservation, and add one log-sourced clarification on Point 5:
+
+1. **Path #3 (`D4 lpd-budget`) built on `michal-bida`'s recipe (ACCEPT):** `L4131?4136` confirms `D4` ran on `bidax5q` (`--bida-exact` settings, bida's pair rules, and `math1`/`math2` top-ups) with DAST's per-question budget flag `--budget`, scoring `49.0% / ?1.42 pp (+1.29 vs curve)` on Screen-720 vs `bidax5q-final`'s `46.7% / ?0.59 pp (+1.71 vs curve)`. Dropping Path #3 under the team's no-competitor constraint is 100% right.
+2. **`rpI` drift, `rpH` IFEval, and the counterfactual (ACCEPT):**
+   - `rpI` did drift longer during its first 20 steps: from `rpE-80`'s `50.4%` saved on Screen-720 (`47.0%` full test) down to `42.9%` at step 100, and only held flat between step 100 (`42.9% / ?0.2 pp`) and step 120 (`43.0% / +0.9 pp` on 720; `41.9% / +0.10 pp` on full test). As `consult5` (`L5225`) noted, fresh on-policy answers *attenuated* the length drift (`+14.9%` more output tokens in `rpI` vs `+35.7%` in `rpG`) rather than eliminating it on their own.
+   - On Screen-720, `rpH` (`--count-rules` on old `rc1-soup-30` answers) scored `?2.5 pp` on IFEval at step 100 and `?2.1 pp` at step 120 (`L5179?5184`), so `--count-rules` alone did not fix IFEval on the 720 screen.
+   - Adding `rpI-120`'s full-test IFEval (`?1.5 pp`) and `no-fit` (`+5.8 pp`) gains measured at `41.9%` saved onto `rpE-40full` (`50.6%` saved) is a cross-saving extrapolation, not an additive proof, and our subjective `55?65%` win probability had no frequentist basis.
+3. **`bidax6p` (`fp32 + fp16 autocast`) moves along the curve, not +2.8 pp vertically (ACCEPT):** `L4662?4668` shows `bidax6p` vs `bidax4` traded `?11.4 pts` of saving (`57.1% ? 45.7%` at step 100) for `+3.3 pp` of accuracy (`?5.1 ? ?1.8 pp`), moving from slightly below the curve to `+0.3..+1.1 pp` above it. Crucially for Path 1, this means **`fp32 + fp16 autocast` shortens ~8?11 percentage points LESS aggressively than `bf16` at equal steps and pairs**?a vital fact for sizing Round 1's shortening pressure.
+4. **Section 1's `zbench`, `gold1`/`teach1c`, `stopV2`, and `4+4` split attributions (ACCEPT):**
+   - `zbench` `0.508` was the position-only baseline (`L1545`); pool
+
+---
+DRAFT TAIL:
+  (`rpJ` Fixed Round-2 Mix Test on `rc1-soup-30`, ~2.5 GPU-h):**
+     ```
+     ptrepair --name rpJ --rp-base models/rc1-soup-30 --rp-own-data --rp-rollouts-from rpH --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--ratio,1.25,--shorten-ratio,1.3,--shorten-min-right,0.75 --rp-quota svamp=400,mbpp=280,ifeval=280,bfcl_simple_python=110,bfcl_multiple=90,bfcl_irrelevance=120 --rp-lr 1e-5 --rp-steps 80 --rp-epochs 1 --rp-screen 40 60 80 --rp-dev
+     ```
+     Score `rpJ-{40,60,80}` with `dev_score.py --vs runs/bon/dev512-rpE80/rollouts.jsonl`.
+     - **Tune Round 2's shorten share from `rpJ`:** If `rpJ-60` saves `< 50.5%` (calibrated), raise Round 2's shorten share from `0.25` to `0.35`; if `rpJ-60` saves `> 54.0%` at `< ?1.5 pp`, lower Round 2's shorten share to `0.15`.
+   - **GPU 1 (`p1r1s0` Shorten-Dominant Round 1 Seed 0, ~3.5 GPU-h):**
+     ```
+     ptrepair --name p1r1s0 --rp-base Qwen/Qwen3-0.6B --rp-own-data --rp-rollouts-from p1src --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--ratio,1.25,--shorten-ratio,1.35,--shorten-min-right,0.60,--mix-preset,round1 --rp-quota svamp=800,mbpp=800,ifeval=800,bfcl_simple_python=280,bfcl_multiple=200,bfcl_irrelevance=320 --rp-lr 2.0e-5 --rp-lr-min 5e-6 --rp-warmup 10 --rp-steps 200 --rp-epochs 1 --rp-dpo-seed 0 --rp-screen 100 150 200 --rp-dev
+     ```
+     - **Hard Gate on `p1r1s0`:** Check `p1r1s0` at steps `100, 150, 200` on calibrated `Dev-512`. It **must reach `? 53.0%` calibrated saving** (expected: `53.5?56.5% saved / ?2.2 to ?3.0 pp`). If saving is `< 52.0%` at step 200, run 60 additional steps at `lr = 1.5e-5` before launching Round 2.
+
+4. **Step 2B (Round 1 Seed 1 + Round 2 On-Policy Seeds 0 & 1, ~28 GPU-hours across 2 GPUs):**
+   - Train `p1r1s1` (`--rp-dpo-seed 1`), merge `models/p1r1s0` and `models/p1r1s1` at the chosen Round-1 step (`150` or `200`).
+   - Run `p1r2s0` on GPU 2 (`--rp-seed 21 --rp-dpo-seed 0`) and `p1r2s1` on GPU 1 (`--rp-seed 22 --rp-dpo-seed 1`) on **3,200 unseen own questions ? 8** (`svamp=1000,mbpp=600,ifeval=750,bfcl_simple_python=300,bfcl_multiple=220,bfcl_irrelevance=330`), `80 steps`, `lr = 1e-5` constant.
+   - Score the 2-seed weight-averaged soups at Round-2 steps `40, 60, 80` on `Dev-512 ? 8`, lock the single checkpoint with highest calibrated accuracy at `? 50.8%` calibrated saving, verify once on `Confirm-512 ? 8`, and run the official **Full Test (2,759 ? 8)** on the 2-seed soup and one earlier curve checkpoint.
+

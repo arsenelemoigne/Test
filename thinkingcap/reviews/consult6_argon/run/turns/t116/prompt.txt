@@ -1,0 +1,38 @@
+--- ALL RUNS IN ALL_RUNS.JSON WITH SAVED BETWEEN 51% AND 60% ---
+rpe-45             (720 ) | saved= 52.9% | acc=-1.70 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shor
+b5qs1-200          (720 ) | saved= 51.8% | acc=-2.00 | bidax5q's recipe (bida settings + his math), SECOND SEED
+rpC-40             (720 ) | saved= 51.2% | acc=-2.19 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 1e-5, 80 steps) at ste
+rpB-10             (720 ) | saved= 52.4% | acc=-2.22 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 2e-5) at step 10
+bidax2-300         (720 ) | saved= 51.1% | acc=-2.57 | LUPIN data ? exact michal-bida recipe (4 answers, 1:1 pairs, no copying ter
+pt-mid             (720 ) | saved= 55.0% | acc=-2.58 | LUPIN data ? one adapter per type (l2s50e pairs), merged at per-type streng
+rpe-20             (720 ) | saved= 54.8% | acc=-2.60 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shor
+bidax2-final       (720 ) | saved= 51.8% | acc=-2.66 | LUPIN data ? exact michal-bida recipe (4 answers, 1:1 pairs, no copying ter
+rpA-10             (720 ) | saved= 53.6% | acc=-2.69 | pt-mid + be-right repair LoRA (fp32, lr 5e-6) at step 10
+margin-final       (720 ) | saved= 53.3% | acc=-2.70 | bidax5q s0 settings, bida pairs with --margin-any ? 1 seed
+l2s50e-final       (720 ) | saved= 53.5% | acc=-2.81 | bidax5q s0 settings, only the pair rule changed: l2s50e (shorten only where
+rpA-40             (720 ) | saved= 52.3% | acc=-2.84 | pt-mid + be-right repair LoRA (fp32, lr 5e-6) at step 40
+push2-final        (720 ) | saved= 52.4% | acc=-3.00 | DPO screen D11: bidax5q with up to 2x 'think less' pairs per 'be right' pai
+rpe-10             (720 ) | saved= 57.2% | acc=-3.00 | repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shor
+bidax2-full        (full) | saved= 51.2% | acc=-3.00 | LUPIN data ? exact michal-bida recipe (4 answers, 1:1 pairs, no copying ter
+rpC-10             (720 ) | saved= 53.6% | acc=-3.03 | pt-mid + be-right repair LoRA (rpA's pairs, fp32, lr 1e-5, 80 steps) at ste
+margin-100         (720 ) | saved= 55.0% | acc=-3.25 | bidax5q s0 settings, bida pairs with --margin-any (the narrowest 15% of eac
+bidax4-300         (720 ) | saved= 53.2% | acc=-3.26 | LUPIN data + our own hard no-fit set (1,871 questions) ? exact michal-bida 
+pt-mid-full        (full) | saved= 53.6% | acc=-3.30 | pt-mid (October's 4 per-type adapters merged at .30/.45/.60/.45, no repair)
+rpA-5              (720 ) | saved= 53.9% | acc=-3.31 | pt-mid (4 per-type adapters merged) + a be-right repair LoRA (1,600 pairs f
+bidax4-final       (720 ) | saved= 52.7% | acc=-3.49 | LUPIN data + our own hard no-fit set (1,871 questions) ? exact michal-bida 
+cleanA-rc1-full    (full) | saved= 57.4% | acc=-3.50 | clean line A: ca1 (DPO round 3) + one 'stop as soon as you're sure' round (
+lpt6mix-C7         (720 ) | saved= 51.3% | acc=-3.60 | November per-type adapters (2-seed averages) merged, no training
+l2s50e-100         (720 ) | saved= 54.4% | acc=-3.61 | bidax5q s0 settings, only the pair rule changed: l2s50e (shorten only where
+rpA-20             (720 ) | saved= 54.1% | acc=-3.62 | pt-mid + be-right repair LoRA (fp32, lr 5e-6) at step 20
+bidax3-300         (720 ) | saved= 54.8% | acc=-3.69 | LUPIN data ? exact michal-bida recipe, same pairs AND same seed as the bida
+bidax4-200         (720 ) | saved= 54.6% | acc=-3.74 | LUPIN data + our own hard no-fit set (1,871 questions) ? exact michal-bida 
+cleanA-rc1-720     (720 ) | saved= 58.7% | acc=-3.80 | clean line A: ca1 (DPO round 3) + one 'stop as soon as you're sure' round (
+bidax3-final       (720 ) | saved= 54.5% | acc=-3.86 | LUPIN data ? exact michal-bida recipe, same pairs AND same seed as the bida
+bidax2s1-final     (720 ) | saved= 51.0% | acc=-3.87 | LUPIN data ? exact michal-bida recipe, second seed (same pairs) ? 1 seed
+bidax3-100         (720 ) | saved= 52.4% | acc=-3.87 | LUPIN data ? exact michal-bida recipe, same pairs AND same seed as the bida
+pt-shift           (720 ) | saved= 54.4% | acc=-3.92 | pt family adapters merged at math .15 / code 0 / instr .65 / tools .65 (con
+margin-200         (720 ) | saved= 56.9% | acc=-4.04 | bidax5q s0 settings, bida pairs with --margin-any ? 1 seed
+bidax3-200         (720 ) | saved= 56.3% | acc=-4.14 | LUPIN data ? exact michal-bida recipe, same pairs AND same seed as the bida
+bidax2-100         (720 ) | saved= 54.7% | acc=-4.62 | LUPIN data ? exact michal-bida recipe (4 answers, 1:1 pairs, no copying ter
+copdc-40           (720 ) | saved= 57.1% | acc=-4.70 | COPD Run C: COPD + correctness push (right up / wrong down within 8 answers
+bidax4-100         (720 ) | saved= 57.1% | acc=-5.10 | LUPIN data + our own hard no-fit set (1,871 questions) ? exact michal-bida 

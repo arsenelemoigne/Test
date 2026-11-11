@@ -1,0 +1,139 @@
+L116:         part = part_of(q[0])
+L117:         if part not in quota:
+L118:             continue
+L119:         size = thinking_len if part in think_only else (lambda r: r["output_tokens"])
+L120:         rights = sorted((r for r in q if right(r)), key=size)
+L121:         wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
+L122:         if args.kinds == "mix":  # (11 Nov) consult6 path 1, round 2: shorten / equal-length right / capped guard
+L123:             is_cr = part == "ifeval" and counting(q[0])
+L124:             if (len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not is_cr
+L125:                     and size(rights[-1]) >= args.shorten_ratio * size(rights[0])):
+L126:                 cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+L127:             if rights and wrongs:
+L128:                 if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
+L129:                     rej = wrongs[0]
+L130:                     fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
+L131:                     if fit:
+L132:                         cand[part]["right_cr"].append((qid, min(fit, key=thinking_len), rej))
+L133:                 else:
+L134:                     close = [(r, w) for r in rights for w in wrongs if max(size(r), size(w)) <= args.ratio * max(1, min(size(r), size(w)))]
+L135:                     if decode:  # prefer a chosen answer that re-checks the question
+L136:                         close.sort(key=lambda rw: not REREAD.search(decode(rw[0])))
+L137:                     for r, w in close[:4]:
+L138:                         cand[part]["right_long" if size(r) > size(w) else "right_short"].append((qid, r, w))
+L139:                 med = sorted(size(r) for r in rights)[len(rights) // 2]
+L140:                 tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # (11 Nov, review fix) on THINKING length
+L141:                 capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
+L142:                 early = sorted((w for w in wrongs if thinking_len(w) < 0.5 * tmed), key=thinking_len)
+L143:                 if capped and early:
+L144:                     pick = ([r for r in capped if decode and REREAD.search(decode(r))] or capped)[0]
+L145:                     cand[part]["capguard"].append((qid, pick, early[-1]))  # the LONGEST early stop: the smallest length gap
+L146:             continue
+L147:         if (args.kinds == "guard,shorten" and len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right
+L148:                 and not (part == "ifeval" and counting(q[0]))):  # (10 Nov, odpo) a counting rule needs its full response
+L149:             spread = size(rights[-1]) / max(1, size(rights[0]))
+L150:             if spread >= args.shorten_ratio:
+L151:                 cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+L152:             elif spread >= 1.25:  # backup supply: used only if the clear (>= 1.5x) pairs run short
+L153:                 cand[part]["shorten_soft"].append((qid, rights[0], rights[-1]))
+L154:         if not rights or not wrongs:
+L155:             continue
+L156:         chosen = rights[0]
+L157:         if args.count_rules and part == "ifeval" and counting(q[0]):
+L158:             rej = wrongs[0]
+L159:             fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
+L160:             rereads[("ifeval", "counting-rule questions")] += 1
+L161:             if not fit:
+L162:                 rereads[("ifeval", "counting-rule questions without a fitting right answer (no pair)")] += 1
+L163:                 continue
+L164:             chosen = min(fit, key=thinking_len)
+L165:             rereads[("ifeval", "counting-rule pairs")] += 1
+L166:             cand[part]["guard"].append((qid, chosen, rej))
+L167:             continue
+L168:         if decode:
+L169:             checked = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0]) and REREAD.search(decode(r))]
+L170:             chosen = checked[0] if checked else rights[0]
+L171:             rereads[(part, "chosen re-checks")] += bool(checked)
+L172:             rereads[(part, "rejected re-checks")] += bool(REREAD.search(decode(wrongs[0])))
+L173:             rereads[(part, "guard questions")] += 1
+L174:         cand[part]["guard"].append((qid, chosen, wrongs[0]))
+L175:         close = [(r, w) for r in rights for w in wrongs
+L176:                  if max(r["output_tokens"], w["output_tokens"]) <= args.ratio * min(r["output_tokens"], w["output_tokens"])]
+L177:         rng.shuffle(close)
+L178:         for r, w in close:
+L179:             cand[part]["right_long" if r["output_tokens"] > w["output_tokens"] else "right_short"].append((qid, r, w))
+L180:     pairs, counts = [], Counter()
+L181:     per_q, right_q, used = Counter(), Counter(), set()
+L182: 
+L183:     def take(part, kind, pool, n):
+L184:         rng.shuffle(pool)
+L185:         got = []
+L186:         for qid, c, w in pool:
+L187:             if len(got) >= n:
+L188:                 break
+L189:             key = (id(c), id(w))
+L190:             if key in used or per_q[qid] >= 3 or (kind != "guard" and right_q[qid] >= 2):
+L191:                 continue
+L192:             used.add(key)
+L193:             per_q[qid] += 1
+L194:             right_q[qid] += kind != "guard"
+L195:             got.append({"id": qid, "source": c["source"], "part": part, "kind": kind, "prompt_ids": c["prompt_ids"],
+L196:                         "chosen_ids": c["output_ids"], "rejected_ids": w["output_ids"],
+L197:                         "chosen_tokens": c["output_tokens"], "rejected_tokens": w["output_tokens"]})
+L198:         return got
+L199:     by_part = {}
+L200:     for part, n in quota.items():
+L201:         if args.kinds == "mix":
+L202:             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
+L203:             if args.mix_preset == "round1":
+L204:                 sh_share = ({"shorten": 0.35, "right": 0.50, "guard": 0.15} if part in ("svamp", "bfcl_irrelevance") else
+L205:                             {"shorten": 0.275, "right": 0.725, "guard": 0.0} if part == "ifeval" else
+L206:                             {"shorten": 0.50, "right": 0.35, "guard": 0.15})
+L207:             n_sh, n_g = round(sh_share["shorten"] * n), round(sh_share["guard"] * n)
+L208:             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
+L209:             g = take(part, "guard", cand[part]["capguard"], n_g)
+L210:             n_r = n - len(sh) - len(g)  # equal-length right fills any shortfall of the two others
+L211:             r = take(part, "right", cand[part]["right_cr"], n_r)
+L212:             r_long = take(part, "right", cand[part]["right_long"], (n_r - len(r)) // 2)
+L213:             r += r_long + take(part, "right", cand[part]["right_short"], n_r - len(r) - len(r_long))
+L214:             by_part[part] = sh + g + r
+L215:             for kind, got in (("shorten", sh), ("guard (capped)", g), ("right (equal length)", r)):
+L216:                 counts[(part, kind)] += len(got)
+L217:             counts[(part, "right of them on counting rules")] += sum(1 for p in r if counting(groups[p["id"]][0]))
+L218:             counts[(part, "candidates shorten / capped guard / right")] = (
+L219:                 f"{len(cand[part]['shorten'])} / {len(cand[part]['capguard'])} / "
+L220:                 f"{len(cand[part]['right_cr']) + len(cand[part]['right_long']) + len(cand[part]['right_short'])}")
+L221:             counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+L222:             continue
+L223:         if args.kinds == "guard,shorten":  # (10 Nov, odpo) half "be right", half "be shorter when sure"; no backfill
+L224:             g = take(part, "guard", cand[part]["guard"], n // 2)
+L225:             sh = take(part, "shorten", cand[part]["shorten"], n - n // 2)
+L226:             soft = take(part, "shorten", cand[part]["shorten_soft"], n - n // 2 - len(sh))
+L227:             counts[(part, "shorten from the 1.25-1.5x backup")] += len(soft)
+L228:             counts[(part, "shorten candidates (>= 1.5x / 1.25-1.5x)")] = f"{len(cand[part]['shorten'])} / {len(cand[part]['shorten_soft'])}"
+L229:             sh += soft
+L230:             by_part[part] = g + sh
+L231:             counts[(part, "guard")] += len(g)
+L232:             counts[(part, "shorten")] += len(sh)
+L233:             counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+L234:             continue
+L235:         if args.kinds == "guard":
+L236:             by_part[part] = take(part, "guard", cand[part]["guard"], n)
+L237:             for p in by_part[part]:
+L238:                 counts[(part, "guard")] += 1
+L239:             counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+L240:             continue
+L241:         g = take(part, "guard", cand[part]["guard"], n // 2)
+L242:         r_long = take(part, "right", cand[part]["right_long"], (n - n // 2) // 2)
+L243:         r_short = take(part, "right", cand[part]["right_short"], n - n // 2 - len(r_long))
+L244:         if len(g) < n // 2:  # a short guard supply is filled with right pairs, never with another kind
+L245:             r_short += take(part, "right", cand[part]["right_short"], n // 2 - len(g))
+L246:         by_part[part] = g + r_long + r_short
+L247:         for p in by_part[part]:
+L248:             counts[(part, p["kind"] + ("" if p["kind"] == "guard" else
+L249:                                        " (right longer)" if p["chosen_tokens"] > p["rejected_tokens"] else " (right shorter)"))] += 1
+L250:         counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+L251:     # stratified order: interleave the parts by their shares, kinds alternating inside each part
+L252:     # (11 Nov, review fix) kinds interleaved by their shares (credit scheme), shuffled inside each kind: any prefix of the
+L253:     # file holds
+[output cut at 10,000 characters]

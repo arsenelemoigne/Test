@@ -1,0 +1,11 @@
+Parent dir contents: ['session_third.log', 'REPORT.md', 'session_part4.log', 'session_part1.log', 'pack', 'session_part2.log', 'session_part3.log', 'session.log', '.gitignore', 'work', 'run', 'FACT_CHECK.md', 'run_failed_empty_turn', 'session_second.log']
+session_third.log 3263
+REPORT.md 54087
+session_part4.log 645
+session_part1.log 3619
+session_part2.log 524
+session_part3.log 96
+session.log 3619
+.gitignore 6
+FACT_CHECK.md 3857
+session_second.log 3442

@@ -1,14 +1,15 @@
 {
- "turn": 71,
+ "turn": 159,
  "passes": 0,
- "code_runs": 71,
- "spent_usd": 2.7100500999999997,
- "conversations": 1,
- "finished": false,
+ "code_runs": 158,
+ "spent_usd": 6.296928999999999,
+ "conversations": 2,
+ "finished": true,
  "no_block": 0,
  "refused": 0,
  "forward_failed": 0,
  "kernel_restarts": 0,
  "repeated_block": 0,
- "code_errors": 1
+ "code_errors": 7,
+ "extra_blocks": 1
 }

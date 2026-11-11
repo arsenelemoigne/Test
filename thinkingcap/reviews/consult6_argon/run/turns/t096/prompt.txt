@@ -1,0 +1,3 @@
+Round 1 IFEval at step 100 ( 50.0%): {'right': 400}
+Round 1 IFEval at step 145 ( 72.5%): {'right': 580}
+Round 1 IFEval at step 200 (100.0%): {'right': 580, 'shorten': 220}

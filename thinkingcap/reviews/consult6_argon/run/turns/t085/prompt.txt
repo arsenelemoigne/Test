@@ -1,0 +1,95 @@
+--- Fact check 1: L4128-4145 ---
+pushed down); the fixed-? ablation saved more (?63%) but lost 3.2 pts on the 1.5B model, so the dynamic ? is the
+accuracy guard; SmartThinker on top of an already-pruned model (ThinkPrune-4k ? SmartThinker) was its best result,
+which fits the plan to try GRPO on v1.
+
+### 3 Nov: the DPO pair-strategy screen (task 1), queued on two new runtimes
+User: try many pair strategies now that the settings are fixed; more compute added. Everything = bidax5q seed 0
+(--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+New lupin_pairs.py flags: `--add-hard P` (DAST's "keep trying": longest > shortest finished wrong, questions solved < P),
+`--budget` (DAST's per-question length target replaces the fixed 1.5x), `--margin-any` (drop each kind's weakest 15%
+for any recipe), recipe `simright` (similar-length right > wrong + think less, 1:1). Tested on synthetic answers.
+Runtime 3 (third_colab.ipynb, plan_line_c.txt): D1 lpd-dast, D2 lpd-hard, D3 lpd-route, D4 lpd-budget, D5 lpd-margin.
+Runtime 4 (fourth_colab.ipynb, plan_line_d.txt): D7 lpd-st1 -> lpd-2stage, D8 lpd-math, D6 lpd-simright, D9 lpd-adar1,
+D10 lpd-l2s50e. Phase 2 (new code / answers): SimPO / LD-DPO, Ada-R1 with no-thinking answers, concise-prompt winners,
+SFT warm-up, stop pairs. Seed noise: bidax5q s0 +1.8 vs s1 +0.4, so a winner needs a second seed.
+**3 Nov, revised (user: some strategies will not shorten enough):** D3, D6 and D8 now keep bida's FULL pairs and only add
+their protective pairs (new `--add-right-below SPEC`: similar-length right > wrong on questions solved below a share, all
+parts or per part). D3 = bida + right & keep-trying pairs below 75% solved; D6 = bida + similar-length (?15%) right > wrong
+everywhere; D8 = bida + right pairs on math / no-fit below 80%. D7's "be right" round cut to 50 steps (as the original),
+
+--- Fact check 2 & 5: L5025-5055 ---
+- 9 Nov ~19:45 (after Colab's provisioning outage; both runtimes restarted) **rpE @ 45: +52.9 / -1.7** official (irrelevance +0.4,
+  multiple +0.6, simple -2.1, ifeval -3.1, mbpp -1.7, svamp -1.3). Path @40 50.5 / -1.7, @45 52.9 / -1.7, @80 50.4 / -0.2: between
+  40 and 45 the screens differ by 2.4 pts of saving at equal accuracy (screen noise ~ +-2). COPD steps 21-25 trained (465-542 tokens).
+- 9 Nov **rpE @ 50: +49.5 / -1.6** (irrelevance +2.3, multiple +1.5, simple -1.7, ifeval -1.9, mbpp -3.3, svamp -1.3). Full tests
+  of rpE-80 then rpE-40 started on GPU 1 (both models built by fullmodel --fm-merge).
+- 9 Nov **COPD cp1a @ 25: +25.6 / -1.5** (-1.6 vs curve): svamp +40 / -0.2, mbpp +23 / -1.7, ifeval +16 / -4.0, irrelevance +20 /
+  -1.7, multiple +23 / +0.6, simple +19 / 0.0. Saving up from 20.8 (@20) but accuracy down from -0.4: the lr jumped back to
+  ~5.5e-6 at step 21 (cosine stretched to 40 steps); IFEval carries the loss (the coach shortens the RESPONSE too).
+- 9 Nov **diagnostic (user): thinking vs response tokens and accuracy per type, 720 x 4, from compare.json** (base -> model):
+  | model | ifeval acc | ifeval think | ifeval response | svamp acc / think | mbpp acc / think |
+  | rc1-soup-30 | 59.0 -> 55.0 | 420 -> 129 | 247 -> 217 | 90.0 -> 85.0 / 685 -> 205 | 50.8 -> 47.3 / 2077 -> 685 |
+  | rpE @ 50 | 59.0 -> 57.1 | 420 -> 153 | 247 -> 245 | 90.0 -> 88.8 / 685 -> 274 | 50.8 -> 47.5 / 2077 -> 968 |
+  | rpE @ 80 | 59.0 -> 59.4 | 420 -> 146 | 247 -> 190 | 90.0 -> 87.5 / 685 -> 297 | 50.8 -> 51.9 / 2077 -> 981 |
+  | COPD @ 25 | 59.0 -> 55.0 | 420 -> 317 | 247 -> 245 | 90.0 -> 89.8 / 685 -> 406 | 50.8 -> 49.2 / 2077 -> 1586 |
+  (1) The repair's lr was CONSTANT (cosine from 1e-5 to lr-min = 1e-5): 50 -> 80 the thinking lengths barely move (ifeval 153 ->
+  146, mbpp 968 -> 981, svamp 274 -> 297) while accuracy rises (ifeval +2.3, mbpp +4.4): its pairs are equal-length (medians
+  chosen / rejected 271/278, 440/440, 185/183), so they teach correctness inside the same length; the saving fell only over
+  steps 0-40. (2) IFEval's loss is NOT a shortened response: COPD and rpE @50 keep the response (247 -> 245); rpE @80 even shortens
+  it (-> 190) yet beats the original. The losses go with THINKING cuts (rc1 -69%, COPD -25%). IFEval is the noisiest part
+  (original 59%, 720 half-width +-3.6 pts vs svamp +-1.9). Which instructions fail needs records + questions (next).
+- 9 Nov **COPD cp1a @ 30: +29.2 / -1.3** (-1.2 vs curve): svamp +45 / -1.0, mbpp +33 / -0.8, ifeval +12 / -3.5, irrelevance +26 /
+  -0.6, multiple +24 / 0.0, simple +22 / +0.6. Saving still rising (20.8 -> 25.6 -> 29.2), accuracy steady near -1.4, IFEval the
+  loss. ifeval_rules.py + ifevalrules stage queued on GPU 1 after the full tests (full-rc1, full-ca1, full-rpE-80/40, s4-cp1a-20/25).
+- 9 Nov **COPD cp1a @ 35: +29.8 / -1.7** (svamp +48 / -1.9, mbpp +27 / -1.0, ifeval +15 / -2.5, irrelevance +26 / -0.8, multiple
+  +25 / -0.6, simple +23 / -2.1): the saving has flattened (29.2 -> 29.8) while accuracy drifts down; math now loses too (-1.9).
+- 9 Nov **COPD diagnostic (user: what is happening at step 35?)**. (a) The lr: cosine stretched to 40 steps, so 6.1e-6 at step 21,
+  4.5e-6 at 25, 2.7e-6 at 30, 1.4e-6 at 35, ~1e-6 at 40: the saving flattens as the lr reaches its floor. (b) The coach's signal
+  shrinks as the student becomes "brief": mean push -0.015 (steps 21-25) -> -0.008..-0.012 (31-38), tokens pushed down 34-37% ->
+  31-33%; entropy 0.29 -> 0.25-0.28; practice answers ~500 -> ~400 tokens, practice accuracy flat 0.83-0.91. (c) 720 @35 vs @25
+  (compare.json): svamp thinking 406 -> 353, acc 89.8 -> 88.1; mbpp 1,586 -> 1,501, 49.2 -> 49.8, still 4.4% cut at 8,192
+  (original 8.5%); ifeval thinking 317 -> 290, RESPONSE 245 -> 278 (longer), cut 3.1 -> 3.8%, acc 55.0 -> 56.5. The accuracy drift
+
+--- Fact check 2: L5165-5205 ---
+basta (14 Oct), horychtom, miroslavmyrha, Herz1c (15 Oct), mrtineu (3 Nov), khudgins: unchanged. marek-krcal active (SimPO /
+DPO branches 6-9 Nov), no published score. matousek-martin: ablations + release v0.1.2, headline unchanged (256 = 31.23 / +0.21,
+850 = 41.60 / -1.17, 1280 = 46.58 / -2.35); per type @850: svamp 53.2 / -1.29, mbpp 42.3 / -1.26, ifeval 38.1 / +0.18, simple
+28.4 / -2.00, multiple 30.4 / +2.44, irrelevance 33.4 / -6.87. Herz1c/DoesLearningToStopScale: same recipe on Qwen3-1.7B
+(47.4 / -0.14), not a 0.6B entry. RikiyaT is not a ThinkingCap entry. **Upstream commit 965a54c (6 Nov): a submission must now
+include the coding agent's traces and the conversation with the harness, as a text document.**
+
+## 10 Nov ? rpI (new round: rpE-80 answers 5,700 new questions x8 itself; 1,579 guard pairs, IFEval 320/320 incl. 152 counting-rule; no-fit 59/80)
+720 x4, official weighting: **step 20 (=100): 42.9% / -0.2; step 40 (=120): 43.0% / +0.9** (svamp 47 / -0.4, mbpp 39 / +3.5,
+ifeval 42 / -0.4, simple 39 / -2.5, multiple 42 / +0.2, no-fit 52 / +6.7). vs curve: +1.5 then **+2.6** (rpE-80 +2.8, rpG-100 +2.2,
+rpG-120 +0.9). Unlike rpG (same steps, old model's answers), rpI kept its length (43% at both steps) while gaining accuracy:
+answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4 at 42% saved (rpG-120: -1.9 at 37%).
+
+## 10 Nov ? rpH (= rpG + IFEval counting rule, 1,500 IFEval questions; 1,598 pairs, 175 counting-rule)
+- rpH-20 (= step 100), 720 x4 official: **42.0% / -0.6** (svamp 44 / -0.2, mbpp 40 / +0.2, ifeval 43 / -2.5, simple 37 / -1.2,
+  multiple 40 / -0.6, no-fit 50 / +3.3); vs curve +1.0 (rpG-100 +2.2, rpI-100 +1.5). IFEval did NOT improve at step 100 (rpG-100:
+  38% / +0.2), but one part of the 720 is 120 questions x4 (CI about +/-4.4 pts): per-part gaps of 2-3 points are noise.
+- rpH-40 (= step 120): **37.0% / -0.3** (svamp 34 / -0.6, mbpp 37 / +0.6, ifeval 36 / -2.1, simple 35 / -1.7, multiple 39 / -1.1,
+  no-fit 49 / +6.5); vs curve +0.6. **The three continuations at step 120 (vs curve): rpG +0.9, rpH +0.6, rpI +2.6.** Only rpI
+  (answers from the CURRENT model on new questions) keeps its length; both runs on the old model's answers drift longer.
+  The IFEval counting rule alone did not fix IFEval on the 720.
+- rpF pairs (Run C step 40 answers x4, all 2,998 IFEval questions): 1,446 pairs; IFEval 320/320 (258 counting-rule); mbpp 287/400
+  (short 113: Run C is right on code too rarely for guard pairs at 4 answers), tools 60-71/80. Training started.
+- rpF-10 (Run C step 40 + 10 repair steps), 720 x4: **54.9% / -4.0** (svamp 73 / -4.8, mbpp 57 / -4.8, ifeval 36 / -3.3, simple 43 / -2.9,
+  multiple 45 / -0.2, no-fit 44 / -5.6); vs curve -0.1 (Run C-40: 57.1 / -4.7, -0.3).
+- rpF-20: **54.8% / -3.8** (ifeval 42 / -0.8, svamp 72 / -6.2, mbpp 55 / -4.4, simple -4.0, multiple -1.5, no-fit -5.4), vs curve +0.1.
+- rpF-40: **52.4% / -4.5** (svamp 71 / -5.0, mbpp 52 / -6.2, ifeval 32 / -4.0, simple -3.1, multiple +1.1, no-fit -5.6), vs curve -1.1.
+  The repair does not lift Run C: it stays on or below the curve (rpE lifted rc1-soup-30 from +0.95 to +1.45 full test). Run C's
+  loss (stopped-early math and code) is not fixed by right-vs-wrong pairs at equal length.
+- rpF-80: **48.1% / -2.6** (svamp 63 / -3.5, mbpp 50 / -4.6, ifeval 31 / -0.8, simple -2.7, multiple +2.3, no-fit -2.5), vs curve -0.1:
+  80 steps moved Run C ALONG the curve (57 -> 48% saved, -4.7 -> -2.6), not above it.
+- od1 started on GPU 1 (round 1: rpE-80 answers 1,290 new questions x8).
+
+## 10 Nov ? rpI step 120, FULL TEST (2,759 x 8): **41.9% saved / +0.1** (official weighting)
+svamp 47 / +0.0, mbpp 38 / +0.5, ifeval 41 / -1.5, simple 37 / +0.2, multiple 38 / -0.9, no-fit 50 / +5.8. vs curve **+1.64**: the
+highest of any full test so far (rpE-80 +1.45, rc1-soup-30 +0.95; michal-bida 47.0 / -0.78, about +1.6). No accuracy loss at all,
+but 42% saved, below the 50% goal. Its 720 screen said 43.0 / +0.9: the screen read 1.1 pts high on saving and 0.8 on accuracy.
+
+## Items decided 10 Nov that were committed but not logged above (added for the record)
+- **cp1e** (queued on GPU 2 after cp1d): cp1d + `rl_train.py --co
+[output cut at 10,000 characters]

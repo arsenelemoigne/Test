@@ -1,0 +1,5 @@
+Work dir: ['edited', 'notes.md', 'report_draft.md']
+Pack dir: ['LADDER_DESIGN_FOR_REVIEW.md', 'code', 'CLAUDE_REVIEW.md', 'EXPERIMENT_LOG.md', 'PATH1_PLAN.md', 'all_runs.json', 'FACT_CHECK.md']
+edited 64
+notes.md 18156
+report_draft.md 44398

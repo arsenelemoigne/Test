@@ -1,0 +1,5 @@
+Round 1 SVAMP at step  50 ( 25%): {'guard': 100, 'right': 100}
+Round 1 SVAMP at step 100 ( 50%): {'guard': 120, 'right': 280}
+Round 1 SVAMP at step 130 ( 65%): {'guard': 120, 'right': 400}
+Round 1 SVAMP at step 150 ( 75%): {'guard': 120, 'right': 400, 'shorten': 80}
+Round 1 SVAMP at step 200 (100%): {'guard': 120, 'right': 400, 'shorten': 280}

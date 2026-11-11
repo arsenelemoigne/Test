@@ -1,0 +1,7 @@
+Last 10 turn files: ['t138', 't139', 't140', 't141', 't142', 't143', 't144', 't145', 't146', 't147']
+Traceback (most recent call last):
+  File "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/astra_harness.py", line 140, in kernel_main
+    exec(compile(tree, "<block>", "exec"), env)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<block>", line 6, in <module>
+IsADirectoryError: [Errno 21] Is a directory: '/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult6_argon/run/turns/t143'

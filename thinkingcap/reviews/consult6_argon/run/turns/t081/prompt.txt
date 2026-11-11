@@ -1,0 +1,28 @@
+L9:     it is DPO's reference, every screen merges onto it); --rp-own-data draws the questions from own_repair_questions()
+L69:         for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
+L70:                                       exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None):
+L102:            "--max-questions", len(chosen), "--seed", 53)
+L122:            "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", 0.1, "--batch", 16, "--lr", args.rp_lr,
+L123:            "--lr-schedule", "cosine", "--warmup", 2, "--lr-min", args.rp_lr, "--max-steps", steps, "--epochs", args.rp_epochs,
+L125:            1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype, "--seed", 0)
+L188:     """(11 Nov) ids of the Dev-512 questions (never trained on once a run passes --rp-exclude-dev)."""
+L196:     Drawn from the own pool OUTSIDE every question already drawn for training by rpE/rpG/rpH (seed 0), rpI (seed 1) and od1
+L197:     (seed 7, 4 rounds); later runs exclude it with --rp-exclude-dev. Then the ORIGINAL Qwen answers it x8 (the reference)."""
+L206:         for seed, sizes in ((0, sizes0), (1, sizes0), (7, od1)):
+L207:             used |= {r["id"] for r in own_repair_questions(sizes, seed=seed)}
+L208:         every = own_repair_questions({p: 10 ** 6 for p in sizes0}, seed=99)
+L237:            "--max-questions", len(rows), "--seed", 53)
+L283:         rows = own_repair_questions(want, seed=args.ld_seed)
+L288:            "--max-questions", len(rows), "--seed", 53)
+L311:     """(11 Nov) ids of the Dev-512 questions (never trained on once a run passes --rp-exclude-dev)."""
+L319:     Drawn from the own pool OUTSIDE every question already drawn for training by rpE/rpG/rpH (seed 0), rpI (seed 1) and od1
+L320:     (seed 7, 4 rounds); later runs exclude it with --rp-exclude-dev. Then the ORIGINAL Qwen answers it x8 (the reference)."""
+L329:         for seed, sizes in ((0, sizes0), (1, sizes0), (7, od1)):
+L330:             used |= {r["id"] for r in own_repair_questions(sizes, seed=seed)}
+L331:         every = own_repair_questions({p: 10 ** 6 for p in sizes0}, seed=99)
+L360:            "--max-questions", len(rows), "--seed", 53)
+L396: def excluded_ids(args):
+L397:     """(11 Nov) questions a new draw must skip: Dev-512 (--rp-exclude-dev) and a JSON id list (--rp-exclude-ids)."""
+L399:     if getattr(args, "rp_exclude_dev", False):
+L401:     f = getattr(args, "rp_exclude_ids", "")
+L416:     round 2 draws unseen ones (data/p1-round1-ids.json; round 2 passes --rp-exclude-ids). Written as runs/bon/rp-p1src/

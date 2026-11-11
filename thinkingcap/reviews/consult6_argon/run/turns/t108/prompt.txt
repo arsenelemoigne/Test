@@ -1,0 +1,63 @@
+EXPERIMENT_LOG.md lines: 5233
+Last 60 lines of EXPERIMENT_LOG.md:
+ifeval 42 / -0.4, simple 39 / -2.5, multiple 42 / +0.2, no-fit 52 / +6.7). vs curve: +1.5 then **+2.6** (rpE-80 +2.8, rpG-100 +2.2,
+rpG-120 +0.9). Unlike rpG (same steps, old model's answers), rpI kept its length (43% at both steps) while gaining accuracy:
+answers from the CURRENT model stop the drift toward longer answers. IFEval -0.4 at 42% saved (rpG-120: -1.9 at 37%).
+
+## 10 Nov ? rpH (= rpG + IFEval counting rule, 1,500 IFEval questions; 1,598 pairs, 175 counting-rule)
+- rpH-20 (= step 100), 720 x4 official: **42.0% / -0.6** (svamp 44 / -0.2, mbpp 40 / +0.2, ifeval 43 / -2.5, simple 37 / -1.2,
+  multiple 40 / -0.6, no-fit 50 / +3.3); vs curve +1.0 (rpG-100 +2.2, rpI-100 +1.5). IFEval did NOT improve at step 100 (rpG-100:
+  38% / +0.2), but one part of the 720 is 120 questions x4 (CI about +/-4.4 pts): per-part gaps of 2-3 points are noise.
+- rpH-40 (= step 120): **37.0% / -0.3** (svamp 34 / -0.6, mbpp 37 / +0.6, ifeval 36 / -2.1, simple 35 / -1.7, multiple 39 / -1.1,
+  no-fit 49 / +6.5); vs curve +0.6. **The three continuations at step 120 (vs curve): rpG +0.9, rpH +0.6, rpI +2.6.** Only rpI
+  (answers from the CURRENT model on new questions) keeps its length; both runs on the old model's answers drift longer.
+  The IFEval counting rule alone did not fix IFEval on the 720.
+- rpF pairs (Run C step 40 answers x4, all 2,998 IFEval questions): 1,446 pairs; IFEval 320/320 (258 counting-rule); mbpp 287/400
+  (short 113: Run C is right on code too rarely for guard pairs at 4 answers), tools 60-71/80. Training started.
+- rpF-10 (Run C step 40 + 10 repair steps), 720 x4: **54.9% / -4.0** (svamp 73 / -4.8, mbpp 57 / -4.8, ifeval 36 / -3.3, simple 43 / -2.9,
+  multiple 45 / -0.2, no-fit 44 / -5.6); vs curve -0.1 (Run C-40: 57.1 / -4.7, -0.3).
+- rpF-20: **54.8% / -3.8** (ifeval 42 / -0.8, svamp 72 / -6.2, mbpp 55 / -4.4, simple -4.0, multiple -1.5, no-fit -5.4), vs curve +0.1.
+- rpF-40: **52.4% / -4.5** (svamp 71 / -5.0, mbpp 52 / -6.2, ifeval 32 / -4.0, simple -3.1, multiple +1.1, no-fit -5.6), vs curve -1.1.
+  The repair does not lift Run C: it stays on or below the curve (rpE lifted rc1-soup-30 from +0.95 to +1.45 full test). Run C's
+  loss (stopped-early math and code) is not fixed by right-vs-wrong pairs at equal length.
+- rpF-80: **48.1% / -2.6** (svamp 63 / -3.5, mbpp 50 / -4.6, ifeval 31 / -0.8, simple -2.7, multiple +2.3, no-fit -2.5), vs curve -0.1:
+  80 steps moved Run C ALONG the curve (57 -> 48% saved, -4.7 -> -2.6), not above it.
+- od1 started on GPU 1 (round 1: rpE-80 answers 1,290 new questions x8).
+
+## 10 Nov ? rpI step 120, FULL TEST (2,759 x 8): **41.9% saved / +0.1** (official weighting)
+svamp 47 / +0.0, mbpp 38 / +0.5, ifeval 41 / -1.5, simple 37 / +0.2, multiple 38 / -0.9, no-fit 50 / +5.8. vs curve **+1.64**: the
+highest of any full test so far (rpE-80 +1.45, rc1-soup-30 +0.95; michal-bida 47.0 / -0.78, about +1.6). No accuracy loss at all,
+but 42% saved, below the 50% goal. Its 720 screen said 43.0 / +0.9: the screen read 1.1 pts high on saving and 0.8 on accuracy.
+
+## Items decided 10 Nov that were committed but not logged above (added for the record)
+- **cp1e** (queued on GPU 2 after cp1d): cp1d + `rl_train.py --copd-early 1.0` (new, "fix 2", user): every token of a WRONG reply whose
+  thinking is under 0.5 x the original model's median thinking on its right answers to that question (row field base_think, from the
+  original's 10 stored answers; track.py thinkprune prints how many questions carry it) gets -1.0 more. Logged per step as
+  copd.early_penalised = [punished, wrong]. Tested on mocked replies (only the too-short wrong reply is punished).
+- **od2 changed to 10 rounds** (user: "add more rounds of 160"): 10 rounds x 10 steps, IFEval 290 questions per round (2,900 of the
+  2,998 usable, no question reused), 720 x4 after rounds 2, 4, 6, 8, 10.
+- **repair_pairs.py --kinds guard,shorten backup supply:** if "shorten" pairs (longest right >= 1.5x shortest) run short, questions
+  with a 1.25-1.5x spread fill in; the summary prints both candidate counts per part.
+- Full test of rpI-120 queued on GPU 2 after rpH (user); done above.
+- cp1d started (GPU 2): its log printed **0/15407 questions carry base_think**: the original's 10-answer file stores no
+  reasoning_tokens, so cp1e's --copd-early would have done nothing. Fixed before cp1e starts: base_think falls back to the
+  answer's thinking ids, else its whole length (output_tokens; slightly over-estimates thinking, the 0.5x threshold stays a proxy).
+  cp1d does not use it. od1 round 1: 160 pairs (guard 80 / shorten 80, no shortfall: svamp 299 shorten candidates >= 1.5x),
+  10 steps, pairs ordered right 75 -> 82%; round 2 answering.
+
+## 10 Nov ? consult5: independent review by the Ivan worker (gpt-6-astra), cap $15 then $30 (user)
+27 analysis turns (26 code runs) on CURRENT_STATE.md, the dossier, the log, all_runs.json, plans and code; stopped at $12.86 (no
+notes kept, so the harness's fallback would have produced an empty report); one final call ($0.76) on the conversation with tool
+outputs trimmed wrote the report: consult5_review.md. Total about $13.6-14.6 (one in-flight turn may have been billed).
+Main points: objective not met; the biggest problem is reading moves on a repeatedly-used screen as frontier progress; the curve
+is descriptive (at 50% it predicts -2.9, so +1 above it still misses); rpI-120 vs rpE-80 is only +0.19 vs curve; fresh answers
+ATTENUATE the drift (rpI +14.9% more output vs rpG +35.7%) but do not stop it, and are confounded with pair counts; screen/full
+gaps are model-dependent (savings +1.2 mean, accuracy +0.4 mean, ranges -1.1..+1.5); 6/8 is not a safety certificate; IFEval
+deficit alone costs 0.65 pt of rpE-80's aggregate. Code issues found: (1) thinking_len() treats an empty thinking as the whole
+answer, FIXED; (2) dpo.py reference-cache fingerprint uses prefixes + lengths only (open); (3) a round with fewer than 160 pairs
+cannot reach step 10 in one epoch, FIXED in odpo (2 epochs allowed); (4) log the identities of rollout policy / init / reference
+separately (open); (5) od2 = 90,400 completions for 1,600 pairs: measure pair yield. Recommendation: ONE controlled experiment
+from the original Qwen: fresh-rollout vs frozen-rollout arms, identical mixed pairs (256 per round, half guard half shorten at
+>= 6/8 and 1.25x), 3 rounds x 32 updates, 2 seeds, a NEW 512-question dev set for selection (never the 720), predetermined final
+checkpoint, paired bootstrap on the full test. Its forecast: 35-50% / -2..0. Advice: do not spend GPU days on more COPD variants.
+

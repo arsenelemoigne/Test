@@ -1,0 +1,55 @@
+PART 4:
+ ts.jsonl`). On each bootstrap draw `draw`, compute `(s_cand, a_cand, _) = headline(base, cand, draw)` and `(s_vs, a_vs, _) = headline(base, vs, draw)`, and bootstrap `(s_cand - s_vs, a_cand - a_vs)` directly.
+
+---
+
+### Bug 6 (MEDIUM ? `track_ptrepair_odpo_dev.py` `L183?395`): Duplicate Function Definitions in `track_ptrepair_odpo_dev.py`
+In `track_ptrepair_odpo_dev.py`, `DEV_FILE`, `DEV_SOURCES`, `dev_ids()`, `devset()`, `dev_generate()`, `dev_score_model()`, `devscore()`, and `ladder()` are pasted twice (`L183?305` and `L307?395`), with truncated headers at `L305` (`def mixscreen(args):`) and `L395` (`def ladder(args):`). Verify that `track.py` itself does not contain these duplicate blocks.
+
+---
+
+## 4. Direct Answers to the 5 Open Questions in `PATH1_PLAN.md`
+
+### Question 1: Is the relative decision rule for `rpJ` (vs `rpE-80` on Dev-512) sound, and what margin should count?
+- **The relative comparison on Dev-512 is sound in principle** because evaluating both `rpJ` and `rpE-80` on the exact same 512 questions cancels out dataset-difficulty offsets (`Dev-512` vs Full Test), **provided two conditions are met:**
+  1. **Compare along the trade-off slope, not just raw dominance:** Between 45% and 55% saved, the empirical trade-off slope in `rpE` (`40 ? 60 ? 80` on the full test: `50.6%/?1.90 ? 47.8%/?1.20 ? 47.0%/?0.90`) is **~0.28 pp of accuracy per 1.0% of tokens saved** (and the quadratic yardstick slope at 50% saved is `?0.19 pp` per `1.0%` saved). Therefore, define the **frontier-adjusted gain** of `rpJ` over `rpE-80` on Dev-512 as:
+     $$\Delta_{\text{frontier}} = (\text{acc}_{\text{rpJ}} - \text{acc}_{\text{rpE80}}) + 0.22 \times (\text{saved}_{\text{rpJ}} - \text{saved}_{\text{rpE80}})$$
+  2. **Exact Margin That Should Count:** Using the direct paired bootstrap (`--vs dev512-rpE80`), the 95% CI half-width on `Dev-512 ? 8` is `?0.85 pp` for accuracy and `?0.9%` for saving (`1-sided 90% CI` ? `+0.55 pp`). `rpJ` **passes** if at step 40, 60, or 80:
+     - **Saving Condition:** $\text{saved}_{\text{rpJ}} - \text{saved}_{\text{rpE80}} \ge +2.5\%$ on Dev-512 (proving the shorten anchors arrested `rpE-80`'s drift and kept full-test-equivalent saving at `? 49.5?51.0%`), **AND**
+     - **Frontier Condition:** $\Delta_{\text{frontier}} \ge +0.40\text{ pp}$ (meaning if `rpJ` saves `+3.5%` more than `rpE-80`, its Dev-512 accuracy is within `?0.37 pp` of `rpE-80`, putting it at `~50.5% saved / ?1.25 pp` or better before Round 1's cleaner starting point).
+
+### Question 2: Are 3,200 pairs and `lr 1.5e-5` cosine right for Round 1 from the original Qwen?
+- **No ? with the current `--mix-preset round1` (39.4% shorten), 3,200 pairs at `lr 1.5e-5` in `fp32` will land at 20?33% saved, not 50?55% saved.**
+- **Why:** In your log, every single-round run from raw Qwen that had `<50%` shorten pairs or included equal-length `right>wrong` pairs (`D12 lpd-chain1`: `40%` shorten in `fp32` ? **17.8?21.7% saved**; `D6 simright`: **28.1% saved**; `lpc-runa2`: **32.5?33.4% saved**) stalled far below 40% saving. Meanwhile, the runs from raw Qwen that reached `50?55%` saving in `fp32` (`D10 lpd-l2s50e`: **54.4% at step 100, 53.5% at final**; `bidax6p`: **48.9% at step 200**) used **50?67% shorten pairs** plus `shortest right > wrong` guard pairs (where chosen is also shorter than rejected on 70%+ of questions) over `200?330` steps at `lr = 2.0e-5`.
+- **Exact Prescription for Round 1:** Keep `3,200 pairs` (`200 steps ? 16`, `1 epoch`), raise `--rp-lr` to **`2.0e-5`** with cosine decay to **`5e-6`** (`--rp-warmup 10`, with Bug 1 fixed so `dpo.py` actually receives `--lr-min 5e-6`!), and change `--mix-preset round1` to **65% Shorten + 35% Compact Re-Read Guard** (`0% capguard`, `0% right_long`; see ?5 below).
+
+### Question 3: Should Round 2 keep the Round-1 model as reference, or the original Qwen?
+- **Keep the Round-1 model (`models/p1r1s0` / `models/p1r1s1`) as Round 2's reference ? do NOT use the original Qwen as Round 2's reference.**
+- **Quantitative Proof from DPO Mechanics & Your Log:**
+  In DPO, the implicit reward is $\beta \log(\pi_\theta(y|x) / \pi_{\text{ref}}(y|x))$. After Round 1 compresses thinking by ~55%, a compact 250-token right answer $y_c$ has much higher probability under $\pi_{\text{R1}}$ than under $\pi_{\text{orig}}$, whereas a 250-token wrong answer $y_w$ also has compressed length. If you set $\pi_{\text{ref}} = \pi_{\text{orig}}$ in Round 2 while training on equal-length `(250-token right, 250-token wrong)` pairs, the KL barrier $\beta D_{\text{KL}}(\pi_\theta \,\|\, \pi_{\text{orig}})$ pulls $\pi_\theta$ **back toward $\pi_{\text{orig}}$'s 680-token length distribution** on every gradient step! In your log, setting `reference = Round 1 (or current stage)` in `rpE`, `rpI`, and `rc1` (2 hops total from raw Qwen: `raw ? R1 ? R2`) achieved your highest full-test scores (`+1.45` and `+1.64 vs curve`), whereas only 4?7 hop chains drifted excessively. Two hops with `reference = Round 1` and `25%` shorten anchors in Round 2 is optimal.
+
+### Question 4: How much can a `Dev-512` ranking be trusted given source differences (`GSM8K` vs `SVAMP`, `KodCode` vs `MBPP+`), and is calibrating on `rc1-soup-30` / `rpE-80` enough?
+- **How much to trust `Dev-512`:**
+  - *Within-family ranking (e.g., step 40 vs 60 vs 80, or `rpJ` vs `rpE-80`):* **High reliability (`r > 0.85`)**, provided you use paired bootstrap differences (`--vs`).
+  - *Absolute level (`saved %` and `acc pp` vs Full Test):* **Systematic domain offset of ~1.5?3.0 pts**, for three reasons documented in your log: (1) `gsm8k_std` is multi-step calculation (where raw Qwen thinks ~880 tokens and answers settle at 20?40% of thinking, `L1553`), whereas SVAMP is 1?2 step arithmetic with wording traps (where raw Qwen thinks 677 tokens and answers settle at 60?80%); (2) `Dev-512` fixes IFEval counting-rule prompts at `66/132 = 50.0%` (whereas the full test has ~32% counting-rule prompts, exaggerating counting-rule gains/losses by ~1.5? on IFEval); and (3) `Dev-512` includes the hard `nofit1`/`nofit2`/`tools1`/`code1` top-ups.
+- **Calibration Fix:** Calibrating on just 2 models (`rc1-soup-30` and `rpE-80`) is **not enough** because a 2-point line has zero degrees of freedom to detect nonlinearity or domain-specific tilt. Score **5 models with known full tests** on `Dev-512`: **`rc1-soup-30` (`57.4/?3.50`), `rpe-40` (`50.6/?1.90`), `rpe-60` (`47.8/?1.20`), `rpe-80` (`47.0/?0.90`), and `ca1-soup-10` (`49.1/?2.40`)**. Compute both the **4-benchmark headline offset** and the **per-part offsets** ($\Delta_p = \text{Full}_p - \text{Dev512}_p$ for $p \in \{\text{svamp, mbpp, ifeval, bfcl}\})$, and select checkpoints using the **per-part calibrated full-test predictor**.
+
+### Question 5: Any risk in reusing the original's 10 stored answers (`P1_ANSWERS`)? Is the 60 / 40 question split right?
+- **Reusing raw Qwen's 10 stored answers (`temp 0.6, top_p 0.95, top_k 20`) is 100% safe technically** (raw Qwen's weights have not changed, and 10 answers per question gives a wider `rights[0]` vs `rights[-1]` spread than 8 answers), **EXCEPT for two data-supply risks that make the blind `60 / 40` hash split across `P1_ANSWERS` fail:**
+  1. **Math & `No-Fit` starvation in `P1_ANSWERS` if `math1`/`math2`/`nofit4` are dropped:** As shown in ?2.4, without `math1`/`math2`, `P1_ANSWERS` has only **661 non-MetaMath math questions** (420 of them `gsm8k_easy`), and without `nofit4`, only **783 `no-fit` questions**. Taking 60% leaves ~396 math questions and ~443 `no-fit` questions?far too few to build 800 math pairs and 320 `no-fit` pairs in Round 1 AND leave 600 `no-fit` questions for Round 2!
+  2. **You do NOT need a 60 / 40 split on Math or IFEval if Round 2 draws from `own_repair_questions()`:** `own_repair_questions()` has **6,598 `gsm8k_std` math questions** (`2,597` mixed / `4,001` always-right, `L5078`) and **2,998 IFEval questions** (`L5187`).
+  - **Exact Fix for the Split:**
+    - If `math1`/`math2` (excluding `metamath_sv` rows) and `nofit4` are allowed as own-generated top-ups (`Option A` in ?2.4), keep a **70 / 30 split** (`int(md5) % 10 < 7` for Round 1, leaving 30% + all unused `gsm8k_std` and `ifeval_built` for Round 2).
+    - If `math1`/`math2`/`nofit4` are strictly excluded (`Option B`), **do NOT split `dp13` by 60/40 on Math**: have raw Qwen answer **2,200 `gsm8k_std` questions ? 8** (~3 GPU-h) for Round 1 Math, use **75%** of `dp13 + nofit1 + nofit2 + tools1 + code1` for Round 1 Code/IFEval/Tools (with Round 1 `no-fit` quota set to `240` instead of `320`), and use the remaining **25%** + fresh `gsm8k_std` (2,000 q) + `ifeval_built` (1,100 q) for Round 2!
+
+---
+
+## 5. How to Make Path 1 as Strong and Safe as Possible (Final Recommended Recipe & First Experiment)
+
+### 5.1 Plain Warning on the One Flaw That Would Sink Path 1
+Let us be blunt: **if you run Round 1 with `--mix-preset round1` as currently written (`39.4%` shorten, `46.9%` `right_long`/`right_short`, `13.7%` `capguard`) and without fixing `p1src`'s math supply, Path 1 will fail.** Your own log (`D12 lpd-chain1` at `17.8?21.7%` saved, `D6 simright` at `28.1%` saved, `lpc-runa2` at `32.5%` saved) proves that a 39%-shorten / 61%-correctness mix in `fp32` from raw Qwen lands at **~20?33% saved**. From a 30%-saved Round-1 model, Round 2 cannot reach >50% saved without cranking up shorten pairs and crashing accuracy below ?2.0 pp (as `od1` just demonstrated).
+
+**The cure is simple and already proven by `rc1 ? rpE` and `D10 lpd-l2s50e`:**
+- **Round 1 must be a Shorten-Dominant + Compact-Guard pass (`65% shorten / 35% rpE-guard`, `0% capguard`, `0% right_long`)** that pushes saving to **53?57% saved** on `Dev-512` (calibrated) while using `--prefer-reread` and `--count-rules` to avoid the worst math/IFEval traps up front.
+- **Round 2 then samples ?8 on-policy from that 53?57% saved Round-1 model** and applies the **25% Shorten Anchor + 60% Compact Re-Read/`--count-rules` Guard + 15% Capped Anti-Early-Stop Guard** mix to trade ~
+[output cut at 10,000 characters]

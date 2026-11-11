@@ -1,0 +1,40 @@
+NOTES HEAD:
+ # Consult 6 (Argon) - Quantitative Research Notes
+
+## 1. Task & Official Evaluation Math
+- Model: Qwen3-0.6B, thinking mode ON (`<think>...</think>` + final answer).
+- Target: > 50.0% tokens saved (thinking + answer combined) AND > -1.00 pp accuracy change on the full test (2,759 questions x 8 samples = 22,072 generations), using ONE clean, reproducible recipe (single training line, own answers only, no competitor copying, no test-time prompt/switch).
+- Official evaluation breakdown (2,759 questions):
+  - SVAMP (v): 1,000 questions (weight 0.25)
+  - MBPP+ (c): 378 questions (weight 0.25)
+  - IFEval (f): 541 questions (weight 0.25)
+  - BFCL (pooled weight 0.25): 840 questions = simple (s: 400, weight 400/3360 = 11.90%), multiple (m: 200, weight 200/3360 = 5.95%), irrelevance/no-fit (i: 240, weight 240/3360 = 7.14%).
+- Headline accuracy change = `(acc_v + acc_c + acc_f + (400*acc_s + 200*acc_m + 240*acc_i)/840) / 4`.
+- Headline tokens saved = `1 - (ratio_v * ratio_c * ratio_f * ratio_bfcl)**0.25`.
+
+## 2. Original Model (Raw Qwen3-0.6B) Full Test Baseline (`full-base`, 2,759 x 8) & Thinking-Off (`ntfull2`, 2,759 x 8)
+- Raw thinking ON vs OFF accuracy and mean thinking tokens:
+  - SVAMP (1,000): ON 88.7% (677 think tok) -> OFF 20.6% (-68.1 pp, 89-98% saved)
+  - MBPP+ (378): ON 52.4% (2,079 think tok) -> OFF 40.8% (-11.6 pp, 89-98% saved)
+  - IFEval (541): ON 58.7% (433 think tok, ~247 resp tok) -> OFF 57.5% (-1.2 pp, 62% total tok saved because response stays ~247 tok!)
+  - BFCL simple (400): ON 82.2% (171 think tok) -> OFF 71.4% (-10.8 pp)
+  - BFCL multiple (200): ON 76.1% (192 think tok) -> OFF 55.3% (-20.8 pp)
+  - BFCL irrelevance / no-fit (240): ON 83.4% (186 think tok) -> OFF 90.3% (+6.9 pp! Thinking hurts no-fit by talking model into calling a function).
+  - Pooled BFCL (840): ON 81.09% -> OFF 72.97% (-8.12 pp).
+  - Overall 4-benchmark mean accuracy: ON 70.22% -> OFF 47.97% (-22.25 pp).
+
+## 3. All Full-Test Runs (2,759 x 8, Official 4-Benchmark Weighting)
+| Model | Saved (%) | Acc (pp) | vs Curve | SVAMP (v) | MBPP+ (c) | IFEval (f) | BFCL Pool | Simple (s) | Mult (m) | No-fit (i) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cleanA-rc1-full (rc1-soup-30) | 57.4 | -3.50 | +0.95 | 67 / -6.6 | 63 / -3.5 | 51 / -2.5 | 44.6 / -1.41 | 41 / -0.1 | 44 / -0.8 | 51 / -4.1 |
+| pt-mid-full (4-adapter merge) | 53.6 | -3.30 | +0.30 | 61 / -6.0 | 62 / -3.9 | 50 / -1.7 | 37.1 / -1.41 | 35 / +0.2 | 38 / +0.4 | 40 / -5.6 |
+| bidax2-full (bida copy on dp13) | 51.2 | -
+
+---
+NOTES TAIL:
+ GSM8K, and missing paired candidate-vs-reference bootstrap in `dev_score.py`.
+- **Nuanced Disagree with Claude on Two Points:**
+  1. **Do NOT drop `rpJ` if it is already queued/running on GPU 2 (~1.5 GPU-h with zero new generation), AFTER fixing `--kinds mix`'s `right` pair bug:** While `rc1-soup-30` (57.4% saved) is not representative of a 30%-saved Round 1, it **IS** representative of the **redesigned 55-57%-saved Round 1** that both Claude and we agree Path 1 must use! Thus, testing whether adding 20-30% shorten anchors to `rpE`'s guard recipe arrests `rpE`'s 57.4% -> 47.0% length drift at ~51-53% saved on `rc1-soup-30` is the exact right test for Round 2?provided `repair_pairs.py --kinds mix` uses `rpE`'s actual compact-right (`checked[0] or rights[0] > wrongs[0]`) pair instead of `right_long`/`right_short`!
+  2. **Why `rpJ`'s current `--kinds mix` code in `repair_pairs.py` is STILL broken even after the 2 fixes (`eb712bc`):**
+     Even with kind-interleaving and `tmed` fixed, `--kinds mix` in `repair_pairs.py` (Lines 134-138, 210-213) replaces `rpE`'s proven `--kinds guard` pair (`shortest right with reread within 1.5x > shortest finished wrong`) with `right_long` and `right_short` (`max/min <= 1.2`, half with `chosen > rejected`), where `take()` calls `rng.shuffle(pool)` across questions (destroying `--prefer-reread` priority across questions and allowing long right answers!). In `rpE`, `--kinds guard` was used specifically because `right_long`/`right_short` was worse.
+

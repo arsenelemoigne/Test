@@ -1,0 +1,4 @@
+At step 20 ( 25% through pairs): {'guard': 40, 'right': 40}
+At step 40 ( 50% through pairs): {'guard': 48, 'right': 112}
+At step 60 ( 75% through pairs): {'guard': 48, 'right': 176, 'shorten': 16}
+At step 80 (100% through pairs): {'guard': 48, 'right': 176, 'shorten': 96}

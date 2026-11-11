@@ -1,0 +1,34 @@
+L3742: --lp-add-q (top-up sets that join the pool even with --lp-answers-pool). Queued on GPU 1: newtop nofit4 = 3,000
+L3744: lpc-bidax4 = exact michal-bida recipe + nofit4 added; 720 at 100/200/300/final.
+L3747: ~1.2 pts accuracy. newtop nofit4: 1,308 candidates dropped as already in pool/top-ups; 1,871 questions x10, mean solve
+L3751: SVAMP wording, labelled gsm8k_matched); newtop now answers math sources too. newtop math1 = 2,000 questions from
+L3752: gsm8k_std + metamath_sv (dedup vs pool), x10; lpc-bidax5 = michal-bida recipe + nofit4 + math1 (--lp-add-q); 720.
+L3759: mbpp +51/-5.0. newtop math1: 3,722 candidates already in the pool / top-ups dropped; answering 3,000 x... (in progress).
+L3761: ifeval +50/-2.3, multiple +47/0.0). Final being scored. GPU 2: math1 answers in progress.
+L3763: ifeval +51/-2.7, simple +43/-2.7, multiple +47/-0.2). GPU 1 queue ended -> lpc-bidax5 seed 1 queued (waits for math1).
+L3774: - 21:10: math1 analysed (2,000 GSM8K/MetaMath questions x10 on the original; solve 80%; sometimes 930 / always 964 / never 106).
+L3776: (560 always / 356 sometimes), >905 653 q. Pairs the bida rule makes from math1 with 4 answers: band 470-905 =
+L3778: only 41 point longer. So math1 under bida's rule adds ~660 "cut more" pairs exactly where we over-cut: bidax5 is not
+L3789: - local test on math1 (4 answers, the original's other 6 answers as a stand-in loser set): band 919 questions, 500
+L3792: - Gate before training: >= 500 overcut pairs from the trained model. GPU 2: onpolicy om1 (math1 band); GPU 1: newtop
+L3793: math2 (2,000 more questions) + onpolicy om2, in case the gate needs them; then the 600-step check.
+L3794: - 22:30: onpolicy om1 (lpc-bidax4-s0 x4 on math1's 934 band questions, 470-905 by the original's 10 answers): right
+L3795: 80.5%, mean thinking 291 (the original ~600), 730 wrong answers (median thinking 231) on 375 questions. Pairs from math1
+L3798: 246 -> 319). Gate 500 not met on math1 alone -> math2 + om2 (GPU 1), then lpc-bidax5m seed 0 there; lupin
+L3801: - 2 Nov ~00:10: GATE PASSED. lpc-bidax5m pairs (math1 + math2 + om1 + om2): svamp in band 2,955 questions; overcut
+L3876: - ~15:00 (user): queued lpc-bidax5p on GPU 2 after bidax6's screens: bidax4's plain bida recipe + math1 + math2 (GSM8K /
+L3886: - ~15:40 (user): next runs switched to michal-bida's settings: lpc-bidax5p -> lpc-bidax5q (plain bida + math1/math2,
+L3902: | lpc-bidax5m (math fix, 16/step, 520 steps) | + math1/math2, no shorten on svamp 470-905, 743 don't-over-cut pairs | final 11.3 /
+L3933: - GPU 2: bidax6 final screen -> lpc-bidax5q (bida settings + math1/math2 plain: his math questions vs bidax6) -> newtop
+L3950: shorter too (shortest right vs longest wrong; math1 band 175 of 216); the original's mistakes are not the trained
+L3957: whose answers are > R alike dropped). Local test on math1 (original x4 + bidax4 x4 as stand-in): 1,865 pairs; right
+L3961: Queued: GPU 1 polans pa6-a (bidax6 x8 on half of dp13 + nofit4) -> lpc-bidax8 (four signals, from bidax6, bida
+L4042: - ~18:30 **lpc-bidax5q** (bida-exact settings + math1/math2 = michal-bida's GSM8K/MetaMath math, plain bida pairs, 339
+L4079: first, all on bidax5q's data (dp13 + nofit4 + math1 + math2) with michal-bida's settings, 339 steps, 720 at
+L4101: - ~02:40: GRPO screens now draw the SAME questions as v1's DPO data: pool dp13 + nofit4 + math1 + math2 (thinkprune
+L4102: --tp-extra, default nofit4,math1,math2; answers from bidax5q's 4-answer file, used for the eligibility filter only).
+L4134: (--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+L4739: solve >= 0.8 + right pairs) on the NEW data (dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2; 10 answers per
+L4752: to the weakest part's fill (how 3,200 requested became ~1,400; nofit4 may release it and give every adapter more steps);
+L4827: training data (jpa = October's lpv-base rule and matching on dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2,
+L4942: to > 50% / better than -1, with nothing from michal-bida (no MetaMath, math1, math2, instr2, code2, nofit4).

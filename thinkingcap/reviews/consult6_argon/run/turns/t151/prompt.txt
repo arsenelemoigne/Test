@@ -1,0 +1,2 @@
+WHAT A CATCH! Checking `find_blocks` in `second_report`:
+Matches in draft_text: ['python', 'python']

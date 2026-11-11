@@ -1,0 +1,82 @@
+PART 3:
+ pters/p1r2s1-s1/step-K:0.5` is mathematically exact (`W_0 + 0.5*(dW_r1_s0 + dW_r2_s0 + dW_r1_s1 + dW_r2_s1)`) and avoids saving/restoring 1.2 GB full-model checkpoints for every screen step! |
+
+---
+
+## 3. Code Audit: Bugs & Mismatches in `code/` (With Exact Line Numbers & Fixes)
+
+Even after the two 11 Nov fixes in `repair_pairs.py` (`eb712bc`: credit-based interleaving of kinds at `L254?268` and `tmed` / `early[-1]` in `capguard` at `L140?145`), **six concrete bugs remain** across `track_ptrepair_odpo_dev.py`, `repair_pairs.py`, `queued_lines.txt`, and `dev_score.py`. **The first four will silently corrupt your training runs if not fixed before execution.**
+
+### Bug 1 (CRITICAL ? `track_ptrepair_odpo_dev.py` `L69?70` & `L108?125`): `ptrepair` Silently Ignores `--rp-exclude-ids`, `--rp-warmup`, `--rp-lr-min`, and `--rp-dpo-seed`!
+Look at the queued commands in `queued_lines.txt`:
+```
+ptrepair --name p1r1s1 ... --rp-lr 1.5e-5 --rp-lr-min 5e-6 --rp-warmup 10 --rp-steps 200 --rp-epochs 2 --rp-dpo-seed 1 ...
+ptrepair --name p1r2s1 ... --rp-exclude-dev --rp-exclude-ids data/p1-round1-ids.json ... --rp-dpo-seed 1 ...
+```
+Now look at what `ptrepair(args)` in `track_ptrepair_odpo_dev.py` actually executes:
+1. **Line 70 (`--rp-exclude-ids` ignored!):**
+   ```py
+   for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
+                                 exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None):
+   ```
+   The helper `excluded_ids(args)` was written at `L396?405` to union `dev_ids()` and `args.rp_exclude_ids` (`data/p1-round1-ids.json`), **but `ptrepair` at Line 70 never calls `excluded_ids(args)`!** As a result, Round 2 (`p1r2s0`, `p1r2s1`) completely ignores `data/p1-round1-ids.json` and trains on Round 1's questions!
+   - **Fix (`L70`):** Replace `exclude=dev_ids() if getattr(args, "rp_exclude_dev", False) else None` with `exclude=excluded_ids(args)`.
+2. **Line 123 (`--rp-warmup` and `--rp-lr-min` ignored!):**
+   ```py
+   "--lr-schedule", "cosine", "--warmup", 2, "--lr-min", args.rp_lr, "--max-steps", steps,
+   ```
+   `--warmup` is hardcoded to `2` (ignoring `--rp-warmup 10`) and `--lr-min` is hardcoded to `args.rp_lr` (ignoring `--rp-lr-min 5e-6`, so Round 1 trains at a **constant `1.5e-5`** instead of cosine decay to `5e-6`!).
+   - **Fix (`L123`):** Use `"--warmup", getattr(args, "rp_warmup", 2), "--lr-min", getattr(args, "rp_lr_min", None) or args.rp_lr`.
+3. **Lines 108, 112, 118, 125 (`--rp-dpo-seed` ignored everywhere ? Seeds 0 and 1 are identical!):**
+   - `L108`: `repair_pairs.py` is called without `--seed`, so `p1r1s0` and `p1r1s1` build the **exact same pairs in the exact same order**.
+   - `L112`: `adapter = Path("adapters") / f"{name}-s0"` hardcodes `-s0`.
+   - `L118`: `sft.py --init-only` is called without `--seed`, producing the **exact same LoRA initialization** for Seed 0 and Seed 1.
+   - `L125`: `dpo.py` is called with hardcoded `"--seed", 0`, ignoring `args.rp_dpo_seed`!
+   - **Fix (`L108?125`):** Pass `dpo_seed = getattr(args, "rp_dpo_seed", 0)` to `repair_pairs.py --seed {dpo_seed}`, `sft.py --init-only --seed {dpo_seed}`, and `dpo.py --seed {dpo_seed}`.
+
+---
+
+### Bug 2 (CRITICAL ? `repair_pairs.py` `L133?138` & `L210?213`): `--kinds mix` Replaces `rpE`'s Proven Compact Correctness Pair with Unfiltered `right_long`/`right_short` and Loses `--prefer-reread`!
+Look at how `--kinds mix` builds the `"right"` pairs (`55%` of Round 2 / `rpJ` and `35?50%` of Round 1) at `L134?138` and `L211?213`:
+```py
+close = [(r, w) for r in rights for w in wrongs if max(size(r), size(w)) <= args.ratio * max(1, min(size(r), size(w)))]
+if decode:  # prefer a chosen answer that re-checks the question
+    close.sort(key=lambda rw: not REREAD.search(decode(rw[0])))
+for r, w in close[:4]:
+    cand[part]["right_long" if size(r) > size(w) else "right_short"].append((qid, r, w))
+```
+And then `take()` at `L184` runs `rng.shuffle(pool)` across the entire `cand[part]["right_long"]` and `cand[part]["right_short"]` lists!
+**Three things go wrong here:**
+1. **`--prefer-reread` is wiped out across questions:** Sorting `close` before `close[:4]` only orders pairs *within a single question*. If Question A has 0 re-read answers (so it contributes 4 non-reread pairs to `cand`) and Question B has 2 re-read answers, `rng.shuffle(pool)` in `take()` picks Question A's non-reread pairs with equal (or higher!) probability.
+2. **Long rambling right answers are selected:** Unlike `rpE` (`L169`: `thinking_len(r) <= 1.5 * thinking_len(rights[0])`), `close` pairs *any* right answer `r` with *any* wrong answer `w` within `1.2?` length. If a question has a 300-token right answer, a 1,800-token right answer, and a 1,700-token wrong answer, `close` puts `(1800-tok right, 1700-tok wrong)` into `right_long`, teaching the model to write 1,800-token traces!
+3. **Half of the pairs (`right_long`) force `chosen_tokens > rejected_tokens`, and strict `--ratio 1.2` starves `no-fit` and tools:** As the docstring of `repair_pairs.py` (`L11`) notes, `right_long`/`right_short` is Lightning McQwen3's rule that was dropped on 9 Nov because `rpE`'s rule (`shortest right with reread > shortest finished wrong`) was much stronger. Moreover, in `rpJ`, `rpH` only has 300 `no-fit` questions (~60 mixed-outcome); requiring `max/min <= 1.2` leaves `bfcl_irrelevance=140` short of quota.
+- **Exact Fix in `repair_pairs.py` (`L133?138` & `L210?213`):**
+  In `--kinds mix`, build `cand[part]["right"]` using `rpE`'s compact re-read rule bounded by `--ratio`:
+  - Restrict candidate right answers to compact ones: `compact_r = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0])]`.
+  - Pair `(r, w)` where `thinking_len(r) <= args.ratio * max(1, thinking_len(w))` (so chosen thinking is never >`1.20x?1.25x` rejected thinking, and compact right answers beat longer or equal-length finished wrong answers without forcing `50%` of pairs to have `chosen > rejected`!).
+  - Partition candidates into `right_reread` (where `REREAD.search(decode(r))` is true) and `right_plain`, and in `take()`, draw from `right_reread` **first** before falling back to `right_plain`!
+  - Also increment `rereads` inside `if args.kinds == "mix":` (`L128?145`) so `summary.txt` logs the counting-rule and re-read statistics (currently `continue` at `L146` skips all `rereads` logging!).
+
+---
+
+### Bug 3 (HIGH ? `queued_lines.txt` & `repair_pairs.py` `L147?153` vs `L124?126`): Missing `1.20x?1.25x` Shorten Backup in `--kinds mix` and Mismatched Steps vs Quotas in `rpJ`
+1. In `repair_pairs.py`, `--kinds guard,shorten` (`L151?152`) has a backup supply `shorten_soft` (`spread >= 1.25`) if `shorten` pairs (`>= args.shorten_ratio`) run short, **but `--kinds mix` (`L124?126`) has NO backup supply!** On `rc1-soup-30` (whose answers are already compressed to ~200 tokens on math and ~90 tokens on tools) or on `10/10` easy questions, requiring `>= 1.3x?1.4x` with no `1.20x` backup causes `shorten` shortfalls that silently convert into `right` pairs (`L209: n_r = n - len(sh) - len(g)`), silently reducing shortening pressure!
+   - **Fix (`L124?126` & `L208`):** Add `shorten_soft` (`spread >= 1.20` on questions solved `>= 0.85`) as a backup for `sh` in `--kinds mix`, and fail loudly (`assert len(sh) >= 0.85 * n_sh`) if shorten pairs still fall >15% short of target.
+2. In `queued_lines.txt`, `rpJ` has quotas summing to **`1,280` pairs (`80` steps of `16`)** with `--rp-epochs 2`, but sets `--rp-steps 60 --rp-screen 20 40 60` (`960` pairs seen, leaving `320` pairs unseen). Set `--rp-steps 80 --rp-screen 20 40 60 80` and `--rp-epochs 1` (and likewise `--rp-epochs 1` on `p1r1` and `p1r2` once quotas are met so no pair is trained on twice).
+
+---
+
+### Bug 4 (HIGH ? `repair_pairs.py` `L203?205` & `L210?212`): Round-1 IFEval Counting-Rule Quota Is Not Capped or Guaranteed at 50%
+In `repair_pairs.py` `L204` (`--mix-preset round1`), IFEval shares are `{"shorten": 0.275, "right": 0.725, "guard": 0.0}` (`220` shorten, `580` right). Then at `L210`:
+```py
+r = take(part, "right", cand[part]["right_cr"], n_r)
+```
+In `p1src`, only ~130?160 IFEval questions produce a valid `right_cr` pair (because `right_cr` gets at most 1 pair per counting-rule question where `response_len(r) >= response_len(w)` and `thinking_len(r) <= 1.2 * thinking_len(w)`). So `r` gets only ~140 `right_cr` pairs (instead of 400), and the remaining **~440 pairs** are filled from non-counting `right_long`/`right_short` (`L211?212`)! Worse, for `--think-only ifeval`, `size` is `thinking_len`, so `right_long` (`50%` of those 440 pairs = `220` pairs) actively trains IFEval to **think longer**!
+- **Fix:** Allow up to `2` `right_cr` pairs per counting-rule question (matching the `right_q[qid] < 2` cap for non-counting questions), and fill any remaining IFEval `right` quota with `rpE`-style compact guard pairs (`shortest thinking right > shortest thinking wrong` where `response_len(c) >= 0.9 * response_len(w)`), never `right_long`!
+
+---
+
+### Bug 5 (MEDIUM ? `dev_score.py`): Missing Paired Candidate-vs-Reference Bootstrap (`--vs`)
+In `PATH1_PLAN.md` Step 1, `rpJ` is judged against `rpE-80` on `Dev-512`: *"more accurate than rpE-80 by more than the paired interval's half-width"*. However, `dev_score.py` only takes `--base` (`dev512-base`) and `--cand` (`dev512-rpJ-40`), so it outputs the 95% CI of `(rpJ ? base)` (half-width **`?1.5 to ?1.7 pp`**), NOT the paired 95% CI of `(rpJ ? rpE-80)`! Because `rpJ` and `rpE-80` share the same base (`rc1-soup-30`) and the same 512 questions, their per-question errors are highly correlated (`r ~ 0.85`), so the true paired 95% CI half-width of `(rpJ ? rpE-80)` is **`?0.8 to ?1.0 pp`**.
+- **Exact Fix in `dev_score.py`:** Add an optional `--vs` argument (`--vs runs/bon/dev512-rpE80/rollouts.jsonl`). On each bootstrap draw `draw`, compute `(s_cand, a_cand, _) = headline(base, cand, draw)` and `(s_vs, a_vs, _) = headline(base, vs, draw)`, and bootstrap `(s_cand - s_vs, a_cand -
+[output cut at 10,000 characters]

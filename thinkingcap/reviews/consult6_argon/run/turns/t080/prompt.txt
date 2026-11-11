@@ -1,0 +1,152 @@
+=== track_ptrepair_odpo_dev.py (Part 3) ===
+100, IFEval 132 (66 with a counting rule, 66 without), tools 140 (60 one function, 35 several, 45 no fit).
+    Drawn from the own pool OUTSIDE every question already drawn for training by rpE/rpG/rpH (seed 0), rpI (seed 1) and od1
+    (seed 7, 4 rounds); later runs exclude it with --rp-exclude-dev. Then the ORIGINAL Qwen answers it x8 (the reference)."""
+    from repair_pairs import counting
+    from build_pool import part_of
+    drive_sync("restore", only=[str(DEV_FILE)])
+    if not DEV_FILE.exists():
+        used = set()
+        sizes0 = {"svamp": 2400, "mbpp": 900, "ifeval": 1500, "bfcl_simple_python": 300, "bfcl_multiple": 300, "bfcl_irrelevance": 300}
+        od1 = {"svamp": 480 * 4, "mbpp": 180 * 4, "ifeval": 450 * 4, "bfcl_simple_python": 240, "bfcl_multiple": 240,
+               "bfcl_irrelevance": 240}
+        for seed, sizes in ((0, sizes0), (1, sizes0), (7, od1)):
+            used |= {r["id"] for r in own_repair_questions(sizes, seed=seed)}
+        every = own_repair_questions({p: 10 ** 6 for p in sizes0}, seed=99)
+        want = {"svamp": 140, "mbpp": 100, "bfcl_simple_python": 60, "bfcl_multiple": 35, "bfcl_irrelevance": 45}
+        picked, counts = [], defaultdict(int)
+        for r in every:
+            if r["id"] in used:
+                continue
+            p = part_of(r)
+            if p == "ifeval":
+                key = "ifeval-count" if counting(r) else "ifeval-plain"
+                if counts[key] < 66:
+                    counts[key] += 1
+                    picked.append(r)
+            elif counts[p] < want.get(p, 0):
+                counts[p] += 1
+                picked.append(r)
+        print(f"devset: {len(picked)} questions {dict(counts)} (outside {len(used)} questions already drawn for training)", flush=True)
+        DEV_FILE.parent.mkdir(exist_ok=True)
+        DEV_FILE.write_text("".join(json.dumps(r) + "\n" for r in picked))
+        drive_sync("save")
+    dev_generate("base", "Qwen/Qwen3-0.6B")
+
+
+def dev_generate(name, model):
+    rows = [l for l in DEV_FILE.read_text().splitlines() if l.strip()]
+    out = BON / f"dev512-{name}"
+    drive_sync("restore", only=[str(out)])
+    if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
+        py("probe_curve.py", "--data", DEV_FILE, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
+           "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+           "--max-questions", len(rows), "--seed", 53)
+        drive_sync("save")
+    return out
+
+
+def dev_score_model(name, spec):
+    """Score one model on Dev-512 x8 against the original: spec = a merged model / Hub id, or OUT=BASE:ADAPTER (merged here)."""
+    dev_ids()
+    assert DEV_FILE.exists(), "run the devset stage first"
+    base = dev_generate("base", "Qwen/Qwen3-0.6B")
+    model = spec
+    if "=" in spec:
+        model, rest = spec.split("=")
+        merge_base, adapter = rest.split(":")
+        if not (Path(model) / "config.json").exists():
+            drive_sync("restore", only=[*([] if merge_base.startswith("Qwen/") else [merge_base]), adapter])
+            py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
+    else:
+        drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
+    out = dev_generate(name, model)
+    if "=" in spec and model.startswith("/content/"):
+        shutil.rmtree(model, ignore_errors=True)
+    res = out / "dev_score.json"
+    run(sys.executable, "dev_score.py", "--base", base / "rollouts.jsonl", "--cand", out / "rollouts.jsonl", "--name", name,
+        "--out", res)
+    drive_sync("save")
+    d = json.loads(res.read_text())
+    return (f"== {name} (Dev-512 x8): saved {d['saved']:+.1f}% [{d['saved_ci'][0]:+.1f}, {d['saved_ci'][1]:+.1f}], "
+            f"accuracy {d['acc']:+.2f} [{d['acc_ci'][0]:+.2f}, {d['acc_ci'][1]:+.2f}]")
+
+
+def devscore(args):
+    print(dev_score_model(args.ds_name, args.ds_model), flush=True)
+
+
+def ladder(args):
+def excluded_ids(args):
+    """(11 Nov) questions a new draw must skip: Dev-512 (--rp-exclude-dev) and a JSON id list (--rp-exclude-ids)."""
+    out = set()
+    if getattr(args, "rp_exclude_dev", False):
+        out |= dev_ids()
+    f = getattr(args, "rp_exclude_ids", "")
+    if f:
+        drive_sync("restore", only=[f])
+        out |= set(json.loads(Path(f).read_text()))
+    return out or None
+
+
+P1_ANSWERS = "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl"  # the original Qwen's 10 answers per question
+P1_IDS = Path("data/p1-round1-ids.json")
+
+
+def p1src(args):
+    """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen) Round 1's material without new generation: the original's 10
+    stored answers per pool question (runs/bon/P1_ANSWERS), keeping only our own sources (no metamath_*, none of the michal-bida
+    top-ups nofit4 / math1 / math2), never a Dev-512 question, and only 60% of the questions (a fixed hash of the id) so that
+    round 2 draws unseen ones (data/p1-round1-ids.json; round 2 passes --rp-exclude-ids). Written as runs/bon/rp-p1src/
+    rollouts.jsonl for ptrepair --rp-rollouts-from p1src."""
+    import hashlib
+    out = BON / "rp-p1src"
+    drive_sync("restore", only=[str(out), str(P1_IDS)])
+    if (out / "rollouts.jsonl").exists() and P1_IDS.exists():
+        print(f"p1src: already built ({sum(1 for _ in open(out / 'rollouts.jsonl'))} answers)", flush=True)
+        return
+    banned = set()
+    tops = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit4", "math1", "math2")]
+    drive_sync("restore", only=[str(BON / P1_ANSWERS), *[str(t) for t in tops]])
+    for t in tops:
+        assert t.exists(), f"{t} is needed to drop the michal-bida top-ups"
+        for l in t.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)
+                banned.add(q.get("pool_id", q.get("id")))
+    dev = dev_ids()
+    keep_ids, n_in, n_out, drop = set(), 0, 0, Counter()
+    out.mkdir(parents=True, exist_ok=True)
+    with open(BON / P1_ANSWERS) as src, open(out / "rollouts.jsonl", "w") as dst:
+        for line in src:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            n_in += 1
+            if n_in == 1:
+                missing = [k for k in ("prompt_ids", "output_ids", "thinking_ids", "correct", "closed_thinking", "truncated",
+                                       "output_tokens", "source") if k not in r]
+                assert not missing, f"the stored answers lack {missing}: cannot build pairs from them"
+            if str(r["source"]).startswith("metamath"):
+                drop["metamath (michal-bida source)"] += 1
+                continue
+            if r["id"] in banned:
+                drop["michal-bida top-ups"] += 1
+                continue
+            if r["id"] in dev:
+                drop["Dev-512"] += 1
+                continue
+            if int(hashlib.md5(str(r["id"]).encode()).hexdigest(), 16) % 10 >= 6:
+                drop["kept for round 2 (40%)"] += 1
+                continue
+            keep_ids.add(r["id"])
+            dst.write(line if line.endswith("\n") else line + "\n")
+            n_out += 1
+    P1_IDS.parent.mkdir(exist_ok=True)
+    P1_IDS.write_text(json.dumps(sorted(keep_ids)))
+    print(f"p1src: {n_out} of {n_in} stored answers kept ({len(keep_ids)} questions); dropped {dict(drop)}", flush=True)
+    drive_sync("save")
+
+
+def dev_ids():
+

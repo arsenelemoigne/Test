@@ -1,0 +1,23 @@
+L445:                 assert not missing, f"the stored answers lack {missing}: cannot build pairs from them"
+L446:             if str(r["source"]).startswith("metamath"):
+L447:                 drop["metamath (michal-bida source)"] += 1
+L448:                 continue
+L449:             if r["id"] in banned:
+L450:                 drop["michal-bida top-ups"] += 1
+L451:                 continue
+L452:             if r["id"] in dev:
+L453:                 drop["Dev-512"] += 1
+L454:                 continue
+L455:             if int(hashlib.md5(str(r["id"]).encode()).hexdigest(), 16) % 10 >= 6:
+L456:                 drop["kept for round 2 (40%)"] += 1
+L457:                 continue
+L458:             keep_ids.add(r["id"])
+L459:             dst.write(line if line.endswith("\n") else line + "\n")
+L460:             n_out += 1
+L461:     P1_IDS.parent.mkdir(exist_ok=True)
+L462:     P1_IDS.write_text(json.dumps(sorted(keep_ids)))
+L463:     print(f"p1src: {n_out} of {n_in} stored answers kept ({len(keep_ids)} questions); dropped {dict(drop)}", flush=True)
+L464:     drive_sync("save")
+L465: 
+L466: 
+L467: def dev_ids():

@@ -1,0 +1,20 @@
+t127_ans matches of OPEN: ['python']
+t127_ans head: ```python
+# Avoid inner markdown ``` blocks inside the Python string by using a placeholder and replacing it!
+bt3 = "`" * 3
+second_report = f"""# Second Independent Review & Hardening of `PATH1_PLAN.md` (11 Nov 2026)
+
+## 1. Response to `FACT_CHECK.md` & `CLAUDE_REVIEW.md`: What We Accept, Where We Nuance, and How Our Estimates Change
+
+### 1.1 Point-by-Point Verdict on `FACT_CHECK.md`
+We accept **9
+t127_ans tail: est calibrated accuracy at `? 50.8%` calibrated saving, verify once on `Confirm-512 ? 8`, and run the official **Full Test (2,759 ? 8)** on the 2-seed soup and one earlier curve checkpoint.
+"""
+
+with open(draft_path, "w") as f:
+    f.write(second_report)
+
+words = len(second_report.split())
+chars = len(second_report)
+print(f"Second report written to {draft_path}: {words} words, {chars} chars.")
+```

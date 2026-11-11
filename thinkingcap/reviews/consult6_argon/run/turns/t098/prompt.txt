@@ -1,0 +1,46 @@
+L3280: the original model gets right only sometimes, HARDEST first (lowest solve rate), topped up to 10 answers (nofit1);
+L3281: (2) lpx-nofit: l2s50e recipe + those questions (--lp-extra-q nofit1, same eval matching, so harder no-fit fill the
+L3287: - DATA UPGRADE (parts the pool made too easy): nofit1 = up to 800 hardest sometimes-right no-fit candidates; tools1 =
+L3288: 1,000 hardest sometimes-right one-function / multiple candidates (2:1); code1 = 800 hardest sometimes-right code
+L3291: - NEW BASELINE lpu-base = l2s50e recipe on pool + nofit1 + tools1 + code1, with no-fit protection (p < 0.8 no shortening
+L3300: - 23:45: both runtimes had disconnected at ~22:03 (Mac restart); reconnected (L4), Drive mounted (user approved), setup running, p
+L3306: - DATA LOOP: stage `poolup dp12` (GPU 1 after tools1 + code1; waits for nofit1 from GPU 2): candidate set = pool dp10 +
+L3310: (--lp-gate: ALL OK or near misses). If it fails, the data step is iterated (dp13...) before any training.
+L3315: - 00:30: top-ups smaller than planned (few unused candidates are answered right only sometimes): nofit1 = 189 no-fit questions (al
+L3316: - ~01:20: dial lpc-adar1-soup-25 x0.5 (fresh 240 x 8): +23.1% / +0.3 (svamp +35/-0.9, mbpp +20/+1.6, ifeval +20/+2.8, simple +16/0
+L3320: newtop nofit2 (up to 1,500 after the BFCL length bins + 8-gram check, 10 answers each), then poolup dp13 (dp10 + nofit1
+L3321: + tools1 + code1 + nofit2 vs the 160-per-part references; held-out check seed 31). All lpu-* runs now target dp13
+L3323: - ~02:20: dial lpc-adar1-soup-25 x0.7 (fresh): +31.3% / -1.6 (x0.5 +23.1 / +0.3; x1 +43.0 / -1.9): the dial trades saving for accu
+L3337: - ~03:20: newtop nofit2 crashed at its last line (missing import; my bug) after answering its 552 questions x10 (saved). 552 of th
+L3340: - poolcheck-dp12 (dp10 + nofit1 + tools1 + code1): 33/36. Fails all on no-fit THINKING too long: median 156 vs 128
+L3343: - poolcheck-dp13 (+ nofit2: 552 hard Haiku-verified no-fit after BFCL length bins / 8-gram): 33/36, no-fit ALL OK.
+L3346: - Iteration 3: poolup dp14 = dp13 without ToolACE one-function questions (poolup --pu-drop), check seed 33; all lpu-* runs
+L3353: harder and longer. Iteration 4: dp15 = dp13's candidates keeping ToolACE simple except its hardest (solved < 50% on
+L3378: - poolcheck-dp15 (dp13 candidates minus ToolACE one-call solved < 50%): 33/36: svamp accuracy 81 vs 88 [84,92] (-6.8),
+L3383: - Closest pools: dp13 (no-fit fixed; misses simple accuracy 2 pts outside, svamp p75 and ifeval accuracy near misses)
+L3384: and dp14 (34/36). Options for the user: (a) accept dp13 as the training pool (gate overridden, logged); (b) re-check
+L3385: dp13 with a bigger, less noisy check (400 questions per part) before deciding; (c) keep iterating.
+L3386: - Meanwhile (GPUs otherwise idle): GPU 2 runs lpv-base = the baseline recipe on dp13, UNGATED and labelled provisional;
+L3388: - ~07:45 lpv-base (PROVISIONAL baseline on dp13: l2s50e recipe + no-fit protection; 86 DPO steps) on the choosing set x4:
+L3399: ### 2026-10-30 ~08:15 ? USER DECISION: accept dp13 (option A)
+L3400: dp13 = pool dp10 + top-ups nofit1 / tools1 / code1 / nofit2, re-picked against the 160-per-part references; check 33/36
+L3403: Experiments queued on dp13, each vs lpv-base with the decision rule (WORTH 3 seeds + fresh soup if acc >= base and saving
+L3558: lpc-bida = his recipe on our pool dp13 (10 answers per question): long2short (guard = shortest right > longest wrong or
+L3692: the final adapter. Scored on the 720 at steps 100 / 200 / 300 / final. Our pool dp13 (12,000 questions) is the data.
+L3838: Visuals (user): only models trained on the current data (dp13 + top-ups) and scored on the 720 set or the full test
+L3896: **Results (720 set unless FULL; tokens saved / accuracy change; all lpc-* runs on pool dp13 + top-ups)**
+L3944: Found while writing it: our dp13 math is mostly EASY (of 2,999: metamath_easy 1,865 + gsm8k_easy 420 = 1-2 calculation
+L3953: DetectorFactory.seed = 0. "prostring" bug CONFIRMED: 99 ToolACE rows in dp13 contain prostring / stringname /
+L3961: Queued: GPU 1 polans pa6-a (bidax6 x8 on half of dp13 + nofit4) -> lpc-bidax8 (four signals, from bidax6, bida
+L4079: first, all on bidax5q's data (dp13 + nofit4 + math1 + math2) with michal-bida's settings, 339 steps, 720 at
+L4101: - ~02:40: GRPO screens now draw the SAME questions as v1's DPO data: pool dp13 + nofit4 + math1 + math2 (thinkprune
+L4110: 720: +29.5 / +1.6 (+1.8 vs the curve; a dp13-era "be right first, then shorten" two-stage run, 29 Oct).
+L4134: (--bida-exact, 339 steps, dp13 + nofit4 + math1 + math2, 4 original answers; 720 set x4 at 100/200/300/final; yardstick).
+L4261: from the original's own pool answers (lupin-all-...-a4: dp13 + top-ups, prostring rows dropped), cuts each before its
+L4413: astradata dv1 (raw: the 10-answer file lupin-all-dp13-nofit1-tools1-code1-nofit2 first, the 4-answer top-ups after, each
+L4739: solve >= 0.8 + right pairs) on the NEW data (dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2; 10 answers per
+L4789: - lpw-2stage step 50 (dp13, "be right" round then l2s50e): **+29.5 / +1.6** (no-fit +37 / +6.5, multiple +32 / +2.9, mbpp +16 /
+L4827: training data (jpa = October's lpv-base rule and matching on dp13 + nofit1, tools1, code1, nofit2, nofit4, math1, math2,
+L4946: (prepare_types gsm8k_std), minus questions already trained on in rounds 1-4; code / instructions / tools = pool-dp13 rows
+L4947: minus MetaMath + own top-ups nofit1, nofit2, tools1, code1; 8-gram check against every evaluation question.
+L5078: Available per part (sometimes / always): svamp 2,597 / 4,001, mbpp 1,274 / 898, ifeval 1,015 / 1,098, simple 316 / 955,

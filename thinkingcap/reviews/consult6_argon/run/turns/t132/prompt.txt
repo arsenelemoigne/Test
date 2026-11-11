@@ -1,0 +1,22 @@
+# Second Independent Review & Hardening of `PATH1_PLAN.md` (11 Nov 2026)
+## 1. Response to `FACT_CHECK.md` & `CLAUDE_REVIEW.md`: What We Accept, Where We Nuance, and How Our Estimates Change
+### 1.1 Point-by-Point Verdict on `FACT_CHECK.md`
+### 1.2 Weighing `CLAUDE_REVIEW.md` Against the Log (With Additional Smoking-Gun Evidence)
+### 1.3 Revised Grounded Estimates
+## 2. Point-by-Point Review of `PATH1_PLAN.md` (Keep / Change / Drop)
+## 3. Code Audit: Bugs & Mismatches in `code/` (With Exact Line Numbers & Fixes)
+### Bug 1 (CRITICAL ? `track_ptrepair_odpo_dev.py` `L69?70` & `L108?125`): `ptrepair` Silently Ignores `--rp-exclude-ids`, `--rp-warmup`, `--rp-lr-min`, and `--rp-dpo-seed`!
+### Bug 2 (CRITICAL ? `repair_pairs.py` `L133?138` & `L210?213`): `--kinds mix` Replaces `rpE`'s Proven Compact Correctness Pair with Unfiltered `right_long`/`right_short` and Loses `--prefer-reread`!
+### Bug 3 (HIGH ? `queued_lines.txt` & `repair_pairs.py` `L147?153` vs `L124?126`): Missing `1.20x?1.25x` Shorten Backup in `--kinds mix` and Mismatched Steps vs Quotas in `rpJ`
+### Bug 4 (HIGH ? `repair_pairs.py` `L203?205` & `L210?212`): Round-1 IFEval Counting-Rule Quota Is Not Capped or Guaranteed at 50%
+### Bug 5 (MEDIUM ? `dev_score.py`): Missing Paired Candidate-vs-Reference Bootstrap (`--vs`)
+### Bug 6 (MEDIUM ? `track_ptrepair_odpo_dev.py` `L183?395`): Duplicate Function Definitions in `track_ptrepair_odpo_dev.py`
+## 4. Direct Answers to the 5 Open Questions in `PATH1_PLAN.md`
+### Question 1: Is the relative decision rule for `rpJ` (vs `rpE-80` on Dev-512) sound, and what margin should count?
+### Question 2: Are 3,200 pairs and `lr 1.5e-5` cosine right for Round 1 from the original Qwen?
+### Question 3: Should Round 2 keep the Round-1 model as reference, or the original Qwen?
+### Question 4: How much can a `Dev-512` ranking be trusted given source differences (`GSM8K` vs `SVAMP`, `KodCode` vs `MBPP+`), and is calibrating on `rc1-soup-30` / `rpE-80` enough?
+### Question 5: Any risk in reusing the original's 10 stored answers (`P1_ANSWERS`)? Is the 60 / 40 question split right?
+## 5. How to Make Path 1 as Strong and Safe as Possible (Final Recommended Recipe & First Experiment)
+### 5.1 Plain Warning on the One Flaw That Would Sink Path 1
+### 5.2 Step-by-Step Execution Checklist (Exact Code Changes & Commands)
