@@ -346,6 +346,8 @@ def main():
     parser.add_argument("--ds-name", default="", help="devscore (11 Nov): the name of the scored model's Dev-512 run")
     parser.add_argument("--ds-model", default="", help="devscore: a merged model path / Hub id, or MERGED_OUT=BASE:ADAPTER to build it")
     parser.add_argument("--rp-rollouts-from", default="", help="ptrepair (11 Nov): reuse this run's answers (runs/bon/rp-NAME), new pairs")
+    parser.add_argument("--rp-public", action="store_true", help="ptrepair (11 Nov, user): draws may use the public datasets "
+                        "(MetaMath, math1 / math2 / nofit4); math then SVAMP-like, not full GSM8K")
     parser.add_argument("--rp-gate", default="", help="ptrepair (11 Nov): RUN,REF,MARGIN: run only if Dev-512 saved of RUN >= "
                         "saved of REF + MARGIN (dev512-NAME/dev_score.json); a missing score = gate closed")
     parser.add_argument("--rp-warmup", type=int, default=2, help="ptrepair (11 Nov): DPO warm-up steps")
@@ -3526,7 +3528,7 @@ def polans(args):
 PT_MID = {"svamp": 0.30, "mbpp": 0.45, "ifeval": 0.60, "bfcl": 0.45}  # pt-mid = lpw-pertype merged at these strengths
 
 
-def own_repair_questions(want, seed=0, exclude=None):
+def own_repair_questions(want, seed=0, exclude=None, public=False):
     """(9 Nov, user: "100% not copying michal-bida") The repair's questions from the user's OWN sources only, want[part] per
     test part, drawn at random (the trained model's own 4 answers then decide which give pairs):
       math         GSM8K train + test at EVERY difficulty, in SVAMP's wording (prepare_types.py gsm8k_std; GSM8K is in the
@@ -3538,7 +3540,10 @@ def own_repair_questions(want, seed=0, exclude=None):
     Left out: MetaMath (every metamath_* source), math1, math2, instr2, code2, nofit4 (michal-bida's sources). Every
     question sharing an 8-word sequence with an evaluation question is dropped (as build_pool.py)."""
     from build_pool import ngrams, part_of, words
-    own_extras = ["nofit1", "nofit2", "tools1", "code1"]
+    own_extras = ["nofit1", "nofit2", "tools1", "code1"] + (["nofit4", "math1", "math2"] if public else [])
+    # (11 Nov, user) public=True: the public DATASETS michal-bida also used (MetaMath, the math1 / math2 / nofit4 top-ups built
+    # from GSM8K / MetaMath / xLAM) are allowed (recipes stay off-limits); math then comes from these SVAMP-like sources,
+    # not from full-difficulty GSM8K (harder than the test's SVAMP)
     pool = Path("data/pool-dp13.jsonl")
     used_globs = [f"data/{prefix}*.jsonl" for prefix in ("bon", "bal", "chain", "trapmath", "rlcal", "rl-", "lot-")]
     drive_sync("restore", only=[str(pool), *[str(BON / f"tooltop-{x}" / "questions.jsonl") for x in own_extras], *used_globs])
@@ -3567,9 +3572,9 @@ def own_repair_questions(want, seed=0, exclude=None):
         other += [r | {"id": r.get("pool_id", r.get("id"))} for r in read(BON / f"tooltop-{x}" / "questions.jsonl")]
     for r in gsm_rows + other:
         part = part_of(r)
-        if part not in want or str(r["source"]).startswith("metamath"):
+        if part not in want or (str(r["source"]).startswith("metamath") and not public):
             continue
-        if part == "svamp" and not r["id"].startswith("gsm8k-std-"):  # math only from full-difficulty GSM8K
+        if part == "svamp" and (r["id"].startswith("gsm8k-std-") == public):  # own: full GSM8K only; public: SVAMP-like only
             continue
         key = json.dumps(r["prompt"])
         if key in texts:
@@ -3677,7 +3682,7 @@ def ptrepair(args):
         k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
         per_part = defaultdict(list)
         for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
-                                      exclude=excluded_ids(args)):
+                                      exclude=excluded_ids(args), public=getattr(args, "rp_public", False)):
             per_part[part_of(r)].append(r)
         for part, n in want.items():
             for r in per_part[part][k * n:(k + 1) * n]:
@@ -3815,11 +3820,9 @@ P1_IDS = Path("data/p1-round1-ids.json")
 
 def p1src(args):
     """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen; revised after both reviews) Round 1's material:
-    (a) the original's 10 STORED answers per pool question (runs/bon/P1_ANSWERS), own sources only (no metamath_*, none of the
-        michal-bida top-ups nofit4 / math1 / math2), never a Dev-512 question nor one sharing an 8-word sequence with Dev-512,
-        and 75% of the questions (a fixed hash of the id; the other 25% stay unseen for round 2);
-    (b) full-difficulty math: the pool's own math is ~660 mostly easy questions, so the original answers 2,200 NEW GSM8K
-        questions (gsm8k_std, SVAMP wording; never Dev-512) x 8 here (~3 GPU-hours).
+    the original's 10 STORED answers per pool question (runs/bon/P1_ANSWERS), public datasets allowed (user, 11 Nov: MetaMath
+    and the math1 / math2 / nofit4 top-ups; recipes stay off-limits), never a Dev-512 question nor a near-duplicate of one, and
+    75% of the questions (a fixed hash of the id; the other 25% stay unseen for round 2). No new generation.
     Written as runs/bon/rp-p1src/rollouts.jsonl (+ data/p1-round1-ids.json: round 2 passes --rp-exclude-ids)."""
     import hashlib
     from build_pool import ngrams, words
@@ -3839,8 +3842,8 @@ def p1src(args):
     def near_dev(prompt):  # a near-duplicate: >= 30% of its 8-grams are rare Dev-512 8-grams (the project's contamination rule)
         g = ngrams(words(prompt))
         return bool(g) and len(g & dev_grams) / len(g) >= 0.3
-    tops_banned = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit4", "math1", "math2")]
-    tops_own = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit1", "tools1", "code1", "nofit2")]
+    tops_banned = []  # (11 Nov, user) the public datasets are allowed: nothing banned
+    tops_own = [BON / f"tooltop-{x}" / "questions.jsonl" for x in ("nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2")]
     pool = Path("data/pool-dp13.jsonl")
     drive_sync("restore", only=[str(BON / P1_ANSWERS), str(pool), *[str(t) for t in tops_banned + tops_own]])
     banned, prompt_of = set(), {}
@@ -3869,12 +3872,6 @@ def p1src(args):
                                        "output_tokens", "source") if k not in r]
                 assert not missing, f"the stored answers lack {missing}: cannot build pairs from them"
             qid = r["id"]
-            if str(r["source"]).startswith("metamath"):
-                drop["metamath (michal-bida source)"] += 1
-                continue
-            if qid in banned:
-                drop["michal-bida top-ups"] += 1
-                continue
             if qid in dev:
                 drop["Dev-512"] += 1
                 continue
@@ -3891,28 +3888,10 @@ def p1src(args):
             dst.write(line if line.endswith("\n") else line + "\n")
             n_out += 1
     print(f"p1src: {n_out} of {n_in} stored answers kept ({len(keep_ids)} questions); dropped {dict(drop)}", flush=True)
-    # (b) full-difficulty GSM8K math, answered now by the original x 8
-    math = [r for r in own_repair_questions({"svamp": 2200}, seed=31, exclude=dev)
-            if not near_dev(r["prompt"])]
-    data = Path("data/p1-math.jsonl")
-    data.write_text("".join(json.dumps(r) + "\n" for r in math))
-    mroll = BON / "p1-math"
-    drive_sync("restore", only=[str(mroll)])
-    py("probe_curve.py", "--data", data, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples", 8,
-       "--model", "Qwen/Qwen3-0.6B", "--out", mroll, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
-       "--max-questions", len(math), "--seed", 31)
-    drive_sync("save")
-    n_math = 0
-    with open(out / "rollouts.part", "a") as dst:
-        for line in open(mroll / "rollouts.jsonl"):
-            if line.strip():
-                dst.write(line if line.endswith("\n") else line + "\n")
-                n_math += 1
-    keep_ids |= {r["id"] for r in math}
     (out / "rollouts.part").rename(out / "rollouts.jsonl")
     P1_IDS.parent.mkdir(exist_ok=True)
     P1_IDS.write_text(json.dumps(sorted(keep_ids)))
-    print(f"p1src: + {n_math} answers on {len(math)} new GSM8K questions; round 1 = {len(keep_ids)} questions", flush=True)
+    print(f"p1src: round 1 = {len(keep_ids)} questions", flush=True)
     drive_sync("save")
 
 

@@ -1,7 +1,7 @@
 # Path 1 — final run (queued 11 Nov 2026, ~01:45)
 
-One clean, reproducible 2-round DPO recipe **from the original Qwen3-0.6B**, the model's own answers only, our own data sources
-only (nothing from michal-bida's sources), every choice on our own held-out questions (Dev-512), never on the test or the 720.
+One clean, reproducible 2-round DPO recipe **from the original Qwen3-0.6B**, the model's own answers only, public datasets
+allowed (user, 11 Nov: using the same public datasets as michal-bida is not copying; his recipe stays off-limits), every choice on our own held-out questions (Dev-512), never on the test or the 720.
 Designed from Gemini 4 Argon's two reviews (reviews/consult6_argon/) and an independent Claude review
 (reviews/claude_path1_review.md); both agreed on the changes below.
 
@@ -22,17 +22,18 @@ hard to ~53–57%, round 2 repairs accuracy**, the rc1 → rpE structure collaps
 
 ## Round 1 — shorten-dominant, from the original (GPU 2 seed 0, GPU 1 seed 1)
 
-- **Material (p1src):** the original's 10 stored answers per pool question, own sources only (no MetaMath, none of the
-  nofit4 / math1 / math2 top-ups), never a Dev-512 question or a near-duplicate of one (≥ 30% shared rare 8-grams), 75% of
-  the pool's questions (a fixed hash; the other 25% stay unseen for round 2), plus 2,200 NEW full-difficulty GSM8K questions
-  answered now by the original × 8 (the pool's own math is ~660 mostly easy questions).
+- **Material (p1src):** the original's 10 stored answers per pool question, including the public datasets (MetaMath, the
+  math1 / math2 / nofit4 top-ups: SVAMP-like math, much closer to the test than full-difficulty GSM8K), never a Dev-512
+  question or a near-duplicate of one (≥ 30% shared rare 8-grams), 75% of the questions (a fixed hash; the other 25% stay
+  unseen for round 2). No new generation.
 - **Pairs (repair_pairs.py --kinds mix --mix-preset round1), 3,200:** quotas math 800, code 800, IFEval 800, one function 280,
   several 200, no fit 240. Per type:
   - math and no fit: 60% "shorter right beats longer right" / 40% "compact be-right";
   - code, one / several functions: 70% / 30%;
   - IFEval: 50% / 50%, and counting-rule questions only get counting-rule pairs (the right answer writes at least as much,
     thinks at most 1.2×), never a "shorter" pair.
-  - "Shorter": on questions right ≥ 6 of 10, longest right ≥ 1.35× the shortest (backup 1.20–1.35× if short of supply).
+  - "Shorter": on questions right ≥ 8 of 10 (user, 11 Nov: 6 of 10 lets a 50%-solved question through 38% of the time;
+    8 of 10, 5%), longest right ≥ 1.35× the shortest (backup 1.20–1.35× if short of supply).
   - "Compact be-right" (rpE's proven pair): the shortest right answer that re-reads the question (within 1.5× the shortest),
     else the shortest right, beats the shortest finished wrong answer.
   - Kinds interleaved by share through the file (fixed bug: "shorter" pairs used to come last).
@@ -48,7 +49,7 @@ reviewers' fallback is 60 more round-1 steps at lr 1.5e-5.
 
 ## Round 2 — on-policy repair (after the gate)
 
-- The round-1 model answers ~3,200 NEW own questions × 8 (math 1,000, code 600, IFEval 750, one function 300, several 220, no
+- The round-1 model answers ~3,200 NEW questions × 8 (public datasets allowed; math SVAMP-like) (math 1,000, code 600, IFEval 750, one function 300, several 220, no
   fit 330; never a round-1 or Dev-512 question; seed 0 and seed 1 draw different questions).
 - **Pairs, 1,280:** 25% "shorter" (right ≥ 6/8, ≥ 1.30×) / 60% compact be-right (+ IFEval counting rule) / 15% "don't stop too
   early" (a right answer at ≤ 1.15× the question's median right thinking beats the longest wrong answer under 0.5× of it).
