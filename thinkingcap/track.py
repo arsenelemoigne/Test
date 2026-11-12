@@ -372,6 +372,7 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-beta", type=float, default=0.1, help="ptrepair (12 Nov): DPO beta (was fixed at 0.1)")
     parser.add_argument("--rp-question-file", default="",
                         help="ptrepair (12 Nov): answer exactly these questions (r2prep's data/r2-step2/3-questions.jsonl)")
     parser.add_argument("--rp-rebuild-if-short", action="store_true",
@@ -4163,7 +4164,7 @@ def ptrepair(args):
     steps = 4 if smoke else args.rp_steps
     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
         py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
-           "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", 0.1, "--batch", 16, "--lr", args.rp_lr,
+           "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", getattr(args, "rp_beta", 0.1), "--batch", 16, "--lr", args.rp_lr,
            "--lr-schedule", "cosine", "--warmup", getattr(args, "rp_warmup", 2),
            "--lr-min", args.rp_lr if getattr(args, "rp_lr_min", None) is None else args.rp_lr_min, "--max-steps", steps, "--epochs", args.rp_epochs,
            "--save-every",

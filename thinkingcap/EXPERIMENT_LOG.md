@@ -5907,3 +5907,9 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   step 3 (disjoint). Report per set vs test: solve rate, bins, median / p90 thinking, cut-off share.
 - No question is used twice: step 1 (stored + new IFEval) / step 2 / step 3 are disjoint by construction.
 - Nothing trains; training lines are not queued.
+- ~21:00 (user: "keep constant, we can adjust later"): constant learning rate in all three steps (the schedule of rpE / rpK /
+  rpL / rpM, our best models; Path 1's cosine 2e-5 -> 5e-6 gave 43.4 / -1.5). Defaults written into the go lines: step 1
+  constant 2e-5 after 10 warm-up steps (checkpoints 40-180 then span lighter to stronger doses than Argon's cosine, which
+  averages ~1.25e-5); step 2 = rpK/rpM settings (constant 1e-5, beta 0.1, shorten 1.30x / >= 7/8); step 3 = rpE's repair
+  (constant 1e-5, beta 0.1, equal-length right > wrong + don't-stop-early) + rpM's IFEval rules. Found: ptrepair had beta
+  fixed at 0.1, so consult16's 0.12 / 0.2 would have been ignored; added --rp-beta (default 0.1).
