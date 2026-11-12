@@ -5882,3 +5882,5 @@ hold before r2s1 (it pulls 126bccc at the end of the hold). GPU 1: transfer v2, 
 - ~19:15 (user: "nothing to start until we have the IFEval data ready"): r2s1 now runs with `--rp-pairs-only`: it answers
   the new IFEval questions (plus fill batches), builds and counts the pairs, saves them, and STOPS. Training starts only
   on the user's go, by rerunning the same line without --rp-pairs-only (it then trains on exactly the saved pairs).
+- ~19:30 (user): rpM-60 dropped from transfer v2 (GPU 1). The line is commented out in plan_line_b.txt; the stage already
+  running still holds rpM-60 after the original's answers, so it must be interrupted once the original's answers are saved.
