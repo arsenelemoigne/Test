@@ -122,7 +122,7 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -183,7 +183,7 @@ def main():
                 for k in ("question", "final", "original_prompt"):  # text copies the pair builder never reads
                     r.pop(k, None)
                 groups[r["id"]].append(r)
-    think_only = set(filter(None, args.think_only.split(",")))
+    think_only = set(filter(None, re.split(r"[,+]", args.think_only)))
     decode = None
     if args.prefer_reread:
         from transformers import AutoTokenizer
@@ -192,9 +192,9 @@ def main():
     rereads = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
                                 "right_cr": [], "capguard": [], "right_count": [], "loop": []})  # mix: right_cr = counting-rule OR compact re-read pairs
-    loop_resp_only = set(filter(None, args.loop_response_only.split(",")))
-    guard_wide = set(filter(None, args.guard_wide.split(",")))
-    right_hold = set(filter(None, args.right_hold.split(",")))
+    loop_resp_only = set(filter(None, re.split(r"[,+]", args.loop_response_only)))
+    guard_wide = set(filter(None, re.split(r"[,+]", args.guard_wide)))
+    right_hold = set(filter(None, re.split(r"[,+]", args.right_hold)))
     for qid, q in groups.items():
         part = part_of(q[0])
         # (11 Nov, rpM) with a quota for "svamp_hard", math questions are two parts: "svamp" = the SVAMP-like questions
@@ -400,6 +400,19 @@ def main():
                 sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
                             {"shorten": 0.70, "right": 0.13, "guard": 0.10, "loop": 0.07} if part == "mbpp" else
                             {"shorten": 0.55, "right": 0.375, "guard": 0.0, "loop": 0.075} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+                            {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.20
+            if args.mix_preset == "r2s1":
+                # (12 Nov, recipe 2 step 1, consult16) moderate shortening from the original (target ~47% saved, like rpE-80):
+                # math 40 shorter / 40 be-right / 15 widened guards / 5 loops; code 60 / 20 / 12.5 / 7.5; IFEval 20% counting
+                # pairs (true length rules), the rest 50 shorter / 41.7 be-right / 8.3 response loops; one function 70 / 30,
+                # several 50 / 50, no fit 60 / 40. Thinking-only shortness with the response held (--think-only all parts,
+                # --resp-median 0.95 --resp-max 1.05): Path 1's --resp-guard 0.9 made IFEval responses longer (263 -> 345)
+                sh_share = ({"shorten": 0.40, "right": 0.40, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
+                            {"shorten": 0.60, "right": 0.20, "guard": 0.125, "loop": 0.075} if part == "mbpp" else
+                            {"shorten": 0.50, "right": 0.4167, "guard": 0.0, "loop": 0.0833} if part == "ifeval" else
                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})

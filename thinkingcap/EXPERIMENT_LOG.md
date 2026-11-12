@@ -5790,3 +5790,15 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - 12 Nov ~16:15, transfer v1 **rpL-40** (scored on the Mac): ARC-C 67.9% / -2.6 [-5.1, -0.1]; CSQA 69.2% / -0.8; MMLU 64.2% /
   +1.4; HumanEval 53.9% / +0.5 (runaways 13.7 -> 1.6%); MATH-500 / Skywork 4k artefacts (49.8 / 25.3 vs 10.2 / 3.4).
   Close to rpK-40 (67/-1.8, 69/-0.3, 63/+1.6, 50/-0.7): slightly more saving, ARC a little worse, code a little better.
+- 12 Nov ~16:45 (user: "prepare and launch recipe 2 ... wait before step 2 and before step 3"): **r2s1 = recipe 2 step 1**
+  queued on GPU 2 after its transfer line (rpL-60, ~3 h), then 4 x 30 min holds (waiting for the go to step 2).
+  repair_pairs.py: preset r2s1 (math 40 shorter / 40 be-right / 15 wide guards / 5 loops; code 60/20/12.5/7.5; IFEval 20%
+  counting on true length rules, rest 50/41.7/8.3; one function 70/30, several 50/50, no fit 60/40), shorter ratio 1.40 on
+  questions >= 8/10, thinking-only shortness with the response held (--think-only all parts, --resp-median 0.95,
+  --resp-max 1.05) instead of Path 1's --resp-guard 0.9; list options accept '+' (the plan splits pair args on commas).
+  CPU dry run on the original's stored answers (p1src): 2,668 pairs (IFEval 508 of 720: shorter candidates with a held
+  response are scarce), shortening pairs halve the thinking with the same response (IFEval think 204 vs 403, response 66
+  vs 66; math 341 vs 694; code 447 vs 1,175), chosen/rejected tokens 0.48 overall. Training: lr 2e-5 (cosine to 5e-6,
+  10 warm-up), beta 0.1, 180 steps (~1.08 epochs), Dev-512 + Dev-SVAMP-200 at 120 / 150 / 180 vs rpE-80.
+  Gate (consult16): Dev-512 saved 46-51.5%, Dev accuracy >= +0.8, Dev-SVAMP saved >= 46% / accuracy >= +1.0.
+  track.py: the hold stage existed in the choices but had no function (KeyError): added.

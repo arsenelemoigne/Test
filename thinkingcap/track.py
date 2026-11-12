@@ -4121,6 +4121,18 @@ TRANSFER_V2_SIZES = {"tr_ifbench": 300, "tr_bfcl_live_simple": 120, "tr_bfcl_liv
                      "tr_bbh": 170, "tr_boolq": 200, "tr_math500": 311}
 
 
+def hold(args):
+    """(12 Nov) Keep the runtime alive and idle for --hold-minutes (a plan whose next line is `end`, or an empty queue for
+    12 minutes, stops the runtime). Used to wait for the user's go between steps. The function was missing (KeyError)."""
+    import time
+    minutes = float(getattr(args, "hold_minutes", 30) or 30)
+    print(f"hold: idle {minutes:.0f} min ({getattr(args, 'hold_tag', '')})", flush=True)
+    end = time.time() + 60 * minutes
+    while time.time() < end:
+        time.sleep(min(300, max(1, end - time.time())))
+        drive_sync("save")
+
+
 def transfer(args):
     """(11 Nov, user: "how much does this transfer ... or is it benchmark overfitting?") Benchmarks our training never used nor
     imitated: MATH-500 (whole-number answers), Skywork-OR1 easy math, ARC-Challenge, CommonsenseQA, MMLU, HumanEval. Each model
