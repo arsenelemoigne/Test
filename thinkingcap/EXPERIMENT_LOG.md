@@ -5858,3 +5858,9 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - A 30-min hold was put before r2s1 on GPU 2 while this was switched.
 - Still from him: the 32/16-bit training precision (--bida-precision, a numerical setting). Steps 2/3 draw from the P1 reserve:
   the same two sources must be excluded there before step 2.
+- ~19:50 (user: "are you sure we will have enough data for a full pass?"): NO, not guaranteed. IFEval is limited by its
+  shortening pairs (fixed mix 50%: 360 needed; the stored answers give 203, from 2,206 questions = 0.09 per question;
+  1,200 new questions x8 would give ~110, about 50 short), and reused answers had no fill-until-full. Added an
+  outside-source fill: if a part with --rp-extra-source is still short after the first build, answer up to 2 more batches
+  of that source's leftover questions (max(400, 6 x pairs short) each; the draw holds 4,800) with the same model, rebuild.
+  Checkpoints every 5 steps; Dev-512 + Dev-SVAMP screens at 120 / 150 / 180.

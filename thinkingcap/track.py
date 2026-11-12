@@ -3825,6 +3825,9 @@ def ptrepair(args):
                     random.Random(args.rp_seed).shuffle(keep)
                     print(f"repair {name}: {part_s} extra questions from {src}: {len(keep)} usable, taking {want_x[part_s]}", flush=True)
                     rows_x += keep[:want_x[part_s]]
+                    # (12 Nov) the rest of this draw, for the fill-until-full batches below (reused answers have no other fill)
+                    Path(f"data/repair-{name}-extra-left-{part_s}.jsonl").write_text(
+                        "".join(json.dumps(r) + "\n" for r in keep[want_x[part_s]:]))
                 data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
                 print(f"repair {name}: {len(rows_x)} extra questions (public datasets; ids sv-*), answered by {answerer}", flush=True)
                 py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
@@ -3837,6 +3840,40 @@ def ptrepair(args):
             py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
                "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
         build()
+        # (12 Nov, user: "enough data for a full pass?") reused answers + new questions from an outside source: if a part
+        # with such a source is still short, answer up to 2 more batches of that source's leftover questions and rebuild
+        srcs_fill = {k for k, v in (x.split("=") for x in getattr(args, "rp_extra_source", "").split(",") if x)} \
+            if reuse and getattr(args, "rp_extra_questions", "") and not smoke else set()
+        for extra in range(1, 3 if srcs_fill else 1):
+            short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+            short = {k: v for k, v in short.items() if v > 0 and k in srcs_fill}
+            if not short:
+                break
+            taken = {json.loads(l)["id"] for f in rolls for l in open(f) if l.strip()}
+            rows_x = []
+            for part_s in short:
+                left_f = Path(f"data/repair-{name}-extra-left-{part_s}.jsonl")
+                left = [json.loads(l) for l in (left_f.read_text().splitlines() if left_f.exists() else []) if l.strip()]
+                left = [r for r in left if r["id"] not in taken and f"sv-{r['id']}" not in taken]
+                n_more = min(len(left), max(400, 6 * short[part_s]))
+                rows_x += left[:n_more]
+                left_f.write_text("".join(json.dumps(r) + "\n" for r in left[n_more:]))
+            print(f"repair {name}: outside-source fill, batch {extra}: short {short}; answering {len(rows_x)} more questions",
+                  flush=True)
+            if not rows_x:
+                break
+            data_x = Path(f"data/repair-{name}-xs{extra}.jsonl")
+            roll_x = BON / f"rp-{name}-xs{extra}"
+            data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
+            drive_sync("restore", only=[str(roll_x)])
+            if not (roll_x / "rollouts.jsonl").exists():
+                py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+                   args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+                   "--max-questions", len(rows_x), "--seed", 54 + extra)
+                drive_sync("save")
+            rolls.append(roll_x / "rollouts.jsonl")
+            shutil.rmtree(pairs, ignore_errors=True)
+            build()
         # (11 Nov, user) fill until full: with --kinds mix the proportion is fixed, so a short part means fewer pairs; on an
         # own-question draw, answer MORE new questions for the short parts (up to 2 extra batches) and rebuild
         for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke else 1):
