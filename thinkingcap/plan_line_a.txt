@@ -608,6 +608,12 @@ newtop --name r2b-simple --nt-sources toolace,glaive_tools --nt-parts bfcl_simpl
 newtop --name r2b-multiple --nt-sources toolace,glaive_tools --nt-parts bfcl_multiple --nt-pool=--per-benchmark+20000 --tt-questions 500 --nt-samples 8 --data-seed 42
 newtop --name r2b-nofit --nt-sources glaive_nofit_hard,toolace_near_verified,glaive_nofit_verified --nt-parts bfcl_irrelevance --nt-pool=--per-benchmark+30000 --tt-questions 500 --nt-samples 8 --data-seed 42
 r2prep --r2-tops r2a-math,r2a-code,r2a-ifeval,r2a-simple,r2a-multiple,r2b-ifeval,r2b-math,r2b-simple,r2b-multiple,r2b-nofit --r2-need2 svamp=650,mbpp=410,ifeval=640,bfcl_simple_python=240,bfcl_multiple=180,bfcl_irrelevance=240 --r2-need3 svamp=650,mbpp=360,ifeval=565,bfcl_simple_python=200,bfcl_multiple=160,bfcl_irrelevance=220 --data-seed 42
+# 12 Nov ~21:50 round 3: r2prep had counted every older lineage's repair draw (rpE, rpI, ...) as 'already answered' and so
+# dropped most held-back questions (3,644); now only recipe 2's own step 1 counts. No-fit and easy math still lack new
+# questions at the test's prompt lengths: drawn without the length match (--nt-raw); the difficulty match decides.
+newtop --name r2c-nofit --nt-sources glaive_nofit_hard,toolace_near_verified,glaive_nofit_verified --nt-parts bfcl_irrelevance --nt-raw --nt-pool=--per-benchmark+30000 --tt-questions 500 --nt-samples 8 --data-seed 43
+newtop --name r2c-math --nt-sources gsm8k_easy --nt-parts svamp --nt-raw --nt-pool=--math-mix+gsm8k_easy=1.0+--per-benchmark+8000 --tt-questions 500 --nt-samples 8 --data-seed 43
+r2prep --r2-redo --r2-tops r2a-math,r2a-code,r2a-ifeval,r2a-simple,r2a-multiple,r2b-ifeval,r2b-math,r2b-simple,r2b-multiple,r2c-nofit,r2c-math --r2-need2 svamp=650,mbpp=410,ifeval=640,bfcl_simple_python=240,bfcl_multiple=180,bfcl_irrelevance=240 --r2-need3 svamp=650,mbpp=360,ifeval=565,bfcl_simple_python=200,bfcl_multiple=160,bfcl_irrelevance=220 --data-seed 43
 hold --hold-minutes 30 --hold-tag after-r2s1-1
 hold --hold-minutes 30 --hold-tag after-r2s1-2
 hold --hold-minutes 30 --hold-tag after-r2s1-3

@@ -5932,3 +5932,11 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
 - ~21:30 check-in, GPU 2 step 2/3 top-ups round 2: r2b-ifeval 1,336 questions x8 (original solves 73%; sometimes 460,
   always 698, never 178); r2b-math 65 (full GSM8K is almost all in the pool already: 4,917 of 4,982 dropped); r2b-simple 500
   (solve 95%, easy); r2b-multiple running; then r2b-nofit, r2prep. GPU 1: transfer v2 original's answers, block 2 at 11%.
+- ~21:50 r2prep result (first run) NOT usable: candidates math 338, code 113, no-fit 237 because every older lineage's repair
+  draw (data/repair-rpE/rpI/....jsonl, pool questions) counted as "already answered" (3,644 dropped). Fixed: only recipe 2's
+  own step-1 files count (--r2-used-glob repair-r2s1*.jsonl), also in newtop; the report now shows how many questions came
+  from the right difficulty bin (the old "got" hid borrowing). Round 3 queued: r2c-nofit and r2c-math without the
+  prompt-length match (no-fit / easy-math sources have no new length-matched questions left), r2prep --r2-redo.
+  Top-ups so far: IFEval 135 + 1,336, math 11 + 65, code 3, simple 158 + 500 (solve 95%), several 263 + 500 (77%), no-fit 0.
+- Step 1's 1,200 NEW IFEval questions vs the test's IFEval: solve 68% vs 59%, bins [23, 6, 13, 12, 46] vs [27, 11, 16, 12, 34],
+  median thinking 221 vs 300: EASIER than the test (the stored step-1 IFEval questions: 56% / 284, close to the test).

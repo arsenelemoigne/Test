@@ -274,6 +274,9 @@ def main():
                         help="r2prep: step 3 questions per part")
     parser.add_argument("--r2-tops", default="r2a-math,r2a-code,r2a-ifeval,r2a-tools,r2a-nofit",
                         help="r2prep: newtop sets (runs/bon/tooltop-NAME) added to the held-back questions")
+    parser.add_argument("--r2-used-glob", default="repair-r2s1*.jsonl",
+                        help="r2prep: data/ files whose questions recipe 2 already answered (step 1)")
+    parser.add_argument("--r2-redo", action="store_true", help="r2prep: rebuild even if the question files exist")
     parser.add_argument("--r2-drop", default="source:metamath_sv+origin:xlam-irrelevance+id:nofit4-&source:glaive_tools&origin:",
                         help="r2prep: questions never used (source:X, origin:X, id:PREFIX; '&' = all of, '+' = list)")
     parser.add_argument("--nt-samples", type=int, default=10, help="newtop: answers per question by the original Qwen")
@@ -3451,7 +3454,7 @@ def newtop(args):
         seen = set()
         drive_sync("restore", only=["data/repair-*.jsonl", "runs/bon/tooltop-*/questions.jsonl"])
         for f in [*Path("data").glob("pool-dp*.jsonl"), *BON.glob("tooltop-*/questions.jsonl"),
-                  *[x for x in Path("data").glob("repair-*.jsonl") if "-extra-left-" not in x.name]]:  # (12 Nov) + every
+                  *[x for x in Path("data").glob("repair-r2s1*.jsonl") if "-extra-left-" not in x.name]]:  # (12 Nov) + every
             # question a repair run answered (r2s1's IFEval); NOT the -extra-left- files (unused leftovers of a draw)
             for line in open(f):
                 if line.strip():
@@ -3538,6 +3541,7 @@ def r2_select(cands, test_bins, need2, need3, seed=0):
         for b, q in enumerate(quota):
             got[b] = [x[2] for x in pool[b][:q]]
             pool[b] = pool[b][q:]
+        native = [len(g) for g in got]  # filled from the bin itself, before any borrowing
         for b, q in enumerate(quota):  # borrow for short bins, nearest bin first
             for nb in sorted(range(len(R2_BINS)), key=lambda j: (abs(j - b), j)):
                 while len(got[b]) < q and pool[nb]:
@@ -3548,7 +3552,7 @@ def r2_select(cands, test_bins, need2, need3, seed=0):
             k = round(len(ids) * need2[part] / total) if total else 0
             step2 += ids[:k]
             step3 += ids[k:]
-        out[part] = {"step2": step2, "step3": step3, "quota": quota, "got": [len(g) for g in got]}
+        out[part] = {"step2": step2, "step3": step3, "quota": quota, "got": native, "total": sum(len(g) for g in got)}
     return out
 
 
@@ -3567,7 +3571,7 @@ def r2prep(args):
     out_dir = BON / "r2prep"
     f2, f3 = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl")
     drive_sync("restore", only=[str(out_dir), str(f2), str(f3)])
-    if f2.exists() and f3.exists() and (out_dir / "report.txt").exists():
+    if f2.exists() and f3.exists() and (out_dir / "report.txt").exists() and not args.r2_redo:
         print((out_dir / "report.txt").read_text(), flush=True)
         return
     need2 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need2.split(","))}
@@ -3587,7 +3591,8 @@ def r2prep(args):
                 rows[q.get("pool_id", q.get("id"))] = q
     step1 = set(json.loads(P1_IDS.read_text())) if P1_IDS.exists() else set()
     used = set()  # every question a repair run already answered (r2s1's new IFEval questions and fill batches)
-    for f in [x for x in Path("data").glob("repair-*.jsonl") if "-extra-left-" not in x.name]:  # leftovers were never answered
+    for f in [x for x in Path("data").glob(args.r2_used_glob) if "-extra-left-" not in x.name]:  # leftovers were never answered
+        # (12 Nov) only RECIPE 2's own runs (r2s1): older lineages' repair draws (rpE, rpI, ...) are not part of this recipe
         for l in f.read_text().splitlines():
             if l.strip():
                 q = json.loads(l)
@@ -3647,8 +3652,9 @@ def r2prep(args):
         lines.append(f"\n{part}: TEST {t['questions']} q | solve {100 * t['solve']:.0f}% | bins % "
                      f"{[round(100 * t['bins'][str(i)]) for i in range(len(R2_BINS))]} | median think {t['median_think']:.0f} | "
                      f"p90 {t['p90_think']:.0f} | cut off {100 * t['cutoff']:.1f}%")
-        lines.append(f"   quota per bin {sel[part]['quota']} -> got {sel[part]['got']}"
-                     + ("   ** SHORT: borrowed from neighbour bins **" if sel[part]['got'] != sel[part]['quota'] else ""))
+        lines.append(f"   quota per bin {sel[part]['quota']} -> from the right bin {sel[part]['got']}"
+                     + (f"   ** {sum(sel[part]['quota']) - sum(sel[part]['got'])} borrowed from neighbour bins or missing **"
+                        if sel[part]['got'] != sel[part]['quota'] else "   (exact match)"))
         for step in ("step2", "step3"):
             ids = sel[part][step]
             if not ids:
