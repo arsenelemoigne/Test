@@ -3663,6 +3663,26 @@ def r2prep(args):
                          f"{[round(100 * bins[i] / len(ids)) for i in range(len(R2_BINS))]} | median think "
                          f"{statistics.median(think):.0f} | p90 {sorted(think)[int(0.9 * len(think))]} | cut off "
                          f"{100 * statistics.fmean(stats[q][2] for q in ids):.1f}%")
+    # (12 Nov, user) step 1's NEW IFEval questions (argilla, answered x8 by the original) vs the test's IFEval
+    for name_x in ("rp-r2s1-extra", *[x.name for x in sorted(BON.glob("rp-r2s1-xs*"))]):
+        rx = BON / name_x / "rollouts.jsonl"
+        drive_sync("restore", only=[str(BON / name_x)])
+        if not rx.exists():
+            continue
+        ax = defaultdict(list)
+        for l in open(rx):
+            if l.strip():
+                r = json.loads(l)
+                ax[r["id"]].append((bool(r["correct"]), r2_think_len(r), bool(r.get("truncated"))))
+        rates = [sum(c for c, _, _ in v) / len(v) for v in ax.values()]
+        think = sorted(t for v in ax.values() for _, t, _ in v)
+        bins = Counter(r2_bin(x) for x in rates)
+        lines.append(f"\nstep 1 new IFEval questions ({name_x}): {len(ax)} q | solve {100 * statistics.fmean(rates):.0f}% | bins % "
+                     f"{[round(100 * bins[i] / len(rates)) for i in range(len(R2_BINS))]} | median think "
+                     f"{statistics.median(think):.0f} | p90 {think[int(0.9 * len(think))]} | cut off "
+                     f"{100 * statistics.fmean(x for v in ax.values() for _, _, x in v):.1f}%   (test IFEval: solve "
+                     f"{100 * test['ifeval']['solve']:.0f}%, bins % {[round(100 * test['ifeval']['bins'][str(i)]) for i in range(len(R2_BINS))]}, "
+                     f"median think {test['ifeval']['median_think']:.0f})")
     out_dir.mkdir(parents=True, exist_ok=True)
     for f, step in ((f2, "step2"), (f3, "step3")):
         f.write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n" for p in need2 for q in sel[p][step]))

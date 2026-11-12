@@ -5926,3 +5926,6 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   copied to Colab). Fixed (95ef5b8): profile as test_difficulty_data.py, leftovers not counted; round 2 (r2b-*) queued with
   wider draws (build_pool --per-benchmark 8,000-30,000), math from full GSM8K (gsm8k_std; harder, the difficulty matching
   takes what fits), IFEval from the same draw; code needs scaled to the held-back code questions (step 2 410, step 3 360).
+- ~20:55 (user): step 1 stays rank 16 only (as all runs so far); r2prep's report now also profiles step 1's 1,200 new IFEval
+  questions vs the test's IFEval. metamath_easy (MetaMathQA GSM_Rephrased, ours since dp4) explained to the user, kept unless
+  the user says otherwise.
