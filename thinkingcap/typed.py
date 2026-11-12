@@ -59,6 +59,8 @@ def is_correct(row, text, truncated=False):
         except Exception:  # an unusual schema the checker cannot type: not a usable trace
             return False
     if task == "instructions":
+        if row.get("grader") == "ifbench":
+            return bool(ifbench_checker()(row, reply)[0])
         return bool(ifeval_checker()(row, reply)[0])
     raise ValueError(f"unknown task {task!r}")
 
@@ -75,6 +77,65 @@ def ifeval_checker():
     from utils.eval.benchmarks import paths
     from utils.eval.graders import load_ifeval
     return load_ifeval(paths(QUESTIONS)["ifeval"])
+
+
+# (12 Nov) IFBench (allenai, 58 new instruction types, none in IFEval's registry): its own verifiers, pinned like the harness
+# pins IFEval, graded strictly with the same rules as load_ifeval (final answer only, per-question seed for unset arguments).
+IFBENCH_REVISION = "cd189a9c2889526d8af901d2103fd3e1ffcea6df"
+IFBENCH_FILES = ("ifbench/__init__.py", "ifbench/classic_instructions.py", "ifbench/instructions.py",
+                 "ifbench/instructions_registry.py", "ifbench/instructions_util.py")
+
+
+def ifbench_dir(questions=QUESTIONS):
+    """questions/vendor/ifbench (holding the ifbench package), fetched at IFBENCH_REVISION if missing."""
+    import urllib.request
+    root = Path(questions) / "vendor/ifbench"
+    for name in IFBENCH_FILES:
+        target = root / name
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            url = f"https://raw.githubusercontent.com/allenai/IFBench/{IFBENCH_REVISION}/{name}"
+            with urllib.request.urlopen(url, timeout=120) as response:
+                target.write_bytes(response.read())
+    return root
+
+
+def load_ifbench(root):
+    import importlib
+    import random
+    for module, package in (("emoji", "emoji"), ("syllapy", "syllapy>=0.8.0"), ("langdetect", "langdetect"),
+                            ("immutabledict", "immutabledict"), ("absl", "absl-py")):
+        try:
+            importlib.import_module(module)
+        except ImportError:  # IFBench's verifiers need these; Colab lacks the first two
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", package], check=True)
+    import langdetect
+    langdetect.DetectorFactory.seed = 0
+    from utils.eval.graders import importable
+    with importable(Path(root)):
+        from ifbench import instructions_registry
+
+    def grade(row, reply):
+        if not reply.strip():
+            return False, None
+        for index, instruction_id in enumerate(row["instruction_id_list"]):
+            random.seed(f"{row['id']}:{instruction_id}")
+            instruction = instructions_registry.INSTRUCTION_DICT[instruction_id](instruction_id)
+            arguments = {k: v for k, v in (row["kwargs"][index] or {}).items() if v is not None}
+            instruction.build_description(**arguments)
+            wants = (instruction.get_instruction_args() or {}) if hasattr(instruction, "get_instruction_args") else {}
+            if "prompt" in wants:
+                instruction.build_description(prompt=row["original_prompt"])
+            if not instruction.check_following(reply):
+                return False, None
+        return True, None
+
+    return grade
+
+
+@lru_cache(maxsize=1)
+def ifbench_checker():
+    return load_ifbench(ifbench_dir(QUESTIONS))
 
 
 @lru_cache(maxsize=1)

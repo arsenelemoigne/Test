@@ -58,7 +58,10 @@ def main():
                 "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
-                "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25}
+                "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
+                "tr_bfcl_live_simple": tr_bfcl_live_simple, "tr_bfcl_live_multiple": tr_bfcl_live_multiple,
+                "tr_bfcl_live_irrelevance": tr_bfcl_live_irrelevance, "tr_bbh": tr_bbh, "tr_boolq": tr_boolq,
+                "tr_ifbench": tr_ifbench}
     for source in args.sources.split(","):
         build = builders[source]
         built = list(build(args, rng))
@@ -1068,6 +1071,123 @@ def tr_humaneval(args, rng):
         yield {"source": "tr_humaneval", "task": "code", "answer": "", "grader": "code", "entry_point": name,
                "tests": [r["test"], f"check({name})"], "setup": r["prompt"].split("def " + name)[0],
                "prompt": [{"role": "user", "content": content}], "pool_id": f"tr-he-{r['task_id']}"}
+
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# (12 Nov) TRANSFER v2 (track.py TRANSFER_V2_SIZES): the types the first transfer set lacks, graded by the same checkers the
+# test uses. Tool calls: BFCL's LIVE splits (user-contributed, never in the test's non-live BFCL) at the harness's own gorilla
+# commit, graded by its AST checker. Multiple choice: BIG-Bench Hard (option tasks) and BoolQ in tr_arc_c's format. Instructions:
+# IFBench (58 instruction types new to IFEval), graded by its own verifiers (typed.py grader "ifbench").
+
+def reference_reply(reference):
+    """A BFCL possible answer -> the reply that states it: the first allowed value of each argument, optional ones left out."""
+    (name, arguments), = reference[0].items()
+    given = ", ".join(f"{k}={values[0]!r}" for k, values in arguments.items() if values and values[0] != "")
+    return f"[{name}({given})]"
+
+
+# The test's BFCL prompts reach 6,123 characters; live ones 40k (dozens of functions), which with a 32,768-token answer cap would
+# overflow Qwen3-0.6B's 40,960-token context in one vLLM engine. 12,000 characters (about 3-4k tokens) keeps 93% / 97% of the
+# gradable multiple / no-fit questions and all simple ones.
+BFCL_LIVE_MAX_CHARS = 12000
+
+
+def _bfcl_live(args, rng, category):
+    """BFCL v3 live_<category> (named BFCL_v4_live_* at the pinned commit; same questions), python functions. Kept: one user
+    message (no extra system turn), a prompt of at most BFCL_LIVE_MAX_CHARS, and for simple / multiple one gold call that
+    BFCL's own checker accepts when stated as a reply (reference_reply), so every kept question is gradable."""
+    from utils.eval.benchmarks import REVISIONS, bfcl_system_prompt, collect, paths, read_jsonl
+    from utils.eval.graders import grade_call, load_bfcl
+
+    root = paths(args.questions)["bfcl"]
+    files = [f"bfcl_eval/data/BFCL_v4_live_{category}.json"]
+    if category != "irrelevance":
+        files.append(f"bfcl_eval/data/possible_answer/BFCL_v4_live_{category}.json")
+    collect("https://raw.githubusercontent.com/ShishirPatil/gorilla/"
+            f"{REVISIONS['bfcl']}/berkeley-function-call-leaderboard/", root, files)
+    data = root / "bfcl_eval/data"
+    references = {} if category == "irrelevance" else {
+        r["id"]: r["ground_truth"] for r in read_jsonl(data / f"possible_answer/BFCL_v4_live_{category}.json")}
+    checker, language = load_bfcl(root)
+    for task in read_jsonl(data / f"BFCL_v4_live_{category}.json"):
+        turns = task["question"]
+        if len(turns) != 1 or [m["role"] for m in turns[0]] != ["user"]:
+            continue
+        row = {"source": f"tr_bfcl_live_{category}", "task": "tool", "answer": "", "grader": "bfcl", "category": category,
+               "function": task["function"], "reference": references.get(task["id"]),
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, task["function"])}, turns[0][0]],
+               "pool_id": f"tr-{task['id']}"}
+        if sum(len(m["content"]) for m in row["prompt"]) > BFCL_LIVE_MAX_CHARS:
+            continue
+        if category != "irrelevance":
+            if len(row["reference"]) != 1:
+                continue
+            try:
+                if not grade_call(row, reference_reply(row["reference"]), checker, language)[0]:
+                    continue
+            except Exception:  # a schema the checker cannot type
+                continue
+        yield row
+
+
+def tr_bfcl_live_simple(args, rng):
+    yield from _bfcl_live(args, rng, "simple")
+
+
+def tr_bfcl_live_multiple(args, rng):
+    yield from _bfcl_live(args, rng, "multiple")
+
+
+def tr_bfcl_live_irrelevance(args, rng):
+    yield from _bfcl_live(args, rng, "irrelevance")
+
+
+BBH_OPTION = re.compile(r"^\(([A-Z])\)\s*(.*)$")
+
+
+def tr_bbh(args, rng, per_task=10):
+    """BIG-Bench Hard (lukaemon/bbh, test), the 17 tasks whose answer is one of the listed options, re-labelled "A. text" as
+    tr_arc_c; per_task questions per task drawn with rng (questions whose target is not an option label are dropped first)."""
+    from datasets import get_dataset_config_names, load_dataset
+    for task in sorted(get_dataset_config_names("lukaemon/bbh")):
+        usable = []
+        for k, r in enumerate(load_dataset("lukaemon/bbh", task, split="test")):
+            if "\nOptions:\n" not in r["input"]:
+                continue
+            question, options = r["input"].rsplit("\nOptions:\n", 1)
+            found = [BBH_OPTION.match(line) for line in options.strip().split("\n")]
+            target = re.fullmatch(r"\(([A-Z])\)", r["target"].strip())
+            labels = [m.group(1) for m in found if m]
+            if not all(found) or not target or labels != [chr(65 + i) for i in range(len(labels))] \
+                    or target.group(1) not in labels:
+                continue
+            usable.append(_tr_row(_options(question.strip(), labels, [m.group(2).strip() for m in found]),
+                                  CHOICE_INSTRUCTION_TR, target.group(1), "multiple_choice", "tr_bbh", f"tr-bbh-{task}-{k}")
+                          | {"bbh_task": task})
+        if len(usable) >= per_task:  # tasks without options (yes/no, numbers, words) have none
+            yield from rng.sample(usable, per_task)
+
+
+def tr_boolq(args, rng):
+    """BoolQ (google/boolq, validation): a passage and a yes/no question, as two options A. True / B. False."""
+    from datasets import load_dataset
+    for k, r in enumerate(load_dataset("google/boolq", split="validation")):
+        q = r["question"].strip()
+        question = f"{r['passage'].strip()}\n\nQuestion: {q[:1].upper() + q[1:]}?"
+        yield _tr_row(_options(question, "AB", ["True", "False"]), CHOICE_INSTRUCTION_TR, "A" if r["answer"] else "B",
+                      "multiple_choice", "tr_boolq", f"tr-boolq-{k}")
+
+
+def tr_ifbench(args, rng):
+    """IFBench (allenai/IFBench_test, 300 prompts, 1-2 of 58 instruction types), graded by IFBench's own verifiers: none of
+    its instruction ids is in IFEval's registry, so typed.py's grader "ifbench" (pinned IFBench commit) checks them."""
+    from datasets import load_dataset
+    for r in load_dataset("allenai/IFBench_test", split="train"):
+        kwargs = [{k: v for k, v in (kw or {}).items() if v is not None} for kw in r["kwargs"]]
+        yield {"source": "tr_ifbench", "task": "instructions", "answer": "", "grader": "ifbench",
+               "id": f"tr-ifbench-{r['key']}", "pool_id": f"tr-ifbench-{r['key']}",
+               "instruction_id_list": r["instruction_id_list"], "kwargs": kwargs, "original_prompt": r["prompt"],
+               "prompt": [{"role": "user", "content": r["prompt"]}]}
 
 
 if __name__ == "__main__":

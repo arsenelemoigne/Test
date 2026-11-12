@@ -4114,6 +4114,11 @@ def competitor_model(name, spec):
 
 TRANSFER_FILE = Path("data/transfer.jsonl")
 TRANSFER_SIZES = {"tr_math500": 1000, "tr_skywork": 200, "tr_arc_c": 200, "tr_csqa": 200, "tr_mmlu": 250, "tr_humaneval": 164}
+# (12 Nov) the second, "generalization" set: the types the first lacks (tool calls: BFCL live; instructions: IFBench; more
+# multiple choice: BBH option tasks, BoolQ). Used as --tr-sets v2 --tr-tag v2 (or spelled out as SOURCE=N,...).
+# tr_bbh: 17 of the 27 BBH tasks have option answers, x 10 per task = 170 (270 asked; the other 10 answer yes/no, numbers or words).
+TRANSFER_V2_SIZES = {"tr_ifbench": 300, "tr_bfcl_live_simple": 120, "tr_bfcl_live_multiple": 100, "tr_bfcl_live_irrelevance": 80,
+                     "tr_bbh": 170, "tr_boolq": 200, "tr_math500": 311}
 
 
 def transfer(args):
@@ -4121,6 +4126,8 @@ def transfer(args):
     imitated: MATH-500 (whole-number answers), Skywork-OR1 easy math, ARC-Challenge, CommonsenseQA, MMLU, HumanEval. Each model
     in --tr-models (NAME=SPEC, SPEC as devscore's) answers them x8 (user: as the test); transfer_score.py compares it with the original, per set."""
     global TRANSFER_FILE, TRANSFER_SIZES
+    if args.tr_sets == "v2":  # (12 Nov) shorthand for the second transfer set
+        args.tr_sets = ",".join(f"{k}={v}" for k, v in TRANSFER_V2_SIZES.items())
     if args.tr_sets:  # (12 Nov, user) e.g. AIME 2025 at a 32k cap, as arXiv 2602.20945 measures it
         TRANSFER_SIZES = {k: int(v) for k, v in (x.split("=") for x in args.tr_sets.split(","))}
         TRANSFER_FILE = Path(f"data/transfer-{args.tr_tag or 'x'}.jsonl")
