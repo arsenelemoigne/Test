@@ -5700,3 +5700,5 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - rpN (hold repair on rpL-60) Dev scores: step 15 58.5 / +1.16 (Dev-SVAMP 58.9 / +2.44), step 30 59.7 / +0.71 (Dev-SVAMP
   57.3 / +2.81); paired vs rpL-60 ~0 on both saving and accuracy -> rpN changes nothing measurable; IFEval responses still
   shrink (273 -> 186 -> 157 tokens on Dev). No full test planned.
+- rpN-45: Dev-512 59.9 / +1.28, Dev-SVAMP-200 56.1 / +2.31 -> same as rpL-60 (Dev 58.9 / +0.92). rpN closed: no effect.
+  GPU 1 picked up the new code (6e00d4b): competitor transfer started with bidaREPLICA, base answers to come from GPU 2.
