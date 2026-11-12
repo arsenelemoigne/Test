@@ -5776,3 +5776,14 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   52/-3.3, 50/-0.2, 48/+3.2, 29/-3.8; **rpK-40 67/-1.8, 69/-0.3, 63/+1.6, 50/-0.7 (best balance)**. MATH-500 / Skywork at
   4k measure finishing, not reasoning (original 10.2% / 3.4%): basta 59.6 / 40.6 (finishes most), rpK-40 48.0 / 24.1,
   bidaREPLICA 42.6 / 20.3, matousek850 12.0 / 6.0 (runaways 77% on MATH-500). Uncapped MATH-500 comes in transfer v2.
+- 12 Nov ~15:10: **consult16 (Argon, $3.54, 90 turns) full plan: reviews/consult16_plan/PLAN.md** (+ NOTES.md). Grounded in our
+  code (repair_pairs.py flags, dpo.py --bida-precision, max-len 8704, p1src stored answers), fixed 6 inconsistencies of consult15
+  (checkpoint lists, pair counts vs batch, max-len 2048, --fp16, dropout, --dr-grpo -> --advantage batch). Recipe 1 step 1 =
+  p1src stored answers, 3,200 pairs (47.5% shorten at p>=0.8, 38% be-right+counting, 9% wide guard, 5% loop), lr 2e-5,
+  beta 0.1, 240 steps, Dev gate 53.5-59%; step 2 = 1,280 pairs on fresh answers (no math/code shorten), lr 1e-5, beta 0.15,
+  80 steps. Code to add: track.py --rp-beta + Dev-SVAMP in the 8-gram filter; repair_pairs.py --general-mode (+ prompt regex);
+  rl_train.py --reward gated_sb. All 3 recipes + full tests ~25 GPU-h (12.5 h on 2 L4s).
+  My concern: its step 1 is again a MIXED round from the original (shorten + be-right + guards), close to Path 1 round 1
+  (p1r1s0: 43.4 / -1.5 full; p1cr1s0 Dev 34%), the design consult15 said fails; the main fix vs p1r1s0 is the response guard
+  (worth ~+3.6 pts). Its 53.5-59% Dev forecast for step 1 looks optimistic; recipe 2 (two shortening rounds then repair) is
+  the version consistent with its own analysis.
