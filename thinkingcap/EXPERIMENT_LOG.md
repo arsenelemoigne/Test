@@ -5802,3 +5802,8 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   10 warm-up), beta 0.1, 180 steps (~1.08 epochs), Dev-512 + Dev-SVAMP-200 at 120 / 150 / 180 vs rpE-80.
   Gate (consult16): Dev-512 saved 46-51.5%, Dev accuracy >= +0.8, Dev-SVAMP saved >= 46% / accuracy >= +1.0.
   track.py: the hold stage existed in the choices but had no function (KeyError): added.
+- 12 Nov ~17:05 (user: "we need to fix 2,668 pairs instead of 2,880"): repair_pairs.py --shorten-second PARTS: a question may
+  give a second "shorter" pair on two OTHER answers (rejected = its second-longest right answer, same ratio and response
+  rules). r2s1 uses it on IFEval only. Dry run: exactly 2,880 pairs = Argon's quotas (IFEval 288 shorter / 240 be-right /
+  144 counting / 48 response loops); IFEval shorter pairs still think 204 vs 387 with responses 62 vs 61; at most 2 pairs per
+  question. Plan line updated.

@@ -164,6 +164,9 @@ def main():
     ap.add_argument("--resp-max", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a 'shorter' pair's chosen RESPONSE is at most this x the rejected "
                          "one's (1.05): thinking shorter, response not longer; 0 = no cap")
+    ap.add_argument("--shorten-second", default="",
+                    help="--kinds mix (12 Nov, recipe 2): parts (comma or +) where a question may give a SECOND 'shorter' pair, "
+                         "rejecting its second-longest right answer with another chosen answer (same thresholds); IFEval runs short")
     ap.add_argument("--right-resp-cap", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
                          "one's + 15 tokens (1.10); 0 = no cap")
@@ -195,6 +198,7 @@ def main():
     loop_resp_only = set(filter(None, re.split(r"[,+]", args.loop_response_only)))
     guard_wide = set(filter(None, re.split(r"[,+]", args.guard_wide)))
     right_hold = set(filter(None, re.split(r"[,+]", args.right_hold)))
+    shorten_second = set(filter(None, re.split(r"[,+]", args.shorten_second)))
     for qid, q in groups.items():
         part = part_of(q[0])
         # (11 Nov, rpM) with a quota for "svamp_hard", math questions are two parts: "svamp" = the SVAMP-like questions
@@ -238,6 +242,23 @@ def main():
                         cand[part]["shorten"].append((qid, short, long))
                     elif spread >= 1.20:  # (11 Nov, consult6 2nd review) backup supply if clear shorten pairs run short
                         cand[part]["shorten_soft"].append((qid, short, long))
+                if base_part in shorten_second and len(rights) >= 3 and short is not long:
+                    # (12 Nov) a second pair on two OTHER answers: rejected = the second-longest right answer, chosen = the
+                    # first other answer passing the same response rules; the same ratio thresholds apply
+                    long2 = rights[-2]
+                    if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+                        rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
+                        ok2 = [r for r in rights[:-2] if r is not short and response_len(r) >= args.resp_median * rmed
+                               and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long2))
+                               and response_len(r) >= args.resp_near_long * response_len(long2)]
+                    else:
+                        ok2 = [r for r in rights[:-2] if r is not short]
+                    if ok2:
+                        spread2 = size(long2) / max(1, size(ok2[0]))
+                        if spread2 >= args.shorten_ratio:
+                            cand[part]["shorten"].append((qid, ok2[0], long2))
+                        elif spread2 >= 1.20:
+                            cand[part]["shorten_soft"].append((qid, ok2[0], long2))
             if rights and wrongs:
                 if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
                     taken = set()  # (11 Nov) up to 2 pairs per question, on different answers: counting-rule pairs are the
