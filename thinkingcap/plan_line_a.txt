@@ -599,6 +599,15 @@ newtop --name r2a-simple --nt-sources toolace,glaive_tools --nt-parts bfcl_simpl
 newtop --name r2a-multiple --nt-sources toolace,glaive_tools --nt-parts bfcl_multiple --tt-questions 500 --nt-samples 8 --data-seed 41
 newtop --name r2a-nofit --nt-sources glaive_nofit_hard,toolace_near_verified,glaive_nofit_verified --nt-parts bfcl_irrelevance --tt-questions 500 --nt-samples 8 --data-seed 41
 r2prep --r2-tops r2a-math,r2a-code,r2a-ifeval,r2a-simple,r2a-multiple,r2a-nofit --data-seed 41
+# 12 Nov ~20:50 round 2 of the step 2/3 data (r2a: math / code sources exhausted, IFEval leftovers wrongly counted as used,
+# no-fit draw all already in the pool, test_difficulty.json not copied to Colab): wider draws, fixed exclusion, code needs
+# scaled to the held-back code questions (KodCode-Light is used up; no other code source without the user's OK)
+newtop --name r2b-ifeval --nt-cand data/extra-src-ifeval_like-m4800-s1041.jsonl --nt-parts ifeval --tt-questions 1400 --nt-samples 8 --data-seed 42
+newtop --name r2b-math --nt-sources gsm8k_std --nt-parts svamp --nt-pool=--math-mix+gsm8k_matched=1.0+--per-benchmark+8000 --tt-questions 800 --nt-samples 8 --data-seed 42
+newtop --name r2b-simple --nt-sources toolace,glaive_tools --nt-parts bfcl_simple_python --nt-pool=--per-benchmark+20000 --tt-questions 500 --nt-samples 8 --data-seed 42
+newtop --name r2b-multiple --nt-sources toolace,glaive_tools --nt-parts bfcl_multiple --nt-pool=--per-benchmark+20000 --tt-questions 500 --nt-samples 8 --data-seed 42
+newtop --name r2b-nofit --nt-sources glaive_nofit_hard,toolace_near_verified,glaive_nofit_verified --nt-parts bfcl_irrelevance --nt-pool=--per-benchmark+30000 --tt-questions 500 --nt-samples 8 --data-seed 42
+r2prep --r2-tops r2a-math,r2a-code,r2a-ifeval,r2a-simple,r2a-multiple,r2b-ifeval,r2b-math,r2b-simple,r2b-multiple,r2b-nofit --r2-need2 svamp=650,mbpp=410,ifeval=640,bfcl_simple_python=240,bfcl_multiple=180,bfcl_irrelevance=240 --r2-need3 svamp=650,mbpp=360,ifeval=565,bfcl_simple_python=200,bfcl_multiple=160,bfcl_irrelevance=220 --data-seed 42
 hold --hold-minutes 30 --hold-tag after-r2s1-1
 hold --hold-minutes 30 --hold-tag after-r2s1-2
 hold --hold-minutes 30 --hold-tag after-r2s1-3

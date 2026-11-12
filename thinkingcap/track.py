@@ -3451,7 +3451,8 @@ def newtop(args):
         seen = set()
         drive_sync("restore", only=["data/repair-*.jsonl", "runs/bon/tooltop-*/questions.jsonl"])
         for f in [*Path("data").glob("pool-dp*.jsonl"), *BON.glob("tooltop-*/questions.jsonl"),
-                  *Path("data").glob("repair-*.jsonl")]:  # (12 Nov) + every question a repair run answered (r2s1's IFEval)
+                  *[x for x in Path("data").glob("repair-*.jsonl") if "-extra-left-" not in x.name]]:  # (12 Nov) + every
+            # question a repair run answered (r2s1's IFEval); NOT the -extra-left- files (unused leftovers of a draw)
             for line in open(f):
                 if line.strip():
                     seen.add(json.dumps(json.loads(line).get("messages") or json.loads(line).get("prompt"), sort_keys=True))
@@ -3573,7 +3574,7 @@ def r2prep(args):
     need3 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need3.split(","))}
     drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
     tops = [x for x in args.r2_tops.split(",") if x]
-    test = json.loads(TEST_DIFFICULTY.read_text())
+    from test_difficulty_data import TEST_DIFFICULTY as test  # (12 Nov) a .py: Colab copies only *.py and plan files
     extras = ("nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2")
     pool_f = Path("data/pool-dp13.jsonl")
     drive_sync("restore", only=[str(BON / P1_ANSWERS), str(pool_f), str(P1_IDS), "data/repair-*.jsonl",
@@ -3586,7 +3587,7 @@ def r2prep(args):
                 rows[q.get("pool_id", q.get("id"))] = q
     step1 = set(json.loads(P1_IDS.read_text())) if P1_IDS.exists() else set()
     used = set()  # every question a repair run already answered (r2s1's new IFEval questions and fill batches)
-    for f in Path("data").glob("repair-*.jsonl"):
+    for f in [x for x in Path("data").glob("repair-*.jsonl") if "-extra-left-" not in x.name]:  # leftovers were never answered
         for l in f.read_text().splitlines():
             if l.strip():
                 q = json.loads(l)
