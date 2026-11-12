@@ -5807,3 +5807,7 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   rules). r2s1 uses it on IFEval only. Dry run: exactly 2,880 pairs = Argon's quotas (IFEval 288 shorter / 240 be-right /
   144 counting / 48 response loops); IFEval shorter pairs still think 204 vs 387 with responses 62 vs 61; at most 2 pairs per
   question. Plan line updated.
+- 12 Nov ~17:15 (user): r2s1's "don't stop early" guard follows consult16: the rejected wrong answer thinks under 0.75x the
+  question's median right thinking (new --guard-wide-max, default 0.95 = rpM's). Dry run: still 2,880 pairs, no shortfall;
+  guard candidates math 582 / code 387 (were 947 / 606 at 0.95); the 108 math guards: chosen 940 vs rejected 541 thinking
+  tokens, the 90 code guards 1,295 vs 794.

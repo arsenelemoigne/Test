@@ -155,6 +155,9 @@ def main():
                     help="--kinds mix (rpM): parts (comma) whose 'don't stop early' guard is widened: the rejected wrong answer thinks "
                          "under 0.95x the question's median right thinking (was 0.5x), the chosen right answer 0.95-1.25x. The "
                          "full test showed the new math errors think 0.5-1.0x as long as a right answer (a skipped re-check)")
+    ap.add_argument("--guard-wide-max", type=float, default=0.95,
+                    help="(12 Nov, recipe 2 / consult16) with --guard-wide: the rejected wrong answer thinks under this x the "
+                         "question's median right thinking (rpM used 0.95; consult16's plan 0.75)")
     ap.add_argument("--right-hold", default="",
                     help="--kinds mix (rpM): parts (comma) whose be-right pair takes a right answer thinking 0.95-1.25x as long as "
                          "the rejected wrong one (else the right answer nearest the median), never the shortest right answer")
@@ -303,7 +306,7 @@ def main():
                         capped = sorted((r for r in rights if 0.95 * tmed <= thinking_len(r) <= 1.25 * tmed), key=thinking_len)
                         # the rejected answer: the wrong one nearest 0.75x the median right thinking (a clear, bounded gap),
                         # listed last so that the line below takes it
-                        early = sorted((w for w in wrongs if thinking_len(w) < 0.95 * tmed),
+                        early = sorted((w for w in wrongs if thinking_len(w) < args.guard_wide_max * tmed),
                                        key=lambda w: -abs(thinking_len(w) - 0.75 * tmed))
                     else:
                         capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
