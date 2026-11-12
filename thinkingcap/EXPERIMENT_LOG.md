@@ -5752,3 +5752,13 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   Earlier the same day: tagged transfer runs use a 32,768 cap on MATH-500 / Skywork (the original truncated >50% at 4,096).
 - First transfer score (computed on the Mac): bidaREPLICA vs original, x8: ARC-C 52% saved / -3.3; CSQA 50% / -0.2; MMLU 48% /
   +3.2; HumanEval 29% / -3.8; MATH-500 22% / +32 and Skywork 11% / +17 are truncation artefacts (original runs out at 4,096).
+- 12 Nov ~12:35: **consult15 (Argon, $3.02, 106 turns, 2 conversations, notes 17 KB kept) report: reviews/consult15_clean/REPORT.md**
+  (+ NOTES.md). New finding from the per-answer tables: p1r1s0's IFEval saving was only 22.5% because --resp-guard 0.9 chose the
+  longer response in 76% of IFEval pairs: response 263 -> 345 tokens, response runaways 2.9% -> 5.0%; fixing that alone would
+  have lifted p1r1s0 from 43.4% to ~47.1% overall. Recipes (all from the original, per-question rules, no benchmark names):
+  (1) 2-step DPO: confidence-gated shortening (c>=5 shortest vs longest; c 3-4 safe shortening; loop killer) with response
+  neutrality (longer responses only on prompts with an explicit minimum-length rule), lr 5e-5, ~240 steps -> 53.5-56.5 / -2.1..-2.8;
+  then on fresh answers: length-matched be-right (+/-15% of median), premature-cut guard, residual trim on c>=7, loop + min-length
+  guard, 80 steps, beta 0.2 -> forecast 52.5-54.8 / -0.5..-0.9. (2) 3-step: two on-policy shortening rounds (~47 -> ~57) then
+  pure repair. (3) confidence-gated ShorterBetter Dr. GRPO then repair DPO. Cheapest test: CPU pair-rebuild audit on the
+  original's stored answers, then a 220-step step-1 screen on Dev-512 (gate >= 52.5% saved, IFEval response <= 235).
