@@ -5827,3 +5827,5 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   --rp-extra-source, whether 1,200 new IFEval questions reach 288 shorter pairs, settings to change, expected Dev / full test.
 - 12 Nov ~17:45 (user: "drop it, we know it transfers"): AIME 2025 dropped (32k cap: ~9 h for the original's 240 answers
   alone at ~120 tok/s, KV-cache bound). GPU 1 goes straight to transfer v2 (original + rpM-60).
+- 12 Nov ~17:55: GPU 1 restarted on transfer v2 (finished plan lines commented out first); question build OK: IFBench 300,
+  BFCL live 120 / 100 / 80 (of 229 / 935 / 807), BBH 170, BoolQ 200, MATH-500 311 at a 32,768 cap; the original answering.
