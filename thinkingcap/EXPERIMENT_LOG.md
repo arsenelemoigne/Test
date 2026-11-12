@@ -5978,3 +5978,20 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
 - ~23:55 check-in: r2d-ifeval 1,524 built questions x8, original solves 67% (sometimes 610, always 674, never 240: a much
   wider spread than argilla's). r2f-ifeval: 11,996 prompts from 3,921 Dolly + OpenAssistant requests -> 6,728 at the test's
   lengths -> 2,333 after the request check; answering.
+
+## 13 Nov ~00:30 — od2 (online DPO from the ORIGINAL, 10 rounds) results, recovered from Drive (never logged before)
+od2 ran all 10 rounds (finished 11 Nov ~13:20 on GPU 1) but only rounds 2 and 4 were logged. 720 x4 (s4-od2-rK-10/compare.json,
+macro average of the 4 families):
+| round (steps) | saved / acc | math | code | IFEval | simple | several | no-fit |
+|---|---|---|---|---|---|---|---|
+| 2 (20) | 11.0 / -0.8 | | | | | | |
+| 4 (40) | 29.3 / -1.0 | | | | | | |
+| 6 (60) | 42.5 / -3.8 | 58 / -6.0 | 44 / -3.5 | 32 / -2.9 | 28 / -2.7 | 31 / -1.9 | 32 / -3.1 |
+| 8 (80) | 54.6 / -5.0 | 71 / -12.7 | 61 / -4.0 | 38 / -0.8 | 37 / -4.0 | 40 / +1.3 | 42 / -4.6 |
+| 10 (100) | 67.1 / -5.6 | 81 / -11.9 | 79 / -3.5 | 46 / -3.8 | 44 / -4.0 | 48 / -1.5 | 50 / -4.8 |
+Below the frontier at every round after 4 (rpE-80 on the same 720: 50.4 / -0.2; one offline round from the original, Path 1:
+~43-46 / about -1.5). The loop never stops shortening and accuracy falls steadily, math collapsing (-12). Likely reasons in its
+design: only two pair kinds (shortest right > shortest wrong; shortest right > longest right on questions right >= 6/8 of the
+time, a low bar), 160 pairs and 10 steps per round, no math / IFEval protection, and the REFERENCE reset to each round's start
+(the DPO anchor moves every round, so nothing holds the model near the original across rounds). Its draws also did not
+exclude Dev-512. consult9 (11 Nov morning) had called it low value before these rounds were scored.
