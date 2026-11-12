@@ -5688,3 +5688,9 @@ Dev-512 had read 62.1 / -0.30 (saving right, accuracy ~1.8 too kind). rpL line: 
   Table 2: Qwen3-0.6B 14.9k -> 8.9k tokens, Mean@8 13.3 -> 24.6, Pass@8 26.7 -> 36.7, 32k budget). transfer stage gained
   --tr-sets / --tr-max-tokens / --tr-tag; prepare_types.py tr_aime25 (math-ai/aime25, 30 problems). Queued on GPU 2 after the
   rpM-60 transfer line: 30 x 8 answers per model at a 32,768-token cap, our "Final answer:" format (the paper uses \boxed{}).
+
+### 12 Nov ~02:10 — rpM-20 full test (2,759 x 8, GPU 1): in the box, just
+rpM-20: **tokens saved +50.1% [48.9, 51.3], accuracy -0.94 pts [-1.64, -0.27]**. Per type: bfcl_irrelevance +54% / +3.5;
+bfcl_multiple +42% / -0.6; bfcl_simple_python +39% / +0.3; ifeval +47% / -2.6; mbpp +52% / -0.7; svamp +56% / -1.5.
+rpM line: step 20 50.1 / -0.94, step 60 54.1 / -0.93 -> 40 more steps bought +4 pts saving at no accuracy cost. rpM-40 52.9 / -1.10
+sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too kind).
