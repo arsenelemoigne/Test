@@ -361,6 +361,8 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-rebuild-pairs", action="store_true",
+                        help="ptrepair (12 Nov): rebuild the pairs from the saved answers (old pairs kept as pairs-NAME-prev)")
     parser.add_argument("--rp-pairs-only", action="store_true",
                         help="ptrepair (12 Nov, user): stop after the answers and pairs; the same line without it trains on them")
     parser.add_argument("--rp-require-full", action="store_true",
@@ -3760,6 +3762,11 @@ def ptrepair(args):
         drive_sync("save")
     pairs = BON / f"pairs-{args.rp_from or name}"
     drive_sync("restore", only=[str(pairs)])
+    if getattr(args, "rp_rebuild_pairs", False) and (pairs / "pairs.jsonl").exists():  # (12 Nov) answers kept, pairs rebuilt
+        old_dir = pairs.with_name(pairs.name + "-prev")
+        shutil.rmtree(old_dir, ignore_errors=True)
+        shutil.move(str(pairs), str(old_dir))
+        print(f"repair {name}: --rp-rebuild-pairs: previous pairs moved to {old_dir}; answers reused", flush=True)
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
         rolls = [roll / "rollouts.jsonl"]
@@ -3774,8 +3781,9 @@ def ptrepair(args):
                         continue
                     n_in += 1
                     r = json.loads(l)
-                    if any(r.get("source") == d[len("source:"):] if d.startswith("source:") else
-                           str(r.get("id", "")).startswith(d[len("id:"):]) for d in drops):
+                    # an item matches when ALL its &-joined conditions do (e.g. id:nofit4-&source:glaive_tools)
+                    if any(all(r.get("source") == c[len("source:"):] if c.startswith("source:") else
+                               str(r.get("id", "")).startswith(c[len("id:"):]) for c in d.split("&")) for d in drops):
                         continue
                     dst_f.write(l)
                     n_out += 1
