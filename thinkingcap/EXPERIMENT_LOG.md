@@ -6031,3 +6031,6 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
   loops (20 at round 6) then by stopping early (99 at round 10, median 0.28x); IFEval stopped-early 30 -> 56 -> 88; tool calls
   also break format (unparseable 6-14 per type). Consistent with its design: shorten pairs on questions right only 6/8, no
   length-held right-vs-wrong / anti-loop / format pairs, a moving reference, no gate between rounds.
+- ~01:05 (user): consult18 launched (Gemini 4 Argon via OpenRouter, cap $15): ONE new strategy for GPU 1, a different bet from
+  recipe 2, full executable plan on one L4. Pack = consult17's + NEW_RESULTS_13nov.md (recipe 2 state, od2 recovered results and
+  failure analysis, RL record, the user's arena idea, generalization) + the current log and code. No BottleCap notes.
