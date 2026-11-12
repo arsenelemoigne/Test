@@ -6040,3 +6040,6 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
   r2e-nofit, r2prep, r2s1b. consult18 at turn 15 ($0.34).
 - ~00:30 (user: "drop what was planned on GPU 1, it took too much time"): transfer v2 (the original's answers, then rpM-60)
   DROPPED; plan_line_b.txt now holds only `end`. GPU 1 is free for consult18's strategy (runtime still disconnected).
+- ~00:55 check-in: GPU 2 still answering r2f-ifeval (2,333 built questions x8, ~2,300 tok/s). GPU 1: user granted Drive;
+  setup cells done (scripts at f6690ad), plan running on the keep-alive holds. consult18: turn ~85, ~$2.4, one provider error
+  being retried.
