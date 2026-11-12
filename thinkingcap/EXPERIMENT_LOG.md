@@ -5818,3 +5818,7 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   Dev-512 / Dev-SVAMP-200 near-duplicates (new dev_svamp_gram_set()). Their answers join p1src's for the pair build (ids sv-*).
   Cost ~1.5-2.5 GPU-hours on GPU 2 before training (IFEval answers ~700 tokens, 9,600 answers). Untested on the Mac (needs the
   harness + datasets): watch the first lines of r2s1 on GPU 2.
+- 12 Nov ~16:50, transfer v1 **rpM-60** (GPU 1): ARC-C 68.7% / -1.7 [-4.3, +0.9]; CSQA 70.1% / -0.7; MMLU 64.1% / +2.1;
+  HumanEval 56.0% / -0.2 [-3.0, +2.4] (runaways 13.7 -> 1.1%). Best of all models on the honest sets (most saving, every
+  change inside noise). MATH-500 4k artefact 45.2 (levels: L1 59.5% saved, L5 18.5% saved = it thinks longer on harder
+  problems). AIME 2025 started on GPU 1.
