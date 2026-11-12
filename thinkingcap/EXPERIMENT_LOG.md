@@ -5694,3 +5694,9 @@ rpM-20: **tokens saved +50.1% [48.9, 51.3], accuracy -0.94 pts [-1.64, -0.27]**.
 bfcl_multiple +42% / -0.6; bfcl_simple_python +39% / +0.3; ifeval +47% / -2.6; mbpp +52% / -0.7; svamp +56% / -1.5.
 rpM line: step 20 50.1 / -0.94, step 60 54.1 / -0.93 -> 40 more steps bought +4 pts saving at no accuracy cost. rpM-40 52.9 / -1.10
 sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too kind).
+- 12 Nov ~03:40, balance: GPU 2's transfer of the original takes ~5.5 h (chunks of 300 q x8 at ~950 tok/s). GPU 1's
+  competitor transfer would have regenerated the same base answers; new --tr-wait-base: it answers with its models first,
+  then waits for GPU 2's base answers on Drive and scores. rpM-60's transfer and the AIME 2025 run moved to GPU 1.
+- rpN (hold repair on rpL-60) Dev scores: step 15 58.5 / +1.16 (Dev-SVAMP 58.9 / +2.44), step 30 59.7 / +0.71 (Dev-SVAMP
+  57.3 / +2.81); paired vs rpL-60 ~0 on both saving and accuracy -> rpN changes nothing measurable; IFEval responses still
+  shrink (273 -> 186 -> 157 tokens on Dev). No full test planned.

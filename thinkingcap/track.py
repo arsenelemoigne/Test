@@ -362,6 +362,8 @@ def main():
     parser.add_argument("--rp-extra-questions", default="", help="ptrepair (11 Nov, rpM): with --rp-rollouts-from, ALSO draw these "
                         "new own questions (part=n,..., public datasets, never a dev question) and let the base model answer "
                         "them; their ids get the prefix sv- (repair_pairs.py: SVAMP-like math 'svamp' vs the reused hard 'svamp_hard')")
+    parser.add_argument("--tr-wait-base", action="store_true", help="transfer (12 Nov): do not generate the original's answers here; "
+                        "answer with the listed models first, then wait for the other GPU's base answers on Drive (up to 14 h) and score")
     parser.add_argument("--tr-sets", default="", help="transfer (12 Nov): SOURCE=N,... instead of the default transfer sets "
                         "(e.g. tr_aime25=30); its own question file and output folders (transfer-<tag>-NAME)")
     parser.add_argument("--tr-max-tokens", type=int, default=4096, help="transfer: token cap for non-code questions (AIME: 32768)")
@@ -4137,11 +4139,21 @@ def transfer(args):
         drive_sync("save")
     rows = [l for l in TRANSFER_FILE.read_text().splitlines() if l.strip()]
     outs = []
-    for item in ["base=Qwen/Qwen3-0.6B"] + list(args.tr_models):
+    items = list(args.tr_models) + ["base=Qwen/Qwen3-0.6B"] if args.tr_wait_base else ["base=Qwen/Qwen3-0.6B"] + list(args.tr_models)
+    for item in items:
         name, spec = item.split("=", 1)
         out = BON / (f"transfer-{args.tr_tag}-{name}" if args.tr_sets else f"transfer-{name}")
         drive_sync("restore", only=[str(out)])
-        if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
+        complete = lambda: (out / "rollouts.jsonl").exists() and sum(1 for _ in open(out / "rollouts.jsonl")) >= 8 * len(rows)  # noqa: E731
+        if args.tr_wait_base and name == "base":
+            import time
+            for _ in range(14 * 6):  # the other GPU writes the original's answers; poll Drive every 10 minutes
+                if complete():
+                    break
+                print("transfer: waiting for the original's answers from the other GPU", flush=True)
+                time.sleep(600)
+                drive_sync("restore", only=[str(out)])
+        if not complete():
             model = spec
             if spec.startswith(("hf:", "hflora:", "zip:")):  # (11 Nov, user) a competitor's PUBLIC weights, for comparison only
                 model = competitor_model(name, spec)
@@ -4159,6 +4171,8 @@ def transfer(args):
                "--max-questions", len(rows), "--seed", 61)
             drive_sync("save")
         outs.append((name, out))
+    if args.tr_wait_base:
+        outs = outs[-1:] + outs[:-1]  # the original first, as the scorer expects
     for name, out in outs[1:]:
         run(sys.executable, "transfer_score.py", "--base", outs[0][1] / "rollouts.jsonl", "--cand", out / "rollouts.jsonl",
             "--name", name, "--out", out / "transfer_score.json", "--questions", TRANSFER_FILE)
