@@ -5845,3 +5845,16 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - 12 Nov ~18:35 (user: yes to A): r2s1 without widened guards: math 55 shorter / 40 be-right / 5 loops, code 70 / 22.5 / 7.5
   (--guard-wide removed from the command). Dry run on the stored answers: math 396 / 288 / 36, code 504 / 162 / 54, tool calls
   full; IFEval 508 of 720 locally (the 1,200 new IFEval questions fill it on the GPU).
+
+## 12 Nov ~19:30 — r2s1 cleaned of michal-bida's data (user: "we should not do this")
+- New IFEval questions (fill to 720 pairs): `--rp-extra-source ifeval=ifeval_like` = argilla/ifeval-like-data drawn IFEval-matched
+  (instruction count and id shares of IFEval's 541; Dolly-based prompts from IFEval's instruction library for the rare ids),
+  4,800 drawn with seed 1041, minus the pool's prompts, the test's rare 8-grams and Dev near-duplicates, 1,200 taken.
+  ifeval_bida (AllenAI IF_multi_constraints + RLVR-IFeval, his two sources) is no longer used anywhere in recipe 2.
+- Stored answers: `--rp-drop source:metamath_sv+id:nofit4-` leaves out MetaMathQA GSM_SV/FOBAR (his math mix) and the
+  nofit4 top-up (built with his xLAM irrelevance source): 105,720 of 133,810 stored answers kept.
+  Mac dry run: every quota still fills exactly (math 396/288/36, code 504/162/54, simple 182/78, multiple 110/110,
+  no-fit 144/96 (shorten candidates 117 clear + 41 backup vs 429 + 156 before); IFEval 508 locally, filled by the new questions).
+- A 30-min hold was put before r2s1 on GPU 2 while this was switched.
+- Still from him: the 32/16-bit training precision (--bida-precision, a numerical setting). Steps 2/3 draw from the P1 reserve:
+  the same two sources must be excluded there before step 2.

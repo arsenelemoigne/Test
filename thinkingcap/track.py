@@ -359,6 +359,9 @@ def main():
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
     parser.add_argument("--rp-dev-svamp", action="store_true", help="ptrepair (11 Nov): with --rp-dev, also score each step on "
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
+    parser.add_argument("--rp-drop", default="",
+                        help="ptrepair (12 Nov, user): with --rp-rollouts-from, leave out stored answers: source:NAME or id:PREFIX, "
+                        "list joined by commas (r2s1: source:metamath_sv,id:nofit4- = michal-bida's MetaMath SV/FOBAR and xLAM no-fit picks)")
     parser.add_argument("--rp-extra-source", default="",
                         help="ptrepair (12 Nov, recipe 2): PART=SOURCE,... the extra questions of these parts come from a prepare_types.py "
                         "source that is NOT in the pool (e.g. ifeval=ifeval_like: argilla ifeval-like-data drawn IFEval-matched, our own source; never ifeval_bida), "
@@ -3754,6 +3757,24 @@ def ptrepair(args):
     if not (pairs / "pairs.jsonl").exists():
         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
         rolls = [roll / "rollouts.jsonl"]
+        drops = [x for x in re.split(r"[,+]", getattr(args, "rp_drop", "")) if x]
+        if drops and reuse:  # (12 Nov, user: no michal-bida data) leave out the answers of these sources / id prefixes
+            kept_f = BON / f"rp-{name}-kept" / "rollouts.jsonl"
+            kept_f.parent.mkdir(parents=True, exist_ok=True)
+            n_in = n_out = 0
+            with open(roll / "rollouts.jsonl") as src_f, open(kept_f, "w") as dst_f:
+                for l in src_f:
+                    if not l.strip():
+                        continue
+                    n_in += 1
+                    r = json.loads(l)
+                    if any(r.get("source") == d[len("source:"):] if d.startswith("source:") else
+                           str(r.get("id", "")).startswith(d[len("id:"):]) for d in drops):
+                        continue
+                    dst_f.write(l)
+                    n_out += 1
+            print(f"repair {name}: --rp-drop {drops}: kept {n_out} of {n_in} stored answers", flush=True)
+            rolls = [kept_f]
         if getattr(args, "rp_extra_questions", "") and reuse:  # (11 Nov, rpM) new SVAMP-like math beside the reused answers
             want_x = {k: int(v) for k, v in (x.split("=") for x in args.rp_extra_questions.split(","))}
             roll_x = BON / f"rp-{name}-extra"
