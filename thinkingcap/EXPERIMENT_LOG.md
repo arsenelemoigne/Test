@@ -5829,3 +5829,15 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   alone at ~120 tok/s, KV-cache bound). GPU 1 goes straight to transfer v2 (original + rpM-60).
 - 12 Nov ~17:55: GPU 1 restarted on transfer v2 (finished plan lines commented out first); question build OK: IFBench 300,
   BFCL live 120 / 100 / 80 (of 229 / 935 / 807), BBH 170, BoolQ 200, MATH-500 311 at a 32,768 cap; the original answering.
+- 12 Nov ~18:00: **consult17 (Argon, $2.69) review of r2s1: reviews/consult17_r2s1/REVIEW.md.** Matches its plan on every
+  quota and rule except: cached p1src not filtered against Dev-SVAMP-200; --resp-near-long 0.95 added; shorten backup 1.20x
+  (plan 1.30x); --rp-epochs 2 (plan 1); no general mode; hard mix (user). Bugs: (1) the new extra-source block reads
+  questions/questions.jsonl without the guard own_repair_questions has (crash on a fresh runtime); (2) pool dedup misses
+  tooltop-* (instr2 already drew 2,000 ifeval_bida questions on 2 Nov); (3) dev_gram_set() should include Dev-SVAMP for every
+  caller; (4) fill-until-full is dead under --rp-rollouts-from; (5) other parts' pair picks change (one rng). Estimate:
+  1,200 new IFEval x8 give ~105-150 more shorter candidates -> 288 reached with ~98% probability.
+  **Critical warning: r2s1 as queued will likely UNDER-shorten (~33-37% Dev-512), like p1cr1s0 (34.6 / 32.4 / 34.4% with
+  6.6% widened guards + loops from the original); p1r1s0 without widened guards reached 47.5% at step 100.** Its fixes:
+  A) drop the widened guards in step 1 (keep them for steps 2-3, as in rpM) and raise shorter shares (math 55/40/5, code
+  70/22.5/7.5) -> expected 46.5-50.5% Dev; B) remove --no-shorten-counting and --resp-near-long -> 338 IFEval shorter
+  candidates from p1src alone (no new generation); C) --rp-epochs 1.
