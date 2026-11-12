@@ -5929,3 +5929,6 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
 - ~20:55 (user): step 1 stays rank 16 only (as all runs so far); r2prep's report now also profiles step 1's 1,200 new IFEval
   questions vs the test's IFEval. metamath_easy (MetaMathQA GSM_Rephrased, ours since dp4) explained to the user, kept unless
   the user says otherwise.
+- ~21:30 check-in, GPU 2 step 2/3 top-ups round 2: r2b-ifeval 1,336 questions x8 (original solves 73%; sometimes 460,
+  always 698, never 178); r2b-math 65 (full GSM8K is almost all in the pool already: 4,917 of 4,982 dropped); r2b-simple 500
+  (solve 95%, easy); r2b-multiple running; then r2b-nofit, r2prep. GPU 1: transfer v2 original's answers, block 2 at 11%.
