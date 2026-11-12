@@ -5884,3 +5884,9 @@ hold before r2s1 (it pulls 126bccc at the end of the hold). GPU 1: transfer v2, 
   on the user's go, by rerunning the same line without --rp-pairs-only (it then trains on exactly the saved pairs).
 - ~19:30 (user): rpM-60 dropped from transfer v2 (GPU 1). The line is commented out in plan_line_b.txt; the stage already
   running still holds rpM-60 after the original's answers, so it must be interrupted once the original's answers are saved.
+- ~19:45 (user: stop after the data and wait for the go): queued right after r2s1 the same line with
+  `--rp-rebuild-if-short --rp-drop source:metamath_sv+id:nofit4-&source:glaive_tools`: if r2s1's pairs are under 2,880
+  (no-fit is the tight part: the GPU's p1src has 126,680 answers vs 133,810 in the Mac copy; Mac dry run margin 4 be-right),
+  the pairs are rebuilt from the same answers (IFEval answers and fill batches reused) keeping nofit4's ToolACE no-fit rows
+  (our builder) and dropping only its Glaive-labelled rows (xLAM + Glaive hard). Mac dry run: no-fit shorten candidates
+  241 + 96 for 144, be-right 140 for 96. If already full it does nothing. Both lines stop before training (--rp-pairs-only).

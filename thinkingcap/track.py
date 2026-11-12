@@ -361,6 +361,8 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-rebuild-if-short", action="store_true",
+                        help="ptrepair (12 Nov): rebuild the pairs (answers reused) only if the saved ones are fewer than --rp-quota")
     parser.add_argument("--rp-rebuild-pairs", action="store_true",
                         help="ptrepair (12 Nov): rebuild the pairs from the saved answers (old pairs kept as pairs-NAME-prev)")
     parser.add_argument("--rp-pairs-only", action="store_true",
@@ -3762,6 +3764,12 @@ def ptrepair(args):
         drive_sync("save")
     pairs = BON / f"pairs-{args.rp_from or name}"
     drive_sync("restore", only=[str(pairs)])
+    if getattr(args, "rp_rebuild_if_short", False) and (pairs / "pairs.jsonl").exists():  # (12 Nov) only when not full
+        need_q = sum(int(x.split("=")[1]) for x in args.rp_quota.split(",") if x)
+        have_q = sum(1 for l in open(pairs / "pairs.jsonl") if l.strip())
+        args.rp_rebuild_pairs = have_q < need_q
+        print(f"repair {name}: --rp-rebuild-if-short: {have_q} of {need_q} pairs -> "
+              f"{'REBUILD' if have_q < need_q else 'full, kept as is'}", flush=True)
     if getattr(args, "rp_rebuild_pairs", False) and (pairs / "pairs.jsonl").exists():  # (12 Nov) answers kept, pairs rebuilt
         old_dir = pairs.with_name(pairs.name + "-prev")
         shutil.rmtree(old_dir, ignore_errors=True)
