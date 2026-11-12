@@ -5729,3 +5729,11 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - 12 Nov ~11:20: GPU 2 reconnected; its restarted transfer line found neither data/transfer.jsonl nor the original's answers
   on Drive (the Drive mount was not visible yet at start) and began regenerating the original's answers (~5.5 h). Stopped;
   the line now uses --tr-wait-base (answers rpK-40 / rpL-40 / rpL-60 first, then restores the original's answers from Drive).
+- 12 Nov ~11:25: **consult14 (Gemini 4 Argon, $10.91) report: reviews/consult14_clean/REPORT.md.** Forced into its final
+  report at turn 362 (it never wrote notes and re-read the pack after 6 context restarts). Three clean recipes:
+  (1, run first) 2-step DPO: step 1 from the original = prefix-cut "stop when sure" pairs 35% + shortest-vs-longest correct
+  (thinking only, response >= 0.95x median) 50% + anti-loop 15%, 3,000 pairs, LoRA r32, lr 5e-5, beta 0.1, 100 steps,
+  target 56-61% Dev; step 2 on fresh step-1 answers = length-matched right-beats-wrong on 0<p<=0.75 (50%), floor guards (20%),
+  anti-loop + easy maintenance (30%), lr 2e-5, beta 0.15, 60 steps. Forecast 53-56 / -0.5 to -0.95. (2) DPO bootstrap to
+  ~46% then difficulty-gated GRPO (brevity bonus only when pass rate >= 0.5). (3) prefix-cut SFT -> compression DPO ->
+  calibration DPO. Gate: 1,200-prompt pilot (step 1 must hit 56-61% Dev with IFEval responses >= 94%; step 2 +1.8 accuracy).
