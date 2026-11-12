@@ -5744,3 +5744,11 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   scores) + current code. Prompt: mandatory notes (created in the first 10 turns, updated every 15) and a side-by-side
   comparison table of its recipes. Harness: notes-only reply forced every 4 turns from turn 12 while notes.md is empty;
   reminder every 15 turns.
+- 12 Nov ~12:45 (user: generalization is too math-heavy; no cap on math): **transfer v2** merged (agent branch transfer-v2,
+  c6bb03a, reviewed): IFBench 300 (new "ifbench" grader: IFBench verifiers pinned at cd189a9; none of its 58 instruction types
+  are in IFEval), BFCL live simple 120 / multiple 100 / irrelevance 80 (the test's own AST checker; different data from the
+  test's non-live BFCL), BBH option tasks 170 (17 of 27 tasks x 10), BoolQ 200, MATH-500 311 uncapped (32,768). Graders
+  verified on reference vs wrong replies for every row. Queued on GPU 1 after AIME: original + rpM-60 (user), x8.
+  Earlier the same day: tagged transfer runs use a 32,768 cap on MATH-500 / Skywork (the original truncated >50% at 4,096).
+- First transfer score (computed on the Mac): bidaREPLICA vs original, x8: ARC-C 52% saved / -3.3; CSQA 50% / -0.2; MMLU 48% /
+  +3.2; HumanEval 29% / -3.8; MATH-500 22% / +32 and Skywork 11% / +17 are truncation artefacts (original runs out at 4,096).

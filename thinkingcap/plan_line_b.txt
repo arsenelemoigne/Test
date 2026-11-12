@@ -604,6 +604,7 @@ ptrepair --name rpN --rp-base models/rpL-60 --rp-own-data --rp-rollouts-from rpI
 transfer --tr-models bidaREPLICA=/content/lupin-models/bidaREPLICAt=Qwen/Qwen3-0.6B:adapters/lpc-bidax5q-s0 basta=hflora:basta/lightning-mcqwen3 matousek850=zip:https://github.com/matousek-martin/qwen3-self-replay/releases/download/v0.1.2/Qwen3-0.6B-Self-Replay-850.zip --tr-wait-base
 transfer --tr-models rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60 --tr-wait-base --hold-tag rpM60
 transfer --tr-sets tr_aime25=30 --tr-max-tokens 32768 --tr-tag aime25 --tr-models rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60
+transfer --tr-sets v2 --tr-tag v2 --tr-models rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60
 # DROPPED (11 Nov ~11:45: the rpK full tests run on GPU 2; Path 1 seed 1 dropped by the user after consult9) fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
 # 11 Nov ~03:40 (user): HOLD lifted, same changes as plan_line_a (seed 1 runs here after od2).
 # DROPPED (11 Nov ~11:45: the rpK full tests run on GPU 2; Path 1 seed 1 dropped by the user after consult9) p1src
