@@ -367,6 +367,9 @@ def main():
     parser.add_argument("--tr-sets", default="", help="transfer (12 Nov): SOURCE=N,... instead of the default transfer sets "
                         "(e.g. tr_aime25=30); its own question file and output folders (transfer-<tag>-NAME)")
     parser.add_argument("--tr-max-tokens", type=int, default=4096, help="transfer: token cap for non-code questions (AIME: 32768)")
+    parser.add_argument("--tr-source-caps", default="", help="transfer (12 Nov): per-source caps SOURCE=N,...; with --tr-tag the "
+                        "math sources default to 32,768 (user: no cap on MATH-500 / Skywork; at 4,096 the original runs out of room on "
+                        "more than half of them). Untagged runs keep 4,096 so they stay comparable with the stored original answers.")
     parser.add_argument("--tr-tag", default="", help="transfer: names the question file and output folders of a --tr-sets run")
     parser.add_argument("--tr-models", nargs="*", default=[], help="transfer (11 Nov): NAME=SPEC models to score (SPEC: merged model, "
                         "Hub id, or OUT=BASE:ADAPTER)")
@@ -4138,6 +4141,8 @@ def transfer(args):
         TRANSFER_FILE.write_text("".join(json.dumps(r) + "\n" for r in out))
         drive_sync("save")
     rows = [l for l in TRANSFER_FILE.read_text().splitlines() if l.strip()]
+    tr_caps = args.tr_source_caps or (",".join(f"{k}=32768" for k in ("tr_math500", "tr_skywork") if k in TRANSFER_SIZES) if args.tr_tag else "")
+    print(f"transfer: per-source caps: {tr_caps or 'none (4,096 / code 8,192)'}", flush=True)
     outs = []
     items = list(args.tr_models) + ["base=Qwen/Qwen3-0.6B"] if args.tr_wait_base else ["base=Qwen/Qwen3-0.6B"] + list(args.tr_models)
     for item in items:
@@ -4167,7 +4172,7 @@ def transfer(args):
                 drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
             py("probe_curve.py", "--data", TRANSFER_FILE, "--sources", ",".join(TRANSFER_SIZES), "--per-source", 1000000,
                "--samples", 8, "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
-               "--max-tokens", args.tr_max_tokens,
+               "--max-tokens", args.tr_max_tokens, "--source-max-tokens", tr_caps,
                "--max-questions", len(rows), "--seed", 61)
             drive_sync("save")
         outs.append((name, out))

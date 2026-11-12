@@ -19,6 +19,7 @@ free again for phase 2, which scores with Transformers. Both write to --out, and
 skipped when its rollouts already exist.
 """
 
+SRC_CAPS = {}  # (12 Nov) per-source token caps, set from --source-max-tokens
 import argparse
 import json
 import math
@@ -93,6 +94,8 @@ def parse_arguments():
     parser.add_argument("--samples", type=int, default=4, help="rollouts per question")
     parser.add_argument("--max-tokens", type=int, default=4096, help="token cap, as the evaluation's (4,096)")
     parser.add_argument("--code-max-tokens", type=int, default=8192, help="token cap for code, as MBPP+'s (8,192)")
+    parser.add_argument("--source-max-tokens", default="", help="(12 Nov) per-source caps SOURCE=N,... that override the others "
+                        "(transfer math: the original runs out of room at 4,096 on MATH-500 / Skywork, so those use 32,768)")
     parser.add_argument("--stride", type=int, default=16,
                         help="thinking tokens between probes; 1 probes every marginal token")
     parser.add_argument("--batch-tokens", type=int, default=32768,
@@ -142,15 +145,17 @@ def generate(questions, args, sink=None):
     eos_ids = eos if isinstance(eos, list) else [eos]
     prompts = [tokenizer.apply_chat_template(q["prompt"], tokenize=True, add_generation_prompt=True,
                                              enable_thinking=True) for q in questions]
+    global SRC_CAPS
+    SRC_CAPS = {k: int(v) for k, v in (x.split("=") for x in args.source_max_tokens.split(",") if x)}
     extra = {"attention_config": {"backend": args.attention_backend}} if args.attention_backend else {}
     engine = LLM(model=args.model, dtype=args.dtype, seed=SEED if args.seed is None else args.seed, gpu_memory_utilization=0.85,
-                 max_model_len=max(args.max_tokens, args.code_max_tokens) + max(len(p) for p in prompts) + 16,
+                 max_model_len=max([args.max_tokens, args.code_max_tokens] + list(SRC_CAPS.values())) + max(len(p) for p in prompts) + 16,
                  generation_config="vllm", enable_lora=bool(args.adapter), max_lora_rank=32, **extra)
     from vllm.lora.request import LoRARequest
     lora = LoRARequest("adapter", 1, args.adapter) if args.adapter else None
     # one cap per question, as the evaluation does: 8,192 for code, 4,096 for everything else
     params = [SamplingParams(n=args.samples, seed=SEED if args.seed is None else args.seed, stop_token_ids=eos_ids, **SAMPLING,
-                             max_tokens=args.code_max_tokens if q["task"] == "code" else args.max_tokens)
+                             max_tokens=SRC_CAPS.get(q.get("source"), args.code_max_tokens if q["task"] == "code" else args.max_tokens))
               for q in questions]
     size = args.chunk or len(questions)
     rollouts = []
