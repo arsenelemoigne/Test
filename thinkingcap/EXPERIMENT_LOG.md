@@ -5975,3 +5975,6 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   questions) judging, to be merged before r2e-nofit runs.
 - ~23:45: hard no-fit batch 2 (seed 8): 475 kept (NO+NO) of 8,000; 298 are new questions -> nofit_glaive_hard2.jsonl now 930
   hard no-fit questions (one per question), pushed (5da269b) before r2e-nofit runs. Haiku spend ~$2 for both batches.
+- ~23:55 check-in: r2d-ifeval 1,524 built questions x8, original solves 67% (sometimes 610, always 674, never 240: a much
+  wider spread than argilla's). r2f-ifeval: 11,996 prompts from 3,921 Dolly + OpenAssistant requests -> 6,728 at the test's
+  lengths -> 2,333 after the request check; answering.
