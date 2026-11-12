@@ -5737,3 +5737,10 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   anti-loop + easy maintenance (30%), lr 2e-5, beta 0.15, 60 steps. Forecast 53-56 / -0.5 to -0.95. (2) DPO bootstrap to
   ~46% then difficulty-gated GRPO (brevity bonus only when pass rate >= 0.5). (3) prefix-cut SFT -> compression DPO ->
   calibration DPO. Gate: 1,200-prompt pilot (step 1 must hit 56-61% Dev with IFEval responses >= 94%; step 2 +1.8 accuracy).
+- 12 Nov ~11:50 (user: "a new argon run ... make sure it writes notes ... all the data"): **consult15** launched (Gemini 4 Argon,
+  OpenRouter, cap $20, reserve $4). Pack reviews/consult15_clean/pack: consult13's pack + the current log (minus the RL-research
+  and consult14 entries, so no hints and no earlier answer) + tables_full/ (per-question and per-answer tables of all 14 models
+  with a full test, 240 questions of answer texts per model, 10-model answer statistics, all 219 scored runs with per-type
+  scores) + current code. Prompt: mandatory notes (created in the first 10 turns, updated every 15) and a side-by-side
+  comparison table of its recipes. Harness: notes-only reply forced every 4 turns from turn 12 while notes.md is empty;
+  reminder every 15 turns.

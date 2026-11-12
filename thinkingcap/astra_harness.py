@@ -836,12 +836,12 @@ def run_main(args, llm=None, forward=None):
         # re-read the pack after each restart. The handoff carries notes.md, so make the model keep it.
         notes_f = work / "notes.md"
         notes_len = len(notes_f.read_text()) if notes_f.exists() else 0
-        if st["turn"] >= 40 and notes_len < 500 and st["turn"] % 10 == 0:
+        if st["turn"] >= 12 and notes_len < 500 and st["turn"] % 4 == 0:
             reply += (f"\n\nNOTES REQUIRED: your notes file {notes_f} is still empty after {st['turn']} turns. The conversation is "
                       "restarted whenever the context fills, and only that file survives. Your NEXT reply must be one code block that "
                       "writes it: every finding so far with its numbers, the files already read, the open questions, and your current "
                       "candidate recipes. No other analysis in that reply.")
-        elif st["turn"] % 20 == 0:
+        elif st["turn"] % 15 == 0:
             reply += (f"\n\nReminder: update {notes_f} now (append new findings with numbers, files read, open questions); "
                       "it is all that survives a context restart.")
         if st["passes"] >= args.passes and not out_of_passes:
