@@ -5956,3 +5956,10 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   r2d-ifeval (3,000 built x8, ~1.5 h), r2prep, r2s1b pairs -> report ~00:30-01:00. GPU 1: transfer v2 original's answers,
   block 2 still 34% (long MATH-500 answers). Hard no-fit batch on the Mac (nofit_verify --rank 1,4) awaits the user's OK
   (download cand-r2b-simple.jsonl from Drive + ~$1 of Haiku).
+- ~22:50 (user: "if needed generate more questions ... enough data across all 3 steps to match the eval data"; OK given for the
+  Drive download + Haiku): hard no-fit batch on the Mac: cand-r2b-simple.jsonl (today's cleaned ToolACE + Glaive draw, 152 MB,
+  40,942 Glaive rows) -> nofit_verify.py --hard --rank 1,4 --singles 1 --max 8000 (each Glaive question offered ONE of its
+  1st-4th closest functions, never its own; pairs judged in earlier batches skipped), Haiku 5.5 NO + NO kept ->
+  nofit_glaive_hard2.jsonl (new prepare_types source glaive_nofit_hard2). Step 1's stored no-fit: 1,239 q, bins
+  [5, 3, 1, 5, 86]% vs the test's [12, 2, 8, 5, 72]: step 1 gets +117 / 0 / +102 / +10 / 0 new no-fit per bin
+  (r2prep --r2-need1-bins), steps 2/3 the rest through the matching. Queued newtop r2e-nofit (x8) before r2prep.

@@ -275,6 +275,7 @@ def main():
     parser.add_argument("--r2-tops", default="r2a-math,r2a-code,r2a-ifeval,r2a-tools,r2a-nofit",
                         help="r2prep: newtop sets (runs/bon/tooltop-NAME) added to the held-back questions")
     parser.add_argument("--r2-need1", default="", help="r2prep: step 1's NEW questions per part, chosen first (e.g. ifeval=1200)")
+    parser.add_argument("--r2-need1-bins", default="", help="r2prep: PART=n0:n1:n2:n3:n4 step 1's new questions per difficulty bin")
     parser.add_argument("--r2-step1-tops", default="", help="r2prep: the newtop sets step 1's new questions come from")
     parser.add_argument("--r2-used-glob", default="repair-r2s1*.jsonl",
                         help="r2prep: data/ files whose questions recipe 2 already answered (step 1)")
@@ -3674,9 +3675,23 @@ def r2prep(args):
     need1 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need1.split(",") if x)}
     tops1 = {x for x in args.r2_step1_tops.split(",") if x}
     sel1 = {}
-    if need1:  # (12 Nov, user) step 1's NEW questions (e.g. IFEval built from real requests), chosen first, test-matched
+    bins1 = {k: [int(x) for x in v.split(":")] for k, v in (x.split("=") for x in args.r2_need1_bins.split(",") if x)}
+    if need1 or bins1:  # (12 Nov, user) step 1's NEW questions (e.g. IFEval built from real requests), chosen first
         c1 = {p: [c for c in cands[p] if c[2] in tops1] for p in need1}
         sel1 = r2_select(c1, {p: test[p]["bins"] for p in need1}, need1, {p: 0 for p in need1}, seed=args.data_seed)
+        rng1 = random.Random(args.data_seed)
+        for p, per_bin in bins1.items():  # exact counts per difficulty bin: what step 1's STORED questions lack vs the test
+            pool1 = defaultdict(list)
+            for c in cands[p]:
+                if c[2] in tops1:
+                    pool1[r2_bin(c[1])].append(c[0])
+            ids, got = [], []
+            for b, n in enumerate(per_bin):
+                rng1.shuffle(pool1[b])
+                ids += pool1[b][:n]
+                got.append(min(n, len(pool1[b])))
+            sel1[p] = {"step2": ids, "step3": [], "quota": per_bin, "got": got, "total": len(ids)}
+            need1[p] = sum(per_bin)
         taken1 = {q for p in sel1 for q in sel1[p]["step2"]}
         for p in cands:
             cands[p] = [c for c in cands[p] if c[0] not in taken1]

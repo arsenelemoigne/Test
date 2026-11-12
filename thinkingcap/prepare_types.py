@@ -55,7 +55,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -754,6 +754,23 @@ def glaive_nofit_hard(args, rng):
     for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
         yield {"source": "glaive_tools", "origin": "near-hard-glaive", "task": "tool", "answer": "", "grader": "bfcl",
                "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nh-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
+                          {"role": "user", "content": r["question"]}]}
+
+
+def glaive_nofit_hard2(args, rng):
+    """(12 Nov, user: enough hard no-fit questions to match the test in all 3 steps) the HARDEST look-alikes: a Glaive
+    question offered ONE Glaive function ranked 1st-4th closest in meaning (never its own), kept only on Haiku's NO + NO
+    (nofit_verify.py --hard --rank 1,4 --singles 1, pairs already judged in earlier batches skipped)."""
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    path = next((p for p in (Path("/content/T/thinkingcap/nofit_glaive_hard2.jsonl"),
+                             Path(__file__).with_name("nofit_glaive_hard2.jsonl")) if p.exists()), None)
+    assert path, "nofit_glaive_hard2.jsonl not found"
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        yield {"source": "glaive_tools", "origin": "nearest-hard-glaive", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nh2-{k}",
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
                           {"role": "user", "content": r["question"]}]}
 
