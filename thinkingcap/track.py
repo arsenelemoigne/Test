@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -265,6 +265,17 @@ def main():
     parser.add_argument("--nt-sources", default="glaive_nofit_hard", help="newtop: prepare_types.py sources")
     parser.add_argument("--nt-parts", default="bfcl_irrelevance", help="newtop: build_pool.py parts")
     parser.add_argument("--nt-raw", action="store_true", help="newtop: no prompt-length matching (build_pool --no-match)")
+    parser.add_argument("--nt-cand", default="", help="newtop (12 Nov): use this already drawn candidate file (no prepare_types)")
+    parser.add_argument("--nt-pool", default="", help="newtop (12 Nov): extra build_pool.py arguments joined by '+'")
+    parser.add_argument("--nt-prep", default="", help="newtop (12 Nov): extra prepare_types.py arguments joined by '+'")
+    parser.add_argument("--r2-need2", default="svamp=650,mbpp=450,ifeval=640,bfcl_simple_python=240,bfcl_multiple=180,bfcl_irrelevance=240",
+                        help="r2prep: step 2 questions per part (consult16 recipe 2)")
+    parser.add_argument("--r2-need3", default="svamp=650,mbpp=400,ifeval=565,bfcl_simple_python=200,bfcl_multiple=160,bfcl_irrelevance=220",
+                        help="r2prep: step 3 questions per part")
+    parser.add_argument("--r2-tops", default="r2a-math,r2a-code,r2a-ifeval,r2a-tools,r2a-nofit",
+                        help="r2prep: newtop sets (runs/bon/tooltop-NAME) added to the held-back questions")
+    parser.add_argument("--r2-drop", default="source:metamath_sv+origin:xlam-irrelevance+id:nofit4-&source:glaive_tools&origin:",
+                        help="r2prep: questions never used (source:X, origin:X, id:PREFIX; '&' = all of, '+' = list)")
     parser.add_argument("--nt-samples", type=int, default=10, help="newtop: answers per question by the original Qwen")
     parser.add_argument("--tt-parts", default="", help="tooltopup: BFCL parts (default all three)")
     parser.add_argument("--tt-hard", action="store_true", help="tooltopup: hardest candidates first")
@@ -361,6 +372,8 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-question-file", default="",
+                        help="ptrepair (12 Nov): answer exactly these questions (r2prep's data/r2-step2/3-questions.jsonl)")
     parser.add_argument("--rp-rebuild-if-short", action="store_true",
                         help="ptrepair (12 Nov): rebuild the pairs (answers reused) only if the saved ones are fewer than --rp-quota")
     parser.add_argument("--rp-rebuild-pairs", action="store_true",
@@ -3421,17 +3434,23 @@ def newtop(args):
         return
     val = f"questions_val{VAL_SEED}"
     cand, pool = Path(f"data/cand-{name}.jsonl"), Path(f"data/poolcand-{name}.jsonl")
+    if getattr(args, "nt_cand", "") and not cand.exists():  # (12 Nov) candidates already drawn (e.g. r2s1's IFEval draw)
+        drive_sync("restore", only=[args.nt_cand])
+        shutil.copy(args.nt_cand, cand)
     if not cand.exists():
         py("prepare_types.py", "--sources", args.nt_sources, "--per-source", 1000000, "--seed", args.data_seed, "--out", cand,
-           "--tool-clean")
+           "--tool-clean", *[x for x in getattr(args, "nt_prep", "").split("+") if x])
     if not pool.exists():
         py("build_pool.py", "--candidates", cand, "--choosing", val, "--all-questions", "questions", "--parts", args.nt_parts,
            "--tool-sources", "toolace,hermes_tools,glaive_tools", "--per-benchmark", args.tt_questions * 4,
-           "--seed", args.data_seed, "--out", pool, *(["--no-match"] if args.nt_raw else []))
+           "--seed", args.data_seed, "--out", pool, *(["--no-match"] if args.nt_raw else []),
+           *[x for x in getattr(args, "nt_pool", "").split("+") if x])
         rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
         # never a question already in the training pool or an earlier top-up (1 Nov: no-fit sources overlap)
         seen = set()
-        for f in [*Path("data").glob("pool-dp*.jsonl"), *BON.glob("tooltop-*/questions.jsonl")]:
+        drive_sync("restore", only=["data/repair-*.jsonl", "runs/bon/tooltop-*/questions.jsonl"])
+        for f in [*Path("data").glob("pool-dp*.jsonl"), *BON.glob("tooltop-*/questions.jsonl"),
+                  *Path("data").glob("repair-*.jsonl")]:  # (12 Nov) + every question a repair run answered (r2s1's IFEval)
             for line in open(f):
                 if line.strip():
                     seen.add(json.dumps(json.loads(line).get("messages") or json.loads(line).get("prompt"), sort_keys=True))
@@ -3448,7 +3467,7 @@ def newtop(args):
     probe = BON / f"tooltop-{name}-k10"
     drive_sync("restore", only=[str(probe)])
     if not (probe / "rollouts.jsonl").exists():
-        py("probe_curve.py", "--data", pool, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,ifeval_like", "--per-source", 1000000,
+        py("probe_curve.py", "--data", pool, "--sources", DEV_SOURCES, "--per-source", 1000000,  # (12 Nov) every pool source
            "--samples", args.nt_samples, "--model", "Qwen/Qwen3-0.6B", "--out", probe, "--dtype", args.dtype,
            "--generate-only", "--chunk", 300, "--max-questions", n, "--seed", 41)
         drive_sync("save")
@@ -3463,6 +3482,191 @@ def newtop(args):
           f"sometimes right {sum(0 < s < 1 for s in solve)}, always {sum(s == 1 for s in solve)}, never {sum(s == 0 for s in solve)}", flush=True)
     (out / "questions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     shutil.copy(probe / "rollouts.jsonl", out / "rollouts.jsonl")
+    drive_sync("save")
+
+
+R2_BINS = [(0.0, 0.25), (0.25, 0.5), (0.5, 0.8), (0.8, 1.0), (1.0, 1.01)]  # original Qwen's solve rate per question
+R2_BIN_NAMES = ["<25%", "25-50%", "50-80%", "80-<100%", "100%"]
+TEST_DIFFICULTY = Path("test_difficulty.json")  # the original's FULL TEST answers (2,759 x 8), per part (committed)
+
+
+def r2_bin(rate):
+    return next(i for i, (lo, hi) in enumerate(R2_BINS) if lo <= rate < hi)
+
+
+def r2_think_len(r):
+    t = r.get("thinking_ids")
+    if isinstance(t, str):
+        try:
+            t = json.loads(t)
+        except ValueError:
+            t = None
+    return len(t) if isinstance(t, list) else int(r.get("reasoning_tokens") or r.get("output_tokens") or 0)
+
+
+def r2_drop_match(row, drops):
+    """drops: items 'source:X' / 'origin:X' / 'id:PREFIX', '&' joins conditions that must ALL hold."""
+    def one(c):
+        kind, _, val = c.partition(":")
+        if kind == "id":
+            return str(row.get("id", "")).startswith(val)
+        return str(row.get(kind, "")) == val
+    return any(all(one(c) for c in d.split("&")) for d in drops)
+
+
+def r2_select(cands, test_bins, need2, need3, seed=0):
+    """cands[part] = [(qid, solve_rate, origin_tag)]. Per part: total = need2 + need3 questions whose solve-rate bins follow
+    the TEST's shares (test_bins[part][bin] = share); held-back pool questions first, then top-ups, at random inside a bin;
+    a bin short of candidates borrows from the nearest bins. Then each bin is split step 2 / step 3 in proportion.
+    Returns {part: {"step2": [qid], "step3": [qid], "quota": [...], "got": [...]}}."""
+    rng = random.Random(seed)
+    out = {}
+    for part in need2:
+        total = need2[part] + need3.get(part, 0)
+        shares = [test_bins[part][str(i)] for i in range(len(R2_BINS))]
+        quota = [int(total * s) for s in shares]
+        for i in sorted(range(len(shares)), key=lambda i: -(total * shares[i] - quota[i]))[:total - sum(quota)]:
+            quota[i] += 1
+        pool = defaultdict(list)
+        for qid, rate, tag in cands.get(part, []):
+            pool[r2_bin(rate)].append((tag != "held", rng.random(), qid))
+        for b in pool:
+            pool[b].sort()
+        got = [[] for _ in R2_BINS]
+        for b, q in enumerate(quota):
+            got[b] = [x[2] for x in pool[b][:q]]
+            pool[b] = pool[b][q:]
+        for b, q in enumerate(quota):  # borrow for short bins, nearest bin first
+            for nb in sorted(range(len(R2_BINS)), key=lambda j: (abs(j - b), j)):
+                while len(got[b]) < q and pool[nb]:
+                    got[b].append(pool[nb].pop(0)[2])
+        step2, step3 = [], []
+        for b, ids in enumerate(got):
+            rng.shuffle(ids)
+            k = round(len(ids) * need2[part] / total) if total else 0
+            step2 += ids[:k]
+            step3 += ids[k:]
+        out[part] = {"step2": step2, "step3": step3, "quota": quota, "got": [len(g) for g in got]}
+    return out
+
+
+def r2prep(args):
+    """(12 Nov, user: "nothing starts until we have all the data, including for step 2 and 3", "make sure it is still
+    representative of the final eval dataset") Recipe 2's step 2 and step 3 QUESTIONS, fixed before any training:
+    candidates = the pool questions held back from step 1 (P1_RESERVE hash; the original's 10 stored answers) + the
+    newtop sets --r2-tops (new questions from our own sources, prompt-length matched, answered x8 by the original), minus
+    Dev-512 / Dev-SVAMP questions and near-duplicates, step 1's questions, and --r2-drop (michal-bida's MetaMath SV/FOBAR
+    and xLAM no-fit). Per part, questions are chosen so that the ORIGINAL's solve-rate profile matches its profile on the
+    FULL TEST (test_difficulty.json), then split step 2 / step 3 (disjoint). Writes data/r2-step2-questions.jsonl,
+    data/r2-step3-questions.jsonl and runs/bon/r2prep/report.txt (each set vs the test: solve rate, bins, thinking)."""
+    import hashlib
+    import statistics
+    from build_pool import ngrams, part_of, words
+    out_dir = BON / "r2prep"
+    f2, f3 = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl")
+    drive_sync("restore", only=[str(out_dir), str(f2), str(f3)])
+    if f2.exists() and f3.exists() and (out_dir / "report.txt").exists():
+        print((out_dir / "report.txt").read_text(), flush=True)
+        return
+    need2 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need2.split(","))}
+    need3 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need3.split(","))}
+    drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
+    tops = [x for x in args.r2_tops.split(",") if x]
+    test = json.loads(TEST_DIFFICULTY.read_text())
+    extras = ("nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2")
+    pool_f = Path("data/pool-dp13.jsonl")
+    drive_sync("restore", only=[str(BON / P1_ANSWERS), str(pool_f), str(P1_IDS), "data/repair-*.jsonl",
+                                *[str(BON / f"tooltop-{x}") for x in extras + tuple(tops)]])
+    rows = {}
+    for f in [pool_f, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras]]:
+        for l in (f.read_text().splitlines() if f.exists() else []):
+            if l.strip():
+                q = json.loads(l)
+                rows[q.get("pool_id", q.get("id"))] = q
+    step1 = set(json.loads(P1_IDS.read_text())) if P1_IDS.exists() else set()
+    used = set()  # every question a repair run already answered (r2s1's new IFEval questions and fill batches)
+    for f in Path("data").glob("repair-*.jsonl"):
+        for l in f.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)
+                used |= {q.get("id"), q.get("pool_id"), json.dumps(q.get("prompt"), sort_keys=True)}
+    dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
+    drop = Counter()
+
+    def usable(qid, row):
+        if qid in dev or qid in step1 or qid in used or json.dumps(row.get("prompt"), sort_keys=True) in used:
+            drop["Dev / step 1 / already answered"] += 1
+            return False
+        if r2_drop_match(row, drops):
+            drop["--r2-drop"] += 1
+            return False
+        g = ngrams(words(row.get("prompt") or ""))
+        if g and len(g & dev_g) * 10 >= 3 * len(g):
+            drop["near-duplicate of a Dev question"] += 1
+            return False
+        return True
+    answers = defaultdict(list)  # qid -> [(correct, thinking tokens, cut off)]
+    for l in open(BON / P1_ANSWERS):
+        if l.strip():
+            r = json.loads(l)
+            p = part_of(r)
+            if p and int(hashlib.md5(str(r["id"]).encode()).hexdigest(), 16) % 100 < P1_RESERVE.get(p, P1_RESERVE_DEFAULT):
+                answers[("held", r["id"])].append((bool(r["correct"]), r2_think_len(r), bool(r.get("truncated"))))
+    for t in tops:
+        qf, rf = BON / f"tooltop-{t}" / "questions.jsonl", BON / f"tooltop-{t}" / "rollouts.jsonl"
+        if not (qf.exists() and rf.exists()):
+            print(f"r2prep: top-up {t} MISSING (run newtop --name {t} first)", flush=True)
+            continue
+        for l in qf.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)
+                rows[q["pool_id"]] = q
+        for l in open(rf):
+            if l.strip():
+                r = json.loads(l)
+                answers[(t, r["id"])].append((bool(r["correct"]), r2_think_len(r), bool(r.get("truncated"))))
+    cands, stats = defaultdict(list), {}
+    for (tag, qid), a in answers.items():
+        row = rows.get(qid)
+        if row is None or not usable(qid, row | {"id": qid}):
+            continue
+        part = part_of(row)
+        if part not in need2:
+            continue
+        rate = sum(c for c, _, _ in a) / len(a)
+        cands[part].append((qid, rate, tag))
+        stats[qid] = (rate, [t for _, t, _ in a], sum(x for _, _, x in a) / len(a), tag)
+    print(f"r2prep: candidates {dict((p, len(v)) for p, v in cands.items())}; dropped {dict(drop)}", flush=True)
+    sel = r2_select(cands, {p: test[p]["bins"] for p in need2}, need2, need3, seed=args.data_seed)
+    lines = ["r2prep: steps 2 and 3 questions vs the FULL TEST (original Qwen's answers on both sides)",
+             f"bins = original's solve rate per question: {' | '.join(R2_BIN_NAMES)}"]
+    for part in need2:
+        t = test[part]
+        lines.append(f"\n{part}: TEST {t['questions']} q | solve {100 * t['solve']:.0f}% | bins % "
+                     f"{[round(100 * t['bins'][str(i)]) for i in range(len(R2_BINS))]} | median think {t['median_think']:.0f} | "
+                     f"p90 {t['p90_think']:.0f} | cut off {100 * t['cutoff']:.1f}%")
+        lines.append(f"   quota per bin {sel[part]['quota']} -> got {sel[part]['got']}"
+                     + ("   ** SHORT: borrowed from neighbour bins **" if sel[part]['got'] != sel[part]['quota'] else ""))
+        for step in ("step2", "step3"):
+            ids = sel[part][step]
+            if not ids:
+                lines.append(f"   {step}: 0 questions  ** EMPTY **")
+                continue
+            rates = [stats[q][0] for q in ids]
+            think = [x for q in ids for x in stats[q][1]]
+            bins = Counter(r2_bin(r) for r in rates)
+            want = (need2 if step == "step2" else need3)[part]
+            lines.append(f"   {step}: {len(ids)} q (want {want}{', SHORT' if len(ids) < want else ''}; "
+                         f"{sum(stats[q][3] != 'held' for q in ids)} new) | solve {100 * statistics.fmean(rates):.0f}% | bins % "
+                         f"{[round(100 * bins[i] / len(ids)) for i in range(len(R2_BINS))]} | median think "
+                         f"{statistics.median(think):.0f} | p90 {sorted(think)[int(0.9 * len(think))]} | cut off "
+                         f"{100 * statistics.fmean(stats[q][2] for q in ids):.1f}%")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for f, step in ((f2, "step2"), (f3, "step3")):
+        f.write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n" for p in need2 for q in sel[p][step]))
+    (out_dir / "selection.json").write_text(json.dumps(sel, indent=1))
+    (out_dir / "report.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
     drive_sync("save")
 
 
@@ -3721,7 +3925,15 @@ def ptrepair(args):
             p = sum(s) / len(s)
             by_part[part_of(rows[qid])]["mixed" if 0 < p < 1 else "right" if p == 1 else "wrong"].append(qid)
     chosen = []
-    if own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
+    if own and getattr(args, "rp_question_file", ""):  # (12 Nov, user) a prepared, test-matched question set (r2prep)
+        drive_sync("restore", only=[args.rp_question_file])
+        qrows = [json.loads(l) for l in Path(args.rp_question_file).read_text().splitlines() if l.strip()]
+        for r in qrows:
+            rows[r["id"]] = r
+            chosen.append(r["id"])
+        print(f"repair {name}: {len(qrows)} questions from {args.rp_question_file}: "
+              f"{dict(Counter(part_of(r) for r in qrows))}", flush=True)
+    elif own:  # (9 Nov) own sources, drawn at random per part; the trained model's own answers decide the pairs
         k, n_rounds = getattr(args, "rp_round", (0, 1))  # (10 Nov, odpo) round k of n takes the k-th slice: no question twice
         per_part = defaultdict(list)
         for r in own_repair_questions({p: n * n_rounds for p, n in want.items()}, seed=args.rp_seed,
@@ -6370,7 +6582,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",

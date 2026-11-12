@@ -5890,3 +5890,20 @@ hold before r2s1 (it pulls 126bccc at the end of the hold). GPU 1: transfer v2, 
   the pairs are rebuilt from the same answers (IFEval answers and fill batches reused) keeping nofit4's ToolACE no-fit rows
   (our builder) and dropping only its Glaive-labelled rows (xLAM + Glaive hard). Mac dry run: no-fit shorten candidates
   241 + 96 for 144, be-right 140 for 96. If already full it does nothing. Both lines stop before training (--rp-pairs-only).
+
+## 12 Nov ~20:40 — steps 2 and 3 QUESTIONS prepared before any training (user: "nothing starts until we have all the data,
+including for step 2 and 3"; "representative of the final eval dataset"; "we should not re use questions")
+- Held-back questions alone fall short (Mac count after drops: 4,069 for 4,595; IFEval -244, simple -95, multiple -84,
+  code -73, no-fit -21, math -9) AND do not match the test's difficulty (no-fit: original solves 93% of training no-fit vs 83%
+  on the test; too few IFEval questions solved 25-80% of the time).
+- GPU 2 queue after r2s1's data: `newtop` x6 (r2a-math GSM8K-easy 600, r2a-code KodCode-Light easy/medium/hard 500, r2a-ifeval
+  1,400 from today's own IFEval draw, r2a-simple / r2a-multiple ToolACE + Glaive 500 each, r2a-nofit Glaive-hard + ToolACE-near
+  + Glaive-verified 500): prompt-length matched, test overlaps / pool / top-ups / every repair run's questions removed,
+  answered x8 by the original (~4-4.5 h).
+- Then `r2prep`: candidates = held-back pool questions (stored x10 answers) + the six top-ups, minus Dev / Dev-SVAMP and
+  near-duplicates, step 1's questions, MetaMath SV/FOBAR, xLAM no-fit (and nofit4 Glaive rows of unknown origin).
+  Per type, questions are picked so the original's solve-rate profile (bins <25 / 25-50 / 50-80 / 80-<100 / 100%) matches
+  its profile on the FULL TEST (test_difficulty.json, from the original's 2,759 x 8 test answers), then split step 2 /
+  step 3 (disjoint). Report per set vs test: solve rate, bins, median / p90 thinking, cut-off share.
+- No question is used twice: step 1 (stored + new IFEval) / step 2 / step 3 are disjoint by construction.
+- Nothing trains; training lines are not queued.
