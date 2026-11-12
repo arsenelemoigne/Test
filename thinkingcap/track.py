@@ -362,6 +362,10 @@ def main():
     parser.add_argument("--rp-extra-questions", default="", help="ptrepair (11 Nov, rpM): with --rp-rollouts-from, ALSO draw these "
                         "new own questions (part=n,..., public datasets, never a dev question) and let the base model answer "
                         "them; their ids get the prefix sv- (repair_pairs.py: SVAMP-like math 'svamp' vs the reused hard 'svamp_hard')")
+    parser.add_argument("--tr-sets", default="", help="transfer (12 Nov): SOURCE=N,... instead of the default transfer sets "
+                        "(e.g. tr_aime25=30); its own question file and output folders (transfer-<tag>-NAME)")
+    parser.add_argument("--tr-max-tokens", type=int, default=4096, help="transfer: token cap for non-code questions (AIME: 32768)")
+    parser.add_argument("--tr-tag", default="", help="transfer: names the question file and output folders of a --tr-sets run")
     parser.add_argument("--tr-models", nargs="*", default=[], help="transfer (11 Nov): NAME=SPEC models to score (SPEC: merged model, "
                         "Hub id, or OUT=BASE:ADAPTER)")
     parser.add_argument("--ds-vs", default="", help="devscore: also the paired difference against this scored run")
@@ -4111,6 +4115,10 @@ def transfer(args):
     """(11 Nov, user: "how much does this transfer ... or is it benchmark overfitting?") Benchmarks our training never used nor
     imitated: MATH-500 (whole-number answers), Skywork-OR1 easy math, ARC-Challenge, CommonsenseQA, MMLU, HumanEval. Each model
     in --tr-models (NAME=SPEC, SPEC as devscore's) answers them x8 (user: as the test); transfer_score.py compares it with the original, per set."""
+    global TRANSFER_FILE, TRANSFER_SIZES
+    if args.tr_sets:  # (12 Nov, user) e.g. AIME 2025 at a 32k cap, as arXiv 2602.20945 measures it
+        TRANSFER_SIZES = {k: int(v) for k, v in (x.split("=") for x in args.tr_sets.split(","))}
+        TRANSFER_FILE = Path(f"data/transfer-{args.tr_tag or 'x'}.jsonl")
     drive_sync("restore", only=[str(TRANSFER_FILE)])
     if not TRANSFER_FILE.exists():
         tmp = Path("data/transfer-all.jsonl")
@@ -4131,7 +4139,7 @@ def transfer(args):
     outs = []
     for item in ["base=Qwen/Qwen3-0.6B"] + list(args.tr_models):
         name, spec = item.split("=", 1)
-        out = BON / f"transfer-{name}"
+        out = BON / (f"transfer-{args.tr_tag}-{name}" if args.tr_sets else f"transfer-{name}")
         drive_sync("restore", only=[str(out)])
         if not (out / "rollouts.jsonl").exists() or sum(1 for _ in open(out / "rollouts.jsonl")) < 8 * len(rows):
             model = spec
@@ -4147,6 +4155,7 @@ def transfer(args):
                 drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
             py("probe_curve.py", "--data", TRANSFER_FILE, "--sources", ",".join(TRANSFER_SIZES), "--per-source", 1000000,
                "--samples", 8, "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
+               "--max-tokens", args.tr_max_tokens,
                "--max-questions", len(rows), "--seed", 61)
             drive_sync("save")
         outs.append((name, out))

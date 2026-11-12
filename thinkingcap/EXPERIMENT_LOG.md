@@ -5684,3 +5684,7 @@ rpL-80: **tokens saved +62.8% [61.7, 63.8], accuracy -2.06 pts [-2.86, -1.26]**.
 bfcl_multiple +53% / -2.9; bfcl_simple_python +51% / -5.1; ifeval +62% / -2.6; mbpp +66% / -1.8; svamp +66% / -2.9.
 Most saving ever on a full test; out of the box on accuracy. One-function tool calls start to break (-5.1; rpL-100/120 collapse on Dev).
 Dev-512 had read 62.1 / -0.30 (saving right, accuracy ~1.8 too kind). rpL line: 40 55.1/-1.4, 60 59.3/-1.7, 80 62.8/-2.1.
+- 12 Nov ~01:45 (user): AIME 2025 check of rpM-60 vs the original, as "The Art of Efficient Reasoning" (arXiv 2602.20945,
+  Table 2: Qwen3-0.6B 14.9k -> 8.9k tokens, Mean@8 13.3 -> 24.6, Pass@8 26.7 -> 36.7, 32k budget). transfer stage gained
+  --tr-sets / --tr-max-tokens / --tr-tag; prepare_types.py tr_aime25 (math-ai/aime25, 30 problems). Queued on GPU 2 after the
+  rpM-60 transfer line: 30 x 8 answers per model at a 32,768-token cap, our "Final answer:" format (the paper uses \boxed{}).

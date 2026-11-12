@@ -58,7 +58,7 @@ def main():
                 "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
-                "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval}
+                "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25}
     for source in args.sources.split(","):
         build = builders[source]
         built = list(build(args, rng))
@@ -994,6 +994,30 @@ def tr_math500(args, rng):
         a = str(r["answer"]).strip()
         if re.fullmatch(r"-?\d+", a):
             yield _tr_row(r["problem"], MATH_INSTRUCTION_TR, a, "math", "tr_math500", f"tr-math500-{r['unique_id']}") | {"level": r["level"]}
+
+
+def tr_aime25(args, rng):
+    """(12 Nov, user) AIME 2025 (I + II, 30 problems, integer answers), the benchmark of 'The Art of Efficient Reasoning'
+    (arXiv 2602.20945, Table 2: Qwen3-0.6B 14.9k -> 8.9k tokens, Mean@8 13.3 -> 24.6 at a 32k budget)."""
+    from datasets import load_dataset
+    rows = None
+    for repo, kw in (("math-ai/aime25", {"split": "test"}), ("yentinglin/aime_2025", {"split": "train"}),
+                     ("opencompass/AIME2025", None)):
+        try:
+            if kw is None:
+                rows = [r for cfg in ("AIME2025-I", "AIME2025-II") for r in load_dataset(repo, cfg, split="test")]
+            else:
+                rows = list(load_dataset(repo, **kw))
+            if rows:
+                print(f"tr_aime25: {len(rows)} problems from {repo}", flush=True)
+                break
+        except Exception as e:  # try the next public copy
+            print(f"tr_aime25: {repo} failed: {e}", flush=True)
+    for i, r in enumerate(rows or []):
+        q = r.get("problem") or r.get("question")
+        a = str(r.get("answer")).strip()
+        if q and re.fullmatch(r"-?\d+", a):
+            yield _tr_row(q, MATH_INSTRUCTION_TR, str(int(a)), "math", "tr_aime25", f"tr-aime25-{r.get('id', i)}")
 
 
 def tr_skywork(args, rng):
