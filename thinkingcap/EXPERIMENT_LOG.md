@@ -6024,3 +6024,10 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
   one-round on-policy repairs rpK / rpM are our best (51.2 / -0.8, 54.1 / -0.93 full test).
 - Decision (user): give all of this to Argon (consult18) for ONE new strategy to run on GPU 1 in parallel with recipe 2's step 1
   on GPU 2.
+- ~01:00 od2 failure analysis (records of rounds 6 / 8 / 10 vs the original's full-test answers on the same questions;
+  reviews/consult18_next/pack/od2_failure_analysis.txt): the dominant failure is PREMATURE STOPPING, growing every round in
+  every type (math: 26 -> 70 -> 84 wrong answers that stopped thinking before half the original's right length; 80% of math's
+  wrong answers at round 10, median 0.24x; 66 of 105 on questions the original solves >= 75%); code fails first by repetition
+  loops (20 at round 6) then by stopping early (99 at round 10, median 0.28x); IFEval stopped-early 30 -> 56 -> 88; tool calls
+  also break format (unparseable 6-14 per type). Consistent with its design: shorten pairs on questions right only 6/8, no
+  length-held right-vs-wrong / anti-loop / format pairs, a moving reference, no gate between rounds.
