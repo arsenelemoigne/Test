@@ -5678,3 +5678,9 @@ Decision (user, 11 Nov ~23:59): launch the clean-recipe Argon review (OpenRouter
 - 12 Nov ~00:20 (user): rpM-60 added to the transfer (generalization) check, GPU 2 after the rpK40/rpL40/rpL60 transfer line
   (base answers reused from Drive). Charts: rpK / rpL / rpM full tests now drawn as three branches from rpE-80 (they were one
   zigzag line); Frontier page regained the README bar and a "no thinking" toggle.
+
+### 12 Nov ~01:25 — rpL-80 full test (2,759 x 8, GPU 2)
+rpL-80: **tokens saved +62.8% [61.7, 63.8], accuracy -2.06 pts [-2.86, -1.26]**. Per type: bfcl_irrelevance +66% / +7.7;
+bfcl_multiple +53% / -2.9; bfcl_simple_python +51% / -5.1; ifeval +62% / -2.6; mbpp +66% / -1.8; svamp +66% / -2.9.
+Most saving ever on a full test; out of the box on accuracy. One-function tool calls start to break (-5.1; rpL-100/120 collapse on Dev).
+Dev-512 had read 62.1 / -0.30 (saving right, accuracy ~1.8 too kind). rpL line: 40 55.1/-1.4, 60 59.3/-1.7, 80 62.8/-2.1.
