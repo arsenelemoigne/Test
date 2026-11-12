@@ -5973,3 +5973,5 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   (Dolly + OpenAssistant built, up to 3,000), r2e-nofit, r2prep, r2s1b -> ~01:30-02:00. Mac: hard no-fit batch 1 = 632 kept
   (NO+NO) of 8,000 (YES 2,546, UNSURE 2,917, mixed 1,905), committed as nofit_glaive_hard2.jsonl; batch 2 (seed 8, other
   questions) judging, to be merged before r2e-nofit runs.
+- ~23:45: hard no-fit batch 2 (seed 8): 475 kept (NO+NO) of 8,000; 298 are new questions -> nofit_glaive_hard2.jsonl now 930
+  hard no-fit questions (one per question), pushed (5da269b) before r2e-nofit runs. Haiku spend ~$2 for both batches.
