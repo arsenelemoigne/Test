@@ -5969,3 +5969,7 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   human-written requests to ifeval_built (--ifeval-bases): Dolly-15k (creative writing / brainstorming / open & general QA,
   no context, 12-150 words: 2,100 after removing coding requests) + OpenAssistant first turns (English, 12-150 words,
   no coding: 1,845). Queued newtop r2f-ifeval (3,000 x8) before r2prep.
+- ~23:25 check-in: GPU 2 answering r2d-ifeval (1,524 built x8, ~13 min per 300 questions -> ~00:10), then r2f-ifeval
+  (Dolly + OpenAssistant built, up to 3,000), r2e-nofit, r2prep, r2s1b -> ~01:30-02:00. Mac: hard no-fit batch 1 = 632 kept
+  (NO+NO) of 8,000 (YES 2,546, UNSURE 2,917, mixed 1,905), committed as nofit_glaive_hard2.jsonl; batch 2 (seed 8, other
+  questions) judging, to be merged before r2e-nofit runs.
