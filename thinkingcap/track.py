@@ -361,7 +361,7 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-extra-source", default="",
                         help="ptrepair (12 Nov, recipe 2): PART=SOURCE,... the extra questions of these parts come from a prepare_types.py "
-                        "source that is NOT in the pool (e.g. ifeval=ifeval_bida: AllenAI's multi-constraint prompts graded by IFEval), "
+                        "source that is NOT in the pool (e.g. ifeval=ifeval_like: argilla ifeval-like-data drawn IFEval-matched, our own source; never ifeval_bida), "
                         "minus the pool's prompts, the test's rare 8-grams and Dev near-duplicates")
     parser.add_argument("--rp-extra-questions", default="", help="ptrepair (11 Nov, rpM): with --rp-rollouts-from, ALSO draw these "
                         "new own questions (part=n,..., public datasets, never a dev question) and let the base model answer "
@@ -3768,10 +3768,16 @@ def ptrepair(args):
                     from build_pool import ngrams, words
                     if not Path("questions/questions.jsonl").exists():  # (12 Nov, consult17 bug 1) a fresh runtime
                         py("utils/eval/benchmarks.py")
-                    cache = Path(f"data/extra-src-{src}.jsonl")
+                    # (12 Nov, user: no michal-bida data) our IFEval sources are drawn IFEval-matched (instruction count and
+                    # each instruction id's share follow IFEval's 541 prompts) with a seed of their own, so the draw is not
+                    # the pool's (the pool's own IFEval rows are dropped below by exact prompt anyway)
+                    prep = (["--ifeval-match", 4 * want_x[part_s], "--seed", 1000 + args.rp_seed]
+                            if src in ("ifeval_like", "ifeval_built") else [])
+                    cache = Path(f"data/extra-src-{src}" + (f"-m{4 * want_x[part_s]}-s{1000 + args.rp_seed}" if prep else "")
+                                 + ".jsonl")
                     drive_sync("restore", only=[str(cache)])
                     if not cache.exists():
-                        py("prepare_types.py", "--sources", src, "--per-source", 1000000, "--out", cache)
+                        py("prepare_types.py", "--sources", src, "--per-source", 1000000, *prep, "--out", cache)
                     pool_texts = set()
                     drive_sync("restore", only=["runs/bon/tooltop-*/questions.jsonl"])
                     for f in [Path("data/pool-dp13.jsonl"), *BON.glob("tooltop-*/questions.jsonl")]:  # (consult17 bug 2)
