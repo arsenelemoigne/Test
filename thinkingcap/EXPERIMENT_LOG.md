@@ -5787,3 +5787,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   (p1r1s0: 43.4 / -1.5 full; p1cr1s0 Dev 34%), the design consult15 said fails; the main fix vs p1r1s0 is the response guard
   (worth ~+3.6 pts). Its 53.5-59% Dev forecast for step 1 looks optimistic; recipe 2 (two shortening rounds then repair) is
   the version consistent with its own analysis.
+- 12 Nov ~16:15, transfer v1 **rpL-40** (scored on the Mac): ARC-C 67.9% / -2.6 [-5.1, -0.1]; CSQA 69.2% / -0.8; MMLU 64.2% /
+  +1.4; HumanEval 53.9% / +0.5 (runaways 13.7 -> 1.6%); MATH-500 / Skywork 4k artefacts (49.8 / 25.3 vs 10.2 / 3.4).
+  Close to rpK-40 (67/-1.8, 69/-0.3, 63/+1.6, 50/-0.7): slightly more saving, ARC a little worse, code a little better.
