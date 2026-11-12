@@ -5995,3 +5995,32 @@ design: only two pair kinds (shortest right > shortest wrong; shortest right > l
 time, a low bar), 160 pairs and 10 steps per round, no math / IFEval protection, and the REFERENCE reset to each round's start
 (the DPO anchor moves every round, so nothing holds the model near the original across rounds). Its draws also did not
 exclude Dev-512. consult9 (11 Nov morning) had called it low value before these rounds were scored.
+
+## 13 Nov ~00:40 — discussion (user): RL "arena", online DPO vs GRPO, what RL gave so far (no code; recorded for consult18)
+- User's idea (after reading about AlphaGo): copies of Qwen3-0.6B "compete" on the same questions; being right AND shorter wins;
+  play indefinitely; each type weighted so a token saved counts relative to that type's length. Reading: with a fixed test there
+  is no opponent to beat; the "competition" is the group of answers to one question = online GRPO-style RL (group-relative
+  reward), or online DPO when only a winner and a loser are kept. Expected behaviour of endless play: fast removal of waste
+  (loops, re-reads, re-checks), then a floor set by the reasoning each question really needs (log-shaped curve), with collapse
+  risks (a length term that can beat correctness teaches giving up; entropy collapse; reward hacking). Reward rule that avoids
+  "giving up": wrong = 0 always; among RIGHT answers only, shorter gets more, relative to the question's own baseline length
+  (this also weights the 4 types equally without hand weights).
+- Online DPO vs GRPO: both answer -> grade -> learn -> repeat. DPO keeps 2 answers per question (winner / loser, our pair rules),
+  learns against a reference, and re-harvests every N steps (od1/od2: every 10 steps); GRPO uses all answers with a numeric
+  reward relative to the group mean and re-harvests every step. Online DPO re-harvested every step ~ GRPO with a group of 2.
+- RL record. Competitors: Herz1c = stop-point SFT then 50 steps online GRPO (reward 1[right] x (1 - 0.2 L / type mean), group 8,
+  24 prompts / step, lr 1e-5, no KL): 43.4 / -0.97 (its RL stage took SVAMP 14% -> 31% saved at equal accuracy); matousek = online
+  Dr.GRPO (group 4, reward right x (1 - 0.1 min(L/ref, 1))) + replay of own shortest always-right answers: 41.6 / -1.17 at step 850
+  (46.6 / -2.35 at 1,280; replay did most of the shortening); bida's offline GRPO on stored answers failed (-13.8% / -9.4).
+  Ours: rc1-rl-40 (rlcal: right x (1 - alpha x solve-rate x sigmoid(z)), z = thinking length among the group's right answers,
+  batch-normalized, KL; from a DPO soup) 55.4 / -2.6 full test; drpo1/2 (stronger, from rc1-rl-40) ~58-60 / -3.7..-4.0; drpo3d-23
+  (gentle, from the original) 21.7 / -0.4; grA / grB (GRPO from the original, 50 steps x 12 x 8) ~+1.5 / -1.0; gr2f (Dr.GRPO
+  from the original, 40 steps x 32 x 8, lr 1e-5 -> 1e-6, KL 0.005) +11.3 / +0.3 at step 40. No RL run so far beat the DPO line
+  (rpM-60 54.1 / -0.93). Argon's consult16 Recipe 3 = online GRPO from the original (ShorterBetter-style reward vs the group's
+  shortest right answer, batch-normalized advantages, DAPO clip 0.20 / 0.28, dynamic sampling, KL 0.005, lr 1.5e-5, 120 steps x
+  16 x 8, 2 updates per batch, ~2.1 GPU-h) + a DPO repair: never run.
+- Online DPO record: od1 (4 rounds from rpE-80) 53.3 / -1.8 on the 720 (along the curve); od2 (10 rounds from the original)
+  see the 13 Nov ~00:30 entry: shortens without stopping, accuracy falls every round (round 10: 67.1 / -5.6, math -11.9); the
+  one-round on-policy repairs rpK / rpM are our best (51.2 / -0.8, 54.1 / -0.93 full test).
+- Decision (user): give all of this to Argon (consult18) for ONE new strategy to run on GPU 1 in parallel with recipe 2's step 1
+  on GPU 2.
