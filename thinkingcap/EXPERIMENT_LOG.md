@@ -5825,3 +5825,5 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - 12 Nov ~17:20 (user: "give our step 1 to argon for review"): **consult17** (Argon, cap $10): reviews our r2s1 implementation
   against its own plan (queued command, code diff, dry runs, log, user deviations: hard mix rule, no general mode), bugs in
   --rp-extra-source, whether 1,200 new IFEval questions reach 288 shorter pairs, settings to change, expected Dev / full test.
+- 12 Nov ~17:45 (user: "drop it, we know it transfers"): AIME 2025 dropped (32k cap: ~9 h for the original's 240 answers
+  alone at ~120 tok/s, KV-cache bound). GPU 1 goes straight to transfer v2 (original + rpM-60).
