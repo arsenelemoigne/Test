@@ -5717,3 +5717,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   ("LoRA Without Regret"). Agent's odds for >50% / better than -1 in one run: ~30-45%. Cheapest test: 150 steps, easy prompts
   of all 4 types, per-question cap 0.5x the original's median right length as generation cap, LoRA r16, lr 1e-5 constant, N=8,
   beta 0, batch-normalised advantages, Dev checks at 50/100/150; go on only if >=35% shorter at <=-2 by step 100.
+- 12 Nov ~09:40: GPU 2's runtime disconnected during the transfer of rpK-40 (Drive log stops at chunk ~3, 60% of 2,400). The
+  original's transfer answers are complete on Drive. plan_line_a: every finished line commented out so a fresh runtime only
+  replays the transfer of rpK-40 / rpL-40 / rpL-60, then holds. Waiting for the user to reconnect.

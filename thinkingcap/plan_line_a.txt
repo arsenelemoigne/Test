@@ -539,42 +539,42 @@
 # 11 Nov ~09:20 (user: "can we do full eval of" Path 1 round 1 step 200 and rpK steps 20 / 40 / 60): the FULL test (2,759 x 8) of
 # each, then its 720 screen. Here the three rpK checkpoints (step 20 first: the one whose estimate sits in the goal box);
 # plan_line_b holds the same list plus Path 1's round 1 (a finished test is skipped, so no test runs twice).
-fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
+# DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpK-20=models/rpE-80:adapters/rpK-s0/step-20 --nothink-models models/rpK-20
 # 11 Nov ~11:45 (user: yes to consult9's rpL, incl. the anti-loop pair). rpL = rpK with the IFEval pairs fixed (they rewarded
 # writing MORE: the chosen response was longer in 76% of pairs) and a new pair "a finished right answer beats a runaway one"
 # (runaways hold 26% of rpE-80's IFEval tokens on the full test). Same start, answers, tool-call pairs and training as rpK.
-ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
-fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
-fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
+# DONE (12 Nov, before GPU 2 reconnect): ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-vs rpE80
+# DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpK-60=models/rpE-80:adapters/rpK-s0/step-60 --nothink-models models/rpK-60
+# DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpK-40=models/rpE-80:adapters/rpK-s0/step-40 --nothink-models models/rpK-40
 # 11 Nov ~16:30 (user: "let's build another RP ... rpM ... let him [Argon] do whatever he wants", after rpL's results). rpM = consult10's
 # design, checked on the real answers: from rpE-80; math protected on SVAMP-like questions (rpE-80 answers 1,200 new ones;
 # widened "don't stop early" guards + length-matched be-right pairs, no "shorter", no anti-loop); IFEval: counting pairs only on
 # true length rules with the chosen answer writing clearly more, "shorter" pairs only on questions without a counting rule with
 # the response held within 5%; several functions 50 / 50. Before it: the SVAMP-like dev slice (Dev-512's math is hard GSM8K and
 # missed rpK's math loss) and its reading of rpE-80, rpK-60 and rpL-60 (models whose full tests exist or are running).
-devsvamp
-devscore --ds-name rpE80 --ds-model models/rpE-80 --ds-dev svamp200
-devscore --ds-name rpK-60 --ds-model models/rpK-60 --ds-dev svamp200 --ds-vs rpE80
-devscore --ds-name rpL-60 --ds-model models/rpL-60 --ds-dev svamp200 --ds-vs rpE80
+# DONE (12 Nov, before GPU 2 reconnect): devsvamp
+# DONE (12 Nov, before GPU 2 reconnect): devscore --ds-name rpE80 --ds-model models/rpE-80 --ds-dev svamp200
+# DONE (12 Nov, before GPU 2 reconnect): devscore --ds-name rpK-60 --ds-model models/rpK-60 --ds-dev svamp200 --ds-vs rpE80
+# DONE (12 Nov, before GPU 2 reconnect): devscore --ds-name rpL-60 --ds-model models/rpL-60 --ds-dev svamp200 --ds-vs rpE80
 # a short wait before rpM: consult11 (the review with the full-test scores) may ask for an edit
-hold --hold-minutes 15 --hold-tag before-rpM
-ptrepair --name rpM --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-extra-questions svamp=1200 --rp-samples 8 --rp-seed 31 --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed3,--count-mode,length,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--resp-median,0.95,--resp-max,1.05,--resp-near-long,0.95,--right-resp-cap,1.15,--loop-response-only,ifeval,--guard-wide,svamp,--right-hold,svamp --rp-quota svamp=180,svamp_hard=60,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-svamp --rp-dev-vs rpE80
+# DONE (12 Nov, before GPU 2 reconnect): hold --hold-minutes 15 --hold-tag before-rpM
+# DONE (12 Nov, before GPU 2 reconnect): ptrepair --name rpM --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-extra-questions svamp=1200 --rp-samples 8 --rp-seed 31 --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed3,--count-mode,length,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--resp-median,0.95,--resp-max,1.05,--resp-near-long,0.95,--right-resp-cap,1.15,--loop-response-only,ifeval,--guard-wide,svamp,--right-hold,svamp --rp-quota svamp=180,svamp_hard=60,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 60 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 20 40 60 --rp-dev --rp-dev-svamp --rp-dev-vs rpE80
 # 11 Nov ~19:45 (user: full tests of rpM at the same steps as the others): rpM step 40 here, step 60 and 20 on GPU 1
-fullmodel --fm-merge models/rpM-40=models/rpE-80:adapters/rpM-s0/step-40 --nothink-models models/rpM-40
+# DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpM-40=models/rpE-80:adapters/rpM-s0/step-40 --nothink-models models/rpM-40
 # 11 Nov ~18:30 (user: "lets add the steps 80 100 120"): rpL resumed from its step-60 state (same pairs, same constant lr) to 120,
 # Dev-512 at 80 / 100 / 120 paired vs rpE-80
-ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 120 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 80 100 120 --rp-dev --rp-dev-vs rpE80
+# DONE (12 Nov, before GPU 2 reconnect): ptrepair --name rpL --rp-base models/rpE-80 --rp-own-data --rp-rollouts-from rpI --rp-kinds mix --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--mix-preset,typed2,--count-mode,atleast,--count-resp-cap,1.35,--resp-median,0.85,--resp-max,1.05,--right-resp-cap,1.10 --rp-quota svamp=160,mbpp=160,ifeval=320,bfcl_simple_python=160,bfcl_multiple=120,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 120 --rp-epochs 2 --rp-dpo-seed 0 --rp-screen 80 100 120 --rp-dev --rp-dev-vs rpE80
 # 11 Nov ~20:40 (user: "is it benchmark overfitting?"): TRANSFER check on benchmarks never trained on (MATH-500, Skywork math,
 # ARC-Challenge, CommonsenseQA, MMLU, HumanEval) x4 (user, 11 Nov ~21:25): the original, rpK-40, rpL-40, rpL-60; bidaREPLICA = OUR
 # replica of michal-bida's recipe (lpc-bidax5q seed 0 final, 720: 46.7 / -0.5), NOT his weights; competitors' PUBLIC weights: basta
 # (Lightning McQwen3 LoRA, without its test-time gate), matousek 850 (GitHub release).
 # michal-bida and Herz1c published no weights (checked: Hub, GitHub repos, branches, releases).
 # 11 Nov ~21:40 (user: split so both GPUs finish together): here the original (the reference) + ours; GPU 1 runs the three others.
-transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60
+# DONE (12 Nov, before GPU 2 reconnect): transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60
 # 11 Nov ~14:00 (user): rpL step 40's full test (now after rpM: consult10 judged this test the least informative of the queue)
-fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
+# DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpL-40=models/rpE-80:adapters/rpL-s0/step-40 --nothink-models models/rpL-40
 # 11 Nov ~22:35 (user): the full test of rpL step 80 (Dev-512 62.1 / -0.30)
-fullmodel --fm-merge models/rpL-80=models/rpE-80:adapters/rpL-s0/step-80 --nothink-models models/rpL-80
+# DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpL-80=models/rpE-80:adapters/rpL-s0/step-80 --nothink-models models/rpL-80
 # 11 Nov ~23:00: the transfer check (part 1) again: its first try failed (prepare_types.py defined the new builders after main ran; fixed)
 transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60 --hold-tag retry
 # MOVED to GPU 1 (12 Nov 03:40, balance): transfer --tr-models rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60 --hold-tag rpM60
