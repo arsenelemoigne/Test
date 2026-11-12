@@ -5948,3 +5948,7 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   Step 1's pairs rebuilt as r2s1b (pairs only) with those 1,200 instead of the argilla ones. Nothing trains.
 - ~21:55 check-in: GPU 2 in hold after-r2s1-2 (ends ~22:15), then r2c-nofit, r2c-math, r2d-ifeval (3,000 built IFEval x8),
   r2prep, r2s1b pairs. GPU 1: transfer v2, original's answers, block 2 of ~5 at 34% (MATH-500 uncapped: ~2.5 h per block).
+- ~22:00 (user: "start the GPU 2"): it had already left the hold by itself (~21:56); no restart was needed. Finished lines
+  commented out in plan_line_a.txt anyway (safe for any later restart). r2c-nofit: 500 questions x8, original solves 96%
+  (sometimes 46, always 450, never 4): our no-fit sources are easy, so the hard no-fit bins (<25% solved: 12% of the test)
+  stay short. r2c-math answering, then r2d-ifeval (3,000 built), r2prep, r2s1b.
