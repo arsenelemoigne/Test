@@ -837,7 +837,7 @@ def ifeval_fill(args, rng, want_n, want_id, got_n, got_id, room, bases=None):
             continue
         got_n[len(ids)] += 1
         got_id.update(ids)
-        built.append({"source": "ifeval_like", "origin": "built", "task": "instructions", "answer": "",
+        built.append({"source": "ifeval_like", "origin": "built", "base": base, "task": "instructions", "answer": "",
                       "grader": "ifeval", "id": f"ifeval_built-{len(built)}", "instruction_id_list": ids,
                       "kwargs": kwargs, "original_prompt": prompt, "prompt": [{"role": "user", "content": prompt}]})
     return built

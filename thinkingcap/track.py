@@ -274,6 +274,8 @@ def main():
                         help="r2prep: step 3 questions per part")
     parser.add_argument("--r2-tops", default="r2a-math,r2a-code,r2a-ifeval,r2a-tools,r2a-nofit",
                         help="r2prep: newtop sets (runs/bon/tooltop-NAME) added to the held-back questions")
+    parser.add_argument("--r2-need1", default="", help="r2prep: step 1's NEW questions per part, chosen first (e.g. ifeval=1200)")
+    parser.add_argument("--r2-step1-tops", default="", help="r2prep: the newtop sets step 1's new questions come from")
     parser.add_argument("--r2-used-glob", default="repair-r2s1*.jsonl",
                         help="r2prep: data/ files whose questions recipe 2 already answered (step 1)")
     parser.add_argument("--r2-redo", action="store_true", help="r2prep: rebuild even if the question files exist")
@@ -375,6 +377,7 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-extra-top", default="", help="ptrepair (12 Nov): NAME=IDS.json,... add tooltop-NAME's answers on these ids")
     parser.add_argument("--rp-beta", type=float, default=0.1, help="ptrepair (12 Nov): DPO beta (was fixed at 0.1)")
     parser.add_argument("--rp-question-file", default="",
                         help="ptrepair (12 Nov): answer exactly these questions (r2prep's data/r2-step2/3-questions.jsonl)")
@@ -3462,6 +3465,30 @@ def newtop(args):
         before = len(rows)
         rows = [r for r in rows if json.dumps(r.get("messages") or r.get("prompt"), sort_keys=True) not in seen]
         print(f"newtop {name}: {before - len(rows)} candidates already in the pool or a top-up, dropped", flush=True)
+        if any(r.get("base") for r in rows):  # (12 Nov) built IFEval: the REQUEST must be new too, and used once
+            def norm(text):
+                return " ".join(str(text).split())
+            used = defaultdict(list)  # first 30 characters -> used prompt texts
+            for key in seen:
+                try:
+                    msgs = json.loads(key)
+                except ValueError:
+                    continue
+                if isinstance(msgs, list) and msgs and isinstance(msgs[-1], dict):
+                    c = norm(msgs[-1].get("content", ""))
+                    used[c[:30]].append(c)
+            kept, bases, before = [], set(), len(rows)
+            for r in rows:
+                b = norm(r.get("base", ""))
+                if not b or b in bases or any(c.startswith(b) for c in used[b[:30]]):
+                    continue
+                bases.add(b)
+                kept.append(r)
+            rows = kept
+            print(f"newtop {name}: {before - len(rows)} built prompts dropped (request already used, or a 2nd prompt on the "
+                  f"same request); {len(rows)} left", flush=True)
+        elif "ifeval" in args.nt_parts and "ifeval_built" in args.nt_sources:
+            print(f"newtop {name}: WARNING built IFEval rows carry no 'base' (request-level check skipped)", flush=True)
         random.Random(args.data_seed).shuffle(rows)
         rows = rows[:args.tt_questions]
         for k, r in enumerate(rows):
@@ -3644,9 +3671,31 @@ def r2prep(args):
         cands[part].append((qid, rate, tag))
         stats[qid] = (rate, [t for _, t, _ in a], sum(x for _, _, x in a) / len(a), tag)
     print(f"r2prep: candidates {dict((p, len(v)) for p, v in cands.items())}; dropped {dict(drop)}", flush=True)
+    need1 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need1.split(",") if x)}
+    tops1 = {x for x in args.r2_step1_tops.split(",") if x}
+    sel1 = {}
+    if need1:  # (12 Nov, user) step 1's NEW questions (e.g. IFEval built from real requests), chosen first, test-matched
+        c1 = {p: [c for c in cands[p] if c[2] in tops1] for p in need1}
+        sel1 = r2_select(c1, {p: test[p]["bins"] for p in need1}, need1, {p: 0 for p in need1}, seed=args.data_seed)
+        taken1 = {q for p in sel1 for q in sel1[p]["step2"]}
+        for p in cands:
+            cands[p] = [c for c in cands[p] if c[0] not in taken1]
+        Path("data/r2-step1-new-ids.json").write_text(json.dumps(sorted(taken1)))
     sel = r2_select(cands, {p: test[p]["bins"] for p in need2}, need2, need3, seed=args.data_seed)
     lines = ["r2prep: steps 2 and 3 questions vs the FULL TEST (original Qwen's answers on both sides)",
              f"bins = original's solve rate per question: {' | '.join(R2_BIN_NAMES)}"]
+    for part, sp in sel1.items():
+        ids = sp["step2"]
+        rates = [stats[q][0] for q in ids]
+        think = [x for q in ids for x in stats[q][1]]
+        bins = Counter(r2_bin(r) for r in rates)
+        t = test[part]
+        lines.append(f"\nSTEP 1 NEW {part} questions (from {sorted(tops1)}): {len(ids)} q (want {need1[part]}) | quota per bin "
+                     f"{sp['quota']} -> from the right bin {sp['got']} | solve {100 * statistics.fmean(rates):.0f}% | bins % "
+                     f"{[round(100 * bins[i] / len(ids)) for i in range(len(R2_BINS))]} | median think {statistics.median(think):.0f}"
+                     f" | p90 {sorted(think)[int(0.9 * len(think))]}   (TEST: solve {100 * t['solve']:.0f}%, bins % "
+                     f"{[round(100 * t['bins'][str(i)]) for i in range(len(R2_BINS))]}, median think {t['median_think']:.0f})"
+                     if ids else f"\nSTEP 1 NEW {part}: 0 questions ** EMPTY **")
     for part in need2:
         t = test[part]
         lines.append(f"\n{part}: TEST {t['questions']} q | solve {100 * t['solve']:.0f}% | bins % "
@@ -4037,6 +4086,23 @@ def ptrepair(args):
                     n_out += 1
             print(f"repair {name}: --rp-drop {drops}: kept {n_out} of {n_in} stored answers", flush=True)
             rolls = [kept_f]
+        for spec in [x for x in getattr(args, "rp_extra_top", "").split(",") if x] if reuse else []:
+            # (12 Nov, user) the original's answers on chosen NEW questions (newtop set, ids picked by r2prep)
+            top, ids_f = spec.split("=")
+            drive_sync("restore", only=[str(BON / f"tooltop-{top}"), ids_f])
+            want_ids = set(json.loads(Path(ids_f).read_text()))
+            dst = BON / f"rp-{name}-top-{top}" / "rollouts.jsonl"
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            n_x, q_x = 0, set()
+            with open(BON / f"tooltop-{top}" / "rollouts.jsonl") as src_f, open(dst, "w") as dst_f:
+                for l in src_f:
+                    if l.strip() and json.loads(l)["id"] in want_ids:
+                        dst_f.write(l)
+                        n_x += 1
+                        q_x.add(json.loads(l)["id"])
+            print(f"repair {name}: + {len(q_x)} new questions ({n_x} answers) from tooltop-{top} ({ids_f})", flush=True)
+            assert q_x, f"no answers of {ids_f} in tooltop-{top}"
+            rolls.append(dst)
         if getattr(args, "rp_extra_questions", "") and reuse:  # (11 Nov, rpM) new SVAMP-like math beside the reused answers
             want_x = {k: int(v) for k, v in (x.split("=") for x in args.rp_extra_questions.split(","))}
             roll_x = BON / f"rp-{name}-extra"
