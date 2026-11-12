@@ -5979,7 +5979,7 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   wider spread than argilla's). r2f-ifeval: 11,996 prompts from 3,921 Dolly + OpenAssistant requests -> 6,728 at the test's
   lengths -> 2,333 after the request check; answering.
 
-## 13 Nov ~00:30 — od2 (online DPO from the ORIGINAL, 10 rounds) results, recovered from Drive (never logged before)
+## 13 Nov ~00:05 — od2 (online DPO from the ORIGINAL, 10 rounds) results, recovered from Drive (never logged before)
 od2 ran all 10 rounds (finished 11 Nov ~13:20 on GPU 1) but only rounds 2 and 4 were logged. 720 x4 (s4-od2-rK-10/compare.json,
 macro average of the 4 families):
 | round (steps) | saved / acc | math | code | IFEval | simple | several | no-fit |
@@ -5996,7 +5996,7 @@ time, a low bar), 160 pairs and 10 steps per round, no math / IFEval protection,
 (the DPO anchor moves every round, so nothing holds the model near the original across rounds). Its draws also did not
 exclude Dev-512. consult9 (11 Nov morning) had called it low value before these rounds were scored.
 
-## 13 Nov ~00:40 — discussion (user): RL "arena", online DPO vs GRPO, what RL gave so far (no code; recorded for consult18)
+## 13 Nov ~00:00 — discussion (user): RL "arena", online DPO vs GRPO, what RL gave so far (no code; recorded for consult18)
 - User's idea (after reading about AlphaGo): copies of Qwen3-0.6B "compete" on the same questions; being right AND shorter wins;
   play indefinitely; each type weighted so a token saved counts relative to that type's length. Reading: with a fixed test there
   is no opponent to beat; the "competition" is the group of answers to one question = online GRPO-style RL (group-relative
@@ -6024,13 +6024,17 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
   one-round on-policy repairs rpK / rpM are our best (51.2 / -0.8, 54.1 / -0.93 full test).
 - Decision (user): give all of this to Argon (consult18) for ONE new strategy to run on GPU 1 in parallel with recipe 2's step 1
   on GPU 2.
-- ~01:00 od2 failure analysis (records of rounds 6 / 8 / 10 vs the original's full-test answers on the same questions;
+- ~00:15 od2 failure analysis (records of rounds 6 / 8 / 10 vs the original's full-test answers on the same questions;
   reviews/consult18_next/pack/od2_failure_analysis.txt): the dominant failure is PREMATURE STOPPING, growing every round in
   every type (math: 26 -> 70 -> 84 wrong answers that stopped thinking before half the original's right length; 80% of math's
   wrong answers at round 10, median 0.24x; 66 of 105 on questions the original solves >= 75%); code fails first by repetition
   loops (20 at round 6) then by stopping early (99 at round 10, median 0.28x); IFEval stopped-early 30 -> 56 -> 88; tool calls
   also break format (unparseable 6-14 per type). Consistent with its design: shorten pairs on questions right only 6/8, no
   length-held right-vs-wrong / anti-loop / format pairs, a moving reference, no gate between rounds.
-- ~01:05 (user): consult18 launched (Gemini 4 Argon via OpenRouter, cap $15): ONE new strategy for GPU 1, a different bet from
+- ~00:20 (user): consult18 launched (Gemini 4 Argon via OpenRouter, cap $15): ONE new strategy for GPU 1, a different bet from
   recipe 2, full executable plan on one L4. Pack = consult17's + NEW_RESULTS_13nov.md (recipe 2 state, od2 recovered results and
   failure analysis, RL record, the user's arena idea, generalization) + the current log and code. No BottleCap notes.
+- ~00:25 check: GPU 1's runtime is DISCONNECTED (Colab shows "Reconnect L4"; its output stopped at transfer v2 block 2, 816 of
+  2,400 prompts, unchanged since ~22:30). Block 1 of the original's transfer-v2 answers is on Drive; block 2 is lost. Not
+  reconnected (user's rule). GPU 2: r2f-ifeval answering (2,333 Dolly / OpenAssistant built questions x8, ~2,100 tok/s), then
+  r2e-nofit, r2prep, r2s1b. consult18 at turn 15 ($0.34).
