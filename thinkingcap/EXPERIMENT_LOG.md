@@ -5864,3 +5864,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   outside-source fill: if a part with --rp-extra-source is still short after the first build, answer up to 2 more batches
   of that source's leftover questions (max(400, 6 x pairs short) each; the draw holds 4,800) with the same model, rebuild.
   Checkpoints every 5 steps; Dev-512 + Dev-SVAMP screens at 120 / 150 / 180.
+- ~20:00 (user: "do not start the full pass until we have enough pairs"): `--rp-require-full` on r2s1: after the pairs (and up
+  to 3 outside-source fill batches), training starts ONLY if pairs.jsonl holds the whole quota (2,880); otherwise the stage
+  stops before training and prints the shortfall (the queue then just holds). Checked on the Mac dry run: 2,668 < 2,880 -> STOP.

@@ -359,6 +359,8 @@ def main():
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
     parser.add_argument("--rp-dev-svamp", action="store_true", help="ptrepair (11 Nov): with --rp-dev, also score each step on "
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
+    parser.add_argument("--rp-require-full", action="store_true",
+                        help="ptrepair (12 Nov, user): never train unless the pairs file holds the whole --rp-quota (stop the stage instead)")
     parser.add_argument("--rp-drop", default="",
                         help="ptrepair (12 Nov, user): with --rp-rollouts-from, leave out stored answers: source:NAME or id:PREFIX, "
                         "list joined by commas (r2s1: source:metamath_sv,id:nofit4- = michal-bida's MetaMath SV/FOBAR and xLAM no-fit picks)")
@@ -3844,7 +3846,7 @@ def ptrepair(args):
         # with such a source is still short, answer up to 2 more batches of that source's leftover questions and rebuild
         srcs_fill = {k for k, v in (x.split("=") for x in getattr(args, "rp_extra_source", "").split(",") if x)} \
             if reuse and getattr(args, "rp_extra_questions", "") and not smoke else set()
-        for extra in range(1, 3 if srcs_fill else 1):
+        for extra in range(1, 4 if srcs_fill else 1):  # up to 3 batches
             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
             short = {k: v for k, v in short.items() if v > 0 and k in srcs_fill}
             if not short:
@@ -3905,6 +3907,15 @@ def ptrepair(args):
             build()
         drive_sync("save")
     print((pairs / "summary.txt").read_text(), flush=True)
+    if getattr(args, "rp_require_full", False) and not smoke:  # (12 Nov, user: "do not start until we have enough pairs")
+        need = sum(int(x.split("=")[1]) for x in args.rp_quota.split(",") if x)
+        have = sum(1 for l in open(pairs / "pairs.jsonl") if l.strip())
+        if have < need:
+            print(f"repair {name}: STOPPED BEFORE TRAINING: {have} pairs < {need} (a full pass needs all of them); "
+                  f"shortfall {(pairs / 'shortfall.json').read_text() if (pairs / 'shortfall.json').exists() else '?'}", flush=True)
+            drive_sync("save")
+            return
+        print(f"repair {name}: {have} pairs = the full {need}: training", flush=True)
     adapter = Path("adapters") / f"{name}-s0"
     start = Path(args.rp_init_from) if args.rp_init_from else Path("adapters") / f"fresh-{name}"  # (10 Nov) continue an adapter
     drive_sync("restore", only=[str(adapter), str(start)])
