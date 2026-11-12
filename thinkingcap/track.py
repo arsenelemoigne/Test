@@ -3766,15 +3766,19 @@ def ptrepair(args):
                                               public=True, avoid_grams=dev_gram_set()) if set(want_x) - set(srcs) else []
                 for part_s, src in srcs.items():  # (12 Nov) new questions from a source outside the pool
                     from build_pool import ngrams, words
+                    if not Path("questions/questions.jsonl").exists():  # (12 Nov, consult17 bug 1) a fresh runtime
+                        py("utils/eval/benchmarks.py")
                     cache = Path(f"data/extra-src-{src}.jsonl")
                     drive_sync("restore", only=[str(cache)])
                     if not cache.exists():
                         py("prepare_types.py", "--sources", src, "--per-source", 1000000, "--out", cache)
                     pool_texts = set()
-                    for l in Path("data/pool-dp13.jsonl").read_text().splitlines() if Path("data/pool-dp13.jsonl").exists() else []:
-                        if l.strip():
-                            pr = json.loads(l).get("prompt")
-                            pool_texts.add(json.dumps(pr, sort_keys=True))
+                    drive_sync("restore", only=["runs/bon/tooltop-*/questions.jsonl"])
+                    for f in [Path("data/pool-dp13.jsonl"), *BON.glob("tooltop-*/questions.jsonl")]:  # (consult17 bug 2)
+                        for l in (f.read_text().splitlines() if f.exists() else []):
+                            if l.strip():
+                                pr = json.loads(l).get("prompt")
+                                pool_texts.add(json.dumps(pr, sort_keys=True))
                     seen_t = Counter()
                     for l in Path("questions/questions.jsonl").read_text().splitlines():
                         if l.strip():
@@ -4025,7 +4029,7 @@ def dev_gram_set():
     for l in (DEV_FILE.read_text().splitlines() if DEV_FILE.exists() else []):
         if l.strip():
             seen.update(ngrams(words(json.loads(l)["prompt"])))
-    return {g for g, n in seen.items() if n < 3}
+    return {g for g, n in seen.items() if n < 3} | dev_svamp_gram_set()  # (12 Nov, consult17 bug 3) both Dev sets
 
 
 def dev_svamp_gram_set():
