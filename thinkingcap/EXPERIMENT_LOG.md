@@ -5771,3 +5771,8 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   -0.3; MMLU 62.6% / +1.6; HumanEval 50.2% / -0.7 [-3.4, +2.1] (runaways 13.7 -> 1.8%); MATH-500 / Skywork are 4k-cap
   artefacts (original truncated 53% / 75%). vs bidaREPLICA (ARC 52% / -3.3, CSQA 50% / -0.2, MMLU 48% / +3.2, HumanEval 29% /
   -3.8): rpK-40 saves more on every unseen set and loses less on ARC and HumanEval -> its "think less" transfers.
+- 12 Nov ~14:05, transfer v1 (x8, vs original; 4k cap) competitors scored on GPU 1. Honest sets (ARC-C / CSQA / MMLU / HumanEval,
+  saved / accuracy): basta 64/-6.6, 65/+2.1, 63/+1.4, 39/-4.6; matousek850 47/-3.6, 38/-0.4, 50/-0.3, 46/-5.6; bidaREPLICA
+  52/-3.3, 50/-0.2, 48/+3.2, 29/-3.8; **rpK-40 67/-1.8, 69/-0.3, 63/+1.6, 50/-0.7 (best balance)**. MATH-500 / Skywork at
+  4k measure finishing, not reasoning (original 10.2% / 3.4%): basta 59.6 / 40.6 (finishes most), rpK-40 48.0 / 24.1,
+  bidaREPLICA 42.6 / 20.3, matousek850 12.0 / 6.0 (runaways 77% on MATH-500). Uncapped MATH-500 comes in transfer v2.
