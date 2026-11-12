@@ -613,4 +613,13 @@
 # DROPPED (11 Nov ~11:45: the rpK full tests run on GPU 2; Path 1 seed 1 dropped by the user after consult9) ptrepair --name p1r2s1 --rp-gate p1r1s1-200,rpE80,6 --rp-base models/p1r1s1 --rp-base-from Qwen/Qwen3-0.6B:adapters/p1r1s1-s0/step-200 --rp-own-data --rp-exclude-dev --rp-exclude-ids data/p1-round1-ids.json --rp-public --rp-kinds mix --rp-samples 8 --rp-seed 22 --rp-pair-args=--think-only,ifeval,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.875,--resp-guard,0.9 --rp-questions svamp=1000,mbpp=600,ifeval=960,bfcl_simple_python=340,bfcl_multiple=250,bfcl_irrelevance=330 --rp-quota svamp=320,mbpp=320,ifeval=320,bfcl_simple_python=100,bfcl_multiple=80,bfcl_irrelevance=140 --rp-lr 1e-5 --rp-steps 80 --rp-epochs 2 --rp-dpo-seed 1 --rp-screen 40 60 80 --rp-dev --rp-dev-vs p1r1s1-200
 # DROPPED 13 Nov 00:30 (user: too slow): hold --hold-minutes 30 --hold-tag after-p1-full-test-1
 # DROPPED 13 Nov 00:30 (user: too slow): hold --hold-minutes 30 --hold-tag after-p1-full-test-2
+# 13 Nov ~00:35 (user: option 2): keep GPU 1 alive and ready for consult18's strategy; its lines go ABOVE these holds
+hold --hold-minutes 30 --hold-tag wait-consult18-1
+hold --hold-minutes 30 --hold-tag wait-consult18-2
+hold --hold-minutes 30 --hold-tag wait-consult18-3
+hold --hold-minutes 30 --hold-tag wait-consult18-4
+hold --hold-minutes 30 --hold-tag wait-consult18-5
+hold --hold-minutes 30 --hold-tag wait-consult18-6
+hold --hold-minutes 30 --hold-tag wait-consult18-7
+hold --hold-minutes 30 --hold-tag wait-consult18-8
 end
