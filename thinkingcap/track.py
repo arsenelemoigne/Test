@@ -361,6 +361,8 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-pairs-only", action="store_true",
+                        help="ptrepair (12 Nov, user): stop after the answers and pairs; the same line without it trains on them")
     parser.add_argument("--rp-require-full", action="store_true",
                         help="ptrepair (12 Nov, user): never train unless the pairs file holds the whole --rp-quota (stop the stage instead)")
     parser.add_argument("--rp-drop", default="",
@@ -3917,7 +3919,12 @@ def ptrepair(args):
                   f"shortfall {(pairs / 'shortfall.json').read_text() if (pairs / 'shortfall.json').exists() else '?'}", flush=True)
             drive_sync("save")
             return
-        print(f"repair {name}: {have} pairs = the full {need}: training", flush=True)
+        print(f"repair {name}: {have} pairs = the full {need}", flush=True)
+    if getattr(args, "rp_pairs_only", False):  # (12 Nov, user: "nothing starts until we have the IFEval data ready")
+        print(f"repair {name}: PAIRS ONLY: answers and pairs saved ({pairs}); no training. Rerun the line without "
+              f"--rp-pairs-only to train on exactly these pairs.", flush=True)
+        drive_sync("save")
+        return
     adapter = Path("adapters") / f"{name}-s0"
     start = Path(args.rp_init_from) if args.rp_init_from else Path("adapters") / f"fresh-{name}"  # (10 Nov) continue an adapter
     drive_sync("restore", only=[str(adapter), str(start)])

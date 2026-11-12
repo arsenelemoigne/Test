@@ -5879,3 +5879,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 MATH-500 / Skywork at the 4k cap are artefacts (the original hits the cap 53% / 75% of the time); MATH-500 saving
 falls with difficulty for all three (rpL-60: level 1 64%, level 5 20%). GPU 2 then pulled 93ed38e and is in the 30-min
 hold before r2s1 (it pulls 126bccc at the end of the hold). GPU 1: transfer v2, original's answers, chunk 1 at 63%.
+- ~19:15 (user: "nothing to start until we have the IFEval data ready"): r2s1 now runs with `--rp-pairs-only`: it answers
+  the new IFEval questions (plus fill batches), builds and counts the pairs, saves them, and STOPS. Training starts only
+  on the user's go, by rerunning the same line without --rp-pairs-only (it then trains on exactly the saved pairs).
