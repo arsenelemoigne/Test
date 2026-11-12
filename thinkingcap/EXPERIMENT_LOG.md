@@ -5867,3 +5867,5 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - ~20:00 (user: "do not start the full pass until we have enough pairs"): `--rp-require-full` on r2s1: after the pairs (and up
   to 3 outside-source fill batches), training starts ONLY if pairs.jsonl holds the whole quota (2,880); otherwise the stage
   stops before training and prints the shortfall (the queue then just holds). Checked on the Mac dry run: 2,668 < 2,880 -> STOP.
+- ~20:10 (user): r2s1 checkpoints at 40, 80, then every 20 from 100: `--rp-save-at 40 80 100 120 140 160 180` (only these
+  are saved) and all seven scored on Dev-512 + Dev-SVAMP (`--rp-screen` same list), ~25 min each on GPU 2 (~3 h total).

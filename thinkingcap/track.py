@@ -359,6 +359,8 @@ def main():
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
     parser.add_argument("--rp-dev-svamp", action="store_true", help="ptrepair (11 Nov): with --rp-dev, also score each step on "
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
+    parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
+                        help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
     parser.add_argument("--rp-require-full", action="store_true",
                         help="ptrepair (12 Nov, user): never train unless the pairs file holds the whole --rp-quota (stop the stage instead)")
     parser.add_argument("--rp-drop", default="",
@@ -3930,8 +3932,9 @@ def ptrepair(args):
            "--lr-schedule", "cosine", "--warmup", getattr(args, "rp_warmup", 2),
            "--lr-min", args.rp_lr if getattr(args, "rp_lr_min", None) is None else args.rp_lr_min, "--max-steps", steps, "--epochs", args.rp_epochs,
            "--save-every",
-           1 if smoke else 5, "--held-out", 0, "--max-len", 8704, "--bida-precision", "--dtype", args.dtype,
-           "--seed", getattr(args, "rp_dpo_seed", 0))
+           1 if smoke else (10 ** 6 if getattr(args, "rp_save_at", None) else 5), "--held-out", 0, "--max-len", 8704,
+           "--bida-precision", "--dtype", args.dtype, "--seed", getattr(args, "rp_dpo_seed", 0),
+           *(["--save-at", *args.rp_save_at] if getattr(args, "rp_save_at", None) and not smoke else []))
         drive_sync("save")
     if smoke:
         print(f"repair {name}: SMOKE done (answers, pairs, {steps} training steps)", flush=True)
