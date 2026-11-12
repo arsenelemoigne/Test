@@ -5913,3 +5913,16 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   averages ~1.25e-5); step 2 = rpK/rpM settings (constant 1e-5, beta 0.1, shorten 1.30x / >= 7/8); step 3 = rpE's repair
   (constant 1e-5, beta 0.1, equal-length right > wrong + don't-stop-early) + rpM's IFEval rules. Found: ptrepair had beta
   fixed at 0.1, so consult16's 0.12 / 0.2 would have been ignored; added --rp-beta (default 0.1).
+
+## 12 Nov ~20:50 — r2s1 (step 1) DATA COMPLETE: 2,880 pairs, nothing trained
+- First build 2,845 of 2,880 (35 short) -> automatic rebuild (--rp-rebuild-if-short) from the same answers with nofit4's ToolACE
+  no-fit rows kept (drop = MetaMath SV/FOBAR + nofit4 Glaive-labelled rows): 104,250 of 126,680 stored answers, 2,880 pairs
+  (2,740 questions), every part at quota. Candidates (clear + backup shorten / capped guard / be-right / counting): math
+  2,608+229 / 193 / 1,284; code 591+37 / 134 / 807; IFEval 286+44 / 128 / 681 / 193 (with the 1,200 new argilla questions);
+  simple 624+116 / 16 / 238; several 277+23 / 10 / 162; no-fit 227+94 / 16 / 124. Saved to runs/bon/pairs-r2s1.
+- Step 2/3 top-ups, round 1 (r2a-*): math 11 questions and code 3 (GSM8K-easy and KodCode-Light already in the pool: used up),
+  IFEval 135 (bug: the unused leftovers of r2s1's draw were counted as answered), simple 158, several 263, no-fit 0 (every
+  length-matched candidate already in the pool -> probe crashed on an empty file), r2prep crashed (test_difficulty.json is not
+  copied to Colab). Fixed (95ef5b8): profile as test_difficulty_data.py, leftovers not counted; round 2 (r2b-*) queued with
+  wider draws (build_pool --per-benchmark 8,000-30,000), math from full GSM8K (gsm8k_std; harder, the difficulty matching
+  takes what fits), IFEval from the same draw; code needs scaled to the held-back code questions (step 2 410, step 3 360).
