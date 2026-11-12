@@ -5762,3 +5762,8 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   guard, 80 steps, beta 0.2 -> forecast 52.5-54.8 / -0.5..-0.9. (2) 3-step: two on-policy shortening rounds (~47 -> ~57) then
   pure repair. (3) confidence-gated ShorterBetter Dr. GRPO then repair DPO. Cheapest test: CPU pair-rebuild audit on the
   original's stored answers, then a 220-step step-1 screen on Dev-512 (gate >= 52.5% saved, IFEval response <= 235).
+- 12 Nov ~13:00 (user: "give it again to argon ... a full plan for the 3 strategies and explain why for the hyperparams"):
+  **consult16** (Argon, task consult-plan, cap $20): same pack + its own consult15 report and notes; asks for a full executable
+  plan per recipe and step (data, pair rules / reward with counts, every hyperparameter, gates, fallbacks, GPU-hours), the WHY
+  of each choice (evidence run or arXiv id, effect of other values, extrapolation marked), fixes of inconsistencies, what to
+  build in code, a 2-GPU schedule and an updated comparison table. Notes mandatory (same harness rule).
