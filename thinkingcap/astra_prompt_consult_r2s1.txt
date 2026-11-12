@@ -1,0 +1,21 @@
+TASK. Review our implementation of YOUR recipe 2, step 1, before it trains (it starts on a GPU in about 2 hours).
+
+Your plan is {DATA}/YOUR_PLAN.md (recipe 2, step 1: "Moderate First-Stage Compression DPO from the original, target ~47% saved"); your notes from that session: {DATA}/YOUR_PLAN_NOTES.md. The whole data pack is in {DATA} as before. Our implementation is in {DATA}/r2s1/:
+- queued_command.txt: the exact command the GPU will run (track.py stage ptrepair; --rp-pair-args are split on commas, list values use '+').
+- code_changes_since_plan.diff (and the full repair_pairs.py / track.py): new pair preset r2s1, --guard-wide-max, list options with '+', the new --rp-extra-source (new IFEval questions from allenai/IF_multi_constraints_upto5, a source outside our pool, filtered against the pool, the test's rare 8-grams and Dev-512 / Dev-SVAMP-200 near-duplicates, answered x8 by the original before the pairs are built), dev_svamp_gram_set(), and the hold stage.
+- dry_run_summary_first_version.txt: the pair build on the original's stored answers alone (2,668 pairs, IFEval short by 212).
+- dry_run_summary_reuse_version.txt: an intermediate version (since REMOVED) that let an IFEval question give a second shorter pair; the user rejected it and asked for new questions instead (the current command).
+- log_entries.md: our log of these changes, the measured pair statistics (shorter pairs halve the thinking with the response held equal) and the user's decisions.
+
+Deliberate deviations from your plan, decided by the user: (1) the per-type mix is a HARD rule (when a kind runs short the type shrinks, it is never refilled by another kind), instead of your --no-trim-mix fallback; IFEval is instead filled with new questions; (2) your "general mode" (rules from per-question measurements and a prompt regex instead of type names / IFEval rule ids) is NOT built yet.
+
+NOTES (MANDATORY): keep {WORK}/notes.md from your first 10 turns, update every 15 turns.
+
+WHAT YOU HAVE: a persistent Python kernel (CPU, no internet, no GPU): reply with exactly one block that starts with ```python to run code; up to {CODE_RUNS} code runs. You may run repair_pairs.py on stored answers if the pack has them, read code, and check numbers.
+
+WHAT TO DELIVER, WITHOUT a code block, up to ~3,000 words:
+1. Does the queued command implement your recipe 2 step 1? A table: every element of your plan (data, each pair rule and threshold, quotas per type and kind, training settings, checkpoints, gate) vs what the command and code actually do, marked same / different / missing.
+2. Bugs or risks in the new code (especially --rp-extra-source and the IFEval fill: could it fail on the GPU, leak test or dev questions, or change the other types' pairs?), with the line to fix.
+3. Will 1,200 new IFEval questions x8 be enough to reach 288 IFEval "shorter" pairs from distinct questions? Estimate from the stored answers' rates.
+4. Any setting you would change before launch, and why (evidence or arXiv id; mark extrapolation).
+5. Your updated expectation for step 1 on Dev-512 / Dev-SVAMP-200 / the full test, and the go / no-go gate for step 2.

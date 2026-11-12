@@ -5822,3 +5822,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   HumanEval 56.0% / -0.2 [-3.0, +2.4] (runaways 13.7 -> 1.1%). Best of all models on the honest sets (most saving, every
   change inside noise). MATH-500 4k artefact 45.2 (levels: L1 59.5% saved, L5 18.5% saved = it thinks longer on harder
   problems). AIME 2025 started on GPU 1.
+- 12 Nov ~17:20 (user: "give our step 1 to argon for review"): **consult17** (Argon, cap $10): reviews our r2s1 implementation
+  against its own plan (queued command, code diff, dry runs, log, user deviations: hard mix rule, no general mode), bugs in
+  --rp-extra-source, whether 1,200 new IFEval questions reach 288 shorter pairs, settings to change, expected Dev / full test.
