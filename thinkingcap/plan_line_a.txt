@@ -576,7 +576,8 @@
 # 11 Nov ~22:35 (user): the full test of rpL step 80 (Dev-512 62.1 / -0.30)
 # DONE (12 Nov, before GPU 2 reconnect): fullmodel --fm-merge models/rpL-80=models/rpE-80:adapters/rpL-s0/step-80 --nothink-models models/rpL-80
 # 11 Nov ~23:00: the transfer check (part 1) again: its first try failed (prepare_types.py defined the new builders after main ran; fixed)
-transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60 --hold-tag retry
+# REPLACED 12 Nov 11:25 (GPU 2 restart regenerated the base: Drive not visible yet at start): transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60 --hold-tag retry
+transfer --tr-models rpK40=/content/lupin-models/rpK40t=models/rpE-80:adapters/rpK-s0/step-40 rpL40=/content/lupin-models/rpL40t=models/rpE-80:adapters/rpL-s0/step-40 rpL60=/content/lupin-models/rpL60t=models/rpE-80:adapters/rpL-s0/step-60 --tr-wait-base --hold-tag retry2
 # MOVED to GPU 1 (12 Nov 03:40, balance): transfer --tr-models rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60 --hold-tag rpM60
 # MOVED to GPU 1 (12 Nov 03:40, balance): transfer --tr-sets tr_aime25=30 --tr-max-tokens 32768 --tr-tag aime25 --tr-models rpM60=/content/lupin-models/rpM60t=models/rpE-80:adapters/rpM-s0/step-60
 # after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without another reconnect

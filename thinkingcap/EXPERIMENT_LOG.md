@@ -5726,3 +5726,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - Charts: new design canvas "ThinkingCap Frontier Canvas" (interactive explorer + full tests by type + loss-by-type heat map);
   rpM-60 canvas gained an interactive board comparing any two of 10 models (original, thinking off, rpE-80, rpK-40/60,
   rpL-40/60/80, rpM-20/60), full-test records of rpM-20, rpL-40, rpL-80 fetched from Drive.
+- 12 Nov ~11:20: GPU 2 reconnected; its restarted transfer line found neither data/transfer.jsonl nor the original's answers
+  on Drive (the Drive mount was not visible yet at start) and began regenerating the original's answers (~5.5 h). Stopped;
+  the line now uses --tr-wait-base (answers rpK-40 / rpL-40 / rpL-60 first, then restores the original's answers from Drive).
