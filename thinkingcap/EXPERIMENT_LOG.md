@@ -5705,3 +5705,8 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - 12 Nov ~06:40: transfer generation is slow on L4 (~950 output tok/s; ~60-75 min per 300-question x8 chunk, 5 chunks per
   model; KV-cache bound at the 4k/8k caps). Estimate: GPU 2 base done ~08:00, then rpK40/rpL40/rpL60 (~4 h each) -> ~20:00;
   GPU 1 bidaREPLICA/basta/matousek850 (~5 h each) -> ~21:00, then rpM60 transfer (~4 h) + AIME (~1.5 h). Argon waits for all.
+- 12 Nov ~09:25 (user: "Launch argon"): consult14 = Gemini 4 Argon (OpenRouter), the clean-recipe review, cap $20 (reserve $4),
+  replies up to 60k tokens, context handoff at 190k (the harness keeps prompts below the 272k long-context price tier). Pack:
+  reviews/consult14_clean/pack (consult13's pack + the current log + NEW_RESULTS.md of 12 Nov + rpM-60 per-question table and
+  answer-by-answer analysis). Prompt: >50% / no worse than -1, at most 3 recipes of 1-3 learning steps as one clear pathway.
+  Transfer + AIME results go in a follow-up message when they land.
