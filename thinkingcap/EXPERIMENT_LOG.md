@@ -5767,3 +5767,7 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   plan per recipe and step (data, pair rules / reward with counts, every hyperparameter, gates, fallbacks, GPU-hours), the WHY
   of each choice (evidence run or arXiv id, effect of other values, extrapolation marked), fixes of inconsistencies, what to
   build in code, a 2-GPU schedule and an updated comparison table. Notes mandatory (same harness rule).
+- 12 Nov ~13:15, transfer (x8, vs original, scored on the Mac): **rpK-40**: ARC-C 66.8% saved / -1.8 [-4.4, +0.8]; CSQA 68.7% /
+  -0.3; MMLU 62.6% / +1.6; HumanEval 50.2% / -0.7 [-3.4, +2.1] (runaways 13.7 -> 1.8%); MATH-500 / Skywork are 4k-cap
+  artefacts (original truncated 53% / 75%). vs bidaREPLICA (ARC 52% / -3.3, CSQA 50% / -0.2, MMLU 48% / +3.2, HumanEval 29% /
+  -3.8): rpK-40 saves more on every unseen set and loses less on ARC and HumanEval -> its "think less" transfers.
