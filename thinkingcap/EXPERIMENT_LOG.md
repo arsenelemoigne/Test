@@ -5842,3 +5842,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   70/22.5/7.5) -> expected 46.5-50.5% Dev; B) remove --no-shorten-counting and --resp-near-long -> 338 IFEval shorter
   candidates from p1src alone (no new generation); C) --rp-epochs 1.
 - 12 Nov ~18:15 (user: ok for C): r2s1 --rp-epochs 1 (never repeat pairs if the file comes out short).
+- 12 Nov ~18:35 (user: yes to A): r2s1 without widened guards: math 55 shorter / 40 be-right / 5 loops, code 70 / 22.5 / 7.5
+  (--guard-wide removed from the command). Dry run on the stored answers: math 396 / 288 / 36, code 504 / 162 / 54, tool calls
+  full; IFEval 508 of 720 locally (the 1,200 new IFEval questions fill it on the GPU).

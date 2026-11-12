@@ -434,8 +434,11 @@ def main():
                 # pairs (true length rules), the rest 50 shorter / 41.7 be-right / 8.3 response loops; one function 70 / 30,
                 # several 50 / 50, no fit 60 / 40. Thinking-only shortness with the response held (--think-only all parts,
                 # --resp-median 0.95 --resp-max 1.05): Path 1's --resp-guard 0.9 made IFEval responses longer (263 -> 345)
-                sh_share = ({"shorten": 0.40, "right": 0.40, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
-                            {"shorten": 0.60, "right": 0.20, "guard": 0.125, "loop": 0.075} if part == "mbpp" else
+                # (12 Nov ~18:30, consult17 change A, user: yes) NO widened guards in step 1: from the original they reward
+                # ~1,000-token right answers and cancel the shortening (p1cr1s0 stalled at 34% Dev, p1r1s0 without them 47.5%);
+                # math 55 shorter / 40 be-right / 5 loops, code 70 / 22.5 / 7.5 (guards come back in steps 2-3, as in rpM)
+                sh_share = ({"shorten": 0.55, "right": 0.40, "guard": 0.0, "loop": 0.05} if base_part == "svamp" else
+                            {"shorten": 0.70, "right": 0.225, "guard": 0.0, "loop": 0.075} if part == "mbpp" else
                             {"shorten": 0.50, "right": 0.4167, "guard": 0.0, "loop": 0.0833} if part == "ifeval" else
                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
