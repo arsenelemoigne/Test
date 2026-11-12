@@ -709,6 +709,11 @@ def run_main(args, llm=None, forward=None):
     messages = json.loads(msgs_f.read_text()) if msgs_f.exists() else [system, {"role": "user", "content": task_prompt(args)}]
     final_sent = False
 
+    def nonempty():  # (12 Nov) an empty user message (code that printed nothing) makes OpenRouter answer 400
+        for m in messages:
+            if m.get("role") == "user" and not str(m.get("content") or "").strip():
+                m["content"] = "(the code ran and printed nothing)"
+
     def save():
         st["spent_usd"] = budget.spent
         state_f.write_text(json.dumps(st, indent=1))
@@ -761,6 +766,7 @@ def run_main(args, llm=None, forward=None):
         t = run / "turns" / f"t{st['turn']:03d}"
         t.mkdir(exist_ok=True)
         (t / "prompt.txt").write_text(messages[-1]["content"])
+        nonempty()
         text, cost, usage = llm(messages)
         budget.spent += cost
         budget.last_cached = usage.get("cachedContentTokenCount", 0) if isinstance(usage, dict) else 0

@@ -5720,3 +5720,9 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - 12 Nov ~09:40: GPU 2's runtime disconnected during the transfer of rpK-40 (Drive log stops at chunk ~3, 60% of 2,400). The
   original's transfer answers are complete on Drive. plan_line_a: every finished line commented out so a fresh runtime only
   replays the transfer of rpK-40 / rpL-40 / rpL-60, then holds. Waiting for the user to reconnect.
+- 12 Nov ~10:30: consult14 crashed at turn 179 ($5.29) with HTTP 400: a code run printed nothing and the empty user message is
+  refused by OpenRouter. Fixed the message, added a guard in astra_harness.py (empty results become "(the code ran and printed
+  nothing)"), resumed from its saved conversation; running again.
+- Charts: new design canvas "ThinkingCap Frontier Canvas" (interactive explorer + full tests by type + loss-by-type heat map);
+  rpM-60 canvas gained an interactive board comparing any two of 10 models (original, thinking off, rpE-80, rpK-40/60,
+  rpL-40/60/80, rpM-20/60), full-test records of rpM-20, rpL-40, rpL-80 fetched from Drive.
