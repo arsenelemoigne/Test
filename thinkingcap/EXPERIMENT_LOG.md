@@ -5940,3 +5940,9 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   Top-ups so far: IFEval 135 + 1,336, math 11 + 65, code 3, simple 158 + 500 (solve 95%), several 263 + 500 (77%), no-fit 0.
 - Step 1's 1,200 NEW IFEval questions vs the test's IFEval: solve 68% vs 59%, bins [23, 6, 13, 12, 46] vs [27, 11, 16, 12, 34],
   median thinking 221 vs 300: EASIER than the test (the stored step-1 IFEval questions: 56% / 284, close to the test).
+- ~22:10 (user: "build better and closer to real eval IFEval questions"): IFEval now from OUR builder ifeval_built (human
+  no_robots requests + IFEval's own instruction sentences, IFEval's instruction-count and id shares; the pool's built IFEval
+  reads 56% solved / 284 thinking vs the test's 59% / 300, argilla 68% / 221). newtop r2d-ifeval: 3,000 questions, each
+  REQUEST new (not in the pool, top-ups or step 1) and used once, x8 by the original. r2prep --r2-need1 ifeval=1200 picks
+  step 1's new IFEval first (test-matched bins), then steps 2/3 from held-back + built (argilla r2a/r2b-ifeval left out).
+  Step 1's pairs rebuilt as r2s1b (pairs only) with those 1,200 instead of the argilla ones. Nothing trains.
