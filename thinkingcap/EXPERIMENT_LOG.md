@@ -5841,3 +5841,4 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   A) drop the widened guards in step 1 (keep them for steps 2-3, as in rpM) and raise shorter shares (math 55/40/5, code
   70/22.5/7.5) -> expected 46.5-50.5% Dev; B) remove --no-shorten-counting and --resp-near-long -> 338 IFEval shorter
   candidates from p1src alone (no new generation); C) --rp-epochs 1.
+- 12 Nov ~18:15 (user: ok for C): r2s1 --rp-epochs 1 (never repeat pairs if the file comes out short).
