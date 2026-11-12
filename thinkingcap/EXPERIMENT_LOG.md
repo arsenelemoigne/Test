@@ -5710,3 +5710,10 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   reviews/consult14_clean/pack (consult13's pack + the current log + NEW_RESULTS.md of 12 Nov + rpM-60 per-question table and
   answer-by-answer analysis). Prompt: >50% / no worse than -1, at most 3 recipes of 1-3 learning steps as one clear pathway.
   Transfer + AIME results go in a follow-up message when they land.
+- 12 Nov ~11:00, research (Claude agent): one online RL run with reward "correct AND length <= cap" (cap = generation cap).
+  Proven at 1.5B full FT on long math traces (ThinkPrune 2504.01296: 10.4k -> 4.7k tokens at +0.1; LASER truncation 2505.15612:
+  -71% at -1.6; DLER 2510.15110: -77% with batch-wise advantage normalisation). Unproven at 0.6B + LoRA + short mixed tasks; no
+  IFEval/BFCL data; small models compress less (2601.02972). LoRA RL: lr ~10x full FT (~1e-5), all linear layers, small batch
+  ("LoRA Without Regret"). Agent's odds for >50% / better than -1 in one run: ~30-45%. Cheapest test: 150 steps, easy prompts
+  of all 4 types, per-question cap 0.5x the original's median right length as generation cap, LoRA r16, lr 1e-5 constant, N=8,
+  beta 0, batch-normalised advantages, Dev checks at 50/100/150; go on only if >=35% shorter at <=-2 by step 100.
