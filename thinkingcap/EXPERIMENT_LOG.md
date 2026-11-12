@@ -5946,5 +5946,5 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   REQUEST new (not in the pool, top-ups or step 1) and used once, x8 by the original. r2prep --r2-need1 ifeval=1200 picks
   step 1's new IFEval first (test-matched bins), then steps 2/3 from held-back + built (argilla r2a/r2b-ifeval left out).
   Step 1's pairs rebuilt as r2s1b (pairs only) with those 1,200 instead of the argilla ones. Nothing trains.
-- ~22:15 check-in: GPU 2 in hold after-r2s1-2 (ends ~22:20), then r2c-nofit, r2c-math, r2d-ifeval (3,000 built IFEval x8),
+- ~21:55 check-in: GPU 2 in hold after-r2s1-2 (ends ~22:15), then r2c-nofit, r2c-math, r2d-ifeval (3,000 built IFEval x8),
   r2prep, r2s1b pairs. GPU 1: transfer v2, original's answers, block 2 of ~5 at 34% (MATH-500 uncapped: ~2.5 h per block).
