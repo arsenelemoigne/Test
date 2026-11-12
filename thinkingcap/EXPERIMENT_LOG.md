@@ -5869,3 +5869,13 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   stops before training and prints the shortfall (the queue then just holds). Checked on the Mac dry run: 2,668 < 2,880 -> STOP.
 - ~20:10 (user): r2s1 checkpoints at 40, 80, then every 20 from 100: `--rp-save-at 40 80 100 120 140 160 180` (only these
   are saved) and all seven scored on Dev-512 + Dev-SVAMP (`--rp-screen` same list), ~25 min each on GPU 2 (~3 h total).
+
+## 12 Nov ~20:30 — generalization round 1 finished (GPU 2): rpK-40 / rpL-40 / rpL-60, x8 vs the original (saved / acc change)
+| model | ARC-C | CSQA | MMLU | HumanEval |
+|---|---|---|---|---|
+| rpK-40 | 66.8 / -1.8 | 68.7 / -0.3 | 62.6 / +1.6 | 50.2 / -0.7 |
+| rpL-40 | 67.9 / -2.6 | 69.2 / -0.8 | 64.2 / +1.4 | 53.9 / +0.5 |
+| rpL-60 | 71.7 / -3.2 | 72.3 / -0.1 | 68.7 / +2.4 | 60.9 / -2.6 |
+MATH-500 / Skywork at the 4k cap are artefacts (the original hits the cap 53% / 75% of the time); MATH-500 saving
+falls with difficulty for all three (rpL-60: level 1 64%, level 5 20%). GPU 2 then pulled 93ed38e and is in the 30-min
+hold before r2s1 (it pulls 126bccc at the end of the hold). GPU 1: transfer v2, original's answers, chunk 1 at 63%.
