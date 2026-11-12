@@ -5702,3 +5702,6 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   shrink (273 -> 186 -> 157 tokens on Dev). No full test planned.
 - rpN-45: Dev-512 59.9 / +1.28, Dev-SVAMP-200 56.1 / +2.31 -> same as rpL-60 (Dev 58.9 / +0.92). rpN closed: no effect.
   GPU 1 picked up the new code (6e00d4b): competitor transfer started with bidaREPLICA, base answers to come from GPU 2.
+- 12 Nov ~06:40: transfer generation is slow on L4 (~950 output tok/s; ~60-75 min per 300-question x8 chunk, 5 chunks per
+  model; KV-cache bound at the 4k/8k caps). Estimate: GPU 2 base done ~08:00, then rpK40/rpL40/rpL60 (~4 h each) -> ~20:00;
+  GPU 1 bidaREPLICA/basta/matousek850 (~5 h each) -> ~21:00, then rpM60 transfer (~4 h) + AIME (~1.5 h). Argon waits for all.
