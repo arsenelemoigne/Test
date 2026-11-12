@@ -45,6 +45,8 @@ def main():
                              "no-fit questions made by offering another conversation's function")
     parser.add_argument("--tool-near", action="store_true",
                         help="toolace (dp4): also no-fit questions offered only the functions the reply did not call")
+    parser.add_argument("--ifeval-bases", default="no_robots",
+                        help="ifeval_built (12 Nov): request sources, from no_robots,dolly,oasst1 (all human-written)")
     parser.add_argument("--ifeval-match", type=int, default=0,
                         help="ifeval_like v2 (dp2): this many questions drawn to IFEval's instruction mix (0: old filter)")
     parser.add_argument("--kod-difficulty", default="easy,medium",
@@ -791,12 +793,27 @@ def ifeval_built(args, rng):
     n = args.ifeval_match or 12000
     want_n = {k: n * c / len(lines) for k, c in Counter(len(r["instruction_id_list"]) for r in lines).items()}
     want_id = {k: n * c / len(lines) for k, c in Counter(i for r in lines for i in r["instruction_id_list"]).items()}
-    bases = [r["prompt"].strip() for r in load_dataset("HuggingFaceH4/no_robots", split="train")
-             if r["category"] in ("Generation", "Brainstorm", "Open QA", "Rewrite", "Summarize")
-             and 8 <= len(r["prompt"].split()) <= 150]
+    which = [x for x in getattr(args, "ifeval_bases", "no_robots").split(",") if x]
+    bases = []
+    if "no_robots" in which:
+        bases += [r["prompt"].strip() for r in load_dataset("HuggingFaceH4/no_robots", split="train")
+                  if r["category"] in ("Generation", "Brainstorm", "Open QA", "Rewrite", "Summarize")
+                  and 8 <= len(r["prompt"].split()) <= 150]
+    if "dolly" in which:  # (12 Nov) human-written requests (Databricks staff), long enough to be a real task (dp3: short ones
+        # like "Why do you love Biriyani?" made the model think too little), no given context
+        bases += [r["instruction"].strip() for r in load_dataset("databricks/databricks-dolly-15k", split="train")
+                  if r["category"] in ("creative_writing", "brainstorming", "open_qa", "general_qa") and not r["context"]
+                  and 12 <= len(r["instruction"].split()) <= 150]
+    if "oasst1" in which:  # (12 Nov) human-written first turns of OpenAssistant conversations (English, no code)
+        bases += [r["text"].strip() for r in load_dataset("OpenAssistant/oasst1", split="train")
+                  if r["role"] == "prompter" and r["parent_id"] is None and r["lang"] == "en" and "```" not in r["text"]
+                  and 12 <= len(r["text"].split()) <= 150]
+    coding = re.compile(r"\b(python|code|coding|script|function|program|programming|sql|javascript|java|c\+\+|html|css|"
+                        r"regex|bash|api|json|excel formula)\b", re.I)
+    bases = list(dict.fromkeys(b for b in bases if not coding.search(b)))  # writing tasks like IFEval's; each request once
     bases = bases * (1 + n // max(1, len(bases)))  # ~6,000 requests: each may carry up to two different instruction sets
     built = ifeval_fill(args, rng, want_n, want_id, Counter(), Counter(), n, bases=bases)
-    print(f"ifeval_built: {len(built)} prompts from {len(set(bases))} no_robots requests", flush=True)
+    print(f"ifeval_built: {len(built)} prompts from {len(set(bases))} requests ({which})", flush=True)
     for r in built:
         yield r | {"origin": "built-long", "id": r["id"].replace("ifeval_built", "ifeval_long")}
 

@@ -5963,3 +5963,9 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   nofit_glaive_hard2.jsonl (new prepare_types source glaive_nofit_hard2). Step 1's stored no-fit: 1,239 q, bins
   [5, 3, 1, 5, 86]% vs the test's [12, 2, 8, 5, 72]: step 1 gets +117 / 0 / +102 / +10 / 0 new no-fit per bin
   (r2prep --r2-need1-bins), steps 2/3 the rest through the matching. Queued newtop r2e-nofit (x8) before r2prep.
+- ~23:05: r2c-math 425 questions x8 (solve 77%). r2d-ifeval: 11,994 built prompts from 6,501 no_robots requests -> 5,829 at
+  the test's prompt lengths -> only 1,524 left after the request check (4,248: request already in the pool / step 1, or a
+  2nd prompt on the same request). Not enough for step 1's 1,200 + the ~280 steps 2/3 lack in the middle bins. Added
+  human-written requests to ifeval_built (--ifeval-bases): Dolly-15k (creative writing / brainstorming / open & general QA,
+  no context, 12-150 words: 2,100 after removing coding requests) + OpenAssistant first turns (English, 12-150 words,
+  no coding: 1,845). Queued newtop r2f-ifeval (3,000 x8) before r2prep.
