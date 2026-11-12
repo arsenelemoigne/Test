@@ -6038,3 +6038,5 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
   2,400 prompts, unchanged since ~22:30). Block 1 of the original's transfer-v2 answers is on Drive; block 2 is lost. Not
   reconnected (user's rule). GPU 2: r2f-ifeval answering (2,333 Dolly / OpenAssistant built questions x8, ~2,100 tok/s), then
   r2e-nofit, r2prep, r2s1b. consult18 at turn 15 ($0.34).
+- ~00:30 (user: "drop what was planned on GPU 1, it took too much time"): transfer v2 (the original's answers, then rpM-60)
+  DROPPED; plan_line_b.txt now holds only `end`. GPU 1 is free for consult18's strategy (runtime still disconnected).
