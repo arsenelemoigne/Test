@@ -359,6 +359,10 @@ def main():
     parser.add_argument("--rp-dev", action="store_true", help="ptrepair (11 Nov): score the --rp-screen steps on Dev-512, not the 720")
     parser.add_argument("--rp-dev-svamp", action="store_true", help="ptrepair (11 Nov): with --rp-dev, also score each step on "
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
+    parser.add_argument("--rp-extra-source", default="",
+                        help="ptrepair (12 Nov, recipe 2): PART=SOURCE,... the extra questions of these parts come from a prepare_types.py "
+                        "source that is NOT in the pool (e.g. ifeval=ifeval_bida: AllenAI's multi-constraint prompts graded by IFEval), "
+                        "minus the pool's prompts, the test's rare 8-grams and Dev near-duplicates")
     parser.add_argument("--rp-extra-questions", default="", help="ptrepair (11 Nov, rpM): with --rp-rollouts-from, ALSO draw these "
                         "new own questions (part=n,..., public datasets, never a dev question) and let the base model answer "
                         "them; their ids get the prefix sv- (repair_pairs.py: SVAMP-like math 'svamp' vs the reused hard 'svamp_hard')")
@@ -3757,7 +3761,39 @@ def ptrepair(args):
             drive_sync("restore", only=[str(roll_x), str(data_x)])
             if not (roll_x / "rollouts.jsonl").exists():
                 ex = dev_ids() | dev_svamp_ids() | (excluded_ids(args) or set())
-                rows_x = own_repair_questions(want_x, seed=args.rp_seed, exclude=ex, public=True, avoid_grams=dev_gram_set())
+                srcs = {k: v for k, v in (x.split("=") for x in getattr(args, "rp_extra_source", "").split(",") if x)}
+                rows_x = own_repair_questions({k: v for k, v in want_x.items() if k not in srcs}, seed=args.rp_seed, exclude=ex,
+                                              public=True, avoid_grams=dev_gram_set()) if set(want_x) - set(srcs) else []
+                for part_s, src in srcs.items():  # (12 Nov) new questions from a source outside the pool
+                    from build_pool import ngrams, words
+                    cache = Path(f"data/extra-src-{src}.jsonl")
+                    drive_sync("restore", only=[str(cache)])
+                    if not cache.exists():
+                        py("prepare_types.py", "--sources", src, "--per-source", 1000000, "--out", cache)
+                    pool_texts = set()
+                    for l in Path("data/pool-dp13.jsonl").read_text().splitlines() if Path("data/pool-dp13.jsonl").exists() else []:
+                        if l.strip():
+                            pr = json.loads(l).get("prompt")
+                            pool_texts.add(json.dumps(pr, sort_keys=True))
+                    seen_t = Counter()
+                    for l in Path("questions/questions.jsonl").read_text().splitlines():
+                        if l.strip():
+                            seen_t.update(ngrams(words(json.loads(l)["messages"])))
+                    test_g = {g for g, n in seen_t.items() if n < 3}
+                    dev_g = dev_gram_set() | dev_svamp_gram_set()
+                    keep = []
+                    for l in cache.read_text().splitlines():
+                        if not l.strip():
+                            continue
+                        r = json.loads(l)
+                        g = ngrams(words(r["prompt"]))
+                        if (r["id"] in ex or json.dumps(r["prompt"], sort_keys=True) in pool_texts or g & test_g
+                                or (g and len(g & dev_g) * 10 >= 3 * len(g))):
+                            continue
+                        keep.append(r)
+                    random.Random(args.rp_seed).shuffle(keep)
+                    print(f"repair {name}: {part_s} extra questions from {src}: {len(keep)} usable, taking {want_x[part_s]}", flush=True)
+                    rows_x += keep[:want_x[part_s]]
                 data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
                 print(f"repair {name}: {len(rows_x)} extra questions (public datasets; ids sv-*), answered by {answerer}", flush=True)
                 py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
@@ -3991,6 +4027,16 @@ def dev_gram_set():
             seen.update(ngrams(words(json.loads(l)["prompt"])))
     return {g for g, n in seen.items() if n < 3}
 
+
+def dev_svamp_gram_set():
+    """(12 Nov, consult16) the rare 8-grams of Dev-SVAMP-200, as dev_gram_set() for Dev-512."""
+    from build_pool import ngrams, words
+    dev_svamp_ids()
+    seen = Counter()
+    for l in (Path(DEV_SVAMP_FILE).read_text().splitlines() if Path(DEV_SVAMP_FILE).exists() else []):
+        if l.strip():
+            seen.update(ngrams(words(json.loads(l)["prompt"])))
+    return {g for g, n in seen.items() if n < 3}
 
 def dev_ids():
     """(11 Nov) ids of the Dev-512 questions (never trained on once a run passes --rp-exclude-dev)."""

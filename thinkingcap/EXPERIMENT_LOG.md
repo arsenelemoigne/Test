@@ -5811,3 +5811,10 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   question's median right thinking (new --guard-wide-max, default 0.95 = rpM's). Dry run: still 2,880 pairs, no shortfall;
   guard candidates math 582 / code 387 (were 947 / 606 at 0.95); the 108 math guards: chosen 940 vs rejected 541 thinking
   tokens, the 90 code guards 1,295 vs 794.
+- 12 Nov ~17:40 (user: "that's not good ... fill in the answers 288" = new questions, not a second pair per question):
+  --shorten-second dropped from r2s1. Instead the original answers 1,200 NEW IFEval questions x8 before the pairs are built:
+  track.py --rp-extra-source ifeval=ifeval_bida (AllenAI IF_multi_constraints_upto5, IFEval-graded, <= 3 constraints; a
+  source NOT in pool-dp13, so not among p1src's used or reserved questions), minus pool prompts, the test's rare 8-grams and
+  Dev-512 / Dev-SVAMP-200 near-duplicates (new dev_svamp_gram_set()). Their answers join p1src's for the pair build (ids sv-*).
+  Cost ~1.5-2.5 GPU-hours on GPU 2 before training (IFEval answers ~700 tokens, 9,600 answers). Untested on the Mac (needs the
+  harness + datasets): watch the first lines of r2s1 on GPU 2.
