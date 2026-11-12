@@ -5952,3 +5952,7 @@ including for step 2 and 3"; "representative of the final eval dataset"; "we sho
   commented out in plan_line_a.txt anyway (safe for any later restart). r2c-nofit: 500 questions x8, original solves 96%
   (sometimes 46, always 450, never 4): our no-fit sources are easy, so the hard no-fit bins (<25% solved: 12% of the test)
   stay short. r2c-math answering, then r2d-ifeval (3,000 built), r2prep, r2s1b.
+- ~22:25 check-in: GPU 2 answering r2c-math (easy GSM8K without the length match, ~425 questions x8, chunk 1 at 67%), then
+  r2d-ifeval (3,000 built x8, ~1.5 h), r2prep, r2s1b pairs -> report ~00:30-01:00. GPU 1: transfer v2 original's answers,
+  block 2 still 34% (long MATH-500 answers). Hard no-fit batch on the Mac (nofit_verify --rank 1,4) awaits the user's OK
+  (download cand-r2b-simple.jsonl from Drive + ~$1 of Haiku).
