@@ -760,7 +760,8 @@ def run_main(args, llm=None, forward=None):
             messages = [system, {"role": "user", "content": task_prompt(args) + "\n\nHANDOFF. The conversation was restarted. "
                                  f"Forward passes used: {st['passes']}/{args.passes}; code runs used: {st['code_runs']}/{args.code_runs}. "
                                  f"Current edits: {sorted(p.name[:-3] for p in (work / 'edited').glob('*.pt'))}. "
-                                 "The kernel's variables are kept. Your notes (/work/notes.md):\n" + notes}]
+                                 "The kernel's variables are kept. Do NOT re-read files your notes say you already read. "
+                                 "Your notes (/work/notes.md):\n" + notes}]
             st["conversations"] += 1
         st["turn"] += 1
         t = run / "turns" / f"t{st['turn']:03d}"
@@ -831,6 +832,18 @@ def run_main(args, llm=None, forward=None):
                     st["forward_failed"] += 1
                     reply = f"The forward request failed and was not counted: {str(e)[:2000]}"
         reply += ignored
+        # (12 Nov, user: "it should write notes throughout") consult14 ran 360 turns over 6 context restarts with no notes and
+        # re-read the pack after each restart. The handoff carries notes.md, so make the model keep it.
+        notes_f = work / "notes.md"
+        notes_len = len(notes_f.read_text()) if notes_f.exists() else 0
+        if st["turn"] >= 40 and notes_len < 500 and st["turn"] % 10 == 0:
+            reply += (f"\n\nNOTES REQUIRED: your notes file {notes_f} is still empty after {st['turn']} turns. The conversation is "
+                      "restarted whenever the context fills, and only that file survives. Your NEXT reply must be one code block that "
+                      "writes it: every finding so far with its numbers, the files already read, the open questions, and your current "
+                      "candidate recipes. No other analysis in that reply.")
+        elif st["turn"] % 20 == 0:
+            reply += (f"\n\nReminder: update {notes_f} now (append new findings with numbers, files read, open questions); "
+                      "it is all that survives a context restart.")
         if st["passes"] >= args.passes and not out_of_passes:
             reply += "\n\nThat was the last forward pass: make your final choice (the tensors in /work/edited are submitted) and reply without a code block."
         messages.append({"role": "user", "content": reply})
