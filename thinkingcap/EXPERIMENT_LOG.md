@@ -5846,7 +5846,7 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
   (--guard-wide removed from the command). Dry run on the stored answers: math 396 / 288 / 36, code 504 / 162 / 54, tool calls
   full; IFEval 508 of 720 locally (the 1,200 new IFEval questions fill it on the GPU).
 
-## 12 Nov ~19:30 — r2s1 cleaned of michal-bida's data (user: "we should not do this")
+## 12 Nov ~18:40 — r2s1 cleaned of michal-bida's data (user: "we should not do this")
 - New IFEval questions (fill to 720 pairs): `--rp-extra-source ifeval=ifeval_like` = argilla/ifeval-like-data drawn IFEval-matched
   (instruction count and id shares of IFEval's 541; Dolly-based prompts from IFEval's instruction library for the rare ids),
   4,800 drawn with seed 1041, minus the pool's prompts, the test's rare 8-grams and Dev near-duplicates, 1,200 taken.
@@ -5858,19 +5858,19 @@ sits between (noise ~0.35 pts). Dev-512 had read 49.3 / +0.49 (accuracy ~1.4 too
 - A 30-min hold was put before r2s1 on GPU 2 while this was switched.
 - Still from him: the 32/16-bit training precision (--bida-precision, a numerical setting). Steps 2/3 draw from the P1 reserve:
   the same two sources must be excluded there before step 2.
-- ~19:50 (user: "are you sure we will have enough data for a full pass?"): NO, not guaranteed. IFEval is limited by its
+- ~18:45 (user: "are you sure we will have enough data for a full pass?"): NO, not guaranteed. IFEval is limited by its
   shortening pairs (fixed mix 50%: 360 needed; the stored answers give 203, from 2,206 questions = 0.09 per question;
   1,200 new questions x8 would give ~110, about 50 short), and reused answers had no fill-until-full. Added an
   outside-source fill: if a part with --rp-extra-source is still short after the first build, answer up to 2 more batches
   of that source's leftover questions (max(400, 6 x pairs short) each; the draw holds 4,800) with the same model, rebuild.
   Checkpoints every 5 steps; Dev-512 + Dev-SVAMP screens at 120 / 150 / 180.
-- ~20:00 (user: "do not start the full pass until we have enough pairs"): `--rp-require-full` on r2s1: after the pairs (and up
+- ~18:50 (user: "do not start the full pass until we have enough pairs"): `--rp-require-full` on r2s1: after the pairs (and up
   to 3 outside-source fill batches), training starts ONLY if pairs.jsonl holds the whole quota (2,880); otherwise the stage
   stops before training and prints the shortfall (the queue then just holds). Checked on the Mac dry run: 2,668 < 2,880 -> STOP.
-- ~20:10 (user): r2s1 checkpoints at 40, 80, then every 20 from 100: `--rp-save-at 40 80 100 120 140 160 180` (only these
+- ~18:55 (user): r2s1 checkpoints at 40, 80, then every 20 from 100: `--rp-save-at 40 80 100 120 140 160 180` (only these
   are saved) and all seven scored on Dev-512 + Dev-SVAMP (`--rp-screen` same list), ~25 min each on GPU 2 (~3 h total).
 
-## 12 Nov ~20:30 — generalization round 1 finished (GPU 2): rpK-40 / rpL-40 / rpL-60, x8 vs the original (saved / acc change)
+## 12 Nov ~19:05 — generalization round 1 finished (GPU 2): rpK-40 / rpL-40 / rpL-60, x8 vs the original (saved / acc change)
 | model | ARC-C | CSQA | MMLU | HumanEval |
 |---|---|---|---|---|
 | rpK-40 | 66.8 / -1.8 | 68.7 / -0.3 | 62.6 / +1.6 | 50.2 / -0.7 |
