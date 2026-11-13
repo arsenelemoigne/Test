@@ -6378,3 +6378,16 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   shortened), and a damaged question gets at most a compact (= shortest-right) be-right pair at a fixed share: nothing pushes
   its length back. ~60% of od2's lost math accuracy is on questions the original solves 8/8.
 - 14 Nov ~00:05 (user: "yes I like this idea, we could ask Argon again ... once we finish od4"): plan = od4 full tests -> lossan on the 2 picked od4 models -> Argon consult21 (cap $4, 60 turns): is od5 (per-question recovery vs the original) viable / worth testing, how to change the online policy against each loss kind, recovery-step design if still needed.
+- ~00:30 14 Nov: **od4-r5 (= od4-best) Dev-512 +59.8% [57.5, 61.9] / -1.17 [-2.84, +0.69]** (math 68 / -6.6, code 69 / -2.0,
+  IFEval 49 / +0.3, simple 47 / +5.8, several 52 / +3.9, no-fit 41 / -0.3); Dev-SVAMP 64.7 / -2.50. vs od3-r4 Dev 62.2 / -3.57:
+  -2.4 saving, +2.4 accuracy. With od3-r4's Dev -> full shift (-1.7 saving, -1.2 acc) the full test would be ~58 / -2.4,
+  ~+2.2 above the curve (at 58% the curve is -4.6): od4's best point so far, if the full test confirms.
+- lossan od3 (reviews/loss_analysis/od3.txt), FULL test net change per type, od3-r3 / od3-r4: math -8.9 / -9.4 (84-86% of the
+  lost accuracy = thinking stopped before half the original's right length; 60% on questions the original solves 8/8; on the
+  lost questions even the RIGHT answers think 0.31-0.32x), code -4.2 / -4.8 (stopped early 64-74%), no-fit -4.6 / -5.4
+  (stopped early / short thinking ~80-85%), IFEval -0.9 / -2.2 (stopped early 51-59%, response too short for length rules
+  9-11%), simple -1.3 / -2.0 and several -0.6 / -1.1 (somewhat short thinking ~50-60%, broken format 6-10%). Noise reference
+  (original vs itself): net ~0 per type; its own losses are "full length but wrong" + loops + cut-offs, i.e. the trained
+  models' early stopping is the real, model-made loss.
+- od3prep --od3-more: only 2 new test-matched slices (rounds 7, 8; round 9's no-fit would be 87% solved vs the test's 83%)
+  -> 8 slices < 9: od4 extension SKIPPED as designed (nothing trained). fullpick od4 started (2 full tests, ~4.5 h).
