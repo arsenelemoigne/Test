@@ -6183,3 +6183,7 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   +0.9, no-fit 45 / +3.5): saving target met, accuracy -0.7 short of the objective; Dev-512 had read 51.1 / +1.25 (accuracy
   ~2.95 too kind). consult19 pack prepared (reviews/consult19_step2: step 1 pairs, Dev per checkpoint and type, full test,
   od3, both step-2 mixes); launch after the s160 full test (~11:00).
+- ~09:50 (user: "launch an argon analysis directly; 1/ re-run either path and change what, 2/ change the plan for step 2,
+  3/ red flags; don't overspend"): consult19 launched (Gemini 4 Argon, OpenRouter, cap $4, stop at turn 60), pack
+  reviews/consult19_step2 (step 1 pairs, Dev per checkpoint and type, s180 full test, od3 results, both step-2 mixes, Dev's
+  measured over-reading). s160's full test is added when it lands.

@@ -4,12 +4,16 @@ Read {DATA}/NEW_RESULTS_13nov_morning.md FIRST (step 1's pairs, its 7 Dev-scored
 
 Objective unchanged: on the full test (2,759 x 8), MORE THAN 50% tokens saved AND an accuracy change no worse than -1 point; recipe 2 = step 1 (done) -> step 2 (shorten more, on the step-1 model's own answers to data/r2-step2-questions.jsonl) -> step 3 (repair, on the step-2 model's answers to data/r2-step3-questions.jsonl). User preferences: constant learning rates; never shorten and protect the SAME type in one step (overshoot, then a separate type-specific repair); avoid over-protecting; the fixed-mix rule (shares fixed per type, never refilled by another kind); no competitor's recipe or michal-bida data.
 
-Answer, with numbers from the pack:
-1. Starting checkpoint for step 2: r2s1b step 160 or step 180 (or another), and why (full tests, Dev per type, how much room each type has left).
-2. Step 2's mix per type (consult16's r2s2, rpM's typed3, or your own), quotas, thresholds (shorten ratio, solved-rate bar, response locks, floors if any), learning rate (constant), beta, steps, checkpoints to score on Dev, and the gate to pick the step-2 checkpoint. Say what step 2 should land at on Dev and on the full test.
-3. Step 3's repair focus per type (which types get repair pairs and which kinds), quotas, lr, beta, steps, checkpoints, and the expected landing; how to reach the objective from step 2's landing.
-4. Risks and what to look at after step 2 before running step 3.
-Be concise: up to ~3,000 words, WITHOUT a code block.
+Answer the user's three questions, with numbers from the pack (be concise: up to ~2,500 words, WITHOUT a code block):
+1. SHOULD WE RE-RUN EITHER PATH, AND CHANGE WHAT? Path A = recipe 2's step 1 (r2s1b, 180 offline DPO steps from the original:
+   full test of step 180 = +50.3% / -1.7, loss in math -4.5, code -3.1, one-function tools -3.0). Path B = the od3 online DPO
+   arena (fixed reference, type floors: rounds 3-4 = 58-61% saved at -4.0 / -4.8, math -9). For each: keep and continue, or
+   re-run with which concrete changes (mix, thresholds, floors, steps, lr), and why; or drop it.
+2. SHOULD WE CHANGE THE PLAN FOR STEP 2? Starting checkpoint (r2s1b step 160 or 180; s160's full test may arrive during your
+   session), consult16's r2s2 mix vs rpM's typed3 vs your own, quotas, thresholds, constant lr, beta, steps, Dev checkpoints
+   and a gate that accounts for Dev's measured over-reading (Dev-512 read +1.25 where the full test read -1.7: ~3 pts;
+   Dev-SVAMP read math -1.1 where the test's SVAMP read -4.5). Then step 3's repair focus in one paragraph.
+3. RED FLAGS: anything in the data, the code, the evaluation or the plan that could mislead us or waste GPU time.
 
 NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go.
 
