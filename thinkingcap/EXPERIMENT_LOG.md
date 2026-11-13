@@ -6191,3 +6191,6 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   report_draft.md updated, check the data in at most ~40 turns, write the final answer by turn ~55. Delivered in turn 12's prompt.
 - ~10:02 (user: "launch argon only after the full test is finished"): consult19 PAUSED between turns (saved conversation);
   resumed with the s160 full test appended once it lands.
+- ~10:10 r2s1b-s160 FULL TEST: +49.0% / -1.7 (math 60 / -4.0, code 51 / -3.2, IFEval 40 / 0.0, simple 41 / -2.6, several 43 /
+  +0.6, no-fit 46 / +5.2). vs s180 (50.3 / -1.7): 1.3 pts less saving at the same accuracy; same shape (math, code, simple
+  lose; no-fit gains). Neither checkpoint reaches the objective (accuracy -0.7 short). consult19 resumed with this result.
