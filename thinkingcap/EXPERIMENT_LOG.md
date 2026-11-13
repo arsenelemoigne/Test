@@ -6179,3 +6179,7 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   the other types gain). Step 2 leaning to rpM's mix (no math / code shortening; shorten IFEval + tools, which still have room
   and gain accuracy), to be reviewed by Argon (consult19, cap ~$6) once BOTH step-1 full tests (180, 160) are in: step 2's
   settings and starting checkpoint, step 3's repair focus. Step 2 waits for the user's go.
+- ~08:44 r2s1b-s180 FULL TEST: +50.3% / -1.7 (math 62 / -4.5, code 54 / -3.1, IFEval 38 / +1.0, simple 42 / -3.0, several 45 /
+  +0.9, no-fit 45 / +3.5): saving target met, accuracy -0.7 short of the objective; Dev-512 had read 51.1 / +1.25 (accuracy
+  ~2.95 too kind). consult19 pack prepared (reviews/consult19_step2: step 1 pairs, Dev per checkpoint and type, full test,
+  od3, both step-2 mixes); launch after the s160 full test (~11:00).

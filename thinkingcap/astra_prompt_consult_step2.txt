@@ -1,0 +1,16 @@
+TASK. Recipe 2 (your consult16 plan) has finished STEP 1. Recommend STEP 2's exact settings and its starting checkpoint, and STEP 3's repair focus, on the evidence.
+
+Read {DATA}/NEW_RESULTS_13nov_morning.md FIRST (step 1's pairs, its 7 Dev-scored checkpoints per type, its full test(s), the od3 arena's results, the two step-2 mixes on the table). Your earlier plans are {DATA}/YOUR_PLAN.md (consult16) and {DATA}/YOUR_CONSULT18_PLAN.md (consult18). The whole data pack is in {DATA} (EXPERIMENT_LOG.md, tables_full/, code/, ...); use code to check any number you rely on.
+
+Objective unchanged: on the full test (2,759 x 8), MORE THAN 50% tokens saved AND an accuracy change no worse than -1 point; recipe 2 = step 1 (done) -> step 2 (shorten more, on the step-1 model's own answers to data/r2-step2-questions.jsonl) -> step 3 (repair, on the step-2 model's answers to data/r2-step3-questions.jsonl). User preferences: constant learning rates; never shorten and protect the SAME type in one step (overshoot, then a separate type-specific repair); avoid over-protecting; the fixed-mix rule (shares fixed per type, never refilled by another kind); no competitor's recipe or michal-bida data.
+
+Answer, with numbers from the pack:
+1. Starting checkpoint for step 2: r2s1b step 160 or step 180 (or another), and why (full tests, Dev per type, how much room each type has left).
+2. Step 2's mix per type (consult16's r2s2, rpM's typed3, or your own), quotas, thresholds (shorten ratio, solved-rate bar, response locks, floors if any), learning rate (constant), beta, steps, checkpoints to score on Dev, and the gate to pick the step-2 checkpoint. Say what step 2 should land at on Dev and on the full test.
+3. Step 3's repair focus per type (which types get repair pairs and which kinds), quotas, lr, beta, steps, checkpoints, and the expected landing; how to reach the objective from step 2's landing.
+4. Risks and what to look at after step 2 before running step 3.
+Be concise: up to ~3,000 words, WITHOUT a code block.
+
+NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go.
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, pandas, scipy): reply with exactly one block that starts with ```python to run code; output is cut at 10,000 characters; up to {CODE_RUNS} code runs.
