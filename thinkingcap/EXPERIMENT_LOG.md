@@ -6100,3 +6100,6 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   type names: the floor as a continuous function of the original's right thinking length L (consult18: max(60 + 0.16 L,
   0.34 L)), the response lock wherever the response is long, the IFEval length rule detected from the prompt text; match
   difficulty to a held-out dev set. User: "if it generalizes to different datasets, it's OK" (transfer results are the bar).
+- ~02:26 check-in: GPU 2 r2s1b training step 50/180 (loss 0.32, 88% of pairs ordered right; raw Qwen = 0.693 / 50%).
+  GPU 1: od3 started (scripts 21dae3a), restoring / od3prep. Check-in job replaced by an overnight one (training + Dev + od3
+  monitor; nothing started or changed by it).
