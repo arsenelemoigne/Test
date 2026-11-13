@@ -6155,3 +6155,7 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
     to the objective: od3-r4 (monitor 59.3 / -2.50) and od3-r3 (55.9 / -3.38); their FULL TESTS are running (~2.2 h each).
     Both are far below the accuracy target; od3-r1 (21.6 / +0.21) and od3-r2 (43.9 / -1.81) are not full-tested.
     Not changed (overnight rule: the user decides in the morning).
+- ~06:16: r2s1b step 140: Dev-512 +47.8% [44.6, 50.8] / +0.73 [-1.00, +2.57] (math 54 / -2.7, code 51 / -3.6, IFEval 42 /
+  +2.9, simple 42 / +8.8, several 46 / +3.9, no-fit 38 / +4.2); Dev-SVAMP +51.9% / -2.00. Inside the gate's saving window,
+  accuracy just under +0.8, test-like math falling (-0.75 at 100, -1.25 at 120, -2.00 at 140). Steps 160 / 180 next.
+  GPU 1: full test of od3-r4 running.
