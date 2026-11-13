@@ -6096,3 +6096,7 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   89%, code 52-53% vs 52%, IFEval 56-59% vs 59%), no overlap between rounds or with rpO's questions; monitor original vs itself
   = 0.0 / 0.00; loop control flow checked with mocked GPU parts (fixed reference, continued adapter, answering model, stop).
 - Queued on GPU 1: od3prep, then odpo od3, then holds.
+- ~02:45 (user, for a FUTURE run; saved to memory): express the pair rules through properties measured on each question, not
+  type names: the floor as a continuous function of the original's right thinking length L (consult18: max(60 + 0.16 L,
+  0.34 L)), the response lock wherever the response is long, the IFEval length rule detected from the prompt text; match
+  difficulty to a held-out dev set. User: "if it generalizes to different datasets, it's OK" (transfer results are the bar).
