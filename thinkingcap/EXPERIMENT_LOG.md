@@ -6194,3 +6194,24 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
 - ~10:10 r2s1b-s160 FULL TEST: +49.0% / -1.7 (math 60 / -4.0, code 51 / -3.2, IFEval 40 / 0.0, simple 41 / -2.6, several 43 /
   +0.6, no-fit 46 / +5.2). vs s180 (50.3 / -1.7): 1.3 pts less saving at the same accuracy; same shape (math, code, simple
   lose; no-fit gains). Neither checkpoint reaches the objective (accuracy -0.7 short). consult19 resumed with this result.
+
+## 13 Nov ~10:30 — consult19 (Argon, $0.92, final forced at turn 39 by the user): step 1 review, step 2 plan, red flags
+reviews/consult19_step2/REPORT.md.
+1. Re-run? Path A (recipe 2 step 1): KEEP, no re-run. Path B (od3 arena): DROP for this objective; if ever revisited: the
+   continuous per-question floor max(60 + 0.16 L, 0.34 L), at most 2 rounds then one dedicated repair round, no-fit
+   shortening bar lower so hard abstentions are not skipped.
+2. Step 2: start from r2s1b-s180 (same accuracy as s160, +1.3 saving). TYPE-SPLIT: shorten ONLY IFEval and tools; math and
+   code get 0 shorten AND 0 guards (length-neutral be-right + loops; guards kept for step 3). 1,600 pairs: math 320 (90%
+   be-right / 10% loop), code 320 (80 / 20), IFEval 480 (20% counting + of the rest 62.5% shorten / 25% be-right / 12.5% loop),
+   simple 180 (50 / 50), several 140 (55 shorten / 45), no-fit 160 (60 / 40); shorten ratio 1.35, solved >= 6/8 (no-fit 5/8),
+   response held; constant 1e-5, beta 0.1, 80 steps, Dev at 20/40/60/80; gate CORRECTED for Dev's over-reading (Dev-512 saving
+   54.5-57.5, Dev acc >= +0.8 (= ~-2.15 full), Dev-SVAMP >= -1.5, Dev math >= -3.5).
+   Step 3: pure repair, 0 shorten, 40-60 steps, ~1,280 pairs: math 400 (60 length-matched be-right / 35 widened guards / 5
+   loops), code 360 (65 / 25 / 10), simple 240 (80 be-right / 20 guards), light maintenance on IFEval (160), several (60), no-fit
+   (60); target >= -0.8 at ~52.5% saved.
+3. Red flags: Dev-512 over-reads accuracy ~3 pts (one-function tools: Dev +8.3 vs test -3.0); Dev-SVAMP under-reads math
+   saving by 7 pts and over-reads its accuracy by 3.4 -> recalibrated gates; code questions short and hard no-fit scarce;
+   hidden shortening in mix-mode be-right (it picks the most compact right answer) and in guards whose chosen can be shorter
+   than the rejected -> use length-held be-right on math / code and require chosen longer than rejected in guards.
+   (Its flag "r2pick auto-runs a 2nd full test" is our fullpick stage, run at the user's request, not a bug; some od3 settings
+   it quotes are wrong (lr / beta / floors) without changing its conclusion.)
