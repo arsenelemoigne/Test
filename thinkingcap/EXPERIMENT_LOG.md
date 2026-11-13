@@ -6113,3 +6113,6 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
 - ~02:46 check-in: GPU 2 r2s1b training step 115/180 (loss 0.25-0.49, 78-86% ordered right). GPU 1 od3 RUNNING: od3prep
   done, round 1 pairs built (IFEval 14 short, simple / several 1 short, math / code full: fixed mix kept), "reference = the
   base model (adapter off)" confirmed, round-1 DPO at step 15/20 (loss 0.47, 86%).
+- ~03:11 check-in: GPU 2 r2s1b TRAINING DONE (180 steps, last loss 0.28, 91% ordered right; steps 140-180: 0.20-0.39, 82-91%);
+  Dev-512 scoring of step 40 started. GPU 1 od3: round 1 done (302 pairs, 20 steps; monitor 0.0 / 0.00 as expected: round 1's
+  answers are the original's own), round 2 = models/od3-r1 answering its 780 questions x8 (chunk 1 at 46%).
