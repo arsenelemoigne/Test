@@ -6187,3 +6187,5 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   3/ red flags; don't overspend"): consult19 launched (Gemini 4 Argon, OpenRouter, cap $4, stop at turn 60), pack
   reviews/consult19_step2 (step 1 pairs, Dev per checkpoint and type, s180 full test, od3 results, both step-2 mixes, Dev's
   measured over-reading). s160's full test is added when it lands.
+- ~09:55 (user): consult19 told explicitly (pause / resume between turns 11 and 12): 60 turns in total, keep notes.md and
+  report_draft.md updated, check the data in at most ~40 turns, write the final answer by turn ~55. Delivered in turn 12's prompt.
