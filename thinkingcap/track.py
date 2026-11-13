@@ -268,6 +268,10 @@ def main():
     parser.add_argument("--od-fixed-ref", action="store_true", help="odpo (13 Nov): the arena with the original as the fixed reference")
     parser.add_argument("--od-r1-steps", type=int, default=20, help="odpo --od-fixed-ref: DPO steps in round 1")
     parser.add_argument("--od-r1-quota", default="", help="odpo --od-fixed-ref: round 1's pair quota (default --rp-quota)")
+    parser.add_argument("--od3-more", type=int, default=0, help="od3prep (13 Nov, user): add this many NEW round slices "
+                        "after the existing data/od3-rK files (same test matching, never a question of an earlier slice)")
+    parser.add_argument("--od-min-rounds", type=int, default=0, help="odpo (13 Nov, user): run only if at least this many "
+                        "round slices exist (else: skipped, nothing trained); rounds are capped at the slices that exist")
     parser.add_argument("--od-stop-save", type=float, default=56.5)
     parser.add_argument("--od-stop-acc", type=float, default=-2.2)
     parser.add_argument("--od-conv-gain", type=float, default=1.5)
@@ -3869,6 +3873,61 @@ def od3prep(args):
     from test_difficulty_data import TEST_DIFFICULTY as test
     done = Path("data/od3-base-stats.json")
     drive_sync("restore", only=["data/od3-*", str(BON / "rp-od3-r1-stored")])
+    if getattr(args, "od3_more", 0):  # (13 Nov, user: "keep running more until each data type hits its cap") more slices
+        assert done.exists(), "od3prep --od3-more needs the first build (data/od3-base-stats.json)"
+        stat = json.loads(done.read_text())  # the original's stats on every usable candidate (Dev / michal-bida already out)
+        have = sorted(int(m.group(1)) for f in Path("data").glob("od3-r*-questions.jsonl")
+                      if (m := re.match(r"od3-r(\d+)-questions\.jsonl$", f.name)))
+        n0 = have[-1] if have else 0
+        if n0 >= 6 + args.od3_more:  # the first build made 6 slices
+            print(f"od3prep: {n0} slices already built", flush=True)
+            return
+        s2, s3 = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl")
+        pool_f = Path("data/pool-dp13.jsonl")
+        drive_sync("restore", only=[str(pool_f), str(s2), str(s3), "runs/bon/tooltop-*/questions.jsonl"])
+        rows = {}
+        for f in [pool_f, *BON.glob("tooltop-*/questions.jsonl")]:
+            for l in f.read_text().splitlines():
+                if l.strip():
+                    q = json.loads(l)
+                    rows[q.get("pool_id", q.get("id"))] = q
+        taken = set()
+        for k in have:
+            taken |= {json.loads(l)["id"] for l in Path(f"data/od3-r{k}-questions.jsonl").read_text().splitlines() if l.strip()}
+        for f in (s2, s3):
+            taken |= {json.loads(l)["id"] for l in f.read_text().splitlines() if l.strip()}
+        cands = defaultdict(list)
+        for qid, st in stat.items():
+            if qid not in taken and qid in rows:
+                cands[st["part"]].append((qid, st["acc"], "held"))
+        print(f"od3prep --od3-more: {n0} slices exist; candidates left {dict((p, len(v)) for p, v in cands.items())}", flush=True)
+        lines = []
+        for k in range(n0 + 1, n0 + 1 + args.od3_more):
+            left = {p: [c for c in v if c[0] not in taken] for p, v in cands.items()}
+            sel = r2_select(left, {p: test[p]["bins"] for p in OD3_ROUND}, OD3_ROUND, {p: 0 for p in OD3_ROUND},
+                            seed=args.data_seed + k)
+            ids = [q for p in OD3_ROUND for q in sel[p]["step2"]]
+            short = {p: f"{len(sel[p]['step2'])}/{OD3_ROUND[p]}" for p in OD3_ROUND if len(sel[p]["step2"]) < OD3_ROUND[p]}
+            for p in OD3_ROUND:  # enough = full AND still test-like: solve rate within 3 pts of the test's for every type
+                if p not in short and sel[p]["step2"]:
+                    sr = 100 * statistics.fmean(stat[q]["acc"] for q in sel[p]["step2"])
+                    if abs(sr - 100 * test[p]["solve"]) > 3:
+                        short[p] = f"solve {sr:.0f}% vs test {100 * test[p]['solve']:.0f}%"
+            if short:  # (13 Nov, user: "but only if we have enough data") a short or off-difficulty slice is never written
+                lines.append(f"round {k}: NOT ENOUGH questions left {short}: slices stop at round {k - 1}")
+                break
+            taken |= set(ids)
+            Path(f"data/od3-r{k}-questions.jsonl").write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n"
+                                                                      for q in ids))
+            lines.append(f"round {k}: " + ", ".join(
+                f"{p} {len(sel[p]['step2'])}/{OD3_ROUND[p]} solve {100 * statistics.fmean(stat[q]['acc'] for q in sel[p]['step2']):.0f}% "
+                f"(test {100 * test[p]['solve']:.0f}%){' SHORT' if len(sel[p]['step2']) < OD3_ROUND[p] else ''}"
+                f"{'' if sel[p]['got'] == sel[p]['quota'] else ' (bins borrowed)'}" for p in OD3_ROUND if sel[p]["step2"]))
+        with open(BON / "od3prep-report.txt", "a") as f:
+            f.write("\n".join(lines) + "\n")
+        print("\n".join(lines), flush=True)
+        drive_sync("save")
+        return
     if done.exists() and (BON / "rp-od3-r1-stored" / "rollouts.jsonl").exists():
         print("od3prep: already built", flush=True)
         return
@@ -4671,10 +4730,33 @@ def odpo_fixed(args):
     drive_sync("restore", only=[str(log)])
     history = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
     prev, answerer, best = None, base, None
+    n_sl = 1  # round 1 = the stored answers; rounds k >= 2 need data/od3-rK-questions.jsonl
+    while Path(f"data/od3-r{n_sl + 1}-questions.jsonl").exists():
+        n_sl += 1
+    if getattr(args, "od_min_rounds", 0) and n_sl < args.od_min_rounds:
+        print(f"odpo {name}: NOT ENOUGH DATA: {n_sl} round slices < --od-min-rounds {args.od_min_rounds}: skipped, nothing "
+              f"trained", flush=True)
+        return
+    if args.od_rounds > n_sl:
+        print(f"odpo {name}: {args.od_rounds} rounds asked, {n_sl} slices exist: {n_sl} rounds", flush=True)
+        args.od_rounds = n_sl
     latch_f = BON / f"{name}-latch.json"  # (13 Nov, consult20 tweak) a type braked once stays braked in later rounds
     drive_sync("restore", only=[str(latch_f)])
     latched = set(json.loads(latch_f.read_text())) if latch_f.exists() else set()
     for k in range(args.od_rounds):
+        done_m = Path("models") / f"{name}-r{k + 1}"  # (13 Nov) a rerun with more rounds skips the finished ones
+        if k + 1 < args.od_rounds and any(h["round"] == k + 1 for h in history):
+            drive_sync("restore", only=[str(done_m), f"adapters/{name}-r{k + 1}-s0"])
+            steps_done = sorted(int(p_.name.split("-")[1]) for p_ in Path(f"adapters/{name}-r{k + 1}-s0").glob("step-*")
+                                if (p_ / "adapter_config.json").exists())
+            if steps_done:
+                prev = f"adapters/{name}-r{k + 1}-s0/step-{steps_done[-1]}"
+                if not (done_m / "config.json").exists():
+                    py("merge.py", "--model", base, "--out", done_m, "--adapters", f"{prev}:1")
+                    drive_sync("save")
+                answerer = str(done_m)
+                print(f"odpo {name}: round {k + 1} already done ({done_m}, step {steps_done[-1]}), skipped", flush=True)
+                continue
         a = copy.copy(args)
         a.name = f"{name}-r{k + 1}"
         a.rp_base, a.rp_ref_base, a.rp_init_from = base, True, prev
@@ -4744,6 +4826,14 @@ def odpo_fixed(args):
             print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
     best = best or answerer
     out = Path("models") / f"{name}-best"
+    best_f = Path(f"data/{name}-best.json")
+    drive_sync("restore", only=[str(best_f)])
+    if best_f.exists() and json.loads(best_f.read_text()).get("best") != best:  # (13 Nov) a longer rerun: a new result
+        for d_ in (out, BON / f"dev512-{name}-best", BON / f"devsv-{name}-best"):  # its old Dev answers too (here and on Drive)
+            shutil.rmtree(d_, ignore_errors=True)
+            if d_ != out:
+                shutil.rmtree(DRIVE / d_, ignore_errors=True)
+        shutil.rmtree(DRIVE / out, ignore_errors=True)
     if not (out / "config.json").exists():
         shutil.rmtree(out, ignore_errors=True)
         shutil.copytree(best, out)

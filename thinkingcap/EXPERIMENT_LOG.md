@@ -6304,3 +6304,10 @@ reviews/consult20_online/REPORT.md.
 - GPU 2: r2g-ifeval: only 394 NEW built prompts left (5,726 dropped: their human request was already used once) -> the
   No Robots + Dolly + OpenAssistant request supply is nearly exhausted; IFEval will stay short after r2prep more1
   (it needed ~1,750). Code (r2g-code) next, then the selection.
+- ~22:45 (user: "keep running more until each data type hits its cap, then only right/wrong pairs to stabilise ... find the
+  best moment ... but only if we have enough data", "double check the code picks up before full test scoring"):
+  queued on GPU 1 BEFORE fullpick: `od3prep --od3-more 6` (new round slices 7-12, each per type full AND its solve rate
+  within 3 pts of the full test's, else not written: a Mac dry run on fake data stopped correctly when bins had to be
+  borrowed), then `odpo od4 --od-rounds 12 --od-min-rounds 9` (runs only if >= 9 slices exist, capped at the slices that
+  exist; rounds 1-5 skipped from their saved adapters / models; no stop rule; Dev at rounds 6/8/10/12; every round's model
+  kept; a changed result clears the stale od4-best Dev). fullpick then chooses among all rounds.
