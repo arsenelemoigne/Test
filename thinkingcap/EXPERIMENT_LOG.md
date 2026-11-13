@@ -6287,3 +6287,7 @@ reviews/consult20_online/REPORT.md.
   model answers the extras x8), pairs rebuilt, and it TRAINS only if all 1,600 pairs exist (--rp-require-full); else stops
   again and another round is built.
 - ~21:15: od4 round 2 model (monitor) +41.8% / -2.02 (od3 round 2: 43.9 / -1.81); nothing at its cap, round 3 training. GPU 2: KodCode kept (user). newtop r2g-math answering (4,597 MetaMath candidates already used, dropped).
+- ~21:45: **od4-r3 Dev-512 +55.8% [53.5, 58.0] / -1.80 [-3.53, -0.20]** (math 72 / -6.4, code 63 / -1.8, IFEval 38 / -0.9,
+  simple 42 / +3.5, several 47 / +3.2, no-fit 36 / -2.2); Dev-SVAMP +67.6% / -4.44. od3 had no Dev at round 3; od3-r4 Dev-512
+  62.2 / -3.57 (math 76 / -9.4), Dev-SVAMP 72.8 / -6.00; od3-r3 FULL 58.4 / -4.01. Math is past its cap (65) -> expected braked
+  from round 4. GPU 2: r2g-math 900 x8 (solve 89%, sometimes right 263), r2g-simple next.
