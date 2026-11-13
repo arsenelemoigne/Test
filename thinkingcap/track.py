@@ -4633,6 +4633,9 @@ def odpo_fixed(args):
     drive_sync("restore", only=[str(log)])
     history = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
     prev, answerer, best = None, base, None
+    latch_f = BON / f"{name}-latch.json"  # (13 Nov, consult20 tweak) a type braked once stays braked in later rounds
+    drive_sync("restore", only=[str(latch_f)])
+    latched = set(json.loads(latch_f.read_text())) if latch_f.exists() else set()
     for k in range(args.od_rounds):
         a = copy.copy(args)
         a.name = f"{name}-r{k + 1}"
@@ -4652,9 +4655,15 @@ def odpo_fixed(args):
             ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
             sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
-            held = sorted(p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold)
+            held = sorted(latched | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
+            latched = set(held)
+            latch_f.write_text(json.dumps(held))
+            drive_sync("save", only=[str(latch_f)])
+            # consult20 tweak: no-fit is NOT length-held (its right answers are short refusals; holding them adds length)
+            rh = [p_ for p_ in held if p_ != "bfcl_irrelevance"]
             if held:
-                a.rp_pair_args = (args.rp_pair_args + ",--no-shorten-parts," + "+".join(held) + ",--right-hold," + "+".join(held))
+                a.rp_pair_args = (args.rp_pair_args + ",--no-shorten-parts," + "+".join(held)
+                                  + ("," + "--right-hold," + "+".join(rh) if rh else ""))
             a.rp_rebuild_pairs = True
             print(f"odpo {name}: round {k + 1} brake on {answerer}'s answers ({sv_:+.1f}% / {ac_:+.2f}): held (no shortening) = "
                   f"{held or 'none'} (caps {caps}, accuracy hold <= {args.od_acc_hold})", flush=True)
