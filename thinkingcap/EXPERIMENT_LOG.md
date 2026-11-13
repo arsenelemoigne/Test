@@ -6108,3 +6108,5 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   by Dev's known over-reading (saving -2.5, accuracy -2.3: models trained from the original); (2) the step-2 starting point
   (recipe 2: the consult16 gate; arena: the stop rule's result), else the next closest. Queued on GPU 2 after r2s1b's Dev
   scores and on GPU 1 after od3. Tested on fake scores. ~2.2 GPU-h per full test.
+- ~02:55: GPU 1 found NOT running: the restart at ~02:30 sent two clicks (relaunch, then an interrupt: "^C" right after
+  "scripts at 21dae3a"), so od3 never started. Relaunched with a single click at ~02:55.
