@@ -6048,3 +6048,18 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
   then the final report is requested automatically). Notice confirmed in turn 224's prompt. Spent so far $5.93 of $15.
 - ~01:28 check-in: r2f-ifeval done: 2,333 built (Dolly + OpenAssistant) questions x8, original solves 70% (sometimes 847,
   always 1,159, never 327). r2e-nofit (930 hard no-fit, none already in the pool) answering; then r2prep, r2s1b.
+
+## 13 Nov ~01:50 — r2prep report (steps 2 / 3 questions vs the full test) + step 1 rebuild short; fix queued, STEP 1 GO (user)
+Original's solve rate on each set (test in brackets), difficulty bins vs the test's:
+- math 650 / 650: 89% / 88% (89%), bins EXACT; code 387 / 339 (wanted 410 / 360; KodCode-Light used up): 56% / 55% (52%), 73
+  borrowed from neighbour bins; IFEval 639 / 566: 59% / 59% (59%), bins EXACT; simple 240 / 200: 82% / 81% (82%), 10 borrowed;
+  several 181 / 159: 76% / 74% (76%), EXACT; no-fit 240 / 220: 84% / 84% (83%), but <25%-solved bin 7% vs the test's 12% (30 short).
+- Step 1's NEW IFEval (1,200 built from r2d + r2f): solve 59% (test 59%), bins [27, 12, 16, 12, 34] vs [27, 11, 16, 12, 34],
+  median thinking 267 vs 300: matches the test. Step 1's new hard no-fit: 87 of 229 wanted (bins [29, 0, 48, 10, 0] of
+  [117, 0, 102, 10, 0]): r2e-nofit = 519 questions x8, original solves 86% (never 15): still mostly easy.
+- r2s1b (pairs only): 2,810 of 2,880 pairs, IFEval 70 short (test-matched built IFEval is harder than argilla: fewer questions
+  qualify for shortening) -> STOPPED before training as designed.
+- Fix (user: "ok, let's do it"): r2prep --r2-need1 ifeval=1800 (still band-matched; all already answered), r2s1b pairs rebuilt
+  (--rp-rebuild-pairs), then the step 1 TRAINING line (constant 2e-5 after 10 warm-up, rank 16, beta 0.1, 180 steps,
+  checkpoints 40 / 80 / 100 / 120 / 140 / 160 / 180 each on Dev-512 + Dev-SVAMP; trains only with all 2,880 pairs and the
+  step 2 / 3 files), then 4 h of holds (step 2 waits for the user's go). Expected: training ~02:40, Dev results ~06:00.
