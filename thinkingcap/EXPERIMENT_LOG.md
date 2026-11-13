@@ -6318,3 +6318,10 @@ reviews/consult20_online/REPORT.md.
   oasst2 (Apache-2.0) and WildChat-1M first user turns (ODC-BY; English, not flagged toxic, streamed, first 40,000), same
   filters (12-150 words, no coding, request used once). newtop r2h-ifeval (3,000) queued after r2g-code; r2prep more1 uses it.
 - ~23:30 (user): the new IFEval request sources (oasst2, WildChat) were NOT asked for -> newtop r2h-ifeval removed from the queue before it ran; r2prep more1 back to the r2g sets only. (prepare_types keeps the two optional bases; unused unless asked.)
+- ~23:40 loss_analysis.py (lost accuracy per question vs the original's full test, by cause and by how reliably the original
+  solved it; reviews/loss_analysis/od2.txt). Noise reference (original's answers 4-7 vs 0-3): every type "loses" 3-6 pts and
+  gains as much back, net ~0. od2 (120 q per type, x4): math net -5.1 (r6) -> -11.8 / -10.9 (r8 / r10), 74-86% of the lost
+  accuracy = stopped thinking before half the original's right length, 59-64% on questions the original solves 8/8, + 1.6-1.8
+  pts of wrong answer FORMAT; code -5.4 to -5.8: r6 short thinking 47% + loops 18%, r10 stopped early 88%; IFEval: stopped
+  early 53-68% + response too short (length rules) 14-17%; tool calls: somewhat short thinking ~55% + unparseable 8-17%.
+  od3-r3 / od3-r4 (full 2,759 q) queued on GPU 1 (lossan).
