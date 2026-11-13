@@ -6230,3 +6230,6 @@ reviews/consult19_step2/REPORT.md.
   >= 55% saved or <= -2.0 monitored accuracy gets NO shortening pairs that round (length-held be-right + loops), the others keep
   shortening (repair_pairs --no-shorten-parts); short rounds use their last saved checkpoint (od3's round-6 crash). Then
   fullpick (full tests of 2 rounds). Mock-tested on the Mac (brake reads the current round, holds the right types).
+- ~15:40 check: BOTH runtimes DISCONNECTED ("Reconnect L4"), last seen on keep-alive holds at code a4aea9d (~10:30): neither
+  r2s2 (step 2) nor od4 started. Everything needed is on Drive and the queues are pushed (d505fd8). Waiting for the user to
+  reconnect (not done by Claude).
