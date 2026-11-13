@@ -6266,3 +6266,5 @@ reviews/consult20_online/REPORT.md.
   (math 56, code 58, IFEval 52, simple 44, several 47, no-fit 58), lr 1.2e-5, no accuracy hold. Reality check logged: Argon's
   forecasts need +2 (A stage 1, 56/-2.1) to +2.7 (S, 53/-0.7) above the curve; od3 reached only +0.4/+0.7; only repairs have
   ever reached +2.3..+3.2 (rpK-40, rpM-60, rpL-60). Treat S's forecast as a stretch, A's final as "match our best repair".
+
+- 13 Nov ~19:28 (Colab clock): both GPUs reconnected (user), queues started at 4f52f93. GPU 2: r2s2 pairs-only, step-1 model (r2s1b-s180) answering the 2,337 step-2 questions x8. GPU 1: od4 round 1 pairs built from the stored original answers (svamp shorten 66, ...), round 1 training started. Standing instruction (user): if r2s2 has all 1,600 pairs, train without waiting; if short, build more test-matched questions for the short types (no test/Dev, no bida, no step-1/step-3 reuse) until full, then train.
