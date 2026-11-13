@@ -6240,3 +6240,7 @@ reviews/consult19_step2/REPORT.md.
   51 / -5.1, no-think 89 / -10.7 -> cap 47; several safe to 49 / -0.6, falls 53 / -2.9, no-think 91 / -20.8 -> cap 50; no fit
   positive throughout (66 / +7.7; no-think 96 / +6.9) -> cap 65. od4 line updated: --od-caps svamp=65,mbpp=66,ifeval=60,
   bfcl_simple_python=47,bfcl_multiple=50,bfcl_irrelevance=65, accuracy hold off (-100).
+- ~16:10 (user): consult20 launched (Gemini 4 Argon, cap $4, 60 turns): design two ONLINE DPO variants for GPU 1 from the
+  original: S = safe, no repair, lands directly at the objective; A = aggressive overshoot + one repair; data-derived per-type
+  caps, 7/8 bar, fixed mix, constant lr; and whether od4 should run as queued. Pack reviews/consult20_online (od2 / od3 results
+  and failure analysis, the od4 design, the per-type full-test frontier, recipe 2 state, code).
