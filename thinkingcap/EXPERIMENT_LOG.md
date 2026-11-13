@@ -6171,3 +6171,7 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   - od3-r4 FULL TEST (2,759 x 8): +60.5% [59.4, 61.5] / -4.79 [-5.53, -4.09] OUTSIDE (math 76 / -9.4, code 67 / -4.8, IFEval
     44 / -2.2, simple 45 / -2.0, several 46 / -1.1, no-fit 48 / -5.4). Dev-512 had read 62.2 / -3.57 (accuracy 1.2 too kind).
     Full test of od3-r3 running.
+- ~08:16: od3-r3 FULL TEST: +58.4% / -4.01 OUTSIDE (math 74 / -8.9, code 64 / -4.2, IFEval 43 / -0.9, simple 42 / -1.3,
+  several 43 / -0.6, no-fit 45 / -4.6). GPU 1 is done (now on holds). od3 summary: online DPO from the original with a fixed
+  reference and type floors shortens fast (round-3 / round-4 models 58-61% saved on the full test) but math (-9) and no-fit
+  (-5) collapse, as in od2; the fixed anchor and floors slowed it, did not stop it. GPU 2: full test of r2s1b-s180 running.
