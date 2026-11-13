@@ -6046,3 +6046,5 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
 - ~01:35 (user: "ask him to conclude within 50 turns"): consult18 stopped between turns 223 and 224 and resumed from its saved
   conversation with --stop-turn 273 (new harness option: a "conclude" notice at 50 / 40 / 30 / 20 / 10 / 5 / 2 turns left,
   then the final report is requested automatically). Notice confirmed in turn 224's prompt. Spent so far $5.93 of $15.
+- ~01:45 check-in: r2f-ifeval done: 2,333 built (Dolly + OpenAssistant) questions x8, original solves 70% (sometimes 847,
+  always 1,159, never 327). r2e-nofit (930 hard no-fit, none already in the pool) answering; then r2prep, r2s1b.
