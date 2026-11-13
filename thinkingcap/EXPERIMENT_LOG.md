@@ -6126,3 +6126,6 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   - od3 round-1 model (20 DPO steps, fixed reference), free monitor on round 2's 780 test-matched questions x8: +21.6% / +0.21
     (math 28 / -0.8, code 23 / +0.9, IFEval 14 / +0.4, simple 21 / +1.2, several 17 / -0.5, no-fit 25 / -0.2). Round 2 pairs:
     IFEval 29 short, code 4, tools 1 (fixed mix); 4-28 right answers per type below the floors. (od2 at 20 steps: 11.0 / -0.8.)
+- ~04:16: r2s1b step 80: Dev-512 +40.9% [38.0, 43.5] / +0.27 [-1.22, +1.78] (math 48 / -0.8, code 42 / -1.6, IFEval 37 / +0.9,
+  simple 37 / +6.9, several 39 / 0.0, no-fit 31 / -2.2); 40 -> 80: +6.2 saved, +0.36 accuracy. Dev-SVAMP pending. od3 round 3
+  answers (models/od3-r2) finishing.
