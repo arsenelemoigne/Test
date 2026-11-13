@@ -6286,3 +6286,4 @@ reviews/consult20_online/REPORT.md.
   simple 450, several 150, no-fit 530 = shortfall / yield x ~1.25). Then the r2s2 line with --rp-more-files (the step-1
   model answers the extras x8), pairs rebuilt, and it TRAINS only if all 1,600 pairs exist (--rp-require-full); else stops
   again and another round is built.
+- ~21:15: od4 round 2 model (monitor) +41.8% / -2.02 (od3 round 2: 43.9 / -1.81); nothing at its cap, round 3 training. GPU 2: KodCode kept (user). newtop r2g-math answering (4,597 MetaMath candidates already used, dropped).
