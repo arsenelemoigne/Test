@@ -6291,3 +6291,8 @@ reviews/consult20_online/REPORT.md.
   simple 42 / +3.5, several 47 / +3.2, no-fit 36 / -2.2); Dev-SVAMP +67.6% / -4.44. od3 had no Dev at round 3; od3-r4 Dev-512
   62.2 / -3.57 (math 76 / -9.4), Dev-SVAMP 72.8 / -6.00; od3-r3 FULL 58.4 / -4.01. Math is past its cap (65) -> expected braked
   from round 4. GPU 2: r2g-math 900 x8 (solve 89%, sometimes right 263), r2g-simple next.
+- ~22:05: od4 round-3 model monitor **+52.7% / -2.37** (od3 round 3: 55.9 / -3.38): math 68 / -4.5 (od3 72 / -7.1), code 62 / -4.1
+  (67 / -5.8), IFEval 41 / -1.4 (42 / -0.8), simple 37 / +0.9 (41 / +0.9), several 40 / +1.8 (42 / +0.3), no-fit 43 / -1.2
+  (46 / -1.3). **First brake: math (68 >= 65) held from round 4 on** (latched). Round 4 trained 15 steps (ordered right 60 ->
+  79%, lowest end so far). GPU 2: r2g-simple 1,100 x8 (solve 94%: easy vs test 82%; sometimes right 257), r2g-multiple only
+  292 left in the sources (solve 75%, sometimes right 73), r2g-nofit answering.
