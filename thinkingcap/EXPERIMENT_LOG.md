@@ -6110,3 +6110,6 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   scores and on GPU 1 after od3. Tested on fake scores. ~2.2 GPU-h per full test.
 - ~02:55: GPU 1 found NOT running: the restart at ~02:30 sent two clicks (relaunch, then an interrupt: "^C" right after
   "scripts at 21dae3a"), so od3 never started. Relaunched with a single click at ~02:55.
+- ~02:46 check-in: GPU 2 r2s1b training step 115/180 (loss 0.25-0.49, 78-86% ordered right). GPU 1 od3 RUNNING: od3prep
+  done, round 1 pairs built (IFEval 14 short, simple / several 1 short, math / code full: fixed mix kept), "reference = the
+  base model (adapter off)" confirmed, round-1 DPO at step 15/20 (loss 0.47, 86%).
