@@ -724,7 +724,16 @@ def run_main(args, llm=None, forward=None):
     while True:
         out_of_passes = st["passes"] >= args.passes
         reserve = getattr(args, "report_reserve", 0.0)
-        if not final_sent and reserve and budget.spent + budget.worst_next(approx_tokens(messages), args.max_reply) > args.cap_usd - reserve:
+        stop_turn = getattr(args, "stop_turn", 0)
+        left = stop_turn - st["turn"] if stop_turn else None
+        if (left is not None and not final_sent and left in (50, 40, 30, 20, 10, 5, 2) and messages[-1]["role"] == "user"
+                and f"[TURN LIMIT {left}]" not in messages[-1]["content"]):  # (13 Nov, user) conclude within a turn budget
+            messages[-1]["content"] += (f"\n\n[TURN LIMIT {left}] The user asks you to CONCLUDE: {left} turns are left before "
+                                        "the final report is requested automatically. Stop exploring; check only what the plan "
+                                        "still needs, keep {WORK}/report_draft.md complete, and write the final plan as soon "
+                                        "as it is ready.".replace("{WORK}", str(work)))
+        if not final_sent and ((left is not None and left <= 0) or (reserve and budget.spent + budget.worst_next(
+                approx_tokens(messages), args.max_reply) > args.cap_usd - reserve)):
             # (10 Nov) stop analysing with money left for the report; the report call sees the whole conversation
             trimmed = [messages[0], messages[1]]
             n = len(messages)
@@ -989,6 +998,7 @@ def main():
     p.add_argument("--raw-model", default="Qwen/Qwen3-0.6B", help="the raw base the training checkpoints were trained on")
     p.add_argument("--data", default="", help="a folder of existing answers for Astra (raw.jsonl, v1.jsonl, summary.json)")
     p.add_argument("--goal", default="vs-dpo", choices=("vs-dpo", "on-top"))
+    p.add_argument("--stop-turn", type=int, default=0, help="(13 Nov) at this turn the final report is requested (notices before)")
     p.add_argument("--task", default="edit", choices=("edit", "consult", "consult-dpo", "consult-merge", "consult-fresh", "consult-review", "consult-ladder", "consult-path2", "consult-path1final", "consult-path1results", "consult-after-rpk20", "consult-full-scores", "consult-box", "consult-clean", "consult-plan", "consult-r2s1", "consult-next"),
                    help="consult (4 Nov, user): strategy analysis only, no forward passes, our work never mentioned")
     p.add_argument("--cpu", action="store_true", help="a small CPU test session (Mac): HF forward passes, 12 math questions")
