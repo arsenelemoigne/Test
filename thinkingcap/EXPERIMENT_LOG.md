@@ -6159,3 +6159,8 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   +2.9, simple 42 / +8.8, several 46 / +3.9, no-fit 38 / +4.2); Dev-SVAMP +51.9% / -2.00. Inside the gate's saving window,
   accuracy just under +0.8, test-like math falling (-0.75 at 100, -1.25 at 120, -2.00 at 140). Steps 160 / 180 next.
   GPU 1: full test of od3-r4 running.
+- ~06:46: r2s1b step 160: Dev-512 +50.1% [47.0, 53.1] / +1.19 [-0.46, +2.91] (math 55 / -4.1, code 57 / -0.9, IFEval 44 / +3.6,
+  simple 44 / +7.7, several 45 / +5.0, no-fit 37 / +4.4) = PASSES Dev-512's gate (46-51.5 / >= +0.8); Dev-SVAMP +53.5% / -1.25
+  (fails the +1.0 math gate). Step 180: Dev-512 +51.1% [48.1, 54.3] / +1.25 (math 59 / -2.9, code 58 / -1.9, IFEval 41 / +3.8,
+  simple 45 / +8.3, several 48 / +3.9, no-fit 37 / +3.6); Dev-SVAMP pending. Corrected for Dev's over-reading (-2.5 / -2.3):
+  step 160 ~47.6 / -1.1, step 180 ~48.6 / -1.05 on the full test (estimate). Math is the loss (Dev-SVAMP -1.25 to -2.0).
