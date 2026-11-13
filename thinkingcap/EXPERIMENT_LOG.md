@@ -6138,3 +6138,10 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
     41 / +0.9, several 42 / +0.3, no-fit 46 / -1.3). Shortens fast; math and code accuracy fall as in od2 despite the fixed
     reference and floors. Stop rule not met (target needs >= 56.5% with >= -2.2; no tripwire per the user), so the loop
     continues: round 4 training, then Dev of od3-r4.
+- ~05:16:
+  - r2s1b step 100 Dev-SVAMP +52.2% [48.3, 56.0] / -0.75 [-3.0, +1.4] (step 80: 43.4 / +1.19): test-like math now loses a
+    little; with Dev-512 45.9 / +0.43 step 100 meets the gate's saving edge but neither accuracy gate (+0.8 / +1.0).
+  - od3-r4 (round-4 model, 65 DPO steps) Dev-512 +62.2% [60.0, 64.3] / -3.57 [-5.32, -1.81] (math 76 / -9.4, code 71 / -4.4,
+    IFEval 45 / -1.8, simple 48 / +4.6, several 53 / +1.4, no-fit 42 / -4.4; runaways math 7.8 -> 0.2%, code 6.0 -> 0.4%);
+    vs rpE-80 +15.3 saved / -4.94 acc. Dev-SVAMP +72.8% / -6.00. Far past the target, math collapsing as in od2: the fixed
+    reference and floors slowed it but did not stop it. Round 5 running (no stop rule fired: the target rule needs >= -2.2).
