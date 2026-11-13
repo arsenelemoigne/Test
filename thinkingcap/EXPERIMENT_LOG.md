@@ -6233,3 +6233,10 @@ reviews/consult19_step2/REPORT.md.
 - ~15:40 check: BOTH runtimes DISCONNECTED ("Reconnect L4"), last seen on keep-alive holds at code a4aea9d (~10:30): neither
   r2s2 (step 2) nor od4 started. Everything needed is on Drive and the queues are pushed (d505fd8). Waiting for the user to
   reconnect (not done by Claude).
+- ~16:00 (user: caps per type from the data, no accuracy hold since a repair follows; avoid going over the edge): per-type
+  frontiers from 13 stored full tests + r2s1b / od3 + the no-thinking mode (saved / acc): math safe to 66 / -2.9 (rpL80), cliff
+  at 67 / -6.6 (rc1) and 74-76 / -9 (od3), no-thinking 98 / -68 -> cap 65; code safe to 66 / -1.8, falls at 67 / -4.8, no-think
+  97 / -11.6 -> cap 66; IFEval no clear cliff (62 / -2.6; no-think 62 / -1.3) -> cap 60; one function safe to 47 / -2.0, cliff
+  51 / -5.1, no-think 89 / -10.7 -> cap 47; several safe to 49 / -0.6, falls 53 / -2.9, no-think 91 / -20.8 -> cap 50; no fit
+  positive throughout (66 / +7.7; no-think 96 / +6.9) -> cap 65. od4 line updated: --od-caps svamp=65,mbpp=66,ifeval=60,
+  bfcl_simple_python=47,bfcl_multiple=50,bfcl_irrelevance=65, accuracy hold off (-100).
