@@ -6118,3 +6118,11 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   answers are the original's own), round 2 = models/od3-r1 answering its 780 questions x8 (chunk 1 at 46%).
 - ~03:16 check-in: GPU 2 generating Dev answers of r2s1b-40 (no score yet). GPU 1 od3 round 2 answering (models/od3-r1).
   No errors.
+- ~03:44 FIRST RESULTS.
+  - r2s1b step 40 (recipe 2 step 1, 40 of 180 steps): Dev-512 +34.7% [32.0, 37.3] / -0.09 [-1.66, +1.44] (math 39 / -0.4,
+    code 39 / -1.1, IFEval 33 / -0.1, simple 29 / +4.2, several 31 / +1.8, no-fit 23 / -3.9; runaways math 7.8 -> 2.5%,
+    code 6.0 -> 2.2%); vs rpE-80 on Dev: -12.2 saved / -1.46 acc. Dev-SVAMP +39.7% / +1.69. Below the step-1 gate's saving
+    (46-51.5) as expected this early; the accuracy reading (-0.09) is already under the gate's +0.8.
+  - od3 round-1 model (20 DPO steps, fixed reference), free monitor on round 2's 780 test-matched questions x8: +21.6% / +0.21
+    (math 28 / -0.8, code 23 / +0.9, IFEval 14 / +0.4, simple 21 / +1.2, several 17 / -0.5, no-fit 25 / -0.2). Round 2 pairs:
+    IFEval 29 short, code 4, tools 1 (fixed mix); 4-28 right answers per type below the floors. (od2 at 20 steps: 11.0 / -0.8.)
