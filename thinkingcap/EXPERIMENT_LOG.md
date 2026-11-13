@@ -6268,3 +6268,4 @@ reviews/consult20_online/REPORT.md.
   ever reached +2.3..+3.2 (rpK-40, rpM-60, rpL-60). Treat S's forecast as a stretch, A's final as "match our best repair".
 
 - 13 Nov ~19:28 (Colab clock): both GPUs reconnected (user), queues started at 4f52f93. GPU 2: r2s2 pairs-only, step-1 model (r2s1b-s180) answering the 2,337 step-2 questions x8. GPU 1: od4 round 1 pairs built from the stored original answers (svamp shorten 66, ...), round 1 training started. Standing instruction (user): if r2s2 has all 1,600 pairs, train without waiting; if short, build more test-matched questions for the short types (no test/Dev, no bida, no step-1/step-3 reuse) until full, then train.
+- od4 round 1 model, measured on round 2 answers (free monitor): +22.7% / +0.58 (od3 round 1: 21.6 / +0.21); no type at its cap, nothing braked; round 2 training. r2s2 answering 2,100 / 2,337.
