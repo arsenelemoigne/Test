@@ -6391,3 +6391,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   models' early stopping is the real, model-made loss.
 - od3prep --od3-more: only 2 new test-matched slices (rounds 7, 8; round 9's no-fit would be 87% solved vs the test's 83%)
   -> 8 slices < 9: od4 extension SKIPPED as designed (nothing trained). fullpick od4 started (2 full tests, ~4.5 h).
+- ~00:45 (user: "we could have done rounds 6, 7, 8 ... still good", option A): fullpick interrupted ~10 min in; od4 continues to 8 rounds (slices 6-8; rounds 1-5 skipped from saved adapters; Dev at round 6, round 8 = od4-best Dev), then fullpick over all 8 rounds.
