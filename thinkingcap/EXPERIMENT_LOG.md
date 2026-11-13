@@ -6075,3 +6075,24 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   step-2 mix); with a question file, ptrepair no longer tops up from unmatched pool questions.
 - ~01:56 (user: "don't hold GPU 2, just start it"): GPU 2's plan cell interrupted during hold after-r2s1-3 and re-run (finished
   lines already commented out): it goes straight to r2prep (1,800 step-1 IFEval) -> r2s1b pairs rebuild -> step 1 training.
+
+## 13 Nov ~02:35 — consult18 (Argon) plan received; GPU 1 = its STEP 1 only (od3, online DPO arena from the original)
+- consult18 (Gemini 4 Argon, $8.05, 285 turns, reviews/consult18_next/run/final_answer.md): bet = "arena overshoot, then a
+  type-split repair". Step 1 od3: online DPO from the ORIGINAL, up to 6 rounds (20 + 5 x 15 DPO steps), each round answers its
+  own test-matched slice x8, reference FIXED to the original, shortening only on questions solved >= 7/8, PER-TYPE FLOORS on
+  every chosen answer (math max(95, 0.35 x the original's median right thinking on that question), code max(180, 0.32x),
+  IFEval max(65, 0.22x) + response lock, one function max(60, 0.40x), several max(68, 0.42x), no fit max(55, 0.32x); chosen
+  by Argon from the full-test answers of 6 models: accuracy on questions the original solves reliably vs the thinking ratio,
+  and where < ~6% of rpK-40's right answers lie), ~70% shorten / ~20% be-right / loops / IFEval counting pairs, NO guards;
+  free monitor each round; constant lr 1.5e-5, beta 0.1, rank 16. Step 2 rpO (rpM-style type-split repair) + full test: NOT
+  queued (user: decide after step 1).
+- User changes: no tripwire / rollback rule (stops only at >= 56.5% saved with >= -2.2, or when saving grows < 1.5 pt from the
+  5th round on with >= 52.5%); Argon's "--no-trim-mix" (refill short kinds with be-right) NOT built: it breaks the user's
+  fixed-mix rule; a short round trains on fewer pairs at the fixed mix.
+- Built: dpo.py --ref-base (reference = the base with the adapter off), repair_pairs --floor-by-part / --base-think /
+  od3_arena, track.py od3prep (6 disjoint test-matched slices; the original's stored answers for round 1; base thinking and
+  stats), od3_monitor, odpo --od-fixed-ref (odpo_fixed). Tests on the Mac: round-1 pairs 316 / 320 at the fixed mix (tools
+  1-2 short; 8-104 right answers per type below the floor never chosen); slices match the test per type (e.g. math 88-89% vs
+  89%, code 52-53% vs 52%, IFEval 56-59% vs 59%), no overlap between rounds or with rpO's questions; monitor original vs itself
+  = 0.0 / 0.00; loop control flow checked with mocked GPU parts (fixed reference, continued adapter, answering model, stop).
+- Queued on GPU 1: od3prep, then odpo od3, then holds.

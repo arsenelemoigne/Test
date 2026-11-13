@@ -105,10 +105,15 @@ def main():
         for r, (c, rj) in zip(rows, saved["ref"]):
             r["ref_c"], r["ref_r"] = c, rj
     else:
-        with torch.no_grad():  # the reference: the starting adapter, scored once
+        import contextlib
+        # (13 Nov, od3) --ref-base: the reference is the BASE model (adapter switched off), not the starting adapter, so an
+        # online loop that continues one adapter keeps the same anchor in every round (od2's reference moved every round)
+        ctx = model.disable_adapter() if args.ref_base else contextlib.nullcontext()
+        with torch.no_grad(), ctx:  # the reference: the starting adapter (or the base with --ref-base), scored once
             for r in rows:
                 r["ref_c"] = float(logps(r["prompt_ids"], r["chosen_ids"], False))
                 r["ref_r"] = float(logps(r["prompt_ids"], r["rejected_ids"], False))
+        print(f"reference = {'the base model (adapter off)' if args.ref_base else 'the starting adapter'}", flush=True)
         ref_path.write_text(json.dumps({"rows": finger, "ref": [[r["ref_c"], r["ref_r"]] for r in rows]}))
     print("reference scored", flush=True)
 
@@ -261,6 +266,7 @@ def parse_arguments():
     parser.add_argument("--bida-exact", action="store_true",
                         help="michal-bida's training settings: float32 base + float16 autocast with a loss scaler, cosine "
                              "warm-up 5%% of steps then down to 0, pairs over 8,704 tokens skipped, no held-out pairs")
+    parser.add_argument("--ref-base", action="store_true", help="(13 Nov) DPO reference = --model with the adapter off")
     parser.add_argument("--keep-order", action="store_true", help="with --mix all: train in the file's order (no shuffle)")
     parser.add_argument("--seed", type=int, default=0)
     return parser.parse_args()

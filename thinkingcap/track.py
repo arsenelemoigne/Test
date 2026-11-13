@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -265,6 +265,14 @@ def main():
     parser.add_argument("--nt-sources", default="glaive_nofit_hard", help="newtop: prepare_types.py sources")
     parser.add_argument("--nt-parts", default="bfcl_irrelevance", help="newtop: build_pool.py parts")
     parser.add_argument("--nt-raw", action="store_true", help="newtop: no prompt-length matching (build_pool --no-match)")
+    parser.add_argument("--od-fixed-ref", action="store_true", help="odpo (13 Nov): the arena with the original as the fixed reference")
+    parser.add_argument("--od-r1-steps", type=int, default=20, help="odpo --od-fixed-ref: DPO steps in round 1")
+    parser.add_argument("--od-r1-quota", default="", help="odpo --od-fixed-ref: round 1's pair quota (default --rp-quota)")
+    parser.add_argument("--od-stop-save", type=float, default=56.5)
+    parser.add_argument("--od-stop-acc", type=float, default=-2.2)
+    parser.add_argument("--od-conv-gain", type=float, default=1.5)
+    parser.add_argument("--od-conv-min", type=float, default=52.5)
+    parser.add_argument("--od-dev-rounds", type=int, nargs="*", default=[4])
     parser.add_argument("--nt-cand", default="", help="newtop (12 Nov): use this already drawn candidate file (no prepare_types)")
     parser.add_argument("--nt-pool", default="", help="newtop (12 Nov): extra build_pool.py arguments joined by '+'")
     parser.add_argument("--nt-prep", default="", help="newtop (12 Nov): extra prepare_types.py arguments joined by '+'")
@@ -3814,6 +3822,136 @@ def r2pick(args):
     drive_sync("save")
 
 
+OD3_ROUND1 = {"svamp": 440, "mbpp": 280, "ifeval": 400, "bfcl_simple_python": 160, "bfcl_multiple": 120, "bfcl_irrelevance": 160}
+OD3_ROUND = {"svamp": 220, "mbpp": 140, "ifeval": 200, "bfcl_simple_python": 80, "bfcl_multiple": 60, "bfcl_irrelevance": 80}
+BFCL_W = {"bfcl_simple_python": 400, "bfcl_multiple": 200, "bfcl_irrelevance": 240}
+
+
+def od3prep(args):
+    """(13 Nov, consult18) the arena's questions, fixed before round 1: --od-rounds disjoint slices, each matched to the full
+    test's difficulty profile per type (the original's solve-rate bins, test_difficulty_data), from every question we hold
+    the ORIGINAL's answers for (the pool's stored x10 answers + the newtop sets' x8), minus Dev / Dev-SVAMP and their
+    near-duplicates, michal-bida's data (--r2-drop) and recipe 2's step 2 / 3 question files (rpO uses those). Writes
+    data/od3-rK-questions.jsonl, runs/bon/rp-od3-r1-stored/rollouts.jsonl (the original's answers to round 1: no generation),
+    data/od3-base-think.json (the original's median right thinking per question: the type floors), data/od3-base-stats.json
+    (its mean tokens and accuracy per question: the free monitor) and data/od3-step2-questions.jsonl (rpO's questions)."""
+    import statistics
+    from build_pool import ngrams, part_of, words
+    from test_difficulty_data import TEST_DIFFICULTY as test
+    done = Path("data/od3-base-stats.json")
+    drive_sync("restore", only=["data/od3-*", str(BON / "rp-od3-r1-stored")])
+    if done.exists() and (BON / "rp-od3-r1-stored" / "rollouts.jsonl").exists():
+        print("od3prep: already built", flush=True)
+        return
+    drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
+    tops = [x for x in args.r2_tops.split(",") if x]
+    extras = ("nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2")
+    pool_f = Path("data/pool-dp13.jsonl")
+    s2, s3 = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl")
+    drive_sync("restore", only=[str(BON / P1_ANSWERS), str(pool_f), str(s2), str(s3),
+                                *[str(BON / f"tooltop-{x}") for x in extras + tuple(tops)]])
+    rows = {}
+    for f in [pool_f, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras + tuple(tops)]]:
+        for l in (f.read_text().splitlines() if f.exists() else []):
+            if l.strip():
+                q = json.loads(l)
+                rows[q.get("pool_id", q.get("id"))] = q
+    r2ids = set()
+    for f in (s2, s3):
+        for l in f.read_text().splitlines():
+            if l.strip():
+                r2ids.add(json.loads(l)["id"])
+    answers = defaultdict(list)  # qid -> the original's answer rows
+    for l in open(BON / P1_ANSWERS):
+        if l.strip():
+            r = json.loads(l)
+            answers[r["id"]].append(r)
+    for t in tops:
+        rf = BON / f"tooltop-{t}" / "rollouts.jsonl"
+        for l in (open(rf) if rf.exists() else []):
+            if l.strip():
+                r = json.loads(l)
+                answers[r["id"]].append(r)
+    dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
+    cands, stat, base_think, drop = defaultdict(list), {}, {}, Counter()
+    for qid, a in answers.items():
+        row = rows.get(qid)
+        if row is None:
+            drop["no question row"] += 1
+            continue
+        part = part_of(row)
+        if part not in OD3_ROUND:
+            continue
+        if qid in dev or r2_drop_match(row | {"id": qid}, drops):
+            drop["Dev / michal-bida data"] += 1
+            continue
+        g = ngrams(words(row.get("prompt") or ""))
+        if g and len(g & dev_g) * 10 >= 3 * len(g):
+            drop["near-duplicate of a Dev question"] += 1
+            continue
+        right_t = sorted(r2_think_len(r) for r in a if bool(r["correct"]))
+        if right_t:
+            base_think[qid] = right_t[len(right_t) // 2]
+        stat[qid] = {"part": part, "tokens": statistics.fmean(r["output_tokens"] for r in a),
+                     "acc": statistics.fmean(bool(r["correct"]) for r in a)}
+        if qid in r2ids:
+            continue  # rpO's questions: their original's stats are kept, the arena never draws them
+        cands[part].append((qid, stat[qid]["acc"], "held"))
+    print(f"od3prep: candidates {dict((p, len(v)) for p, v in cands.items())}; dropped {dict(drop)}", flush=True)
+    lines, taken = [], set()
+    for k in range(1, args.od_rounds + 1):
+        need = OD3_ROUND1 if k == 1 else OD3_ROUND
+        left = {p: [c for c in v if c[0] not in taken] for p, v in cands.items()}
+        sel = r2_select(left, {p: test[p]["bins"] for p in need}, need, {p: 0 for p in need}, seed=args.data_seed + k)
+        ids = [q for p in need for q in sel[p]["step2"]]
+        taken |= set(ids)
+        Path(f"data/od3-r{k}-questions.jsonl").write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n" for q in ids))
+        lines.append(f"round {k}: " + ", ".join(
+            f"{p} {len(sel[p]['step2'])}/{need[p]} solve {100 * statistics.fmean(stat[q]['acc'] for q in sel[p]['step2']):.0f}% "
+            f"(test {100 * test[p]['solve']:.0f}%){' SHORT' if len(sel[p]['step2']) < need[p] else ''}"
+            for p in need if sel[p]["step2"]))
+        if k == 1:
+            out = BON / "rp-od3-r1-stored"
+            out.mkdir(parents=True, exist_ok=True)
+            with open(out / "rollouts.jsonl", "w") as f:
+                for q in ids:
+                    for r in answers[q]:
+                        f.write(json.dumps(r) + "\n")
+    s3_rows = [json.loads(l) for l in s3.read_text().splitlines() if l.strip()]
+    extra = [r for r in s3_rows if part_of(r) == "svamp"][:200] + [r for r in s3_rows if part_of(r) == "ifeval"][:200]
+    Path("data/od3-step2-questions.jsonl").write_text(s2.read_text() + "".join(json.dumps(r) + "\n" for r in extra))
+    Path("data/od3-base-think.json").write_text(json.dumps(base_think))
+    done.write_text(json.dumps(stat))
+    (BON / "od3prep-report.txt").write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
+    drive_sync("save")
+
+
+def od3_monitor(rollouts, stats):
+    """The free round monitor: a round's answers vs the ORIGINAL's on the same questions (macro over math / code / IFEval /
+    tool calls, the tool parts weighted 400 / 200 / 240 as in the test). Returns (saved %, accuracy change pts, per part)."""
+    import statistics
+    by = defaultdict(list)
+    for l in open(rollouts):
+        if l.strip():
+            r = json.loads(l)
+            if r["id"] in stats:
+                by[r["id"]].append(r)
+    part_tok, part_acc = defaultdict(lambda: [0.0, 0.0]), defaultdict(list)
+    for qid, rs in by.items():
+        st = stats[qid]
+        part_tok[st["part"]][0] += statistics.fmean(r["output_tokens"] for r in rs)
+        part_tok[st["part"]][1] += st["tokens"]
+        part_acc[st["part"]].append(statistics.fmean(bool(r["correct"]) for r in rs) - st["acc"])
+    per = {p: (100 * (1 - t[0] / max(1e-9, t[1])), 100 * statistics.fmean(part_acc[p])) for p, t in part_tok.items()}
+    fam = [per[p] for p in ("svamp", "mbpp", "ifeval") if p in per]
+    tools = [(BFCL_W[p], per[p]) for p in BFCL_W if p in per]
+    if tools:
+        w = sum(x for x, _ in tools)
+        fam.append((sum(x * v[0] for x, v in tools) / w, sum(x * v[1] for x, v in tools) / w))
+    return statistics.fmean(f[0] for f in fam), statistics.fmean(f[1] for f in fam), per
+
+
 def onpolicy(args):
     """A trained model's own answers on a top-up's questions in one thinking band (1 Nov, math hole): the questions of
     runs/bon/tooltop-<--op-from> whose original-Qwen answers think --op-band tokens on average (mean thinking length),
@@ -4337,6 +4475,7 @@ def ptrepair(args):
            "--save-every",
            1 if smoke else (10 ** 6 if getattr(args, "rp_save_at", None) else 5), "--held-out", 0, "--max-len", 8704,
            "--bida-precision", "--dtype", args.dtype, "--seed", getattr(args, "rp_dpo_seed", 0),
+           *(["--ref-base"] if getattr(args, "rp_ref_base", False) else []),
            *(["--save-at", *args.rp_save_at] if getattr(args, "rp_save_at", None) and not smoke else []))
         drive_sync("save")
     if smoke:
@@ -4373,6 +4512,8 @@ def odpo(args):
     --od-steps steps continuing the adapter, the round's start as the reference. Each round is a ptrepair run named
     <name>-r<k>; the answering model of the next round is merged to models/<name>-r<k>. 720 x4 at --od-screen-rounds."""
     import copy
+    if getattr(args, "od_fixed_ref", False):
+        return odpo_fixed(args)
     prev, answerer = args.od_init, args.od_answers0 or args.rp_base  # no --od-init: round 1 trains a fresh LoRA on --rp-base
     assert args.rp_base and (answerer or not prev), "odpo needs --rp-base (and --od-answers0 with --od-init)"
     for k in range(args.od_rounds):
@@ -4394,6 +4535,81 @@ def odpo(args):
                 drive_sync("save")
             answerer = str(nxt)
     print(f"odpo {args.name}: done; last adapter {prev}", flush=True)
+
+
+def odpo_fixed(args):
+    """(13 Nov, consult18 od3; user: anchor fixed, no tripwire) the online arena with the ORIGINAL as the DPO reference in every
+    round: round k answers its own test-matched slice (data/od3-rK-questions.jsonl; round 1 = the original's stored answers),
+    builds pairs (--rp-pair-args, type floors), trains --od-steps more steps of ONE adapter continued across rounds
+    (dpo.py --ref-base: the reference is the original with the adapter off). Free monitor on each round's answers vs the
+    original's on the same questions; STOP when (a) saved >= --od-stop-save with accuracy >= --od-stop-acc, or (b) from the
+    5th round's answers on, saved grew < --od-conv-gain since the last round with saved >= --od-conv-min. The answering
+    model of the stopping round is the arena's result (models/<name>-best). Dev-512 + Dev-SVAMP after --od-dev-rounds and on
+    the result. No step 2 here (the user decides after looking)."""
+    import copy
+    name, base = args.name, "Qwen/Qwen3-0.6B"
+    stats_f = Path("data/od3-base-stats.json")
+    drive_sync("restore", only=[str(stats_f), "data/od3-*"])
+    stats = json.loads(stats_f.read_text())
+    log = BON / f"{name}-monitor.jsonl"
+    drive_sync("restore", only=[str(log)])
+    history = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
+    prev, answerer, best = None, base, None
+    for k in range(args.od_rounds):
+        a = copy.copy(args)
+        a.name = f"{name}-r{k + 1}"
+        a.rp_base, a.rp_ref_base, a.rp_init_from = base, True, prev
+        a.rp_answers_model = "" if answerer == base else answerer
+        a.rp_steps = args.od_r1_steps if k == 0 else args.od_steps
+        a.rp_epochs = max(args.rp_epochs, 2)
+        a.rp_screen, a.rp_dev, a.rp_dev_svamp = [], False, False
+        a.rp_quota = args.od_r1_quota if k == 0 and args.od_r1_quota else args.rp_quota
+        a.rp_rollouts_from = "od3-r1-stored" if k == 0 else ""
+        a.rp_question_file = "" if k == 0 else f"data/{name}-r{k + 1}-questions.jsonl"
+        a.rp_extra_questions, a.rp_extra_source, a.rp_extra_top, a.rp_drop = "", "", "", ""
+        if k > 0:
+            a.rp_question_file = f"data/od3-r{k + 1}-questions.jsonl"
+        print(f"odpo {name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO continues {prev or 'a fresh LoRA'}, "
+              f"reference = the original", flush=True)
+        ptrepair(a)
+        roll = BON / f"rp-{a.rp_rollouts_from or a.name}" / "rollouts.jsonl"
+        saved, acc, per = od3_monitor(roll, stats)
+        rec = {"round": k + 1, "answering_model": answerer, "saved": round(saved, 2), "acc": round(acc, 2),
+               "per_part": {p: [round(v[0], 1), round(v[1], 2)] for p, v in per.items()}}
+        if not any(h["round"] == k + 1 for h in history):
+            history.append(rec)
+            log.write_text("".join(json.dumps(h) + "\n" for h in history))
+        print(f"odpo {name}: MONITOR round {k + 1} answers ({answerer}) vs the original on the same questions: saved "
+              f"{saved:+.1f}% / accuracy {acc:+.2f} | " + ", ".join(f"{p} {v[0]:+.0f}/{v[1]:+.1f}" for p, v in per.items()),
+              flush=True)
+        prev = f"adapters/{a.name}-s0/step-{a.rp_steps}"
+        if k > 0 and saved >= args.od_stop_save and acc >= args.od_stop_acc:
+            best = answerer
+            print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
+            break
+        if k >= 4 and saved - history[k - 1]["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
+            best = answerer
+            print(f"odpo {name}: STOP (saving stopped growing: {history[k - 1]['saved']:.1f} -> {saved:.1f})", flush=True)
+            break
+        nxt = Path("models") / a.name
+        drive_sync("restore", only=[str(nxt)])
+        if not (nxt / "config.json").exists():
+            py("merge.py", "--model", base, "--out", nxt, "--adapters", f"{prev}:1")
+            drive_sync("save")
+        answerer = str(nxt)
+        if k + 1 in args.od_dev_rounds:
+            print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", "")), flush=True)
+            print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
+    best = best or answerer
+    out = Path("models") / f"{name}-best"
+    if not (out / "config.json").exists():
+        shutil.rmtree(out, ignore_errors=True)
+        shutil.copytree(best, out)
+    Path(f"data/{name}-best.json").write_text(json.dumps({"best": best, "history": history}, indent=1))
+    drive_sync("save")
+    print(f"odpo {name}: RESULT {best} -> {out}", flush=True)
+    print(dev_score_model(f"{name}-best", str(out), vs=getattr(args, "rp_dev_vs", "")), flush=True)
+    print(dev_score_model(f"{name}-best", str(out), vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
 
 
 DEV_FILE = Path("data/dev512.jsonl")
@@ -6750,7 +6966,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "odpo"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",

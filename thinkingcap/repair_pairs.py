@@ -122,7 +122,10 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2"),
+    ap.add_argument("--floor-by-part", default="", help="(13 Nov) PART=ABS:RATIO,...: chosen answers think >= max(ABS, RATIO x "
+                    "the ORIGINAL's median right thinking on that question (--base-think), else the group's)")
+    ap.add_argument("--base-think", default="", help="(13 Nov) JSON {question id: the original's median right thinking tokens}")
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -196,6 +199,13 @@ def main():
         tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
         decode = lambda r: tok.decode(list(r.get("thinking_ids") or r["output_ids"]), skip_special_tokens=True)  # noqa: E731
     rereads = Counter()
+    floors = {}
+    for spec in filter(None, re.split(r"[,+]", args.floor_by_part)):  # PART=ABS_TOKENS:RATIO
+        part_f, val = spec.split("=")
+        a_, r_ = val.split(":")
+        floors[part_f] = (float(a_), float(r_))
+    base_think = json.loads(Path(args.base_think).read_text()) if args.base_think else {}
+    floor_drop = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
                                 "right_cr": [], "capguard": [], "right_count": [], "loop": []})  # mix: right_cr = counting-rule OR compact re-read pairs
     loop_resp_only = set(filter(None, re.split(r"[,+]", args.loop_response_only)))
@@ -215,6 +225,15 @@ def main():
         size = thinking_len if part in think_only else (lambda r: r["output_tokens"])
         rights = sorted((r for r in q if right(r)), key=size)
         wrongs = sorted((r for r in q if finished(r) and not right(r)), key=size)
+        all_rights = rights
+        if floors.get(base_part):  # (13 Nov, consult18) a chosen answer never thinks below the type's floor for this question
+            abs_min, ratio_min = floors[base_part]
+            bt = base_think.get(str(qid))
+            if bt is None:
+                bt = sorted(thinking_len(r) for r in rights)[len(rights) // 2] if rights else 0
+            ftok = max(abs_min, ratio_min * bt)
+            rights = [r for r in all_rights if thinking_len(r) >= ftok]
+            floor_drop[part] += len(all_rights) - len(rights)
         if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
                                           length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
@@ -227,13 +246,14 @@ def main():
                 runaway = [r for r in runaway if r["closed_thinking"]]
             if rights and runaway:
                 cand[part]["loop"].append((qid, rights[0], runaway[0]))
-            if len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right and not no_shorten:
-                long, short = rights[-1], rights[0]
+            if (len(all_rights) >= 2 and len(all_rights) / len(q) >= args.shorten_min_right and not no_shorten and rights
+                    and rights[0] is not all_rights[-1]):
+                long, short = all_rights[-1], rights[0]
                 if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
                     # (11 Nov, rpL) thinking shorter, response neither clipped nor longer: at least --resp-median x the
                     # question's median right response, at most --resp-max x the rejected answer's response
                     rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
-                    ok = [r for r in rights[:-1] if response_len(r) >= args.resp_median * rmed
+                    ok = [r for r in rights if r is not long and response_len(r) >= args.resp_median * rmed
                           and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
                           and response_len(r) >= args.resp_near_long * response_len(long)]
                     short = ok[0] if ok else long
@@ -349,6 +369,8 @@ def main():
         for r, w in close:
             cand[part]["right_long" if r["output_tokens"] > w["output_tokens"] else "right_short"].append((qid, r, w))
     pairs, counts = [], Counter()
+    for part_f, n_f in floor_drop.items():
+        counts[(part_f, "right answers below the type floor (never chosen)")] = n_f
     shortfall = {}  # (11 Nov) part -> pairs missing to reach the quota at the fixed mix (written to shortfall.json)
     per_q, right_q, used = Counter(), Counter(), set()
 
@@ -427,6 +449,16 @@ def main():
                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.20
+            if args.mix_preset == "od3_arena":
+                # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
+                # guards (shortening and protection are not mixed in one step); math 75 / 20 / 5 loops, code 75 / 17.5 / 7.5,
+                # IFEval 20% counting pairs + 75 / 18.75 / 6.25, several 70 / 30, one function and no fit 75 / 25
+                sh_share = ({"shorten": 0.75, "right": 0.20, "guard": 0.0, "loop": 0.05} if base_part == "svamp" else
+                            {"shorten": 0.75, "right": 0.175, "guard": 0.0, "loop": 0.075} if part == "mbpp" else
+                            {"shorten": 0.75, "right": 0.1875, "guard": 0.0, "loop": 0.0625} if part == "ifeval" else
+                            {"shorten": 0.70, "right": 0.30, "guard": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.75, "right": 0.25, "guard": 0.0})
                 count_share = 0.20
             if args.mix_preset == "r2s2":
                 # (13 Nov, recipe 2 step 2 as consult16 planned it) shorten again on the step-1 model's own answers, every type:
