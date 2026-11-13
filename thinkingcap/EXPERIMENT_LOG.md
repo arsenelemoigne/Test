@@ -6145,3 +6145,13 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
     IFEval 45 / -1.8, simple 48 / +4.6, several 53 / +1.4, no-fit 42 / -4.4; runaways math 7.8 -> 0.2%, code 6.0 -> 0.4%);
     vs rpE-80 +15.3 saved / -4.94 acc. Dev-SVAMP +72.8% / -6.00. Far past the target, math collapsing as in od2: the fixed
     reference and floors slowed it but did not stop it. Round 5 running (no stop rule fired: the target rule needs >= -2.2).
+- ~05:46:
+  - r2s1b step 120: Dev-512 +45.1% [42.1, 47.9] / +0.98 [-0.68, +2.75] (math 50 / -2.5, code 47 / -1.5, IFEval 44 / +2.7,
+    simple 37 / +7.3, several 42 / +3.6, no-fit 37 / +3.3); Dev-SVAMP +49.0% / -1.25. Passes Dev-512's accuracy gate (+0.8) at
+    the saving edge (45.1 vs 46), fails Dev-SVAMP's (+1.0). Steps 140 / 160 / 180 next.
+  - od3 finished its rounds; monitor: round-4 model +59.3% / -2.50 (math 74 / -8.9, no-fit 53 / -4.3), round-5 model
+    +65.4% / -4.87 (math 81 / -14.5, code 81 / -4.7). Round 6's adapter was not saved (merge.py: adapters/od3-r6-s0/step-15
+    missing) -> odpo stopped before od3-best and its Dev (round 6 lost; rounds 1-5 kept). fullpick od3 then chose by distance
+    to the objective: od3-r4 (monitor 59.3 / -2.50) and od3-r3 (55.9 / -3.38); their FULL TESTS are running (~2.2 h each).
+    Both are far below the accuracy target; od3-r1 (21.6 / +0.21) and od3-r2 (43.9 / -1.81) are not full-tested.
+    Not changed (overnight rule: the user decides in the morning).
