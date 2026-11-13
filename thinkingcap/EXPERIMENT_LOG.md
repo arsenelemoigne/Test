@@ -6103,3 +6103,8 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
 - ~02:26 check-in: GPU 2 r2s1b training step 50/180 (loss 0.32, 88% of pairs ordered right; raw Qwen = 0.693 / 50%).
   GPU 1: od3 started (scripts 21dae3a), restoring / od3prep. Check-in job replaced by an overnight one (training + Dev + od3
   monitor; nothing started or changed by it).
+- ~02:50 (user): after all checkpoints are scored, a FULL TEST (2,759 x 8, no 720 screen) of 2 checkpoints per model:
+  new stage `fullpick`: (1) the checkpoint closest to the objective by its Dev score (or the arena's free monitor) corrected
+  by Dev's known over-reading (saving -2.5, accuracy -2.3: models trained from the original); (2) the step-2 starting point
+  (recipe 2: the consult16 gate; arena: the stop rule's result), else the next closest. Queued on GPU 2 after r2s1b's Dev
+  scores and on GPU 1 after od3. Tested on fake scores. ~2.2 GPU-h per full test.

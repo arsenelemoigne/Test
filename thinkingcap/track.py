@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -485,6 +485,11 @@ def main():
     parser.add_argument("--tp-ramp", type=int, default=300)
     parser.add_argument("--tp-gate", type=float, default=0.0)
     parser.add_argument("--tp-dr-grpo", action="store_true")
+    parser.add_argument("--fm-no-screen", action="store_true", help="fullmodel (13 Nov): skip the 720 screen")
+    parser.add_argument("--fp-run", default="r2s1b", help="fullpick: the run whose checkpoints / rounds are candidates")
+    parser.add_argument("--fp-kind", default="dpo", choices=("dpo", "arena"), help="fullpick: a ptrepair run or an odpo arena")
+    parser.add_argument("--fp-save-bias", type=float, default=2.5, help="fullpick: Dev over-reads saving by this (pts)")
+    parser.add_argument("--fp-acc-bias", type=float, default=2.3, help="fullpick: Dev over-reads accuracy by this (pts)")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
     parser.add_argument("--fm-merge", nargs="*", default=[], help="fullmodel (9 Nov): models/OUT=BASE:ADAPTER merges an "
                         "adapter onto a base model before testing models/OUT")
@@ -3042,6 +3047,8 @@ def fullmodel(args):
             evaluate(out, samples=8, questions="questions", model=model)
             drive_sync("save")
             print(score_line(f"{name} (FULL evaluation 2,759 x 8)", out, base=base), flush=True)
+        if getattr(args, "fm_no_screen", False):  # (13 Nov) the full test only
+            continue
         evaluate(screen, samples=4, questions=SCREEN, model=model)
         drive_sync("save")
         print(score_line(f"{name} (screen 720 x 4)", screen, base=ROOT / "s4-base"), flush=True)
@@ -3950,6 +3957,75 @@ def od3_monitor(rollouts, stats):
         w = sum(x for x, _ in tools)
         fam.append((sum(x * v[0] for x, v in tools) / w, sum(x * v[1] for x, v in tools) / w))
     return statistics.fmean(f[0] for f in fam), statistics.fmean(f[1] for f in fam), per
+
+
+def fullpick(args):
+    """(13 Nov, user) the FULL test (2,759 x 8) of 2 checkpoints per model, chosen once all are scored: (1) the one whose Dev
+    score, corrected by Dev's known over-reading (--fp-save-bias / --fp-acc-bias), lies closest to the objective (> 50% saved
+    at better than -1; inside it, the most saving); (2) the step-2 starting point (dpo: r2pick's gate rule; arena: the stop
+    rule's result models/<run>-best), or the next closest when it is the same. dpo candidates = ptrepair's Dev-scored
+    checkpoints (merged here to models/<run>-sSTEP); arena candidates = the merged round models, scored by the free monitor
+    (round k+1's answers measure round k's model)."""
+    import copy
+    run_name = args.fp_run
+    cands = []  # (label, model path, dev saved, dev acc)
+    if args.fp_kind == "dpo":
+        for step in args.pk_steps:
+            d, v = BON / f"dev512-{run_name}-{step}" / "dev_score.json", BON / f"devsv-{run_name}-{step}" / "dev_score.json"
+            drive_sync("restore", only=[str(d.parent), str(v.parent)])
+            if d.exists() and v.exists():
+                a, b = json.loads(d.read_text()), json.loads(v.read_text())
+                cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}",
+                              "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
+        gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc
+                and c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc]
+        start = max(gate, key=lambda c: c["saved"])["label"] if gate else None
+    else:
+        log = BON / f"{run_name}-monitor.jsonl"
+        best_f = Path(f"data/{run_name}-best.json")
+        drive_sync("restore", only=[str(log), str(best_f)])
+        hist = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+        for h in hist:
+            if h["answering_model"].startswith("models/"):
+                cands.append({"label": Path(h["answering_model"]).name, "model": h["answering_model"], "saved": h["saved"],
+                              "acc": h["acc"]})
+        start = Path(json.loads(best_f.read_text())["best"]).name if best_f.exists() else None
+        d = BON / f"dev512-{run_name}-best" / "dev_score.json"
+        drive_sync("restore", only=[str(d.parent)])
+        if start and start not in {c["label"] for c in cands} and d.exists():  # the result is the last, unmonitored round
+            a = json.loads(d.read_text())
+            cands.append({"label": start, "model": f"models/{run_name}-best", "saved": a["saved"], "acc": a["acc"]})
+    assert cands, f"fullpick: no scored candidate of {run_name}"
+
+    def dist(c):
+        ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias
+        inside = ps > 50 and pa > -1
+        return (0, -ps) if inside else (1, max(0.0, 50.5 - ps) + 2 * max(0.0, -0.9 - pa))
+    ranked = sorted(cands, key=dist)
+    picks = [ranked[0]]
+    other = next((c for c in cands if c["label"] == start), None)
+    if other is None or other["label"] == picks[0]["label"]:
+        other = ranked[1] if len(ranked) > 1 else None
+    if other is not None:
+        picks.append(other)
+    for c in cands:
+        print(f"fullpick {run_name}: {c['label']}: Dev/monitor {c['saved']:+.1f}% / {c['acc']:+.2f} -> corrected "
+              f"{c['saved'] - args.fp_save_bias:+.1f}% / {c['acc'] - args.fp_acc_bias:+.2f}"
+              + ("  <- FULL TEST" if c in picks else ""), flush=True)
+    models = []
+    for c in picks:
+        model = Path(c["model"])
+        drive_sync("restore", only=[str(model)])
+        if not (model / "config.json").exists() and args.fp_kind == "dpo":
+            adapter = Path("adapters") / f"{run_name}-s0" / f"step-{c['step']}"
+            drive_sync("restore", only=[str(adapter)])
+            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters", f"{adapter}:1")
+            drive_sync("save")
+        models.append(str(model))
+    Path(f"data/{run_name}-fullpick.json").write_text(json.dumps({"picks": picks, "start": start, "all": cands}, indent=1))
+    a = copy.copy(args)
+    a.fm_soup, a.fm_merge, a.nothink_models, a.fm_screen_only, a.fm_no_screen = [], [], models, False, True
+    fullmodel(a)
 
 
 def onpolicy(args):
@@ -6966,7 +7042,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "odpo"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "odpo", "fullpick", "fullmodel"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
