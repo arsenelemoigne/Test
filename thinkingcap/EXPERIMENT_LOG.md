@@ -6068,3 +6068,8 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   rounds; never shorten and protect the same type in one step, overshoot then a separate type-specific repair; avoid
   over-protecting; steps 2/3 sets now exist and match the test; the plan must be launchable tonight). Turn limit raised to 288
   so it can answer them. Its next turn started computing per-type floors.
+- ~02:05 (user): "after step 1's checkpoints are scored, prepare step 2's data", then "wait for me to start step 2": NOTHING for
+  step 2 is queued. Built and tested (code only, not queued): `r2pick` (picks the step-1 checkpoint by consult16's gate on the
+  Dev / Dev-SVAMP scores: saving 46-51.5, Dev acc >= +0.8, Dev-SVAMP >= 46% / +1.0; passing -> most saving; else accuracy gates
+  only -> nearest the window; else best accuracy; merges it to models/r2s1-best) and repair_pairs preset `r2s2` (consult16's
+  step-2 mix); with a question file, ptrepair no longer tops up from unmatched pool questions.

@@ -122,7 +122,7 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -427,6 +427,17 @@ def main():
                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.20
+            if args.mix_preset == "r2s2":
+                # (13 Nov, recipe 2 step 2 as consult16 planned it) shorten again on the step-1 model's own answers, every type:
+                # math 40 shorter / 30 be-right / 25 widened guards / 5 loops; code 45 / 35 / 15 / 5; IFEval 20% counting pairs,
+                # the rest 56.25 shorter / 31.25 be-right / 12.5 response loops; one function 60 / 40, several 50 / 50, no fit 60 / 40
+                sh_share = ({"shorten": 0.40, "right": 0.30, "guard": 0.25, "loop": 0.05} if base_part == "svamp" else
+                            {"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if part == "mbpp" else
+                            {"shorten": 0.5625, "right": 0.3125, "guard": 0.0, "loop": 0.125} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0})
                 count_share = 0.20
             if args.mix_preset == "r2s1":
                 # (12 Nov, recipe 2 step 1, consult16) moderate shortening from the original (target ~47% saved, like rpE-80):

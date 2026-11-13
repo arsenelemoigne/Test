@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -274,6 +274,15 @@ def main():
                         help="r2prep: step 3 questions per part")
     parser.add_argument("--r2-tops", default="r2a-math,r2a-code,r2a-ifeval,r2a-tools,r2a-nofit",
                         help="r2prep: newtop sets (runs/bon/tooltop-NAME) added to the held-back questions")
+    parser.add_argument("--pk-run", default="r2s1b", help="r2pick: the ptrepair run whose checkpoints were scored on Dev")
+    parser.add_argument("--pk-steps", type=int, nargs="*", default=[40, 80, 100, 120, 140, 160, 180], help="r2pick: its checkpoints")
+    parser.add_argument("--pk-out", default="r2s1-best", help="r2pick: merged model name (models/NAME)")
+    parser.add_argument("--pk-base", default="Qwen/Qwen3-0.6B", help="r2pick: base the adapter is merged onto")
+    parser.add_argument("--pk-save-lo", type=float, default=46.0)
+    parser.add_argument("--pk-save-hi", type=float, default=51.5)
+    parser.add_argument("--pk-acc", type=float, default=0.8)
+    parser.add_argument("--pk-sv-save", type=float, default=46.0)
+    parser.add_argument("--pk-sv-acc", type=float, default=1.0)
     parser.add_argument("--r2-need1", default="", help="r2prep: step 1's NEW questions per part, chosen first (e.g. ifeval=1200)")
     parser.add_argument("--r2-need1-bins", default="", help="r2prep: PART=n0:n1:n2:n3:n4 step 1's new questions per difficulty bin")
     parser.add_argument("--r2-step1-tops", default="", help="r2prep: the newtop sets step 1's new questions come from")
@@ -3763,6 +3772,48 @@ def r2prep(args):
     drive_sync("save")
 
 
+def r2pick(args):
+    """(13 Nov, user: "after we finish scoring all the checkpoints of step 1, start preparing the data for step 2") pick the
+    step-1 checkpoint by consult16's gate on the Dev scores already computed by ptrepair --rp-dev --rp-dev-svamp, merge it to
+    models/<--pk-out>, and write data/<--pk-out>-choice.json. Gate (Dev-512 over-reads saving ~2.5 pts and accuracy 1.4-3.2 for
+    a model trained from the original): Dev saving in [--pk-save-lo, --pk-save-hi], Dev accuracy >= --pk-acc, Dev-SVAMP saving
+    >= --pk-sv-save and accuracy >= --pk-sv-acc. Passing: the most saving. None passing: the accuracy gates only, closest to
+    the middle of the saving window. Else: the best Dev accuracy. The choice is printed; the user can override it."""
+    run_name, out = args.pk_run, args.pk_out
+    rows = []
+    for step in args.pk_steps:
+        d, v = BON / f"dev512-{run_name}-{step}" / "dev_score.json", BON / f"devsv-{run_name}-{step}" / "dev_score.json"
+        drive_sync("restore", only=[str(d.parent), str(v.parent)])
+        if not (d.exists() and v.exists()):
+            print(f"r2pick: step {step} has no Dev / Dev-SVAMP score yet", flush=True)
+            continue
+        a, b = json.loads(d.read_text()), json.loads(v.read_text())
+        rows.append({"step": step, "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
+    assert rows, f"r2pick: no scored checkpoint of {run_name}"
+    for r in rows:
+        r["acc_ok"] = r["acc"] >= args.pk_acc and r["sv_saved"] >= args.pk_sv_save and r["sv_acc"] >= args.pk_sv_acc
+        r["pass"] = r["acc_ok"] and args.pk_save_lo <= r["saved"] <= args.pk_save_hi
+        print(f"r2pick: {run_name} step {r['step']}: Dev {r['saved']:+.1f}% / {r['acc']:+.2f}, Dev-SVAMP {r['sv_saved']:+.1f}% / "
+              f"{r['sv_acc']:+.2f}" + ("  PASSES the gate" if r["pass"] else ""), flush=True)
+    mid = (args.pk_save_lo + args.pk_save_hi) / 2
+    passing = [r for r in rows if r["pass"]]
+    if passing:
+        pick, why = max(passing, key=lambda r: (r["saved"], r["step"])), "passes the gate, most saving"
+    elif [r for r in rows if r["acc_ok"]]:
+        pick, why = min([r for r in rows if r["acc_ok"]], key=lambda r: abs(r["saved"] - mid)), "accuracy gates only, nearest the window"
+    else:
+        pick, why = max(rows, key=lambda r: (r["acc"], r["sv_acc"])), "no checkpoint meets the accuracy gates: best Dev accuracy"
+    print(f"r2pick: CHOSEN {run_name} step {pick['step']} ({why})", flush=True)
+    model = Path("models") / out
+    drive_sync("restore", only=[str(model)])
+    if not (model / "config.json").exists():
+        adapter = Path("adapters") / f"{run_name}-s0" / f"step-{pick['step']}"
+        drive_sync("restore", only=[str(adapter)])
+        py("merge.py", "--model", args.pk_base, "--out", model, "--adapters", f"{adapter}:1")
+    Path(f"data/{out}-choice.json").write_text(json.dumps({"run": run_name, "pick": pick, "why": why, "all": rows}, indent=1))
+    drive_sync("save")
+
+
 def onpolicy(args):
     """A trained model's own answers on a top-up's questions in one thinking band (1 Nov, math hole): the questions of
     runs/bon/tooltop-<--op-from> whose original-Qwen answers think --op-band tokens on average (mean thinking length),
@@ -4220,7 +4271,7 @@ def ptrepair(args):
             build()
         # (11 Nov, user) fill until full: with --kinds mix the proportion is fixed, so a short part means fewer pairs; on an
         # own-question draw, answer MORE new questions for the short parts (up to 2 extra batches) and rebuild
-        for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke else 1):
+        for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke and not getattr(args, "rp_question_file", "") else 1):
             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
             short = {k: v for k, v in short.items() if v > 0.1 * dict((x.split("=")[0], int(x.split("=")[1]))
                                                                        for x in quota.split(",")).get(k, 0)}
@@ -6699,7 +6750,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
