@@ -6377,3 +6377,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
 - Difference from today's 7/8 bar: 7/8 looks at the current model only (a question the original solved 8/8, now 7/8, is still
   shortened), and a damaged question gets at most a compact (= shortest-right) be-right pair at a fixed share: nothing pushes
   its length back. ~60% of od2's lost math accuracy is on questions the original solves 8/8.
+- 14 Nov ~00:05 (user: "yes I like this idea, we could ask Argon again ... once we finish od4"): plan = od4 full tests -> lossan on the 2 picked od4 models -> Argon consult21 (cap $4, 60 turns): is od5 (per-question recovery vs the original) viable / worth testing, how to change the online policy against each loss kind, recovery-step design if still needed.
