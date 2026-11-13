@@ -6175,3 +6175,7 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   several 43 / -0.6, no-fit 45 / -4.6). GPU 1 is done (now on holds). od3 summary: online DPO from the original with a fixed
   reference and type floors shortens fast (round-3 / round-4 models 58-61% saved on the full test) but math (-9) and no-fit
   (-5) collapse, as in od2; the fixed anchor and floors slowed it, did not stop it. GPU 2: full test of r2s1b-s180 running.
+- ~08:20 (user: "yes perfect"): no new step 1 (it landed as planned: Dev 51.1 / +1.25 at 180, the loss is math and some code,
+  the other types gain). Step 2 leaning to rpM's mix (no math / code shortening; shorten IFEval + tools, which still have room
+  and gain accuracy), to be reviewed by Argon (consult19, cap ~$6) once BOTH step-1 full tests (180, 160) are in: step 2's
+  settings and starting checkpoint, step 3's repair focus. Step 2 waits for the user's go.
