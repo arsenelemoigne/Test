@@ -6260,3 +6260,9 @@ reviews/consult20_online/REPORT.md.
 - Caveat (Claude): its plan lines need translating to our flags (list separators '+', floors ABS:RATIO, fullpick / r2pick
   option names, the od3prep --r2-drop path it gives is wrong); some premises are off (od3 did not use --right-hold) without
   changing the design. Both GPUs still disconnected.
+
+- 13 Nov, user decision on consult20 variant S: DROP the per-type accuracy hold (-1.5). It sits inside the monitor's noise
+  (and the monitor reads accuracy 0.6-2.3 too kindly), so it would fire at random. S = od4 mechanics with Argon's interior caps
+  (math 56, code 58, IFEval 52, simple 44, several 47, no-fit 58), lr 1.2e-5, no accuracy hold. Reality check logged: Argon's
+  forecasts need +2 (A stage 1, 56/-2.1) to +2.7 (S, 53/-0.7) above the curve; od3 reached only +0.4/+0.7; only repairs have
+  ever reached +2.3..+3.2 (rpK-40, rpM-60, rpL-60). Treat S's forecast as a stretch, A's final as "match our best repair".
