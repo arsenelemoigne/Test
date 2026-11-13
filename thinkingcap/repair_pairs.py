@@ -122,10 +122,11 @@ def main():
                     help="guard,shorten: the longest right answer must be >= this x the shortest")
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
+    ap.add_argument("--no-shorten-parts", default="", help="(13 Nov, od4) parts that get NO shorten pairs this round (held)")
     ap.add_argument("--floor-by-part", default="", help="(13 Nov) PART=ABS:RATIO,...: chosen answers think >= max(ABS, RATIO x "
                     "the ORIGINAL's median right thinking on that question (--base-think), else the group's)")
     ap.add_argument("--base-think", default="", help="(13 Nov) JSON {question id: the original's median right thinking tokens}")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -408,6 +409,7 @@ def main():
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
             count_share = args.count_share
+            stop_sh = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
             if args.mix_preset == "typed2":
                 # (11 Nov, rpL = rpK + consult9's IFEval fixes + the anti-loop pair) tool calls as in "typed"; math and code
                 # hold as in "typed", with a tenth of anti-loop pairs; IFEval: 20% counting-rule pairs (true "at least N" rules,
@@ -449,6 +451,18 @@ def main():
                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+                count_share = 0.20
+            if args.mix_preset == "r2s2a":
+                # (13 Nov, consult19, user: go) step 2 = shorten ONLY IFEval and tools; math and code get no shorten and no
+                # guards (length-held be-right via --right-hold, + loops; guards wait for step 3). Math 90 be-right / 10 loops,
+                # code 80 / 20, IFEval 20% counting + 62.5 shorten / 25 be-right / 12.5 loops, one function 50 / 50, several
+                # 55 / 45, no fit 60 / 40
+                sh_share = ({"shorten": 0.0, "right": 0.90, "guard": 0.0, "loop": 0.10} if base_part == "svamp" else
+                            {"shorten": 0.0, "right": 0.80, "guard": 0.0, "loop": 0.20} if part == "mbpp" else
+                            {"shorten": 0.625, "right": 0.25, "guard": 0.0, "loop": 0.125} if part == "ifeval" else
+                            {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_simple_python" else
+                            {"shorten": 0.55, "right": 0.45, "guard": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.60, "right": 0.40, "guard": 0.0})
                 count_share = 0.20
             if args.mix_preset == "od3_arena":
                 # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
@@ -502,6 +516,8 @@ def main():
             # question's pair limit, or the same pair proposed by two kinds); nothing is ever refilled by another kind.
             # IFEval: counting-rule questions never get "shorter" pairs; their be-right pairs hold a FIXED half of the quota
             # and the mix below holds the other half, 1 : 1 (before: a short counting half let the other half grow)
+            if part in stop_sh:  # (13 Nov, od4 brake) this type reached its saving cap: hold it (length-held be-right + loops)
+                sh_share = {"shorten": 0.0, "right": 0.90, "guard": 0.0, "loop": 0.10}
             want_cnt = int(round(count_share * n)) if cand[part]["right_count"] else 0
             cnt = take(part, "right", cand[part]["right_count"], want_cnt)
             n_full, n_mix = n, n - want_cnt

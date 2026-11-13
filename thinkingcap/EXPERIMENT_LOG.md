@@ -6215,3 +6215,18 @@ reviews/consult19_step2/REPORT.md.
    than the rejected -> use length-held be-right on math / code and require chosen longer than rejected in guards.
    (Its flag "r2pick auto-runs a 2nd full test" is our fullpick stage, run at the user's request, not a bug; some od3 settings
    it quotes are wrong (lr / beta / floors) without changing its conclusion.)
+
+## 13 Nov ~10:45 — user: recipe 2 step 2 = Argon's (consult19) mix with 7/8; path 2 re-run with a brake (od4)
+- vs the old reference curve (quadratic fit to 43 screen points, acc = -0.388 + 0.0899 s - 0.0028 s^2): r2s1b-s180 +1.25,
+  s160 +1.01, od3-r3 +0.68, od3-r4 +0.41 (rpK-40 +2.33, rpM-60 +2.79, rpL-60 +3.20, bidax2 +0.13, p1r1s0 +0.26).
+- Why online DPO did worse than offline (discussion): online compares the model with its OWN latest answers, so every round's
+  "longer right" is already short and the push compounds; nothing but right / wrong (too late) says "too short"; math, where
+  stopping early is easiest to learn and most costly, collapses first. It needs a brake.
+- GPU 2: r2s2 (recipe 2 step 2) from models/r2s1b-s180, preset r2s2a (shorten only IFEval + tools; math / code no shorten, no
+  guards, length-held be-right (--right-hold svamp+mbpp) + loops), quotas math 320 / code 320 / IFEval 480 / simple 180 / several
+  140 / no-fit 160, shorten 1.35x, solved >= 7/8, constant 1e-5, beta 0.1, 80 steps, Dev at 20/40/60/80. FIRST answers + pairs
+  only (length-held pairs: one per question, may not reach the math / code quotas); quotas fitted to the supply, then train.
+- GPU 1: od4 = od3 + a per-type BRAKE: each round first answers and measures (free monitor) its own slice, then every type at
+  >= 55% saved or <= -2.0 monitored accuracy gets NO shortening pairs that round (length-held be-right + loops), the others keep
+  shortening (repair_pairs --no-shorten-parts); short rounds use their last saved checkpoint (od3's round-6 crash). Then
+  fullpick (full tests of 2 rounds). Mock-tested on the Mac (brake reads the current round, holds the right types).

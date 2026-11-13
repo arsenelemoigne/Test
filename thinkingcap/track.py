@@ -273,6 +273,8 @@ def main():
     parser.add_argument("--od-conv-gain", type=float, default=1.5)
     parser.add_argument("--od-conv-min", type=float, default=52.5)
     parser.add_argument("--od-dev-rounds", type=int, nargs="*", default=[4])
+    parser.add_argument("--od-caps", default="", help="odpo --od-fixed-ref (13 Nov, od4): PART=SAVED%%,... stop shortening a type at this saving")
+    parser.add_argument("--od-acc-hold", type=float, default=-2.0, help="od4: ... or when its monitored accuracy is at or below this")
     parser.add_argument("--nt-cand", default="", help="newtop (12 Nov): use this already drawn candidate file (no prepare_types)")
     parser.add_argument("--nt-pool", default="", help="newtop (12 Nov): extra build_pool.py arguments joined by '+'")
     parser.add_argument("--nt-prep", default="", help="newtop (12 Nov): extra prepare_types.py arguments joined by '+'")
@@ -4641,10 +4643,21 @@ def odpo_fixed(args):
         a.rp_screen, a.rp_dev, a.rp_dev_svamp = [], False, False
         a.rp_quota = args.od_r1_quota if k == 0 and args.od_r1_quota else args.rp_quota
         a.rp_rollouts_from = "od3-r1-stored" if k == 0 else ""
-        a.rp_question_file = "" if k == 0 else f"data/{name}-r{k + 1}-questions.jsonl"
+        a.rp_question_file = "" if k == 0 else f"data/od3-r{k + 1}-questions.jsonl"  # od3prep's test-matched slices
         a.rp_extra_questions, a.rp_extra_source, a.rp_extra_top, a.rp_drop = "", "", "", ""
-        if k > 0:
-            a.rp_question_file = f"data/od3-r{k + 1}-questions.jsonl"
+        if args.od_caps and k > 0:  # (13 Nov, od4 brake, user) measure THIS round's answers first, then hold the types at
+            # their saving cap (or losing accuracy): no shortening pairs for them this round, length-held be-right + loops
+            a0 = copy.copy(a)
+            a0.rp_pairs_only, a0.rp_require_full = True, False
+            ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
+            sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
+            caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
+            held = sorted(p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold)
+            if held:
+                a.rp_pair_args = (args.rp_pair_args + ",--no-shorten-parts," + "+".join(held) + ",--right-hold," + "+".join(held))
+            a.rp_rebuild_pairs = True
+            print(f"odpo {name}: round {k + 1} brake on {answerer}'s answers ({sv_:+.1f}% / {ac_:+.2f}): held (no shortening) = "
+                  f"{held or 'none'} (caps {caps}, accuracy hold <= {args.od_acc_hold})", flush=True)
         print(f"odpo {name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO continues {prev or 'a fresh LoRA'}, "
               f"reference = the original", flush=True)
         ptrepair(a)
@@ -4659,6 +4672,12 @@ def odpo_fixed(args):
               f"{saved:+.1f}% / accuracy {acc:+.2f} | " + ", ".join(f"{p} {v[0]:+.0f}/{v[1]:+.1f}" for p, v in per.items()),
               flush=True)
         prev = f"adapters/{a.name}-s0/step-{a.rp_steps}"
+        if not (Path(prev) / "adapter_config.json").exists():  # (13 Nov, od3 round 6) fewer steps than planned: last saved one
+            steps_done = sorted(int(p_.name.split("-")[1]) for p_ in Path(f"adapters/{a.name}-s0").glob("step-*")
+                                if (p_ / "adapter_config.json").exists())
+            assert steps_done, f"odpo {name}: round {k + 1} saved no adapter"
+            prev = f"adapters/{a.name}-s0/step-{steps_done[-1]}"
+            print(f"odpo {name}: round {k + 1} trained {steps_done[-1]} steps (fewer pairs than planned)", flush=True)
         if k > 0 and saved >= args.od_stop_save and acc >= args.od_stop_acc:
             best = answerer
             print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
