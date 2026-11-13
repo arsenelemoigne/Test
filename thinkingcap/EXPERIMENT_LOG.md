@@ -6244,3 +6244,19 @@ reviews/consult19_step2/REPORT.md.
   original: S = safe, no repair, lands directly at the objective; A = aggressive overshoot + one repair; data-derived per-type
   caps, 7/8 bar, fixed mix, constant lr; and whether od4 should run as queued. Pack reviews/consult20_online (od2 / od3 results
   and failure analysis, the od4 design, the per-type full-test frontier, recipe 2 state, code).
+
+## 13 Nov ~16:25 — consult20 (Argon, $0.65, final forced at turn 31 by the user): two online-DPO variants
+reviews/consult20_online/REPORT.md.
+- Variant S (safe, no repair) = od4s: online loop from the original, fixed reference, INTERIOR-frontier caps (math 56, code 58,
+  IFEval 52, one function 44, several 47, no fit 58), floors 0.30-0.42, accuracy hold -1.5, constant 1.2e-5, stop at monitor
+  >= 51.5% with >= -0.2; expected full test 52.5-54.0% / -0.6 to -0.9.
+- Variant A (aggressive + repair) = od4 (as queued, edge caps 65 / 66 / 60 / 47 / 50 / 65, no accuracy hold, 1.5e-5, up to 5
+  rounds, stop at monitor >= 54.5% with >= -2.2) -> rpO pure repair (0 shorten; math 400: 60% length-held right / 35% widened
+  guards / 5% loops; code 280: 60 / 25 / 15; IFEval 280: 20% counting / 68% length-held right / 12% loops; tools 320: 85% right
+  / 15% guards), constant 8e-6, 60 steps, Dev at 20/40/60; expected 56.2 / -2.1 after the loop, 53.2 / -0.6 after the repair.
+- Verdict: run A FIRST (od4 is its stage 1, keep its architecture) with 3 tweaks: no-fit out of --right-hold, latch braked types
+  across rounds, Dev at rounds 3 and 4 (5 rounds). Monitor reads saving ~1-2.5 lower than the full test and accuracy 0.6-2.3
+  too kind; its gates correct for that.
+- Caveat (Claude): its plan lines need translating to our flags (list separators '+', floors ABS:RATIO, fullpick / r2pick
+  option names, the od3prep --r2-drop path it gives is wrong); some premises are off (od3 did not use --right-hold) without
+  changing the design. Both GPUs still disconnected.
