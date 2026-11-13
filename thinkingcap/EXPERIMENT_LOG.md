@@ -6392,3 +6392,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
 - od3prep --od3-more: only 2 new test-matched slices (rounds 7, 8; round 9's no-fit would be 87% solved vs the test's 83%)
   -> 8 slices < 9: od4 extension SKIPPED as designed (nothing trained). fullpick od4 started (2 full tests, ~4.5 h).
 - ~00:45 (user: "we could have done rounds 6, 7, 8 ... still good", option A): fullpick interrupted ~10 min in; od4 continues to 8 rounds (slices 6-8; rounds 1-5 skipped from saved adapters; Dev at round 6, round 8 = od4-best Dev), then fullpick over all 8 rounds.
+- ~00:55: GPU 1 restarted at 9c00fd3 (fullpick stopped at 1,536 / 22,072 answers): rounds 1-5 skipped from their saved models, round 6 answering its 780-question slice with od4-r5. fullpick had chosen od4-r4 (monitor 52.1 / -1.08) and od4-r5 (Dev 59.8 / -1.17); it re-chooses after round 8.
