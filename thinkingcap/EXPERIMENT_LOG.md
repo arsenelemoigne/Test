@@ -6317,3 +6317,4 @@ reviews/consult20_online/REPORT.md.
   IFEval supply for step 2: ifeval_built gets two more human-written request sources, both public / ungated: OpenAssistant
   oasst2 (Apache-2.0) and WildChat-1M first user turns (ODC-BY; English, not flagged toxic, streamed, first 40,000), same
   filters (12-150 words, no coding, request used once). newtop r2h-ifeval (3,000) queued after r2g-code; r2prep more1 uses it.
+- ~23:30 (user): the new IFEval request sources (oasst2, WildChat) were NOT asked for -> newtop r2h-ifeval removed from the queue before it ran; r2prep more1 back to the r2g sets only. (prepare_types keeps the two optional bases; unused unless asked.)
