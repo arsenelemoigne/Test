@@ -46,7 +46,7 @@ def main():
     parser.add_argument("--tool-near", action="store_true",
                         help="toolace (dp4): also no-fit questions offered only the functions the reply did not call")
     parser.add_argument("--ifeval-bases", default="no_robots",
-                        help="ifeval_built (12 Nov): request sources, from no_robots,dolly,oasst1 (all human-written)")
+                        help="ifeval_built (12 Nov): request sources, from no_robots,dolly,oasst1,oasst2,wildchat (all human-written)")
     parser.add_argument("--ifeval-match", type=int, default=0,
                         help="ifeval_like v2 (dp2): this many questions drawn to IFEval's instruction mix (0: old filter)")
     parser.add_argument("--kod-difficulty", default="easy,medium",
@@ -808,6 +808,29 @@ def ifeval_built(args, rng):
         bases += [r["text"].strip() for r in load_dataset("OpenAssistant/oasst1", split="train")
                   if r["role"] == "prompter" and r["parent_id"] is None and r["lang"] == "en" and "```" not in r["text"]
                   and 12 <= len(r["text"].split()) <= 150]
+    if "oasst2" in which:  # (13 Nov, user: step 2 short of IFEval) OpenAssistant's 2nd release: more human-written first turns
+        try:
+            bases += [r["text"].strip() for r in load_dataset("OpenAssistant/oasst2", split="train")
+                      if r["role"] == "prompter" and r["parent_id"] is None and r["lang"] == "en" and "```" not in r["text"]
+                      and 12 <= len(r["text"].split()) <= 150]
+        except Exception as e:  # a source that will not load must not stop the others
+            print(f"ifeval_built: oasst2 not loaded ({type(e).__name__}: {e})", flush=True)
+    if "wildchat" in which:  # (13 Nov) real users' first requests (WildChat-1M): English, not flagged toxic, streamed
+        try:
+            got = 0
+            for r in load_dataset("allenai/WildChat-1M", split="train", streaming=True):
+                if got >= 40000:
+                    break
+                conv = r.get("conversation") or []
+                if r.get("language") != "English" or r.get("toxic") or not conv or conv[0].get("role") != "user":
+                    continue
+                t = (conv[0].get("content") or "").strip()
+                if "```" in t or not 12 <= len(t.split()) <= 150:
+                    continue
+                bases.append(t)
+                got += 1
+        except Exception as e:
+            print(f"ifeval_built: wildchat not loaded ({type(e).__name__}: {e})", flush=True)
     coding = re.compile(r"\b(python|code|coding|script|function|program|programming|sql|javascript|java|c\+\+|html|css|"
                         r"regex|bash|api|json|excel formula)\b", re.I)
     bases = list(dict.fromkeys(b for b in bases if not coding.search(b)))  # writing tasks like IFEval's; each request once

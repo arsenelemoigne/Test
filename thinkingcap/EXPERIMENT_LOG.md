@@ -6311,3 +6311,9 @@ reviews/consult20_online/REPORT.md.
   borrowed), then `odpo od4 --od-rounds 12 --od-min-rounds 9` (runs only if >= 9 slices exist, capped at the slices that
   exist; rounds 1-5 skipped from their saved adapters / models; no stop rule; Dev at rounds 6/8/10/12; every round's model
   kept; a changed result clears the stale od4-best Dev). fullpick then chooses among all rounds.
+- ~23:00: od4 round-4 model (math braked) monitor **+52.1% / -1.08** (round-3 model 52.7 / -2.37; od3 round-4 model 59.3 / -2.50):
+  same saving, +1.3 accuracy. Round 5 training. r2g-ifeval: 394 x8 (solve 66%, sometimes right 147, never 72).
+- User: keep THREE steps for Path 1 (step 1, step 2, repair) to find the right per-type adjustments before merging later.
+  IFEval supply for step 2: ifeval_built gets two more human-written request sources, both public / ungated: OpenAssistant
+  oasst2 (Apache-2.0) and WildChat-1M first user turns (ODC-BY; English, not flagged toxic, streamed, first 40,000), same
+  filters (12-150 words, no coding, request used once). newtop r2h-ifeval (3,000) queued after r2g-code; r2prep more1 uses it.
