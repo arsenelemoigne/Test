@@ -386,6 +386,7 @@ def main():
                         help="ptrepair (12 Nov): rebuild the pairs (answers reused) only if the saved ones are fewer than --rp-quota")
     parser.add_argument("--rp-rebuild-pairs", action="store_true",
                         help="ptrepair (12 Nov): rebuild the pairs from the saved answers (old pairs kept as pairs-NAME-prev)")
+    parser.add_argument("--rp-require-files", default="", help="ptrepair (13 Nov): never train unless these files exist ('+' list)")
     parser.add_argument("--rp-pairs-only", action="store_true",
                         help="ptrepair (12 Nov, user): stop after the answers and pairs; the same line without it trains on them")
     parser.add_argument("--rp-require-full", action="store_true",
@@ -4257,6 +4258,13 @@ def ptrepair(args):
             drive_sync("save")
             return
         print(f"repair {name}: {have} pairs = the full {need}", flush=True)
+    need_files = [x for x in re.split(r"[,+]", getattr(args, "rp_require_files", "")) if x]
+    if need_files and not smoke:  # (13 Nov, user) step 1 trains only once steps 2 / 3 have their question sets too
+        drive_sync("restore", only=need_files)
+        missing = [f for f in need_files if not Path(f).exists() or not Path(f).read_text().strip()]
+        if missing:
+            print(f"repair {name}: STOPPED BEFORE TRAINING: missing {missing}", flush=True)
+            return
     if getattr(args, "rp_pairs_only", False):  # (12 Nov, user: "nothing starts until we have the IFEval data ready")
         print(f"repair {name}: PAIRS ONLY: answers and pairs saved ({pairs}); no training. Rerun the line without "
               f"--rp-pairs-only to train on exactly these pairs.", flush=True)
