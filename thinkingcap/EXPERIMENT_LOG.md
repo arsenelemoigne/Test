@@ -6297,3 +6297,10 @@ reviews/consult20_online/REPORT.md.
   79%, lowest end so far). GPU 2: r2g-simple 1,100 x8 (solve 94%: easy vs test 82%; sometimes right 257), r2g-multiple only
   292 left in the sources (solve 75%, sometimes right 73), r2g-nofit answering.
 - ~22:20: r2g-nofit 1,200 x8: original solves 96% (test no-fit 83%), sometimes right only 112, never 6: hard no-fit questions stay scarce -> no-fit likely still short after r2prep more1 (its right-vs-wrong pairs need sometimes-right questions). r2g-ifeval (built, new human requests) running. od4: round-4 model answering round 5 questions.
+- ~22:30: **od4-r4 Dev-512 +54.5% [51.9, 57.1] / -1.86** (r3: 55.8 / -1.80): math 68 / -6.3, code 60 / -2.3, IFEval 41 / -1.1,
+  simple 44 / +4.6, several 48 / +1.4, no-fit 38 / -0.8. **Dev-SVAMP +64.7% / -2.12** (r3: 67.6 / -4.44): the math brake
+  traded 2.9 pts of test-like math saving for +2.3 accuracy. od3-r4 for reference: Dev 62.2 / -3.57, Dev-SVAMP 72.8 / -6.00.
+  Round 5 (last) running.
+- GPU 2: r2g-ifeval: only 394 NEW built prompts left (5,726 dropped: their human request was already used once) -> the
+  No Robots + Dolly + OpenAssistant request supply is nearly exhausted; IFEval will stay short after r2prep more1
+  (it needed ~1,750). Code (r2g-code) next, then the selection.
