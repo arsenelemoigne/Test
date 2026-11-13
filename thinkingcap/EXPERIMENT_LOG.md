@@ -6043,3 +6043,6 @@ exclude Dev-512. consult9 (11 Nov morning) had called it low value before these 
 - ~00:55 check-in: GPU 2 still answering r2f-ifeval (2,333 built questions x8, ~2,300 tok/s). GPU 1: user granted Drive;
   setup cells done (scripts at f6690ad), plan running on the keep-alive holds. consult18: turn ~85, ~$2.4, one provider error
   being retried.
+- ~01:35 (user: "ask him to conclude within 50 turns"): consult18 stopped between turns 223 and 224 and resumed from its saved
+  conversation with --stop-turn 273 (new harness option: a "conclude" notice at 50 / 40 / 30 / 20 / 10 / 5 / 2 turns left,
+  then the final report is requested automatically). Notice confirmed in turn 224's prompt. Spent so far $5.93 of $15.
