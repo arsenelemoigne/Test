@@ -6073,3 +6073,5 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   Dev / Dev-SVAMP scores: saving 46-51.5, Dev acc >= +0.8, Dev-SVAMP >= 46% / +1.0; passing -> most saving; else accuracy gates
   only -> nearest the window; else best accuracy; merges it to models/r2s1-best) and repair_pairs preset `r2s2` (consult16's
   step-2 mix); with a question file, ptrepair no longer tops up from unmatched pool questions.
+- ~01:56 (user: "don't hold GPU 2, just start it"): GPU 2's plan cell interrupted during hold after-r2s1-3 and re-run (finished
+  lines already commented out): it goes straight to r2prep (1,800 step-1 IFEval) -> r2s1b pairs rebuild -> step 1 training.
