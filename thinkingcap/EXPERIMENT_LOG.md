@@ -6296,3 +6296,4 @@ reviews/consult20_online/REPORT.md.
   (46 / -1.3). **First brake: math (68 >= 65) held from round 4 on** (latched). Round 4 trained 15 steps (ordered right 60 ->
   79%, lowest end so far). GPU 2: r2g-simple 1,100 x8 (solve 94%: easy vs test 82%; sometimes right 257), r2g-multiple only
   292 left in the sources (solve 75%, sometimes right 73), r2g-nofit answering.
+- ~22:20: r2g-nofit 1,200 x8: original solves 96% (test no-fit 83%), sometimes right only 112, never 6: hard no-fit questions stay scarce -> no-fit likely still short after r2prep more1 (its right-vs-wrong pairs need sometimes-right questions). r2g-ifeval (built, new human requests) running. od4: round-4 model answering round 5 questions.
