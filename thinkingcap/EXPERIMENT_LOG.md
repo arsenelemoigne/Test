@@ -6129,3 +6129,12 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
 - ~04:16: r2s1b step 80: Dev-512 +40.9% [38.0, 43.5] / +0.27 [-1.22, +1.78] (math 48 / -0.8, code 42 / -1.6, IFEval 37 / +0.9,
   simple 37 / +6.9, several 39 / 0.0, no-fit 31 / -2.2); 40 -> 80: +6.2 saved, +0.36 accuracy. Dev-SVAMP pending. od3 round 3
   answers (models/od3-r2) finishing.
+- ~04:46:
+  - r2s1b step 80 Dev-SVAMP +43.4% / +1.19. Step 100 Dev-512 +45.9% [43.2, 48.6] / +0.43 [-1.13, +2.11] (math 53 / -3.6,
+    code 49 / -0.8, IFEval 42 / +1.0, simple 38 / +9.4, several 42 / +2.5, no-fit 35 / -0.3): at the gate's saving edge
+    (46-51.5), accuracy under the gate's +0.8; Dev-512's math (GSM8K) -3.6; Dev-SVAMP of step 100 pending.
+  - od3 monitor: round-2 model +43.9% / -1.81 (math 58 / -4.0, code 49 / -2.1, IFEval 31 / -0.2, simple 32 / -0.9, several
+    46 / -1.2, no-fit 42 / -1.0); round-3 model +55.9% / -3.38 (math 72 / -7.1, code 67 / -5.8, IFEval 42 / -0.8, simple
+    41 / +0.9, several 42 / +0.3, no-fit 46 / -1.3). Shortens fast; math and code accuracy fall as in od2 despite the fixed
+    reference and floors. Stop rule not met (target needs >= 56.5% with >= -2.2; no tripwire per the user), so the loop
+    continues: round 4 training, then Dev of od3-r4.
