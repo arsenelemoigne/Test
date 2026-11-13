@@ -6164,3 +6164,10 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   (fails the +1.0 math gate). Step 180: Dev-512 +51.1% [48.1, 54.3] / +1.25 (math 59 / -2.9, code 58 / -1.9, IFEval 41 / +3.8,
   simple 45 / +8.3, several 48 / +3.9, no-fit 37 / +3.6); Dev-SVAMP pending. Corrected for Dev's over-reading (-2.5 / -2.3):
   step 160 ~47.6 / -1.1, step 180 ~48.6 / -1.05 on the full test (estimate). Math is the loss (Dev-SVAMP -1.25 to -2.0).
+- ~07:16:
+  - r2s1b step 180 Dev-SVAMP +54.7% / -1.12. fullpick r2s1b chose steps 160 (corrected ~47.6 / -1.11) and 180 (~48.6 / -1.05)
+    for the FULL TEST (running, ~2.2 h each). Dev summary: 40 34.7 / -0.09; 80 40.9 / +0.27; 100 45.9 / +0.43; 120 45.1 / +0.98;
+    140 47.8 / +0.73; 160 50.1 / +1.19; 180 51.1 / +1.25 (Dev-SVAMP 39.7 / +1.69 ... 54.7 / -1.12).
+  - od3-r4 FULL TEST (2,759 x 8): +60.5% [59.4, 61.5] / -4.79 [-5.53, -4.09] OUTSIDE (math 76 / -9.4, code 67 / -4.8, IFEval
+    44 / -2.2, simple 45 / -2.0, several 46 / -1.1, no-fit 48 / -5.4). Dev-512 had read 62.2 / -3.57 (accuracy 1.2 too kind).
+    Full test of od3-r3 running.
