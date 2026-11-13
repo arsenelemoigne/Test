@@ -6063,3 +6063,8 @@ Original's solve rate on each set (test in brackets), difficulty bins vs the tes
   (--rp-rebuild-pairs), then the step 1 TRAINING line (constant 2e-5 after 10 warm-up, rank 16, beta 0.1, 180 steps,
   checkpoints 40 / 80 / 100 / 120 / 140 / 160 / 180 each on Dev-512 + Dev-SVAMP; trains only with all 2,880 pairs and the
   step 2 / 3 files), then 4 h of holds (step 2 waits for the user's go). Expected: training ~02:40, Dev results ~06:00.
+- ~01:55 (user: "tell argon to answer also"): consult18 paused between turns and resumed with the user's points appended to
+  its current message (per-type floors from the data; cheap round monitor on the round's own answers, Dev only every few
+  rounds; never shorten and protect the same type in one step, overshoot then a separate type-specific repair; avoid
+  over-protecting; steps 2/3 sets now exist and match the test; the plan must be launchable tonight). Turn limit raised to 288
+  so it can answer them. Its next turn started computing per-type floors.
