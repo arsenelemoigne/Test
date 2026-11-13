@@ -6325,3 +6325,55 @@ reviews/consult20_online/REPORT.md.
   pts of wrong answer FORMAT; code -5.4 to -5.8: r6 short thinking 47% + loops 18%, r10 stopped early 88%; IFEval: stopped
   early 53-68% + response too short (length rules) 14-17%; tool calls: somewhat short thinking ~55% + unparseable 8-17%.
   od3-r3 / od3-r4 (full 2,759 q) queued on GPU 1 (lossan).
+
+## 13 Nov ~23:55 — od4 COMPLETE DATA (5 rounds) + Path 1 step-2 data hunt + design notes (user: "add all the data logs")
+### od4 (Path 2: online DPO from raw, fixed reference, per-type data-derived saving caps, no accuracy hold, consult20 tweaks)
+Training per round (DPO loss / pairs ordered right, at steps 5 / 10 / 15 / 20):
+| round | steps | step 5 | step 10 | step 15 | step 20 | brake (types held, no shortening) |
+|---|---|---|---|---|---|---|
+| 1 | 20 | 0.630 / 75% | 0.567 / 84% | 0.475 / 88% | 0.323 / 92% | — (original's stored answers) |
+| 2 | 15 | 0.435 / 85% | 0.394 / 88% | 0.366 / 91% | | none |
+| 3 | 15 | 0.598 / 68% | 0.542 / 79% | 0.338 / 91% | | none |
+| 4 | 15 | 0.787 / 60% | 0.632 / 74% | 0.511 / 79% | | svamp (math, monitor 68 >= cap 65), latched |
+| 5 | 15 | 0.850 / 72% | 0.689 / 59% | 0.406 / 84% | | svamp |
+Tripwire 0.000 throughout. Free monitor (model after round k, on round k+1's 780 new test-matched questions x8, vs the
+original's stored answers), saved / accuracy, overall then math / code / IFEval / simple / several / no-fit:
+| model | overall | math | code | IFEval | simple | several | no-fit | od3 same round (overall) |
+|---|---|---|---|---|---|---|---|---|
+| r1 | 22.7 / +0.58 | 30 / -0.1 | 23 / +1.1 | 17 / -0.1 | 20 / +2.6 | 16 / +0.1 | 25 / +0.7 | 21.6 / +0.21 |
+| r2 | 41.8 / -2.02 | 55 / -3.8 | 46 / -3.9 | 29 / -0.1 | 31 / +0.8 | 44 / -1.2 | 41 / -1.8 | 43.9 / -1.81 |
+| r3 | 52.7 / -2.37 | 68 / -4.5 | 62 / -4.1 | 41 / -1.4 | 37 / +0.9 | 40 / +1.8 | 43 / -1.2 | 55.9 / -3.38 |
+| r4 | 52.1 / -1.08 | 66 / -5.1 | 63 / -0.2 | 36 / +0.1 | 41 / +2.2 | 37 / +1.9 | 50 / -1.9 | 59.3 / -2.50 |
+Dev (512 held-out x8; Dev-SVAMP = 200 test-like math):
+| model | Dev-512 | math | code | IFEval | simple | several | no-fit | Dev-SVAMP |
+|---|---|---|---|---|---|---|---|---|
+| od4-r3 | 55.8 [53.5, 58.0] / -1.80 [-3.53, -0.20] | 72 / -6.4 | 63 / -1.8 | 38 / -0.9 | 42 / +3.5 | 47 / +3.2 | 36 / -2.2 | 67.6 / -4.44 |
+| od4-r4 | 54.5 [51.9, 57.1] / -1.86 [-3.67, -0.22] | 68 / -6.3 | 60 / -2.3 | 41 / -1.1 | 44 / +4.6 | 48 / +1.4 | 38 / -0.8 | 64.7 / -2.12 |
+| od3-r4 (ref) | 62.2 / -3.57 | 76 / -9.4 | 71 / -4.4 | 45 / -1.8 | 48 / +4.6 | 53 / +1.4 | 42 / -4.4 | 72.8 / -6.00 |
+od3-r3 FULL 58.4 / -4.01, od3-r4 FULL 60.5 / -4.79. Reading: od4 levels off ~52-55% saved; vs od3 at the same round ~3 pts
+less saving for ~1 pt better accuracy (math and code), about the same trade on the curve; the math brake helped test-like math
+(Dev-SVAMP -4.44 -> -2.12) but monitor math stays ~-5; Dev-512 overall flat r3 -> r4 (the monitor's +1.3 is within noise).
+Result models/od4-r5 -> models/od4-best (5 rounds done, no stop rule fired). Next on GPU 1: od4-best Dev, lossan (od3-r3 /
+od3-r4), od3prep --od3-more 6, od4 to 12 rounds only if >= 9 test-matched slices, then fullpick (2 full tests).
+### Path 1 step 2 (r2s2) data hunt, GPU 2 (candidates answered x8 by the ORIGINAL)
+| set | source | questions | solve | sometimes right / always / never | note |
+|---|---|---|---|---|---|
+| r2g-math | MetaMathQA GSM_Rephrased | 900 | 89% | 263 / 616 / 21 | 4,597 candidates already used, dropped |
+| r2g-simple | ToolACE + Glaive | 1,100 | 94% | 257 / 833 / 10 | easy vs the test's 82% |
+| r2g-multiple | ToolACE + Glaive | 292 | 75% | 73 / 179 / 40 | the sources hold only 292 more |
+| r2g-nofit | our verified no-fit sets | 1,200 | 96% | 112 / 1,082 / 6 | easy vs the test's 83% |
+| r2g-ifeval | built on No Robots / Dolly / OASST1 | 394 | 66% | 147 / 175 / 72 | 5,726 dropped: request already used |
+| r2g-code | KodCode-V1 (our dp7 builder; user: keep) | running | | | 2,281 already used, dropped |
+Then r2prep more1 (test-matched selection), r2s2 rebuild; trains only with all 1,600 pairs. IFEval is expected to stay short:
+options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd instruction set per used request — USER DECIDES.
+### Design notes (user, 13 Nov night)
+- Path 1 stays THREE steps (step 1 / step 2 / repair) to tune per-type pairs and mixes before merging into one step + repair.
+- The user's goal: a clean ONE-SHOT algorithm, no repair. Proposed od5 (not built): per-question rule vs the ORIGINAL's solve
+  rate: shorten only where the model solves a question as often as the original (within 1 wrong); on a question that lost
+  accuracy, a RECOVERY pair (chosen = a right answer about the original's usual right length, rejected = a wrong, short one);
+  shares follow the rule (not fixed), no caps; + dedicated pairs for the other loss kinds (anti-loop for code, response length
+  for IFEval length rules, well-formed > broken format for tool calls / math answers). Final heavy run: 24 answers per question,
+  "within 1 wrong", only once the best strategy (online vs offline) is identified.
+- Difference from today's 7/8 bar: 7/8 looks at the current model only (a question the original solved 8/8, now 7/8, is still
+  shortened), and a damaged question gets at most a compact (= shortest-right) be-right pair at a fixed share: nothing pushes
+  its length back. ~60% of od2's lost math accuracy is on questions the original solves 8/8.
