@@ -6269,3 +6269,20 @@ reviews/consult20_online/REPORT.md.
 
 - 13 Nov ~19:28 (Colab clock): both GPUs reconnected (user), queues started at 4f52f93. GPU 2: r2s2 pairs-only, step-1 model (r2s1b-s180) answering the 2,337 step-2 questions x8. GPU 1: od4 round 1 pairs built from the stored original answers (svamp shorten 66, ...), round 1 training started. Standing instruction (user): if r2s2 has all 1,600 pairs, train without waiting; if short, build more test-matched questions for the short types (no test/Dev, no bida, no step-1/step-3 reuse) until full, then train.
 - od4 round 1 model, measured on round 2 answers (free monitor): +22.7% / +0.58 (od3 round 1: 21.6 / +0.21); no type at its cap, nothing braked; round 2 training. r2s2 answering 2,100 / 2,337.
+
+## 13 Nov ~20:50 (Colab clock) — r2s2 (Path 1 step 2) pairs SHORT: 699 / 1,600 -> nothing trained; extra test-matched questions queued
+- Step-1 model (r2s1b-s180) on the 2,337 step-2 questions x8. Pairs kept / quota (the fixed mix's scarcest kind limits each type):
+  math 205 / 320 (be-right compact 200 = only questions it both solves and fails), code 123 / 320 (be-right 118), IFEval
+  152 / 480 (shorten 76: few questions solved >= 7/8 with a clearly shorter right answer), simple 72 / 180 (be-right 36),
+  several 89 / 140 (be-right 40), no-fit 58 / 160 (be-right 23). Yield ~0.24-0.49 pairs per question.
+- Standing instruction (user): "either launch it BUT ONLY IF WE HAVE ENOUGH PAIRS, else start rebuilding new ones ... data
+  representative of the full eval and no cheating, repeat until we actually have enough data".
+- Queued on GPU 2: newtop r2g-* (our own sources, answered x8 by the ORIGINAL, prompt-length matched, 8-gram test check, every
+  pool / top-up / repair question removed): math MetaMathQA GSM_Rephrased 900, simple / several ToolACE + Glaive 1,100 / 450,
+  no-fit our Haiku-verified Glaive-hard + ToolACE-near + Glaive-verified 1,200, IFEval built on NEW human requests (No Robots,
+  Dolly, OpenAssistant; request used once) 3,000, code KodCode-V1 easy/medium/hard at MBPP-like task length (our dp7 builder,
+  NOT michal-bida's kodcode_full selection) 1,300. Then `r2prep --r2-more more1`: extra step-2 questions for each type picked
+  so the original's solve-rate bins match the FULL TEST, disjoint from steps 1 / 2 / 3 (want math 450, code 780, IFEval 1,750,
+  simple 450, several 150, no-fit 530 = shortfall / yield x ~1.25). Then the r2s2 line with --rp-more-files (the step-1
+  model answers the extras x8), pairs rebuilt, and it TRAINS only if all 1,600 pairs exist (--rp-require-full); else stops
+  again and another round is built.

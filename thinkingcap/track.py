@@ -299,6 +299,8 @@ def main():
     parser.add_argument("--r2-used-glob", default="repair-r2s1*.jsonl",
                         help="r2prep: data/ files whose questions recipe 2 already answered (step 1)")
     parser.add_argument("--r2-redo", action="store_true", help="r2prep: rebuild even if the question files exist")
+    parser.add_argument("--r2-more", default="", help="r2prep (13 Nov, user): EXTRA step-2 questions for the short types only "
+                        "(data/r2-step2-NAME-questions.jsonl, test-matched bins), disjoint from steps 1 / 2 / 3 and earlier extras")
     parser.add_argument("--r2-drop", default="source:metamath_sv+origin:xlam-irrelevance+id:nofit4-&source:glaive_tools&origin:",
                         help="r2prep: questions never used (source:X, origin:X, id:PREFIX; '&' = all of, '+' = list)")
     parser.add_argument("--nt-samples", type=int, default=10, help="newtop: answers per question by the original Qwen")
@@ -397,6 +399,8 @@ def main():
                         "Dev-SVAMP-200 (SVAMP-like math), paired against --rp-dev-vs")
     parser.add_argument("--rp-save-at", type=int, nargs="*", default=None,
                         help="ptrepair (12 Nov, user): save checkpoints only at these steps (the last step is always saved)")
+    parser.add_argument("--rp-more-files", default="", help="ptrepair (13 Nov, user): extra question files (r2prep --r2-more), "
+                        "'+'-joined, each answered by the run's own answerer and added to its answers before the pairs")
     parser.add_argument("--rp-extra-top", default="", help="ptrepair (12 Nov): NAME=IDS.json,... add tooltop-NAME's answers on these ids")
     parser.add_argument("--rp-beta", type=float, default=0.1, help="ptrepair (12 Nov): DPO beta (was fixed at 0.1)")
     parser.add_argument("--rp-question-file", default="",
@@ -3625,12 +3629,22 @@ def r2prep(args):
     from build_pool import ngrams, part_of, words
     out_dir = BON / "r2prep"
     f2, f3 = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl")
-    drive_sync("restore", only=[str(out_dir), str(f2), str(f3)])
-    if f2.exists() and f3.exists() and (out_dir / "report.txt").exists() and not args.r2_redo:
+    more = getattr(args, "r2_more", "")
+    drive_sync("restore", only=[str(out_dir), str(f2), str(f3)] + (["data/r2-step2-*-questions.jsonl"] if more else []))
+    if more:  # (13 Nov, user) extra step-2 questions: same matching, but never a question of steps 1 / 2 / 3 or an earlier extra
+        out_dir, fm = BON / f"r2prep-{more}", Path(f"data/r2-step2-{more}-questions.jsonl")
+        drive_sync("restore", only=[str(out_dir)])
+        if fm.exists() and (out_dir / "report.txt").exists() and not args.r2_redo:
+            print((out_dir / "report.txt").read_text(), flush=True)
+            return
+        assert f2.exists() and f3.exists(), "r2prep --r2-more needs the step 2 / 3 files on Drive"
+    elif f2.exists() and f3.exists() and (out_dir / "report.txt").exists() and not args.r2_redo:
         print((out_dir / "report.txt").read_text(), flush=True)
         return
     need2 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need2.split(","))}
     need3 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need3.split(","))}
+    if more:
+        need3 = {k: 0 for k in need2}
     drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
     tops = [x for x in args.r2_tops.split(",") if x]
     from test_difficulty_data import TEST_DIFFICULTY as test  # (12 Nov) a .py: Colab copies only *.py and plan files
@@ -3652,6 +3666,12 @@ def r2prep(args):
             if l.strip():
                 q = json.loads(l)
                 used |= {q.get("id"), q.get("pool_id"), json.dumps(q.get("prompt"), sort_keys=True)}
+    if more:  # steps 2 / 3 and every earlier extra file are taken
+        for f in [f2, f3, *[x for x in Path("data").glob("r2-step2-*-questions.jsonl") if x != fm]]:
+            for l in f.read_text().splitlines():
+                if l.strip():
+                    q = json.loads(l)
+                    used |= {q.get("id"), q.get("pool_id"), json.dumps(q.get("prompt"), sort_keys=True)}
     dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
     drop = Counter()
 
@@ -3699,10 +3719,10 @@ def r2prep(args):
         cands[part].append((qid, rate, tag))
         stats[qid] = (rate, [t for _, t, _ in a], sum(x for _, _, x in a) / len(a), tag)
     print(f"r2prep: candidates {dict((p, len(v)) for p, v in cands.items())}; dropped {dict(drop)}", flush=True)
-    need1 = {k: int(v) for k, v in (x.split("=") for x in args.r2_need1.split(",") if x)}
+    need1 = {} if more else {k: int(v) for k, v in (x.split("=") for x in args.r2_need1.split(",") if x)}
     tops1 = {x for x in args.r2_step1_tops.split(",") if x}
     sel1 = {}
-    bins1 = {k: [int(x) for x in v.split(":")] for k, v in (x.split("=") for x in args.r2_need1_bins.split(",") if x)}
+    bins1 = {} if more else {k: [int(x) for x in v.split(":")] for k, v in (x.split("=") for x in args.r2_need1_bins.split(",") if x)}
     if need1 or bins1:  # (12 Nov, user) step 1's NEW questions (e.g. IFEval built from real requests), chosen first
         c1 = {p: [c for c in cands[p] if c[2] in tops1] for p in need1}
         sel1 = r2_select(c1, {p: test[p]["bins"] for p in need1}, need1, {p: 0 for p in need1}, seed=args.data_seed)
@@ -3746,7 +3766,7 @@ def r2prep(args):
         lines.append(f"   quota per bin {sel[part]['quota']} -> from the right bin {sel[part]['got']}"
                      + (f"   ** {sum(sel[part]['quota']) - sum(sel[part]['got'])} borrowed from neighbour bins or missing **"
                         if sel[part]['got'] != sel[part]['quota'] else "   (exact match)"))
-        for step in ("step2", "step3"):
+        for step in ("step2",) if more else ("step2", "step3"):
             ids = sel[part][step]
             if not ids:
                 lines.append(f"   {step}: 0 questions  ** EMPTY **")
@@ -3781,7 +3801,7 @@ def r2prep(args):
                      f"{100 * test['ifeval']['solve']:.0f}%, bins % {[round(100 * test['ifeval']['bins'][str(i)]) for i in range(len(R2_BINS))]}, "
                      f"median think {test['ifeval']['median_think']:.0f})")
     out_dir.mkdir(parents=True, exist_ok=True)
-    for f, step in ((f2, "step2"), (f3, "step3")):
+    for f, step in ((fm, "step2"),) if more else ((f2, "step2"), (f3, "step3")):
         f.write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n" for p in need2 for q in sel[p][step]))
     (out_dir / "selection.json").write_text(json.dumps(sel, indent=1))
     (out_dir / "report.txt").write_text("\n".join(lines) + "\n")
@@ -4369,6 +4389,24 @@ def ptrepair(args):
                     n_out += 1
             print(f"repair {name}: --rp-drop {drops}: kept {n_out} of {n_in} stored answers", flush=True)
             rolls = [kept_f]
+        for i_m, mf in enumerate([x for x in re.split(r"[,+]", getattr(args, "rp_more_files", "")) if x]
+                                 if own and not reuse and not smoke else [], 1):
+            # (13 Nov, user: "repeat until we actually have enough data") extra test-matched questions, own answerer
+            drive_sync("restore", only=[mf])
+            assert Path(mf).exists(), f"{mf} is not on Drive"
+            roll_m = BON / f"rp-{name}-m{i_m}"
+            drive_sync("restore", only=[str(roll_m)])
+            if not (roll_m / "rollouts.jsonl").exists():
+                qm = [json.loads(l) for l in Path(mf).read_text().splitlines() if l.strip()]
+                data_m = Path(f"data/repair-{name}-m{i_m}.jsonl")
+                data_m.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in qm))
+                print(f"repair {name}: + {len(qm)} extra questions from {mf}: {dict(Counter(part_of(r) for r in qm))}, "
+                      f"answered by {answerer}", flush=True)
+                py("probe_curve.py", "--data", data_m, "--per-source", 1000000,  # every row: the file is already curated
+                   "--samples", args.rp_samples, "--model", answerer, "--out", roll_m, "--dtype", args.dtype, "--generate-only",
+                   "--chunk", 300, "--max-questions", len(qm), "--seed", 60 + i_m)
+                drive_sync("save")
+            rolls.append(roll_m / "rollouts.jsonl")
         for spec in [x for x in getattr(args, "rp_extra_top", "").split(",") if x] if reuse else []:
             # (12 Nov, user) the original's answers on chosen NEW questions (newtop set, ids picked by r2prep)
             top, ids_f = spec.split("=")
