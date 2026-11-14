@@ -1,0 +1,17 @@
+TASK. Design the NEXT online-DPO run: re-try online DPO with better settings so that ONE clean run from the original Qwen3-0.6B reaches the objective on the full test (> 50% tokens saved at better than -1 accuracy), ideally with NO repair step.
+
+Read {DATA}/NEW_RESULTS_14nov.md FIRST: od4 (your consult20 variant A first stage, run to 8 rounds) round by round, its Dev checks, its two FULL tests (od4-r8 51.6 / -1.3, od4-r7 55.4 / -2.0), and the per-question loss analyses of od2, od3 and od4 ({DATA}/loss_analysis/; the script is {DATA}/code/loss_analysis.py). Your consult20 report is {DATA}/YOUR_CONSULT20_REPORT.md. Code: {DATA}/code (track.py: odpo_fixed, od3prep, od3_monitor, ptrepair, fullpick, lossan; repair_pairs.py: presets od3_arena / hold, --floor-by-part, --no-shorten-parts, --right-hold, --base-think; dpo.py --ref-base). Use code to check any number you rely on.
+
+Answer these, in order:
+1. Diagnosis: why does od4 lose its last 1.3-2.0 points, per loss kind (stopping early on questions the original solves reliably, loops, IFEval response length, format), and why did the held rounds recover accuracy by lengthening?
+2. Is the user's od5 rule viable and worth testing (per question vs the ORIGINAL's solve rate: shorten only where the model is still as good as the original, within 1 of 8; a RECOVERY pair on a damaged question: chosen = a right answer about the original's median right length, rejected = a wrong short one; shares follow the rule instead of fixed shares; no caps)? What exactly would you change or add (e.g. dedicated pairs for loops / IFEval length rules / format; how to handle the 8-answer noise)?
+3. The run you recommend (od5 or a better od4): rounds, steps, pairs per round and how each pair kind is chosen, thresholds, reference, lr, beta, stop rule (with the monitor's and Dev's known biases), expected full-test landing, risks, and the exact track.py plan lines plus any small code change needed (name the function and what changes).
+4. Only if you think one clean run cannot reach the objective: the smallest recovery step that would, with its expected landing.
+
+Rules (user): start from the original; LoRA rank 16; constant learning rates; the model's own answers only; questions matched to the test's difficulty (od3prep slices: 8 exist, more can be built only if test-matched); general rules preferred (measured per question, not type names); no competitor recipe, no michal-bida data. Compute: one Colab L4, ~6-8 GPU-hours including Dev checks (full tests extra, ~2.5 h each).
+
+Be concise: up to ~2,500 words, WITHOUT a code block (plan lines as plain text are fine).
+
+NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go. You have 60 TURNS IN TOTAL: check the data in at most ~40, write the final answer by turn ~55; at turn 60 the final answer is requested automatically.
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, pandas, scipy): reply with exactly one block that starts with ```python to run code; output is cut at 10,000 characters; up to {CODE_RUNS} code runs.

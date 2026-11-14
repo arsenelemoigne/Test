@@ -6448,3 +6448,11 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   settings) after r2s2's 2 full tests + loss analysis. Each cap $4, 60 turns, notes, written report.
 - ~09:15 CET: r2s2-60 Dev-512 55.1 / +1.54 (math 57 / -2.3, code 62 / -0.9, IFEval 51 / +3.5, simple 51 / +9.8, several 53 / +0.4, no-fit 44 / +3.9), Dev-SVAMP 54.5 / -1.25; **r2s2-80 Dev-512 55.5 [52.7, 58.3] / +1.95** (math 54 / -2.1, code 60 / +0.5, IFEval 56 / +4.6, simple 52 / +5.8, several 55 / +1.8, no-fit 46 / +5.3), Dev-SVAMP pending. Saving plateaus ~55% from step 40 (55.0 / +2.35). GPU 1: od4-r7 full test 18,688 / 22,072.
 - ~09:35 CET: fullpick r2s2 -> FULL TESTS of r2s2-s40 (Dev 55.0 / +2.35 -> corrected 54.0 / -0.65) and r2s2-s80 (55.5 / +1.95 -> 54.5 / -1.05); s40 running. GPU 1: od4-r7 full test 20,992 / 22,072.
+- ~10:30 CET: **od4-r7 FULL TEST 55.4 / -2.0 (+2.00 above the curve)**; od4-r8 51.6 / -1.3 (+1.90). lossan od4
+  (reviews/loss_analysis/od4.txt), net per type, od4-r8 / od4-r7: math -1.7 / -3.1 (stopped early 51 / 62%, 57 / 54% on
+  questions the original solves 8/8), code -0.9 / -2.1 (loops 12 / 11%), IFEval -1.2 / -1.3 (stopped early 71 / 66%),
+  simple -1.2 / -0.8, several -0.9 / -1.3, no-fit -2.0 / -3.3 (never braked: far below its 65 cap).
+- **Argon consult21 launched** (reviews/consult21_online2; task consult-online2, astra_prompt_consult_online2.txt; pack =
+  consult20's + NEW_RESULTS_14nov.md (od4 all rounds, Dev, full tests, per type), loss_analysis/ (od2, od3, od4), current
+  code; cap $4, 60 turns, --stop-turn): diagnosis per loss kind, od5 viability, the recommended next online run with plan
+  lines, a recovery step only if needed.
