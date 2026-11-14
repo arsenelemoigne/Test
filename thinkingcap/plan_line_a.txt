@@ -667,8 +667,13 @@
 # (14 Nov, INVALID: merged onto the original instead of r2s1b-s180 -> s40 full test 5.3 / +0.3) fullpick --fp-run r2s2 --fp-kind dpo --pk-steps 20 40 60 80 --pk-save-lo 54.5 --pk-save-hi 57.5 --pk-acc 0.8 --pk-sv-save 0 --pk-sv-acc -1.5 --fp-save-bias 1.0 --fp-acc-bias 3.0
 # lossan --la-models fullpick:r2s2 --la-tag r2s2
 # (14 Nov) the same 2 checkpoints, merged onto the model step 2 was trained on (r2s1b-s180)
-fullpick --fp-run r2s2 --fp-kind dpo --pk-steps 20 40 60 80 --pk-save-lo 54.5 --pk-save-hi 57.5 --pk-acc 0.8 --pk-sv-save 0 --pk-sv-acc -1.5 --fp-save-bias 1.0 --fp-acc-bias 3.0 --fp-base models/r2s1b-s180
-lossan --la-models fullpick:r2s2 --la-tag r2s2
+# (14 Nov, done) fullpick --fp-run r2s2 --fp-kind dpo --pk-steps 20 40 60 80 --pk-save-lo 54.5 --pk-save-hi 57.5 --pk-acc 0.8 --pk-sv-save 0 --pk-sv-acc -1.5 --fp-save-bias 1.0 --fp-acc-bias 3.0 --fp-base models/r2s1b-s180
+# (14 Nov, done) lossan --la-models fullpick:r2s2 --la-tag r2s2
+# (14 Nov, user: go step 3) consult22's step 3: a pure repair from r2s2-s80 (no shortening), 640 pairs, constant 8e-6, 40 steps
+r2prep --r2-more s3m1 --r2-tops r2a-math,r2a-code,r2a-simple,r2a-multiple,r2b-math,r2b-simple,r2b-multiple,r2c-nofit,r2c-math,r2d-ifeval,r2e-nofit,r2f-ifeval,r2g-math,r2g-code,r2g-ifeval,r2g-simple,r2g-multiple,r2g-nofit,r2i-ifeval,r2j-simple --r2-used-glob repair-r2s*.jsonl --r2-need2 svamp=250,mbpp=260,bfcl_simple_python=450,bfcl_multiple=100,bfcl_irrelevance=180,ifeval=0 --data-seed 53
+ptrepair --name r2s3 --rp-base models/r2s2-s80-on-r2s1b-s180 --rp-own-data --rp-question-file data/r2-step3-questions.jsonl --rp-questions svamp=650,mbpp=339,ifeval=566,bfcl_simple_python=200,bfcl_multiple=159,bfcl_irrelevance=220 --rp-more-files data/r2-step2-s3m1-questions.jsonl --rp-samples 8 --rp-seed 53 --rp-kinds mix --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--mix-preset,r2s3,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--right-resp-cap,1.15,--loop-response-only,ifeval,--guard-wide,svamp+mbpp+bfcl_simple_python,--guard-wide-max,0.85,--right-hold,svamp+mbpp+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--loop-finished,--right-hold-band,0.90+1.15+1.00,--right-hold-format --rp-quota svamp=200,mbpp=140,ifeval=120,bfcl_simple_python=100,bfcl_multiple=48,bfcl_irrelevance=32 --rp-require-full --rp-rebuild-if-short --rp-lr 8e-6 --rp-warmup 2 --rp-beta 0.1 --rp-steps 40 --rp-epochs 1 --rp-save-at 10 20 30 40 --rp-dev --rp-dev-svamp --rp-dev-vs rpE80 --rp-dpo-seed 0
+fullpick --fp-run r2s3 --fp-kind dpo --pk-steps 10 20 30 40 --pk-save-lo 52.2 --pk-save-hi 55.2 --pk-acc 2.35 --pk-sv-save 50.0 --pk-sv-acc -0.50 --fp-save-bias 1.8 --fp-acc-bias 3.22 --fp-base models/r2s2-s80-on-r2s1b-s180
+lossan --la-models fullpick:r2s3 --la-tag r2s3
 hold --hold-minutes 30 --hold-tag after-step1-1
 hold --hold-minutes 30 --hold-tag after-step1-2
 hold --hold-minutes 30 --hold-tag after-step1-3

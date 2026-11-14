@@ -6526,3 +6526,15 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   from shortening. Launched in parallel (cap $4, 60 turns each): **consult22** (reviews/consult22_step3: Path 1 step 3
   repair from r2s2-s80) and **consult23** (reviews/consult23_od5b: od5b diagnosis + changes from the next round; pack adds
   NEW_RESULTS_od5b.md, the round-3 run log, pairs-od5b-r1, od4-r2 answers).
+- ~17:50 CET: **consult22 answered** (55 turns, $2.11; reviews/consult22_step3/REPORT.md): r2s2-s80's net loss is all in math
+  (-0.81 macro), code (-0.60) and simple (-0.56); 58% of the lost accuracy = stopping early (40% on questions the original
+  solves 8/8). Step 3 = a PURE repair from r2s2-s80: 640 pairs (math 200: 60 length-held be-right / 30 widened guards vs the
+  model's OWN median / 10 loops; code 140: 60/25/15; simple 100: 75/25; IFEval 120: 25% length-rule + be-right / loops;
+  several 48 and no-fit 32 be-right), constant 8e-6, beta 0.1, 40 steps, Dev at 10/20/30/40; ~1,240 extra test-matched
+  questions from unused leftovers (r2prep --r2-more s3m1). Expected full test 52.1-52.8 / -0.5 to -0.8 (inside the goal).
+  Fallback if it overshoots: merge the step-3 adapter at 0.55 (~51.5 / -0.8). User: "go step 3".
+  Built: repair_pairs --mix-preset r2s3, --loop-finished (anti-loop pairs also reject finished repetition loops),
+  --right-hold-band LO+HI+CENTER (step 3: 0.90 / 1.15 / 1.00), --right-hold-format (broken-format wrong answers rejected
+  first). Mac checks: r2s2a's pairs byte-identical to before (old presets unchanged); r2s3 on real math answers: 0 shorten,
+  42 be-right, 18 guards, chosen / rejected median 312 / 264. Queued on GPU 2 (parsed with track.py's parser): r2prep s3m1,
+  ptrepair r2s3 (trains only with all 640 pairs), fullpick r2s3 (--fp-base r2s2-s80; consult22's gate), lossan r2s3.

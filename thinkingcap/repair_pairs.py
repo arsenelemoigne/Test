@@ -126,7 +126,7 @@ def main():
     ap.add_argument("--floor-by-part", default="", help="(13 Nov) PART=ABS:RATIO,...: chosen answers think >= max(ABS, RATIO x "
                     "the ORIGINAL's median right thinking on that question (--base-think), else the group's)")
     ap.add_argument("--base-think", default="", help="(13 Nov) JSON {question id: the original's median right thinking tokens}")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5", "r2s3"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -177,6 +177,14 @@ def main():
     ap.add_argument("--right-resp-cap", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
                          "one's + 15 tokens (1.10); 0 = no cap")
+    ap.add_argument("--loop-finished", action="store_true",
+                    help="(14 Nov, consult22 step 3) --kinds mix: anti-loop pairs also reject FINISHED repetition loops (an 8-word "
+                         "phrase repeated >= 4 times), and their chosen answer never loops")
+    ap.add_argument("--right-hold-band", default="0.95,1.25,1.05",
+                    help="(14 Nov, consult22) --right-hold: LO,HI,CENTER of the right / wrong thinking ratio (step 3: 0.90,1.15,1.00)")
+    ap.add_argument("--right-hold-format", action="store_true",
+                    help="(14 Nov, consult22) --right-hold: prefer a rejected wrong answer with a broken format (empty response, "
+                         "math without a final answer, tool reply without a call)")
     ap.add_argument("--base-resp", default="",
                     help="(14 Nov, od5b) data/od3-base-resp.json: the ORIGINAL's median right-answer response tokens per question")
     ap.add_argument("--base-stats", default="",
@@ -205,6 +213,21 @@ def main():
         tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
         decode = lambda r: tok.decode(list(r.get("thinking_ids") or r["output_ids"]), skip_special_tokens=True)  # noqa: E731
     decode_full = (lambda r: tok.decode(list(r["output_ids"]), skip_special_tokens=True)) if args.prefer_reread else None  # noqa: E731
+    def loops8(r):  # (14 Nov) a finished answer repeating an 8-word phrase >= 4 times (needs --prefer-reread's tokenizer)
+        if decode_full is None:
+            return False
+        w_ = re.findall(r"\w+", decode_full(r).lower())
+        g_ = Counter(tuple(w_[i:i + 8]) for i in range(max(0, len(w_) - 7)))
+        return bool(g_) and max(g_.values()) >= 4
+
+    def broken(r, base_part):  # (14 Nov) a wrong answer whose FORMAT is broken
+        if response_len(r) == 0:
+            return True
+        if base_part == "svamp":
+            return r.get("_nofinal", False)
+        if base_part.startswith("bfcl") and base_part != "bfcl_irrelevance" and decode_full is not None:
+            return "(" not in decode_full(r).split("</think>")[-1]
+        return False
     base_stats = json.loads(Path(args.base_stats).read_text()) if args.base_stats else {}
     base_resp = json.loads(Path(args.base_resp).read_text()) if args.base_resp else {}
     od5 = args.mix_preset == "od5"
@@ -350,8 +373,12 @@ def main():
             runaway = [r for r in q if not finished(r)]
             if base_part in loop_resp_only:  # (rpM) only loops in the RESPONSE (the thinking closed, then cut at the cap)
                 runaway = [r for r in runaway if r["closed_thinking"]]
-            if rights and runaway:
-                cand[part]["loop"].append((qid, rights[0], runaway[0]))
+            loop_chosen = rights
+            if args.loop_finished:  # (14 Nov, consult22) + finished repetition loops; the chosen answer never loops
+                runaway = runaway + [r for r in q if finished(r) and not right(r) and loops8(r)]
+                loop_chosen = [r for r in rights if not loops8(r)]
+            if loop_chosen and runaway:
+                cand[part]["loop"].append((qid, loop_chosen[0], runaway[0]))
             if (len(all_rights) >= 2 and len(all_rights) / len(q) >= args.shorten_min_right and not no_shorten and rights
                     and rights[0] is not all_rights[-1]):
                 long, short = all_rights[-1], rights[0]
@@ -417,8 +444,10 @@ def main():
                         for r in rights:
                             for w in wrongs:
                                 ratio = thinking_len(r) / max(1, thinking_len(w))
-                                if 0.95 <= ratio <= 1.25:
-                                    key = (round(abs(ratio - 1.05), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+                                lo_, hi_, ce_ = (float(x) for x in re.split(r"[,+]", args.right_hold_band))
+                                if lo_ <= ratio <= hi_:
+                                    key = ((0 if broken(w, base_part) else 1) if args.right_hold_format else 0,
+                                           round(abs(ratio - ce_), 2), 0 if decode and REREAD.search(decode(r)) else 1)
                                     if best is None or key < best[0]:
                                         best = (key, r, w)
                         if best:
@@ -603,6 +632,16 @@ def main():
                             {"shorten": 0.55, "right": 0.45, "guard": 0.0} if part == "bfcl_multiple" else
                             {"shorten": 0.60, "right": 0.40, "guard": 0.0})
                 count_share = 0.20
+            if args.mix_preset == "r2s3":
+                # (14 Nov, consult22, user: go) step 3 = a PURE repair from r2s2-s80: no shortening anywhere; math 60 length-held
+                # be-right / 30 widened guards / 10 loops, code 60 / 25 / 15, simple 75 / 25, IFEval 25% counting pairs + the rest
+                # 83.3 be-right / 16.7 loops, several and no-fit be-right only
+                sh_share = ({"shorten": 0.0, "right": 0.60, "guard": 0.30, "loop": 0.10} if base_part == "svamp" else
+                            {"shorten": 0.0, "right": 0.60, "guard": 0.25, "loop": 0.15} if part == "mbpp" else
+                            {"shorten": 0.0, "right": 0.75, "guard": 0.25, "loop": 0.0} if part == "bfcl_simple_python" else
+                            {"shorten": 0.0, "right": 0.8333, "guard": 0.0, "loop": 0.1667} if part == "ifeval" else
+                            {"shorten": 0.0, "right": 1.0, "guard": 0.0, "loop": 0.0})
+                count_share = 0.25
             if args.mix_preset == "od3_arena":
                 # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
                 # guards (shortening and protection are not mixed in one step); math 75 / 20 / 5 loops, code 75 / 17.5 / 7.5,
