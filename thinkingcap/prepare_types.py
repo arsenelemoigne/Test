@@ -808,6 +808,11 @@ def ifeval_built(args, rng):
         bases += [r["text"].strip() for r in load_dataset("OpenAssistant/oasst1", split="train")
                   if r["role"] == "prompter" and r["parent_id"] is None and r["lang"] == "en" and "```" not in r["text"]
                   and 12 <= len(r["text"].split()) <= 150]
+    if "haiku" in which:  # (14 Nov, user: "for any missing data, you can generate it with haiku") gen_ifeval_requests.py
+        path = next((p_ for p_ in (Path("/content/T/thinkingcap/ifeval_requests_haiku.jsonl"),
+                                   Path(__file__).with_name("ifeval_requests_haiku.jsonl")) if p_.exists()), None)
+        assert path, "ifeval_requests_haiku.jsonl not found"
+        bases += [json.loads(l)["text"] for l in path.read_text().splitlines() if l.strip()]
     if "oasst2" in which:  # (13 Nov, user: step 2 short of IFEval) OpenAssistant's 2nd release: more human-written first turns
         try:
             bases += [r["text"].strip() for r in load_dataset("OpenAssistant/oasst2", split="train")

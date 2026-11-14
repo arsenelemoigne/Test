@@ -6394,3 +6394,10 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
 - ~00:45 (user: "we could have done rounds 6, 7, 8 ... still good", option A): fullpick interrupted ~10 min in; od4 continues to 8 rounds (slices 6-8; rounds 1-5 skipped from saved adapters; Dev at round 6, round 8 = od4-best Dev), then fullpick over all 8 rounds.
 - ~00:55: GPU 1 restarted at 9c00fd3 (fullpick stopped at 1,536 / 22,072 answers): rounds 1-5 skipped from their saved models, round 6 answering its 780-question slice with od4-r5. fullpick had chosen od4-r4 (monitor 52.1 / -1.08) and od4-r5 (Dev 59.8 / -1.17); it re-chooses after round 8.
 - ~01:20: od4-r5 monitor (round 6 slice) **+56.4% / -1.66** (math 68 / -4.7, code 70 / -4.2, IFEval 42 / +1.3, simple 41 / +1.9, several 50 / +2.4, no-fit 51 / -1.8); od3-r5 monitor 65.4 / -4.87 (math 81 / -14.5, code 81 / -4.7). Brake: held = math, code (70 >= 66), several (50 >= 50). Round 6 trained 15 steps (loss 0.750 / 0.837 / 0.510, ordered right 56 / 50 / 82%: the hardest pairs so far). Dev of od4-r6 running.
+- ~01:50 (user: "for any missing data, you can generate it with haiku"): gen_ifeval_requests.py, Claude Haiku 5.5 via
+  OpenRouter (the route of our 12 Nov Haiku batch; no Anthropic key on this Mac), 350 calls x 20 requests seeded by
+  (topic, kind): generation / brainstorm / open question / advice / rewrite / summarize (texts included), no format or length
+  demands (IFEval's instructions are added afterwards by ifeval_fill). 6,854 kept (134 coding, 8 format, 7 near-duplicates
+  dropped); ~78k in / 1.14M out tokens (~$0.6). 3-call test first. Committed as ifeval_requests_haiku.jsonl; prepare_types
+  ifeval_built base "haiku". Queued newtop r2i-ifeval (3,000 built, x8 by the original, prompt-length matched, 8-gram test
+  check) after r2g-code; r2prep more1 now includes it.
