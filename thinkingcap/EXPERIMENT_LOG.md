@@ -6515,3 +6515,7 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   od5b to 16 rounds (--od-min-rounds 10: only if >= 10 slices exist), then fullpick + lossan.
 - ~15:20 CET: **r2s2-s40 (step 2, merged correctly onto r2s1b-s180) FULL TEST 52.9 / -1.7** -> +1.77 above the curve (curve -3.47); vs step 1 (r2s1b-s180) 50.3 / -1.7: +2.6 saving at the same accuracy. Dev had read 55.0 / +2.35: Dev over-read accuracy by 4.05 pts here (assumed 3.0). Not at the goal (needs better than -1). s80 full test (correct merge) running.
 - ~16:30 CET: **od5b-r2 monitor (round 3 slice) +16.4% / -0.52** (od4-r2: 41.8 / -2.02; od5b-r1 11.2 / +0.43): about +5 pts of saving per round so far, accuracy much better held than od4. Round 3 pairs: math shorten 35 / recovery 10 / right 7 (slice acc -1.8), code 22 / 6 / 9 (-0.8), IFEval 12 / 18 / 28 (+0.2), simple 17 / 1 / 6 (+0.8), several 13 / 1 / 4 (-1.7), no-fit 9 / 2 / 7 (+0.6): recovery grows where the slice lost accuracy, as designed. Nothing held.
+- ~16:45 CET: **r2s2-s80 (step 2, correct merge) FULL TEST 53.7 / -1.27 (+2.36 above the curve)**; s40 52.9 / -1.74
+  (+1.77). Path 1's best so far: 0.27 pts from the goal. lossan r2s2 (reviews/loss_analysis/r2s2.txt), net per type,
+  s80 / s40: math -3.25 / -4.00, code -2.38 / -2.88, simple -4.69 / -3.66, several -0.69 / +0.50, IFEval +1.20 / +0.23,
+  no-fit +6.15 / +4.64. The remaining loss sits in math, code and simple tool calls -> a short repair (step 3) on those.

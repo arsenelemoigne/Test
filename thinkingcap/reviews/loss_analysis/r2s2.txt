@@ -1,0 +1,79 @@
+===== NOISE REFERENCE: original answers 4-7 vs its answers 0-3 (x4 each) vs the original (full test, same questions) =====
+bfcl_irrelevance: 240 q | net -0.94 pts = lost -2.50 + gained +1.56 | 21 questions lost | thinking vs original's right median: median 1.00x
+   lost accuracy by cause (pts of the type's accuracy):  full length but wrong 1.74 (70%); stopped thinking early (<0.5x) 0.43 (17%); somewhat short thinking (0.5-0.8x) 0.23 (9%); repetition loop 0.09 (3%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.21 (8%); orig 3-5/8 0.52 (21%); orig 6-7/8 0.10 (4%); orig 8/8 1.67 (67%)
+   on the lost questions, the model's RIGHT answers think 0.87x the original's right median
+bfcl_multiple: 200 q | net +0.62 pts = lost -3.62 + gained +4.25 | 24 questions lost | thinking vs original's right median: median 1.02x
+   lost accuracy by cause (pts of the type's accuracy):  full length but wrong 2.08 (57%); unparseable / wrong format 1.00 (28%); somewhat short thinking (0.5-0.8x) 0.51 (14%); repetition loop 0.03 (1%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.38 (10%); orig 3-5/8 1.00 (28%); orig 6-7/8 0.62 (17%); orig 8/8 1.62 (45%)
+   on the lost questions, the model's RIGHT answers think 1.03x the original's right median
+bfcl_simple_python: 400 q | net -0.06 pts = lost -3.44 + gained +3.38 | 42 questions lost | thinking vs original's right median: median 0.97x
+   lost accuracy by cause (pts of the type's accuracy):  full length but wrong 2.15 (63%); unparseable / wrong format 0.62 (18%); somewhat short thinking (0.5-0.8x) 0.55 (16%); repetition loop 0.06 (2%); stopped thinking early (<0.5x) 0.05 (1%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.31 (9%); orig 3-5/8 0.62 (18%); orig 6-7/8 0.75 (22%); orig 8/8 1.75 (51%)
+   on the lost questions, the model's RIGHT answers think 0.97x the original's right median
+ifeval: 541 q | net +0.55 pts = lost -6.05 + gained +6.61 | 104 questions lost | thinking vs original's right median: median 0.98x
+   lost accuracy by cause (pts of the type's accuracy):  full length but wrong 2.45 (41%); repetition loop 1.39 (23%); somewhat short thinking (0.5-0.8x) 0.84 (14%); IFEval response too short (<0.7x) 0.68 (11%); cut off at the cap 0.60 (10%); stopped thinking early (<0.5x) 0.09 (2%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.69 (11%); orig 3-5/8 1.16 (19%); orig 6-7/8 1.43 (24%); orig 8/8 2.77 (46%)
+   on the lost questions, the model's RIGHT answers think 1.00x the original's right median
+mbpp: 378 q | net +0.93 pts = lost -4.89 + gained +5.82 | 52 questions lost | thinking vs original's right median: median 1.01x
+   lost accuracy by cause (pts of the type's accuracy):  repetition loop 2.42 (49%); full length but wrong 1.03 (21%); somewhat short thinking (0.5-0.8x) 0.64 (13%); cut off at the cap 0.63 (13%); stopped thinking early (<0.5x) 0.17 (3%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.66 (14%); orig 3-5/8 0.60 (12%); orig 6-7/8 1.32 (27%); orig 8/8 2.31 (47%)
+   on the lost questions, the model's RIGHT answers think 0.98x the original's right median
+svamp: 1000 q | net +0.30 pts = lost -3.20 + gained +3.50 | 109 questions lost | thinking vs original's right median: median 0.99x
+   lost accuracy by cause (pts of the type's accuracy):  full length but wrong 1.05 (33%); repetition loop 0.89 (28%); cut off at the cap 0.39 (12%); unparseable / wrong format 0.36 (11%); somewhat short thinking (0.5-0.8x) 0.30 (9%); stopped thinking early (<0.5x) 0.22 (7%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.23 (7%); orig 3-5/8 0.15 (5%); orig 6-7/8 0.88 (27%); orig 8/8 1.95 (61%)
+   on the lost questions, the model's RIGHT answers think 1.01x the original's right median
+
+===== r2s2-s40-on-r2s1b-s180 vs the original (full test, same questions) =====
+bfcl_irrelevance: 240 q | net +4.64 pts = lost -1.09 + gained +5.73 | 10 questions lost | thinking vs original's right median: median 0.66x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 0.68 (62%); somewhat short thinking (0.5-0.8x) 0.42 (38%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.10 (10%); orig 3-5/8 0.16 (14%); orig 6-7/8 0.47 (43%); orig 8/8 0.36 (33%)
+   on the lost questions, the model's RIGHT answers think 0.50x the original's right median
+bfcl_multiple: 200 q | net +0.50 pts = lost -6.56 + gained +7.06 | 36 questions lost | thinking vs original's right median: median 0.51x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 2.97 (45%); somewhat short thinking (0.5-0.8x) 1.98 (30%); unparseable / wrong format 1.48 (23%); full length but wrong 0.13 (2%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.69 (10%); orig 3-5/8 2.00 (30%); orig 6-7/8 1.94 (30%); orig 8/8 1.94 (30%)
+   on the lost questions, the model's RIGHT answers think 0.52x the original's right median
+bfcl_simple_python: 400 q | net -3.66 pts = lost -7.53 + gained +3.88 | 87 questions lost | thinking vs original's right median: median 0.57x
+   lost accuracy by cause (pts of the type's accuracy):  somewhat short thinking (0.5-0.8x) 3.64 (48%); stopped thinking early (<0.5x) 2.85 (38%); unparseable / wrong format 0.61 (8%); full length but wrong 0.43 (6%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.44 (6%); orig 3-5/8 0.84 (11%); orig 6-7/8 2.50 (33%); orig 8/8 3.75 (50%)
+   on the lost questions, the model's RIGHT answers think 0.56x the original's right median
+ifeval: 541 q | net +0.23 pts = lost -5.75 + gained +5.98 | 138 questions lost | thinking vs original's right median: median 0.46x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 3.36 (58%); somewhat short thinking (0.5-0.8x) 1.18 (21%); repetition loop 0.55 (9%); IFEval response too short (<0.7x) 0.38 (7%); cut off at the cap 0.14 (2%); full length but wrong 0.14 (2%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.88 (15%); orig 3-5/8 2.06 (36%); orig 6-7/8 1.48 (26%); orig 8/8 1.34 (23%)
+   on the lost questions, the model's RIGHT answers think 0.46x the original's right median
+mbpp: 378 q | net -2.88 pts = lost -6.35 + gained +3.47 | 108 questions lost | thinking vs original's right median: median 0.46x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 3.56 (56%); somewhat short thinking (0.5-0.8x) 1.71 (27%); repetition loop 0.56 (9%); full length but wrong 0.47 (7%); cut off at the cap 0.04 (1%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.69 (11%); orig 3-5/8 1.88 (30%); orig 6-7/8 1.72 (27%); orig 8/8 2.05 (32%)
+   on the lost questions, the model's RIGHT answers think 0.45x the original's right median
+svamp: 1000 q | net -4.00 pts = lost -6.47 + gained +2.48 | 270 questions lost | thinking vs original's right median: median 0.46x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 4.07 (63%); somewhat short thinking (0.5-0.8x) 1.46 (23%); repetition loop 0.42 (7%); full length but wrong 0.42 (7%); unparseable / wrong format 0.10 (2%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.06 (1%); orig 3-5/8 0.55 (8%); orig 6-7/8 2.17 (34%); orig 8/8 3.69 (57%)
+   on the lost questions, the model's RIGHT answers think 0.46x the original's right median
+
+===== r2s2-s80-on-r2s1b-s180 vs the original (full test, same questions) =====
+bfcl_irrelevance: 240 q | net +6.15 pts = lost -0.94 + gained +7.08 | 9 questions lost | thinking vs original's right median: median 0.59x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 0.77 (82%); somewhat short thinking (0.5-0.8x) 0.17 (18%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.05 (6%); orig 3-5/8 0.10 (11%); orig 6-7/8 0.52 (56%); orig 8/8 0.26 (28%)
+   on the lost questions, the model's RIGHT answers think 0.50x the original's right median
+bfcl_multiple: 200 q | net -0.69 pts = lost -7.31 + gained +6.62 | 40 questions lost | thinking vs original's right median: median 0.47x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 4.32 (59%); unparseable / wrong format 1.74 (24%); somewhat short thinking (0.5-0.8x) 1.21 (17%); full length but wrong 0.04 (1%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.50 (7%); orig 3-5/8 2.25 (31%); orig 6-7/8 2.19 (30%); orig 8/8 2.38 (32%)
+   on the lost questions, the model's RIGHT answers think 0.49x the original's right median
+bfcl_simple_python: 400 q | net -4.69 pts = lost -8.19 + gained +3.50 | 94 questions lost | thinking vs original's right median: median 0.52x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 3.87 (47%); somewhat short thinking (0.5-0.8x) 3.50 (43%); unparseable / wrong format 0.74 (9%); full length but wrong 0.07 (1%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.44 (5%); orig 3-5/8 0.97 (12%); orig 6-7/8 2.25 (27%); orig 8/8 4.53 (55%)
+   on the lost questions, the model's RIGHT answers think 0.53x the original's right median
+ifeval: 541 q | net +1.20 pts = lost -5.11 + gained +6.31 | 117 questions lost | thinking vs original's right median: median 0.40x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 3.29 (64%); repetition loop 0.66 (13%); somewhat short thinking (0.5-0.8x) 0.64 (13%); IFEval response too short (<0.7x) 0.36 (7%); cut off at the cap 0.09 (2%); full length but wrong 0.06 (1%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.74 (14%); orig 3-5/8 1.69 (33%); orig 6-7/8 1.41 (28%); orig 8/8 1.27 (25%)
+   on the lost questions, the model's RIGHT answers think 0.40x the original's right median
+mbpp: 378 q | net -2.38 pts = lost -6.18 + gained +3.80 | 95 questions lost | thinking vs original's right median: median 0.45x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 3.52 (57%); somewhat short thinking (0.5-0.8x) 1.75 (28%); repetition loop 0.55 (9%); full length but wrong 0.21 (3%); cut off at the cap 0.13 (2%); unparseable / wrong format 0.02 (0%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.60 (10%); orig 3-5/8 1.52 (25%); orig 6-7/8 2.15 (35%); orig 8/8 1.92 (31%)
+   on the lost questions, the model's RIGHT answers think 0.47x the original's right median
+svamp: 1000 q | net -3.25 pts = lost -5.99 + gained +2.74 | 259 questions lost | thinking vs original's right median: median 0.47x
+   lost accuracy by cause (pts of the type's accuracy):  stopped thinking early (<0.5x) 3.49 (58%); somewhat short thinking (0.5-0.8x) 1.53 (26%); repetition loop 0.49 (8%); full length but wrong 0.39 (6%); unparseable / wrong format 0.09 (2%)
+   lost accuracy by how reliably the original solved it:  orig 1-2/8 0.09 (1%); orig 3-5/8 0.66 (11%); orig 6-7/8 1.82 (30%); orig 8/8 3.41 (57%)
+   on the lost questions, the model's RIGHT answers think 0.45x the original's right median
+
+
