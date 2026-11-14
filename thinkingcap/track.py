@@ -568,6 +568,11 @@ def main():
     parser.add_argument("--word-scorer", default="lingua", help="fading: lingua (experiment 2) or marginal (experiment 3)")
     args = parser.parse_args()
     update()
+    if Path("/content").exists() and not Path("/content/drive/MyDrive").exists() and args.stage != "plan":
+        # (14 Nov 21:50) a plan started before the Drive cell ran: every stage would redo finished work on a disk that is
+        # lost at the next disconnect. Refuse at once, so the queue runs out fast; mount Drive (cell 1), then rerun the plan.
+        print(f"{args.stage}: Drive is NOT mounted -> refused (run the Drive cell first, then the plan cell)", flush=True)
+        sys.exit(3)
     if args.stage != "plan":
         keep_saving(300)  # inside every stage too: a long stage is on Drive at most ~5 minutes behind
     globals()[args.stage](args)
