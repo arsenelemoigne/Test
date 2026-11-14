@@ -6484,3 +6484,9 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   Plan: odpo od5 (8 rounds = all 8 test-matched slices, lr 1.2e-5, beta 0.1, floors svamp 25:0.48, mbpp 35:0.42, ifeval
   20:0.36, simple / several 0.45, no-fit 0.42; caps 62/63/56/46/49/56 + acc hold -2.0, unlatched; no early stop; Dev at
   rounds 4/6/8), then fullpick od5 (2 full tests), then lossan od5.
+- ~11:45 CET: od5 round 1 pairs (320): IFEval only 6 shorten of 88 (od4 round 1: ~60) -> BUG in the IFEval response floor:
+  "original's response = mean tokens - median right thinking" counts the original's runaway answers, so 0.92x of it sat
+  above almost every real response. Fix: od3prep --od3-resp writes data/od3-base-resp.json (the original's median RIGHT
+  response per question, from its stored answers; runaways excluded; Mac test OK); repair_pairs --base-resp. od5 stopped
+  in round 1; restarted clean as od5b (same design). Other parts' round-1 pairs looked as designed: shorten / neutral /
+  loop / format e.g. simple 24 / 8 / 0 / 4, several 15 / 8 / 2 / 3, no-fit 16 / 12 / 4 / 0.

@@ -177,6 +177,8 @@ def main():
     ap.add_argument("--right-resp-cap", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
                          "one's + 15 tokens (1.10); 0 = no cap")
+    ap.add_argument("--base-resp", default="",
+                    help="(14 Nov, od5b) data/od3-base-resp.json: the ORIGINAL's median right-answer response tokens per question")
     ap.add_argument("--base-stats", default="",
                     help="(14 Nov, od5 / consult21) data/od3-base-stats.json: the ORIGINAL's solve rate p0 and mean tokens per question")
     ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten", "mix"),
@@ -204,6 +206,7 @@ def main():
         decode = lambda r: tok.decode(list(r.get("thinking_ids") or r["output_ids"]), skip_special_tokens=True)  # noqa: E731
     decode_full = (lambda r: tok.decode(list(r["output_ids"]), skip_special_tokens=True)) if args.prefer_reread else None  # noqa: E731
     base_stats = json.loads(Path(args.base_stats).read_text()) if args.base_stats else {}
+    base_resp = json.loads(Path(args.base_resp).read_text()) if args.base_resp else {}
     od5 = args.mix_preset == "od5"
     od5_dmg = defaultdict(list)  # part -> (p1 - p0) per question: the part's accuracy change on this slice
     rereads = Counter()
@@ -249,7 +252,9 @@ def main():
             p1 = k1 / max(1, n_ans)
             p0 = st["acc"] if st else None
             bt = base_think.get(str(qid)) or (sorted(thinking_len(r) for r in all_rights)[len(all_rights) // 2] if all_rights else 0)
-            b_resp = max(1.0, st["tokens"] - bt) if st else 0.0
+            # (14 Nov, od5b) the original's MEDIAN RIGHT response; od5's "mean tokens - median right thinking" counted the
+            # original's runaway answers and put the IFEval floor above almost every real response (6 shorten pairs of 88)
+            b_resp = float(base_resp.get(str(qid), 0.0)) if args.base_resp else 0.0
             if p0 is not None:
                 od5_dmg[part].append(p1 - p0)
             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else

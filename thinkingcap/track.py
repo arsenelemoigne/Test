@@ -270,6 +270,8 @@ def main():
     parser.add_argument("--od-r1-quota", default="", help="odpo --od-fixed-ref: round 1's pair quota (default --rp-quota)")
     parser.add_argument("--la-models", default="od3-r3,od3-r4", help="lossan: full-tested models (runs/mvtf/full-NAME)")
     parser.add_argument("--la-tag", default="od3", help="lossan: report name runs/bon/lossan-TAG.txt")
+    parser.add_argument("--od3-resp", action="store_true", help="od3prep (14 Nov, od5b): write data/od3-base-resp.json, the "
+                        "ORIGINAL's median RIGHT-answer response tokens per question (its stored answers), and stop")
     parser.add_argument("--od3-more", type=int, default=0, help="od3prep (13 Nov, user): add this many NEW round slices "
                         "after the existing data/od3-rK files (same test matching, never a question of an earlier slice)")
     parser.add_argument("--od-unlatch", action="store_true", help="odpo (14 Nov, od5 / consult21): a type at its cap is held "
@@ -3901,6 +3903,29 @@ def od3prep(args):
     from test_difficulty_data import TEST_DIFFICULTY as test
     done = Path("data/od3-base-stats.json")
     drive_sync("restore", only=["data/od3-*", str(BON / "rp-od3-r1-stored")])
+    if getattr(args, "od3_resp", False):  # (14 Nov, od5b) the original's own response length per question (IFEval floor)
+        out_f = Path("data/od3-base-resp.json")
+        drive_sync("restore", only=[str(out_f)])
+        if out_f.exists():
+            print(f"od3prep --od3-resp: {out_f} already built", flush=True)
+            return
+        stat = json.loads(done.read_text())
+        drive_sync("restore", only=[str(BON / P1_ANSWERS), "runs/bon/tooltop-*/rollouts.jsonl"])
+        resp = defaultdict(list)
+        for f in [BON / P1_ANSWERS, *BON.glob("tooltop-*/rollouts.jsonl")]:
+            for l in open(f):
+                if l.strip():
+                    r = json.loads(l)
+                    if str(r["id"]) in stat and r.get("correct") in (True, "True") and r.get("closed_thinking", True) \
+                            and not r.get("truncated"):
+                        resp[str(r["id"])].append(max(0, int(r["output_tokens"]) - r2_think_len(r)))
+        med = {q: sorted(v)[len(v) // 2] for q, v in resp.items() if v}
+        out_f.write_text(json.dumps(med))
+        print(f"od3prep --od3-resp: median right response for {len(med)} of {len(stat)} questions "
+              f"(IFEval median of medians {sorted(v for q, v in med.items() if stat[q]['part'] == 'ifeval')[len([1 for q in med if stat[q]['part'] == 'ifeval']) // 2] if any(stat[q]['part'] == 'ifeval' for q in med) else 'n/a'})",
+              flush=True)
+        drive_sync("save")
+        return
     if getattr(args, "od3_more", 0):  # (13 Nov, user: "keep running more until each data type hits its cap") more slices
         assert done.exists(), "od3prep --od3-more needs the first build (data/od3-base-stats.json)"
         stat = json.loads(done.read_text())  # the original's stats on every usable candidate (Dev / michal-bida already out)
