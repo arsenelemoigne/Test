@@ -6412,3 +6412,11 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   -6.0 -> -0.9. fullpick (Dev bias -2.5 saving / -2.3 accuracy): od4-r7 (monitor 56.1 / -0.14 -> 53.6 / -2.44) and od4-r8
   (Dev 52.3 / +1.61 -> 49.8 / -0.69, at the goal's edge) -> both FULL TESTS running (~4.5 h).
 - ~03:55 CET: full test of od4-best (= r8) started 02:09 UTC, at 768 / 22,072 answers after 44 min (~10 min per 256-answer chunk on code, vs ~1.7 min for od4-r4 before the stop): a few very long answers (12.5 s each at the end of each chunk) hold each chunk; watch for code loops in its records. GPU 2: r2i-ifeval 2,100 / 3,000.
+- ~04:35 CET: r2i-ifeval (Haiku requests) 3,000 x8: solve 71%, sometimes right 1,074, always 1,545, never 381.
+  **r2prep more1** (extra step-2 questions, original's solve-rate bins matched to the FULL test, disjoint from steps 1/2/3):
+  candidates math 1,173 / code 1,253 / IFEval 6,769 / simple 1,651 / several 957 / no-fit 2,191 (dropped 4,783 already
+  used, 673 michal-bida (--r2-drop), 325 near-Dev). Picked: math 450 (exact bins, solve 88% vs test 89%), code 780 (exact,
+  53% vs 52%), IFEval 1,750 (exact, 59% vs 59%), simple 450 (49 borrowed from neighbour bins: 89% vs 82%, easier), several
+  150 (exact, 75% vs 76%), no-fit 530 (22 borrowed, 85% vs 83%). r2s2 now: pairs rebuilt over step-2 + these 4,110; the
+  step-1 model is answering them x8 (~1.5-2 h); trains only with all 1,600 pairs. GPU 1: od4-best full test 1,792 / 22,072
+  (faster again after the first code chunks).
