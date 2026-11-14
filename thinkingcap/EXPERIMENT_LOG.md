@@ -6612,3 +6612,6 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   -3.8), IFEval 36 / -0.9, simple 39 / +0.2, several 40 / +3.8, no-fit 47 / -2.2 (held). Round 5 trained on 204 pairs: loss
   0.626 / 0.622 / 0.523, ordered right 62 / 62 / 79%.
 - r2s3-s20 Dev-SVAMP 50.1 / -0.69 (s10 52.8 / -0.62).
+- ~00:15 CET 15 Nov **od5c r5 (od5c-r5 on slice 6): 47.0% saved / +0.39** (od4 r5 56.4 / -1.66). Curve at 47.0 = -2.35 ->
+  **+2.74 above, best of all online runs so far**. Brake round 6: math still held (cap 62). Round 6 pairs 240 -> 224 (204 q).
+- ~00:15 CET r2s3-s30 Dev-512 52.8 / +2.50 (vs rpE80 +5.9 / +1.13); same as s20 (52.8 / +2.54).
