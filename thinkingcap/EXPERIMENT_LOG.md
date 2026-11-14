@@ -6457,3 +6457,16 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   code; cap $4, 60 turns, --stop-turn): diagnosis per loss kind, od5 viability, the recommended next online run with plan
   lines, a recovery step only if needed.
 - ~11:30 CET (user leaving): both runtimes connected; GPU 1 idle in holds (re-reads the queue every 30 min, so a pushed line starts without a click). Added keep-awake holds: GPU 1 +24 (12 h), GPU 2 +16 (8 h) before end (end releases the runtime).
+- ~10:35 CET: **consult21 answered** (55 turns, $1.90; reviews/consult21_online2/REPORT.md). Diagnosis: (1) early stopping is
+  still ~80% of od4's lost accuracy; the 7/8 bar is blind to the original (an 8/8 question slipping to 7/8 is still
+  shortened); no-fit never braked (cap 65 unreachable) and cost 0.40-0.48 macro pts, more than the 0.3 gap to the goal;
+  (2) anti-loop pairs only catch cut-off answers, not finished repetition loops; (3) IFEval responses drift 0.95^k because
+  the response floor is the current round's median, not the original's; (4) tool-call format errors get no pair.
+  Held rounds lengthened: floors drop short right answers, --right-hold is centred at 1.05x (chosen longer), and the fixed
+  long reference gives those lengthening pairs the larger gradients. Verdict: od5 VIABLE with 4 refinements: noise rule
+  (p0 = 8/8 -> shorten only at 8/8; damaged = any drop when p0 >= 7/8, else a drop of >= 2 answers), per-question floors
+  ~0.36-0.48x the original's right thinking so shortening dries up by itself, a BOUNDED recovery pair (chosen 1.08-1.45x
+  the wrong one and <= 1.05x the original's), and dedicated loop / format / IFEval-length pairs; neutral right-hold at
+  1.00x; shares proportional to candidate counts (no fixed mix); unlatched emergency caps. Run: 6 rounds, lr 1.2e-5,
+  beta 0.1; expected full test 52.5-54.5 / -0.4 to -0.8. Contingency: a 30-step recovery pass (rpP).
+  Its plan lines need fixing (an invented --r2-drop path in its od3prep line; the 8 slices already exist).
