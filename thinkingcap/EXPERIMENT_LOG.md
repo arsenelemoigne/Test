@@ -6447,3 +6447,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   per loss kind) after od4-r7's full test + od4 loss analysis; consult22 (offline path: step 2 result -> step 3 / better
   settings) after r2s2's 2 full tests + loss analysis. Each cap $4, 60 turns, notes, written report.
 - ~09:15 CET: r2s2-60 Dev-512 55.1 / +1.54 (math 57 / -2.3, code 62 / -0.9, IFEval 51 / +3.5, simple 51 / +9.8, several 53 / +0.4, no-fit 44 / +3.9), Dev-SVAMP 54.5 / -1.25; **r2s2-80 Dev-512 55.5 [52.7, 58.3] / +1.95** (math 54 / -2.1, code 60 / +0.5, IFEval 56 / +4.6, simple 52 / +5.8, several 55 / +1.8, no-fit 46 / +5.3), Dev-SVAMP pending. Saving plateaus ~55% from step 40 (55.0 / +2.35). GPU 1: od4-r7 full test 18,688 / 22,072.
+- ~09:35 CET: fullpick r2s2 -> FULL TESTS of r2s2-s40 (Dev 55.0 / +2.35 -> corrected 54.0 / -0.65) and r2s2-s80 (55.5 / +1.95 -> 54.5 / -1.05); s40 running. GPU 1: od4-r7 full test 20,992 / 22,072.
