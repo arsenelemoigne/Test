@@ -272,6 +272,8 @@ def main():
     parser.add_argument("--la-tag", default="od3", help="lossan: report name runs/bon/lossan-TAG.txt")
     parser.add_argument("--od3-resp", action="store_true", help="od3prep (14 Nov, od5b): write data/od3-base-resp.json, the "
                         "ORIGINAL's median RIGHT-answer response tokens per question (its stored answers), and stop")
+    parser.add_argument("--od3-tol", default="", help="od3prep --od3-more (14 Nov): per-type solve-rate tolerance vs the test, "
+                        "PART=PTS,... (default 3 pts for every type)")
     parser.add_argument("--od3-more", type=int, default=0, help="od3prep (13 Nov, user): add this many NEW round slices "
                         "after the existing data/od3-rK files (same test matching, never a question of an earlier slice)")
     parser.add_argument("--od-unlatch", action="store_true", help="odpo (14 Nov, od5 / consult21): a type at its cap is held "
@@ -3934,7 +3936,7 @@ def od3prep(args):
         have = sorted(int(m.group(1)) for f in Path("data").glob("od3-r*-questions.jsonl")
                       if (m := re.match(r"od3-r(\d+)-questions\.jsonl$", f.name)))
         n0 = have[-1] if have else 0
-        if n0 >= 6 + args.od3_more:  # the first build made 6 slices
+        if n0 >= 6 + args.od3_more and not getattr(args, "od3_tol", ""):  # the first build made 6 slices
             print(f"od3prep: {n0} slices already built", flush=True)
             return
         s2, s3 = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl")
@@ -3966,7 +3968,8 @@ def od3prep(args):
             for p in OD3_ROUND:  # enough = full AND still test-like: solve rate within 3 pts of the test's for every type
                 if p not in short and sel[p]["step2"]:
                     sr = 100 * statistics.fmean(stat[q]["acc"] for q in sel[p]["step2"])
-                    if abs(sr - 100 * test[p]["solve"]) > 3:
+                    tol = {k: float(v) for k, v in (x.split("=") for x in getattr(args, "od3_tol", "").split(",") if x)}
+                    if abs(sr - 100 * test[p]["solve"]) > tol.get(p, 3.0):
                         short[p] = f"solve {sr:.0f}% vs test {100 * test[p]['solve']:.0f}%"
             if short:  # (13 Nov, user: "but only if we have enough data") a short or off-difficulty slice is never written
                 lines.append(f"round {k}: NOT ENOUGH questions left {short}: slices stop at round {k - 1}")
