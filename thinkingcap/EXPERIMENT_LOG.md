@@ -6552,3 +6552,9 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   stop at ~round 10). Mac: old od5 pairs byte-identical; v2 on real math answers 41 shorten / 7 recovery / 12 compact,
   chosen longer in 15%. Expected (consult23): in the box by rounds 8-10, full test 53-55 / -0.6 to -0.95 (rpM-60 54.1 / -0.93).
 - ~18:05 CET (user: restart from the original): od5 v2 runs CLEAN from round 1 as od5c (same v2 settings, up to 16 rounds, no early stop, then fullpick od5c + lossan od5c). od5b (rounds 1-3 under v1) kept for comparison.
+
+### 14 Nov ~17:45 — od5c round 1 pairs (od5 v2, from the original)
+320 pairs (308 questions). Per type shorten / compact be-right / loop / format / recovery:
+math 50/12/10/8/0, code 39/10/7/0/0, IFEval 54/23/11/0/0, simple 26/6/0/4/0, several 18/5/2/3/0, no-fit 22/6/4/0/0.
+Total: shorten 209 (65%), be-right 62 (19%), loop 34 (11%), format 15 (5%), recovery 0 (expected: round-1 model = original, nothing damaged).
+v1 (od5b) round 1 was shortening-poor on code/IFEval; v2 now shortens on every type.
