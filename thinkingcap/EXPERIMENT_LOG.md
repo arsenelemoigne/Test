@@ -6402,3 +6402,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   ifeval_built base "haiku". Queued newtop r2i-ifeval (3,000 built, x8 by the original, prompt-length matched, 8-gram test
   check) after r2g-code; r2prep more1 now includes it.
 - ~01:55: **od4-r6 Dev-512 +60.1% [58.0, 62.3] / -1.18** (math 66 / -6.0, code 70 / -1.9, IFEval 52 / +0.1, simple 49 / +7.9, several 53 / 0.0, no-fit 45 / -2.5); Dev-SVAMP 63.4 / -2.06 (od4-r5 59.8 / -1.17, Dev-SVAMP 64.7 / -2.50). od4-r6 monitor (round 7 slice) +58.6 / -1.69; still held: math, code, several. Round 7 training.
+- ~02:10: od4-r6 monitor per type (round 7 slice): math 67 / -5.4, code 70 / -2.5, IFEval 50 / +0.9, simple 46 / +2.6, several 53 / -1.7, no-fit 48 / -2.0 (overall 58.6 / -1.69). Round 7 trained (loss 0.714 / 0.659 / 0.483, ordered right 56 / 61 / 78%); round 8 answering. GPU 2: r2g-code 900 / 1,300.
