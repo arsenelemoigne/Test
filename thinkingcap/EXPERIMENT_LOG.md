@@ -6619,3 +6619,4 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   several 44 / +3.0, no-fit 45 / +1.3. Round 6 pairs 224 = shorten 98, be-right 58, recovery 46, loop 20, format 2; trained
   loss 0.665 / 0.591 / 0.587, ordered right 65 / 61 / 71%.
 - r2s3-s30 Dev-SVAMP 49.4 / -0.38 (s20 50.1 / -0.69, s10 52.8 / -0.62).
+- ~00:50 CET r2s3-s40 Dev-512 51.1 / +2.63 (saving given back by the repair: s10 53.5, s20 52.8, s30 52.8, s40 51.1). fullpick (bias -1.8 saving / -3.22 acc) corrects: s10 51.7 / -1.62, s20 51.0 / -0.68, s30 51.0 / -0.72, s40 49.3 / -0.59 -> expected picks s20 + s30 for the two full tests.
