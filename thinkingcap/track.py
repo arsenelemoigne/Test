@@ -272,6 +272,8 @@ def main():
     parser.add_argument("--la-tag", default="od3", help="lossan: report name runs/bon/lossan-TAG.txt")
     parser.add_argument("--od3-more", type=int, default=0, help="od3prep (13 Nov, user): add this many NEW round slices "
                         "after the existing data/od3-rK files (same test matching, never a question of an earlier slice)")
+    parser.add_argument("--od-unlatch", action="store_true", help="odpo (14 Nov, od5 / consult21): a type at its cap is held "
+                        "for that round only (no permanent latch)")
     parser.add_argument("--od-min-rounds", type=int, default=0, help="odpo (13 Nov, user): run only if at least this many "
                         "round slices exist (else: skipped, nothing trained); rounds are capped at the slices that exist")
     parser.add_argument("--od-stop-save", type=float, default=56.5)
@@ -4801,7 +4803,8 @@ def odpo_fixed(args):
             ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
             sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
-            held = sorted(latched | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
+            held = sorted((set() if getattr(args, "od_unlatch", False) else latched)
+                          | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
             latched = set(held)
             latch_f.write_text(json.dumps(held))
             drive_sync("save", only=[str(latch_f)])

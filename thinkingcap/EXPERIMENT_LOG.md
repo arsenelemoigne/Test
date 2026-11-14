@@ -6470,3 +6470,17 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   1.00x; shares proportional to candidate counts (no fixed mix); unlatched emergency caps. Run: 6 rounds, lr 1.2e-5,
   beta 0.1; expected full test 52.5-54.5 / -0.4 to -0.8. Contingency: a 30-step recovery pass (rpP).
   Its plan lines need fixing (an invented --r2-drop path in its od3prep line; the 8 slices already exist).
+- ~11:00 CET (user: "go"): **od5 built and queued on GPU 1.** repair_pairs.py --mix-preset od5 (+ --base-stats): per
+  question vs the ORIGINAL (p0 from data/od3-base-stats.json, its median right thinking from od3-base-think.json):
+  shorten only if p1 = 8/8 when p0 = 8/8, else p1 >= max(6/8, p0 - 1/8); damaged = any drop when p0 >= 7/8, else a drop of
+  >= 1/8 (and 1-7 right) -> BOUNDED recovery (rejected thinks < 0.85x the original's, chosen 1.08x+10 .. min(1.05x the
+  original's, 1.45x+50) the rejected, re-read and near 0.85x preferred); undamaged mixed -> neutral be-right 0.90-1.12x at
+  1.00x; loop pairs now catch finished repetition loops (8-word phrase x4); format pairs (empty response, math without a
+  final answer, tool reply without a call); IFEval response floor tied to 0.92x the original's response; defect pairs first
+  (count <= 20% IFEval, loop <= 12%, format <= 10%), then shares proportional to the candidate counts (recovery x2 when the
+  part's slice accuracy is below the original's); held types (unlatched caps) get no shortening that round. track.py
+  --od-unlatch. Mac smoke test on real Dev-SVAMP answers: 60 / 60 pairs (34 shorten, 16 neutral, 4 recovery, 6 format);
+  with math held: 0 shorten, 13 recovery, 47 neutral. Parsed with track.py's own parser.
+  Plan: odpo od5 (8 rounds = all 8 test-matched slices, lr 1.2e-5, beta 0.1, floors svamp 25:0.48, mbpp 35:0.42, ifeval
+  20:0.36, simple / several 0.45, no-fit 0.42; caps 62/63/56/46/49/56 + acc hold -2.0, unlatched; no early stop; Dev at
+  rounds 4/6/8), then fullpick od5 (2 full tests), then lossan od5.

@@ -126,7 +126,7 @@ def main():
     ap.add_argument("--floor-by-part", default="", help="(13 Nov) PART=ABS:RATIO,...: chosen answers think >= max(ABS, RATIO x "
                     "the ORIGINAL's median right thinking on that question (--base-think), else the group's)")
     ap.add_argument("--base-think", default="", help="(13 Nov) JSON {question id: the original's median right thinking tokens}")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -177,6 +177,8 @@ def main():
     ap.add_argument("--right-resp-cap", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
                          "one's + 15 tokens (1.10); 0 = no cap")
+    ap.add_argument("--base-stats", default="",
+                    help="(14 Nov, od5 / consult21) data/od3-base-stats.json: the ORIGINAL's solve rate p0 and mean tokens per question")
     ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten", "mix"),
                     help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
@@ -190,6 +192,7 @@ def main():
                 for k in ("prompt_ids", "output_ids", "thinking_ids"):  # (11 Nov) compact: 4 bytes per token, not ~36
                     if isinstance(r.get(k), list):
                         r[k] = array("i", r[k])
+                r["_nofinal"] = "final" in r and r["final"] is None  # (14 Nov, od5) format pair: a math answer with no final number
                 for k in ("question", "final", "original_prompt"):  # text copies the pair builder never reads
                     r.pop(k, None)
                 groups[r["id"]].append(r)
@@ -199,6 +202,10 @@ def main():
         from transformers import AutoTokenizer
         tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
         decode = lambda r: tok.decode(list(r.get("thinking_ids") or r["output_ids"]), skip_special_tokens=True)  # noqa: E731
+    decode_full = (lambda r: tok.decode(list(r["output_ids"]), skip_special_tokens=True)) if args.prefer_reread else None  # noqa: E731
+    base_stats = json.loads(Path(args.base_stats).read_text()) if args.base_stats else {}
+    od5 = args.mix_preset == "od5"
+    od5_dmg = defaultdict(list)  # part -> (p1 - p0) per question: the part's accuracy change on this slice
     rereads = Counter()
     floors = {}
     for spec in filter(None, re.split(r"[,+]", args.floor_by_part)):  # PART=ABS_TOKENS:RATIO
@@ -208,7 +215,8 @@ def main():
     base_think = json.loads(Path(args.base_think).read_text()) if args.base_think else {}
     floor_drop = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
-                                "right_cr": [], "capguard": [], "right_count": [], "loop": []})  # mix: right_cr = counting-rule OR compact re-read pairs
+                                "right_cr": [], "capguard": [], "right_count": [], "loop": [],
+                                "recovery": [], "hold": [], "format": []})  # mix: right_cr = counting-rule OR compact re-read pairs
     loop_resp_only = set(filter(None, re.split(r"[,+]", args.loop_response_only)))
     guard_wide = set(filter(None, re.split(r"[,+]", args.guard_wide)))
     right_hold = set(filter(None, re.split(r"[,+]", args.right_hold)))
@@ -235,6 +243,98 @@ def main():
             ftok = max(abs_min, ratio_min * bt)
             rights = [r for r in all_rights if thinking_len(r) >= ftok]
             floor_drop[part] += len(all_rights) - len(rights)
+        if args.kinds == "mix" and od5:  # (14 Nov, user's od5 rule, consult21's refinements) per question vs the ORIGINAL
+            st = base_stats.get(str(qid))
+            k1, n_ans = len(all_rights), len(q)
+            p1 = k1 / max(1, n_ans)
+            p0 = st["acc"] if st else None
+            bt = base_think.get(str(qid)) or (sorted(thinking_len(r) for r in all_rights)[len(all_rights) // 2] if all_rights else 0)
+            b_resp = max(1.0, st["tokens"] - bt) if st else 0.0
+            if p0 is not None:
+                od5_dmg[part].append(p1 - p0)
+            is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+                                          length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+            no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
+
+            def looping(r):
+                if not finished(r):
+                    return True
+                if decode_full is None:
+                    return False
+                w_ = re.findall(r"\w+", decode_full(r).lower())
+                g_ = Counter(tuple(w_[i:i + 8]) for i in range(max(0, len(w_) - 7)))
+                return bool(g_) and max(g_.values()) >= 4
+            clean = [r for r in rights if not looping(r)]  # chosen answers never loop
+            loops = [r for r in q if looping(r) and not right(r)]
+            if clean and loops:
+                cand[part]["loop"].append((qid, clean[0], min(loops, key=lambda r: -r["output_tokens"])))
+
+            def bad_format(r):
+                if response_len(r) == 0:
+                    return True
+                if base_part == "svamp":
+                    return r.get("_nofinal", False)
+                if base_part.startswith("bfcl") and base_part != "bfcl_irrelevance" and decode_full is not None:
+                    return "(" not in decode_full(r).split("</think>")[-1]
+                return False
+            bad = [w for w in wrongs if bad_format(w)]
+            if clean and bad:
+                w = bad[0]
+                near = sorted(clean, key=lambda r: abs(thinking_len(r) / max(1, thinking_len(w)) - 1.0))
+                if near and 0.85 <= thinking_len(near[0]) / max(1, thinking_len(w)) <= 1.25:
+                    cand[part]["format"].append((qid, near[0], w))
+            if is_cr and clean and wrongs:  # IFEval length rules: as before (write at least as much, think at most 1.2x)
+                rej = wrongs[0]
+                need = args.count_resp_min * response_len(rej) + 15 if args.count_resp_min > 0 else response_len(rej)
+                fit = [r for r in clean if response_len(r) >= need and thinking_len(r) <= 1.2 * thinking_len(rej)
+                       and (args.count_resp_cap <= 0 or response_len(r) <= args.count_resp_cap * response_len(rej) + args.count_resp_pad)]
+                if fit:
+                    cand[part]["right_count"].append((qid, min(fit, key=thinking_len), rej))
+            if p0 is None:
+                can_shorten, damaged = p1 >= args.shorten_min_right, False
+            else:
+                can_shorten = (p1 == 1.0) if p0 >= 1.0 else (p1 >= max(0.75, p0 - 0.125))
+                damaged = 1 <= k1 < n_ans and ((p1 < p0) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+            if can_shorten and not no_shorten and len(clean) >= 2:
+                long = max(clean, key=size)
+                pool_s = [r for r in clean if r is not long]
+                if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+                    rmed = sorted(response_len(r) for r in clean)[len(clean) // 2]
+                    floor_r = max(args.resp_median * rmed, 0.92 * b_resp if base_part == "ifeval" else 0.0)
+                    pool_s = [r for r in pool_s if response_len(r) >= floor_r
+                              and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
+                              and response_len(r) >= args.resp_near_long * response_len(long)]
+                if pool_s:
+                    short = min(pool_s, key=size)
+                    if size(long) / max(1, size(short)) >= args.shorten_ratio:
+                        cand[part]["shorten"].append((qid, short, long))
+            if damaged and clean and wrongs:  # bounded recovery: chosen a little longer than the wrong one, never past ~the original
+                tmed = sorted(thinking_len(r) for r in clean)[len(clean) // 2]
+                target = min(0.85 * bt, 1.25 * tmed) if bt else 1.25 * tmed
+                best = None
+                for w in sorted((w for w in wrongs if not bt or thinking_len(w) < 0.85 * bt), key=thinking_len):
+                    tw = thinking_len(w)
+                    hi = min(1.05 * bt, 1.45 * tw + 50) if bt else 1.45 * tw + 50
+                    ok_r = [r for r in clean if 1.08 * tw + 10 <= thinking_len(r) <= hi]
+                    for r in ok_r:
+                        key = (0 if (bt and tw < 0.65 * bt) else 1, 0 if decode and REREAD.search(decode(r)) else 1,
+                               abs(thinking_len(r) - target))
+                        if best is None or key < best[0]:
+                            best = (key, r, w)
+                if best:
+                    cand[part]["recovery"].append((qid, best[1], best[2]))
+            elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-1.12x, at 1.00)
+                best = None
+                for r in clean:
+                    for w in wrongs:
+                        ratio = thinking_len(r) / max(1, thinking_len(w))
+                        if 0.90 <= ratio <= 1.12:
+                            key = (round(abs(ratio - 1.0), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+                            if best is None or key < best[0]:
+                                best = (key, r, w)
+                if best:
+                    cand[part]["hold"].append((qid, best[1], best[2]))
+            continue
         if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
                                           length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
@@ -393,6 +493,36 @@ def main():
         return got
     by_part = {}
     for part, n in quota.items():
+        if args.kinds == "mix" and od5:  # (14 Nov) defect pairs first, then shares that FOLLOW the candidate counts
+            stop5 = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+            got5 = []
+            for kind5, cap5 in (("right_count", 0.20 if part == "ifeval" else 0.0), ("loop", 0.12), ("format", 0.10)):
+                if cap5 > 0:
+                    got5 += take(part, "right" if kind5 == "right_count" else kind5, cand[part][kind5], int(round(cap5 * n)))
+            n_rem = n - len(got5)
+            dmg = sum(od5_dmg[part]) / max(1, len(od5_dmg[part]))  # the part's accuracy change on this slice
+            c_sh = 0 if part in stop5 else len(cand[part]["shorten"])
+            c_rec = len(cand[part]["recovery"]) * (2 if dmg < -0.01 else 1)
+            c_hold = len(cand[part]["hold"])
+            tot5 = max(1, c_sh + c_rec + c_hold)
+            n_sh5 = int(round(n_rem * c_sh / tot5))
+            n_rec5 = int(round(n_rem * c_rec / tot5))
+            sh5 = take(part, "shorten", cand[part]["shorten"], n_sh5) if c_sh else []
+            rec5 = take(part, "recovery", cand[part]["recovery"], n_rec5 + (n_sh5 - len(sh5)))
+            hold5 = take(part, "right", cand[part]["hold"], n_rem - len(sh5) - len(rec5))
+            if len(sh5) + len(rec5) + len(hold5) < n_rem:  # protective kinds fill any gap, never shortening
+                rec5 += take(part, "recovery", cand[part]["recovery"], n_rem - len(sh5) - len(rec5) - len(hold5))
+            by_part[part] = got5 + sh5 + rec5 + hold5
+            if len(by_part[part]) < n:
+                shortfall[part] = n - len(by_part[part])
+            counts[(part, "od5 slice accuracy vs the original (pts)")] = f"{100 * dmg:+.1f}"
+            counts[(part, "od5 candidates shorten / recovery / hold / loop / format / count")] = (
+                f"{len(cand[part]['shorten'])}{' (held)' if part in stop5 else ''} / {len(cand[part]['recovery'])} / "
+                f"{c_hold} / {len(cand[part]['loop'])} / {len(cand[part]['format'])} / {len(cand[part]['right_count'])}")
+            for kind5 in ("shorten", "recovery", "right", "loop", "format"):
+                counts[(part, f"od5 {kind5}")] = sum(1 for x in by_part[part] if x["kind"] == kind5)
+            counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+            continue
         if args.kinds == "mix":
             base_part = "svamp" if part == "svamp_hard" else part
             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
