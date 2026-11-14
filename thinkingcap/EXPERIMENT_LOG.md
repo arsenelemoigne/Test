@@ -6571,3 +6571,7 @@ code 6, several 3, simple 2, no-fit 2), loop 21, format 3.
 GPU 2: step 3 pairs 626/640 (short: no-fit 12, several 2) -> STOPPED BEFORE TRAINING (rule); fullpick/lossan failed as expected.
 Haiku no-fit batch 2 (gen_nofit_questions.py --calls 700 --seed 7, nofit_haiku2.jsonl, disjoint from nofit_haiku.jsonl which
 stays reserved for od5c slices 10-16) being generated; builder prepare_types haiku_nofit2.
+- ~19:45 CET: Haiku no-fit batch 2: 700 calls -> 6,960 items -> 367 kept on NO + NO (5,645 UNSURE dropped), 0 overlap with
+  nofit_haiku.jsonl, 367/367 pass the BFCL conversion -> nofit_haiku2.jsonl. GPU 2 queue: newtop r2l-nofit (x8 by the
+  original) -> r2prep --r2-more s3m2 (several 100, no-fit 300, test bins) -> ptrepair r2s3 with s3m1+s3m2 (reuses all answers,
+  trains only with all 640) -> fullpick -> lossan.
