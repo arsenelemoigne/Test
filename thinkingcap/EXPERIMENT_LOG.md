@@ -6538,3 +6538,16 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   first). Mac checks: r2s2a's pairs byte-identical to before (old presets unchanged); r2s3 on real math answers: 0 shorten,
   42 be-right, 18 guards, chosen / rejected median 312 / 264. Queued on GPU 2 (parsed with track.py's parser): r2prep s3m1,
   ptrepair r2s3 (trains only with all 640 pairs), fullpick r2s3 (--fp-base r2s2-s80; consult22's gate), lossan r2s3.
+- ~17:50 CET: **consult23 answered** ($1.93; reviews/consult23_od5b/REPORT.md). Diagnosis (5 causes): the shortening bar
+  p1 >= max(6/8, p0-1/8) (8/8 on 8/8 questions) locks out most mixed code / IFEval questions; a 7/8 slip on an 8/8 question
+  became "damaged" (lengthening recovery); od5's neutral be-right lost od4's compact-be-right shortening signal; the
+  response filter (+-5% of the long answer's response, on every type) killed 37-73% of shorten candidates on code / IFEval /
+  no-fit; --no-shorten-counting barred ~half of IFEval. Only ~46% of pairs shortened and 22-50% lengthened (training 70%
+  ordered right vs od4's 91%). Fixes (user: "go od5b", from round 4 without waiting): repair_pairs --od5-v2 (shorten if
+  p1 >= 7/8 on 8/8 questions, >= max(4/8, p0-1/8) for p0 >= 4/8, >= max(2/8, p0) below; damage = a 2-answer drop on 7-8/8
+  questions, else 1; response rules on IFEval only, no near-long rule; compact be-right (0.50-1.00x the wrong one) on
+  undamaged mixed questions unless held; caps length-rule 10%, neutral 20%, recovery 20% unless the slice lost > 1.5 pts),
+  plan: no --no-shorten-counting / --resp-near-long, floors svamp 0.44, mbpp 0.36, ifeval 0.32, simple / several 0.42,
+  no-fit 0.35, quotas 58/52/58/26/22/24, lr 1.4e-5; still up to 16 rounds, no early stop (consult23 proposed a convergence
+  stop at ~round 10). Mac: old od5 pairs byte-identical; v2 on real math answers 41 shorten / 7 recovery / 12 compact,
+  chosen longer in 15%. Expected (consult23): in the box by rounds 8-10, full test 53-55 / -0.6 to -0.95 (rpM-60 54.1 / -0.93).

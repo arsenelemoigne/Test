@@ -177,6 +177,11 @@ def main():
     ap.add_argument("--right-resp-cap", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
                          "one's + 15 tokens (1.10); 0 = no cap")
+    ap.add_argument("--od5-v2", action="store_true",
+                    help="(14 Nov, consult23, user: go od5b) od5 v2: shorten where the model is as good as the original (7/8 counts "
+                         "on 8/8 questions; mixed questions too), damage = a 2-answer drop on 7-8/8 questions, response rules only on "
+                         "IFEval, compact (no longer than the wrong one) be-right on undamaged mixed questions, caps: length-rule 10%, "
+                         "neutral 20%, recovery 20% unless the slice lost > 1.5 pts")
     ap.add_argument("--loop-finished", action="store_true",
                     help="(14 Nov, consult22 step 3) --kinds mix: anti-loop pairs also reject FINISHED repetition loops (an 8-word "
                          "phrase repeated >= 4 times), and their chosen answer never loops")
@@ -321,17 +326,23 @@ def main():
             if p0 is None:
                 can_shorten, damaged = p1 >= args.shorten_min_right, False
             else:
-                can_shorten = (p1 == 1.0) if p0 >= 1.0 else (p1 >= max(0.75, p0 - 0.125))
-                damaged = 1 <= k1 < n_ans and ((p1 < p0) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+                if args.od5_v2:  # (14 Nov, consult23) as good as the original; real damage only
+                    can_shorten = (p1 >= 0.875 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.125) if p0 >= 0.50
+                                   else p1 >= max(0.25, p0))
+                    damaged = 1 <= k1 < n_ans and ((p1 <= p0 - 0.25) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+                else:
+                    can_shorten = (p1 == 1.0) if p0 >= 1.0 else (p1 >= max(0.75, p0 - 0.125))
+                    damaged = 1 <= k1 < n_ans and ((p1 < p0) if p0 >= 0.875 else (p1 <= p0 - 0.125))
             if can_shorten and not no_shorten and len(clean) >= 2:
                 long = max(clean, key=size)
                 pool_s = [r for r in clean if r is not long]
-                if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+                if (part in think_only and (args.resp_median > 0 or args.resp_max > 0)
+                        and (not args.od5_v2 or base_part == "ifeval")):  # v2: response rules on IFEval only
                     rmed = sorted(response_len(r) for r in clean)[len(clean) // 2]
                     floor_r = max(args.resp_median * rmed, 0.92 * b_resp if base_part == "ifeval" else 0.0)
                     pool_s = [r for r in pool_s if response_len(r) >= floor_r
                               and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
-                              and response_len(r) >= args.resp_near_long * response_len(long)]
+                              and (args.od5_v2 or response_len(r) >= args.resp_near_long * response_len(long))]
                 if pool_s:
                     short = min(pool_s, key=size)
                     if size(long) / max(1, size(short)) >= args.shorten_ratio:
@@ -353,7 +364,17 @@ def main():
                     cand[part]["recovery"].append((qid, best[1], best[2]))
             elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-1.12x, at 1.00)
                 best = None
-                for r in clean:
+                if args.od5_v2 and part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts))):
+                    # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
+                    for r in clean:
+                        for w in wrongs:
+                            ratio = thinking_len(r) / max(1, thinking_len(w))
+                            if 0.50 <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
+                                                           or response_len(r) <= args.right_resp_cap * response_len(w) + 15):
+                                key = (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75))
+                                if best is None or key < best[0]:
+                                    best = (key, r, w)
+                for r in (clean if best is None else []):
                     for w in wrongs:
                         ratio = thinking_len(r) / max(1, thinking_len(w))
                         if 0.90 <= ratio <= 1.12:
@@ -530,7 +551,8 @@ def main():
         if args.kinds == "mix" and od5:  # (14 Nov) defect pairs first, then shares that FOLLOW the candidate counts
             stop5 = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
             got5 = []
-            for kind5, cap5 in (("right_count", 0.20 if part == "ifeval" else 0.0), ("loop", 0.12), ("format", 0.10)):
+            for kind5, cap5 in (("right_count", (0.10 if args.od5_v2 else 0.20) if part == "ifeval" else 0.0), ("loop", 0.12),
+                                ("format", 0.10)):
                 if cap5 > 0:
                     got5 += take(part, "right" if kind5 == "right_count" else kind5, cand[part][kind5], int(round(cap5 * n)))
             n_rem = n - len(got5)
@@ -541,10 +563,13 @@ def main():
             # (14 Nov, od5b round 2 on) neutral be-right pairs take at most 25% of the slots (od4's be-right share): counted
             # in full they crowded out shortening where most questions are "mixed" (IFEval round 1: 129 neutral vs 33 shorten
             # candidates -> 12 shorten pairs of 88). Shortening vs recovery still follows the candidate counts (the damage).
-            n_hold5 = min(c_hold, int(round(0.25 * n_rem))) if (c_sh + c_rec) else n_rem
+            n_hold5 = min(c_hold, int(round((0.20 if args.od5_v2 else 0.25) * n_rem))) if (c_sh + c_rec) else n_rem
             n_act = n_rem - n_hold5
             tot5 = max(1, c_sh + c_rec)
             n_sh5 = int(round(n_act * c_sh / tot5))
+            if args.od5_v2 and c_sh and dmg > -0.015:  # (14 Nov, consult23) recovery <= 20% unless the slice lost > 1.5 pts
+                n_rec_cap = min(len(cand[part]["recovery"]), int(round(0.20 * n_act)))
+                n_sh5 = min(c_sh, n_act - n_rec_cap)
             sh5 = take(part, "shorten", cand[part]["shorten"], n_sh5) if c_sh else []
             rec5 = take(part, "recovery", cand[part]["recovery"], n_act - len(sh5))
             hold5 = take(part, "right", cand[part]["hold"], n_rem - len(sh5) - len(rec5))
