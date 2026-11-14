@@ -6590,3 +6590,8 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   simple, 54% several, 72% no-fit. Dev then failed: no --rp-screen -> default asked for step 5 (not saved). Fixed: rerun with
   --rp-screen 10 20 30 40 (training reused).
 - GPU 1 od5c: rounds 1-2 skipped as done; round 3 answers resumed from 300 saved.
+- ~22:45 CET **od5c r2 monitor (od5c-r2 on slice 3): 36.9% saved / -1.28** (od4 r2 41.8 / -2.02; od5b r2 16.4 / -0.52).
+  Curve at 36.9 = -0.88 -> 0.40 BELOW the curve (od4 r2: 0.50 below). Per type: math 46 / -1.9, code 38 / -1.4, IFEval 31 / -0.4,
+  simple 26 / -1.7, several 41 / -1.5, no-fit 38 / -0.8.
+  Round 3 pairs 240 = shorten 138, be-right 49, recovery 32 (IFEval 12, code 7, math 6, simple 4, several 2, no-fit 1), loop 17,
+  format 4. Round 3 trained: loss 0.520 / 0.560 / 0.490, ordered right 84 / 70 / 75%.
