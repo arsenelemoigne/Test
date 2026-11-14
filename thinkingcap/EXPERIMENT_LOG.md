@@ -6490,3 +6490,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   response per question, from its stored answers; runaways excluded; Mac test OK); repair_pairs --base-resp. od5 stopped
   in round 1; restarted clean as od5b (same design). Other parts' round-1 pairs looked as designed: shorten / neutral /
   loop / format e.g. simple 24 / 8 / 0 / 4, several 15 / 8 / 2 / 3, no-fit 16 / 12 / 4 / 0.
+- ~12:40 CET: od5b round 1 pairs: IFEval shorten candidates 14 -> 33 with the real response floor, but only 12 of 88 used: shares proportional to counts let the NEUTRAL be-right pairs (129 IFEval candidates: most IFEval questions are mixed) crowd out shortening. Change (from round 2): neutral pairs capped at 25% of the slots (od4's be-right share); shortening vs recovery still follows the candidate counts (damage). Mac test: 40 shorten / 5 recovery / 15 neutral; math held: 0 / 19 / 41. GPU 1 restarted after round 1 (round 1 kept).

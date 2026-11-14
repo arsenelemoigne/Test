@@ -509,11 +509,15 @@ def main():
             c_sh = 0 if part in stop5 else len(cand[part]["shorten"])
             c_rec = len(cand[part]["recovery"]) * (2 if dmg < -0.01 else 1)
             c_hold = len(cand[part]["hold"])
-            tot5 = max(1, c_sh + c_rec + c_hold)
-            n_sh5 = int(round(n_rem * c_sh / tot5))
-            n_rec5 = int(round(n_rem * c_rec / tot5))
+            # (14 Nov, od5b round 2 on) neutral be-right pairs take at most 25% of the slots (od4's be-right share): counted
+            # in full they crowded out shortening where most questions are "mixed" (IFEval round 1: 129 neutral vs 33 shorten
+            # candidates -> 12 shorten pairs of 88). Shortening vs recovery still follows the candidate counts (the damage).
+            n_hold5 = min(c_hold, int(round(0.25 * n_rem))) if (c_sh + c_rec) else n_rem
+            n_act = n_rem - n_hold5
+            tot5 = max(1, c_sh + c_rec)
+            n_sh5 = int(round(n_act * c_sh / tot5))
             sh5 = take(part, "shorten", cand[part]["shorten"], n_sh5) if c_sh else []
-            rec5 = take(part, "recovery", cand[part]["recovery"], n_rec5 + (n_sh5 - len(sh5)))
+            rec5 = take(part, "recovery", cand[part]["recovery"], n_act - len(sh5))
             hold5 = take(part, "right", cand[part]["hold"], n_rem - len(sh5) - len(rec5))
             if len(sh5) + len(rec5) + len(hold5) < n_rem:  # protective kinds fill any gap, never shortening
                 rec5 += take(part, "recovery", cand[part]["recovery"], n_rem - len(sh5) - len(rec5) - len(hold5))
