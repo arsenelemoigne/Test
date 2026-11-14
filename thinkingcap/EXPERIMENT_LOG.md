@@ -6575,3 +6575,9 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   nofit_haiku.jsonl, 367/367 pass the BFCL conversion -> nofit_haiku2.jsonl. GPU 2 queue: newtop r2l-nofit (x8 by the
   original) -> r2prep --r2-more s3m2 (several 100, no-fit 300, test bins) -> ptrepair r2s3 with s3m1+s3m2 (reuses all answers,
   trains only with all 640) -> fullpick -> lossan.
+- ~20:05 CET GPU 2 retry: newtop r2l-nofit: 367 Haiku -> 217 after the pool's contamination / near-duplicate checks (150
+  dropped); the original solves 98% of them (sometimes right 15, always 201, never 1) -> batch 2 is EASY, unlike batch 1.
+  r2prep s3m2: several 100 (12 borrowed), no-fit 300 (54 borrowed; solve 96% vs test 83%). ptrepair r2s3 rebuilt with
+  s3m1+s3m2: 633 / 640 pairs: several now full (48), no-fit 25 / 32 (SHORT 7) -> stopped again before training (rule).
+  Reason: r2s2-s80 is already strong on no-fit (+6.15 vs the original), so few no-fit questions are half-right = few
+  be-right pairs. Asking the user: train with 633 (no-fit 25) or generate more.
