@@ -6411,3 +6411,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   63.4 / -2.06). The last round (4 of 6 types held) gave back ~8 pts of saving for ~+2.8 accuracy: math 66 -> 49 saved,
   -6.0 -> -0.9. fullpick (Dev bias -2.5 saving / -2.3 accuracy): od4-r7 (monitor 56.1 / -0.14 -> 53.6 / -2.44) and od4-r8
   (Dev 52.3 / +1.61 -> 49.8 / -0.69, at the goal's edge) -> both FULL TESTS running (~4.5 h).
+- ~03:55 CET: full test of od4-best (= r8) started 02:09 UTC, at 768 / 22,072 answers after 44 min (~10 min per 256-answer chunk on code, vs ~1.7 min for od4-r4 before the stop): a few very long answers (12.5 s each at the end of each chunk) hold each chunk; watch for code loops in its records. GPU 2: r2i-ifeval 2,100 / 3,000.
