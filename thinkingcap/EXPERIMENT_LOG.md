@@ -6618,3 +6618,4 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
 - od5c r5 per type (slice 6): math 57 / -2.4 (from -5.9, still held), code 53 / -0.6, IFEval 39 / +1.9, simple 35 / +3.2,
   several 44 / +3.0, no-fit 45 / +1.3. Round 6 pairs 224 = shorten 98, be-right 58, recovery 46, loop 20, format 2; trained
   loss 0.665 / 0.591 / 0.587, ordered right 65 / 61 / 71%.
+- r2s3-s30 Dev-SVAMP 49.4 / -0.38 (s20 50.1 / -0.69, s10 52.8 / -0.62).
