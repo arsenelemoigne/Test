@@ -6621,3 +6621,10 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
 - r2s3-s30 Dev-SVAMP 49.4 / -0.38 (s20 50.1 / -0.69, s10 52.8 / -0.62).
 - ~00:50 CET r2s3-s40 Dev-512 51.1 / +2.63 (saving given back by the repair: s10 53.5, s20 52.8, s30 52.8, s40 51.1). fullpick (bias -1.8 saving / -3.22 acc) corrects: s10 51.7 / -1.62, s20 51.0 / -0.68, s30 51.0 / -0.72, s40 49.3 / -0.59 -> expected picks s20 + s30 for the two full tests.
 - ~00:45 CET **od5c r6 (od5c-r6 on slice 7): 46.9% saved / -0.33** (od4 r6 58.6 / -1.69); curve at 46.9 = -2.33 -> +2.0 above. Saving flat since r5 (47.0): round 7 brake now holds math AND code (no shortening). Round 7 pairs 240 (220 q).
+- od5c r6 per type (slice 7): math 54 / -2.2, code 51 / -2.3 (both held in round 7), IFEval 43 / +2.1, simple 38 / +0.6,
+  several 44 / -0.9, no-fit 40 / +3.5. Round 7 pairs by type (shorten / be-right / recovery / loop / format): math 0/17/16/4/0,
+  code 0/25/15/6/0, IFEval 13/27/11/7/0, simple 18/5/2/0/1, several 14/4/3/0/1, no-fit 17/5/1/1/0 -> only 62 shorten of 240.
+  Trained: loss 0.622 / 0.616 / 0.584, ordered right 71 / 66 / 68%.
+  Reading: overall saving ~= question-share average of the types (r5 check 47.2 vs 47.0). Held types' quotas are not
+  redistributed; IFEval shortening is candidate-limited, tools quota-limited -> saving plateau ~47. Idea for a next run
+  (od5d, not applied to od5c): a held type's budget goes to shortening on types at/above the original's accuracy.
