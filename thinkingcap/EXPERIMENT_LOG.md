@@ -6501,3 +6501,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   download protection; the full comparison waits for round 2's complete rollouts.jsonl. GPU 2: r2s2-s40 full test
   15,360 / 22,072.
 - ~14:10 CET: **r2s2-s40 "full test" 5.3 / +0.3 is INVALID**: fullpick's dpo branch merged the step-2 adapter onto the ORIGINAL Qwen (hard-coded) instead of r2s1b-s180, the model step 2 was trained on (its Dev runs merged correctly: 55.0 / +2.35). Fix: fullpick --fp-base (merges onto it; new model names ...-on-r2s1b-s180 so nothing stale is reused); queued the same 2 picks (s40, s80) + lossan after the running (also invalid) s80 test.
+- ~14:30 CET (user: "stop GPU 2"): GPU 2 stopped (invalid s80 test) and restarted at 55f8b2d (finished lines marked done); fullpick r2s2 --fp-base models/r2s1b-s180 now merges onto step 1's model: models/r2s2-s40-on-r2s1b-s180 (then s80); full tests running.
