@@ -1,0 +1,342 @@
+scripts at 2c329ef od5b: no per-round Dev checks (user)
+drive: light restore done (data/*.jsonl, runs/bon/kprobe-*/rollouts.jsonl, runs/bon/*plot*, runs/bon/probe-plot*, runs/bon/kprobe-plot*, runs/bon/pairs-plot*, runs/bon/zoo-*, runs/bon/pairs-tg*, runs/bon/pairs-stop*, runs/mvtf/f8-base, questions_fresh*, runs/bon/*bench*, runs/bon/probe-mathmatch, runs/bon/ps-*, runs/bon/poolcheck-*, runs/bon/probe-poolcheck-*, runs/bon/probe-poolcand-*, runs/bon/lupin-answers-*, runs/mvtf/v4-base, runs/mvtf/eval-base, questions_40, questions_val*, questions_ref*, runs/mvtf/v4-base-*, runs/mvtf/r4-*, runs/bon/probe-mf*, runs/bon/pairs-mf*, runs/bon/tskip-*)
+plan: odpo --name od5b --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 16 --od-steps 15 --od-r1-steps 20 --od-r1-quota svamp=80,mbpp=56,ifeval=88,bfcl_simple_python=36,bfcl_multiple=28,bfcl_irrelevance=32 --rp-quota svamp=60,mbpp=42,ifeval=66,bfcl_simple_python=27,bfcl_multiple=21,bfcl_irrelevance=24 --rp-questions svamp=220,mbpp=140,ifeval=200,bfcl_simple_python=80,bfcl_multiple=60,bfcl_irrelevance=80 --rp-own-data --rp-kinds mix --rp-samples 8 --rp-seed 18 --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.85,--mix-preset,od5,--base-stats,data/od3-base-stats.json,--base-resp,data/od3-base-resp.json,--base-think,data/od3-base-think.json,--floor-by-part,svamp=25:0.48+mbpp=35:0.42+ifeval=20:0.36+bfcl_simple_python=20:0.45+bfcl_multiple=25:0.45+bfcl_irrelevance=20:0.42,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--resp-median,0.95,--resp-max,1.05,--resp-near-long,0.95,--right-resp-cap,1.15 --rp-lr 1.2e-5 --rp-warmup 2 --rp-beta 0.1 --rp-dpo-seed 0 --rp-dev-vs rpE80 --od-dev-rounds 99 --data-seed 18 --od-caps svamp=62,mbpp=63,ifeval=56,bfcl_simple_python=46,bfcl_multiple=49,bfcl_irrelevance=56 --od-acc-hold -2.0 --od-unlatch --od-stop-save 999 --od-conv-gain -999
+scripts at 2c329ef od5b: no per-round Dev checks (user)
+drive: light restore done (data/od3-base-stats.json, data/od3-*)
+drive: light restore done (runs/bon/od5b-monitor.jsonl)
+odpo od5b: 16 rounds asked, 9 slices exist: 9 rounds
+drive: light restore done (runs/bon/od5b-latch.json)
+drive: light restore done (models/od5b-r1, adapters/od5b-r1-s0)
+odpo od5b: round 1 already done (models/od5b-r1, step 20), skipped
+drive: light restore done (models/od5b-r2, adapters/od5b-r2-s0)
+odpo od5b: round 2 already done (models/od5b-r2, step 15), skipped
+drive: light restore done (questions_screen720, runs/mvtf/s4-base)
+drive: light restore done (data/od3-r3-questions.jsonl)
+repair od5b-r3: 780 questions from data/od3-r3-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+drive: light restore done (runs/bon/rp-od5b-r3)
+drive: light restore done (models/od5b-r2)
+$ /usr/bin/python3 probe_curve.py --data data/repair-od5b-r3.jsonl --sources toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built --per-source 1000000 --samples 8 --model models/od5b-r2 --out runs/bon/rp-od5b-r3 --dtype bfloat16 --generate-only --chunk 300 --max-questions 780 --seed 53
+0 questions already sampled, 780 to go
+I0000 00:00:1794661601.620607  342241 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+INFO 11-14 13:06:50 [api_utils.py:273] non-default args: {'dtype': 'bfloat16', 'seed': 53, 'max_model_len': 9311, 'gpu_memory_utilization': 0.85, 'disable_log_stats': True, 'max_lora_rank': 32, 'generation_config': 'vllm', 'model': 'models/od5b-r2'}
+INFO 11-14 13:06:50 [model.py:611] Resolved architecture: Qwen3ForCausalLM
+INFO 11-14 13:06:50 [model.py:1745] Using max model len 9311
+INFO 11-14 13:06:50 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=8192.
+INFO 11-14 13:06:50 [vllm.py:999] Asynchronous scheduling is enabled.
+INFO 11-14 13:06:50 [kernel.py:270] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+sampled 300/780 questions
+sampled 600/780 questions
+sampled 780/780 questions
+INFO 11-14 15:25:09 [core_client.py:652] [shutdown] MPClient: start timeout=default
+INFO 11-14 15:25:09 [core_client.py:654] [shutdown] MPClient: stopping engine manager
+INFO 11-14 15:25:09 [core_client.py:656] [shutdown] MPClient: engine manager stopped
+INFO 11-14 15:25:09 [core_client.py:657] [shutdown] MPClient: cleaning up background resources
+INFO 11-14 15:25:09 [core_client.py:659] [shutdown] MPClient: complete
+drive: light restore done (runs/bon/pairs-od5b-r3)
+$ /usr/bin/python3 repair_pairs.py --rollouts runs/bon/rp-od5b-r3/rollouts.jsonl --out runs/bon/pairs-od5b-r3 --quota svamp=60,mbpp=42,ifeval=66,bfcl_simple_python=27,bfcl_multiple=21,bfcl_irrelevance=24 --kinds mix --seed 0 --think-only svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance --prefer-reread --count-rules --shorten-ratio 1.30 --shorten-min-right 0.85 --mix-preset od5 --base-stats data/od3-base-stats.json --base-resp data/od3-base-resp.json --base-think data/od3-base-think.json --floor-by-part svamp=25:0.48+mbpp=35:0.42+ifeval=20:0.36+bfcl_simple_python=20:0.45+bfcl_multiple=25:0.45+bfcl_irrelevance=20:0.42 --count-mode atleast --count-resp-min 1.10 --count-resp-cap 1.75 --count-resp-pad 60 --no-shorten-counting --resp-median 0.95 --resp-max 1.05 --resp-near-long 0.95 --right-resp-cap 1.15
+235 pairs (216 questions)
+  bfcl_irrelevance / SHORT of quota: 5
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 9 / 2 / 7 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 2
+  bfcl_irrelevance / od5 right: 7
+  bfcl_irrelevance / od5 shorten: 9
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.6
+  bfcl_irrelevance / right answers below the type floor (never chosen): 12
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 1 / 9 / 1 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 1
+  bfcl_multiple / od5 recovery: 1
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 13
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.7
+  bfcl_multiple / right answers below the type floor (never chosen): 2
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 45 / 3 / 6 / 2 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 2
+  bfcl_simple_python / od5 recovery: 1
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 17
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.8
+  bfcl_simple_python / right answers below the type floor (never chosen): 3
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 12 / 18 / 30 / 21 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 8
+  ifeval / od5 recovery: 18
+  ifeval / od5 right: 28
+  ifeval / od5 shorten: 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / right answers below the type floor (never chosen): 27
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 7 / 13 / 28 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 5
+  mbpp / od5 recovery: 6
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 22
+  mbpp / od5 slice accuracy vs the original (pts): -0.8
+  mbpp / right answers below the type floor (never chosen): 9
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 139 / 19 / 7 / 17 / 1 / 0
+  svamp / od5 format: 1
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 10
+  svamp / od5 right: 7
+  svamp / od5 shorten: 35
+  svamp / od5 slice accuracy vs the original (pts): -1.8
+  svamp / right answers below the type floor (never chosen): 153
+  svamp: median chosen / rejected tokens 359 / 501; chosen longer in 22%
+  mbpp: median chosen / rejected tokens 560 / 744; chosen longer in 24%
+  ifeval: median chosen / rejected tokens 313 / 350; chosen longer in 50%
+  bfcl_simple_python: median chosen / rejected tokens 109 / 146; chosen longer in 11%
+  bfcl_multiple: median chosen / rejected tokens 119 / 158; chosen longer in 19%
+  bfcl_irrelevance: median chosen / rejected tokens 194 / 207; chosen longer in 32%
+  ifeval questions answered: 200, with a counting rule: 110
+  first 80 pairs by part: {'svamp': 21, 'ifeval': 23, 'mbpp': 14, 'bfcl_simple_python': 9, 'bfcl_multiple': 7, 'bfcl_irrelevance': 6}
+235 pairs (216 questions)
+  bfcl_irrelevance / SHORT of quota: 5
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 9 / 2 / 7 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 2
+  bfcl_irrelevance / od5 right: 7
+  bfcl_irrelevance / od5 shorten: 9
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.6
+  bfcl_irrelevance / right answers below the type floor (never chosen): 12
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 1 / 9 / 1 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 1
+  bfcl_multiple / od5 recovery: 1
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 13
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.7
+  bfcl_multiple / right answers below the type floor (never chosen): 2
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 45 / 3 / 6 / 2 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 2
+  bfcl_simple_python / od5 recovery: 1
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 17
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.8
+  bfcl_simple_python / right answers below the type floor (never chosen): 3
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 12 / 18 / 30 / 21 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 8
+  ifeval / od5 recovery: 18
+  ifeval / od5 right: 28
+  ifeval / od5 shorten: 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / right answers below the type floor (never chosen): 27
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 7 / 13 / 28 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 5
+  mbpp / od5 recovery: 6
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 22
+  mbpp / od5 slice accuracy vs the original (pts): -0.8
+  mbpp / right answers below the type floor (never chosen): 9
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 139 / 19 / 7 / 17 / 1 / 0
+  svamp / od5 format: 1
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 10
+  svamp / od5 right: 7
+  svamp / od5 shorten: 35
+  svamp / od5 slice accuracy vs the original (pts): -1.8
+  svamp / right answers below the type floor (never chosen): 153
+  svamp: median chosen / rejected tokens 359 / 501; chosen longer in 22%
+  mbpp: median chosen / rejected tokens 560 / 744; chosen longer in 24%
+  ifeval: median chosen / rejected tokens 313 / 350; chosen longer in 50%
+  bfcl_simple_python: median chosen / rejected tokens 109 / 146; chosen longer in 11%
+  bfcl_multiple: median chosen / rejected tokens 119 / 158; chosen longer in 19%
+  bfcl_irrelevance: median chosen / rejected tokens 194 / 207; chosen longer in 32%
+  ifeval questions answered: 200, with a counting rule: 110
+  first 80 pairs by part: {'svamp': 21, 'ifeval': 23, 'mbpp': 14, 'bfcl_simple_python': 9, 'bfcl_multiple': 7, 'bfcl_irrelevance': 6}
+
+repair od5b-r3: PAIRS ONLY: answers and pairs saved (runs/bon/pairs-od5b-r3); no training. Rerun the line without --rp-pairs-only to train on exactly these pairs.
+odpo od5b: round 3 brake on models/od5b-r2's answers (+16.4% / -0.52): held (no shortening) = none (caps {'svamp': 62.0, 'mbpp': 63.0, 'ifeval': 56.0, 'bfcl_simple_python': 46.0, 'bfcl_multiple': 49.0, 'bfcl_irrelevance': 56.0}, accuracy hold <= -2.0)
+odpo od5b: round 3/9: models/od5b-r2 answers, DPO continues adapters/od5b-r2-s0/step-15, reference = the original
+drive: light restore done (questions_screen720, runs/mvtf/s4-base)
+drive: light restore done (data/od3-r3-questions.jsonl)
+repair od5b-r3: 780 questions from data/od3-r3-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+drive: light restore done (runs/bon/rp-od5b-r3)
+drive: light restore done (models/od5b-r2)
+drive: light restore done (runs/bon/pairs-od5b-r3)
+repair od5b-r3: --rp-rebuild-pairs: previous pairs moved to runs/bon/pairs-od5b-r3-prev; answers reused
+$ /usr/bin/python3 repair_pairs.py --rollouts runs/bon/rp-od5b-r3/rollouts.jsonl --out runs/bon/pairs-od5b-r3 --quota svamp=60,mbpp=42,ifeval=66,bfcl_simple_python=27,bfcl_multiple=21,bfcl_irrelevance=24 --kinds mix --seed 0 --think-only svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance --prefer-reread --count-rules --shorten-ratio 1.30 --shorten-min-right 0.85 --mix-preset od5 --base-stats data/od3-base-stats.json --base-resp data/od3-base-resp.json --base-think data/od3-base-think.json --floor-by-part svamp=25:0.48+mbpp=35:0.42+ifeval=20:0.36+bfcl_simple_python=20:0.45+bfcl_multiple=25:0.45+bfcl_irrelevance=20:0.42 --count-mode atleast --count-resp-min 1.10 --count-resp-cap 1.75 --count-resp-pad 60 --no-shorten-counting --resp-median 0.95 --resp-max 1.05 --resp-near-long 0.95 --right-resp-cap 1.15
+235 pairs (216 questions)
+  bfcl_irrelevance / SHORT of quota: 5
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 9 / 2 / 7 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 2
+  bfcl_irrelevance / od5 right: 7
+  bfcl_irrelevance / od5 shorten: 9
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.6
+  bfcl_irrelevance / right answers below the type floor (never chosen): 12
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 1 / 9 / 1 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 1
+  bfcl_multiple / od5 recovery: 1
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 13
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.7
+  bfcl_multiple / right answers below the type floor (never chosen): 2
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 45 / 3 / 6 / 2 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 2
+  bfcl_simple_python / od5 recovery: 1
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 17
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.8
+  bfcl_simple_python / right answers below the type floor (never chosen): 3
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 12 / 18 / 30 / 21 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 8
+  ifeval / od5 recovery: 18
+  ifeval / od5 right: 28
+  ifeval / od5 shorten: 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / right answers below the type floor (never chosen): 27
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 7 / 13 / 28 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 5
+  mbpp / od5 recovery: 6
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 22
+  mbpp / od5 slice accuracy vs the original (pts): -0.8
+  mbpp / right answers below the type floor (never chosen): 9
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 139 / 19 / 7 / 17 / 1 / 0
+  svamp / od5 format: 1
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 10
+  svamp / od5 right: 7
+  svamp / od5 shorten: 35
+  svamp / od5 slice accuracy vs the original (pts): -1.8
+  svamp / right answers below the type floor (never chosen): 153
+  svamp: median chosen / rejected tokens 359 / 501; chosen longer in 22%
+  mbpp: median chosen / rejected tokens 560 / 744; chosen longer in 24%
+  ifeval: median chosen / rejected tokens 313 / 350; chosen longer in 50%
+  bfcl_simple_python: median chosen / rejected tokens 109 / 146; chosen longer in 11%
+  bfcl_multiple: median chosen / rejected tokens 119 / 158; chosen longer in 19%
+  bfcl_irrelevance: median chosen / rejected tokens 194 / 207; chosen longer in 32%
+  ifeval questions answered: 200, with a counting rule: 110
+  first 80 pairs by part: {'svamp': 21, 'ifeval': 23, 'mbpp': 14, 'bfcl_simple_python': 9, 'bfcl_multiple': 7, 'bfcl_irrelevance': 6}
+235 pairs (216 questions)
+  bfcl_irrelevance / SHORT of quota: 5
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 9 / 2 / 7 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 2
+  bfcl_irrelevance / od5 right: 7
+  bfcl_irrelevance / od5 shorten: 9
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.6
+  bfcl_irrelevance / right answers below the type floor (never chosen): 12
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 1 / 9 / 1 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 1
+  bfcl_multiple / od5 recovery: 1
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 13
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.7
+  bfcl_multiple / right answers below the type floor (never chosen): 2
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 45 / 3 / 6 / 2 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 2
+  bfcl_simple_python / od5 recovery: 1
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 17
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.8
+  bfcl_simple_python / right answers below the type floor (never chosen): 3
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 12 / 18 / 30 / 21 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 8
+  ifeval / od5 recovery: 18
+  ifeval / od5 right: 28
+  ifeval / od5 shorten: 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / right answers below the type floor (never chosen): 27
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 7 / 13 / 28 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 5
+  mbpp / od5 recovery: 6
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 22
+  mbpp / od5 slice accuracy vs the original (pts): -0.8
+  mbpp / right answers below the type floor (never chosen): 9
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 139 / 19 / 7 / 17 / 1 / 0
+  svamp / od5 format: 1
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 10
+  svamp / od5 right: 7
+  svamp / od5 shorten: 35
+  svamp / od5 slice accuracy vs the original (pts): -1.8
+  svamp / right answers below the type floor (never chosen): 153
+  svamp: median chosen / rejected tokens 359 / 501; chosen longer in 22%
+  mbpp: median chosen / rejected tokens 560 / 744; chosen longer in 24%
+  ifeval: median chosen / rejected tokens 313 / 350; chosen longer in 50%
+  bfcl_simple_python: median chosen / rejected tokens 109 / 146; chosen longer in 11%
+  bfcl_multiple: median chosen / rejected tokens 119 / 158; chosen longer in 19%
+  bfcl_irrelevance: median chosen / rejected tokens 194 / 207; chosen longer in 32%
+  ifeval questions answered: 200, with a counting rule: 110
+  first 80 pairs by part: {'svamp': 21, 'ifeval': 23, 'mbpp': 14, 'bfcl_simple_python': 9, 'bfcl_multiple': 7, 'bfcl_irrelevance': 6}
+
+drive: light restore done (adapters/od5b-r3-s0, adapters/od5b-r2-s0/step-15)
+$ /usr/bin/python3 dpo.py --model Qwen/Qwen3-0.6B --pairs runs/bon/pairs-od5b-r3/pairs.jsonl --init-adapter adapters/od5b-r2-s0/step-15 --out adapters/od5b-r3-s0 --mix all --keep-order --nll 0.0 --beta 0.1 --batch 16 --lr 1.2e-05 --lr-schedule cosine --warmup 2 --lr-min 1.2e-05 --max-steps 15 --epochs 2 --save-every 5 --held-out 0 --max-len 8704 --bida-precision --dtype bfloat16 --seed 0 --ref-base
+I0000 00:00:1794669952.820134  379831 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+training on 235 pairs, 0 held out
+reference = the base model (adapter off)
+reference scored
+tripwire baseline 0.000; 15 steps of 16 pairs
+`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+/content/ThinkingCap-Test/dpo.py:170: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  stats.append((float(loss), float(margin) > 0))
+step 5/15  loss 0.5964  pairs ordered right 72%
+step 5: tripwire 0.000 (baseline 0.000)
+step 10/15  loss 0.5188  pairs ordered right 72%
+step 10: tripwire 0.000 (baseline 0.000)
+step 15/15  loss 0.5201  pairs ordered right 71%
+step 15: tripwire 0.000 (baseline 0.000)
+saved adapters/od5b-r3-s0
+odpo od5b: MONITOR round 3 answers (models/od5b-r2) vs the original on the same questions: saved +16.4% / accuracy -0.52 | bfcl_irrelevance +20/+0.6, mbpp +6/-0.8, svamp +32/-1.8, ifeval +11/+0.2, bfcl_simple_python +12/+0.8, bfcl_multiple +23/-1.7
+drive: light restore done (models/od5b-r3)
+$ /usr/bin/python3 merge.py --model Qwen/Qwen3-0.6B --out models/od5b-r3 --adapters adapters/od5b-r3-s0/step-15:1
+I0000 00:00:1794670219.323219  381078 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+merged adapters/od5b-r3-s0/step-15 at 1
+saved models/od5b-r3
+drive: light restore done (questions_screen720, runs/mvtf/s4-base)
+drive: light restore done (data/od3-r4-questions.jsonl)
+repair od5b-r4: 780 questions from data/od3-r4-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+drive: light restore done (runs/bon/rp-od5b-r4)
+drive: light restore done (models/od5b-r3)
+$ /usr/bin/python3 probe_curve.py --data data/repair-od5b-r4.jsonl --sources toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built --per-source 1000000 --samples 8 --model models/od5b-r3 --out runs/bon/rp-od5b-r4 --dtype bfloat16 --generate-only --chunk 300 --max-questions 780 --seed 53
+0 questions already sampled, 780 to go
+I0000 00:00:1794670244.446631  381280 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+INFO 11-14 15:30:55 [api_utils.py:273] non-default args: {'dtype': 'bfloat16', 'seed': 53, 'max_model_len': 9321, 'gpu_memory_utilization': 0.85, 'disable_log_stats': True, 'max_lora_rank': 32, 'generation_config': 'vllm', 'model': 'models/od5b-r3'}
+INFO 11-14 15:30:55 [model.py:611] Resolved architecture: Qwen3ForCausalLM
+INFO 11-14 15:30:55 [model.py:1745] Using max model len 9321
+INFO 11-14 15:30:55 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=8192.
+INFO 11-14 15:30:55 [vllm.py:999] Asynchronous scheduling is enabled.
+INFO 11-14 15:30:55 [kernel.py:270] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])

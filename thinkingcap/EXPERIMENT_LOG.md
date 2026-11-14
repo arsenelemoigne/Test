@@ -6519,3 +6519,10 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   (+1.77). Path 1's best so far: 0.27 pts from the goal. lossan r2s2 (reviews/loss_analysis/r2s2.txt), net per type,
   s80 / s40: math -3.25 / -4.00, code -2.38 / -2.88, simple -4.69 / -3.66, several -0.69 / +0.50, IFEval +1.20 / +0.23,
   no-fit +6.15 / +4.64. The remaining loss sits in math, code and simple tool calls -> a short repair (step 3) on those.
+- ~17:05 CET (user: also ask Argon what is happening with od5b, with all the data): od5b-r2 per type: math 32 / -1.8, code
+  6 / -0.8, IFEval 11 / +0.2, simple 12 / +0.8, several 23 / -1.7, no-fit 20 / +0.6 (od4-r2: 55/-3.8, 46/-3.9, 29/-0.1,
+  31/+0.8, 44/-1.2, 41/-1.8). First reading: od4's compact be-right pairs (shortest right > wrong) also taught "shorter" on
+  the mostly-mixed code / IFEval questions; od5's neutral pairs do not, and p1 >= max(6/8, p0 - 1/8) excludes most of them
+  from shortening. Launched in parallel (cap $4, 60 turns each): **consult22** (reviews/consult22_step3: Path 1 step 3
+  repair from r2s2-s80) and **consult23** (reviews/consult23_od5b: od5b diagnosis + changes from the next round; pack adds
+  NEW_RESULTS_od5b.md, the round-3 run log, pairs-od5b-r1, od4-r2 answers).

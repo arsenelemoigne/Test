@@ -1,0 +1,16 @@
+TASK. od5b (your consult21 od5 design, as built and adjusted) shortens far more slowly than od4: after 2 rounds 16.4% saved / -0.52 vs od4's 41.8 / -2.02 on the same slices; code is at 6% saved. Diagnose why, and say what to change so that the run (rounds 3 onward; up to 16 rounds are planned) reaches the objective on the full test (> 50% tokens saved at better than -1 accuracy) without od4's accuracy loss.
+
+Read {DATA}/NEW_RESULTS_od5b.md FIRST (the changes made while running, round-by-round monitor per type next to od4, training lines, pairs per kind per round, our first reading). Data: {DATA}/od5b/ (the run log of round 3, round 1's pair file pairs-od5b-r1.jsonl, od4-r2.jsonl = od4's round-1 model's 6,240 answers to slice 2 for comparison), {DATA}/loss_analysis/ (od2, od3, od4, r2s2), EXPERIMENT_LOG.md. Your consult21 report is {DATA}/YOUR_CONSULT21_REPORT.md. Code: {DATA}/code (repair_pairs.py --mix-preset od5: the per-question rule, bounded recovery, neutral 0.90-1.12x be-right capped at 25%, loop / format / IFEval length pairs, floors; track.py odpo_fixed, od3prep --od3-more / --od3-tops; plan_line_b.txt = the queue). Use code to check any number you rely on.
+
+Answer, in order:
+1. Diagnosis: why od5b shortens at about a third to half of od4's pace (per type; e.g. is our first reading right that most code / IFEval questions are never shorten-eligible under p1 >= max(6/8, p0 - 1/8), and that od4's compact be-right pairs were themselves a shortening signal?). Use the pair counts, candidate counts and per-type monitor.
+2. What to change from the next round, keeping od5's protections (recovery vs the original, loop / format / length pairs) and the user's principle (shorten where the model is as good as the original, recover where it is damaged): eligibility rule, the neutral pairs, floors, quotas, lr, steps per round. Give the exact repair_pairs.py / track.py changes (function and what changes) and the plan line(s).
+3. Expected trajectory per round and the expected full-test landing; how many rounds are needed; risks.
+
+Rules (user): start from the original; LoRA rank 16; constant learning rates; the model's own answers only; test-matched slices; general rules preferred (measured per question, not type names); no competitor recipe, no michal-bida data. Rounds stay small (15 steps / 240 pairs) unless you show a strong reason; more rounds are fine.
+
+Be concise: up to ~2,000 words, WITHOUT a code block (plan lines as plain text are fine).
+
+NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go. You have 60 TURNS IN TOTAL: check the data in at most ~40, write the final answer by turn ~55; at turn 60 the final answer is requested automatically.
+
+WHAT YOU HAVE. A persistent Python kernel (CPU, no internet, no GPU; numpy, pandas, scipy): reply with exactly one block that starts with ```python to run code; output is cut at 10,000 characters; up to {CODE_RUNS} code runs.
