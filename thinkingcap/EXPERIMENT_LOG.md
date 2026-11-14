@@ -6595,3 +6595,11 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   simple 26 / -1.7, several 41 / -1.5, no-fit 38 / -0.8.
   Round 3 pairs 240 = shorten 138, be-right 49, recovery 32 (IFEval 12, code 7, math 6, simple 4, several 2, no-fit 1), loop 17,
   format 4. Round 3 trained: loss 0.520 / 0.560 / 0.490, ordered right 84 / 70 / 75%.
+- ~23:25 CET **od5c r3 monitor (od5c-r3 on slice 4): 44.2% saved / -0.82** (od4 r3 52.7 / -2.37). Curve at 44.2 = -1.88 ->
+  +1.06 above (od4 r3 also +1.06 above). Per type: math 57 / -1.7, code 50 / -3.8, IFEval 36 / -0.3, simple 33 / +2.8,
+  several 34 / +4.7, no-fit 37 / +0.4.
+  Round 4 pairs 238 (2 short) = shorten 110 (code 0: code damaged -> all code pairs are be-right 31 / recovery 14 / loop 6),
+  be-right 69, recovery 37 (code 14, math 10, IFEval 9, no-fit 3, simple 1), loop 18, format 4. Trained: loss 0.578 / 0.624 /
+  0.552, ordered right 70 / 68 / 75%.
+- ~23:25 CET **r2s3-s10 Dev-512 53.5 / +1.60** (vs rpE80 +6.6 / +0.24); Dev-SVAMP 52.8 / -0.62. With this lineage's Dev bias
+  (3.2-4.1) the full test would read about -1.6 to -2.5: no gain over r2s2-s80 yet (Dev 55.5 / +1.95 -> full -1.27). s20-s40 next.
