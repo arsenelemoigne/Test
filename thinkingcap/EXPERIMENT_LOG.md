@@ -6491,3 +6491,12 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   in round 1; restarted clean as od5b (same design). Other parts' round-1 pairs looked as designed: shorten / neutral /
   loop / format e.g. simple 24 / 8 / 0 / 4, several 15 / 8 / 2 / 3, no-fit 16 / 12 / 4 / 0.
 - ~12:40 CET: od5b round 1 pairs: IFEval shorten candidates 14 -> 33 with the real response floor, but only 12 of 88 used: shares proportional to counts let the NEUTRAL be-right pairs (129 IFEval candidates: most IFEval questions are mixed) crowd out shortening. Change (from round 2): neutral pairs capped at 25% of the slots (od4's be-right share); shortening vs recovery still follows the candidate counts (damage). Mac test: 40 shorten / 5 recovery / 15 neutral; math held: 0 / 19 / 41. GPU 1 restarted after round 1 (round 1 kept).
+- ~12:30 CET: od5b round 2 answering is ~5x slower than od4's round 2 (first 300 questions: ~42 min vs ~7). Checked
+  without stopping anything: GPU memory / KV cache normal (161,180 tokens, same as GPU 2), engine start normal (CUDA
+  graphs captured), no leftover process. od5b round 1 pairs (pairs-od5b-r1, from Drive): chosen / rejected tokens 0.59,
+  chosen longer in 22% (shorten and anti-loop pairs all shorter; neutral pairs balanced) -> round 1 taught SHORTER.
+  Implied answer length of the first 300 questions ~590 tokens = od4-r1 on the same slice (590 mean; per type: code 1,516,
+  IFEval 546, math 474, tools 141-180; cut off 1.4%). -> the slowdown is the runtime (~3x slower generation than the same
+  runtime overnight: ~550 vs 1,600-1,800 tokens/s), not longer answers. The .partial answer file is blocked by Chrome's
+  download protection; the full comparison waits for round 2's complete rollouts.jsonl. GPU 2: r2s2-s40 full test
+  15,360 / 22,072.
