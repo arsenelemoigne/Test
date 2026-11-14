@@ -6608,3 +6608,7 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   hold); pairs rebuilt 240 -> 204 (188 questions). Per-type line prints after round 5 training.
 - ~23:45 CET **r2s3-s20 Dev-512 52.8 / +2.54** (s10 53.5 / +1.60) -> with Dev bias 3.2-4.1 the full test would read about -0.7
   to -1.6 (r2s2-s80 Dev +1.95 -> full -1.27). Dev-SVAMP s20 next, then s30, s40.
+- ~23:55 CET od5c r4 per type (slice 5): math 62 / -5.9 (at its 62% cap -> held in round 5), code 59 / +1.7 (recovered from
+  -3.8), IFEval 36 / -0.9, simple 39 / +0.2, several 40 / +3.8, no-fit 47 / -2.2 (held). Round 5 trained on 204 pairs: loss
+  0.626 / 0.622 / 0.523, ordered right 62 / 62 / 79%.
+- r2s3-s20 Dev-SVAMP 50.1 / -0.69 (s10 52.8 / -0.62).
