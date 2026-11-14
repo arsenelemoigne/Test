@@ -6456,3 +6456,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   consult20's + NEW_RESULTS_14nov.md (od4 all rounds, Dev, full tests, per type), loss_analysis/ (od2, od3, od4), current
   code; cap $4, 60 turns, --stop-turn): diagnosis per loss kind, od5 viability, the recommended next online run with plan
   lines, a recovery step only if needed.
+- ~11:30 CET (user leaving): both runtimes connected; GPU 1 idle in holds (re-reads the queue every 30 min, so a pushed line starts without a click). Added keep-awake holds: GPU 1 +24 (12 h), GPU 2 +16 (8 h) before end (end releases the runtime).

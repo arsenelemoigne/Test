@@ -683,4 +683,20 @@ hold --hold-minutes 30 --hold-tag after-r2s1-4
 # after the last full test: two waits, so that follow-up lines (consult9's recommendations) can be queued without another reconnect
 hold --hold-minutes 30 --hold-tag after-full-tests-1
 hold --hold-minutes 30 --hold-tag after-full-tests-2
+hold --hold-minutes 30 --hold-tag keep-awake-a-1
+hold --hold-minutes 30 --hold-tag keep-awake-a-2
+hold --hold-minutes 30 --hold-tag keep-awake-a-3
+hold --hold-minutes 30 --hold-tag keep-awake-a-4
+hold --hold-minutes 30 --hold-tag keep-awake-a-5
+hold --hold-minutes 30 --hold-tag keep-awake-a-6
+hold --hold-minutes 30 --hold-tag keep-awake-a-7
+hold --hold-minutes 30 --hold-tag keep-awake-a-8
+hold --hold-minutes 30 --hold-tag keep-awake-a-9
+hold --hold-minutes 30 --hold-tag keep-awake-a-10
+hold --hold-minutes 30 --hold-tag keep-awake-a-11
+hold --hold-minutes 30 --hold-tag keep-awake-a-12
+hold --hold-minutes 30 --hold-tag keep-awake-a-13
+hold --hold-minutes 30 --hold-tag keep-awake-a-14
+hold --hold-minutes 30 --hold-tag keep-awake-a-15
+hold --hold-minutes 30 --hold-tag keep-awake-a-16
 end
