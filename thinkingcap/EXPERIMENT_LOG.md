@@ -6581,3 +6581,12 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   s3m1+s3m2: 633 / 640 pairs: several now full (48), no-fit 25 / 32 (SHORT 7) -> stopped again before training (rule).
   Reason: r2s2-s80 is already strong on no-fit (+6.15 vs the original), so few no-fit questions are half-right = few
   be-right pairs. Asking the user: train with 633 (no-fit 25) or generate more.
+
+### 14 Nov ~22:30 CET — after the reconnect
+- Restart: the plan cells first ran before the Drive cell (stages failed, nothing redone); guard pushed (b58fd31: every stage
+  refuses on Colab while Drive is not mounted); user mounted Drive, plans restarted ~21:53.
+- GPU 2 r2s3 TRAINED on 633 pairs (no-fit 25, user): 40 steps, loss 0.692 (s5) / 0.687 / 0.678 / 0.674 / 0.672 / 0.666 /
+  0.684 / 0.639 (s40), ordered right 52-69% (slow, as step 2). Pairs: chosen longer in 62% math, 58% code, 45% IFEval, 75%
+  simple, 54% several, 72% no-fit. Dev then failed: no --rp-screen -> default asked for step 5 (not saved). Fixed: rerun with
+  --rp-screen 10 20 30 40 (training reused).
+- GPU 1 od5c: rounds 1-2 skipped as done; round 3 answers resumed from 300 saved.
