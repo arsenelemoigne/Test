@@ -6406,3 +6406,8 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
 - ~02:30: **od4-r7 monitor (round 8 slice) +56.1% / -0.14** (best od4 accuracy so far at this saving; od3 never had a round-7 model; od3-r5 monitor 65.4 / -4.87). Brake: held = math, code, several, simple (simple reached its 47 cap). Round 8 (last) training.
 - ~02:50: od4-r7 monitor per type: math 58 / -3.4 (held math gave back saving: 67 -> 58, accuracy -5.4 -> -3.4), code 63 / -0.4, IFEval 54 / +3.0, simple 47 / +1.9, several 49 / +1.0, no-fit 51 / -3.2. Round 8 trained (loss 0.779 / 0.666 / 0.516, ordered right 60 / 60 / 78%). RESULT od4-r8 -> od4-best; its Dev running, then fullpick. GPU 2: r2g-code 1,200 / 1,300.
 - ~03:10: r2g-code 1,300 x8 (solve 66%, sometimes right 473, always 586, never 241; test code 52%). r2i-ifeval: 11,995 built prompts from the 6,854 Haiku requests -> 4,468 after the request check (one prompt per request) -> 3,000 being answered x8 by the original. GPU 1: od4-best (= r8) Dev-512 running.
+- ~03:30: **od4-r8 (= od4-best) Dev-512 +52.3% [49.5, 55.1] / +1.61 [+0.10, +3.18]** (math 49 / -0.9, code 58 / +2.4, IFEval
+  52 / +0.1, simple 49 / +9.2, several 53 / +1.8, no-fit 44 / +0.3); **Dev-SVAMP +49.8% / +1.62** (od4-r6: 60.1 / -1.18,
+  63.4 / -2.06). The last round (4 of 6 types held) gave back ~8 pts of saving for ~+2.8 accuracy: math 66 -> 49 saved,
+  -6.0 -> -0.9. fullpick (Dev bias -2.5 saving / -2.3 accuracy): od4-r7 (monitor 56.1 / -0.14 -> 53.6 / -2.44) and od4-r8
+  (Dev 52.3 / +1.61 -> 49.8 / -0.69, at the goal's edge) -> both FULL TESTS running (~4.5 h).
