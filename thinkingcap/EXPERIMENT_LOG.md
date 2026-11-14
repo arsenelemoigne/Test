@@ -6603,3 +6603,8 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   0.552, ordered right 70 / 68 / 75%.
 - ~23:25 CET **r2s3-s10 Dev-512 53.5 / +1.60** (vs rpE80 +6.6 / +0.24); Dev-SVAMP 52.8 / -0.62. With this lineage's Dev bias
   (3.2-4.1) the full test would read about -1.6 to -2.5: no gain over r2s2-s80 yet (Dev 55.5 / +1.95 -> full -1.27). s20-s40 next.
+- ~23:45 CET od5c round 5 brake read od5c-r4's answers on slice 5: **49.6% saved / -1.19** (od4 r4 52.1 / -1.08); curve at
+  49.6 = -2.82 -> +1.63 above (od4 r4 +2.22). Brake: math and no-fit HELD (no shortening; type over its saving cap / accuracy
+  hold); pairs rebuilt 240 -> 204 (188 questions). Per-type line prints after round 5 training.
+- ~23:45 CET **r2s3-s20 Dev-512 52.8 / +2.54** (s10 53.5 / +1.60) -> with Dev bias 3.2-4.1 the full test would read about -0.7
+  to -1.6 (r2s2-s80 Dev +1.95 -> full -1.27). Dev-SVAMP s20 next, then s30, s40.
