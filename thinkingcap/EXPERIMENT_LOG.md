@@ -6513,3 +6513,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   newtop set's original stats (solve rate, median right thinking / response) into data/od3-base-*.json (Mac test OK).
   Queued on GPU 1 after od5b's 9 rounds: newtop r2k-nofit (x8 by the original), od3prep --od3-more 7 (slices 10-16), odpo
   od5b to 16 rounds (--od-min-rounds 10: only if >= 10 slices exist), then fullpick + lossan.
+- ~15:20 CET: **r2s2-s40 (step 2, merged correctly onto r2s1b-s180) FULL TEST 52.9 / -1.7** -> +1.77 above the curve (curve -3.47); vs step 1 (r2s1b-s180) 50.3 / -1.7: +2.6 saving at the same accuracy. Dev had read 55.0 / +2.35: Dev over-read accuracy by 4.05 pts here (assumed 3.0). Not at the goal (needs better than -1). s80 full test (correct merge) running.
