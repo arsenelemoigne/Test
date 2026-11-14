@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -785,6 +785,32 @@ def glaive_nofit_hard(args, rng):
                "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nh-{k}",
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
                           {"role": "user", "content": r["question"]}]}
+
+
+def haiku_nofit(args, rng):
+    """(14 Nov, user: "yes", generate the missing hard no-fit questions with Haiku) near-miss no-fit questions written by
+    Claude Haiku (gen_nofit_questions.py): 1-3 functions of the question's own domain, none of which can fulfil it, kept only
+    on Haiku's NO + NO (two wordings). Functions converted to BFCL's format; tag glaive_tools / origin haiku-nofit."""
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    path = next((p for p in (Path("/content/T/thinkingcap/nofit_haiku.jsonl"),
+                             Path(__file__).with_name("nofit_haiku.jsonl")) if p.exists()), None)
+    assert path, "nofit_haiku.jsonl not found"
+    kept = 0
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        try:
+            functions = [bfcl_function(f) for f in r["functions"]]
+        except (ValueError, KeyError, TypeError, AttributeError):
+            continue
+        if not bfcl_types(functions) or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in functions):
+            continue
+        kept += 1
+        yield {"source": "glaive_tools", "origin": "haiku-nofit", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "irrelevance", "function": functions, "reference": None, "id": f"haiku_nf-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
+                          {"role": "user", "content": r["question"]}]}
+    print(f"haiku_nofit: {kept} questions kept", flush=True)
 
 
 def glaive_nofit_hard2(args, rng):

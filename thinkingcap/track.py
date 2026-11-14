@@ -272,6 +272,8 @@ def main():
     parser.add_argument("--la-tag", default="od3", help="lossan: report name runs/bon/lossan-TAG.txt")
     parser.add_argument("--od3-resp", action="store_true", help="od3prep (14 Nov, od5b): write data/od3-base-resp.json, the "
                         "ORIGINAL's median RIGHT-answer response tokens per question (its stored answers), and stop")
+    parser.add_argument("--od3-tops", default="", help="od3prep --od3-more (14 Nov): newtop sets (tooltop-NAME, the original's "
+                        "answers) added to the candidates, with their stats merged into data/od3-base-*.json")
     parser.add_argument("--od3-tol", default="", help="od3prep --od3-more (14 Nov): per-type solve-rate tolerance vs the test, "
                         "PART=PTS,... (default 3 pts for every type)")
     parser.add_argument("--od3-more", type=int, default=0, help="od3prep (13 Nov, user): add this many NEW round slices "
@@ -3933,6 +3935,46 @@ def od3prep(args):
     if getattr(args, "od3_more", 0):  # (13 Nov, user: "keep running more until each data type hits its cap") more slices
         assert done.exists(), "od3prep --od3-more needs the first build (data/od3-base-stats.json)"
         stat = json.loads(done.read_text())  # the original's stats on every usable candidate (Dev / michal-bida already out)
+        for top in [x for x in getattr(args, "od3_tops", "").split(",") if x]:  # (14 Nov) new candidates with their stats
+            from build_pool import ngrams, part_of, words
+            qf, rf = BON / f"tooltop-{top}" / "questions.jsonl", BON / f"tooltop-{top}" / "rollouts.jsonl"
+            drive_sync("restore", only=[str(qf.parent)])
+            assert qf.exists() and rf.exists(), f"tooltop-{top} is not on Drive"
+            think_f, resp_f = Path("data/od3-base-think.json"), Path("data/od3-base-resp.json")
+            bthink = json.loads(think_f.read_text()) if think_f.exists() else {}
+            bresp = json.loads(resp_f.read_text()) if resp_f.exists() else {}
+            qrows = {}
+            for l in qf.read_text().splitlines():
+                if l.strip():
+                    q = json.loads(l)
+                    qrows[q.get("pool_id", q.get("id"))] = q
+            ans = defaultdict(list)
+            for l in open(rf):
+                if l.strip():
+                    r = json.loads(l)
+                    ans[r["id"]].append(r)
+            dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
+            drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
+            added = 0
+            for qid, a in ans.items():
+                row = qrows.get(qid)
+                if row is None or str(qid) in stat or qid in dev or r2_drop_match(row | {"id": qid}, drops):
+                    continue
+                g = ngrams(words(row.get("prompt") or ""))
+                if g and len(g & dev_g) * 10 >= 3 * len(g):
+                    continue
+                ok = [r for r in a if bool(r["correct"]) and r.get("closed_thinking", True) and not r.get("truncated")]
+                stat[str(qid)] = {"part": part_of(row), "tokens": statistics.fmean(r["output_tokens"] for r in a),
+                                  "acc": statistics.fmean(bool(r["correct"]) for r in a)}
+                if ok:
+                    bthink[str(qid)] = sorted(r2_think_len(r) for r in ok)[len(ok) // 2]
+                    bresp[str(qid)] = sorted(max(0, r["output_tokens"] - r2_think_len(r)) for r in ok)[len(ok) // 2]
+                added += 1
+            done.write_text(json.dumps(stat))
+            think_f.write_text(json.dumps(bthink))
+            resp_f.write_text(json.dumps(bresp))
+            print(f"od3prep --od3-tops: + {added} candidates from tooltop-{top} (stats merged)", flush=True)
+            drive_sync("save")
         have = sorted(int(m.group(1)) for f in Path("data").glob("od3-r*-questions.jsonl")
                       if (m := re.match(r"od3-r(\d+)-questions\.jsonl$", f.name)))
         n0 = have[-1] if have else 0

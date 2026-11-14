@@ -6506,3 +6506,10 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
 - ~15:00 CET: od5b-r1 monitor per type: math 19 / -0.5, code 9 / +1.0, IFEval 8 / +0.6, simple 13 / +0.5, several 6 / -0.8, no-fit 9 / +1.9 (od4-r1: 30/-0.1, 23/+1.1, 17/-0.1, 20/+2.6, 16/+0.1, 25/+0.7). Round 2 trained 15 steps (loss 0.557/0.550/0.559, ordered right 74/75/69%). User: more steps to reach 50% (like od4's extension; only 8 test-matched slices exist): rounds 3-8 = 22 steps on 360 pairs (quotas x1.5), same mix; GPU 1 restarted after round 2 (rounds 1-2 kept).
 - ~15:15 CET (user: keep the small rounds, but more of them, up to 16): od5b reverted to 15 steps / 240 pairs per round (round 3 had not trained yet), --od-rounds 16, Dev at rounds 4/6/8/12/16; before it, od3prep --od3-more 8 builds slices 9-16 with the same test matching except no-fit tolerance 5 pts (round 9 had failed only on no-fit: 87% vs 83%); rounds stop at the slices that exist.
 - ~16:00 CET (user: no need to score each round with 16 rounds): od5b --od-dev-rounds 99 (Dev only on the final model, automatic); the free monitor stays. GPU 1 restarted (round 3 answering ~10 min in; rounds 1-2 kept).
+- ~14:45 CET (user: yes, Haiku for the missing hard no-fit): gen_nofit_questions.py (Claude Haiku 5.5 via OpenRouter; near-
+  miss no-fit: 1-3 functions of the question's own domain, none can fulfil it; kept only on Haiku's NO + NO with two
+  wordings): batch 1 300 calls -> 150 kept of 3,004; batch 2 600 calls -> 308 of 5,914 (most verdicts UNSURE, dropped);
+  458 unique, all pass the BFCL conversion; ~$2 in all. Builder prepare_types haiku_nofit; od3prep --od3-tops merges a
+  newtop set's original stats (solve rate, median right thinking / response) into data/od3-base-*.json (Mac test OK).
+  Queued on GPU 1 after od5b's 9 rounds: newtop r2k-nofit (x8 by the original), od3prep --od3-more 7 (slices 10-16), odpo
+  od5b to 16 rounds (--od-min-rounds 10: only if >= 10 slices exist), then fullpick + lossan.
