@@ -6551,3 +6551,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   no-fit 0.35, quotas 58/52/58/26/22/24, lr 1.4e-5; still up to 16 rounds, no early stop (consult23 proposed a convergence
   stop at ~round 10). Mac: old od5 pairs byte-identical; v2 on real math answers 41 shorten / 7 recovery / 12 compact,
   chosen longer in 15%. Expected (consult23): in the box by rounds 8-10, full test 53-55 / -0.6 to -0.95 (rpM-60 54.1 / -0.93).
+- ~18:05 CET (user: restart from the original): od5 v2 runs CLEAN from round 1 as od5c (same v2 settings, up to 16 rounds, no early stop, then fullpick od5c + lossan od5c). od5b (rounds 1-3 under v1) kept for comparison.
