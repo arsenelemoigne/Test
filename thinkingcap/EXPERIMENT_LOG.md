@@ -6562,3 +6562,12 @@ v1 (od5b) round 1 was shortening-poor on code/IFEval; v2 now shortens on every t
 ### 14 Nov ~17:50 CET — check-in
 - GPU 1 od5c round 1 trained: 20 steps (320 pairs), loss 0.653 (s5) -> 0.363 (s20), ordered right 82 -> 94% (learns its pairs much faster than od4/od5b's ~0.59). Round-1 monitor is trivial (answers = original, +0/+0). od5c-r1 is now answering slice 2 (780 q x 8) = the first real monitor, comparable to od4 "r1" 22.7/+0.58 and od5b 11.2/+0.43.
 - GPU 2 r2prep s3m1 done: 1,240 extra step-3 questions (math 250 incl. 220 new, code 260, simple 450, several 100, no-fit 180, IFEval 0 as asked). Bins: math / several exact; code 88, simple 70, no-fit 26 borrowed from neighbour bins (hardest bins used up), so extras are easier than the test (code solve 75% vs 52%). Now ptrepair r2s3: r2s2-s80 answers the 2,134 step-3 questions x8 (then the 1,240 extras), then pairs (train only if all 640).
+
+### 14 Nov ~19:35 CET — od5c first real monitor (od5c-r1 answering slice 2 vs the original)
+**od5c r1: 24.5% saved / +0.41** (od4 r1 22.7 / +0.58; od5b v1 r1 11.2 / +0.43). Curve at 24.5 = +0.13 -> +0.28 above.
+Per type: math +31 / -0.0, code +29 / +1.6, IFEval +18 / +0.0, simple +21 / +0.7, several +17 / -1.6, no-fit +22 / +0.5.
+Round 2 pairs: 240 (217 questions) = shorten 137, compact be-right 50, recovery 29 (first damage seen: math 8, IFEval 8,
+code 6, several 3, simple 2, no-fit 2), loop 21, format 3.
+GPU 2: step 3 pairs 626/640 (short: no-fit 12, several 2) -> STOPPED BEFORE TRAINING (rule); fullpick/lossan failed as expected.
+Haiku no-fit batch 2 (gen_nofit_questions.py --calls 700 --seed 7, nofit_haiku2.jsonl, disjoint from nofit_haiku.jsonl which
+stays reserved for od5c slices 10-16) being generated; builder prepare_types haiku_nofit2.
