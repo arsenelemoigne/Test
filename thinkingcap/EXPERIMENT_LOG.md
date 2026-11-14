@@ -6401,3 +6401,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   dropped); ~78k in / 1.14M out tokens (~$0.6). 3-call test first. Committed as ifeval_requests_haiku.jsonl; prepare_types
   ifeval_built base "haiku". Queued newtop r2i-ifeval (3,000 built, x8 by the original, prompt-length matched, 8-gram test
   check) after r2g-code; r2prep more1 now includes it.
+- ~01:55: **od4-r6 Dev-512 +60.1% [58.0, 62.3] / -1.18** (math 66 / -6.0, code 70 / -1.9, IFEval 52 / +0.1, simple 49 / +7.9, several 53 / 0.0, no-fit 45 / -2.5); Dev-SVAMP 63.4 / -2.06 (od4-r5 59.8 / -1.17, Dev-SVAMP 64.7 / -2.50). od4-r6 monitor (round 7 slice) +58.6 / -1.69; still held: math, code, several. Round 7 training.
