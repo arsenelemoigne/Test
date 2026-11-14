@@ -3078,7 +3078,14 @@ def lossan(args):
     """(13 Nov, user: "take a new look at od2, od3-r3 and od3-r4 ... what causes the accuracy loss") loss_analysis.py on the
     full tests of --la-models against the original's full test (+ the original vs itself as the noise reference).
     CPU only, a few minutes. Report: runs/bon/lossan-<tag>.txt (on Drive)."""
-    names = [x for x in args.la_models.split(",") if x]
+    names = []
+    for x in [x for x in args.la_models.split(",") if x]:
+        if x.startswith("fullpick:"):  # (14 Nov) the models fullpick chose for RUN (data/RUN-fullpick.json)
+            f = Path(f"data/{x.split(':', 1)[1]}-fullpick.json")
+            drive_sync("restore", only=[str(f)])
+            names += [Path(c["model"]).name for c in json.loads(f.read_text())["picks"]]
+        else:
+            names.append(x)
     base = ROOT / "full-base"
     drive_sync("restore", only=[str(base), *[str(ROOT / f"full-{n}") for n in names]])
     cands = [f"{n}={ROOT / f'full-{n}' / 'records.jsonl'}" for n in names if (ROOT / f"full-{n}" / "records.jsonl").exists()]
