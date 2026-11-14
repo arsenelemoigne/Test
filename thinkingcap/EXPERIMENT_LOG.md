@@ -6436,3 +6436,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   neighbour bin), IFEval 200 (exact bins, 59% vs 59%). **r2s2: 1,600 of 1,600 pairs (1,572 questions), every type at
   quota -> STEP 2 TRAINING STARTED** (from r2s1b-s180, constant lr 1e-5, beta 0.1, 80 steps, preset r2s2a: shorten only
   IFEval + tools, math / code length-held be-right + loops; checkpoints 20 / 40 / 60 / 80 each on Dev-512 + Dev-SVAMP).
+- ~07:30 CET: r2s2 training (1 pass over 1,600 new pairs, so every batch is unseen): loss / ordered right at steps 5-70: 0.693/54, 0.686/62, 0.684/71, 0.672/61, 0.648/69, 0.662/62, 0.647/71, 0.657/60, 0.639/66, 0.624/69, 0.629/64, 0.624/64, 0.604/74, 0.592/64% (slow, steady: lr 1e-5). Dev of steps 20/40/60/80 after training. GPU 1: od4-r7 full test 768 / 22,072.
