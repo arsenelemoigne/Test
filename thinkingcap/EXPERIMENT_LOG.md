@@ -6500,3 +6500,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   runtime overnight: ~550 vs 1,600-1,800 tokens/s), not longer answers. The .partial answer file is blocked by Chrome's
   download protection; the full comparison waits for round 2's complete rollouts.jsonl. GPU 2: r2s2-s40 full test
   15,360 / 22,072.
+- ~14:10 CET: **r2s2-s40 "full test" 5.3 / +0.3 is INVALID**: fullpick's dpo branch merged the step-2 adapter onto the ORIGINAL Qwen (hard-coded) instead of r2s1b-s180, the model step 2 was trained on (its Dev runs merged correctly: 55.0 / +2.35). Fix: fullpick --fp-base (merges onto it; new model names ...-on-r2s1b-s180 so nothing stale is reused); queued the same 2 picks (s40, s80) + lossan after the running (also invalid) s80 test.

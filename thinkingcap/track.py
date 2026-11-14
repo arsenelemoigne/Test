@@ -504,6 +504,8 @@ def main():
     parser.add_argument("--fm-no-screen", action="store_true", help="fullmodel (13 Nov): skip the 720 screen")
     parser.add_argument("--fp-run", default="r2s1b", help="fullpick: the run whose checkpoints / rounds are candidates")
     parser.add_argument("--fp-kind", default="dpo", choices=("dpo", "arena"), help="fullpick: a ptrepair run or an odpo arena")
+    parser.add_argument("--fp-base", default="Qwen/Qwen3-0.6B", help="fullpick dpo (14 Nov): the model the run's adapter was "
+                        "trained ON (r2s2: models/r2s1b-s180); the checkpoints are merged onto it")
     parser.add_argument("--fp-save-bias", type=float, default=2.5, help="fullpick: Dev over-reads saving by this (pts)")
     parser.add_argument("--fp-acc-bias", type=float, default=2.3, help="fullpick: Dev over-reads accuracy by this (pts)")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
@@ -4109,7 +4111,8 @@ def fullpick(args):
             drive_sync("restore", only=[str(d.parent), str(v.parent)])
             if d.exists() and v.exists():
                 a, b = json.loads(d.read_text()), json.loads(v.read_text())
-                cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}",
+                base_tag = "" if args.fp_base == "Qwen/Qwen3-0.6B" else "-on-" + Path(args.fp_base).name  # (14 Nov) never reuse a wrong-base merge
+                cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}{base_tag}",
                               "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
         gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc
                 and c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc]
@@ -4153,7 +4156,10 @@ def fullpick(args):
         if not (model / "config.json").exists() and args.fp_kind == "dpo":
             adapter = Path("adapters") / f"{run_name}-s0" / f"step-{c['step']}"
             drive_sync("restore", only=[str(adapter)])
-            py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters", f"{adapter}:1")
+            if args.fp_base != "Qwen/Qwen3-0.6B":
+                drive_sync("restore", only=[args.fp_base])
+                assert (Path(args.fp_base) / "config.json").exists(), f"{args.fp_base} is not on Drive"
+            py("merge.py", "--model", args.fp_base, "--out", model, "--adapters", f"{adapter}:1")
             drive_sync("save")
         models.append(str(model))
     Path(f"data/{run_name}-fullpick.json").write_text(json.dumps({"picks": picks, "start": start, "all": cands}, indent=1))
