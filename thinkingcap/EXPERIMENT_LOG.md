@@ -6420,3 +6420,13 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   150 (exact, 75% vs 76%), no-fit 530 (22 borrowed, 85% vs 83%). r2s2 now: pairs rebuilt over step-2 + these 4,110; the
   step-1 model is answering them x8 (~1.5-2 h); trains only with all 1,600 pairs. GPU 1: od4-best full test 1,792 / 22,072
   (faster again after the first code chunks).
+- ~05:40 CET: **r2s2 rebuild: 1,550 of 1,600 pairs** -> STOPPED (no training). Short: simple 142 / 180 (be-right only 71
+  candidates: the step-1 model rarely fails our remaining simple questions) and IFEval 468 / 480 (shortening supply 234).
+  Every other type full. Per the user's rule, the missing data is generated with Haiku:
+  - simple: gen_tool_questions.py (Claude Haiku 5.5 via OpenRouter, 150 calls x 10 items over 70 domains: a typed
+    Python-style function, a question, the one correct call; difficulty varied on purpose: 1-6 arguments, optional ones to
+    set or leave out, lists, a distractor number). 1,402 items, 1,398 pass the Glaive clean-up (BFCL types, every argument
+    value stated in the question); 3-call test first; ~$0.2. Builder prepare_types haiku_tools (tag glaive_tools/haiku).
+  - IFEval: no new generation needed; ~5,000 test-matched Haiku-request candidates (r2i) are left.
+  Queued: newtop r2j-simple (x8 by the original) -> r2prep more2 (simple 400 + IFEval 200, test bins) -> r2s2 with both
+  extra files; trains only with all 1,600 pairs.
