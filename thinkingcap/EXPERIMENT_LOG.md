@@ -6430,3 +6430,4 @@ options (a) new request sources, (b) lower step 2's IFEval quota, (c) a 2nd inst
   - IFEval: no new generation needed; ~5,000 test-matched Haiku-request candidates (r2i) are left.
   Queued: newtop r2j-simple (x8 by the original) -> r2prep more2 (simple 400 + IFEval 200, test bins) -> r2s2 with both
   extra files; trains only with all 1,600 pairs.
+- ~06:40 CET: **od4-r8 (od4-best) FULL TEST 2,759 x 8: +51.6% saved / -1.3 pts** -> +1.90 above the curve (curve at 51.6 = -3.20): online DPO's best full test (od3-r3 +0.68, od3-r4 +0.41; Path 1 step 1 r2s1b-s180 50.3 / -1.7 = +1.25). 0.3 pts short of the goal (> 50% at better than -1). Dev-512 had read 52.3 / +1.61 (bias -0.7 saving, -2.9 accuracy). Full test of od4-r7 started.
