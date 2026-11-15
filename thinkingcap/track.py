@@ -437,6 +437,7 @@ def main():
     parser.add_argument("--rp-rebuild-pairs", action="store_true",
                         help="ptrepair (12 Nov): rebuild the pairs from the saved answers (old pairs kept as pairs-NAME-prev)")
     parser.add_argument("--rp-require-files", default="", help="ptrepair (13 Nov): never train unless these files exist ('+' list)")
+    parser.add_argument("--note", default="", help="(15 Nov) ignored: makes a re-queued plan line textually new")
     parser.add_argument("--rp-no-fill", action="store_true", help="ptrepair (15 Nov, r2one, user: 'only if we have enough good "
                         "quality data'): a short part is NEVER filled with new questions answered from the pool (they would not "
                         "be test-matched); with --rp-require-full the run then stops before training")
@@ -4824,6 +4825,8 @@ def ptrepair(args):
             rolls.append(roll_x / "rollouts.jsonl")
 
         def build():
+            # (15 Nov, r2one crash on a fresh runtime) the data files named in the pair rules (--base-think, --base-stats, ...)
+            drive_sync("restore", only=[x for x in args.rp_pair_args.split(",") if x.startswith("data/")])
             py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
                "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
         build()
