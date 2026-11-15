@@ -6659,3 +6659,6 @@ domain-training side runs math-128 32.4 / -1.86, instructions-128 32.6 / -0.86, 
 = 4B scaling chain (1.7B 47.4 / -0.14 unchanged), not a 0.6B entry. marek-krcal: branches last pushed 9 Nov, no published
 score. michal-bida (20 Oct), basta (14 Oct): unchanged. GitHub repo / code search and Hugging Face Hub search: no new
 ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model releases and their quantizations).
+- od5c r8 per type (slice 9): math 58 / -2.4, code 57 / -1.4, IFEval 46 / +1.1, simple 48 / +3.9, several 52 / -0.3, no-fit
+  55 / +3.2. Round 9 (math, simple, several held) trained; Dev-512 on od5c's final model running. GPU 2: r2s3-s20 full test
+  18,432 / 22,072. Argon consult24 turn 36 ($1.31), intermittent MALFORMED_FUNCTION_CALL retries but progressing.
