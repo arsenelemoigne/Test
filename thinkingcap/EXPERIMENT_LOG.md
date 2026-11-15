@@ -6732,3 +6732,10 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   r2s3b, loop filter on every chosen answer, right-hold fixes, base-think-anchored guards. Expected full test 53.1
   [52.5, 53.7] / -0.58 [-0.80, -0.35]. Fallback: merge r2s3-s30 x0.85 + a 20-step IFEval / no-fit shortener x0.80 onto
   r2s2-s80 (~53.0 / -0.85). WAITING for the user's go.
+- ~05:35 CET **od5c-r10 FULL TEST 2,759 x 8: +54.1% saved / -1.7** (official mean from per type -1.68); curve at 54.1 = -3.72
+  -> +2.04 above (= od4-r7's +2.0). Its monitor had read 52.9 / +0.84: monitor over-read accuracy by 2.5 (exactly fullpick's
+  --fp-acc-bias 2.5) and under-read saving by 1.2. Per type: math 65 / -4.6 (monitor 61 / -2.0: the math loss is the gap),
+  code 54 / -1.3, IFEval 46 / -0.7, simple 46 / -1.1, several 48 / -1.1, no-fit 53 / +2.3. Outside the goal by 0.7 on
+  accuracy. Frontier artifact v13 (new family od5c).
+- od5d r1 per type (slice 2): math 29 / -1.0, code 23 / +1.6, IFEval 16 / +0.5, simple 21 / +1.6, several 16 / -1.2, no-fit
+  24 / +3.0.
