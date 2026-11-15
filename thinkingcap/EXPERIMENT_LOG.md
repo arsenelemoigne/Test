@@ -6662,3 +6662,11 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - od5c r8 per type (slice 9): math 58 / -2.4, code 57 / -1.4, IFEval 46 / +1.1, simple 48 / +3.9, several 52 / -0.3, no-fit
   55 / +3.2. Round 9 (math, simple, several held) trained; Dev-512 on od5c's final model running. GPU 2: r2s3-s20 full test
   18,432 / 22,072. Argon consult24 turn 36 ($1.31), intermittent MALFORMED_FUNCTION_CALL retries but progressing.
+- ~02:28 CET **r2s3-s20 (Path 1 step 3, step 20) FULL TEST 2,759 x 8: +52.7% saved / -1.0** (printed at one decimal; from the
+  per-type numbers the official mean is -0.997, i.e. -0.95 to -1.05: exact value with lossan r2s3). Curve at 52.7 = -3.43
+  -> +2.43 above. vs step 2 (r2s2-s80 53.7 / -1.27): -1.0 saving, +0.27 accuracy. Per type: math 59 / -2.9, code 53 / -1.9,
+  IFEval 48 / +0.9, simple 48 / -3.5, several 51 / -0.2, no-fit 52 / +5.7. Dev (52.8 / +2.54) over-read accuracy by 3.5.
+  Added to the Frontier artifact (v11). r2s3-s30 full test running.
+- ~02:30 CET (user): one od5c full test on EACH GPU: GPU 2 after lossan r2s3 = fullpick od5c --fp-n 1 --fp-skip-tested
+  --fp-tag -gpu2 (best round finished by then); GPU 1 at the end = the best round not tested / picked on GPU 2 (new
+  fullpick options --fp-n, --fp-skip-tested, --fp-tag; lossan fullpick:RUN reads every GPU's picks).
