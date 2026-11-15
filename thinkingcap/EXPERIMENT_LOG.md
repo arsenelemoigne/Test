@@ -6791,3 +6791,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~09:45 CET **od5d r8 (slice 9): 49.2% / -1.10** (od5c r8 52.8 / -0.02). Per type: math 48 / -2.8, code 51 / -2.6, IFEval 46 /
   -0.1, simple 49 / +1.1, several 53 / -1.3, no-fit 56 / +3.1. Round 9 holds math, code, simple, several.
 - ~10:05 CET (user: 'No keep pushing'): od5c continues to round 16 as queued (rounds 13-15 now, r2s3b, slice 16 + round 16, then its second full test). Last hard no-fit batch appended: nofit_haiku4.jsonl = 501.
+- ~10:10 CET od5c r14 (slice 15): **50.3% / +2.47** (curve +4.8 above; with the measured -2.5 monitor bias ~ -0.0 full). od5d r9 (slice 10): 44.3% / +1.82 (od5c r9 48.1 / +2.05); its stop rules did not fire (needs >= 53 / >= -0.3).
