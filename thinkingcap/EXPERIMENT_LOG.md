@@ -6759,3 +6759,8 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~07:25 CET **od5d r4 (slice 5): 43.3% / -0.13** (od5c r4 49.6 / -1.19); curve at 43.3 = -1.74 -> +1.61 above (od5c r4 +1.63).
   Per type: math 50 / -2.7, code 47 / +0.7, IFEval 37 / +0.6, simple 36 / +0.6, several 37 / +4.0, no-fit 45 / -1.3. v3 moved
   free slots: IFEval +8, code +6, simple +4.
+- ~07:45 CET **od5c r12 (slice 13): 49.7% / +2.24** -> curve +5.1 above (monitor; od5c's monitor over-read accuracy by 2.5 on
+  r10). Per type: math 49 / -1.4, code 55 / +1.4, IFEval 46 / +5.2, simple 45 / +3.7, several 52 / -0.4, no-fit 51 / +7.4.
+  Round 13 trained (several held); Dev of round 13's model running; then the 40-min wait for the hard no-fit batches.
+- ~07:45 CET **od5d r5 (slice 6): 44.2% / +0.39** (od5c r5 47.0 / +0.39); round 6 holds math and code (v3 moves their free
+  slots to healthy types; none left empty).
