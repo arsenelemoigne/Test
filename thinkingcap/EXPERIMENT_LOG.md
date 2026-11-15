@@ -6775,3 +6775,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   (91%). GPU 1 in the 30-min wait for hard batches 5 (generating), then newtop r2r-nofit + od3prep slice 16 + od5c continues.
 - ~09:05 CET **od5d r7 (slice 8): 45.4% / +0.44** (od5c r7 42.1 / +1.09). Per type: math 46 / -2.8 (held in round 8), code
   45 / -0.0, IFEval 44 / +2.9, simple 45 / +1.6, several 44 / -0.5, no-fit 50 / +3.7.
+- ~09:30 CET GPU 1: the 30-min wait ended before hard batch 5 was pushed -> newtop r2r-nofit had nothing new, od3prep failed, slice 16 not built; od5c now runs rounds 13-15 (15 slices). Batch 5a (117 kept) appended; batch 5b generating; queued after od5c: newtop r2s-nofit, od3prep slice 16, od5c round 16 (min 16), then the second full test.
