@@ -6680,3 +6680,12 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   up to 12 rounds, stop at monitor >= 53 / >= -0.3 or convergence. Expected full test 52.3-53.5 / -0.6 to -0.1.
   WAITING for the user's go before building od5d.
 - od5c-best (round 9 model) Dev-512: 48.9% / +1.97 (Dev-SVAMP running).
+- ~02:55 CET (user: "yes to both, queue it after"): **od5d built and queued on GPU 2** after the od5c full test there.
+  repair_pairs --od5-v3 (= v2 + health measured before the pairs; A: neutral / recovery capped at 20%, free slots -> shorten on
+  healthy types; B: healthy types shorten-eligible within 1 answer in 8; C: healthy IFEval length-rule questions shorten if
+  the response is no shorter and total tokens drop). Deviation from consult24: on caution types (-2 < slice acc < 0) the v2
+  eligibility is kept as is (Argon's "8/8 cliff" fix referred to v1; v2 already shortens at 7/8). track: --rp-plain-precision
+  (bf16, no --bida-precision; user), --od-stop-from 9. Queue: quotas 52/46/58/30/26/28 (r1 76/54/88/40/30/32), tool caps
+  48/51/58, 12 rounds, stop >= 53 / >= -0.3 or convergence (>= 51, < +0.4) from round 9; fullpick od5d (2 full tests), lossan.
+  Tests on stored answers (od4-r1 on slice 2): v2 output byte-identical to before (od5c unaffected); v3 with math + code held:
+  240 pairs, 144 shorten (v2 218 / 90); IFEval shorten candidates 35 -> 55.
