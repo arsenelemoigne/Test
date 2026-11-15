@@ -6717,3 +6717,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   --fp-tag=-b (second full test: best round not yet tested) -> lossan od5c.
 - consult25 (Argon, cap $4, 60 turns) launched: from r2s2-s80 to > 52% at better than -1 (pack: steps 1-3, full tests,
   loss analyses r2s2 + r2s3, code incl. the Haiku generators).
+- ~04:50 CET Haiku several-tool batch: 120 calls -> 1,173 items, 1,168 pass the builder checks (2 functions 884, 3 functions 282, 4 functions 2; the right function is first in 95% before the builder's shuffle) -> tools_multiple_haiku.jsonl (~1.1M output tokens). plan_line_b refill lines pushed.
