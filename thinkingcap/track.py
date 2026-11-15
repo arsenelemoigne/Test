@@ -4601,6 +4601,14 @@ def ptrepair(args):
                    "--chunk", 300, "--max-questions", len(qm), "--seed", 60 + i_m)
                 drive_sync("save")
             rolls.append(roll_m / "rollouts.jsonl")
+        for i_m, mf in enumerate([x for x in re.split(r"[,+]", getattr(args, "rp_more_files", "")) if x]
+                                 if reuse and not smoke else [], 1):
+            # (15 Nov, consult25) with --rp-rollouts-from, the stored answers of that run's extra files are reused too
+            src_m = BON / f"rp-{reuse}-m{i_m}"
+            drive_sync("restore", only=[str(src_m)])
+            assert (src_m / "rollouts.jsonl").exists(), f"{src_m} is not on Drive"
+            rolls.append(src_m / "rollouts.jsonl")
+            print(f"repair {name}: + stored answers {src_m} (extra file {mf})", flush=True)
         for spec in [x for x in getattr(args, "rp_extra_top", "").split(",") if x] if reuse else []:
             # (12 Nov, user) the original's answers on chosen NEW questions (newtop set, ids picked by r2prep)
             top, ids_f = spec.split("=")

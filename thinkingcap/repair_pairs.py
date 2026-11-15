@@ -126,7 +126,7 @@ def main():
     ap.add_argument("--floor-by-part", default="", help="(13 Nov) PART=ABS:RATIO,...: chosen answers think >= max(ABS, RATIO x "
                     "the ORIGINAL's median right thinking on that question (--base-think), else the group's)")
     ap.add_argument("--base-think", default="", help="(13 Nov) JSON {question id: the original's median right thinking tokens}")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5", "r2s3"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5", "r2s3", "r2s3b"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -427,6 +427,8 @@ def main():
                 loop_chosen = [r for r in rights if not loops8(r)]
             if loop_chosen and runaway:
                 cand[part]["loop"].append((qid, loop_chosen[0], runaway[0]))
+            if args.mix_preset == "r2s3b" and args.loop_finished:  # (15 Nov, consult25) no pair of any kind chooses a loop
+                rights = [r for r in rights if not loops8(r)] or rights
             if (len(all_rights) >= 2 and len(all_rights) / len(q) >= args.shorten_min_right and not no_shorten and rights
                     and rights[0] is not all_rights[-1]):
                 long, short = all_rights[-1], rights[0]
@@ -489,15 +491,24 @@ def main():
                         # right, with no "be shorter" signal: the shortest right answer over a long wrong one taught math to
                         # skip its re-check); among equally close pairs, a right answer that re-reads the question
                         best = None
+                        b3 = args.mix_preset == "r2s3b"  # (15 Nov, consult25) never length-match an early-stop wrong answer
                         for r in rights:
                             for w in wrongs:
                                 ratio = thinking_len(r) / max(1, thinking_len(w))
                                 lo_, hi_, ce_ = (float(x) for x in re.split(r"[,+]", args.right_hold_band))
-                                if lo_ <= ratio <= hi_:
+                                if lo_ <= ratio <= hi_ and (not b3 or thinking_len(w) >= 0.65 * tmed):
                                     key = ((0 if broken(w, base_part) else 1) if args.right_hold_format else 0,
                                            round(abs(ratio - ce_), 2), 0 if decode and REREAD.search(decode(r)) else 1)
                                     if best is None or key < best[0]:
                                         best = (key, r, w)
+                        if best is None and b3 and args.right_hold_format:  # a broken-format wrong answer, any length
+                            for w in (w for w in wrongs if broken(w, base_part)):
+                                for r in rights:
+                                    if 0.80 * tmed <= thinking_len(r) <= 1.15 * tmed:
+                                        key = (round(abs(thinking_len(r) / max(1, tmed) - 1.0), 2),
+                                               0 if decode and REREAD.search(decode(r)) else 1)
+                                        if best is None or key < best[0]:
+                                            best = (key, r, w)
                         if best:
                             cand[part]["right_cr"].append((qid, best[1], best[2]))
                     elif pool_r:
@@ -505,7 +516,18 @@ def main():
                         cand[part]["right_cr"].append((qid, (checked or pool_r)[0], wrongs[0]))
                     # the capped "don't stop too early" guard (non-counting questions only: counting-rule questions belong
                     # to IFEval's counting half; consult8)
-                    if base_part in guard_wide:  # (rpM) the 0.5-1.0x band: a calculation that skipped its re-check
+                    bt3 = float(base_think.get(str(qid)) or 0) if args.mix_preset == "r2s3b" else 0.0
+                    if base_part in guard_wide and args.mix_preset == "r2s3b":
+                        # (15 Nov, consult25) "too short" is measured against the ORIGINAL's right thinking too: rejected = a
+                        # wrong answer under 0.85x max(own median, 0.70x the original's), a broken one first, else nearest
+                        # 0.70x; chosen = a right answer just longer than it, at most min(1.30x own median, 0.90x original's)
+                        ref_t = max(tmed, 0.70 * bt3) if bt3 else tmed
+                        early = sorted((w for w in wrongs if thinking_len(w) < args.guard_wide_max * ref_t),
+                                       key=lambda w: (1 if broken(w, base_part) else 0, -abs(thinking_len(w) - 0.70 * ref_t)))
+                        hi3 = min(1.30 * tmed, 0.90 * bt3) if bt3 else 1.30 * tmed
+                        capped = sorted((r for r in rights if early and max(0.95 * tmed, 1.08 * thinking_len(early[-1]) + 10)
+                                         <= thinking_len(r) <= hi3), key=thinking_len)
+                    elif base_part in guard_wide:  # (rpM) the 0.5-1.0x band: a calculation that skipped its re-check
                         capped = sorted((r for r in rights if 0.95 * tmed <= thinking_len(r) <= 1.25 * tmed), key=thinking_len)
                         # the rejected answer: the wrong one nearest 0.75x the median right thinking (a clear, bounded gap),
                         # listed last so that the line below takes it
@@ -697,6 +719,17 @@ def main():
                             {"shorten": 0.0, "right": 0.75, "guard": 0.25, "loop": 0.0} if part == "bfcl_simple_python" else
                             {"shorten": 0.0, "right": 0.8333, "guard": 0.0, "loop": 0.1667} if part == "ifeval" else
                             {"shorten": 0.0, "right": 1.0, "guard": 0.0, "loop": 0.0})
+                count_share = 0.25
+            if args.mix_preset == "r2s3b":
+                # (15 Nov, consult25, user: go) from r2s2-s80: math / code / simple / several = pure repair (length-held
+                # be-right that never matches an early stop, guards anchored to the original's thinking, loops); IFEval
+                # 25% counting pairs + 60 / 25 / 15 shorten / compact / loops; no-fit 62.5 shorten / 37.5 compact
+                sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.40, "loop": 0.10} if base_part == "svamp" else
+                            {"shorten": 0.0, "right": 0.55, "guard": 0.25, "loop": 0.20} if part == "mbpp" else
+                            {"shorten": 0.0, "right": 0.60, "guard": 0.40, "loop": 0.0} if part == "bfcl_simple_python" else
+                            {"shorten": 0.0, "right": 0.75, "guard": 0.25, "loop": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+                            {"shorten": 0.625, "right": 0.375, "guard": 0.0, "loop": 0.0})
                 count_share = 0.25
             if args.mix_preset == "od3_arena":
                 # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
