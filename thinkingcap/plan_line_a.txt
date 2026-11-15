@@ -702,11 +702,11 @@
 # (moved below) lossan --la-models fullpick:od5d --la-tag od5d
 # (15 Nov 11:20) od5c's SECOND full test moved here from GPU 1 (GPU 2 is free after od5d's tests; GPU 1 runs r2s3b):
 # the best od5c round not yet full-tested (likely round 15: monitor 52.9 / +2.41), then the loss analysis of both
-fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag=-b
-lossan --la-tag od5c --la-models fullpick:od5c
+# (DONE before the 15 Nov 16:25 disconnect) fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag=-b
+# (DONE before the 15 Nov 16:25 disconnect) lossan --la-tag od5c --la-models fullpick:od5c
 # (15 Nov 13:15, user: 'Yes swap it') od5d's remaining full test (round 10; best = r11 already done: 49.5 / -1.2) after od5c's
-fullpick --fp-run od5d --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5
-lossan --la-models fullpick:od5d --la-tag od5d
+# (DONE before the 15 Nov 16:25 disconnect) fullpick --fp-run od5d --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5
+# (DONE before the 15 Nov 16:25 disconnect) lossan --la-models fullpick:od5d --la-tag od5d
 # (15 Nov 16:00, user) (1) full test of od5c's round 15 (monitor 52.9 / +2.41): is the late zone stable, or was round 16 lucky?
 fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag=-c
 lossan --la-tag od5c3 --la-models fullpick:od5c
