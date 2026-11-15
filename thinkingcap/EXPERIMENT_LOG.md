@@ -6776,3 +6776,12 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~09:05 CET **od5d r7 (slice 8): 45.4% / +0.44** (od5c r7 42.1 / +1.09). Per type: math 46 / -2.8 (held in round 8), code
   45 / -0.0, IFEval 44 / +2.9, simple 45 / +1.6, several 44 / -0.5, no-fit 50 / +3.7.
 - ~09:30 CET GPU 1: the 30-min wait ended before hard batch 5 was pushed -> newtop r2r-nofit had nothing new, od3prep failed, slice 16 not built; od5c now runs rounds 13-15 (15 slices). Batch 5a (117 kept) appended; batch 5b generating; queued after od5c: newtop r2s-nofit, od3prep slice 16, od5c round 16 (min 16), then the second full test.
+- ~09:50 CET (user: "Yes: r2s3b") **r2s3b built and queued on GPU 1** right after od5c's rounds 13-15 (then slice 16 + od5c
+  round 16 + its second full test). Code: repair_pairs preset r2s3b (math 50/40/10 be-right / guard / loop, code 55/25/20,
+  simple 60/40, several 75/25, IFEval 25% counting + 60/25/15 shorten / compact / loop, no-fit 62.5/37.5 shorten / compact);
+  with --loop-finished no chosen answer of any kind loops; right-hold never matches a wrong answer under 0.65x the own
+  median and falls back to broken-format wrongs; guards: rejected < 0.85x max(own median, 0.70x the original's right
+  thinking), chosen just longer, capped at min(1.30x own median, 0.90x original's). track ptrepair: --rp-rollouts-from also
+  reuses that run's --rp-more-files answers (rp-r2s3-m1, -m2). r2s3 preset re-checked byte-identical on stored answers.
+  Queue: ptrepair r2s3b (800 pairs, 50 steps, plain bf16, lr 8e-6, Dev 20/30/40/50; trains only with all 800) -> fullpick
+  r2s3b (gate corrected 1.3 / 3.5) -> lossan r2s3b.
