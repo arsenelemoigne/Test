@@ -6752,3 +6752,10 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~06:45 CET **od5d r3 (slice 4): 39.2% / +0.27** (od5c r3 44.2 / -0.82): curve +1.44 above (od5c r3 +1.06). Per type:
   math 49 / -0.2, code 44 / -0.7, IFEval 30 / -1.0, simple 32 / +1.5, several 31 / +3.9, no-fit 36 / +4.8. No free slots yet.
 - ~07:00 CET hard no-fit batch 2: 8,810 items -> 132 kept (8,010 UNSURE) -> nofit_haiku3.jsonl = 247 hard no-fit questions, pushed before GPU 1's wait ends (newtop r2o-nofit next).
+- ~07:25 CET GPU 1: newtop r2o-nofit (247 hard Haiku no-fit -> 183 after the checks, x8) -> **slice 13 built** (no-fit 85% vs 83%,
+  bins borrowed); **slice 14 failed on no-fit (91% vs 83%)**. od5c round 13 running. 2 more hard batches (1,800 calls)
+  generating -> queued: hold 40, newtop r2p-nofit (haiku_nofit4), od3prep slices 14-16, od5c continues (min 14), then the
+  second full test.
+- ~07:25 CET **od5d r4 (slice 5): 43.3% / -0.13** (od5c r4 49.6 / -1.19); curve at 43.3 = -1.74 -> +1.61 above (od5c r4 +1.63).
+  Per type: math 50 / -2.7, code 47 / +0.7, IFEval 37 / +0.6, simple 36 / +0.6, several 37 / +4.0, no-fit 45 / -1.3. v3 moved
+  free slots: IFEval +8, code +6, simple +4.
