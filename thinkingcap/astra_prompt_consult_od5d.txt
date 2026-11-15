@@ -1,0 +1,17 @@
+TASK. od5c (your consult23 od5 v2, run from the original Qwen) holds accuracy well (round 5: 47.0% saved / +0.39, +2.7 above our curve, the best of all online runs) but its saving has PLATEAUED at ~47% for three rounds. Review our diagnosis and our od5d proposal (a NEW run from the original; od5c continues unchanged as the reference) so that od5d reaches the objective on the full test: > 50% tokens saved at better than -1 accuracy.
+
+Read {DATA}/NEW_RESULTS_od5c.md FIRST (settings, the round-by-round monitor per type next to od4, pairs per kind / type / round with candidate counts, empty slots, our reading, the od5d rules A, B, C). Your consult23 report is {DATA}/YOUR_CONSULT23_REPORT.md. Code: {DATA}/code (repair_pairs.py: the od5 / --od5-v2 path builds the pairs, its allocation is in the "if args.kinds == 'mix' and od5" block; track.py: odpo_fixed = the round loop, the brake, od3_monitor = the headline; plan_line_b.txt = the queue). Loss analyses in {DATA}/loss_analysis/. Use code to check any number you rely on.
+
+Answer, in order:
+1. Is our diagnosis right (held types leave slots empty; IFEval is candidate-limited; the tool types are quota-limited; the official 4-benchmark weighting makes IFEval and the tools as important as math and code)? Anything else limiting the saving?
+2. Rules A, B, C: keep, change or drop each, with exact thresholds. The user asks specifically: should rule B (shorten-eligible within one answer in 8 of the original) apply to ALL types, or only to types whose slice accuracy is at / above the original's? Also: should the brake threshold (-2.0), the caps or the quotas change; lr and steps per round.
+3. Describe the exact code changes in words (file, function, what changes) and give the od5d queue line(s) as plain text, plus how many rounds and when to stop.
+4. Expected trajectory per round, expected full-test landing, and the main risks (od4's monitor over-read its full test: round 7 -0.14 on its slice vs -2.0 on the full test).
+
+Rules (user): start from the original; LoRA rank 16; constant learning rates; the model's own answers only; test-matched slices; general rules measured per question / per type (not type names); no competitor recipe, no michal-bida data. Rounds stay small (15 steps / 240 pairs) unless you show a strong reason; up to 16 rounds.
+
+Be concise: up to ~2,000 words, WITHOUT a code block (plan lines as plain text are fine).
+
+NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go. You have 60 TURNS IN TOTAL: check the data in at most ~40, write the final answer by turn ~55; at turn 60 the final answer is requested automatically.
+
+HOW TO RUN CODE. There are no tools or function calls here. To run Python, write ONE markdown block that starts with ```python in your reply (plain text); I run it on a CPU machine (numpy, pandas, scipy; no internet, no GPU) and paste the output back, cut at 10,000 characters. You can do this up to {CODE_RUNS} times.

@@ -6628,3 +6628,8 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   Reading: overall saving ~= question-share average of the types (r5 check 47.2 vs 47.0). Held types' quotas are not
   redistributed; IFEval shortening is candidate-limited, tools quota-limited -> saving plateau ~47. Idea for a next run
   (od5d, not applied to od5c): a held type's budget goes to shortening on types at/above the original's accuracy.
+- ~01:35 CET 15 Nov (user: "ok ask argon"): consult24 (Gemini 4 Argon, cap $4, 60 turns) launched: od5c plateau diagnosis
+  + od5d rules A (held type's empty slots -> shorten pairs on healthy types), B (healthy types: shorten-eligible within one
+  answer in 8 of the original; user asks: all types?), C (healthy IFEval: counting questions shortened if the response is
+  not shorter). Pack reviews/consult24_od5d/pack (NEW_RESULTS_od5c.md, od5c_pairs_table.md). od5c pairs trained per round:
+  r4 238, r5 204, r6 224, r7 213 (held types leave slots empty).
