@@ -6846,3 +6846,9 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
   training losses, Dev / full tests and their biases, where every artifact lives on Drive, how to rerun). Raw round logs
   (rounds 12-16) reviews/od5c/raw_gpu1_log_rounds3to16.txt, per-type pairs r3-r7 reviews/od5c/pairs_r3_r7_per_type.md,
   loss analysis reviews/od5c/loss_analysis_od5c.txt.
+- ~16:00 CET (user: "change only the seed and else yes queue it"): queued on GPU 2 after od5d's test + lossan: (1) full
+  test of od5c-r15 (fullpick --fp-skip-tested --fp-tag=-c; r10 and r16 are tested) + lossan od5c3; (2) **od5r** = exact
+  replication of od5c (same recipe, same 16 slices, same --bida-precision), ONLY the seeds changed: --rp-dpo-seed 0 -> 1
+  (pair sampling, adapter init, batch order) and the answer sampling seed 53 -> 54 (new track flag --rp-gen-seed, default 53
+  = unchanged for every other run); then fullpick od5r (2 full tests) + lossan od5r. consult26 waits for od5c-r15's full
+  test too. Note: the runtimes' 24 h limit (~21:50) will interrupt od5r after ~5 rounds; it resumes after a reconnect.
