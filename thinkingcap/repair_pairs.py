@@ -123,10 +123,15 @@ def main():
     ap.add_argument("--mix-shares", default="shorten=0.25,right=0.60,guard=0.15",
                     help="--kinds mix (11 Nov, consult6 path 1): shares of shorten / equal-length right / capped guard per part")
     ap.add_argument("--no-shorten-parts", default="", help="(13 Nov, od4) parts that get NO shorten pairs this round (held)")
+    ap.add_argument("--shorten-min-by-part", default="", help="(15 Nov, consult27 r2one) PART=RATE,...: per-type --shorten-min-right "
+                    "(the share of right answers a question needs for a 'think less' pair); other parts keep --shorten-min-right")
+    ap.add_argument("--shorten-ratio-by-part", default="", help="(15 Nov, r2one) PART=RATIO,...: per-type --shorten-ratio")
+    ap.add_argument("--shorten-skip-shortest", action="store_true", help="(15 Nov, r2one) with >= 4 right answers above the "
+                    "floor, a 'think less' pair never chooses the single shortest one (an outlier): the next shortest instead")
     ap.add_argument("--floor-by-part", default="", help="(13 Nov) PART=ABS:RATIO,...: chosen answers think >= max(ABS, RATIO x "
                     "the ORIGINAL's median right thinking on that question (--base-think), else the group's)")
     ap.add_argument("--base-think", default="", help="(13 Nov) JSON {question id: the original's median right thinking tokens}")
-    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5", "r2s3", "r2s3b"),
+    ap.add_argument("--mix-preset", default="", choices=("", "round1", "typed", "typed2", "round1b", "typed3", "round1c", "hold", "r2s1", "r2s2", "od3_arena", "r2s2a", "od5", "r2s3", "r2s3b", "r2one"),
                     help="--kinds mix: per-type shares instead of --mix-shares (shorten / right / guard). round1 (path 1, from "
                          "the original): math + no-fit 60/40/0, code + one / several functions 70/30/0, IFEval's non-counting "
                          "half 50/50/0. typed (11 Nov, the IFEval + tool-call repair): math + code 0/80/20 (hold: no "
@@ -251,6 +256,9 @@ def main():
         a_, r_ = val.split(":")
         floors[part_f] = (float(a_), float(r_))
     base_think = json.loads(Path(args.base_think).read_text()) if args.base_think else {}
+    sh_min_part = {k: float(v) for k, v in (x.split("=") for x in re.split(r"[,+]", args.shorten_min_by_part) if x)}
+    sh_ratio_part = {k: float(v) for k, v in (x.split("=") for x in re.split(r"[,+]", args.shorten_ratio_by_part) if x)}
+    r2one = args.mix_preset == "r2one"
     floor_drop = Counter()
     cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
                                 "right_cr": [], "capguard": [], "right_count": [], "loop": [],
@@ -427,24 +435,27 @@ def main():
                 loop_chosen = [r for r in rights if not loops8(r)]
             if loop_chosen and runaway:
                 cand[part]["loop"].append((qid, loop_chosen[0], runaway[0]))
-            if args.mix_preset == "r2s3b" and args.loop_finished:  # (15 Nov, consult25) no pair of any kind chooses a loop
+            if args.mix_preset in ("r2s3b", "r2one") and args.loop_finished:  # (15 Nov, consult25 / 27) no pair chooses a loop
                 rights = [r for r in rights if not loops8(r)] or rights
-            if (len(all_rights) >= 2 and len(all_rights) / len(q) >= args.shorten_min_right and not no_shorten and rights
-                    and rights[0] is not all_rights[-1]):
-                long, short = all_rights[-1], rights[0]
+            sh_min = sh_min_part.get(base_part, args.shorten_min_right)
+            sh_ratio = sh_ratio_part.get(base_part, args.shorten_ratio)
+            rights_s = rights[1:] if args.shorten_skip_shortest and len(rights) >= 4 else rights  # (r2one) not the outlier
+            if (len(all_rights) >= 2 and len(all_rights) / len(q) >= sh_min and not no_shorten and rights_s
+                    and rights_s[0] is not all_rights[-1]):
+                long, short = all_rights[-1], rights_s[0]
                 if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
                     # (11 Nov, rpL) thinking shorter, response neither clipped nor longer: at least --resp-median x the
                     # question's median right response, at most --resp-max x the rejected answer's response
                     rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
-                    ok = [r for r in rights if r is not long and response_len(r) >= args.resp_median * rmed
+                    ok = [r for r in rights_s if r is not long and response_len(r) >= args.resp_median * rmed
                           and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
                           and response_len(r) >= args.resp_near_long * response_len(long)]
                     short = ok[0] if ok else long
                 elif part in think_only and args.resp_guard > 0:  # (11 Nov) never prefer a notably shorter RESPONSE
-                    short = next(r for r in rights if response_len(r) >= args.resp_guard * response_len(long))
+                    short = next(r for r in rights_s if response_len(r) >= args.resp_guard * response_len(long))
                 if short is not long:
                     spread = size(long) / max(1, size(short))
-                    if spread >= args.shorten_ratio:
+                    if spread >= sh_ratio:
                         cand[part]["shorten"].append((qid, short, long))
                     elif spread >= 1.20:  # (11 Nov, consult6 2nd review) backup supply if clear shorten pairs run short
                         cand[part]["shorten_soft"].append((qid, short, long))
@@ -491,7 +502,7 @@ def main():
                         # right, with no "be shorter" signal: the shortest right answer over a long wrong one taught math to
                         # skip its re-check); among equally close pairs, a right answer that re-reads the question
                         best = None
-                        b3 = args.mix_preset == "r2s3b"  # (15 Nov, consult25) never length-match an early-stop wrong answer
+                        b3 = args.mix_preset in ("r2s3b", "r2one")  # (15 Nov, consult25 / 27) never length-match an early stop
                         for r in rights:
                             for w in wrongs:
                                 ratio = thinking_len(r) / max(1, thinking_len(w))
@@ -517,7 +528,21 @@ def main():
                     # the capped "don't stop too early" guard (non-counting questions only: counting-rule questions belong
                     # to IFEval's counting half; consult8)
                     bt3 = float(base_think.get(str(qid)) or 0) if args.mix_preset == "r2s3b" else 0.0
-                    if base_part in guard_wide and args.mix_preset == "r2s3b":
+                    if base_part in guard_wide and r2one:
+                        # (15 Nov, consult27) from the ORIGINAL's own answers: rejected = a finished wrong answer that stopped
+                        # thinking early (< --guard-wide-max x the question's median right thinking), the longest such one
+                        # that has a partner; chosen = the shortest clean right answer just longer than it and at most
+                        # min(1.05 x median, 1.35 x the wrong one + 35): "don't stop that early", never "think more than usual"
+                        early, capped = [], []
+                        for w_g in sorted((w for w in wrongs if thinking_len(w) < args.guard_wide_max * tmed),
+                                          key=thinking_len, reverse=True):
+                            tw_g = thinking_len(w_g)
+                            ok_g = sorted((r for r in rights if tw_g < thinking_len(r) <= min(1.05 * tmed, 1.35 * tw_g + 35)),
+                                          key=thinking_len)
+                            if ok_g:
+                                early, capped = [w_g], ok_g
+                                break
+                    elif base_part in guard_wide and args.mix_preset == "r2s3b":
                         # (15 Nov, consult25) "too short" is measured against the ORIGINAL's right thinking too: rejected = a
                         # wrong answer under 0.85x max(own median, 0.70x the original's), a broken one first, else nearest
                         # 0.70x; chosen = a right answer just longer than it, at most min(1.30x own median, 0.90x original's)
@@ -731,6 +756,17 @@ def main():
                             {"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
                             {"shorten": 0.625, "right": 0.375, "guard": 0.0, "loop": 0.0})
                 count_share = 0.25
+            if args.mix_preset == "r2one":
+                # (15 Nov, consult27: Path 1's three steps as ONE offline step from the original) math 45 shorter / 35
+                # length-held be-right / 12 bounded early-stop guards / 8 loops; code 58 / 22 / 8 / 12; IFEval 20% at-least
+                # counting pairs + 62.5 / 22.5 / 0 / 15 of the rest; one function 45 / 43 / 12; several 55 / 35 / 10; no fit 65 / 35
+                sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.12, "loop": 0.08} if base_part == "svamp" else
+                            {"shorten": 0.58, "right": 0.22, "guard": 0.08, "loop": 0.12} if part == "mbpp" else
+                            {"shorten": 0.625, "right": 0.225, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+                            {"shorten": 0.45, "right": 0.43, "guard": 0.12, "loop": 0.0} if part == "bfcl_simple_python" else
+                            {"shorten": 0.55, "right": 0.35, "guard": 0.10, "loop": 0.0} if part == "bfcl_multiple" else
+                            {"shorten": 0.65, "right": 0.35, "guard": 0.0, "loop": 0.0})
+                count_share = 0.20
             if args.mix_preset == "od3_arena":
                 # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
                 # guards (shortening and protection are not mixed in one step); math 75 / 20 / 5 loops, code 75 / 17.5 / 7.5,

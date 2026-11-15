@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -305,6 +305,10 @@ def main():
                         help="r2prep: step 2 questions per part (consult16 recipe 2)")
     parser.add_argument("--r2-need3", default="svamp=650,mbpp=400,ifeval=565,bfcl_simple_python=200,bfcl_multiple=160,bfcl_irrelevance=220",
                         help="r2prep: step 3 questions per part")
+    parser.add_argument("--one-need", default="", help="oneprep (15 Nov, consult27 r2one): PART=N,... questions per type in "
+                        "ONE test-matched set (fewer if the native difficulty bins run short: no bin is ever borrowed)")
+    parser.add_argument("--one-tol", default="bfcl_irrelevance=5", help="oneprep: PART=PTS solve-rate tolerance vs the test "
+                        "(default 3 pts)")
     parser.add_argument("--r2-tops", default="r2a-math,r2a-code,r2a-ifeval,r2a-tools,r2a-nofit",
                         help="r2prep: newtop sets (runs/bon/tooltop-NAME) added to the held-back questions")
     parser.add_argument("--pk-run", default="r2s1b", help="r2pick: the ptrepair run whose checkpoints were scored on Dev")
@@ -4149,6 +4153,102 @@ def od3prep(args):
     drive_sync("save")
 
 
+def oneprep(args):
+    """(15 Nov, user: "Start coding r2one so it's ready"; consult27) ONE test-matched question set for a single offline DPO
+    step from the original: candidates = the original's stored answers (the pool's x10 answers, P1_ANSWERS, and the newtop
+    sets --r2-tops, x8), minus Dev-512 / Dev-SVAMP questions and their near-duplicates and --r2-drop (michal-bida's data),
+    exactly as od3prep. Per type, up to --one-need questions whose ORIGINAL solve-rate bins follow the FULL TEST's shares
+    (test_difficulty.json); the set is cut to what the scarcest NATIVE bin allows, so no bin borrows from another and the
+    solve rate stays within --one-tol of the test's (3 pts default). Questions used by other runs (od5c's slices, Path 1) may
+    be used again: this is an independent run from the original. Writes data/<name>-questions.jsonl,
+    runs/bon/rp-<name>-src/rollouts.jsonl (the original's answers to them: no generation; ptrepair --rp-rollouts-from
+    <name>-src) and runs/bon/oneprep-<name>.txt."""
+    import statistics
+    from build_pool import ngrams, part_of, words
+    from test_difficulty_data import TEST_DIFFICULTY as test
+    name = args.name
+    qf, src = Path(f"data/{name}-questions.jsonl"), BON / f"rp-{name}-src"
+    rep_f = BON / f"oneprep-{name}.txt"
+    drive_sync("restore", only=[str(qf), str(src), str(rep_f)])
+    if qf.exists() and (src / "rollouts.jsonl").exists() and rep_f.exists():
+        print(rep_f.read_text(), flush=True)
+        return
+    need = {k: int(v) for k, v in (x.split("=") for x in args.one_need.split(",") if x)}
+    tol = {k: float(v) for k, v in (x.split("=") for x in args.one_tol.split(",") if x)}
+    drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
+    tops = [x for x in args.r2_tops.split(",") if x]
+    extras = ("nofit1", "tools1", "code1", "nofit2", "nofit4", "math1", "math2")
+    pool_f = Path("data/pool-dp13.jsonl")
+    drive_sync("restore", only=[str(BON / P1_ANSWERS), str(pool_f),
+                                *[str(BON / f"tooltop-{x}") for x in extras + tuple(tops)]])
+    rows = {}
+    for f in [pool_f, *[BON / f"tooltop-{x}" / "questions.jsonl" for x in extras + tuple(tops)]]:
+        for l in (f.read_text().splitlines() if f.exists() else []):
+            if l.strip():
+                q = json.loads(l)
+                rows[q.get("pool_id", q.get("id"))] = q
+    answers = defaultdict(list)
+    for f in [BON / P1_ANSWERS, *[BON / f"tooltop-{t}" / "rollouts.jsonl" for t in tops]]:
+        if not f.exists():
+            print(f"oneprep: {f} MISSING", flush=True)
+            continue
+        for l in open(f):
+            if l.strip():
+                r = json.loads(l)
+                answers[r["id"]].append(r)
+    dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
+    cands, stat, drop = defaultdict(list), {}, Counter()
+    for qid, a in answers.items():
+        row = rows.get(qid)
+        if row is None:
+            drop["no question row"] += 1
+            continue
+        part = part_of(row)
+        if part not in need:
+            continue
+        if qid in dev or r2_drop_match(row | {"id": qid}, drops):
+            drop["Dev / michal-bida data"] += 1
+            continue
+        g = ngrams(words(row.get("prompt") or ""))
+        if g and len(g & dev_g) * 10 >= 3 * len(g):
+            drop["near-duplicate of a Dev question"] += 1
+            continue
+        stat[qid] = statistics.fmean(bool(r["correct"]) for r in a)
+        cands[part].append((qid, stat[qid], "held"))
+    lines = [f"oneprep {name}: candidates {dict((p, len(v)) for p, v in cands.items())}; dropped {dict(drop)}"]
+    total = {}
+    for p, n in need.items():  # what the scarcest native bin allows (no borrowing)
+        have = Counter(r2_bin(rate) for _, rate, _ in cands[p])
+        sh = test[p]["bins"]
+        cap = min(int(have[b] / sh[str(b)]) for b in range(len(R2_BINS)) if sh[str(b)] > 0)
+        total[p] = min(n, cap)
+        if total[p] < n:
+            lines.append(f"  {p}: {n} asked, the native bins allow {cap} -> {total[p]}")
+    sel = r2_select(cands, {p: test[p]["bins"] for p in need}, total, {p: 0 for p in need}, seed=args.data_seed)
+    ids, ok = [], True
+    for p in need:
+        got = sel[p]["step2"]
+        sr = 100 * statistics.fmean(stat[q] for q in got) if got else 0.0
+        off = abs(sr - 100 * test[p]["solve"]) > tol.get(p, 3.0)
+        ok &= not off
+        lines.append(f"  {p}: {len(got)} questions, solve {sr:.1f}% (test {100 * test[p]['solve']:.1f}%)"
+                     f"{' OFF-DIFFICULTY' if off else ''}{'' if sel[p]['got'] == sel[p]['quota'] else ' (bins borrowed)'}")
+        ids += got
+    assert ok, "oneprep: a type is off the test's difficulty: nothing written\n" + "\n".join(lines)
+    qf.write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n" for q in ids))
+    src.mkdir(parents=True, exist_ok=True)
+    n_ans = 0
+    with open(src / "rollouts.jsonl", "w") as f:
+        for q in ids:
+            for r in answers[q]:
+                f.write(json.dumps(r) + "\n")
+                n_ans += 1
+    lines.append(f"  total {len(ids)} questions, {n_ans} stored answers of the original -> {src}/rollouts.jsonl")
+    rep_f.write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
+    drive_sync("save")
+
+
 def od3_monitor(rollouts, stats):
     """The free round monitor: a round's answers vs the ORIGINAL's on the same questions (macro over math / code / IFEval /
     tool calls, the tool parts weighted 400 / 200 / 240 as in the test). Returns (saved %, accuracy change pts, per part)."""
@@ -7378,7 +7478,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
