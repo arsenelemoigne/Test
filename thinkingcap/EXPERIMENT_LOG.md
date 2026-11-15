@@ -6829,3 +6829,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~13:45 CET r2s3b-s30 Dev-SVAMP 48.6 / -0.31 (s20 51.5 / 0.00). Step 40 Dev running. GPU 2 od5c-best full test 1,792 / 22,072.
 - ~13:50 CET (user): Argon consult26 (online DPO only: one online run to > 52% at better than -1 on the full test) launches ONLY when all online evaluations are done: od5c-r16 full test, lossan od5c, od5d-r10 full test, lossan od5d (~17:30); 120 turns, $3.
 - ~13:55 CET (user): Argon consult27 OFFLINE launches when r2s3b's 2 full tests + lossan are in: ONE offline DPO run from the original (any number of steps) to > 52% at better than -1, with ALL offline DPO data (Path 1 + r2s3b, rpE/K/L/M, clean line A), reports and logs; 120 turns, $3.
+- ~14:15 CET r2s3b-s40 Dev-512 51.9 / +2.39, Dev-SVAMP 45.2 / +0.12 (saving falling with steps: s20 53.7, s30 53.4, s40 51.9). Step 50 next. GPU 2 od5c-r16 full test 15,872 / 22,072 (~30 min).
