@@ -6747,3 +6747,7 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   calls generating -> then newtop + od3prep slices 13-16 + od5c continues before its second full test.
 - ~06:05 CET od5d r2 (slice 3): 34.6% / -1.18 (od5c r2 36.9 / -1.28). Per type: math 43 / -1.8, code 35 / -1.9, IFEval 28 / -0.6, simple 27 / -0.4, several 39 / -3.1, no-fit 36 / +1.8. GPU 1: od5c round 12's model answering slice 13? (no: round 12 answers slice 12 = model r11 monitored).
 - ~06:30 CET od5c r11 (slice 12): 46.8% / +1.30 (math 50 / -1.4, code 53 / -1.4, IFEval 37 / +2.6, simple 47 / +4.8, several 47 / +3.0, no-fit 48 / +8.2). Round 12 trained; Dev of round 12's model running. Hard no-fit batch 1: 6,869 items -> 115 kept on NO + NO (6,268 UNSURE); batch 2 (900 calls) generating. Queued before the second od5c full test: hold 20 min, newtop r2o-nofit (haiku_nofit3), od3prep slices 13-16, od5c continues (min 13 slices).
+- ~06:45 CET od5c-best (= round 12's model) Dev-512 48.2 / +2.79, Dev-SVAMP 44.6 / +1.81. GPU 1 in the 20-min wait before the
+  hard no-fit refill (Haiku batch 2 still generating).
+- ~06:45 CET **od5d r3 (slice 4): 39.2% / +0.27** (od5c r3 44.2 / -0.82): curve +1.44 above (od5c r3 +1.06). Per type:
+  math 49 / -0.2, code 44 / -0.7, IFEval 30 / -1.0, simple 32 / +1.5, several 31 / +3.9, no-fit 36 / +4.8. No free slots yet.
