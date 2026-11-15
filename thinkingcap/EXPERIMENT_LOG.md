@@ -6807,3 +6807,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   (-2.5 accuracy, +1.2 saving) it would read ~54 / -0.1 on the full test. Per type: math 56 / -0.8, code 58 / +1.3, IFEval
   47 / +5.0, simple 44 / +3.5, several 57 / -2.3, no-fit 58 / +10.2. Round 16 trained. od5c reached all 16 rounds.
 - od5d-best (= round 11's model) Dev-512 49.6 / +1.69 (Dev-SVAMP running), then fullpick od5d on GPU 2.
+- ~11:20 CET od5c reached round 16 (user rule met). od5c's second full test + lossan moved to GPU 2 after od5d's tests (GPU 1: r2s3b with the IFEval refill, its 2 full tests, lossan). Mac keep-awake renewed for 24 h.
