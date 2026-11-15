@@ -6862,3 +6862,4 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
   GPU 1 after r2s3b's tests, then od3prep --od3-more 8 (same strict tolerances), odpo od5c --od-rounds 24 (continues the same
   adapter from round 16), full tests of the 2 best new rounds.
 - ~16:50 CET (user: max $5 on Haiku): the 12-batch hard no-fit generation STOPPED after ~5 min (no file written). OpenRouter usage today $20.97 (Argon consult24 $1.96 + consult25 $1.59 + Haiku several-tool and hard no-fit batches 3-5 + the stopped run). No more Haiku spending; alternatives: no-fit built from our existing tool questions with the right function removed (free), math / code from MetaMath / KodCode via newtop (free, GPU only).
+- ~17:00 CET (user): Argon consults now on the user's personal Google AI Studio key (Keychain service google-ai-studio-key; --provider google --llm gemini-4-argon); tested OK. Haiku (OpenRouter) capped at $5 (user).
