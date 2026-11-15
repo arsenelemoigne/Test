@@ -511,6 +511,10 @@ def main():
     parser.add_argument("--fp-base", default="Qwen/Qwen3-0.6B", help="fullpick dpo (14 Nov): the model the run's adapter was "
                         "trained ON (r2s2: models/r2s1b-s180); the checkpoints are merged onto it")
     parser.add_argument("--fp-save-bias", type=float, default=2.5, help="fullpick: Dev over-reads saving by this (pts)")
+    parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
+    parser.add_argument("--fp-skip-tested", action="store_true", help="fullpick (15 Nov, user: one full test on each GPU): "
+                        "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
+    parser.add_argument("--fp-tag", default="", help="fullpick (15 Nov): suffix of data/<run>-fullpick<tag>.json (one per GPU)")
     parser.add_argument("--fp-acc-bias", type=float, default=2.3, help="fullpick: Dev over-reads accuracy by this (pts)")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
     parser.add_argument("--fm-merge", nargs="*", default=[], help="fullmodel (9 Nov): models/OUT=BASE:ADAPTER merges an "
@@ -3095,10 +3099,11 @@ def lossan(args):
     CPU only, a few minutes. Report: runs/bon/lossan-<tag>.txt (on Drive)."""
     names = []
     for x in [x for x in args.la_models.split(",") if x]:
-        if x.startswith("fullpick:"):  # (14 Nov) the models fullpick chose for RUN (data/RUN-fullpick.json)
-            f = Path(f"data/{x.split(':', 1)[1]}-fullpick.json")
-            drive_sync("restore", only=[str(f)])
-            names += [Path(c["model"]).name for c in json.loads(f.read_text())["picks"]]
+        if x.startswith("fullpick:"):  # (14 Nov) the models fullpick chose for RUN (data/RUN-fullpick*.json: every GPU's picks)
+            run_x = x.split(':', 1)[1]
+            drive_sync("restore", only=[f"data/{run_x}-fullpick*.json"])
+            for f in sorted(Path("data").glob(f"{run_x}-fullpick*.json")):
+                names += [n for n in (Path(c["model"]).name for c in json.loads(f.read_text())["picks"]) if n not in names]
         else:
             names.append(x)
     base = ROOT / "full-base"
@@ -4189,11 +4194,27 @@ def fullpick(args):
         inside = ps > 50 and pa > -1
         return (0, -ps) if inside else (1, max(0.0, 50.5 - ps) + 2 * max(0.0, -0.9 - pa))
     ranked = sorted(cands, key=dist)
-    picks = [ranked[0]]
-    other = next((c for c in cands if c["label"] == start), None)
+    tested = set()
+    if getattr(args, "fp_skip_tested", False):  # (15 Nov, user) a model full-tested elsewhere (the other GPU) is never re-picked
+        for c in cands:
+            out_c = ROOT / f"full-{Path(c['model']).name}"
+            drive_sync("restore", only=[str(out_c)])
+            if (out_c / "results.json").exists():
+                tested.add(c["label"])
+        drive_sync("restore", only=[f"data/{run_name}-fullpick*.json"])  # picked on the other GPU (test maybe still running)
+        for f in Path("data").glob(f"{run_name}-fullpick*.json"):
+            if f.name != f"{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json":
+                tested |= {c["label"] for c in json.loads(f.read_text())["picks"]}
+        if tested:
+            print(f"fullpick {run_name}: already full-tested or picked on the other GPU, not picked again: {sorted(tested)}",
+                  flush=True)
+    pool = [c for c in ranked if c["label"] not in tested]
+    assert pool, f"fullpick {run_name}: every candidate already has a full test"
+    picks = [pool[0]]
+    other = next((c for c in pool if c["label"] == start), None)
     if other is None or other["label"] == picks[0]["label"]:
-        other = ranked[1] if len(ranked) > 1 else None
-    if other is not None:
+        other = pool[1] if len(pool) > 1 else None
+    if other is not None and getattr(args, "fp_n", 2) >= 2:
         picks.append(other)
     for c in cands:
         print(f"fullpick {run_name}: {c['label']}: Dev/monitor {c['saved']:+.1f}% / {c['acc']:+.2f} -> corrected "
@@ -4212,7 +4233,8 @@ def fullpick(args):
             py("merge.py", "--model", args.fp_base, "--out", model, "--adapters", f"{adapter}:1")
             drive_sync("save")
         models.append(str(model))
-    Path(f"data/{run_name}-fullpick.json").write_text(json.dumps({"picks": picks, "start": start, "all": cands}, indent=1))
+    Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(
+        json.dumps({"picks": picks, "start": start, "all": cands}, indent=1))
     a = copy.copy(args)
     a.fm_soup, a.fm_merge, a.nothink_models, a.fm_screen_only, a.fm_no_screen = [], [], models, False, True
     fullmodel(a)
