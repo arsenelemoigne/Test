@@ -6689,3 +6689,10 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   48/51/58, 12 rounds, stop >= 53 / >= -0.3 or convergence (>= 51, < +0.4) from round 9; fullpick od5d (2 full tests), lossan.
   Tests on stored answers (od4-r1 on slice 2): v2 output byte-identical to before (od5c unaffected); v3 with math + code held:
   240 pairs, 144 shorten (v2 218 / 90); IFEval shorten candidates 35 -> 55.
+- ~02:45 CET od3prep (all Path 1 top-ups merged: e.g. + 690 simple from r2j, + 217 no-fit from r2l): candidates left mbpp 1,963,
+  simple 2,593, math 2,735, IFEval 6,642, several 794, no-fit 3,078. **Slices 10 and 11 built** (every type full and within
+  1-3 pts of the test's solve rate; slice 11 borrowed bins). **Slice 12 failed on several tools: solve 71% vs the test's 76%**
+  (the remaining several-tool questions are too hard). od5c continues with rounds 10-11 now. User rule (reach 16): queued
+  newtop r2m-multiple (900 more several-tool questions from ToolACE / Glaive, as r2g-multiple, x8 by the original) ->
+  od3prep --od3-more 5 (slices 12-16) -> odpo od5c again (--od-min-rounds 12; skips finished rounds) -> fullpick -> lossan.
+- GPU 2: r2s3-s30 full test started (768 / 22,072 at 02:47).
