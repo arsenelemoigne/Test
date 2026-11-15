@@ -6751,3 +6751,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   hard no-fit refill (Haiku batch 2 still generating).
 - ~06:45 CET **od5d r3 (slice 4): 39.2% / +0.27** (od5c r3 44.2 / -0.82): curve +1.44 above (od5c r3 +1.06). Per type:
   math 49 / -0.2, code 44 / -0.7, IFEval 30 / -1.0, simple 32 / +1.5, several 31 / +3.9, no-fit 36 / +4.8. No free slots yet.
+- ~07:00 CET hard no-fit batch 2: 8,810 items -> 132 kept (8,010 UNSURE) -> nofit_haiku3.jsonl = 247 hard no-fit questions, pushed before GPU 1's wait ends (newtop r2o-nofit next).
