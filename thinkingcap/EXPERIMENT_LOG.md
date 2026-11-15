@@ -6819,3 +6819,9 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~13:00 CET **r2s3b-s20 Dev-512 53.7 / +1.63** (r2s3-s20 52.8 / +2.54), **Dev-SVAMP 51.5 / +0.00** (r2s3-s20 50.1 / -0.69):
   more saving and better math, but lower Dev-512 accuracy; with this lineage's Dev bias (3.3-3.5) ~52.4 / -1.9 on the full
   test. Steps 30 / 40 / 50 next. Training ended loss 0.621, ordered right 70%.
+- ~13:15 CET GPU 2: my synthetic click on the plan cell DID interrupt it (^C during the od5d-r10 full test, ~800 / 22,072;
+  runtime still connected). Plan a had been made restart-safe (finished lines commented, od5c's test first), so I restarted
+  the plan cell (user asked for the swap). fullpick od5c --fp-tag=-b skipped od5c-r10 (tested) and picked **od5c-r16
+  (= od5c-best: Dev-512 55.0 / +2.22 -> corrected 54.0 / -0.28)**; its full test is running. Then lossan od5c (r10 + r16),
+  then od5d-r10's full test (restarted), lossan od5d. Checked GPU 1's queue: r2s3b Dev 30-50 -> fullpick r2s3b (2 tests)
+  -> lossan r2s3bf, nothing else; both finish before the ~21:50 24 h runtime limit.
