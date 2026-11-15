@@ -6785,3 +6785,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   reuses that run's --rp-more-files answers (rp-r2s3-m1, -m2). r2s3 preset re-checked byte-identical on stored answers.
   Queue: ptrepair r2s3b (800 pairs, 50 steps, plain bf16, lr 8e-6, Dev 20/30/40/50; trains only with all 800) -> fullpick
   r2s3b (gate corrected 1.3 / 3.5) -> lossan r2s3b.
+- ~09:55 CET (user): after r2s3b, turn Path 1's 3 steps into ONE clean step from the original if possible (memory thinkingcap-path1-single-step).
