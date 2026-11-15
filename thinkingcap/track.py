@@ -286,6 +286,10 @@ def main():
     parser.add_argument("--od-stop-acc", type=float, default=-2.2)
     parser.add_argument("--od-conv-gain", type=float, default=1.5)
     parser.add_argument("--od-conv-min", type=float, default=52.5)
+    parser.add_argument("--od-stop-from", type=int, default=0, help="odpo (15 Nov, consult24): the two stop rules apply only "
+                        "from this round's monitor on (9 = once round 8's model is measured)")
+    parser.add_argument("--rp-plain-precision", action="store_true", help="ptrepair / odpo (15 Nov, user): train in plain "
+                        "--dtype (bf16), WITHOUT --bida-precision (fp32 base + fp16 autocast, michal-bida's setting)")
     parser.add_argument("--od-dev-rounds", type=int, nargs="*", default=[4])
     parser.add_argument("--od-caps", default="", help="odpo --od-fixed-ref (13 Nov, od4): PART=SAVED%%,... stop shortening a type at this saving")
     parser.add_argument("--od-acc-hold", type=float, default=-2.0, help="od4: ... or when its monitored accuracy is at or below this")
@@ -4780,7 +4784,8 @@ def ptrepair(args):
            "--lr-min", args.rp_lr if getattr(args, "rp_lr_min", None) is None else args.rp_lr_min, "--max-steps", steps, "--epochs", args.rp_epochs,
            "--save-every",
            1 if smoke else (10 ** 6 if getattr(args, "rp_save_at", None) else 5), "--held-out", 0, "--max-len", 8704,
-           "--bida-precision", "--dtype", args.dtype, "--seed", getattr(args, "rp_dpo_seed", 0),
+           *([] if getattr(args, "rp_plain_precision", False) else ["--bida-precision"]),
+           "--dtype", args.dtype, "--seed", getattr(args, "rp_dpo_seed", 0),
            *(["--ref-base"] if getattr(args, "rp_ref_base", False) else []),
            *(["--save-at", *args.rp_save_at] if getattr(args, "rp_save_at", None) and not smoke else []))
         drive_sync("save")
@@ -4939,11 +4944,12 @@ def odpo_fixed(args):
             assert steps_done, f"odpo {name}: round {k + 1} saved no adapter"
             prev = f"adapters/{a.name}-s0/step-{steps_done[-1]}"
             print(f"odpo {name}: round {k + 1} trained {steps_done[-1]} steps (fewer pairs than planned)", flush=True)
-        if k > 0 and saved >= args.od_stop_save and acc >= args.od_stop_acc:
+        stop_ok = k + 1 >= getattr(args, "od_stop_from", 0)
+        if stop_ok and k > 0 and saved >= args.od_stop_save and acc >= args.od_stop_acc:
             best = answerer
             print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
             break
-        if k >= 4 and saved - history[k - 1]["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
+        if stop_ok and k >= 4 and saved - history[k - 1]["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
             best = answerer
             print(f"odpo {name}: STOP (saving stopped growing: {history[k - 1]['saved']:.1f} -> {saved:.1f})", flush=True)
             break

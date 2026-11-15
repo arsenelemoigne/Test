@@ -694,6 +694,12 @@ lossan --la-tag r2s3 --la-models fullpick:r2s3
 # (15 Nov 02:30, user: move one od5c full test to this GPU) the best od5c round finished by then (fullpick's arena rule,
 # monitor corrected by 1.0 / 2.5); GPU 1 later full-tests the best round NOT already picked here
 fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag -gpu2
+# (15 Nov 02:50, user: 'yes to both, queue it after') od5d = consult24: od5 v3 (rules A / B / C + caps on neutral and
+# recovery pairs), quotas 12 pairs math / code -> tools, tool caps +2, plain bf16 (no --bida-precision), up to 12 rounds,
+# stop from round 9 at monitor >= 53 / >= -0.3 or when saving stops growing (>= 51, < +0.4); then 2 full tests + loss analysis
+odpo --name od5d --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 12 --od-steps 15 --od-r1-steps 20 --od-r1-quota svamp=76,mbpp=54,ifeval=88,bfcl_simple_python=40,bfcl_multiple=30,bfcl_irrelevance=32 --rp-quota svamp=52,mbpp=46,ifeval=58,bfcl_simple_python=30,bfcl_multiple=26,bfcl_irrelevance=28 --rp-questions svamp=220,mbpp=140,ifeval=200,bfcl_simple_python=80,bfcl_multiple=60,bfcl_irrelevance=80 --rp-own-data --rp-kinds mix --rp-samples 8 --rp-seed 18 --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.85,--mix-preset,od5,--od5-v3,--base-stats,data/od3-base-stats.json,--base-resp,data/od3-base-resp.json,--base-think,data/od3-base-think.json,--floor-by-part,svamp=25:0.44+mbpp=35:0.36+ifeval=20:0.32+bfcl_simple_python=20:0.42+bfcl_multiple=25:0.42+bfcl_irrelevance=20:0.35,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--resp-median,0.95,--resp-max,1.05,--right-resp-cap,1.15 --rp-lr 1.4e-5 --rp-warmup 2 --rp-beta 0.1 --rp-dpo-seed 0 --rp-dev-vs rpE80 --od-dev-rounds 99 --data-seed 18 --od-caps svamp=62,mbpp=63,ifeval=56,bfcl_simple_python=48,bfcl_multiple=51,bfcl_irrelevance=58 --od-acc-hold -2.0 --od-unlatch --od-stop-save 53.0 --od-stop-acc -0.3 --od-conv-min 51.0 --od-conv-gain 0.4 --od-stop-from 9 --rp-plain-precision
+fullpick --fp-run od5d --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5
+lossan --la-models fullpick:od5d --la-tag od5d
 hold --hold-minutes 30 --hold-tag after-step1-1
 hold --hold-minutes 30 --hold-tag after-step1-2
 hold --hold-minutes 30 --hold-tag after-step1-3

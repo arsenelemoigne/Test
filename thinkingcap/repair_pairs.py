@@ -182,6 +182,11 @@ def main():
                          "on 8/8 questions; mixed questions too), damage = a 2-answer drop on 7-8/8 questions, response rules only on "
                          "IFEval, compact (no longer than the wrong one) be-right on undamaged mixed questions, caps: length-rule 10%, "
                          "neutral 20%, recovery 20% unless the slice lost > 1.5 pts")
+    ap.add_argument("--od5-v3", action="store_true",
+                    help="(15 Nov, consult24, user: go od5d) od5 v3 = v2 + health per type (slice accuracy vs the original, measured "
+                         "before the pairs): A) neutral / recovery pairs capped at 20%% and the free slots go to shorten pairs on the "
+                         "healthy types; B) healthy types: shorten-eligible within one answer in 8 of the original; C) healthy IFEval: "
+                         "length-rule questions shorten too if the chosen response is no shorter and the total tokens go down")
     ap.add_argument("--loop-finished", action="store_true",
                     help="(14 Nov, consult22 step 3) --kinds mix: anti-loop pairs also reject FINISHED repetition loops (an 8-word "
                          "phrase repeated >= 4 times), and their chosen answer never loops")
@@ -197,6 +202,8 @@ def main():
     ap.add_argument("--kinds", default="guard,right", choices=("guard,right", "guard", "guard,shorten", "mix"),
                     help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
+    if args.od5_v3:
+        args.od5_v2 = True
     rng = random.Random(args.seed)
     quota = {k: int(v) for k, v in (x.split("=") for x in args.quota.split(","))}
     groups = defaultdict(list)
@@ -252,6 +259,18 @@ def main():
     guard_wide = set(filter(None, re.split(r"[,+]", args.guard_wide)))
     right_hold = set(filter(None, re.split(r"[,+]", args.right_hold)))
     shorten_second = set(filter(None, re.split(r"[,+]", args.shorten_second)))
+    stop_v3 = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+    part_dmg_v3 = {}  # (15 Nov, consult24) each part's slice accuracy change vs the original, BEFORE any pair is built
+    if od5 and args.od5_v3:
+        pre_v3 = defaultdict(list)
+        for qid_, q_ in groups.items():
+            st_ = base_stats.get(str(qid_))
+            if part_of(q_[0]) in quota and st_ is not None:
+                pre_v3[part_of(q_[0])].append(sum(1 for r in q_ if right(r)) / max(1, len(q_)) - st_["acc"])
+        part_dmg_v3 = {p_: sum(v) / len(v) for p_, v in pre_v3.items() if v}
+
+    def healthy_v3(p_):  # not held this round and at or above the original's accuracy on this slice
+        return args.od5_v3 and p_ not in stop_v3 and part_dmg_v3.get(p_, 0.0) >= 0.0
     for qid, q in groups.items():
         part = part_of(q[0])
         # (11 Nov, rpM) with a quota for "svamp_hard", math questions are two parts: "svamp" = the SVAMP-like questions
@@ -326,17 +345,25 @@ def main():
             if p0 is None:
                 can_shorten, damaged = p1 >= args.shorten_min_right, False
             else:
-                if args.od5_v2:  # (14 Nov, consult23) as good as the original; real damage only
+                if args.od5_v3 and healthy_v3(part):  # (15 Nov, consult24 rule B) healthy type: within one answer in 8
+                    can_shorten = (p1 >= 0.75 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.25) if p0 >= 0.50
+                                   else p1 >= max(0.25, p0 - 0.125))
+                    damaged = 1 <= k1 < n_ans and ((p1 <= p0 - 0.25) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+                elif args.od5_v2:  # (14 Nov, consult23) as good as the original; real damage only
                     can_shorten = (p1 >= 0.875 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.125) if p0 >= 0.50
                                    else p1 >= max(0.25, p0))
                     damaged = 1 <= k1 < n_ans and ((p1 <= p0 - 0.25) if p0 >= 0.875 else (p1 <= p0 - 0.125))
                 else:
                     can_shorten = (p1 == 1.0) if p0 >= 1.0 else (p1 >= max(0.75, p0 - 0.125))
                     damaged = 1 <= k1 < n_ans and ((p1 < p0) if p0 >= 0.875 else (p1 <= p0 - 0.125))
-            if can_shorten and not no_shorten and len(clean) >= 2:
+            rule_c = args.od5_v3 and base_part == "ifeval" and is_cr and healthy_v3(part)
+            if can_shorten and (not no_shorten or rule_c) and len(clean) >= 2:
                 long = max(clean, key=size)
                 pool_s = [r for r in clean if r is not long]
-                if (part in think_only and (args.resp_median > 0 or args.resp_max > 0)
+                if rule_c:  # (15 Nov, consult24 rule C) think less, write no less, and fewer tokens in all
+                    pool_s = [r for r in pool_s if response_len(r) >= max(response_len(long), 0.92 * b_resp)
+                              and r["output_tokens"] < long["output_tokens"]]
+                elif (part in think_only and (args.resp_median > 0 or args.resp_max > 0)
                         and (not args.od5_v2 or base_part == "ifeval")):  # v2: response rules on IFEval only
                     rmed = sorted(response_len(r) for r in clean)[len(clean) // 2]
                     floor_r = max(args.resp_median * rmed, 0.92 * b_resp if base_part == "ifeval" else 0.0)
@@ -564,6 +591,8 @@ def main():
             # in full they crowded out shortening where most questions are "mixed" (IFEval round 1: 129 neutral vs 33 shorten
             # candidates -> 12 shorten pairs of 88). Shortening vs recovery still follows the candidate counts (the damage).
             n_hold5 = min(c_hold, int(round((0.20 if args.od5_v2 else 0.25) * n_rem))) if (c_sh + c_rec) else n_rem
+            if args.od5_v3:  # (15 Nov, consult24) neutral pairs never take more than 20%, held parts included
+                n_hold5 = min(c_hold, int(round(0.20 * n_rem)))
             n_act = n_rem - n_hold5
             tot5 = max(1, c_sh + c_rec)
             n_sh5 = int(round(n_act * c_sh / tot5))
@@ -571,9 +600,11 @@ def main():
                 n_rec_cap = min(len(cand[part]["recovery"]), int(round(0.20 * n_act)))
                 n_sh5 = min(c_sh, n_act - n_rec_cap)
             sh5 = take(part, "shorten", cand[part]["shorten"], n_sh5) if c_sh else []
-            rec5 = take(part, "recovery", cand[part]["recovery"], n_act - len(sh5))
-            hold5 = take(part, "right", cand[part]["hold"], n_rem - len(sh5) - len(rec5))
-            if len(sh5) + len(rec5) + len(hold5) < n_rem:  # protective kinds fill any gap, never shortening
+            healthy5 = args.od5_v3 and part not in stop5 and dmg >= 0.0
+            rec5 = take(part, "recovery", cand[part]["recovery"],
+                        min(n_act - len(sh5), int(round(0.20 * n_act))) if healthy5 else n_act - len(sh5))
+            hold5 = take(part, "right", cand[part]["hold"], n_hold5 if args.od5_v3 else n_rem - len(sh5) - len(rec5))
+            if len(sh5) + len(rec5) + len(hold5) < n_rem and not healthy5:  # protective kinds fill any gap, never shortening
                 rec5 += take(part, "recovery", cand[part]["recovery"], n_rem - len(sh5) - len(rec5) - len(hold5))
             by_part[part] = got5 + sh5 + rec5 + hold5
             if len(by_part[part]) < n:
@@ -793,6 +824,34 @@ def main():
             counts[(part, p["kind"] + ("" if p["kind"] == "guard" else
                                        " (right longer)" if p["chosen_tokens"] > p["rejected_tokens"] else " (right shorter)"))] += 1
         counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+    if args.kinds == "mix" and od5 and args.od5_v3:  # (15 Nov, consult24 rule A) free slots -> shorten on the healthy parts
+        free = sum(quota.values()) - sum(len(v) for v in by_part.values())
+        h_parts = [p_ for p_ in quota if p_ in by_part and healthy_v3(p_)]
+        moved = Counter()
+        while free > 0 and h_parts:
+            tot_q = sum(quota[p_] for p_ in h_parts)
+            share = {p_: max(1, int(round(free * quota[p_] / tot_q))) for p_ in h_parts}
+            got_any = 0
+            for p_ in h_parts:
+                if free <= 0:
+                    break
+                extra = take(p_, "shorten", cand[p_]["shorten"], min(share[p_], free))
+                by_part[p_] += extra
+                moved[p_] += len(extra)
+                free -= len(extra)
+                got_any += len(extra)
+            if not got_any:
+                break
+            h_parts = [p_ for p_ in h_parts if any((id(c), id(w)) not in used for _, c, w in cand[p_]["shorten"])]
+        for p_ in quota:
+            if p_ in by_part:
+                counts[(p_, "od5 v3 slice accuracy measured first (pts)")] = f"{100 * part_dmg_v3.get(p_, 0.0):+.1f}"
+                counts[(p_, "od5 v3 health")] = ("HELD" if p_ in stop_v3 else "healthy" if healthy_v3(p_) else "caution (< 0)")
+                counts[(p_, "od5 v3 free slots received (shorten)")] = moved[p_]
+                for kind5 in ("shorten", "recovery", "right", "loop", "format"):
+                    counts[(p_, f"od5 {kind5}")] = sum(1 for x in by_part[p_] if x["kind"] == kind5)
+                counts[(p_, "SHORT of quota")] = max(0, quota[p_] - len(by_part[p_]))
+        counts[("all", "od5 v3 free slots left empty")] = free
     # stratified order: interleave the parts by their shares, kinds alternating inside each part
     # (11 Nov, review fix) kinds interleaved by their shares (credit scheme), shuffled inside each kind: any prefix of the
     # file holds every kind in proportion (before: kinds sorted by name, so with 3 kinds the "shorten" pairs all came last)
