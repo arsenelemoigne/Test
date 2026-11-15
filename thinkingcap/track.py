@@ -288,6 +288,8 @@ def main():
     parser.add_argument("--od-conv-min", type=float, default=52.5)
     parser.add_argument("--od-stop-from", type=int, default=0, help="odpo (15 Nov, consult24): the two stop rules apply only "
                         "from this round's monitor on (9 = once round 8's model is measured)")
+    parser.add_argument("--rp-gen-seed", type=int, default=53, help="ptrepair / odpo (15 Nov, user: replicate od5c with "
+                        "another seed only): the sampling seed of the run's own answers (53 = every earlier run)")
     parser.add_argument("--rp-plain-precision", action="store_true", help="ptrepair / odpo (15 Nov, user): train in plain "
                         "--dtype (bf16), WITHOUT --bida-precision (fp32 base + fp16 autocast, michal-bida's setting)")
     parser.add_argument("--od-dev-rounds", type=int, nargs="*", default=[4])
@@ -4546,7 +4548,7 @@ def ptrepair(args):
         py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
            "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", args.rp_samples,
            "--model", answerer, "--out", roll, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
-           "--max-questions", len(chosen), "--seed", 53)
+           "--max-questions", len(chosen), "--seed", getattr(args, "rp_gen_seed", 53))
         drive_sync("save")
     pairs = BON / f"pairs-{args.rp_from or name}"
     drive_sync("restore", only=[str(pairs)])
