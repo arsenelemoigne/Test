@@ -24,7 +24,7 @@ Sources: `EXPERIMENT_LOG.md` (the "why"), `reviews/strategy_tree/frontier_points
 | 3 | Truncation and early-stop rules | 20-27 Oct | rc1-soup-30 (calibrated-cut DPO round) 57.4 / -3.5 | +0.95 | superseded (became the base of the repair line) |
 | 4 | Activation steering and weight edits | 21 Oct, 3 Nov | no full test | - | dead end (Astra: not finished) |
 | 5 | Pruning | 27-30 Oct | no full test | - | dead end |
-| 6 | Reinforcement learning (RL) | 20 Oct - 11 Nov | rc1-rl-40 (RL on top of a DPO model) 55.4 / -2.6 | +1.40 | dead end |
+| 6 | Reinforcement learning (RL) | 20 Oct - 11 Nov | from the original: no full test (GRPO best 11.3% / +0.3 on the 720; most runs thought LONGER). On top of a DPO model: rc1-rl-40 55.4 / -2.6, but its start rc1-soup-30 was already 57.4 / -3.5, so RL only moved it along the curve | +1.40 | dead end |
 | 7 | Offline DPO (preference training on stored answers) | 21 Oct - 15 Nov | rpM-60 54.1 / -0.93 (6-stage chain); clean 3-step recipe r2s3b-s40 51.3 / -0.78 | +2.79 / +2.36 | superseded; r2one not finished |
 | 8 | Online DPO | 10-15 Nov | **od5c r16 54.8 / -0.78**, r15 54.0 / -0.56 | +3.09 / +3.14 | **kept** |
 | 9 | Built on a competitor's recipe (excluded) | 27 Oct - 6 Nov | bida copy 51.2 / -3.0 | +0.13 | banned by the user |
