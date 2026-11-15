@@ -280,6 +280,7 @@ def main():
                         "after the existing data/od3-rK files (same test matching, never a question of an earlier slice)")
     parser.add_argument("--od-unlatch", action="store_true", help="odpo (14 Nov, od5 / consult21): a type at its cap is held "
                         "for that round only (no permanent latch)")
+    parser.add_argument("--od-best-name", default="", help="odpo (15 Nov): name of the result model (default <name>-best)")
     parser.add_argument("--od-min-rounds", type=int, default=0, help="odpo (13 Nov, user): run only if at least this many "
                         "round slices exist (else: skipped, nothing trained); rounds are capped at the slices that exist")
     parser.add_argument("--od-stop-save", type=float, default=56.5)
@@ -295,6 +296,8 @@ def main():
     parser.add_argument("--od-dev-rounds", type=int, nargs="*", default=[4])
     parser.add_argument("--od-caps", default="", help="odpo --od-fixed-ref (13 Nov, od4): PART=SAVED%%,... stop shortening a type at this saving")
     parser.add_argument("--od-acc-hold", type=float, default=-2.0, help="od4: ... or when its monitored accuracy is at or below this")
+    parser.add_argument("--nt-new-text", action="store_true", help="newtop (15 Nov): also drop a candidate whose user "
+                        "question TEXT was already used in the pool, a top-up or a repair set (with other functions offered)")
     parser.add_argument("--nt-cand", default="", help="newtop (12 Nov): use this already drawn candidate file (no prepare_types)")
     parser.add_argument("--nt-pool", default="", help="newtop (12 Nov): extra build_pool.py arguments joined by '+'")
     parser.add_argument("--nt-prep", default="", help="newtop (12 Nov): extra prepare_types.py arguments joined by '+'")
@@ -3553,6 +3556,21 @@ def newtop(args):
         before = len(rows)
         rows = [r for r in rows if json.dumps(r.get("messages") or r.get("prompt"), sort_keys=True) not in seen]
         print(f"newtop {name}: {before - len(rows)} candidates already in the pool or a top-up, dropped", flush=True)
+        if getattr(args, "nt_new_text", False):  # (15 Nov) the user question itself must be new (no-fit made from used
+            def last_user(msgs):  # several-function questions)
+                if isinstance(msgs, list):
+                    us = [m.get("content", "") for m in msgs if isinstance(m, dict) and m.get("role") == "user"]
+                    return " ".join(str(us[-1]).split()) if us else ""
+                return " ".join(str(msgs).split())
+            used_text = set()
+            for key in seen:
+                try:
+                    used_text.add(last_user(json.loads(key)))
+                except ValueError:
+                    pass
+            before = len(rows)
+            rows = [r for r in rows if last_user(r.get("messages") or r.get("prompt")) not in used_text]
+            print(f"newtop {name}: {before - len(rows)} candidates whose question text was already used, dropped", flush=True)
         if any(r.get("base") for r in rows):  # (12 Nov) built IFEval: the REQUEST must be new too, and used once
             def norm(text):
                 return " ".join(str(text).split())
@@ -4986,11 +5004,12 @@ def odpo_fixed(args):
             print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", "")), flush=True)
             print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
     best = best or answerer
-    out = Path("models") / f"{name}-best"
-    best_f = Path(f"data/{name}-best.json")
+    bname = getattr(args, "od_best_name", "") or f"{name}-best"  # (15 Nov) od5c's extension to round 24 must not
+    out = Path("models") / bname  # overwrite models/od5c-best (= round 16, full-tested)
+    best_f = Path(f"data/{bname}.json")
     drive_sync("restore", only=[str(best_f)])
     if best_f.exists() and json.loads(best_f.read_text()).get("best") != best:  # (13 Nov) a longer rerun: a new result
-        for d_ in (out, BON / f"dev512-{name}-best", BON / f"devsv-{name}-best"):  # its old Dev answers too (here and on Drive)
+        for d_ in (out, BON / f"dev512-{bname}", BON / f"devsv-{bname}"):  # its old Dev answers too (here and on Drive)
             shutil.rmtree(d_, ignore_errors=True)
             if d_ != out:
                 shutil.rmtree(DRIVE / d_, ignore_errors=True)
@@ -4998,11 +5017,11 @@ def odpo_fixed(args):
     if not (out / "config.json").exists():
         shutil.rmtree(out, ignore_errors=True)
         shutil.copytree(best, out)
-    Path(f"data/{name}-best.json").write_text(json.dumps({"best": best, "history": history}, indent=1))
+    best_f.write_text(json.dumps({"best": best, "history": history}, indent=1))
     drive_sync("save")
     print(f"odpo {name}: RESULT {best} -> {out}", flush=True)
-    print(dev_score_model(f"{name}-best", str(out), vs=getattr(args, "rp_dev_vs", "")), flush=True)
-    print(dev_score_model(f"{name}-best", str(out), vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
+    print(dev_score_model(bname, str(out), vs=getattr(args, "rp_dev_vs", "")), flush=True)
+    print(dev_score_model(bname, str(out), vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
 
 
 DEV_FILE = Path("data/dev512.jsonl")

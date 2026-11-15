@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -833,6 +833,40 @@ def haiku_multiple(args, rng):
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
                           {"role": "user", "content": r["question"]}]}
     print(f"haiku_multiple: {kept} questions kept", flush=True)
+
+
+def haiku_multiple_removed(args, rng):
+    """(15 Nov, user: extend od5c to round 24 with free data, same test matching) HARD no-fit questions at no cost: a Haiku
+    several-function question (tools_multiple_haiku.jsonl: 2-4 functions of the question's own domain, exactly one fits)
+    offered only the functions that do NOT fit (the right one removed), as toolace --tool-near does for ToolACE. Kept only
+    when no remaining function shares a name word with the removed one (such a function may answer the question too).
+    Use with newtop --nt-new-text so that a question whose text was already used anywhere is never offered again."""
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    path = next((p for p in (Path("/content/T/thinkingcap/tools_multiple_haiku.jsonl"),
+                             Path(__file__).with_name("tools_multiple_haiku.jsonl")) if p.exists()), None)
+    assert path, "tools_multiple_haiku.jsonl not found"
+    kept = 0
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        try:
+            functions = [bfcl_function(f) for f in r["functions"]]
+            right = r["call"]["name"]
+        except (ValueError, KeyError, TypeError, AttributeError):
+            continue
+        others = [f for f in functions if f["name"] != right]
+        if len(others) == len(functions) or not others:
+            continue
+        if (not bfcl_types(others) or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in others)
+                or any(name_words(f["name"]) & name_words(right) for f in others)):
+            continue
+        rng.shuffle(others)
+        kept += 1
+        yield {"source": "glaive_tools", "origin": "haiku-multiple-removed", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "irrelevance", "function": others, "reference": None, "id": f"haiku_mur-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, others)},
+                          {"role": "user", "content": r["question"]}]}
+    print(f"haiku_multiple_removed: {kept} questions kept", flush=True)
 
 
 def haiku_nofit(args, rng, fname="nofit_haiku.jsonl", prefix="haiku_nf"):
