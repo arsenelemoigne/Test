@@ -836,37 +836,33 @@ def haiku_multiple(args, rng):
 
 
 def haiku_multiple_removed(args, rng):
-    """(15 Nov, user: extend od5c to round 24 with free data, same test matching) HARD no-fit questions at no cost: a Haiku
+    """(15 Nov, user: extend od5c to round 24 with free data, same test matching) HARD no-fit questions: a Haiku
     several-function question (tools_multiple_haiku.jsonl: 2-4 functions of the question's own domain, exactly one fits)
-    offered only the functions that do NOT fit (the right one removed), as toolace --tool-near does for ToolACE. Kept only
-    when no remaining function shares a name word with the removed one (such a function may answer the question too).
-    Use with newtop --nt-new-text so that a question whose text was already used anywhere is never offered again."""
+    offered only the functions that do NOT fit (the right one removed), as toolace --tool-near does for ToolACE; kept only
+    when no remaining function shares a name word with the removed one, AND (user: "Yes, run the Haiku checks") on the same
+    two Haiku label checks as every earlier near-miss no-fit source, NO + NO (verify_removed_nofit.py: 224 of 384 kept,
+    file tools_multiple_removed_verified.jsonl). Use with newtop --nt-new-text (a question TEXT already used is dropped)."""
     from utils.eval.benchmarks import bfcl_system_prompt, paths
 
     root = paths(args.questions)["bfcl"]
-    path = next((p for p in (Path("/content/T/thinkingcap/tools_multiple_haiku.jsonl"),
-                             Path(__file__).with_name("tools_multiple_haiku.jsonl")) if p.exists()), None)
-    assert path, "tools_multiple_haiku.jsonl not found"
+    path = next((p for p in (Path("/content/T/thinkingcap/tools_multiple_removed_verified.jsonl"),
+                             Path(__file__).with_name("tools_multiple_removed_verified.jsonl")) if p.exists()), None)
+    assert path, "tools_multiple_removed_verified.jsonl not found"
     kept = 0
-    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+    for r in (json.loads(l) for l in path.read_text().splitlines() if l.strip()):
         try:
             functions = [bfcl_function(f) for f in r["functions"]]
-            right = r["call"]["name"]
         except (ValueError, KeyError, TypeError, AttributeError):
             continue
-        others = [f for f in functions if f["name"] != right]
-        if len(others) == len(functions) or not others:
+        if not bfcl_types(functions) or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in functions):
             continue
-        if (not bfcl_types(others) or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in others)
-                or any(name_words(f["name"]) & name_words(right) for f in others)):
-            continue
-        rng.shuffle(others)
+        rng.shuffle(functions)
         kept += 1
         yield {"source": "glaive_tools", "origin": "haiku-multiple-removed", "task": "tool", "answer": "", "grader": "bfcl",
-               "category": "irrelevance", "function": others, "reference": None, "id": f"haiku_mur-{k}",
-               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, others)},
+               "category": "irrelevance", "function": functions, "reference": None, "id": f"haiku_mur-{r['k']}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
                           {"role": "user", "content": r["question"]}]}
-    print(f"haiku_multiple_removed: {kept} questions kept", flush=True)
+    print(f"haiku_multiple_removed: {kept} verified questions kept", flush=True)
 
 
 def haiku_nofit(args, rng, fname="nofit_haiku.jsonl", prefix="haiku_nf"):
