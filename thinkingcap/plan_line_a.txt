@@ -691,6 +691,9 @@
 ptrepair --name r2s3 --rp-base models/r2s2-s80-on-r2s1b-s180 --rp-own-data --rp-question-file data/r2-step3-questions.jsonl --rp-questions svamp=650,mbpp=339,ifeval=566,bfcl_simple_python=200,bfcl_multiple=159,bfcl_irrelevance=220 --rp-more-files data/r2-step2-s3m1-questions.jsonl+data/r2-step2-s3m2-questions.jsonl --rp-samples 8 --rp-seed 53 --rp-kinds mix --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--mix-preset,r2s3,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--no-shorten-counting,--right-resp-cap,1.15,--loop-response-only,ifeval,--guard-wide,svamp+mbpp+bfcl_simple_python,--guard-wide-max,0.85,--right-hold,svamp+mbpp+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--loop-finished,--right-hold-band,0.90+1.15+1.00,--right-hold-format --rp-quota svamp=200,mbpp=140,ifeval=120,bfcl_simple_python=100,bfcl_multiple=48,bfcl_irrelevance=25 --rp-require-full --rp-rebuild-if-short --rp-lr 8e-6 --rp-warmup 2 --rp-beta 0.1 --rp-steps 40 --rp-epochs 1 --rp-save-at 10 20 30 40 --rp-screen 10 20 30 40 --rp-dev --rp-dev-svamp --rp-dev-vs rpE80 --rp-dpo-seed 0
 fullpick --fp-run r2s3 --fp-kind dpo --pk-steps 10 20 30 40 --pk-save-lo 52.2 --pk-save-hi 55.2 --pk-acc 2.35 --pk-sv-save 50.0 --pk-sv-acc -0.50 --fp-save-bias 1.8000 --fp-acc-bias 3.22 --fp-base models/r2s2-s80-on-r2s1b-s180
 lossan --la-tag r2s3 --la-models fullpick:r2s3
+# (15 Nov 02:30, user: move one od5c full test to this GPU) the best od5c round finished by then (fullpick's arena rule,
+# monitor corrected by 1.0 / 2.5); GPU 1 later full-tests the best round NOT already picked here
+fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag -gpu2
 hold --hold-minutes 30 --hold-tag after-step1-1
 hold --hold-minutes 30 --hold-tag after-step1-2
 hold --hold-minutes 30 --hold-tag after-step1-3
