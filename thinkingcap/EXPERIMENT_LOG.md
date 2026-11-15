@@ -6802,3 +6802,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   lossan r2s3b failed as expected; GPU 1 moved on: slice 16 built from hard no-fit (r2s-nofit, 170 x8), od5c round 16 running.
 - ~10:45 CET **od5d r10 (slice 11): 50.7% / -0.00** (od5c r10 52.9 / +0.84). od5d ended after round 11 (11 slices existed when
   it started) -> RESULT od5d-r11 -> Dev of od5d-best running, then fullpick od5d (2 full tests) + lossan on GPU 2.
+- ~10:58 CET (user: 'More IFEval via Haiku'): our pool still holds ~6,200 unused test-matchable IFEval questions, incl. the Haiku-written requests -> queued on GPU 1 after od5c round 16: r2prep --r2-more s3m3 (IFEval 600, test bins) -> ptrepair r2s3b with s3m1+s3m2+s3m3 (reuses rp-r2s3*; s3m3 answered by r2s2-s80; track change: reuse mode answers NEW extra files) -> fullpick r2s3b -> lossan; then od5c's second full test.
