@@ -6739,3 +6739,9 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   accuracy. Frontier artifact v13 (new family od5c).
 - od5d r1 per type (slice 2): math 29 / -1.0, code 23 / +1.6, IFEval 16 / +0.5, simple 21 / +1.6, several 16 / -1.2, no-fit
   24 / +3.0.
+- ~05:50 CET GPU 1: newtop r2n-multiple: 1,168 Haiku several-tool questions -> 664 after the pool checks, x8 by the original:
+  solve 77% (sometimes right 189, always 390, never 85) -> od3prep: **slice 12 built** (all types matched); **slice 13 failed
+  on no-fit: 91% solved vs the test's 83%** (remaining no-fit questions too easy). od5c running round 12 (rounds 1-11 skipped).
+  User rule (reach 16): gen_nofit_questions.py --hard (explicit hard near-miss patterns: parameters cannot express the
+  request, unsupported action on the same entities, a different entity, advice / explanation in the functions' words), 700
+  calls generating -> then newtop + od3prep slices 13-16 + od5c continues before its second full test.

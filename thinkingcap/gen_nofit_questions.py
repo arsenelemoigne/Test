@@ -27,6 +27,18 @@ overlapping words) but that NONE of them can fulfil: it needs a different action
 capability that no parameter covers. Make them hard: a careless assistant should be tempted to call one of the functions.
 Vary the questions (short and long, casual and formal). English only.
 Return ONLY a JSON array of 10 objects: {{"functions": [{{...}}], "question": "..."}}"""
+PROMPT_HARD = """Create 10 test items for a function-calling benchmark, all of the kind "no function fits". Domain: {domain}.
+These must be HARD: a small model should be strongly tempted to make a call. Use these patterns (mix them):
+(a) the right function exists in spirit but its parameters cannot express the request (another unit, period, scope or
+granularity that no parameter covers); (b) the request needs an action the functions do not do (cancel / update / delete /
+compare / explain) on exactly the entities the functions handle; (c) the request is about a different entity of the same
+kind (another product line, another data source, another platform) that no function reaches; (d) the user asks for advice,
+an opinion or an explanation about the domain, using the functions' own vocabulary, which no call answers.
+Each item: 1 to 3 Python-style functions (name in snake_case, a one-sentence description, parameters as a JSON schema object
+with "type": "object", "properties" (each with "type" among string, integer, number, boolean, array, object and a
+"description") and "required"), and a realistic user question that NONE of them can fulfil. Vary the questions (short and
+long, casual and formal). English only.
+Return ONLY a JSON array of 10 objects: {{"functions": [{{...}}], "question": "..."}}"""
 CHECK1 = """A user asked an assistant:
 {question}
 
@@ -59,8 +71,8 @@ def call(content, key, model, max_tokens, temperature, seed=0):
             time.sleep(2 * 2 ** attempt)
 
 
-def generate(domain, key, model, seed):
-    text = call(PROMPT.format(domain=domain), key, model, 9000, 1.0, seed)
+def generate(domain, key, model, seed, prompt=None):
+    text = call((prompt or PROMPT).format(domain=domain), key, model, 9000, 1.0, seed)
     try:
         out = json.loads(text[text.find("["): text.rfind("]") + 1])
     except ValueError:
@@ -93,12 +105,15 @@ def main():
     ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=str(Path(__file__).with_name("nofit_haiku.jsonl")))
+    ap.add_argument("--hard", action="store_true", help="(15 Nov, user: reach round 16; slice 13's no-fit questions were too "
+                    "easy, 91% solved vs the test's 83%) explicit hard near-miss patterns")
     a = ap.parse_args()
     key = os.environ["OPENROUTER_API_KEY"]
     rng = random.Random(a.seed)
     seeds = [(rng.choice(DOMAINS).strip(), a.seed * 100000 + k) for k in range(a.calls)]
     with ThreadPoolExecutor(a.workers) as ex:
-        items = [it for batch in ex.map(lambda s: generate(s[0], key, a.model, s[1]), seeds) for it in batch]
+        items = [it for batch in ex.map(lambda s: generate(s[0], key, a.model, s[1], PROMPT_HARD if a.hard else None), seeds)
+                 for it in batch]
     seen, uniq = set(), []
     for it in items:
         k = it["question"].lower()
