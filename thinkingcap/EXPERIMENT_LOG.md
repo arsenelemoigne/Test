@@ -6745,3 +6745,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   User rule (reach 16): gen_nofit_questions.py --hard (explicit hard near-miss patterns: parameters cannot express the
   request, unsupported action on the same entities, a different entity, advice / explanation in the functions' words), 700
   calls generating -> then newtop + od3prep slices 13-16 + od5c continues before its second full test.
+- ~06:05 CET od5d r2 (slice 3): 34.6% / -1.18 (od5c r2 36.9 / -1.28). Per type: math 43 / -1.8, code 35 / -1.9, IFEval 28 / -0.6, simple 27 / -0.4, several 39 / -3.1, no-fit 36 / +1.8. GPU 1: od5c round 12's model answering slice 13? (no: round 12 answers slice 12 = model r11 monitored).
