@@ -6704,3 +6704,16 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   Per type: math 57 / -2.8, code 52 / -1.6, IFEval 47 / +1.4, simple 48 / -3.8, several 50 / -0.6, no-fit 51 / +5.6.
   vs s20 (52.7 / -1.0): -1.2 saving, +0.16 accuracy. Not yet the user's margin target (> 52%). Frontier artifact v12.
   od5c-best (round 11's model) Dev-512 48.6 / +2.56. Next on GPU 2: lossan r2s3, then consult25 (from step 2 -> > 52 / -1).
+- ~04:40 CET lossan r2s3 -> reviews/loss_analysis/r2s3.txt. Exact official accuracy: **r2s3-s20 -0.99** (52.7%),
+  **r2s3-s30 -0.84** (51.5%): both inside the objective. Per type s30: math -2.80 (lost questions think 0.48x), code -1.62,
+  IFEval +1.39, simple -3.78, several -0.56, no-fit +5.62.
+- ~04:20 CET queue events: GPU 1 newtop r2m-multiple found no new several-tool questions (2,167 already used; probe crashed
+  on an empty set) -> od3prep and the od5c continuation skipped -> GPU 1 went on to fullpick od5c = **full test of od5c-r10**
+  (corrected pick: r10 51.9 / -1.66; running). GPU 2's od5c pick failed ('--fp-tag -gpu2' read as an option) -> GPU 2
+  moved on to **od5d (started round 1)**.
+- User rule (reach 16): several-tool questions written by Haiku: gen_tool_questions.py --multiple (2-4 same-domain functions,
+  exactly one fits; test 3 calls: 30/30 pass the builder checks), builder prepare_types haiku_multiple; 120 calls generating.
+  Queued on GPU 1 after the r10 full test: newtop r2n-multiple -> od3prep slices 12-16 -> od5c continues -> fullpick
+  --fp-tag=-b (second full test: best round not yet tested) -> lossan od5c.
+- consult25 (Argon, cap $4, 60 turns) launched: from r2s2-s80 to > 52% at better than -1 (pack: steps 1-3, full tests,
+  loss analyses r2s2 + r2s3, code incl. the Haiku generators).

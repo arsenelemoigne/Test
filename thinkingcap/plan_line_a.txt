@@ -693,7 +693,7 @@ fullpick --fp-run r2s3 --fp-kind dpo --pk-steps 10 20 30 40 --pk-save-lo 52.2 --
 lossan --la-tag r2s3 --la-models fullpick:r2s3
 # (15 Nov 02:30, user: move one od5c full test to this GPU) the best od5c round finished by then (fullpick's arena rule,
 # monitor corrected by 1.0 / 2.5); GPU 1 later full-tests the best round NOT already picked here
-fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag -gpu2
+# (failed 04:20: '--fp-tag -gpu2' parsed as an option; od5c's first full test runs on GPU 1 instead) fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag -gpu2
 # (15 Nov 02:50, user: 'yes to both, queue it after') od5d = consult24: od5 v3 (rules A / B / C + caps on neutral and
 # recovery pairs), quotas 12 pairs math / code -> tools, tool caps +2, plain bf16 (no --bida-precision), up to 12 rounds,
 # stop from round 9 at monitor >= 53 / >= -0.3 or when saving stops growing (>= 51, < +0.4); then 2 full tests + loss analysis

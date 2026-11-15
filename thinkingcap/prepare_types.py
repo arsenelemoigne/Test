@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -785,6 +785,38 @@ def glaive_nofit_hard(args, rng):
                "category": "irrelevance", "function": r["functions"], "reference": None, "id": f"glaive_nh-{k}",
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, r["functions"])},
                           {"role": "user", "content": r["question"]}]}
+
+
+def haiku_multiple(args, rng):
+    """(15 Nov, user: od5c must reach round 16; ToolACE / Glaive several-tool questions are used up) BFCL multiple style
+    questions written by Claude Haiku (gen_tool_questions.py --multiple): 2-4 same-domain functions, exactly one fits;
+    Glaive clean-up as haiku_tools (BFCL types, every argument value stated in the question); the functions are shuffled
+    so the right one is not always first. Source tag glaive_tools, origin haiku-multiple."""
+    from utils.eval.benchmarks import bfcl_system_prompt, paths
+
+    root = paths(args.questions)["bfcl"]
+    path = next((p for p in (Path("/content/T/thinkingcap/tools_multiple_haiku.jsonl"),
+                             Path(__file__).with_name("tools_multiple_haiku.jsonl")) if p.exists()), None)
+    assert path, "tools_multiple_haiku.jsonl not found"
+    kept = 0
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        try:
+            functions = [bfcl_function(f) for f in r["functions"]]
+            arguments = r["call"].get("arguments") or {}
+            right_f = next(f for f in functions if f["name"] == r["call"]["name"])
+        except (ValueError, KeyError, TypeError, AttributeError, StopIteration):
+            continue
+        if (not isinstance(arguments, dict) or not bfcl_types(functions) or not grounded(arguments, r["question"])
+                or not all(re.fullmatch(r"[A-Za-z_]\w*", f["name"]) for f in functions)):
+            continue
+        rng.shuffle(functions)
+        kept += 1
+        yield {"source": "glaive_tools", "origin": "haiku-multiple", "task": "tool", "answer": "", "grader": "bfcl",
+               "category": "multiple", "function": functions, "reference": bfcl_reference(right_f, arguments),
+               "id": f"haiku_mu-{k}",
+               "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
+                          {"role": "user", "content": r["question"]}]}
+    print(f"haiku_multiple: {kept} questions kept", flush=True)
 
 
 def haiku_nofit(args, rng, fname="nofit_haiku.jsonl", prefix="haiku_nf"):

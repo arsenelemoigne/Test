@@ -1,0 +1,17 @@
+TASK. Path 1 (recipe 2, offline DPO) now has two full tests inside the objective: r2s3-s20 52.7% saved / -0.99 and r2s3-s30 51.5% / -0.84 (steps from r2s2-s80, step 2's model, 53.7% / -1.27). The user wants a MARGIN: > 52% tokens saved at better than -1 accuracy on the full test, robustly (not just on the edge). Design how to get there STARTING FROM step 2's model r2s2-s80 (models/r2s2-s80-on-r2s1b-s180).
+
+Read {DATA}/NEW_RESULTS_step3.md FIRST (step 3's design, Dev, the two FULL tests per type, the exact accuracies), then {DATA}/NEW_RESULTS_path1.md (steps 1-2), {DATA}/loss_analysis/r2s3.txt and r2s2.txt (per type and per loss cause vs the original, with the noise reference), your consult22 report {DATA}/YOUR_CONSULT22_REPORT.md (step 3's design) and your consult19 report (the recipe). Code: {DATA}/code (track.py: ptrepair, r2prep, fullpick --fp-base; repair_pairs.py: presets r2s2a / r2s3, --right-hold, --right-hold-band, --guard-wide, --loop-finished, --floor-by-part, --count-mode; dpo.py; gen_*.py = the Haiku generators for missing data; prepare_types.py builders). Use code to check any number you rely on.
+
+Answer, in order:
+1. Where the remaining accuracy is lost in r2s3-s20 / s30 (per type, per cause) and where saving is still left on the table (per type, vs what is safe), and what that implies for the design.
+2. The plan from r2s2-s80: one step or two (e.g. a better repair, a repair plus a careful re-shortening of the safe types, or another order), with for each step: questions (test-matched; say how many per type are needed; missing ones may be generated with Haiku), pairs per type and kind, response / thinking rules, lr, beta, steps, checkpoints, and a Dev gate corrected for this lineage's Dev bias (Dev over-read accuracy by 3.2-4.1 pts; Dev-512 read +2.5 where the full test read -0.84 to -0.99).
+3. The exact track.py plan lines (ptrepair / r2prep / fullpick --fp-base ...) and any small code change (function and what changes).
+4. Expected full-test landing (saved / accuracy, per type) and risks; a fallback.
+
+Rules (user): LoRA rank 16; constant learning rates; the model's own answers; questions matched to the test's difficulty (the original's solve-rate bins); shortening pairs only on questions solved >= 7/8; fixed per-type shares; no competitor recipe, no michal-bida data or settings (new runs train in plain bf16, without --bida-precision; ptrepair's --rp-plain-precision flag); missing data may be generated with Haiku; no new datasets. Compute: one Colab L4; Dev checks ~20 min each, full tests ~1.5-3 h each.
+
+Be concise: up to ~2,000 words, WITHOUT a code block (plan lines as plain text are fine).
+
+NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go. You have 60 TURNS IN TOTAL: check the data in at most ~40, write the final answer by turn ~55; at turn 60 the final answer is requested automatically.
+
+HOW TO RUN CODE. There are no tools or function calls here. Reply in plain text only. To run Python, write ONE markdown block that starts with ```python in your reply; I run it on a CPU machine (numpy, pandas, scipy; no internet, no GPU) and paste the output back, cut at 10,000 characters. You can do this up to {CODE_RUNS} times.

@@ -38,9 +38,22 @@ The question must be fully answerable by calling the function once. English only
 Return ONLY a JSON array of 10 objects: {{"function": {{...}}, "question": "...", "call": {{"name": "...", "arguments": {{...}}}}}}"""
 
 
-def ask(domain, key, model, seed):
-    body = json.dumps({"model": model, "max_tokens": 8000, "temperature": 1.0, "seed": seed,
-                       "messages": [{"role": "user", "content": PROMPT.format(domain=domain)}]}).encode()
+PROMPT_MULTIPLE = """Create 10 test items for a function-calling benchmark of the kind "several functions offered, call the
+right one". Domain: {domain}.
+Each item: 2 to 4 Python-style functions of the SAME domain (names in snake_case, a one-sentence description each,
+parameters as a JSON schema object with "type": "object", "properties" (each with "type" among string, integer, number,
+boolean, array, object, and a "description"), and "required"), a realistic user question, and the ONE correct call. Exactly
+one function fits the question; the others are plausible near-misses (similar names or parameters, another action or entity).
+Rules: every argument value in the call must appear literally in the question (same number or words). Vary difficulty:
+1-2 or 4-6 arguments, optional parameters set or left out, list arguments, an extra number that is NOT an argument, and
+sometimes near-miss functions that share most parameters with the right one. The question must be fully answerable by
+calling the right function once. English only.
+Return ONLY a JSON array of 10 objects: {{"functions": [{{...}}, ...], "question": "...", "call": {{"name": "...", "arguments": {{...}}}}}}"""
+
+
+def ask(domain, key, model, seed, prompt=PROMPT):
+    body = json.dumps({"model": model, "max_tokens": 12000, "temperature": 1.0, "seed": seed,
+                       "messages": [{"role": "user", "content": prompt.format(domain=domain)}]}).encode()
     request = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=body, headers={
         "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     for attempt in range(4):
@@ -69,6 +82,18 @@ def valid(item):
     return all(k in props for k in args) and all(k in args for k in params.get("required", []) if k in props)
 
 
+def valid_multiple(item):
+    fs, call, q = item.get("functions"), item.get("call"), item.get("question")
+    if not (isinstance(fs, list) and 2 <= len(fs) <= 4 and isinstance(call, dict) and isinstance(q, str) and q.strip()):
+        return False
+    names = [str(f.get("name", "")) if isinstance(f, dict) else "" for f in fs]
+    if len(set(names)) != len(names) or call.get("name") not in names:
+        return False
+    return all(valid({"function": f, "call": call if f.get("name") == call.get("name") else
+                      {"name": f.get("name"), "arguments": {}}, "question": q}) or f.get("name") != call.get("name")
+               for f in fs) and all(re.fullmatch(r"[A-Za-z_]\w*", n) for n in names)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--calls", type=int, default=150)
@@ -76,22 +101,25 @@ def main():
     ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=str(Path(__file__).with_name("tools_simple_haiku.jsonl")))
+    ap.add_argument("--multiple", action="store_true", help="(15 Nov, user: reach round 16; our several-tool sources are used "
+                    "up) BFCL multiple style: 2-4 same-domain functions, exactly one fits the question")
     a = ap.parse_args()
     key = os.environ["OPENROUTER_API_KEY"]
     rng = random.Random(a.seed)
     seeds = [(rng.choice(DOMAINS).strip(), a.seed * 100000 + k) for k in range(a.calls)]
     with ThreadPoolExecutor(a.workers) as ex:
-        results = list(ex.map(lambda s: (s, ask(s[0], key, a.model, s[1])), seeds))
+        results = list(ex.map(lambda s: (s, ask(s[0], key, a.model, s[1], PROMPT_MULTIPLE if a.multiple else PROMPT)), seeds))
     kept, seen, bad, tin, tout = [], set(), 0, 0, 0
     for (domain, _), (items, usage) in results:
         tin += usage.get("prompt_tokens", 0)
         tout += usage.get("completion_tokens", 0)
         for it in items:
-            if not valid(it) or it["question"].strip().lower() in seen:
+            if not (valid_multiple(it) if a.multiple else valid(it)) or it["question"].strip().lower() in seen:
                 bad += 1
                 continue
             seen.add(it["question"].strip().lower())
-            kept.append({"domain": domain, "function": it["function"], "question": it["question"].strip(), "call": it["call"]})
+            kept.append({"domain": domain, **({"functions": it["functions"]} if a.multiple else {"function": it["function"]}),
+                         "question": it["question"].strip(), "call": it["call"]})
     Path(a.out).write_text("".join(json.dumps(r) + "\n" for r in kept))
     print(f"{len(kept)} items kept from {a.calls} calls ({bad} invalid or duplicate); tokens in {tin} / out {tout}; "
           f"failed calls {sum(1 for _, (i, _) in results if not i)}")
