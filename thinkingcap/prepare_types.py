@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -796,6 +796,11 @@ def haiku_nofit3(args, rng):
 def haiku_nofit4(args, rng):
     """(15 Nov) more HARD Haiku no-fit (--hard, batches 3-4) for slices 14-16 (slice 14 failed: 91% solved vs 83%)."""
     yield from haiku_nofit(args, rng, "nofit_haiku4.jsonl", "haiku_nf4")
+
+
+def haiku_nofit5(args, rng):
+    """(15 Nov, user: extend od5c to round 24, strict test matching) 12 more HARD Haiku no-fit batches for slices 17-24."""
+    yield from haiku_nofit(args, rng, "nofit_haiku5.jsonl", "haiku_nf5")
 
 
 def haiku_multiple(args, rng):
