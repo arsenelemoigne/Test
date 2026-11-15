@@ -6796,3 +6796,9 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   Round 15 trained; od5c's stage ended (RESULT od5c-r15 -> od5c-best), Dev of r15 running; r2s3b next on GPU 1.
 - od5d r9 per type: math 38 / +0.3 (from 48 after its hold), code 47 / -0.1, IFEval 45 / +3.5, simple 48 / +4.8, several 47 /
   +1.3, no-fit 47 / +3.7. Round 10 (simple held) answering.
+- ~10:45 CET **r2s3b STOPPED BEFORE TRAINING: 728 / 800 pairs**. Every type at quota except IFEval: 140 of 212 (the fixed mix is
+  cut to its scarcest kind: IFEval shorten candidates 56 + 7 backup for the 95 needed; counting 35 / 53... see pair summary).
+  Math 220 (110 be-right, guards, 22 loops), code 160, simple 112, several 48, no-fit 48 (30 shorten + 18 compact). fullpick /
+  lossan r2s3b failed as expected; GPU 1 moved on: slice 16 built from hard no-fit (r2s-nofit, 170 x8), od5c round 16 running.
+- ~10:45 CET **od5d r10 (slice 11): 50.7% / -0.00** (od5c r10 52.9 / +0.84). od5d ended after round 11 (11 slices existed when
+  it started) -> RESULT od5d-r11 -> Dev of od5d-best running, then fullpick od5d (2 full tests) + lossan on GPU 2.
