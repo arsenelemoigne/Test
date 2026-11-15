@@ -6637,3 +6637,8 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   code 1.4, IFEval 1.0, simple 1.1, several 1.7, no-fit 1.5 pts (95% x2); headline SE ~0.5. The -2.0 per-type brake can fire
   on noise for code / tools. Added to consult24's pack (NEW_RESULTS_od5c.md, "ADDED during your session").
 - GPU 2: fullpick r2s3 picked s20 (corrected 51.0 / -0.68) and s30 (51.0 / -0.72); full test of s20 running.
+- ~01:25 CET (user: generate spare data so od5c reaches round 16): od3prep for slices 10-16 now merges every Path 1 top-up
+  set the original already answered x8 (r2a-r2l: math, code, simple, several, no-fit, IFEval incl. Haiku-written) -> far more
+  test-matchable candidates at no GPU cost. If a type is still short, the check-in adds data at once (our existing sources
+  via newtop first, Haiku on the Mac second; no OpenRouter key on Colab), then od3prep + odpo od5c again (skips finished
+  rounds) before fullpick, until 16 slices.
