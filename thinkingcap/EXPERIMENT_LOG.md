@@ -6826,3 +6826,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   then od5d-r10's full test (restarted), lossan od5d. Checked GPU 1's queue: r2s3b Dev 30-50 -> fullpick r2s3b (2 tests)
   -> lossan r2s3bf, nothing else; both finish before the ~21:50 24 h runtime limit.
 - ~13:25 CET **r2s3b-s30 Dev-512 53.4 / +2.34** (r2s3-s30 52.8 / +2.50; r2s3b-s20 53.7 / +1.63) -> with the 3.3-3.5 Dev bias ~52.1 / -1.1. Dev-SVAMP s30 running. GPU 2: od5c-best (r16) full test 512 / 22,072.
+- ~13:45 CET r2s3b-s30 Dev-SVAMP 48.6 / -0.31 (s20 51.5 / 0.00). Step 40 Dev running. GPU 2 od5c-best full test 1,792 / 22,072.
