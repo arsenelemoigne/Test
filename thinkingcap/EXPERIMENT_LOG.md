@@ -6786,3 +6786,7 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   Queue: ptrepair r2s3b (800 pairs, 50 steps, plain bf16, lr 8e-6, Dev 20/30/40/50; trains only with all 800) -> fullpick
   r2s3b (gate corrected 1.3 / 3.5) -> lossan r2s3b.
 - ~09:55 CET (user): after r2s3b, turn Path 1's 3 steps into ONE clean step from the original if possible (memory thinkingcap-path1-single-step).
+- ~09:45 CET **od5c r13 (slice 14): 51.2% / +1.25** (curve +4.4 above). Per type: math 52 / -1.7, code 53 / +2.0, IFEval 46 /
+  +1.5, simple 50 / +2.8, several 54 / -2.1, no-fit 59 / +8.2. Round 14 holds the 3 tool types.
+- ~09:45 CET **od5d r8 (slice 9): 49.2% / -1.10** (od5c r8 52.8 / -0.02). Per type: math 48 / -2.8, code 51 / -2.6, IFEval 46 /
+  -0.1, simple 49 / +1.1, several 53 / -1.3, no-fit 56 / +3.1. Round 9 holds math, code, simple, several.
