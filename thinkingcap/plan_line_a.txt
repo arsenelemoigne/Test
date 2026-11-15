@@ -717,12 +717,16 @@ odpo --name od5r --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 16 --od-st
 # (15 Nov ~21:20, replaced below) lossan --la-models fullpick:od5r --la-tag od5r
 # (15 Nov ~21:20, user: "start scoring 10, 12, 14, 15, 16 only on online dpo") od5r full tests of rounds 16, 15, 14, 12, 10
 # (most important first; one line each so a disconnect loses at most one test), then the loss analysis of all five
-fullmodel --nothink-models models/od5r-r16 --fm-no-screen
-fullmodel --nothink-models models/od5r-r15 --fm-no-screen
-fullmodel --nothink-models models/od5r-r14 --fm-no-screen
-fullmodel --nothink-models models/od5r-r12 --fm-no-screen
-fullmodel --nothink-models models/od5r-r10 --fm-no-screen
-lossan --la-models od5r-r10,od5r-r12,od5r-r14,od5r-r15,od5r-r16 --la-tag od5r
+# (15 Nov ~21:30, user: no full tests of all five; Dev-512 on them, then the best 2) fullmodel --nothink-models models/od5r-r16 --fm-no-screen
+# (15 Nov ~21:30, user: no full tests of all five; Dev-512 on them, then the best 2) fullmodel --nothink-models models/od5r-r15 --fm-no-screen
+# (15 Nov ~21:30, user: no full tests of all five; Dev-512 on them, then the best 2) fullmodel --nothink-models models/od5r-r14 --fm-no-screen
+# (15 Nov ~21:30, user: no full tests of all five; Dev-512 on them, then the best 2) fullmodel --nothink-models models/od5r-r12 --fm-no-screen
+# (15 Nov ~21:30, user: no full tests of all five; Dev-512 on them, then the best 2) fullmodel --nothink-models models/od5r-r10 --fm-no-screen
+# (15 Nov ~21:30, user: no full tests of all five; Dev-512 on them, then the best 2) lossan --la-models od5r-r10,od5r-r12,od5r-r14,od5r-r15,od5r-r16 --la-tag od5r
+# (15 Nov ~21:30, user: "just do the normal 512 tests and we will pick the best 2 for full eval") od5r rounds 10, 12,
+# 14, 15, 16 scored on Dev-512 (x8); full test of the best 2 (Dev bias from od4 / od5c / od5d: saving ~0.3, accuracy ~2.95)
+fullpick --fp-run od5r --fp-kind arena --fp-dev-rounds 10 12 14 15 16 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-n 2 --rp-dev-vs rpE80
+lossan --la-models fullpick:od5r --la-tag od5r --note dev2
 hold --hold-minutes 30 --hold-tag after-step1-1
 hold --hold-minutes 30 --hold-tag after-step1-2
 hold --hold-minutes 30 --hold-tag after-step1-3

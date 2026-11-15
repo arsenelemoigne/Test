@@ -528,6 +528,8 @@ def main():
     parser.add_argument("--fp-base", default="Qwen/Qwen3-0.6B", help="fullpick dpo (14 Nov): the model the run's adapter was "
                         "trained ON (r2s2: models/r2s1b-s180); the checkpoints are merged onto it")
     parser.add_argument("--fp-save-bias", type=float, default=2.5, help="fullpick: Dev over-reads saving by this (pts)")
+    parser.add_argument("--fp-dev-rounds", type=int, nargs="*", default=None, help="fullpick --fp-kind arena (15 Nov, user): "
+                        "candidates = these rounds' models scored on Dev-512 (instead of the free monitor); full-test the best")
     parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
     parser.add_argument("--fp-skip-tested", action="store_true", help="fullpick (15 Nov, user: one full test on each GPU): "
                         "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
@@ -4300,6 +4302,17 @@ def fullpick(args):
         gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc
                 and c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc]
         start = max(gate, key=lambda c: c["saved"])["label"] if gate else None
+    elif getattr(args, "fp_dev_rounds", None):  # (15 Nov, user: "just do the normal 512 tests and we will pick the best 2")
+        for k in args.fp_dev_rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
+            label = f"{run_name}-r{k}"
+            d = BON / f"dev512-{label}" / "dev_score.json"
+            drive_sync("restore", only=[str(d.parent)])
+            if not d.exists():
+                print(dev_score_model(label, f"models/{label}", vs=getattr(args, "rp_dev_vs", "")), flush=True)
+            if d.exists():
+                a = json.loads(d.read_text())
+                cands.append({"label": label, "model": f"models/{label}", "saved": a["saved"], "acc": a["acc"]})
+        start = None  # the 2nd pick is simply the next best
     else:
         log = BON / f"{run_name}-monitor.jsonl"
         best_f = Path(f"data/{run_name}-best.json")
