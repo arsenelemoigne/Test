@@ -6696,3 +6696,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   newtop r2m-multiple (900 more several-tool questions from ToolACE / Glaive, as r2g-multiple, x8 by the original) ->
   od3prep --od3-more 5 (slices 12-16) -> odpo od5c again (--od-min-rounds 12; skips finished rounds) -> fullpick -> lossan.
 - GPU 2: r2s3-s30 full test started (768 / 22,072 at 02:47).
+- ~03:25 CET **od5c r9 (od5c-r9 on slice 10): 48.1% saved / +2.05** (Dev-512 of the same model 48.9 / +1.97: monitor and Dev agree); curve at 48.1 = -2.54 -> **+4.6 above (best distance yet)**. Per type: math 52 / -0.1, code 51 / -0.2, IFEval 43 / +3.0, simple 47 / +6.5, several 46 / +3.4, no-fit 45 / +5.4. Round 10 trained (last loss 0.480, 75%). GPU 2: r2s3-s30 full test 6,400 / 22,072 (~04:40).
