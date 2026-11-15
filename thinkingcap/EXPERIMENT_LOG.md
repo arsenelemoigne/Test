@@ -6840,3 +6840,9 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
 - r2s3b Dev s50 51.2 / +3.03 (SVAMP 45.2 / +0.50); fullpick picked **s30** (corrected 52.1 / -1.16) and **s40** (50.6 / -1.11)
   for full tests (running on GPU 1).
 - ~14:55 CET lossan od5c -> reviews/loss_analysis/od5c.txt. Exact od5c-best = -0.78 (math -2.84, code -1.95, IFEval +0.49, simple -1.09, several 0.00, no-fit +5.89); od5c-r10 math -4.58 (the gap closed by rounds 11-16). GPU 2 now: od5d-r10 full test (768 / 22,072); GPU 1: r2s3b-s30 full test (768 / 22,072).
+- ~15:45 CET (user: save everything about the online DPO so it can be reproduced): **reviews/od5c/REPRODUCE_od5c.md** = the
+  full record of od5c (method, code versions, training data and how every slice was built incl. the Haiku files, the exact
+  pair policy, brake, quotas, hyper-parameters, the queue line, round-by-round monitor per type + held types + pairs +
+  training losses, Dev / full tests and their biases, where every artifact lives on Drive, how to rerun). Raw round logs
+  (rounds 12-16) reviews/od5c/raw_gpu1_log_rounds3to16.txt, per-type pairs r3-r7 reviews/od5c/pairs_r3_r7_per_type.md,
+  loss analysis reviews/od5c/loss_analysis_od5c.txt.

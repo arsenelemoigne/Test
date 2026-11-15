@@ -1,0 +1,1034 @@
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 10 / 30 / 10 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 11 / 26 / 7 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+240 pairs (225 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 51 / 1 / 10 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 18
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 3 / 9 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 14
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 30 / 0 / 14 / 0 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 20
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 31 / 14 / 39 / 14 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 7
+  ifeval / od5 right: 15
+  ifeval / od5 shorten: 29
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 10 / 30 / 10 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 11 / 26 / 7 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+odpo od5c: round 12 brake on models/od5c-r11's answers (+46.8% / +1.30): held (no shortening) = ['bfcl_simple_python'] (caps {'svamp': 62.0, 'mbpp': 63.0, 'ifeval': 56.0, 'bfcl_simple_python': 46.0, 'bfcl_multiple': 49.0, 'bfcl_irrelevance': 56.0}, accuracy hold <= -2.0)
+odpo od5c: round 12/12: models/od5c-r11 answers, DPO continues adapters/od5c-r11-s0/step-15, reference = the original
+repair od5c-r12: 780 questions from data/od3-r12-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+227 pairs (217 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 51 / 1 / 10 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 18
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 3 / 9 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 14
+  bfcl_simple_python / SHORT of quota: 13
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 30 (held) / 0 / 12 / 0 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 12
+  bfcl_simple_python / od5 shorten: 0
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 31 / 14 / 39 / 14 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 7
+  ifeval / od5 right: 15
+  ifeval / od5 shorten: 29
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 10 / 30 / 10 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 11 / 26 / 7 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+227 pairs (217 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 51 / 1 / 10 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 18
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 3 / 9 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 14
+  bfcl_simple_python / SHORT of quota: 13
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 30 (held) / 0 / 12 / 0 / 1 / 0
+  bfcl_simple_python / od5 format: 1
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 12
+  bfcl_simple_python / od5 shorten: 0
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 31 / 14 / 39 / 14 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 7
+  ifeval / od5 right: 15
+  ifeval / od5 shorten: 29
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 10 / 30 / 10 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 11 / 26 / 7 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+step 5/15  loss 0.5490  pairs ordered right 75%
+step 10/15  loss 0.5193  pairs ordered right 74%
+step 15/15  loss 0.5827  pairs ordered right 68%
+odpo od5c: MONITOR round 12 answers (models/od5c-r11) vs the original on the same questions: saved +46.8% / accuracy +1.30 | bfcl_irrelevance +48/+8.2, mbpp +53/-1.4, svamp +50/-1.4, ifeval +37/+2.6, bfcl_multiple +47/+3.0, bfcl_simple_python +47/+4.8
+odpo od5c: RESULT models/od5c-r12 -> models/od5c-best
+scripts at 8f6a01f log: od5c r11, hard no-fit refill queued
+scripts at 8f6a01f log: od5c r11, hard no-fit refill queued
+scripts at 98b5d79 log: hard no-fit 247
+plan: newtop --name r2o-nofit --nt-sources haiku_nofit3 --nt-parts bfcl_irrelevance --nt-raw --nt-pool=--per-benchmark+30000 --tt-questions 1000 --nt-samples 8 --data-seed 57
+scripts at 98b5d79 log: hard no-fit 247
+newtop r2o-nofit: 183 questions x8; mean solve rate 91%, sometimes right 39, always 139, never 5
+scripts at 98b5d79 log: hard no-fit 247
+plan: od3prep --od3-more 4 --od3-tops r2o-nofit --od3-tol bfcl_irrelevance=5 --data-seed 52
+scripts at 98b5d79 log: hard no-fit 247
+od3prep --od3-tops: + 183 candidates from tooltop-r2o-nofit (stats merged)
+od3prep --od3-more: 12 slices exist; candidates left {'bfcl_simple_python': 2353, 'mbpp': 1543, 'svamp': 2075, 'ifeval': 6042, 'bfcl_multiple': 1278, 'bfcl_irrelevance': 3021}
+round 13: svamp 220/220 solve 88% (test 89%), mbpp 140/140 solve 53% (test 52%), ifeval 200/200 solve 59% (test 59%), bfcl_simple_python 80/80 solve 81% (test 82%), bfcl_multiple 60/60 solve 77% (test 76%), bfcl_irrelevance 80/80 solve 85% (test 83%) (bins borrowed)
+round 14: NOT ENOUGH questions left {'bfcl_irrelevance': 'solve 91% vs test 83%'}: slices stop at round 13
+scripts at 98b5d79 log: hard no-fit 247
+plan: odpo --name od5c --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 16 --od-steps 15 --od-r1-steps 20 --od-r1-quota svamp=80,mbpp=56,ifeval=88,bfcl_simple_python=36,bfcl_multiple=28,bfcl_irrelevance=32 --rp-quota svamp=58,mbpp=52,ifeval=58,bfcl_simple_python=26,bfcl_multiple=22,bfcl_irrelevance=24 --rp-questions svamp=220,mbpp=140,ifeval=200,bfcl_simple_python=80,bfcl_multiple=60,bfcl_irrelevance=80 --rp-own-data --rp-kinds mix --rp-samples 8 --rp-seed 18 --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.85,--mix-preset,od5,--od5-v2,--base-stats,data/od3-base-stats.json,--base-resp,data/od3-base-resp.json,--base-think,data/od3-base-think.json,--floor-by-part,svamp=25:0.44+mbpp=35:0.36+ifeval=20:0.32+bfcl_simple_python=20:0.42+bfcl_multiple=25:0.42+bfcl_irrelevance=20:0.35,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--resp-median,0.95,--resp-max,1.05,--right-resp-cap,1.15 --rp-lr 1.4e-5 --rp-warmup 2 --rp-beta 0.1 --rp-dpo-seed 0 --rp-dev-vs rpE80 --od-dev-rounds 99 --data-seed 18 --od-caps svamp=62,mbpp=63,ifeval=56,bfcl_simple_python=46,bfcl_multiple=49,bfcl_irrelevance=56 --od-acc-hold -2.0 --od-unlatch --od-stop-save 999 --od-conv-gain -999 --od-min-rounds 13 --od-unlatch
+scripts at 98b5d79 log: hard no-fit 247
+odpo od5c: 16 rounds asked, 13 slices exist: 13 rounds
+odpo od5c: round 1 already done (models/od5c-r1, step 20), skipped
+odpo od5c: round 2 already done (models/od5c-r2, step 15), skipped
+odpo od5c: round 3 already done (models/od5c-r3, step 15), skipped
+odpo od5c: round 4 already done (models/od5c-r4, step 15), skipped
+odpo od5c: round 5 already done (models/od5c-r5, step 15), skipped
+odpo od5c: round 6 already done (models/od5c-r6, step 15), skipped
+odpo od5c: round 7 already done (models/od5c-r7, step 15), skipped
+odpo od5c: round 8 already done (models/od5c-r8, step 15), skipped
+odpo od5c: round 9 already done (models/od5c-r9, step 15), skipped
+odpo od5c: round 10 already done (models/od5c-r10, step 15), skipped
+odpo od5c: round 11 already done (models/od5c-r11, step 15), skipped
+odpo od5c: round 12 already done (models/od5c-r12, step 15), skipped
+repair od5c-r13: 780 questions from data/od3-r13-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+240 pairs (221 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 2 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 22
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 18 / 2 / 10 / 0 / 3 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 2
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 14
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 2 / 9 / 0 / 2 / 0
+  bfcl_simple_python / od5 format: 2
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 17
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 24 / 12 / 47 / 5 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 5
+  ifeval / od5 recovery: 12
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 24
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 13 / 37 / 8 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 146 / 13 / 30 / 14 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+240 pairs (221 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 2 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 22
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 18 / 2 / 10 / 0 / 3 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 2
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 14
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 2 / 9 / 0 / 2 / 0
+  bfcl_simple_python / od5 format: 2
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 17
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 24 / 12 / 47 / 5 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 5
+  ifeval / od5 recovery: 12
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 24
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 13 / 37 / 8 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 146 / 13 / 30 / 14 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+odpo od5c: round 13 brake on models/od5c-r12's answers (+49.7% / +2.24): held (no shortening) = ['bfcl_multiple'] (caps {'svamp': 62.0, 'mbpp': 63.0, 'ifeval': 56.0, 'bfcl_simple_python': 46.0, 'bfcl_multiple': 49.0, 'bfcl_irrelevance': 56.0}, accuracy hold <= -2.0)
+odpo od5c: round 13/13: models/od5c-r12 answers, DPO continues adapters/od5c-r12-s0/step-15, reference = the original
+repair od5c-r13: 780 questions from data/od3-r13-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+230 pairs (213 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 2 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 22
+  bfcl_multiple / SHORT of quota: 10
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 18 (held) / 2 / 9 / 0 / 3 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 2
+  bfcl_multiple / od5 right: 8
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 2 / 9 / 0 / 2 / 0
+  bfcl_simple_python / od5 format: 2
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 17
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 24 / 12 / 47 / 5 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 5
+  ifeval / od5 recovery: 12
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 24
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 13 / 37 / 8 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 146 / 13 / 30 / 14 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+230 pairs (213 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 2 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 22
+  bfcl_multiple / SHORT of quota: 10
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 18 (held) / 2 / 9 / 0 / 3 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 2
+  bfcl_multiple / od5 right: 8
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 35 / 2 / 9 / 0 / 2 / 0
+  bfcl_simple_python / od5 format: 2
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 17
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 24 / 12 / 47 / 5 / 0 / 11
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 5
+  ifeval / od5 recovery: 12
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 24
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 62 / 13 / 37 / 8 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 146 / 13 / 30 / 14 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+step 5/15  loss 0.5321  pairs ordered right 79%
+step 10/15  loss 0.4668  pairs ordered right 80%
+step 15/15  loss 0.5066  pairs ordered right 74%
+odpo od5c: MONITOR round 13 answers (models/od5c-r12) vs the original on the same questions: saved +49.7% / accuracy +2.24 | bfcl_irrelevance +51/+7.4, mbpp +55/+1.4, svamp +49/-1.4, ifeval +46/+5.2, bfcl_simple_python +45/+3.7, bfcl_multiple +52/-0.4
+odpo od5c: RESULT models/od5c-r13 -> models/od5c-best
+scripts at 517fb01 log: od5c r12, od5d r5
+scripts at 517fb01 log: od5c r12, od5d r5
+scripts at 3c90a8e log: od5d r6
+plan: newtop --name r2p-nofit --nt-sources haiku_nofit4 --nt-parts bfcl_irrelevance --nt-raw --nt-pool=--per-benchmark+30000 --tt-questions 1000 --nt-samples 8 --data-seed 58
+scripts at 3c90a8e log: od5d r6
+newtop r2p-nofit: 87 questions x8; mean solve rate 88%, sometimes right 16, always 67, never 4
+scripts at 96f799c log
+plan: od3prep --od3-more 3 --od3-tops r2p-nofit --od3-tol bfcl_irrelevance=5 --data-seed 53
+scripts at 96f799c log
+od3prep --od3-tops: + 87 candidates from tooltop-r2p-nofit (stats merged)
+od3prep --od3-more: 13 slices exist; candidates left {'bfcl_simple_python': 2273, 'mbpp': 1403, 'svamp': 1855, 'ifeval': 5842, 'bfcl_multiple': 1218, 'bfcl_irrelevance': 3028}
+round 14: svamp 220/220 solve 89% (test 89%), mbpp 140/140 solve 52% (test 52%), ifeval 200/200 solve 59% (test 59%), bfcl_simple_python 80/80 solve 82% (test 82%), bfcl_multiple 60/60 solve 76% (test 76%), bfcl_irrelevance 80/80 solve 86% (test 83%) (bins borrowed)
+round 15: NOT ENOUGH questions left {'bfcl_irrelevance': 'solve 92% vs test 83%'}: slices stop at round 14
+scripts at 96f799c log
+plan: newtop --name r2q-nofit --nt-sources haiku_nofit4 --nt-parts bfcl_irrelevance --nt-raw --nt-pool=--per-benchmark+30000 --tt-questions 1000 --nt-samples 8 --data-seed 59
+scripts at 96f799c log
+newtop r2q-nofit: 88 questions x8; mean solve rate 90%, sometimes right 19, always 66, never 3
+scripts at 9d2a6b0 log
+plan: od3prep --od3-more 3 --od3-tops r2q-nofit --od3-tol bfcl_irrelevance=5 --data-seed 54
+scripts at 9d2a6b0 log
+od3prep --od3-tops: + 88 candidates from tooltop-r2q-nofit (stats merged)
+od3prep --od3-more: 14 slices exist; candidates left {'bfcl_simple_python': 2193, 'mbpp': 1263, 'svamp': 1635, 'ifeval': 5642, 'bfcl_multiple': 1158, 'bfcl_irrelevance': 3036}
+round 15: svamp 220/220 solve 88% (test 89%), mbpp 140/140 solve 52% (test 52%), ifeval 200/200 solve 59% (test 59%), bfcl_simple_python 80/80 solve 80% (test 82%) (bins borrowed), bfcl_multiple 60/60 solve 75% (test 76%), bfcl_irrelevance 80/80 solve 88% (test 83%) (bins borrowed)
+round 16: NOT ENOUGH questions left {'bfcl_irrelevance': 'solve 91% vs test 83%'}: slices stop at round 15
+scripts at 9d2a6b0 log
+scripts at 9d2a6b0 log
+scripts at cb17c99 log: slice 15, od5d r7
+plan: newtop --name r2r-nofit --nt-sources haiku_nofit4 --nt-parts bfcl_irrelevance --nt-raw --nt-pool=--per-benchmark+30000 --tt-questions 1000 --nt-samples 8 --data-seed 60
+scripts at cb17c99 log: slice 15, od5d r7
+scripts at cb17c99 log: slice 15, od5d r7
+plan: od3prep --od3-more 2 --od3-tops r2r-nofit --od3-tol bfcl_irrelevance=5 --data-seed 55
+scripts at cb17c99 log: slice 15, od5d r7
+scripts at cb17c99 log: slice 15, od5d r7
+plan: odpo --name od5c --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 16 --od-steps 15 --od-r1-steps 20 --od-r1-quota svamp=80,mbpp=56,ifeval=88,bfcl_simple_python=36,bfcl_multiple=28,bfcl_irrelevance=32 --rp-quota svamp=58,mbpp=52,ifeval=58,bfcl_simple_python=26,bfcl_multiple=22,bfcl_irrelevance=24 --rp-questions svamp=220,mbpp=140,ifeval=200,bfcl_simple_python=80,bfcl_multiple=60,bfcl_irrelevance=80 --rp-own-data --rp-kinds mix --rp-samples 8 --rp-seed 18 --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.85,--mix-preset,od5,--od5-v2,--base-stats,data/od3-base-stats.json,--base-resp,data/od3-base-resp.json,--base-think,data/od3-base-think.json,--floor-by-part,svamp=25:0.44+mbpp=35:0.36+ifeval=20:0.32+bfcl_simple_python=20:0.42+bfcl_multiple=25:0.42+bfcl_irrelevance=20:0.35,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--resp-median,0.95,--resp-max,1.05,--right-resp-cap,1.15 --rp-lr 1.4e-5 --rp-warmup 2 --rp-beta 0.1 --rp-dpo-seed 0 --rp-dev-vs rpE80 --od-dev-rounds 99 --data-seed 18 --od-caps svamp=62,mbpp=63,ifeval=56,bfcl_simple_python=46,bfcl_multiple=49,bfcl_irrelevance=56 --od-acc-hold -2.0 --od-unlatch --od-stop-save 999 --od-conv-gain -999 --od-min-rounds 14 --od-unlatch
+scripts at cb17c99 log: slice 15, od5d r7
+odpo od5c: 16 rounds asked, 15 slices exist: 15 rounds
+odpo od5c: round 1 already done (models/od5c-r1, step 20), skipped
+odpo od5c: round 2 already done (models/od5c-r2, step 15), skipped
+odpo od5c: round 3 already done (models/od5c-r3, step 15), skipped
+odpo od5c: round 4 already done (models/od5c-r4, step 15), skipped
+odpo od5c: round 5 already done (models/od5c-r5, step 15), skipped
+odpo od5c: round 6 already done (models/od5c-r6, step 15), skipped
+odpo od5c: round 7 already done (models/od5c-r7, step 15), skipped
+odpo od5c: round 8 already done (models/od5c-r8, step 15), skipped
+odpo od5c: round 9 already done (models/od5c-r9, step 15), skipped
+odpo od5c: round 10 already done (models/od5c-r10, step 15), skipped
+odpo od5c: round 11 already done (models/od5c-r11, step 15), skipped
+odpo od5c: round 12 already done (models/od5c-r12, step 15), skipped
+odpo od5c: round 13 already done (models/od5c-r13, step 15), skipped
+repair od5c-r14: 780 questions from data/od3-r14-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+240 pairs (217 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 52 / 1 / 2 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 20
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 16 / 4 / 7 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 4
+  bfcl_multiple / od5 right: 6
+  bfcl_multiple / od5 shorten: 11
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 3 / 8 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 3
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 15
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 9 / 42 / 8 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 9
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 25
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 5 / 30 / 6 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 5
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 32
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 97 / 12 / 23 / 12 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+240 pairs (217 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 52 / 1 / 2 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 20
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 16 / 4 / 7 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 4
+  bfcl_multiple / od5 right: 6
+  bfcl_multiple / od5 shorten: 11
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 3 / 8 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 3
+  bfcl_simple_python / od5 right: 5
+  bfcl_simple_python / od5 shorten: 15
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 9 / 42 / 8 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 9
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 25
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 5 / 30 / 6 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 5
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 32
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 97 / 12 / 23 / 12 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+odpo od5c: round 14 brake on models/od5c-r13's answers (+51.2% / +1.25): held (no shortening) = ['bfcl_irrelevance', 'bfcl_multiple', 'bfcl_simple_python'] (caps {'svamp': 62.0, 'mbpp': 63.0, 'ifeval': 56.0, 'bfcl_simple_python': 46.0, 'bfcl_multiple': 49.0, 'bfcl_irrelevance': 56.0}, accuracy hold <= -2.0)
+odpo od5c: round 14/15: models/od5c-r13 answers, DPO continues adapters/od5c-r13-s0/step-15, reference = the original
+repair od5c-r14: 780 questions from data/od3-r14-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+196 pairs (176 questions)
+  bfcl_irrelevance / SHORT of quota: 20
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 52 (held) / 1 / 2 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 0
+  bfcl_multiple / SHORT of quota: 10
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 16 (held) / 4 / 7 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 4
+  bfcl_multiple / od5 right: 7
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 14
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 25 (held) / 3 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 3
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 0
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 9 / 42 / 8 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 9
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 25
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 5 / 30 / 6 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 5
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 32
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 97 / 12 / 23 / 12 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+196 pairs (176 questions)
+  bfcl_irrelevance / SHORT of quota: 20
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 52 (held) / 1 / 2 / 1 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 1
+  bfcl_irrelevance / od5 recovery: 1
+  bfcl_irrelevance / od5 right: 2
+  bfcl_irrelevance / od5 shorten: 0
+  bfcl_multiple / SHORT of quota: 10
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 16 (held) / 4 / 7 / 0 / 1 / 0
+  bfcl_multiple / od5 format: 1
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 4
+  bfcl_multiple / od5 right: 7
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 14
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 25 (held) / 3 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 3
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 0
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 9 / 42 / 8 / 0 / 9
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 9
+  ifeval / od5 right: 17
+  ifeval / od5 shorten: 25
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 5 / 30 / 6 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 5
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 32
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 97 / 12 / 23 / 12 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+step 5/15  loss 0.5247  pairs ordered right 68%
+step 10/15  loss 0.4382  pairs ordered right 82%
+step 15/15  loss 0.4392  pairs ordered right 81%
+odpo od5c: MONITOR round 14 answers (models/od5c-r13) vs the original on the same questions: saved +51.2% / accuracy +1.25 | bfcl_multiple +54/-2.1, mbpp +53/+2.0, svamp +52/-1.7, ifeval +46/+1.5, bfcl_simple_python +50/+2.8, bfcl_irrelevance +59/+8.2
+repair od5c-r15: 780 questions from data/od3-r15-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+239 pairs (214 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 48 / 0 / 6 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 19
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 / 4 / 9 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 13
+  bfcl_simple_python / SHORT of quota: 1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 / 0 / 5 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 4
+  bfcl_simple_python / od5 shorten: 18
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 21 / 10 / 39 / 17 / 0 / 10
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 10
+  ifeval / od5 right: 20
+  ifeval / od5 shorten: 21
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 57 / 9 / 32 / 12 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 4 / 22 / 4 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 4
+  svamp / od5 recovery: 4
+  svamp / od5 right: 11
+  svamp / od5 shorten: 39
+239 pairs (214 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 48 / 0 / 6 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 19
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 / 4 / 9 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 4
+  bfcl_multiple / od5 shorten: 13
+  bfcl_simple_python / SHORT of quota: 1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 / 0 / 5 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 4
+  bfcl_simple_python / od5 shorten: 18
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 21 / 10 / 39 / 17 / 0 / 10
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 10
+  ifeval / od5 right: 20
+  ifeval / od5 shorten: 21
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 57 / 9 / 32 / 12 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 4 / 22 / 4 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 4
+  svamp / od5 recovery: 4
+  svamp / od5 right: 11
+  svamp / od5 shorten: 39
+odpo od5c: round 15 brake on models/od5c-r14's answers (+50.3% / +2.47): held (no shortening) = ['bfcl_multiple', 'bfcl_simple_python'] (caps {'svamp': 62.0, 'mbpp': 63.0, 'ifeval': 56.0, 'bfcl_simple_python': 46.0, 'bfcl_multiple': 49.0, 'bfcl_irrelevance': 56.0}, accuracy hold <= -2.0)
+odpo od5c: round 15/15: models/od5c-r14 answers, DPO continues adapters/od5c-r14-s0/step-15, reference = the original
+repair od5c-r15: 780 questions from data/od3-r15-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+212 pairs (194 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 48 / 0 / 6 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 19
+  bfcl_multiple / SHORT of quota: 9
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 (held) / 4 / 8 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 4
+  bfcl_multiple / od5 right: 7
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 19
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 (held) / 0 / 5 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 4
+  bfcl_simple_python / od5 shorten: 0
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 21 / 10 / 39 / 17 / 0 / 10
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 10
+  ifeval / od5 right: 20
+  ifeval / od5 shorten: 21
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 57 / 9 / 32 / 12 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 4 / 22 / 4 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 4
+  svamp / od5 recovery: 4
+  svamp / od5 right: 11
+  svamp / od5 shorten: 39
+212 pairs (194 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 48 / 0 / 6 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 19
+  bfcl_multiple / SHORT of quota: 9
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 (held) / 4 / 8 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 4
+  bfcl_multiple / od5 right: 7
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 19
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 (held) / 0 / 5 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 0
+  bfcl_simple_python / od5 right: 4
+  bfcl_simple_python / od5 shorten: 0
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 21 / 10 / 39 / 17 / 0 / 10
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 10
+  ifeval / od5 right: 20
+  ifeval / od5 shorten: 21
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 57 / 9 / 32 / 12 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 4 / 22 / 4 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 4
+  svamp / od5 recovery: 4
+  svamp / od5 right: 11
+  svamp / od5 shorten: 39
+step 5/15  loss 0.5579  pairs ordered right 68%
+step 10/15  loss 0.5219  pairs ordered right 72%
+step 15/15  loss 0.5868  pairs ordered right 80%
+odpo od5c: MONITOR round 15 answers (models/od5c-r14) vs the original on the same questions: saved +50.3% / accuracy +2.47 | bfcl_irrelevance +55/+9.1, mbpp +54/+1.8, svamp +52/-0.0, ifeval +43/+6.5, bfcl_multiple +54/+0.2, bfcl_simple_python +49/-2.2
+odpo od5c: RESULT models/od5c-r15 -> models/od5c-best
+scripts at 57b58a4 log: per type r14 / od5d r9
+scripts at 57b58a4 log: per type r14 / od5d r9
+728 pairs (748 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_simple_python / SHORT of quota: 0
+  ifeval / SHORT of quota: 72
+  mbpp / SHORT of quota: 0
+  svamp / SHORT of quota: 0
+728 pairs (748 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_simple_python / SHORT of quota: 0
+  ifeval / SHORT of quota: 72
+  mbpp / SHORT of quota: 0
+  svamp / SHORT of quota: 0
+scripts at 57b58a4 log: per type r14 / od5d r9
+scripts at 57b58a4 log: per type r14 / od5d r9
+scripts at 57b58a4 log: per type r14 / od5d r9
+scripts at 57b58a4 log: per type r14 / od5d r9
+scripts at 57b58a4 log: per type r14 / od5d r9
+plan: newtop --name r2s-nofit --nt-sources haiku_nofit4 --nt-parts bfcl_irrelevance --nt-raw --nt-pool=--per-benchmark+30000 --tt-questions 1000 --nt-samples 8 --data-seed 61
+scripts at 57b58a4 log: per type r14 / od5d r9
+newtop r2s-nofit: 170 questions x8; mean solve rate 88%, sometimes right 44, always 121, never 5
+scripts at 57b58a4 log: per type r14 / od5d r9
+plan: od3prep --od3-more 1 --od3-tops r2s-nofit --od3-tol bfcl_irrelevance=5 --data-seed 56
+scripts at 57b58a4 log: per type r14 / od5d r9
+od3prep --od3-tops: + 170 candidates from tooltop-r2s-nofit (stats merged)
+od3prep --od3-more: 15 slices exist; candidates left {'bfcl_simple_python': 2113, 'mbpp': 1123, 'svamp': 1415, 'ifeval': 5442, 'bfcl_multiple': 1098, 'bfcl_irrelevance': 3126}
+round 16: svamp 220/220 solve 88% (test 89%), mbpp 140/140 solve 53% (test 52%), ifeval 200/200 solve 58% (test 59%), bfcl_simple_python 80/80 solve 80% (test 82%) (bins borrowed), bfcl_multiple 60/60 solve 77% (test 76%), bfcl_irrelevance 80/80 solve 84% (test 83%) (bins borrowed)
+scripts at 57b58a4 log: per type r14 / od5d r9
+plan: odpo --name od5c --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 16 --od-steps 15 --od-r1-steps 20 --od-r1-quota svamp=80,mbpp=56,ifeval=88,bfcl_simple_python=36,bfcl_multiple=28,bfcl_irrelevance=32 --rp-quota svamp=58,mbpp=52,ifeval=58,bfcl_simple_python=26,bfcl_multiple=22,bfcl_irrelevance=24 --rp-questions svamp=220,mbpp=140,ifeval=200,bfcl_simple_python=80,bfcl_multiple=60,bfcl_irrelevance=80 --rp-own-data --rp-kinds mix --rp-samples 8 --rp-seed 18 --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.85,--mix-preset,od5,--od5-v2,--base-stats,data/od3-base-stats.json,--base-resp,data/od3-base-resp.json,--base-think,data/od3-base-think.json,--floor-by-part,svamp=25:0.44+mbpp=35:0.36+ifeval=20:0.32+bfcl_simple_python=20:0.42+bfcl_multiple=25:0.42+bfcl_irrelevance=20:0.35,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--resp-median,0.95,--resp-max,1.05,--right-resp-cap,1.15 --rp-lr 1.4e-5 --rp-warmup 2 --rp-beta 0.1 --rp-dpo-seed 0 --rp-dev-vs rpE80 --od-dev-rounds 99 --data-seed 18 --od-caps svamp=62,mbpp=63,ifeval=56,bfcl_simple_python=46,bfcl_multiple=49,bfcl_irrelevance=56 --od-acc-hold -2.0 --od-unlatch --od-stop-save 999 --od-conv-gain -999 --od-min-rounds 16 --od-unlatch
+scripts at 57b58a4 log: per type r14 / od5d r9
+odpo od5c: round 1 already done (models/od5c-r1, step 20), skipped
+odpo od5c: round 2 already done (models/od5c-r2, step 15), skipped
+odpo od5c: round 3 already done (models/od5c-r3, step 15), skipped
+odpo od5c: round 4 already done (models/od5c-r4, step 15), skipped
+odpo od5c: round 5 already done (models/od5c-r5, step 15), skipped
+odpo od5c: round 6 already done (models/od5c-r6, step 15), skipped
+odpo od5c: round 7 already done (models/od5c-r7, step 15), skipped
+odpo od5c: round 8 already done (models/od5c-r8, step 15), skipped
+odpo od5c: round 9 already done (models/od5c-r9, step 15), skipped
+odpo od5c: round 10 already done (models/od5c-r10, step 15), skipped
+odpo od5c: round 11 already done (models/od5c-r11, step 15), skipped
+odpo od5c: round 12 already done (models/od5c-r12, step 15), skipped
+odpo od5c: round 13 already done (models/od5c-r13, step 15), skipped
+odpo od5c: round 14 already done (models/od5c-r14, step 15), skipped
+odpo od5c: round 15 already done (models/od5c-r15, step 15), skipped
+repair od5c-r16: 780 questions from data/od3-r16-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+240 pairs (211 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 44 / 0 / 5 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 19
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 / 3 / 9 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 5
+  bfcl_multiple / od5 shorten: 12
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 / 3 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 15
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 19 / 11 / 43 / 10 / 0 / 7
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 11
+  ifeval / od5 right: 21
+  ifeval / od5 shorten: 19
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 58 / 8 / 27 / 9 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 84 / 15 / 22 / 10 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+240 pairs (211 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 44 / 0 / 5 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 5
+  bfcl_irrelevance / od5 shorten: 19
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 / 3 / 9 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 5
+  bfcl_multiple / od5 shorten: 12
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 / 3 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 15
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 19 / 11 / 43 / 10 / 0 / 7
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 11
+  ifeval / od5 right: 21
+  ifeval / od5 shorten: 19
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 58 / 8 / 27 / 9 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 84 / 15 / 22 / 10 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+odpo od5c: round 16 brake on models/od5c-r15's answers (+52.9% / +2.41): held (no shortening) = ['bfcl_irrelevance', 'bfcl_multiple'] (caps {'svamp': 62.0, 'mbpp': 63.0, 'ifeval': 56.0, 'bfcl_simple_python': 46.0, 'bfcl_multiple': 49.0, 'bfcl_irrelevance': 56.0}, accuracy hold <= -2.0)
+odpo od5c: round 16/16: models/od5c-r15 answers, DPO continues adapters/od5c-r15-s0/step-15, reference = the original
+repair od5c-r16: 780 questions from data/od3-r16-questions.jsonl: {'svamp': 220, 'mbpp': 140, 'ifeval': 200, 'bfcl_simple_python': 80, 'bfcl_multiple': 60, 'bfcl_irrelevance': 80}
+211 pairs (185 questions)
+  bfcl_irrelevance / SHORT of quota: 21
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 44 (held) / 0 / 3 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 3
+  bfcl_irrelevance / od5 shorten: 0
+  bfcl_multiple / SHORT of quota: 8
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 (held) / 3 / 9 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 9
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 / 3 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 15
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 19 / 11 / 43 / 10 / 0 / 7
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 11
+  ifeval / od5 right: 21
+  ifeval / od5 shorten: 19
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 58 / 8 / 27 / 9 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 84 / 15 / 22 / 10 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+211 pairs (185 questions)
+  bfcl_irrelevance / SHORT of quota: 21
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 44 (held) / 0 / 3 / 0 / 0 / 0
+  bfcl_irrelevance / od5 format: 0
+  bfcl_irrelevance / od5 loop: 0
+  bfcl_irrelevance / od5 recovery: 0
+  bfcl_irrelevance / od5 right: 3
+  bfcl_irrelevance / od5 shorten: 0
+  bfcl_multiple / SHORT of quota: 8
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 17 (held) / 3 / 9 / 0 / 2 / 0
+  bfcl_multiple / od5 format: 2
+  bfcl_multiple / od5 loop: 0
+  bfcl_multiple / od5 recovery: 3
+  bfcl_multiple / od5 right: 9
+  bfcl_multiple / od5 shorten: 0
+  bfcl_simple_python / SHORT of quota: 0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 23 / 3 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 format: 3
+  bfcl_simple_python / od5 loop: 0
+  bfcl_simple_python / od5 recovery: 2
+  bfcl_simple_python / od5 right: 6
+  bfcl_simple_python / od5 shorten: 15
+  ifeval / SHORT of quota: 0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 19 / 11 / 43 / 10 / 0 / 7
+  ifeval / od5 format: 0
+  ifeval / od5 loop: 7
+  ifeval / od5 recovery: 11
+  ifeval / od5 right: 21
+  ifeval / od5 shorten: 19
+  mbpp / SHORT of quota: 0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 58 / 8 / 27 / 9 / 0 / 0
+  mbpp / od5 format: 0
+  mbpp / od5 loop: 6
+  mbpp / od5 recovery: 7
+  mbpp / od5 right: 9
+  mbpp / od5 shorten: 30
+  svamp / SHORT of quota: 0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 84 / 15 / 22 / 10 / 0 / 0
+  svamp / od5 format: 0
+  svamp / od5 loop: 7
+  svamp / od5 recovery: 8
+  svamp / od5 right: 10
+  svamp / od5 shorten: 33
+step 5/15  loss 0.5045  pairs ordered right 75%
+step 10/15  loss 0.6503  pairs ordered right 74%
+step 15/15  loss 0.5652  pairs ordered right 76%
+odpo od5c: MONITOR round 16 answers (models/od5c-r15) vs the original on the same questions: saved +52.9% / accuracy +2.41 | bfcl_multiple +57/-2.3, mbpp +58/+1.3, svamp +56/-0.8, ifeval +47/+5.0, bfcl_simple_python +44/+3.5, bfcl_irrelevance +58/+10.2
+odpo od5c: RESULT models/od5c-r16 -> models/od5c-best
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+799 pairs (791 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_simple_python / SHORT of quota: 0
+  ifeval / SHORT of quota: 1
+  mbpp / SHORT of quota: 0
+  svamp / SHORT of quota: 0
+799 pairs (791 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_simple_python / SHORT of quota: 0
+  ifeval / SHORT of quota: 1
+  mbpp / SHORT of quota: 0
+  svamp / SHORT of quota: 0
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 1f3db74 log: od5d full-test picks
+scripts at 2dcebaa log
+scripts at 2dcebaa log
+799 pairs (791 questions)
+  bfcl_irrelevance / SHORT of quota: 0
+  bfcl_multiple / SHORT of quota: 0
+  bfcl_simple_python / SHORT of quota: 0
+  ifeval / SHORT of quota: 1
+  mbpp / SHORT of quota: 0
+  svamp / SHORT of quota: 0
+scripts at b924a54 log: r2s3b-s40 Dev
+scripts at b924a54 log: r2s3b-s40 Dev
