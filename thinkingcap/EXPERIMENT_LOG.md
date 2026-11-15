@@ -6670,3 +6670,13 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~02:30 CET (user): one od5c full test on EACH GPU: GPU 2 after lossan r2s3 = fullpick od5c --fp-n 1 --fp-skip-tested
   --fp-tag -gpu2 (best round finished by then); GPU 1 at the end = the best round not tested / picked on GPU 2 (new
   fullpick options --fp-n, --fp-skip-tested, --fp-tag; lossan fullpick:RUN reads every GPU's picks).
+- ~02:35 CET **consult24 (Argon) report** -> reviews/consult24_od5d/REPORT.md ($1.96, 42 turns; two provider-error
+  restarts). Diagnosis confirmed + 3 code bottlenecks: (5) the od5 allocation lets held / candidate-starved types fill
+  with uncapped hold pairs (and healthy IFEval with uncapped recovery), hiding the free slots; (6) --resp-max 1.05 would kill
+  most of rule C's candidates (30 -> 7 on od4-r2's at-least questions); (7) slice accuracy must be computed before the
+  candidate loop. Rules: A keep (transfer free slots to healthy types' shorten, after capping hold / recovery at 20%);
+  B only on healthy types (+ the 8/8 -> 6/8 top-bin fix on all unheld types); C keep with a total-token guard. Brake -2.0
+  kept; tool caps +2 (48 / 51 / 58); quotas move 12 pairs math / code -> tools (52/46/58/30/26/28); lr 1.4e-5, 15 steps;
+  up to 12 rounds, stop at monitor >= 53 / >= -0.3 or convergence. Expected full test 52.3-53.5 / -0.6 to -0.1.
+  WAITING for the user's go before building od5d.
+- od5c-best (round 9 model) Dev-512: 48.9% / +1.97 (Dev-SVAMP running).
