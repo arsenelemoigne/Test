@@ -6803,3 +6803,7 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~10:45 CET **od5d r10 (slice 11): 50.7% / -0.00** (od5c r10 52.9 / +0.84). od5d ended after round 11 (11 slices existed when
   it started) -> RESULT od5d-r11 -> Dev of od5d-best running, then fullpick od5d (2 full tests) + lossan on GPU 2.
 - ~10:58 CET (user: 'More IFEval via Haiku'): our pool still holds ~6,200 unused test-matchable IFEval questions, incl. the Haiku-written requests -> queued on GPU 1 after od5c round 16: r2prep --r2-more s3m3 (IFEval 600, test bins) -> ptrepair r2s3b with s3m1+s3m2+s3m3 (reuses rp-r2s3*; s3m3 answered by r2s2-s80; track change: reuse mode answers NEW extra files) -> fullpick r2s3b -> lossan; then od5c's second full test.
+- ~11:10 CET **od5c r15 (slice 16): 52.9% / +2.41** -> curve +5.9 above, od5c's best round; with r10's measured monitor bias
+  (-2.5 accuracy, +1.2 saving) it would read ~54 / -0.1 on the full test. Per type: math 56 / -0.8, code 58 / +1.3, IFEval
+  47 / +5.0, simple 44 / +3.5, several 57 / -2.3, no-fit 58 / +10.2. Round 16 trained. od5c reached all 16 rounds.
+- od5d-best (= round 11's model) Dev-512 49.6 / +1.69 (Dev-SVAMP running), then fullpick od5d on GPU 2.
