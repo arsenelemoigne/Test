@@ -6830,3 +6830,12 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~13:50 CET (user): Argon consult26 (online DPO only: one online run to > 52% at better than -1 on the full test) launches ONLY when all online evaluations are done: od5c-r16 full test, lossan od5c, od5d-r10 full test, lossan od5d (~17:30); 120 turns, $3.
 - ~13:55 CET (user): Argon consult27 OFFLINE launches when r2s3b's 2 full tests + lossan are in: ONE offline DPO run from the original (any number of steps) to > 52% at better than -1, with ALL offline DPO data (Path 1 + r2s3b, rpE/K/L/M, clean line A), reports and logs; 120 turns, $3.
 - ~14:15 CET r2s3b-s40 Dev-512 51.9 / +2.39, Dev-SVAMP 45.2 / +0.12 (saving falling with steps: s20 53.7, s30 53.4, s40 51.9). Step 50 next. GPU 2 od5c-r16 full test 15,872 / 22,072 (~30 min).
+
+## 15 Nov ~14:40 CET — **od5c-best (= round 16's model) FULL TEST 2,759 x 8: +54.8% saved / -0.8 -> INSIDE THE GOAL, above the user's 52% margin target**
+Official mean from per type: -0.78 (BFCL pooled 400/200/240 = +1.16). Curve at 54.8 = -3.87 -> **+3.09 above: the best
+point of any run** (rpM-60 54.1 / -0.93 = +2.79; r2s3-s20 52.7 / -0.99 = +2.43). ONE online DPO algorithm from the original
+(od5 v2, 16 rounds of its own answers on test-matched slices, fixed reference = the original, LoRA rank 16, constant lr
+1.4e-5, no repair stage). Per type: math 61 / -2.8, code 59 / -2.0, IFEval 47 / +0.5, simple 49 / -1.1, several 50 / 0.0,
+no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Frontier artifact v16.
+- r2s3b Dev s50 51.2 / +3.03 (SVAMP 45.2 / +0.50); fullpick picked **s30** (corrected 52.1 / -1.16) and **s40** (50.6 / -1.11)
+  for full tests (running on GPU 1).
