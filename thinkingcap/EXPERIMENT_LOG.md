@@ -6718,3 +6718,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - consult25 (Argon, cap $4, 60 turns) launched: from r2s2-s80 to > 52% at better than -1 (pack: steps 1-3, full tests,
   loss analyses r2s2 + r2s3, code incl. the Haiku generators).
 - ~04:50 CET Haiku several-tool batch: 120 calls -> 1,173 items, 1,168 pass the builder checks (2 functions 884, 3 functions 282, 4 functions 2; the right function is first in 95% before the builder's shuffle) -> tools_multiple_haiku.jsonl (~1.1M output tokens). plan_line_b refill lines pushed.
+- ~04:50 CET od5d round 1 pairs (v3): 320 = shorten 210, be-right 63, loop 32, format 15, recovery 0 (all types healthy, no free slots: as od5c's round 1 209/62/34/15); od5d round 1 trained, model answering slice 2. GPU 1 od5c-r10 full test 2,048 / 22,072. consult25 turn 44 ($0.98).
