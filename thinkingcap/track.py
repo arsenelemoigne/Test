@@ -533,6 +533,8 @@ def main():
     parser.add_argument("--fp-save-bias", type=float, default=2.5, help="fullpick: Dev over-reads saving by this (pts)")
     parser.add_argument("--fp-dev-rounds", type=int, nargs="*", default=None, help="fullpick --fp-kind arena (15 Nov, user): "
                         "candidates = these rounds' models scored on Dev-512 (instead of the free monitor); full-test the best")
+    parser.add_argument("--fp-min-save", type=float, default=None, help="fullpick (15 Nov, user): no full test at all when the "
+                        "best candidate's Dev / monitor saving is below this")
     parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
     parser.add_argument("--fp-skip-tested", action="store_true", help="fullpick (15 Nov, user: one full test on each GPU): "
                         "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
@@ -4332,6 +4334,11 @@ def fullpick(args):
             a = json.loads(d.read_text())
             cands.append({"label": start, "model": f"models/{run_name}-best", "saved": a["saved"], "acc": a["acc"]})
     assert cands, f"fullpick: no scored candidate of {run_name}"
+    if getattr(args, "fp_min_save", None) is not None and max(c["saved"] for c in cands) < args.fp_min_save:
+        # (15 Nov, user: "if we are not near 50% on the Dev 512, let's not run the full eval")
+        print(f"fullpick {run_name}: NO FULL TEST: best Dev saving {max(c['saved'] for c in cands):+.1f}% < --fp-min-save "
+              f"{args.fp_min_save} | " + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}" for c in cands), flush=True)
+        return
 
     def dist(c):
         ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias
