@@ -163,16 +163,23 @@ SFT = plain imitation training on chosen texts.
 - Why: strong pressure "affordable on code/IFEval but not on math or tool choice"; gentle versions save ~25%.
 - Verdict: dead end.
 
-**6d. ShorterBetter reward (sb1, sb2).** *26-27 Oct.* sb1 collapsed by step 33; sb2-5 53.7 / -2.9 (fresh 240 x 8), stopped by its guard at step 10. Dead end.
+**6d. ShorterBetter reward (sb1, sb2).** *26-27 Oct.* RL with the reward of arXiv 2504.21370: r = 2 x correct - 0.005 x |length - the shortest right answer in the group|, started from rc1-rl-40 (not from the original).
+- Result: sb1 collapsed by step 33; sb2 (gentler, with a per-type accuracy guard) reached 53.7 / -2.9 at step 5 (fresh 240 x 8) and was stopped by its guard at step 10.
+- Why: the paper's models think 5-11k tokens; ours ~360 when right, so there is far less slack, and the length term cut useful steps on math (log 25 Oct: both ESTAR and ShorterBetter "use far longer-thinking models").
+- Verdict: dead end.
 
 **6e. GRPO from the original (grA, grB, grC; tp0 smoke; gr2f).** Group-relative RL with a length term. *3 Nov, 6 Nov.*
 - Best: gr2f step 40 11.3 / +0.3 (720); grA/grC finals thought 6-7% LONGER.
 - Why: the length term was "tiny next to the right / wrong reward" (consult1: 115-1,035x smaller); 3 Nov: "GRPO stopped. No GRPO run shortened thinking"; gr2f "saving is small and does not grow steadily".
 - Verdict: dead end.
 
-**6f. COPD, on-policy distillation from a Qwen3-4B coach (cp1a, cp1c2, cp1d) + repair rpF.** *9-11 Nov.*
-- Best: cp1a step 20 +20.8 / -0.4 (720); cp1c2 step 40 57.1 / -4.7 (on the curve); rpF-80 on cp1c2 48.1 / -2.6 (on the curve).
-- Why: the 4B coach "pushes the USEFUL check down twice as hard"; the correctness push "carries a hidden length reward"; consult5: "do not spend GPU days on more COPD variants"; "COPD line closed" (11 Nov).
+**6f. COPD, contrastive on-policy distillation with a Qwen3-4B coach (cp1a, cp1c / cp1c2, cp1d) + repair rpF.** *9-11 Nov.* (Ruan et al., arXiv 2607.19046.) Not classic distillation (the 0.6B never imitates the 4B's answers): the 0.6B writes its own answer; a frozen Qwen3-4B re-reads that answer twice, once under a "light effort" and once under a "heavy effort" instruction; each token is pushed up or down by log p(light) - log p(heavy). No correctness reward in Run A.
+- Sanity checks before training: the 0.6B as its own coach barely reacted to the effort instructions (so a self-coach would teach nothing); the 4B reacted, but on 20 hand-written answers it pushed the USEFUL re-read down too.
+- Run A (cp1a, 64 questions x 2 answers per step, lr 1e-5 cosine): it did NOT collapse; it shortened steadily: step 10 14.6 / -0.2, step 20 20.8 / -0.4, step 30 29.2 / -1.3, step 40 34.1 / -2.4 (720 x 4), sliding along the curve (vs curve -0.5 to -1.6). The math loss grew slowly (no correctness term), and the saving flattened as the cosine lr reached its floor.
+- Run C (cp1c2, + a group correctness push, constant lr): faster and harder: step 25 35.8 / -3.6, step 40 57.1 / -4.7 (on the curve). Its repair (rpF) brought it to 48.1 / -2.6 at step 80, still on the curve.
+- cp1d (Run A's settings + the correctness push only): step 40 42.6 / -3.3.
+- Why it was closed (11 Nov): every COPD run moved ALONG the curve, never above it; the coach's sense of "needless effort" is a 4B's sense (a step trivial for the 4B is often needed by the 0.6B), so it cut useful checks; the correctness push "carries a hidden length reward"; consult5 and consult6: "do not spend GPU days on more COPD variants".
+- Lesson: the 0.6B could follow the coach (it shortened fine); the problem was the signal, not its capacity to learn: a bigger model's judgment of what is wasted does not transfer to a much smaller model.
 - Verdict: dead end.
 
 **"Trajectory RL"** under that name: not found in the log.
