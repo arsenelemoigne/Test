@@ -1,7 +1,7 @@
 # Fresh-run brief: online DPO for shorter thinking in Qwen3-0.6B (clean reproduction)
 
 Draft, 15 Nov 2026. Hand this file to a NEW coding-agent conversation. It assumes no other context.
-Two items are still open and are marked **[PENDING]**: the seed replication (od5r) and the precision check (od5p).
+One item is still open and marked **[PENDING]**: the seed replication (od5r).
 
 ---
 
@@ -112,8 +112,8 @@ Write these into `PREREGISTRATION.md` and commit it before any training:
 
 ## 6. Phase C: the run
 
-**[PENDING od5p]** If the plain-bf16 rerun (od5p) lands with od5c, use `--rp-plain-precision`. Otherwise keep od5c's
-precision setting (fp32 base + fp16 autocast, first seen in michal-bida's public code) and disclose it.
+**Precision (user, 15 Nov):** keep od5c's precision setting (fp32 base + fp16 autocast with a loss scaler, first seen in
+michal-bida's public code; the LoRA weights are fp32 either way) and disclose it in IDEA.md. No plain-bf16 rerun.
 
 The line (od5c's, from `plan_line_b.txt`; `--name` changed):
 ```
