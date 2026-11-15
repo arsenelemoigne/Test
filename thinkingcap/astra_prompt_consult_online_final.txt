@@ -1,0 +1,18 @@
+TASK. Our online DPO run od5c (your consult23 od5 v2, from the original Qwen3-0.6B, 16 rounds) is now INSIDE the objective on the full test at two consecutive rounds: round 15 54.0% saved / -0.56 and round 16 54.8% / -0.78 (objective: > 50% saved at better than -1; the user's margin target: > 52% at better than -1). od5d (your consult24 rules A/B/C, plain bf16) did worse (49.5 / -1.21 and 51.6 / -1.95). The user wants ONE online DPO run that reaches > 52% at better than -1 on the full test RELIABLY (not by luck), and is cleaner: without the --bida-precision setting (fp32 master weights + fp16 autocast, a setting first seen in a competitor's code; use plain bf16 or justify another standard precision setting on its own merits) and with fewer data refills (od5c needed Haiku-written questions for slices 12-16).
+
+Read {DATA}/NEW_RESULTS_online_15nov.md FIRST, then {DATA}/od5c/REPRODUCE_od5c.md (the full record of od5c), then {DATA}/loss_analysis/od5c3.txt and od5d.txt, {DATA}/pertype_best_full.md, and your reports {DATA}/YOUR_CONSULT23_REPORT.md and YOUR_CONSULT24_REPORT.md. Code: {DATA}/code (repair_pairs.py: --mix-preset od5 with --od5-v2 / --od5-v3 builds the pairs; track.py: odpo_fixed = the round loop, the brake, od3_monitor = the headline monitor, fullpick = choosing checkpoints for the full test; plan_line_a.txt holds the od5c / od5r lines). The whole log is {DATA}/EXPERIMENT_LOG.md. Use code to check any number you rely on.
+
+Answer, in order:
+1. Review od5c: what made it work, and what may have been luck (seed, data refills, the precision setting, the stopping round). Why did od5d (v3) do worse: rules A/B/C, the precision change, or both? Say what in the data supports each answer.
+2. Design ONE online DPO run from the original that reaches > 52% at better than -1 on the full test reliably: pair rules per type (keep v2, or v2 plus specific changes), quotas, caps, brake (-2.0 hold?), lr, steps and pairs per round, number of rounds, and how many fresh test-matched questions it needs per type (so that our existing pools suffice, or say exactly how many are missing). Precision: plain bf16 unless you show a strong reason.
+3. How to choose the checkpoint without the full test, given the biases (monitor / Dev over-read accuracy by ~2.5-3.0): which rounds to full-test, and a stopping rule.
+4. Exact code changes in words (file, function, what changes) and the queue line(s) as plain text.
+5. Expected full-test landing (saved / accuracy, per type) with a range, and the main risks. How should the seed replication od5r (running now, only seeds changed) be read when it lands?
+
+Rules (user): start from the original; LoRA rank 16; constant learning rates; the model's own answers only; test-matched questions; general rules measured per question / per type (not type names); no competitor recipe, no michal-bida data; no new datasets (our existing question pools only). Online DPO only (no offline repair stage).
+
+Be concise: up to ~2,500 words, WITHOUT a code block (plan lines as plain text are fine).
+
+NOTES (MANDATORY). The conversation is restarted whenever the context fills up, and ONLY {WORK}/notes.md survives a restart. Create it within your first 10 turns and update it at least every 15 turns. Keep {WORK}/report_draft.md growing as you go. You have 120 TURNS IN TOTAL: check the data in at most ~90, write the final answer by turn ~110; at turn 120 the final answer is requested automatically.
+
+HOW TO RUN CODE. There are no tools or function calls here. To run Python, write ONE markdown block that starts with ```python in your reply (plain text); I run it on a CPU machine (numpy, pandas, scipy; no internet, no GPU) and paste the output back, cut at 10,000 characters. You can do this up to {CODE_RUNS} times.
