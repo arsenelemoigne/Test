@@ -4606,9 +4606,22 @@ def ptrepair(args):
             # (15 Nov, consult25) with --rp-rollouts-from, the stored answers of that run's extra files are reused too
             src_m = BON / f"rp-{reuse}-m{i_m}"
             drive_sync("restore", only=[str(src_m)])
-            assert (src_m / "rollouts.jsonl").exists(), f"{src_m} is not on Drive"
+            if not (src_m / "rollouts.jsonl").exists():  # (15 Nov, user: more IFEval for r2s3b) a NEW extra file: answer it
+                src_m = BON / f"rp-{name}-m{i_m}"  # with this run's answerer (the --rp-base model), as without reuse
+                drive_sync("restore", only=[mf, str(src_m)])
+                assert Path(mf).exists(), f"{mf} is not on Drive"
+                if not (src_m / "rollouts.jsonl").exists():
+                    qm = [json.loads(l) for l in Path(mf).read_text().splitlines() if l.strip()]
+                    data_m = Path(f"data/repair-{name}-m{i_m}.jsonl")
+                    data_m.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in qm))
+                    print(f"repair {name}: + {len(qm)} NEW extra questions from {mf}: {dict(Counter(part_of(r) for r in qm))}, "
+                          f"answered by {answerer}", flush=True)
+                    py("probe_curve.py", "--data", data_m, "--per-source", 1000000, "--samples", args.rp_samples,
+                       "--model", answerer, "--out", src_m, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+                       "--max-questions", len(qm), "--seed", 60 + i_m)
+                    drive_sync("save")
             rolls.append(src_m / "rollouts.jsonl")
-            print(f"repair {name}: + stored answers {src_m} (extra file {mf})", flush=True)
+            print(f"repair {name}: + answers {src_m} (extra file {mf})", flush=True)
         for spec in [x for x in getattr(args, "rp_extra_top", "").split(",") if x] if reuse else []:
             # (12 Nov, user) the original's answers on chosen NEW questions (newtop set, ids picked by r2prep)
             top, ids_f = spec.split("=")
