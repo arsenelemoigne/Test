@@ -6854,3 +6854,10 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
   test too. Note: the runtimes' 24 h limit (~21:50) will interrupt od5r after ~5 rounds; it resumes after a reconnect.
 - ~16:12 CET **od5d-r10 FULL TEST: +51.6% saved / -1.9** (official mean -1.95; curve at 51.6 = -3.20 -> +1.25 above). Its monitor had read 50.7 / -0.00 (accuracy over-read 1.9). Per type: math 54 / -3.5, code 52 / -2.3, IFEval 49 / -1.3, simple 49 / -2.4, several 50 / -2.2, no-fit 56 / +3.4. Frontier artifact v17. od5d is done (both full tests outside the goal); od5c's recipe (v2) beat its v3 rules.
 - ~16:25 CET **BOTH runtimes disconnected** (Reconnect L4), ~5 h before the 24 h limit (probably the session / compute units). GPU 1 was at 21,248 / 22,072 of r2s3b-s30's full test; GPU 2 had finished lossan od5d (saved from the page: reviews/loss_analysis/od5d.txt). Both plans made restart-safe (every finished line commented): GPU 1 restarts at fullpick r2s3b (s30 + s40 full tests) -> lossan r2s3bf; GPU 2 at the od5c-r15 full test -> lossan od5c3 -> od5r -> its full tests. Waiting for the user to reconnect both + mount Drive.
+- ~16:45 CET (user: extend od5c to round 24, do NOT loosen the matching): supply after slice 16 (test-matchable candidates
+  left): math 1,195 (need 1,760 for 8 slices), code 983 (need 1,120; hardest bin scarce), IFEval 5,242 (1,600), simple 2,033
+  (640), several 1,038 (480), no-fit 3,046 but too easy (slices 13-16 each used ~90-180 new hard Haiku no-fit). Plan: 12 hard
+  Haiku no-fit batches (~$25, generating now in 3 streams -> nofit_haiku5.jsonl, builder haiku_nofit5); ~1,200 more math
+  (metamath_easy, as r2g-math) and ~1,000 more code (KodCode easy/medium/hard, as r2g-code) answered x8 by the original on
+  GPU 1 after r2s3b's tests, then od3prep --od3-more 8 (same strict tolerances), odpo od5c --od-rounds 24 (continues the same
+  adapter from round 16), full tests of the 2 best new rounds.
