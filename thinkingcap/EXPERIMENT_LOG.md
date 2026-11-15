@@ -6852,3 +6852,4 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
   (pair sampling, adapter init, batch order) and the answer sampling seed 53 -> 54 (new track flag --rp-gen-seed, default 53
   = unchanged for every other run); then fullpick od5r (2 full tests) + lossan od5r. consult26 waits for od5c-r15's full
   test too. Note: the runtimes' 24 h limit (~21:50) will interrupt od5r after ~5 rounds; it resumes after a reconnect.
+- ~16:12 CET **od5d-r10 FULL TEST: +51.6% saved / -1.9** (official mean -1.95; curve at 51.6 = -3.20 -> +1.25 above). Its monitor had read 50.7 / -0.00 (accuracy over-read 1.9). Per type: math 54 / -3.5, code 52 / -2.3, IFEval 49 / -1.3, simple 49 / -2.4, several 50 / -2.2, no-fit 56 / +3.4. Frontier artifact v17. od5d is done (both full tests outside the goal); od5c's recipe (v2) beat its v3 rules.
