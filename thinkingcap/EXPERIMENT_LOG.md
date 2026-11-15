@@ -6839,3 +6839,4 @@ point of any run** (rpM-60 54.1 / -0.93 = +2.79; r2s3-s20 52.7 / -0.99 = +2.43).
 no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Frontier artifact v16.
 - r2s3b Dev s50 51.2 / +3.03 (SVAMP 45.2 / +0.50); fullpick picked **s30** (corrected 52.1 / -1.16) and **s40** (50.6 / -1.11)
   for full tests (running on GPU 1).
+- ~14:55 CET lossan od5c -> reviews/loss_analysis/od5c.txt. Exact od5c-best = -0.78 (math -2.84, code -1.95, IFEval +0.49, simple -1.09, several 0.00, no-fit +5.89); od5c-r10 math -4.58 (the gap closed by rounds 11-16). GPU 2 now: od5d-r10 full test (768 / 22,072); GPU 1: r2s3b-s30 full test (768 / 22,072).
