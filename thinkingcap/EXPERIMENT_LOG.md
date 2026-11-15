@@ -6633,3 +6633,7 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   answer in 8 of the original; user asks: all types?), C (healthy IFEval: counting questions shortened if the response is
   not shorter). Pack reviews/consult24_od5d/pack (NEW_RESULTS_od5c.md, od5c_pairs_table.md). od5c pairs trained per round:
   r4 238, r5 204, r6 224, r7 213 (held types leave slots empty).
+- ~01:10 CET: monitor noise (od4-r1 on slice 2 vs the original, per-question p1 - p0): SE per type on one slice = math 0.8,
+  code 1.4, IFEval 1.0, simple 1.1, several 1.7, no-fit 1.5 pts (95% x2); headline SE ~0.5. The -2.0 per-type brake can fire
+  on noise for code / tools. Added to consult24's pack (NEW_RESULTS_od5c.md, "ADDED during your session").
+- GPU 2: fullpick r2s3 picked s20 (corrected 51.0 / -0.68) and s30 (51.0 / -0.72); full test of s20 running.

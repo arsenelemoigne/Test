@@ -52,3 +52,12 @@ B. On a healthy type (slice accuracy >= the original's), a question is shorten-e
    original: p0 = 1 -> p1 >= 0.75; p0 >= 0.5 -> p1 >= max(0.5, p0 - 0.25); else p1 >= max(0.25, p0 - 0.125).
 C. On a healthy IFEval, counting / at-least questions may get a shorten pair only if the chosen answer's RESPONSE is at
    least as long as the rejected answer's (think less, write no less) and >= 0.92x the original's median right response.
+
+## ADDED during your session: how noisy is the per-type monitor? (measured on od4-r1's answers to slice 2 vs the original)
+Per question d = p1 - p0 (share right over 8 answers, model vs the original's stored 8). SE of a type's slice accuracy =
+sd(d) / sqrt(questions in the slice): math sd 0.124 -> SE 0.8 pts (95% +/-1.6) on 220 q; code 0.167 -> 1.4 (+/-2.8) on 140;
+IFEval 0.144 -> 1.0 (+/-2.0) on 200; simple 0.102 -> 1.1 (+/-2.2) on 80; several 0.128 -> 1.7 (+/-3.2) on 60; no-fit
+0.132 -> 1.5 (+/-2.9) on 80. Headline (4 benchmarks equal): SE ~0.5 pts (95% ~+/-1.0) per round, before the
+between-slice variation (each round is a different slice). So the -2.0 brake on one round's per-type number fires on noise
+for code and the tool types; please say whether the brake / health tests should use a margin, pooled rounds, or a
+confidence bound (e.g. accuracy + 1 SE <= -2).
