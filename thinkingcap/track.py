@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -258,6 +258,9 @@ def main():
     parser.add_argument("--lp-answers-pool", default="", help="lupin: whose 10-answer files to use (dp12: dp10)")
     parser.add_argument("--lp-gate", action="store_true", help="lupin: refuse unless the pool's check is ALL OK or near misses")
     parser.add_argument("--lp-extra-q", default="", help="lupin: add tooltopup <name>'s extra tool questions to the pairs")
+    parser.add_argument("--wd-model", default="models/od5c-best", help="wandaod (15 Nov): the trained model to prune")
+    parser.add_argument("--wd-rollouts", default="runs/bon/rp-od5c-r17/rollouts.jsonl,runs/bon/rp-od5c-r16/rollouts.jsonl",
+                        help="wandaod: calibration answers, the first file that exists (the model's own answers, never Dev)")
     parser.add_argument("--wd-sparsity", type=float, nargs="*", default=[0.1, 0.2, 0.3, 0.4, 0.5], help="wanda: levels")
     parser.add_argument("--pu-drop-hard", default="", help="poolup: part:source:min_solve, drop questions solved below it")
     parser.add_argument("--pu-drop", default="", help="poolup: part:source pairs left out, e.g. bfcl_simple_python:toolace")
@@ -6212,6 +6215,46 @@ def wandaeval(args):
     shutil.rmtree(scratch, ignore_errors=True)
 
 
+def wandaod(args):
+    """(15 Nov, user: "on top of the online DPO, try a pruned Wanda ... from 1% to 20%, 2% at a time, to see where it
+    breaks") Wanda one-shot pruning of a TRAINED model (--wd-model, default models/od5c-best = od5c round 16) at
+    --wd-sparsity, calibrated on that model's OWN answers to training questions (the first existing file of
+    --wd-rollouts: never Dev-512, which scores the result), each level scored on Dev-512 x8 against the original (same
+    scoring as every Dev number in the log; Dev over-reads accuracy by ~3 vs the full test). Pruned models live on local
+    scratch only. Summary: runs/sparse/<name>-dev.txt (Drive)."""
+    name = args.name
+    rolls = [Path(x) for x in args.wd_rollouts.split(",") if x]
+    drive_sync("restore", only=[str(r.parent) for r in rolls] + [args.wd_model])
+    data = next((r for r in rolls if r.exists()), None)
+    assert data, f"wandaod: none of {args.wd_rollouts} is on Drive"
+    print(f"wandaod {name}: calibration answers from {data}; model {args.wd_model}", flush=True)
+    scratch = Path("/content/wanda-models") / name
+    levels = [round(s_ * 100) for s_ in args.wd_sparsity]
+    todo = [s_ for s_, pct in zip(args.wd_sparsity, levels)
+            if not (BON / f"dev512-{name}-{pct}" / "dev_score.json").exists()]
+    drive_sync("restore", only=[str(BON / f"dev512-{name}-{pct}") for pct in levels])
+    todo = [s_ for s_ in args.wd_sparsity if not (BON / f"dev512-{name}-{round(s_ * 100)}" / "dev_score.json").exists()]
+    if todo:
+        py("wanda_prune.py", "--rollouts", data, "--model", args.wd_model, "--calib", 128, "--per-part", 5,
+           "--pairs-per-part", 2, "--sparsity", *todo, "--device", "cuda", "--save", "--out", scratch)
+    lines = [f"wandaod {name}: {args.wd_model} pruned with Wanda, calibration = its own answers ({data.name}), Dev-512 x8 vs the original"]
+    for s_ in args.wd_sparsity:
+        pct = round(s_ * 100)
+        d = BON / f"dev512-{name}-{pct}" / "dev_score.json"
+        if not d.exists():
+            print(dev_score_model(f"{name}-{pct}", str(scratch / f"wanda-{pct}"), vs=getattr(args, "rp_dev_vs", "")), flush=True)
+            drive_sync("save")
+        if d.exists():
+            a = json.loads(d.read_text())
+            lines.append(f"  {pct:3d}% pruned: Dev-512 saved {a['saved']:+.1f}% / accuracy {a['acc']:+.2f}")
+    out = Path("runs/sparse") / f"{name}-dev.txt"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n")
+    print("\n".join(lines), flush=True)
+    drive_sync("save")
+    shutil.rmtree(scratch, ignore_errors=True)
+
+
 def lupin_pool(args):
     """The checked pool LUPIN trains on: --lp-pool, or 'auto' = dp11 when dp10 was superseded (code still off), else dp10."""
     if args.lp_pool != "auto":
@@ -7498,7 +7541,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "wandaod", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
