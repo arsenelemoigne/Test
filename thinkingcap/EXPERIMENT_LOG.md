@@ -6648,3 +6648,4 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   240 pairs = shorten 143, be-right 53, recovery 24, loop 20, format 0; trained loss 0.445 / 0.409 / 0.527, ordered right
   86 / 90 / 78%. Argon consult24: turn 32, $0.93, intermittent provider errors (retrying).
 - ~02:05 CET **od5c r8 (od5c-r8 on slice 9): 52.8% saved / -0.02** -> inside the goal on the monitor; curve at 52.8 = -3.45 -> **+3.43 above (best of any run)**. (od4 r7 monitor 56.1 / -0.14 read -2.0 on the full test: confirm with full tests.) Round 9 brake holds math, simple, several (caps / accuracy).
+- ~02:05 CET (user): each step-3 FULL score -> Frontier artifact + log; when both r2s3 full tests + lossan r2s3 are in -> new Argon consult25: from r2s2-s80, how to reach > 52% saved at better than -1. r2s3-s20 full test at 14,080 / 22,072 answers (~02:35).
