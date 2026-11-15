@@ -758,7 +758,7 @@ fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp
 # (15 Nov ~23:00, user: "on top of the online DPO, try a pruned Wanda ... 2% at a time, to see where it breaks") od5c
 # round 16 pruned at 2-20%, calibrated on its own answers to slice 17 (else 16), each level on Dev-512 x8. Prediction
 # (written first): ~free up to ~10%, then longer thinking and lost accuracy, tool calls first (as the original did).
-wandaod --name wod5c --wd-model models/od5c-best --wd-sparsity 0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20 --rp-dev-vs rpE80
+# (15 Nov ~23:05, user: unqueued; only after the online DPO has been reproduced) wandaod --name wod5c --wd-model models/od5c-best --wd-sparsity 0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20 --rp-dev-vs rpE80
 # (moved to GPU 2, 15 Nov 11:20) fullpick --fp-run od5c --fp-kind arena --fp-save-bias 1.0 --fp-acc-bias 2.5 --fp-n 1 --fp-skip-tested --fp-tag=-b
 # (moved to GPU 2, 15 Nov 11:20) lossan --la-tag od5c --la-models fullpick:od5c
 hold --hold-minutes 30 --hold-tag after-od3-1
