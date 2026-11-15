@@ -6808,3 +6808,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   47 / +5.0, simple 44 / +3.5, several 57 / -2.3, no-fit 58 / +10.2. Round 16 trained. od5c reached all 16 rounds.
 - od5d-best (= round 11's model) Dev-512 49.6 / +1.69 (Dev-SVAMP running), then fullpick od5d on GPU 2.
 - ~11:20 CET od5c reached round 16 (user rule met). od5c's second full test + lossan moved to GPU 2 after od5d's tests (GPU 1: r2s3b with the IFEval refill, its 2 full tests, lossan). Mac keep-awake renewed for 24 h.
+- ~11:25 CET GPU 2: fullpick od5d picked **od5d-r10** (monitor 50.7 / -0.00 -> corrected 49.7 / -2.50) and **od5d-r11** (= od5d-best, Dev 49.6 / +1.69 -> corrected 48.6 / -0.81) for full tests; first running (512 / 22,072). GPU 1: Dev of od5c-best (round 16's model) at 300 / 512, then the IFEval refill and r2s3b.
