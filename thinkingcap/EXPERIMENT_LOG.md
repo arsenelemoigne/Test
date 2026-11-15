@@ -6698,3 +6698,9 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - GPU 2: r2s3-s30 full test started (768 / 22,072 at 02:47).
 - ~03:25 CET **od5c r9 (od5c-r9 on slice 10): 48.1% saved / +2.05** (Dev-512 of the same model 48.9 / +1.97: monitor and Dev agree); curve at 48.1 = -2.54 -> **+4.6 above (best distance yet)**. Per type: math 52 / -0.1, code 51 / -0.2, IFEval 43 / +3.0, simple 47 / +6.5, several 46 / +3.4, no-fit 45 / +5.4. Round 10 trained (last loss 0.480, 75%). GPU 2: r2s3-s30 full test 6,400 / 22,072 (~04:40).
 - ~03:45 CET **od5c r10 (od5c-r10 on slice 11): 52.9% saved / +0.84** -> inside the goal on the monitor with margin; curve at 52.9 = -3.47 -> **+4.3 above**. Per type: math 61 / -2.0, code 58 / +0.8, IFEval 44 / +2.1, simple 47 / +2.5, several 50 / 0.0, no-fit 51 / +4.5. Round 11 trained (loss 0.406, 88%); Dev-512 of od5c-best (= round 11's model) running; then the several-tool refill and slices 12-16. GPU 2 r2s3-s30 full test 16,640 / 22,072. GPU 2's od5c full-test pick (fullpick arena rule) would now choose r10.
+- ~04:10 CET **r2s3-s30 (Path 1 step 3, step 30) FULL TEST 2,759 x 8: +51.5% saved / -0.8 -> INSIDE THE GOAL** (official mean
+  from the per-type numbers: -0.84; curve at 51.5 = -3.18 -> +2.35 above). First CLEAN recipe in the box: 3 offline DPO steps
+  from the original (shorten, shorten IFEval + tools, repair), rank 16, constant lr, own answers, test-matched questions.
+  Per type: math 57 / -2.8, code 52 / -1.6, IFEval 47 / +1.4, simple 48 / -3.8, several 50 / -0.6, no-fit 51 / +5.6.
+  vs s20 (52.7 / -1.0): -1.2 saving, +0.16 accuracy. Not yet the user's margin target (> 52%). Frontier artifact v12.
+  od5c-best (round 11's model) Dev-512 48.6 / +2.56. Next on GPU 2: lossan r2s3, then consult25 (from step 2 -> > 52 / -1).
