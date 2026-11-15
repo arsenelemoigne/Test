@@ -4299,13 +4299,14 @@ def fullpick(args):
         for step in args.pk_steps:
             d, v = BON / f"dev512-{run_name}-{step}" / "dev_score.json", BON / f"devsv-{run_name}-{step}" / "dev_score.json"
             drive_sync("restore", only=[str(d.parent), str(v.parent)])
-            if d.exists() and v.exists():
-                a, b = json.loads(d.read_text()), json.loads(v.read_text())
+            if d.exists():  # (15 Nov, user: Dev-SVAMP is not needed as a first check) Dev-SVAMP optional
+                a = json.loads(d.read_text())
+                b = json.loads(v.read_text()) if v.exists() else {"saved": None, "acc": None}
                 base_tag = "" if args.fp_base == "Qwen/Qwen3-0.6B" else "-on-" + Path(args.fp_base).name  # (14 Nov) never reuse a wrong-base merge
                 cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}{base_tag}",
                               "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
         gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc
-                and c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc]
+                and (c["sv_saved"] is None or (c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc))]
         start = max(gate, key=lambda c: c["saved"])["label"] if gate else None
     elif getattr(args, "fp_dev_rounds", None):  # (15 Nov, user: "just do the normal 512 tests and we will pick the best 2")
         for k in args.fp_dev_rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
