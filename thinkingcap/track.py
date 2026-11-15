@@ -437,6 +437,9 @@ def main():
     parser.add_argument("--rp-rebuild-pairs", action="store_true",
                         help="ptrepair (12 Nov): rebuild the pairs from the saved answers (old pairs kept as pairs-NAME-prev)")
     parser.add_argument("--rp-require-files", default="", help="ptrepair (13 Nov): never train unless these files exist ('+' list)")
+    parser.add_argument("--rp-no-fill", action="store_true", help="ptrepair (15 Nov, r2one, user: 'only if we have enough good "
+                        "quality data'): a short part is NEVER filled with new questions answered from the pool (they would not "
+                        "be test-matched); with --rp-require-full the run then stops before training")
     parser.add_argument("--rp-pairs-only", action="store_true",
                         help="ptrepair (12 Nov, user): stop after the answers and pairs; the same line without it trains on them")
     parser.add_argument("--rp-require-full", action="store_true",
@@ -4860,7 +4863,8 @@ def ptrepair(args):
             build()
         # (11 Nov, user) fill until full: with --kinds mix the proportion is fixed, so a short part means fewer pairs; on an
         # own-question draw, answer MORE new questions for the short parts (up to 2 extra batches) and rebuild
-        for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke and not getattr(args, "rp_question_file", "") else 1):
+        for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke and not getattr(args, "rp_question_file", "")
+                           and not getattr(args, "rp_no_fill", False) else 1):  # (15 Nov) --rp-no-fill: never off-matched fills
             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
             short = {k: v for k, v in short.items() if v > 0.1 * dict((x.split("=")[0], int(x.split("=")[1]))
                                                                        for x in quota.split(",")).get(k, 0)}
