@@ -6649,3 +6649,13 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   86 / 90 / 78%. Argon consult24: turn 32, $0.93, intermittent provider errors (retrying).
 - ~02:05 CET **od5c r8 (od5c-r8 on slice 9): 52.8% saved / -0.02** -> inside the goal on the monitor; curve at 52.8 = -3.45 -> **+3.43 above (best of any run)**. (od4 r7 monitor 56.1 / -0.14 read -2.0 on the full test: confirm with full tests.) Round 9 brake holds math, simple, several (caps / accuracy).
 - ~02:05 CET (user): each step-3 FULL score -> Frontier artifact + log; when both r2s3 full tests + lossan r2s3 are in -> new Argon consult25: from r2s2-s80, how to reach > 52% saved at better than -1. r2s3-s20 full test at 14,080 / 22,072 answers (~02:35).
+
+## 15 Nov ~02:20 — public competitor scan (user: "double check in detail")
+No new or better 0.6B score. Upstream BottleCapAI/ThinkingCap-Test: last commit 965a54c (6 Nov), still 5 forks (marek-krcal,
+miroslavmyrha, basta, horychtom, michal-bida), none pushed since 9 Nov. matousek-martin/qwen3-self-replay pushed 14 Nov
+(write-up refresh, agent traces, smoke checks): headline unchanged (256 = 31.23 / +0.21, 850 = 41.60 / -1.17); new
+domain-training side runs math-128 32.4 / -1.86, instructions-128 32.6 / -0.86, mixed-128 35.2 / -0.71. Herz1c: 0.6B entry
+(WhereTheThinkingStopsMattering) unchanged 43.3 / -1.17 and 43.5 / -0.77 (two evals); DoesLearningToStopScale pushed 14 Nov
+= 4B scaling chain (1.7B 47.4 / -0.14 unchanged), not a 0.6B entry. marek-krcal: branches last pushed 9 Nov, no published
+score. michal-bida (20 Oct), basta (14 Oct): unchanged. GitHub repo / code search and Hugging Face Hub search: no new
+ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model releases and their quantizations).
