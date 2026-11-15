@@ -6719,3 +6719,16 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   loss analyses r2s2 + r2s3, code incl. the Haiku generators).
 - ~04:50 CET Haiku several-tool batch: 120 calls -> 1,173 items, 1,168 pass the builder checks (2 functions 884, 3 functions 282, 4 functions 2; the right function is first in 95% before the builder's shuffle) -> tools_multiple_haiku.jsonl (~1.1M output tokens). plan_line_b refill lines pushed.
 - ~04:50 CET od5d round 1 pairs (v3): 320 = shorten 210, be-right 63, loop 32, format 15, recovery 0 (all types healthy, no free slots: as od5c's round 1 209/62/34/15); od5d round 1 trained, model answering slice 2. GPU 1 od5c-r10 full test 2,048 / 22,072. consult25 turn 44 ($0.98).
+- ~05:10 CET **od5d r1 monitor (od5d-r1 on slice 2): 22.0% / +0.60** (od5c r1 24.5 / +0.41; od4 22.7 / +0.58; plain bf16).
+  Round 2: nothing held.
+- ~05:10 CET **consult25 report** (Argon, $1.59, 55 turns) -> reviews/consult25_path1margin/REPORT.md. Diagnosis: 81-82% of
+  r2s3's gross loss is still short thinking (< 0.8x the original's right median); step 3's right-hold matched early-stop wrong
+  answers, its guards used the model's own (already short) median, finished loops could still be "chosen" in be-right /
+  guard pairs, and IFEval / no-fit (+1.2 / +6.2) were held instead of shortened. Plan r2s3b: ONE step from r2s2-s80 reusing
+  its 3,774 x 8 stored answers (no new generation): 800 pairs / 50 steps, math / code / simple / several = pure repair
+  (length-held be-right excluding early-stop wrongs + broken-format fallback, guards anchored to max(own median, 0.70x the
+  original's thinking), loop pairs), IFEval + no-fit = safe shortening (>= 7/8) + count / compact holds; plain bf16, lr 8e-6,
+  Dev at 20/30/40/50, gate corrected 1.3 / 3.5. Code: ptrepair reuses stored --rp-more-files answers; repair_pairs preset
+  r2s3b, loop filter on every chosen answer, right-hold fixes, base-think-anchored guards. Expected full test 53.1
+  [52.5, 53.7] / -0.58 [-0.80, -0.35]. Fallback: merge r2s3-s30 x0.85 + a 20-step IFEval / no-fit shortener x0.80 onto
+  r2s2-s80 (~53.0 / -0.85). WAITING for the user's go.
