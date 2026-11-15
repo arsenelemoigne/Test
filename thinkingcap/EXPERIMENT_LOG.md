@@ -6767,3 +6767,7 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~08:05 CET od5d r6 monitor line: 44.2 / +0.39 per type math 48 / -2.1, code 50 / -2.2, IFEval 38 / +2.9, simple 37 / +3.6, several 46 / +2.2, no-fit 46 / +2.7. od5c-best (round 13's model) Dev-SVAMP 48.8 / +1.25. Hard no-fit batch 3: 127 kept -> nofit_haiku4.jsonl (batch 4 generating; GPU 1 in the 40-min wait).
 - ~08:25 CET **od5d r6 (slice 7): 43.5% / +0.02** (od5c r6 46.9 / -0.33). Per type: math 43 / -1.4, code 46 / +0.6 (held in round 6: math -5, code -4 saving), IFEval 42 / -0.4 (+4), simple 42 / +0.9 (+5), several 45 / -2.1, no-fit 43 / +4.9. Healthy types grew with the moved slots, but the held math / code fell back as in od5c: headline flat at ~44.
 - ~08:50 CET hard no-fit batch 4: 133 kept -> nofit_haiku4.jsonl 260; GPU 1's newtop r2p-nofit had started 2 min earlier with batch 3 (127) -> queued newtop r2q-nofit (batch 4's new 133) + od3prep before od5c continues.
+- ~08:50 CET GPU 1: **slice 14 built** (r2p-nofit, no-fit 86% vs 83%); slice 15 failed on no-fit (92% vs 83%). Batch 4
+  (newtop r2q-nofit) = 88 new after the checks, answering now. Queued after it: hold 30, newtop r2r-nofit (2 more hard
+  batches, 1,800 calls, generating), od3prep, then od5c continues.
+- od5d r6 per type confirmed above (43.5 / +0.02); round 7 (several held) answering.
