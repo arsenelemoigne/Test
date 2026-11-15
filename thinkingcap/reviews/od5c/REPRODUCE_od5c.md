@@ -7,6 +7,10 @@ Per type (saved / accuracy): math (SVAMP) 61 / -2.84, code (MBPP+) 59 / -1.95, I
 several functions 50 / 0.00, no function fits 57 / +5.89 (BFCL pooled 400/200/240 = +1.16; official = mean of the 4).
 Second full test: `models/od5c-r10` (after round 10) +54.1% / -1.68 (math 65 / -4.58). Loss analysis of both:
 reviews/loss_analysis/od5c.txt.
+Third full test (15 Nov, to check round 16 was not luck): `models/od5c-r15` (after round 15) **+54.0% / -0.56**, also
+inside the objective and above the 52% margin (+3.14 above the curve). Per type: math 62 / -2.79, code 54 / -0.86, IFEval
+48 / +0.51, one function 48 / -1.56, several 50 / -1.38, no function fits 57 / +6.93. Loss analysis of r10 / r15 / r16:
+reviews/loss_analysis/od5c3.txt (losses are mostly "stopped thinking early" on questions the original solved 6-8/8).
 
 Everything below runs with this repository (branch mvt-fading, folder thinkingcap) on one Colab L4, through
 `python track.py plan --plan-file plan_line_b.txt` (the queue runner; each line is one stage of track.py).
@@ -122,7 +126,8 @@ Training loss at steps 5 / 10 / 15 (ordered right at the end): r1 0.653 / 0.538 
 ## 7. Biases of the cheap estimates (for choosing checkpoints)
 Free monitor vs full test: r10 52.9 / +0.84 -> 54.1 / -1.68 (accuracy over-read 2.5, saving under-read 1.2; math 61 / -2.0
 -> 65 / -4.6). Dev-512 vs full test: r16 55.0 / +2.22 -> 54.8 / -0.78 (over-read 3.0). fullpick's arena rule corrects by
-1.0 saving / 2.5 accuracy and picked r10, then (skipping tested models) r16.
+1.0 saving / 2.5 accuracy and picked r10, then (skipping tested models) r16, then r15. Monitor vs full test r15:
+52.9 / +2.41 -> 54.0 / -0.56 (accuracy over-read 3.0, saving under-read 1.1).
 
 ## 8. Where everything is (Google Drive thinkingcap-mvtf/ = the runtime's runs/, data/, models/, adapters/)
 models/od5c-r1 ... od5c-r16, models/od5c-best; adapters/od5c-rK-s0/step-15 (r1: step-20); runs/bon/rp-od5c-rK/rollouts.jsonl
