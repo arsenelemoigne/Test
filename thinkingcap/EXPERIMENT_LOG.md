@@ -6643,3 +6643,7 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   via newtop first, Haiku on the Mac second; no OpenRouter key on Colab), then od3prep + odpo od5c again (skips finished
   rounds) before fullpick, until 16 slices.
 - ~01:28 CET **od5c r7 (od5c-r7 on slice 8): 42.1% saved / +1.09** (od4 r7 56.1 / -0.14); curve at 42.1 = -1.57 -> +2.66 above. Saving went BACK (46.9 -> 42.1) after round 7's protective round (62 shorten of 213); round 8: no type held (all shortening again).
+- od5c r7 per type (slice 8): math 46 / -1.0, code 41 / -0.1, IFEval 38 / +2.7, simple 41 / +1.9, several 42 / +1.4, no-fit
+  46 / +5.6 (every type at or above -1; math / code gave back 8-10 pts of saving after being held). Round 8 (no type held):
+  240 pairs = shorten 143, be-right 53, recovery 24, loop 20, format 0; trained loss 0.445 / 0.409 / 0.527, ordered right
+  86 / 90 / 78%. Argon consult24: turn 32, $0.93, intermittent provider errors (retrying).
