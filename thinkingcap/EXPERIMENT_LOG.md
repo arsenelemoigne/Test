@@ -6764,3 +6764,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
   Round 13 trained (several held); Dev of round 13's model running; then the 40-min wait for the hard no-fit batches.
 - ~07:45 CET **od5d r5 (slice 6): 44.2% / +0.39** (od5c r5 47.0 / +0.39); round 6 holds math and code (v3 moves their free
   slots to healthy types; none left empty).
+- ~08:05 CET od5d r6 monitor line: 44.2 / +0.39 per type math 48 / -2.1, code 50 / -2.2, IFEval 38 / +2.9, simple 37 / +3.6, several 46 / +2.2, no-fit 46 / +2.7. od5c-best (round 13's model) Dev-SVAMP 48.8 / +1.25. Hard no-fit batch 3: 127 kept -> nofit_haiku4.jsonl (batch 4 generating; GPU 1 in the 40-min wait).
