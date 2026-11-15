@@ -6765,3 +6765,4 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~07:45 CET **od5d r5 (slice 6): 44.2% / +0.39** (od5c r5 47.0 / +0.39); round 6 holds math and code (v3 moves their free
   slots to healthy types; none left empty).
 - ~08:05 CET od5d r6 monitor line: 44.2 / +0.39 per type math 48 / -2.1, code 50 / -2.2, IFEval 38 / +2.9, simple 37 / +3.6, several 46 / +2.2, no-fit 46 / +2.7. od5c-best (round 13's model) Dev-SVAMP 48.8 / +1.25. Hard no-fit batch 3: 127 kept -> nofit_haiku4.jsonl (batch 4 generating; GPU 1 in the 40-min wait).
+- ~08:25 CET **od5d r6 (slice 7): 43.5% / +0.02** (od5c r6 46.9 / -0.33). Per type: math 43 / -1.4, code 46 / +0.6 (held in round 6: math -5, code -4 saving), IFEval 42 / -0.4 (+4), simple 42 / +0.9 (+5), several 45 / -2.1, no-fit 43 / +4.9. Healthy types grew with the moved slots, but the held math / code fell back as in od5c: headline flat at ~44.
