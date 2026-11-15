@@ -21,7 +21,10 @@ written predictions first, then the run, then analysis and generalization. It is
 | od5c round 16 | **54.8%** | **-0.78** | -1.55 to -0.07 | 61 / -2.8 | 59 / -2.0 | 47 / +0.5 | 49 / -1.1 | 50 / 0.0 | 57 / +5.9 |
 | od5c round 15 | 54.0% | -0.56 | -1.31 to +0.17 | 62 / -2.8 | 54 / -0.9 | 48 / +0.5 | 48 / -1.6 | 50 / -1.4 | 57 / +6.9 |
 
-Per type: saved % / accuracy change. A rerun lands near these numbers, not on them, because vLLM sampling is not
+Per type: saved % / accuracy change. Round 16's interval is a paired bootstrap over prompts with the official weighting
+(computed 15 Nov from its records); round 15's is compare.py's. Round 16 is the best point INSIDE the goal; rpL-80
+(62.8 / -2.06) and rpL-60 sit further above our length-accuracy curve (fitted on 2 Nov to 43 points of the 720-question
+screen) but outside the goal. A rerun lands near these numbers, not on them, because vLLM sampling is not
 bit-reproducible (about a third of answers are identical between two runs).
 
 ## 1. Ground rules (the user's, non-negotiable)
@@ -104,8 +107,8 @@ Write these into `PREREGISTRATION.md` and commit it before any training:
   `reviews/od5c/REPRODUCE_od5c.md` section 3, in order, with the same seeds. (a) is faithful; (b) is a stronger
   reproduction but lands on slightly different questions. Recommended: (a) for the reproduction, (b) only if time allows.
 - **Checks to run and save (one report file):** questions per type per slice; solve rate per type vs the test; bin
-  shares; zero overlap between slices; zero Dev / test overlap; share of Haiku-written questions per slice (slices 12-16
-  needed them for several-function and no-fit types).
+  shares; zero overlap between slices; zero Dev / test overlap; share of Haiku-written questions per slice (Haiku no-fit
+  questions from slice 10 on, several-function questions in slice 12, hard no-fit in slices 13-16).
 
 ## 6. Phase C: the run
 
@@ -183,6 +186,6 @@ whether the same changes appear: fewer paragraphs, less repetition, the same hes
   and 16 of od5c, and Path 1 for comparison.
 - **IDEA.md:** motivation (Phase A), the strategy tree (one page), the method, results with intervals and the per-type
   table, generalization, limitations (math, the -1 goal not statistically secure, test-profile matching, the
-  Haiku-written questions, the precision setting if kept), hardware (Colab L4) and cost.
+  Haiku-written questions of slices 10-16, the precision setting if kept), hardware (Colab L4) and cost.
 - The clean conversation, plus the exploratory transcripts (keys redacted, unrelated projects removed, both stated).
 - The data files (question lists with hashes, the Haiku files) and the plan lines that ran.
