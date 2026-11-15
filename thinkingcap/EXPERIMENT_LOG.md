@@ -6812,3 +6812,10 @@ ThinkingCap-Test entries (Hub "ThinkingCap" hits are BottleCap's own large-model
 - ~11:58 CET r2s3b rebuilt with the 600 IFEval (s3m3): **799 / 800 pairs**: IFEval 211 / 212 = shorten 95, counting 53, compact 39, loops 24 (the fixed shares round to 211); all other types full -> stopped by the all-pairs rule. Not a data shortage: IFEval quota set to 211 (shares unchanged), r2s3b retrains with the 799 pairs (pairs reused).
 - ~12:20 CET **r2s3b training started** on 799 pairs (rebuild-if-short: 799 of 799, kept), plain bf16, 50 steps; Dev at 20/30/40/50 next. GPU 2: od5d-r10 full test ~5,000 / 22,072.
 - ~12:28 CET r2s3b training: loss 0.691 / 0.690 / 0.686 / 0.669 / 0.663 at steps 5-25, ordered right 52 / 49 / 44 / 68 / 61% (slow, as r2s3). GPU 2: od5d-r10 full test 15,616 / 22,072 (~30 min).
+- ~13:05 CET **od5d-best (= round 11's model) FULL TEST 2,759 x 8: +49.5% saved / -1.2** (official mean from per type -1.21;
+  curve at 49.5 = -2.80 -> +1.59 above). Dev had read 49.6 / +1.69 (over-read accuracy by 2.9). Per type: math 50 / -1.8,
+  code 49 / -2.1, IFEval 47 / -0.3, simple 50 / -1.7, several 51 / -3.6, no-fit 57 / +3.6. Outside the goal (saving < 50 and
+  accuracy < -1). Frontier artifact v14 (new family od5d). Full test of od5d-r10 running next on GPU 2.
+- ~13:00 CET **r2s3b-s20 Dev-512 53.7 / +1.63** (r2s3-s20 52.8 / +2.54), **Dev-SVAMP 51.5 / +0.00** (r2s3-s20 50.1 / -0.69):
+  more saving and better math, but lower Dev-512 accuracy; with this lineage's Dev bias (3.3-3.5) ~52.4 / -1.9 on the full
+  test. Steps 30 / 40 / 50 next. Training ended loss 0.621, ordered right 70%.
