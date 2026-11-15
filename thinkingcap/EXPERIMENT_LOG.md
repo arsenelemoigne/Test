@@ -6642,3 +6642,4 @@ stays reserved for od5c slices 10-16) being generated; builder prepare_types hai
   test-matchable candidates at no GPU cost. If a type is still short, the check-in adds data at once (our existing sources
   via newtop first, Haiku on the Mac second; no OpenRouter key on Colab), then od3prep + odpo od5c again (skips finished
   rounds) before fullpick, until 16 slices.
+- ~01:28 CET **od5c r7 (od5c-r7 on slice 8): 42.1% saved / +1.09** (od4 r7 56.1 / -0.14); curve at 42.1 = -1.57 -> +2.66 above. Saving went BACK (46.9 -> 42.1) after round 7's protective round (62 shorten of 213); round 8: no type held (all shortening again).
