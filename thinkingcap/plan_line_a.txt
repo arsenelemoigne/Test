@@ -743,6 +743,7 @@ transfer --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
 # (16 Nov ~16:40, user: Drive org storage full, big clean-up back to ~90 GB, only what is not needed; then stop
 # while travelling) free Drive on this runtime (Drive trash + local copies; list in DRIVE/drivefree-*.txt), then stop.
 drivefree --df-apply
+drivecheck
 end
 hold --hold-minutes 30 --hold-tag drivefull-a-1
 hold --hold-minutes 30 --hold-tag drivefull-a-2

@@ -804,6 +804,7 @@ odpo --name od5c --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 24 --od-st
 # (16 Nov ~16:40, user: Drive org storage full, big clean-up back to ~90 GB, only what is not needed; then stop
 # while travelling) free Drive on this runtime (Drive trash + local copies; list in DRIVE/drivefree-*.txt), then stop.
 drivefree --df-apply
+drivecheck
 end
 hold --hold-minutes 30 --hold-tag drivefull-b-1
 hold --hold-minutes 30 --hold-tag drivefull-b-2

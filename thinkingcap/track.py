@@ -58,7 +58,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -2576,6 +2576,30 @@ def drivefree(args):
                 shutil.rmtree(local, ignore_errors=True) if local.is_dir() else local.unlink()
                 print(f"drivefree: local copy {rel} removed (freed by another runtime)", flush=True)
     print(f"drivefree: done, {total / 1e9:.1f} GB {'freed' if args.df_apply else 'listed'}; report {report.name}", flush=True)
+
+
+def drivecheck(args):
+    """(16 Nov, user: "after the clean-up, check that every important run is still on Drive and not in the trash") Read
+    only. For each important item: present on Drive (the mount shows only live files, never the trash) with its size and
+    the key file inside; prints OK / MISSING per item and a final verdict line."""
+    must = [f"models/{m}" for m in ("od5c-best", "od5c-ext-best", "od5r-best", "od5r-ext-best", "od5c-r16", "od5c-r19",
+                                     "od5r-r15", "od5r-r16", "od5r-r19", "rpE-80", "rpK-40", "rpL-80", "rpM-60")]
+    must += [f"adapters/od5c-r{k}-s0" for k in range(1, 21)] + [f"adapters/od5r-r{k}-s0" for k in range(1, 20)]
+    must += [f"runs/mvtf/full-{m}" for m in ("base", "od5c-best", "od5c-r15", "od5c-r19", "od5c-r10", "od5r-r15", "od5r-r16")]
+    must += [f"data/od3-r{k}-questions.jsonl" for k in range(2, 24)] + ["data/od3-base-stats.json", "data/od3-base-resp.json",
+             "data/od3-base-think.json", "runs/bon/od5c-monitor.jsonl", "runs/bon/od5r-monitor.jsonl", "runs/bon/transfer-base"]
+    missing = []
+    for rel in must:
+        p = DRIVE / rel
+        key = next((f for f in ("model.safetensors", "adapter_model.safetensors", "records.jsonl", "rollouts.jsonl")
+                    if p.is_dir() and any(p.rglob(f))), "")
+        ok = p.exists() and (not p.is_dir() or any(p.iterdir()))
+        sz = sum(f.stat().st_size for f in p.rglob("*") if f.is_file()) if p.is_dir() else (p.stat().st_size if p.exists() else 0)
+        print(f"drivecheck: {'OK     ' if ok else 'MISSING'} {rel} {sz / 1e9:.2f} GB {key}", flush=True)
+        if not ok:
+            missing.append(rel)
+    print(f"drivecheck: VERDICT {len(must) - len(missing)}/{len(must)} present" + (f"; MISSING: {', '.join(missing)}" if missing else
+          " -- every important item is on Drive"), flush=True)
 
 
 def stopgold(args):
@@ -7678,7 +7702,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "wandaod", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
+    if stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "wandaod", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime
         drive_sync("restore", only=["data/*.jsonl", "runs/bon/kprobe-*/rollouts.jsonl", "runs/bon/*plot*",
                                     "runs/bon/probe-plot*", "runs/bon/kprobe-plot*", "runs/bon/pairs-plot*", "runs/bon/zoo-*",
