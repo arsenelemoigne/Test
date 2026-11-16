@@ -6929,3 +6929,4 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
 - ~05:50 CET od5c-r17 Dev-512: **52.8 [50.0, 55.3] / +2.93** (r16 55.0 / +2.22, r19 53.3 / +2.38): with r16's Dev bias about 52.6 / -0.1 on a full test.
 - ~06:10 CET Dev-512: od5c-r18 **50.3 [47.4, 53.1] / +2.76** (r17 52.8 / +2.93, r19 53.3 / +2.38); od5r-r14 **44.8 [41.8, 47.8] / +2.42** (r10 49.0 / +1.23, r12 43.4 / +3.16, r16 51.8 / +2.30).
 - ~06:30 CET od5c-r19 Dev-512 (rescored as od5c-r19): 52.8 [50.1, 55.4] / +2.49 (as od5c-ext-best: 53.3 / +2.38); fullpick picked **od5c-r19 for the full test** (corrected 52.5 / -0.46), running on GPU 1 (~09:00). od5r-r15 Dev-512: **51.5 [48.7, 54.0] / +2.52**.
+- ~06:50 CET fullpick od5r: od5r-r16 rescored Dev-512 51.3 / +2.57 (as od5r-best 51.8 / +2.30); **full tests of od5r-r15 (corrected 51.2 / -0.43) and od5r-r16 (51.0 / -0.38)** running on GPU 2 (~09:15 and ~11:30). GPU 1: od5c-r19 full test 1,024 / 22,072.
