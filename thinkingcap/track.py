@@ -157,6 +157,10 @@ def main():
     parser.add_argument("--drpo-score", type=int, nargs="*", default=[5, 10, 15, 20, 25, 30, 40, 50, 60], help="drpo: checkpoints scored on fresh x8 (~7 min each)")
     parser.add_argument("--match-size", type=int, default=1500, help="mathmatch: matched GSM8K questions (train + test)")
     parser.add_argument("--match-test", type=int, default=300, help="mathmatch: of which held out as a math test set")
+    parser.add_argument("--nt-full-models", nargs="*", default=[],
+                        help="nothink (16 Nov, user: 'does the best model answer better by itself?'): with --nt-full, these "
+                             "trained models also answer the FULL test x8 with thinking OFF, compared with the original "
+                             "thinking off (full-base-nothink) and with the original thinking (full-base)")
     parser.add_argument("--nothink-models", nargs="*", default=["Qwen/Qwen3-0.6B", "models/rc1-rl-40"],
                         help="nothink: models scored on fresh x8 with thinking switched off (empty think block)")
     parser.add_argument("--nt-full", action="store_true",
@@ -2053,6 +2057,18 @@ def nothink(args):
             shutil.rmtree(out, ignore_errors=True)
             py("evaluate_nothink.py", "--questions", "questions", "--samples", 8, "--out", out)
         print(raw_diff("original with thinking OFF vs thinking ON (full test 2,759 x 8)", out, base), flush=True)
+        for m in getattr(args, "nt_full_models", []) or []:
+            if m.startswith("models/") and not (Path(m) / "config.json").exists():
+                drive_sync("restore", only=[m])
+            mo = ROOT / f"full-{Path(m).name}-nothink"
+            if not (mo / "results.json").exists():
+                drive_sync("restore", only=[f"runs/mvtf/{mo.name}"])
+            if not (mo / "results.json").exists():
+                shutil.rmtree(mo, ignore_errors=True)
+                py("evaluate_nothink.py", "--questions", "questions", "--samples", 8, "--out", mo, "--model", m)
+            print(raw_diff(f"{Path(m).name} with thinking OFF vs the ORIGINAL with thinking OFF (full test 2,759 x 8)", mo, out), flush=True)
+            print(raw_diff(f"{Path(m).name} with thinking OFF vs the original thinking (full test 2,759 x 8)", mo, base), flush=True)
+            drive_sync("save")
         return
     evaluate(ROOT / "f8-base", samples=8, questions=fresh_q)
     for m in args.nothink_models:

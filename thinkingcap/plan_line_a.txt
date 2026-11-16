@@ -742,11 +742,11 @@
 # (16 Nov ~16:05) end REMOVED: Drive is full (org storage), new files are NOT reaching Drive; releasing the runtime would lose them. Keep the runtime alive, idle, until Drive has space and everything is saved.
 # (16 Nov ~16:40, user: Drive org storage full, big clean-up back to ~90 GB, only what is not needed; then stop
 # while travelling) free Drive on this runtime (Drive trash + local copies; list in DRIVE/drivefree-*.txt), then stop.
-drivefree --df-apply
-drivecheck
+# (done 16 Nov, before the flight) drivefree --df-apply
+# (done 16 Nov, before the flight) drivecheck
 # (16 Nov ~17:00, user: drop od5r-r15's transfer) score od5c16's finished transfer answers (all sets, no new answering)
-transfer --tr-models od5c16=models/od5c-best --tr-drop none
-end
+# (done 16 Nov, before the flight) transfer --tr-models od5c16=models/od5c-best --tr-drop none
+# (done 16 Nov, before the flight) end
 hold --hold-minutes 30 --hold-tag drivefull-a-1
 hold --hold-minutes 30 --hold-tag drivefull-a-2
 hold --hold-minutes 30 --hold-tag drivefull-a-3
