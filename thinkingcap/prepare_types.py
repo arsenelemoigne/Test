@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_nofit_argon_b1": tgt_nofit_argon_b1, "tgt_simple_argon_b1": tgt_simple_argon_b1, "tgt_simple_haiku_b1": tgt_simple_haiku_b1, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_code_argon_pilot": tgt_code_argon_pilot, "tgt_code_argon_b1": tgt_code_argon_b1, "tgt_nofit_argon_b1": tgt_nofit_argon_b1, "tgt_simple_argon_b1": tgt_simple_argon_b1, "tgt_simple_haiku_b1": tgt_simple_haiku_b1, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -670,6 +670,35 @@ def glaive_tools(args, rng):
                "reference": bfcl_reference(called[0], arguments),
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
                           {"role": "user", "content": question}]}
+
+
+def tgt_code(args, rng, fname, origin):
+    """(16 Nov, user: option (b)) MBPP-style code tasks written by Gemini 4 Argon (gen_code_tasks.py), kept only if the
+    reference solution passed ALL its asserts on the Mac. Same row format as kodcode(): MBPP's instruction, the statement
+    with its first assert as the example, every assert as a hidden test function run by the code grader."""
+    from utils.eval.benchmarks import MBPP_INSTRUCTION, MBPP_NAME_REMINDER
+
+    path = next((p for p in (Path("/content/T/thinkingcap") / fname, Path(__file__).with_name(fname)) if p.exists()), None)
+    assert path, f"{fname} not found"
+    kept = 0
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        name, tests = r["function_name"], r["tests"]
+        body = "\n".join(f"def test_{i}():\n    {t.strip()}\n" for i, t in enumerate(tests))
+        prompt = f'"""\n{r["question"].strip()}\n{tests[0].strip()}\n"""\n'
+        content = f"{MBPP_INSTRUCTION}\n\n{prompt}\n{MBPP_NAME_REMINDER.format(name=name)}"
+        kept += 1
+        yield {"source": "kodcode", "origin": origin, "task": "code", "answer": "", "grader": "code", "entry_point": name,
+               "tests": [body, *[f"test_{i}()" for i in range(len(tests))]], "setup": "", "id": f"{origin}-{k}",
+               "prompt": [{"role": "user", "content": content}]}
+    print(f"{origin}: {kept} code tasks from {fname}", flush=True)
+
+
+def tgt_code_argon_pilot(args, rng):
+    yield from tgt_code(args, rng, "tools_tgt_code_argon_pilot.jsonl", "tgt-code-ar0")
+
+
+def tgt_code_argon_b1(args, rng):
+    yield from tgt_code(args, rng, "tools_tgt_code_argon_b1.jsonl", "tgt-code-ar1")
 
 
 def tgt_nofit_argon(args, rng):
