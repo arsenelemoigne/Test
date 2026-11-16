@@ -6927,3 +6927,4 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
 - ~05:30 CET od5r-r12 Dev-512: 43.4 [40.5, 46.4] / +3.16.
 - OPEN for the user (morning): hard CODE questions for slices 20-24 (~50 hard per slice). Options: (a) stop od5c / od5r at round 19; (b) generate MBPP-style code tasks with Argon (problem + function signature + tests + a reference solution that must pass its own tests before use; a new pipeline, needs care: executing generated code); (c) another code source (a new dataset: needs the user's go).
 - ~05:50 CET od5c-r17 Dev-512: **52.8 [50.0, 55.3] / +2.93** (r16 55.0 / +2.22, r19 53.3 / +2.38): with r16's Dev bias about 52.6 / -0.1 on a full test.
+- ~06:10 CET Dev-512: od5c-r18 **50.3 [47.4, 53.1] / +2.76** (r17 52.8 / +2.93, r19 53.3 / +2.38); od5r-r14 **44.8 [41.8, 47.8] / +2.42** (r10 49.0 / +1.23, r12 43.4 / +3.16, r16 51.8 / +2.30).
