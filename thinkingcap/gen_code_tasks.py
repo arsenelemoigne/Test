@@ -39,9 +39,17 @@ single element, ties, negative numbers, zero, duplicates, boundaries, ordering o
 tuple, int vs float). Do not make them long or algorithmically deep. Every behaviour the tests check must follow from the
 statement itself (no hidden conventions), but you may state it briefly ("return them in ascending order", "return None
 if ..."). English only.
-Each task: "question" (the statement), "function_name" (snake_case), "solution" (the full reference function, no
+{novel}Each task: "question" (the statement), "function_name" (snake_case), "solution" (the full reference function, no
 imports unless needed, no printing), "tests" (6 to 8 assert lines calling the function, at least 3 of them edge cases).
 Return ONLY a JSON array of 10 objects: {{"question": "...", "function_name": "...", "solution": "...", "tests": ["assert ...", ...]}}"""
+
+NOVEL = """INVENT NEW TASKS: do NOT reproduce or paraphrase known benchmark problems (MBPP, HumanEval, APPS, LeetCode or
+Codeforces classics, textbook exercises such as Fibonacci, factorial, primes, palindromes, anagrams, binomial
+coefficients, derangements or Stirling numbers). Give each task a small concrete setting of its own (shelf labels, ticket
+codes, sensor readings, playlist lengths, seat maps, ...) and word it in your own way, not with stock phrases.
+Mix the difficulty: about half the tasks should be ones a careful small model gets right about half of the time (one
+tricky edge case), the other half harder (two or three edge cases at once).
+"""
 
 COST = {"usd": 0.0}
 
@@ -107,11 +115,13 @@ def main():
     ap.add_argument("--calls", type=int, default=6)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--novel", action="store_true", help="(16 Nov) new tasks only, mixed difficulty (most of the first batch "
+                    "shared rare 8-word sequences with the test's code questions and was dropped by the contamination check)")
     a = ap.parse_args()
     rng = random.Random(a.seed)
     topics = [rng.choice(TOPICS) for _ in range(a.calls)]
     with ThreadPoolExecutor(6) as ex:
-        items = [dict(x, topic=t) for t, b in zip(topics, ex.map(lambda t: parse(argon(PROMPT.format(topic=t))), topics)) for x in b]
+        items = [dict(x, topic=t) for t, b in zip(topics, ex.map(lambda t: parse(argon(PROMPT.format(topic=t, novel=NOVEL if a.novel else ""))), topics)) for x in b]
     seen_q, seen_n, cands = set(), set(), []
     for it in items:
         if not well_formed(it):
