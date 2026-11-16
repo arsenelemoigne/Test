@@ -4312,7 +4312,10 @@ def fullpick(args):
         for k in args.fp_dev_rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
             label = f"{run_name}-r{k}"
             d = BON / f"dev512-{label}" / "dev_score.json"
-            drive_sync("restore", only=[str(d.parent)])
+            drive_sync("restore", only=[str(d.parent), f"models/{label}"])
+            if not d.exists() and not (Path("models") / label / "config.json").exists():
+                print(f"fullpick {run_name}: {label} does not exist (fewer rounds ran): skipped", flush=True)
+                continue
             if not d.exists():
                 print(dev_score_model(label, f"models/{label}", vs=getattr(args, "rp_dev_vs", "")), flush=True)
             if d.exists():

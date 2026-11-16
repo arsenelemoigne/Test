@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_nofit_argon_b1": tgt_nofit_argon_b1, "tgt_simple_argon_b1": tgt_simple_argon_b1, "tgt_simple_haiku_b1": tgt_simple_haiku_b1, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -676,6 +676,21 @@ def tgt_nofit_argon(args, rng):
     """(16 Nov, user) pilot: NEW no-fit questions aimed at the original's measured traps (gen_targeted_tools.py), written
     by Gemini 4 Argon, kept on Haiku NO + NO."""
     yield from haiku_nofit(args, rng, "tools_tgt_nofit_argon_pilot.jsonl", "tgt_nf_ar")
+
+
+def tgt_nofit_argon_b1(args, rng):
+    """(16 Nov, user: "go ahead with it") the full batch of Argon no-fit questions (same generator as the pilot, 50 calls)."""
+    yield from haiku_nofit(args, rng, "tools_tgt_nofit_argon_b1.jsonl", "tgt_nf_ar1")
+
+
+def tgt_simple_argon_b1(args, rng):
+    """(16 Nov) the full batch of one-function questions, if Argon wins the pilot."""
+    yield from haiku_tools(args, rng, "tools_tgt_simple_argon_b1.jsonl", "tgt-argon-b1")
+
+
+def tgt_simple_haiku_b1(args, rng):
+    """(16 Nov) the full batch of one-function questions, if Haiku wins the pilot."""
+    yield from haiku_tools(args, rng, "tools_tgt_simple_haiku_b1.jsonl", "tgt-haiku-b1")
 
 
 def tgt_nofit_haiku(args, rng):
