@@ -729,7 +729,7 @@ fullpick --fp-run od5r --fp-kind arena --fp-dev-rounds 10 12 14 15 16 --fp-save-
 lossan --la-models fullpick:od5r --la-tag od5r --note dev2
 # (16 Nov ~09:35, user: "test how our new Qwen generalizes onto other tasks, we did this before, let's redo it") transfer
 # sets 1 and 2 (benchmarks never used or imitated in training), od5c round 16 vs the original, x8, as on 12 Nov.
-transfer --tr-models od5c16=models/od5c-best
+# (16 Nov ~10:00, balance: moved to GPU 1 next to od5r-r15) transfer --tr-models od5c16=models/od5c-best
 # (16 Nov ~09:50, balance: moved to GPU 1 as set v2b, without uncapped MATH-500) transfer --tr-sets v2 --tr-tag v2 --tr-models od5c16=models/od5c-best
 # (16 Nov ~02:50, user: "have both of the online DPO go until round 24") od5r continued from its round 16 on the new
 # slices 17-24 (built on GPU 1), only --od-rounds 24 changed; skipped if slice 17 does not exist yet (--od-min-rounds 17).
