@@ -740,6 +740,10 @@ transfer --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
 # (16 Nov ~15:35, user on a plane: "when the big task now running finishes, stop and start nothing new; I restart
 # tonight") the runner saves everything to Drive and releases the runtime at this line. REMOVE this end before restarting.
 # (16 Nov ~16:05) end REMOVED: Drive is full (org storage), new files are NOT reaching Drive; releasing the runtime would lose them. Keep the runtime alive, idle, until Drive has space and everything is saved.
+# (16 Nov ~16:40, user: Drive org storage full, big clean-up back to ~90 GB, only what is not needed; then stop
+# while travelling) free Drive on this runtime (Drive trash + local copies; list in DRIVE/drivefree-*.txt), then stop.
+drivefree --df-apply
+end
 hold --hold-minutes 30 --hold-tag drivefull-a-1
 hold --hold-minutes 30 --hold-tag drivefull-a-2
 hold --hold-minutes 30 --hold-tag drivefull-a-3
