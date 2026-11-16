@@ -33,6 +33,8 @@ def main():
     res, lines = {}, [f"== transfer {args.name} (x8, vs the original):"]
     for src in sorted(base):
         ids = [q for q in base[src] if q in cand[src]]
+        if not ids:  # (16 Nov) a set the candidate did not answer (--tr-drop)
+            continue
         m = lambda d, q, i: sum(x[i] for x in d[src][q]) / len(d[src][q])  # noqa: E731
         a0 = sum(m(base, q, 0) for q in ids) / len(ids); a1 = sum(m(cand, q, 0) for q in ids) / len(ids)
         t0 = sum(m(base, q, 1) for q in ids) / len(ids); t1 = sum(m(cand, q, 1) for q in ids) / len(ids)

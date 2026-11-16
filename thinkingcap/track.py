@@ -462,6 +462,9 @@ def main():
                         "answer with the listed models first, then wait for the other GPU's base answers on Drive (up to 14 h) and score")
     parser.add_argument("--tr-sets", default="", help="transfer (12 Nov): SOURCE=N,... instead of the default transfer sets "
                         "(e.g. tr_aime25=30); its own question file and output folders (transfer-<tag>-NAME)")
+    parser.add_argument("--tr-drop", default="tr_math500,tr_skywork", help="transfer (16 Nov, user: \"apply it to the next "
+                        "tests\"): sets NOT answered by the candidates (MATH-500 / Skywork at the 4k cap are truncation artefacts and "
+                        "took ~2/3 of the time); the original's stored answers are reused; empty = all sets")
     parser.add_argument("--tr-max-tokens", type=int, default=4096, help="transfer: token cap for non-code questions (AIME: 32768)")
     parser.add_argument("--tr-source-caps", default="", help="transfer (12 Nov): per-source caps SOURCE=N,...; with --tr-tag the "
                         "math sources default to 32,768 (user: no cap on MATH-500 / Skywork; at 4,096 the original runs out of room on "
@@ -5453,6 +5456,14 @@ def transfer(args):
         TRANSFER_FILE.write_text("".join(json.dumps(r) + "\n" for r in out))
         drive_sync("save")
     rows = [l for l in TRANSFER_FILE.read_text().splitlines() if l.strip()]
+    n_all = len(rows)
+    drop = {x for x in getattr(args, "tr_drop", "").split(",") if x}
+    q_file, q_sources = TRANSFER_FILE, [k for k in TRANSFER_SIZES if k not in drop]
+    if drop & set(TRANSFER_SIZES):  # (16 Nov) candidates answer the kept sets only; the original's full answers are reused
+        rows = [l for l in rows if json.loads(l)["source"] not in drop]
+        q_file = TRANSFER_FILE.with_name(TRANSFER_FILE.stem + "-short.jsonl")
+        q_file.write_text("".join(l + "\n" for l in rows))
+        print(f"transfer: sets dropped {sorted(drop & set(TRANSFER_SIZES))}: {len(rows)} questions ({', '.join(q_sources)})", flush=True)
     tr_caps = args.tr_source_caps or (",".join(f"{k}=32768" for k in ("tr_math500", "tr_skywork") if k in TRANSFER_SIZES) if args.tr_tag else "")
     print(f"transfer: per-source caps: {tr_caps or 'none (4,096 / code 8,192)'}", flush=True)
     outs = []
@@ -5461,7 +5472,7 @@ def transfer(args):
         name, spec = item.split("=", 1)
         out = BON / (f"transfer-{args.tr_tag}-{name}" if args.tr_sets else f"transfer-{name}")
         drive_sync("restore", only=[str(out)])
-        complete = lambda: (out / "rollouts.jsonl").exists() and sum(1 for _ in open(out / "rollouts.jsonl")) >= 8 * len(rows)  # noqa: E731
+        complete = lambda: (out / "rollouts.jsonl").exists() and sum(1 for _ in open(out / "rollouts.jsonl")) >= 8 * (n_all if name == "base" else len(rows))  # noqa: E731
         if args.tr_wait_base and name == "base":
             import time
             for _ in range(14 * 6):  # the other GPU writes the original's answers; poll Drive every 10 minutes
@@ -5482,10 +5493,11 @@ def transfer(args):
                     py("merge.py", "--model", merge_base, "--out", model, "--adapters", f"{adapter}:1")
             else:
                 drive_sync("restore", only=[spec] if not spec.startswith("Qwen/") else [])
-            py("probe_curve.py", "--data", TRANSFER_FILE, "--sources", ",".join(TRANSFER_SIZES), "--per-source", 1000000,
+            py("probe_curve.py", "--data", q_file if name != "base" else TRANSFER_FILE,
+               "--sources", ",".join(q_sources if name != "base" else TRANSFER_SIZES), "--per-source", 1000000,
                "--samples", 8, "--model", model, "--out", out, "--dtype", "bfloat16", "--generate-only", "--chunk", 300,
                "--max-tokens", args.tr_max_tokens, "--source-max-tokens", tr_caps,
-               "--max-questions", len(rows), "--seed", 61)
+               "--max-questions", n_all if name == "base" else len(rows), "--seed", 61)
             drive_sync("save")
         outs.append((name, out))
     if args.tr_wait_base:
