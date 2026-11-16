@@ -737,6 +737,9 @@ odpo --name od5r --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 24 --od-st
 # (16 Nov ~10:55, balance) od5r stops at round 19 (slices 20-24 are built on GPU 1 after code batch 2, ~14:15). Fill
 # the gap with transfer set 1 (od5c-best + od5r-r15, moved from GPU 1), then od5r rounds 20-24, then Dev + full test.
 transfer --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
+# (16 Nov ~15:35, user on a plane: "when the big task now running finishes, stop and start nothing new; I restart
+# tonight") the runner saves everything to Drive and releases the runtime at this line. REMOVE this end before restarting.
+end
 # (16 Nov ~12:50: not needed, the transfer runs past the slices) hold --hold-minutes 30 --hold-tag wait-slices20-1
 # (16 Nov ~12:50: not needed, the transfer runs past the slices) hold --hold-minutes 30 --hold-tag wait-slices20-2
 # (16 Nov ~12:50: not needed, the transfer runs past the slices) hold --hold-minutes 30 --hold-tag wait-slices20-3
