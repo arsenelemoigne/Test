@@ -739,7 +739,23 @@ odpo --name od5r --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 24 --od-st
 transfer --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
 # (16 Nov ~15:35, user on a plane: "when the big task now running finishes, stop and start nothing new; I restart
 # tonight") the runner saves everything to Drive and releases the runtime at this line. REMOVE this end before restarting.
-end
+# (16 Nov ~16:05) end REMOVED: Drive is full (org storage), new files are NOT reaching Drive; releasing the runtime would lose them. Keep the runtime alive, idle, until Drive has space and everything is saved.
+hold --hold-minutes 30 --hold-tag drivefull-a-1
+hold --hold-minutes 30 --hold-tag drivefull-a-2
+hold --hold-minutes 30 --hold-tag drivefull-a-3
+hold --hold-minutes 30 --hold-tag drivefull-a-4
+hold --hold-minutes 30 --hold-tag drivefull-a-5
+hold --hold-minutes 30 --hold-tag drivefull-a-6
+hold --hold-minutes 30 --hold-tag drivefull-a-7
+hold --hold-minutes 30 --hold-tag drivefull-a-8
+hold --hold-minutes 30 --hold-tag drivefull-a-9
+hold --hold-minutes 30 --hold-tag drivefull-a-10
+hold --hold-minutes 30 --hold-tag drivefull-a-11
+hold --hold-minutes 30 --hold-tag drivefull-a-12
+hold --hold-minutes 30 --hold-tag drivefull-a-13
+hold --hold-minutes 30 --hold-tag drivefull-a-14
+hold --hold-minutes 30 --hold-tag drivefull-a-15
+hold --hold-minutes 30 --hold-tag drivefull-a-16
 # (16 Nov ~12:50: not needed, the transfer runs past the slices) hold --hold-minutes 30 --hold-tag wait-slices20-1
 # (16 Nov ~12:50: not needed, the transfer runs past the slices) hold --hold-minutes 30 --hold-tag wait-slices20-2
 # (16 Nov ~12:50: not needed, the transfer runs past the slices) hold --hold-minutes 30 --hold-tag wait-slices20-3
