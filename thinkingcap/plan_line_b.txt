@@ -802,7 +802,10 @@ fullpick --fp-run od5c --fp-kind arena --fp-dev-rounds 20 21 22 23 24 --fp-save-
 # (16 Nov ~09:40, user: "do the generalization on round 15") transfer sets 1 + 2 for od5r round 15 (seed replication,
 # full test 51.9 / -0.52), x8 vs the original, same sets as od5c-best on GPU 2.
 transfer --tr-models od5r15=models/od5r-r15
-transfer --tr-sets v2 --tr-tag v2 --tr-models od5r15=models/od5r-r15
+# (16 Nov ~09:50, balance) set 2 WITHOUT the uncapped MATH-500: on 12 Nov the original alone needed ~2.5 h per block
+# of ~5 there and the user dropped it for time. v2b = IFBench, BFCL-live x3, BBH, BoolQ (970 questions, 4k cap): the
+# original's answers once, then od5c round 16 and od5r round 15, all on this GPU (no cross-GPU wait).
+transfer --tr-sets tr_ifbench=300,tr_bfcl_live_simple=120,tr_bfcl_live_multiple=100,tr_bfcl_live_irrelevance=80,tr_bbh=170,tr_boolq=200 --tr-tag v2b --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
 hold --hold-minutes 30 --hold-tag after-od3-4
 hold --hold-minutes 30 --hold-tag after-od3-5
 hold --hold-minutes 30 --hold-tag after-od3-6
