@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -672,16 +672,38 @@ def glaive_tools(args, rng):
                           {"role": "user", "content": question}]}
 
 
-def haiku_tools(args, rng):
+def tgt_nofit_argon(args, rng):
+    """(16 Nov, user) pilot: NEW no-fit questions aimed at the original's measured traps (gen_targeted_tools.py), written
+    by Gemini 4 Argon, kept on Haiku NO + NO."""
+    yield from haiku_nofit(args, rng, "tools_tgt_nofit_argon_pilot.jsonl", "tgt_nf_ar")
+
+
+def tgt_nofit_haiku(args, rng):
+    """(16 Nov) the same pilot, written by Claude Haiku 5.5."""
+    yield from haiku_nofit(args, rng, "tools_tgt_nofit_haiku_pilot.jsonl", "tgt_nf_hk")
+
+
+def tgt_simple_argon(args, rng):
+    """(16 Nov) pilot: NEW one-function questions aimed at the original's measured traps, written by Gemini 4 Argon;
+    same clean-up as haiku_tools (BFCL types, every argument value literally in the question)."""
+    yield from haiku_tools(args, rng, "tools_tgt_simple_argon_pilot.jsonl", "tgt-argon")
+
+
+def tgt_simple_haiku(args, rng):
+    """(16 Nov) the same pilot, written by Claude Haiku 5.5."""
+    yield from haiku_tools(args, rng, "tools_tgt_simple_haiku_pilot.jsonl", "tgt-haiku")
+
+
+def haiku_tools(args, rng, fname="tools_simple_haiku.jsonl", origin="haiku"):
     """(14 Nov, user: "for any missing data, you can generate it with haiku") ONE-function tool questions written by Claude
     Haiku (gen_tool_questions.py, BFCL simple style, varied difficulty), with the Glaive clean-up: BFCL type names, every
     argument value stated in the question. Source tag glaive_tools (the answer pipeline's tool sources), origin haiku."""
     from utils.eval.benchmarks import bfcl_system_prompt, paths
 
     root = paths(args.questions)["bfcl"]
-    path = next((p for p in (Path("/content/T/thinkingcap/tools_simple_haiku.jsonl"),
-                             Path(__file__).with_name("tools_simple_haiku.jsonl")) if p.exists()), None)
-    assert path, "tools_simple_haiku.jsonl not found"
+    path = next((p for p in (Path("/content/T/thinkingcap") / fname,
+                             Path(__file__).with_name(fname)) if p.exists()), None)
+    assert path, f"{fname} not found"
     kept = 0
     for r in (json.loads(l) for l in path.read_text().splitlines() if l.strip()):
         try:
@@ -692,11 +714,11 @@ def haiku_tools(args, rng):
         if not isinstance(arguments, dict) or not bfcl_types(functions) or not grounded(arguments, r["question"]):
             continue
         kept += 1
-        yield {"source": "glaive_tools", "origin": "haiku", "task": "tool", "answer": "", "grader": "bfcl",
+        yield {"source": "glaive_tools", "origin": origin, "task": "tool", "answer": "", "grader": "bfcl",
                "category": "simple", "function": functions, "reference": bfcl_reference(functions[0], arguments),
                "prompt": [{"role": "system", "content": bfcl_system_prompt(root, functions)},
                           {"role": "user", "content": r["question"]}]}
-    print(f"haiku_tools: {kept} questions kept", flush=True)
+    print(f"haiku_tools ({fname}): {kept} questions kept", flush=True)
 
 
 def toolace_near_verified(args, rng):
