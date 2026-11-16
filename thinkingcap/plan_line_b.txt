@@ -781,7 +781,7 @@ odpo --name od5c --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 24 --od-st
 fullpick --fp-run od5c --fp-kind arena --fp-dev-rounds 17 18 19 20 21 22 23 24 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-n 1 --rp-dev-vs rpE80 --fp-tag=-ext2
 # (16 Nov ~08:40, user: option (b): Argon-written MBPP-style code tasks, reference solution passing its own asserts)
 # pilot screen: the original answers the 45 pilot tasks x8 (how many are hard).
-newtop --name r2x-code-pilot --nt-sources tgt_code_argon_pilot --nt-parts mbpp --nt-raw --nt-pool=--per-benchmark+20000 --tt-questions 100 --nt-samples 8 --nt-new-text --data-seed 74
+# (moved below the running hold: the runner only moves forward) newtop --name r2x-code-pilot --nt-sources tgt_code_argon_pilot --nt-parts mbpp --nt-raw --nt-pool=--per-benchmark+20000 --tt-questions 100 --nt-samples 8 --nt-new-text --data-seed 74
 # (15 Nov ~23:00, user: "on top of the online DPO, try a pruned Wanda ... 2% at a time, to see where it breaks") od5c
 # round 16 pruned at 2-20%, calibrated on its own answers to slice 17 (else 16), each level on Dev-512 x8. Prediction
 # (written first): ~free up to ~10%, then longer thinking and lost accuracy, tool calls first (as the original did).
@@ -791,6 +791,7 @@ newtop --name r2x-code-pilot --nt-sources tgt_code_argon_pilot --nt-parts mbpp -
 hold --hold-minutes 30 --hold-tag after-od3-1
 hold --hold-minutes 30 --hold-tag after-od3-2
 hold --hold-minutes 30 --hold-tag after-od3-3
+newtop --name r2x-code-pilot --nt-sources tgt_code_argon_pilot --nt-parts mbpp --nt-raw --nt-pool=--per-benchmark+20000 --tt-questions 100 --nt-samples 8 --nt-new-text --data-seed 74 --note mv1
 hold --hold-minutes 30 --hold-tag after-od3-4
 hold --hold-minutes 30 --hold-tag after-od3-5
 hold --hold-minutes 30 --hold-tag after-od3-6
