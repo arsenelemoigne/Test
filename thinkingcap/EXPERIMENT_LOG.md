@@ -6971,3 +6971,20 @@ no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Fronti
 - ~16:35 CET user released both runtimes (Colab tabs show 'Reconnect L4') and emptied the Drive trash: **Drive 415 -> 183 GB, account total 497 -> 265 GB** (Gmail 11.7, Photos 70.0). Nothing runs. TO RESTART tonight: plan_line_b has the od5c rounds 22-23 line + fullpick commented under its end; plan_line_a needs od5r rounds 20-23 + fullpick od5r 17-23 re-enabled (and the end lines removed); a fresh runtime replays every non-comment line.
 - ~20:30 CET (user) for the evening restart: GPU 1 first runs **nothink --nt-full --nt-full-models models/od5c-best** (the best model with thinking OFF on the full test, compared with the original thinking off: did the model itself get better?), then od5c rounds 22-23 (--note ext5) and fullpick od5c 20-24. GPU 2: od5r rounds 20-23 (ext2) and fullpick od5r 17-24. drivefree / drivecheck / end lines commented. The user restarts both runtimes (fresh runtime replays every non-comment line).
 - ~23:40 CET published efficiency metrics on the full test (original vs od5c-best, matched draws): negative / positive flips 7.8 / 6.9% (noise floor, original vs its own other draws: 6.2 / 6.2); math NFR 7.8 vs noise 5.1 with PFR at noise; no-fit NFR 1.4 / PFR 7.2 vs noise 3.7; IFEval at noise. G-Pass@8 56.1 -> 54.3 (math 70.1 -> 61.7, no-fit 72.5 -> 81.7). Global overthinking O_g (spend above the cheapest correct answer of either model) 409 -> 58 tokens. Hesitation markers per 100 thinking words 2.95 -> 2.45. Outcome efficiency on math (share of thinking before the correct number first appears, correct answers) 49% -> 66%. Added to the write-up with references.
+
+### 17 Nov ~02:30: the best model with thinking OFF (ntbest, full test 2,759 x 8)
+od5c-best (round 16) answering with thinking switched off, against the ORIGINAL with thinking off (full-base-nothink):
+| type | original off | od5c-best off | change | tokens orig off -> od5c off |
+|---|---|---|---|---|
+| no function fits | 90.3 | 92.6 | +2.2 | 8 -> 12 |
+| several functions | 55.3 | 67.1 | +11.8 | 20 -> 19 |
+| one function | 71.4 | 74.0 | +2.6 | 22 -> 22 |
+| instructions (IFEval) | 57.5 | 56.9 | -0.6 | 262 -> 192 |
+| code (MBPP) | 40.8 | 41.5 | +0.7 | 61 -> 55 |
+| math (SVAMP) | 20.6 | 24.3 | +3.7 | 13 -> 11 |
+Four-benchmark average (BFCL pooled 400/200/240): math +3.7, code +0.7, IFEval -0.6, BFCL +4.7 -> about +2.1 points.
+Reading: without thinking, the trained model answers better than the original on 5 of 6 types, most on several-functions (+11.8)
+and math (+3.7). Caveat: svamp shows 19.4% unreadable answers in the trained run (no 'Final answer:' line), so part of any math
+difference may be format, not knowledge; tool-call gains may partly be format too. Against the original WITH thinking the trained
+model without thinking is far worse (math -64.4, code -10.9): thinking still carries the hard tasks.
+Ops: restarts restore every finished odpo round's model from Drive just to skip it (2-7 min per round over rclone): ~1-2 h before round 22/20.
