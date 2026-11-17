@@ -182,6 +182,13 @@ def main():
     ap.add_argument("--right-resp-cap", type=float, default=0.0,
                     help="--kinds mix, --think-only parts: a be-right pair's chosen RESPONSE is at most this x the rejected "
                          "one's + 15 tokens (1.10); 0 = no cap")
+    ap.add_argument("--od5-v4", action="store_true",
+                    help="(17 Nov, consult29 od6a) density-preserving rules on top of v2: shorten only if p1 >= p0 (all right "
+                         "when p0 >= 0.875), floor (0.35 + 0.15 p0) x the original's right thinking, the 2nd-shortest right "
+                         "answer as chosen, recovery on ANY drop of a p0 >= 0.75 question (with the ORIGINAL's stored right "
+                         "answers when the model has none that fit), recovery never capped")
+    ap.add_argument("--base-rollouts", default="",
+                    help="(17 Nov, od5-v4) the ORIGINAL's stored answers (rollouts.jsonl files, comma/+ separated): recovery fallback")
     ap.add_argument("--od5-v2", action="store_true",
                     help="(14 Nov, consult23, user: go od5b) od5 v2: shorten where the model is as good as the original (7/8 counts "
                          "on 8/8 questions; mixed questions too), damage = a 2-answer drop on 7-8/8 questions, response rules only on "
@@ -208,6 +215,8 @@ def main():
                     help="guard,right: half / half (Track A); guard: only shortest right > shortest finished wrong")
     args = ap.parse_args()
     if args.od5_v3:
+        args.od5_v2 = True
+    if getattr(args, "od5_v4", False):
         args.od5_v2 = True
     rng = random.Random(args.seed)
     quota = {k: int(v) for k, v in (x.split("=") for x in args.quota.split(","))}
@@ -256,6 +265,29 @@ def main():
         a_, r_ = val.split(":")
         floors[part_f] = (float(a_), float(r_))
     base_think = json.loads(Path(args.base_think).read_text()) if args.base_think else {}
+    base_right = defaultdict(list)  # (17 Nov, od5-v4) the ORIGINAL's stored right answers per question: recovery fallback
+    for bf in filter(None, re.split(r"[,+]", args.base_rollouts)):
+        for bpath in sorted(Path(".").glob(bf)) if any(ch in bf for ch in "*?[") else [Path(bf)]:
+            if not bpath.exists():
+                continue
+            for line in open(bpath):
+                try:
+                    rb = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                try:
+                    ok_b = finished(rb) and right(rb)
+                except KeyError:
+                    ok_b = False
+                if ok_b and (rb.get("thinking_ids") is not None or rb.get("output_ids") is not None):
+                    for k in ("prompt_ids", "output_ids", "thinking_ids"):
+                        if isinstance(rb.get(k), list):
+                            rb[k] = array("i", rb[k])
+                    for k in ("question", "final", "original_prompt"):
+                        rb.pop(k, None)
+                    base_right[str(rb.get("id"))].append(rb)
+    if args.base_rollouts:
+        print(f"od5-v4: the original's stored right answers for {len(base_right)} questions", flush=True)
     sh_min_part = {k: float(v) for k, v in (x.split("=") for x in re.split(r"[,+]", args.shorten_min_by_part) if x)}
     sh_ratio_part = {k: float(v) for k, v in (x.split("=") for x in re.split(r"[,+]", args.shorten_ratio_by_part) if x)}
     r2one = args.mix_preset == "r2one"
@@ -357,6 +389,9 @@ def main():
                     can_shorten = (p1 >= 0.75 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.25) if p0 >= 0.50
                                    else p1 >= max(0.25, p0 - 0.125))
                     damaged = 1 <= k1 < n_ans and ((p1 <= p0 - 0.25) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+                elif args.od5_v4:  # (17 Nov, consult29 od6a) never shorten below the original; any drop of a solid question is damage
+                    can_shorten = p1 >= p0 and (p0 < 0.875 or p1 >= 1.0)
+                    damaged = k1 < n_ans and ((p1 < p0) if p0 >= 0.75 else (p1 <= p0 - 0.25))
                 elif args.od5_v2:  # (14 Nov, consult23) as good as the original; real damage only
                     can_shorten = (p1 >= 0.875 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.125) if p0 >= 0.50
                                    else p1 >= max(0.25, p0))
@@ -378,18 +413,35 @@ def main():
                     pool_s = [r for r in pool_s if response_len(r) >= floor_r
                               and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
                               and (args.od5_v2 or response_len(r) >= args.resp_near_long * response_len(long))]
+                if args.od5_v4 and bt and p0 is not None:  # (17 Nov, od6a) reliability-scaled floor on the chosen answer
+                    pool_s = [r for r in pool_s if thinking_len(r) >= (0.35 + 0.15 * p0) * bt]
                 if pool_s:
-                    short = min(pool_s, key=size)
-                    if size(long) / max(1, size(short)) >= args.shorten_ratio:
+                    ratio_need = sh_ratio_part.get(base_part, args.shorten_ratio)
+                    ordered = sorted(pool_s, key=size)
+                    short = ordered[0]
+                    if args.od5_v4 and len(ordered) >= 2 and size(long) / max(1, size(ordered[1])) >= ratio_need:
+                        short = ordered[1]  # (17 Nov, od6a) the 2nd-shortest right answer, not a lucky early stop
+                    if size(long) / max(1, size(short)) >= ratio_need:
                         cand[part]["shorten"].append((qid, short, long))
-            if damaged and clean and wrongs:  # bounded recovery: chosen a little longer than the wrong one, never past ~the original
-                tmed = sorted(thinking_len(r) for r in clean)[len(clean) // 2]
+                        if base_part in shorten_second and len(clean) >= 3:  # (17 Nov) a 2nd pair on this question
+                            rest = [r for r in clean if r is not long and r is not short]
+                            long2 = max(rest, key=size) if rest else None
+                            if long2 is not None and size(long2) / max(1, size(short)) >= ratio_need:
+                                cand[part]["shorten"].append((qid, short, long2))
+            src_rec = clean
+            if args.od5_v4 and damaged and wrongs and bt:  # (17 Nov, od6a) no fitting right answer of its own: the ORIGINAL's
+                tw0 = thinking_len(min(wrongs, key=thinking_len))
+                if not any(1.08 * tw0 + 10 <= thinking_len(r) <= min(1.05 * bt, 1.45 * tw0 + 50) for r in clean):
+                    src_rec = [r for r in base_right.get(str(qid), []) if max(0.60 * bt, 1.08 * tw0 + 10) <= thinking_len(r) <= 1.05 * bt][:4] or clean
+            if damaged and src_rec and wrongs:  # bounded recovery: chosen a little longer than the wrong one, never past ~the original
+                clean_rec = src_rec
+                tmed = sorted(thinking_len(r) for r in clean_rec)[len(clean_rec) // 2]
                 target = min(0.85 * bt, 1.25 * tmed) if bt else 1.25 * tmed
                 best = None
                 for w in sorted((w for w in wrongs if not bt or thinking_len(w) < 0.85 * bt), key=thinking_len):
                     tw = thinking_len(w)
-                    hi = min(1.05 * bt, 1.45 * tw + 50) if bt else 1.45 * tw + 50
-                    ok_r = [r for r in clean if 1.08 * tw + 10 <= thinking_len(r) <= hi]
+                    hi = (1.05 * bt if clean_rec is not clean else min(1.05 * bt, 1.45 * tw + 50)) if bt else 1.45 * tw + 50
+                    ok_r = [r for r in clean_rec if 1.08 * tw + 10 <= thinking_len(r) <= hi]
                     for r in ok_r:
                         key = (0 if (bt and tw < 0.65 * bt) else 1, 0 if decode and REREAD.search(decode(r)) else 1,
                                abs(thinking_len(r) - target))
@@ -643,7 +695,7 @@ def main():
             n_act = n_rem - n_hold5
             tot5 = max(1, c_sh + c_rec)
             n_sh5 = int(round(n_act * c_sh / tot5))
-            if args.od5_v2 and c_sh and dmg > -0.015:  # (14 Nov, consult23) recovery <= 20% unless the slice lost > 1.5 pts
+            if args.od5_v2 and not args.od5_v4 and c_sh and dmg > -0.015:  # (14 Nov, consult23) recovery <= 20% unless the slice lost > 1.5 pts
                 n_rec_cap = min(len(cand[part]["recovery"]), int(round(0.20 * n_act)))
                 n_sh5 = min(c_sh, n_act - n_rec_cap)
             sh5 = take(part, "shorten", cand[part]["shorten"], n_sh5) if c_sh else []

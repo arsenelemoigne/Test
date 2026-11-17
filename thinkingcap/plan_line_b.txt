@@ -818,10 +818,9 @@ fullpick --fp-run od5c --fp-kind arena --fp-dev-rounds 20 21 22 23 24 --fp-save-
 # of ~5 there and the user dropped it for time. v2b = IFBench, BFCL-live x3, BBH, BoolQ (970 questions, 4k cap): the
 # original's answers once, then od5c round 16 and od5r round 15, all on this GPU (no cross-GPU wait).
 # (16 Nov ~10:00, user: "don't run set 2") transfer --tr-sets tr_ifbench=300,tr_bfcl_live_simple=120,tr_bfcl_live_multiple=100,tr_bfcl_live_irrelevance=80,tr_bbh=170,tr_boolq=200 --tr-tag v2b --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
-hold --hold-minutes 30 --hold-tag wait-od6a-1
-hold --hold-minutes 30 --hold-tag wait-od6a-2
-hold --hold-minutes 30 --hold-tag wait-od6a-3
-hold --hold-minutes 30 --hold-tag wait-od6a-4
-hold --hold-minutes 30 --hold-tag wait-od6a-5
-hold --hold-minutes 30 --hold-tag wait-od6a-6
+# (17 Nov, user: "lets launch od6a") consult29 density-preserving rules (--od5-v4): shorten only if the question kept its
+# solve rate (7/8+ needs 4/4), reliability-scaled floor, 2nd-shortest chosen, any drop of a solid question = damage,
+# recovery falls back to the original's own right answers, uncapped. Lower caps, brake at -1.5. bf16->fp32 master as od5c.
+odpo --name od6a --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 20 --od-steps 15 --od-r1-steps 20 --od-r1-quota svamp=80,mbpp=56,ifeval=88,bfcl_simple_python=36,bfcl_multiple=28,bfcl_irrelevance=32 --rp-quota svamp=58,mbpp=52,ifeval=58,bfcl_simple_python=26,bfcl_multiple=22,bfcl_irrelevance=24 --rp-questions svamp=220,mbpp=140,ifeval=200,bfcl_simple_python=80,bfcl_multiple=60,bfcl_irrelevance=80 --rp-own-data --rp-kinds mix --rp-samples 8 --rp-seed 18 --rp-pair-args=--think-only,svamp+mbpp+ifeval+bfcl_simple_python+bfcl_multiple+bfcl_irrelevance,--prefer-reread,--count-rules,--shorten-ratio,1.30,--shorten-min-right,0.85,--mix-preset,od5,--od5-v2,--od5-v4,--base-rollouts,runs/bon/lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl+runs/bon/tooltop-*/rollouts.jsonl,--base-stats,data/od3-base-stats.json,--base-resp,data/od3-base-resp.json,--base-think,data/od3-base-think.json,--floor-by-part,svamp=25:0.44+mbpp=35:0.36+ifeval=20:0.32+bfcl_simple_python=20:0.42+bfcl_multiple=25:0.42+bfcl_irrelevance=20:0.35,--count-mode,atleast,--count-resp-min,1.10,--count-resp-cap,1.75,--count-resp-pad,60,--resp-median,0.95,--resp-max,1.05,--right-resp-cap,1.15 --rp-lr 1.4e-5 --rp-warmup 2 --rp-beta 0.1 --rp-dpo-seed 0 --rp-dev-vs rpE80 --od-dev-rounds 99 --data-seed 18 --od-caps svamp=58,mbpp=56,ifeval=48,bfcl_simple_python=52,bfcl_multiple=52,bfcl_irrelevance=55 --od-acc-hold -1.5 --od-unlatch --od-stop-save 999 --od-conv-gain -999 --od-min-rounds 20 --od-best-name od6a-best --note consult29
+fullpick --fp-run od6a --fp-kind arena --fp-dev-rounds 16 17 18 19 20 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 2 --rp-dev-vs rpE80 --fp-tag=-a
 end

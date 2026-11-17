@@ -5014,7 +5014,8 @@ def ptrepair(args):
 
         def build():
             # (15 Nov, r2one crash on a fresh runtime) the data files named in the pair rules (--base-think, --base-stats, ...)
-            drive_sync("restore", only=[x for x in args.rp_pair_args.split(",") if x.startswith("data/")])
+            drive_sync("restore", only=[y for x in args.rp_pair_args.split(",") for y in x.split("+")
+                                        if y.startswith(("data/", "runs/"))])
             py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
                "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
         build()
