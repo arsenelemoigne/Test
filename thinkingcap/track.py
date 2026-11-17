@@ -551,6 +551,8 @@ def main():
                         "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
     parser.add_argument("--fp-tag", default="", help="fullpick (15 Nov): suffix of data/<run>-fullpick<tag>.json (one per GPU)")
     parser.add_argument("--fp-acc-bias", type=float, default=2.3, help="fullpick: Dev over-reads accuracy by this (pts)")
+    parser.add_argument("--fp-acc-slope", type=float, default=0.0, help="(17 Nov, consult28) fullpick: extra accuracy bias per pt of Dev saving above 53%")
+    parser.add_argument("--fp-acc-gate", type=float, default=-1.0, help="(17 Nov, consult28) fullpick: a pick counts as inside only above this corrected accuracy")
     parser.add_argument("--fm-screen-only", action="store_true", help="fullmodel: the 720 screen only (re-scoring old models)")
     parser.add_argument("--fm-merge", nargs="*", default=[], help="fullmodel (9 Nov): models/OUT=BASE:ADAPTER merges an "
                         "adapter onto a base model before testing models/OUT")
@@ -4504,8 +4506,8 @@ def fullpick(args):
         return
 
     def dist(c):
-        ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias
-        inside = ps > 50 and pa > -1
+        ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias - getattr(args, "fp_acc_slope", 0.0) * max(0.0, c["saved"] - 53.0)
+        inside = ps > 50 and pa > getattr(args, "fp_acc_gate", -1.0)
         return (0, -ps) if inside else (1, max(0.0, 50.5 - ps) + 2 * max(0.0, -0.9 - pa))
     ranked = sorted(cands, key=dist)
     tested = set()
@@ -4532,7 +4534,7 @@ def fullpick(args):
         picks.append(other)
     for c in cands:
         print(f"fullpick {run_name}: {c['label']}: Dev/monitor {c['saved']:+.1f}% / {c['acc']:+.2f} -> corrected "
-              f"{c['saved'] - args.fp_save_bias:+.1f}% / {c['acc'] - args.fp_acc_bias:+.2f}"
+              f"{c['saved'] - args.fp_save_bias:+.1f}% / {c['acc'] - args.fp_acc_bias - getattr(args, 'fp_acc_slope', 0.0) * max(0.0, c['saved'] - 53.0):+.2f}"
               + ("  <- FULL TEST" if c in picks else ""), flush=True)
     models = []
     for c in picks:
