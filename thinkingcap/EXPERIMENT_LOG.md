@@ -6988,3 +6988,4 @@ and math (+3.7). Caveat: svamp shows 19.4% unreadable answers in the trained run
 difference may be format, not knowledge; tool-call gains may partly be format too. Against the original WITH thinking the trained
 model without thinking is far worse (math -64.4, code -10.9): thinking still carries the hard tasks.
 Ops: restarts restore every finished odpo round's model from Drive just to skip it (2-7 min per round over rclone): ~1-2 h before round 22/20.
+- 17 Nov ~04:05 CET od5c round-22 MONITOR (od5c-r21 on slice 22): **49.5 / +2.52**. Per type: math 54 / -0.2, code 40 / -0.8, IFEval 52 / +4.9, simple 49 / +6.1, several 51 / +5.2, no-fit 56 / +7.0. Same plateau as rounds 19-20 (49.9 / +3.00): saving ~50% on the monitor, accuracy +2.5. Round 22 trained (15 steps, 78% pairs ordered right). GPU 2: od5r round 20 training (step 10/15).
