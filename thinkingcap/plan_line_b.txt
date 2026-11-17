@@ -818,41 +818,4 @@ fullpick --fp-run od5c --fp-kind arena --fp-dev-rounds 20 21 22 23 24 --fp-save-
 # of ~5 there and the user dropped it for time. v2b = IFBench, BFCL-live x3, BBH, BoolQ (970 questions, 4k cap): the
 # original's answers once, then od5c round 16 and od5r round 15, all on this GPU (no cross-GPU wait).
 # (16 Nov ~10:00, user: "don't run set 2") transfer --tr-sets tr_ifbench=300,tr_bfcl_live_simple=120,tr_bfcl_live_multiple=100,tr_bfcl_live_irrelevance=80,tr_bbh=170,tr_boolq=200 --tr-tag v2b --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
-hold --hold-minutes 30 --hold-tag after-od3-4
-hold --hold-minutes 30 --hold-tag after-od3-5
-hold --hold-minutes 30 --hold-tag after-od3-6
-hold --hold-minutes 30 --hold-tag after-od3-7
-hold --hold-minutes 30 --hold-tag after-od3-8
-hold --hold-minutes 30 --hold-tag wait-consult18-1
-hold --hold-minutes 30 --hold-tag wait-consult18-2
-hold --hold-minutes 30 --hold-tag wait-consult18-3
-hold --hold-minutes 30 --hold-tag wait-consult18-4
-hold --hold-minutes 30 --hold-tag wait-consult18-5
-hold --hold-minutes 30 --hold-tag wait-consult18-6
-hold --hold-minutes 30 --hold-tag wait-consult18-7
-hold --hold-minutes 30 --hold-tag wait-consult18-8
-hold --hold-minutes 30 --hold-tag keep-awake-b-1
-hold --hold-minutes 30 --hold-tag keep-awake-b-2
-hold --hold-minutes 30 --hold-tag keep-awake-b-3
-hold --hold-minutes 30 --hold-tag keep-awake-b-4
-hold --hold-minutes 30 --hold-tag keep-awake-b-5
-hold --hold-minutes 30 --hold-tag keep-awake-b-6
-hold --hold-minutes 30 --hold-tag keep-awake-b-7
-hold --hold-minutes 30 --hold-tag keep-awake-b-8
-hold --hold-minutes 30 --hold-tag keep-awake-b-9
-hold --hold-minutes 30 --hold-tag keep-awake-b-10
-hold --hold-minutes 30 --hold-tag keep-awake-b-11
-hold --hold-minutes 30 --hold-tag keep-awake-b-12
-hold --hold-minutes 30 --hold-tag keep-awake-b-13
-hold --hold-minutes 30 --hold-tag keep-awake-b-14
-hold --hold-minutes 30 --hold-tag keep-awake-b-15
-hold --hold-minutes 30 --hold-tag keep-awake-b-16
-hold --hold-minutes 30 --hold-tag keep-awake-b-17
-hold --hold-minutes 30 --hold-tag keep-awake-b-18
-hold --hold-minutes 30 --hold-tag keep-awake-b-19
-hold --hold-minutes 30 --hold-tag keep-awake-b-20
-hold --hold-minutes 30 --hold-tag keep-awake-b-21
-hold --hold-minutes 30 --hold-tag keep-awake-b-22
-hold --hold-minutes 30 --hold-tag keep-awake-b-23
-hold --hold-minutes 30 --hold-tag keep-awake-b-24
 end

@@ -7005,3 +7005,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 17 Nov ~09:00 CET fullpick od5r: od5r-r17 Dev-512 **51.5% [48.6, 54.1] / +2.29 [+0.57, +4.04]** (r23: 47.3 / +3.47). GPU 1 queue finished (od5c-r20 full test done) and is on idle hold lines.
 - 17 Nov ~09:25 CET fullpick od5r: od5r-r18 Dev-512 **50.6% [47.9, 53.3] / +2.25 [+0.45, +4.03]**.
 - 17 Nov ~09:50 CET fullpick od5r: od5r-r19 Dev-512 **48.1% [45.2, 50.7] / +2.43 [+0.81, +4.13]** (re-scored; was 49.0 / +2.37 as ext-best on 16 Nov).
+- 17 Nov ~10:15 CET (user) GPU 1: all remaining hold lines removed from plan_line_b -> the runner reaches 'end', saves, flushes Drive and releases the runtime.
