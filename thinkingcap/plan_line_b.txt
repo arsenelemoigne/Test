@@ -818,4 +818,10 @@ fullpick --fp-run od5c --fp-kind arena --fp-dev-rounds 20 21 22 23 24 --fp-save-
 # of ~5 there and the user dropped it for time. v2b = IFBench, BFCL-live x3, BBH, BoolQ (970 questions, 4k cap): the
 # original's answers once, then od5c round 16 and od5r round 15, all on this GPU (no cross-GPU wait).
 # (16 Nov ~10:00, user: "don't run set 2") transfer --tr-sets tr_ifbench=300,tr_bfcl_live_simple=120,tr_bfcl_live_multiple=100,tr_bfcl_live_irrelevance=80,tr_bbh=170,tr_boolq=200 --tr-tag v2b --tr-models od5c16=models/od5c-best od5r15=models/od5r-r15
+hold --hold-minutes 30 --hold-tag wait-od6a-1
+hold --hold-minutes 30 --hold-tag wait-od6a-2
+hold --hold-minutes 30 --hold-tag wait-od6a-3
+hold --hold-minutes 30 --hold-tag wait-od6a-4
+hold --hold-minutes 30 --hold-tag wait-od6a-5
+hold --hold-minutes 30 --hold-tag wait-od6a-6
 end
