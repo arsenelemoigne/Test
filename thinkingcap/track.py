@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path("runs/mvtf")
@@ -7741,10 +7742,12 @@ def plan(args):
         todo = [l for l in lines if l and l not in done]
         if todo and todo[0] == "end":  # the queue's last line: save everything, let Drive upload it, stop
             finish()
+            Path("/content/QUEUE_DONE").write_text(time.strftime("%Y-%m-%d %H:%M"))
             return
         if not todo:
             idle_since = idle_since or time.time()
             if time.time() - idle_since > args.wait_hours * 3600:
+                Path("/content/QUEUE_DONE").write_text(time.strftime("%Y-%m-%d %H:%M"))
                 return
             time.sleep(300)
             update_files()
@@ -7783,6 +7786,7 @@ def end(args):
         (DRIVE / name).write_text("\n".join(lines) + "\n")
         print(f"drive: wrote {name}", flush=True)
     finish()
+    Path("/content/QUEUE_DONE").write_text(time.strftime("%Y-%m-%d %H:%M"))
     parent = os.getppid()
     print(f"plan: stopping the worker (pid {parent})", flush=True)
     os.kill(parent, signal.SIGTERM)
