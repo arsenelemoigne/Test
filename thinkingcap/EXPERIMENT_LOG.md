@@ -7026,3 +7026,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
   simple 52 / multiple 52 / irrelevance 55, brake −1.5; then fullpick rounds 16–20 with the safer rule (slope 0.25, gate −0.85), 2 full tests.
 - Not implemented from consult29: the beyond-noise brake (`--od-bn-hold`) and the RGTS pick; its lr 5e-5 / quota 480 suggestions ignored (not our setup).
 - Same commit: od5f's `--shorten-ratio-by-part` and `--shorten-second` now act in the od5 path (they were silently ignored).
+- 17 Nov ~17:00 CET **od5f first real monitor (od5f-r1 on slice 2): 28.5% saved / +0.37** (od5c r1 24.5 / +0.41): faster start, same accuracy. Slice accuracy by type: math -1.1, code +0.8, IFEval +0.5, simple +1.5, several +0.3, no-fit +1.5. Round-2 pairs 240 (220 questions); no type held. GPU 1 idle (needs Run all).
