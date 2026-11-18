@@ -18,6 +18,9 @@ Key readings (see EXPERIMENT_LOG.md, 19 Nov 01:00-01:20):
    one function 12/88, several 28/72, no-fit 10/90.
 3. Surprisal: the original reads the trained thinking at 0.81 bits/token vs its own 0.49 (math 0.39 -> 0.68): repetition gone.
 4. No thinking at all: trained 50.2% vs original 47.2% (all types): the model itself improved.
-5. Per-task budgets (math full, code / IFEval / no-fit none, tools small): 82% saved at the same average accuracy.
+5. Per-task budgets (math full, code / IFEval / no-fit none, tools small): 82% saved at the same average accuracy ON THESE SLICES,
+   but NOT reliable for the full test: on the full test the original with thinking off loses 9.1 pts on code and 5.0 on IFEval
+   (here only -2.3 / +2.7), and the trained model reads ~3 pts optimistic on these slices (+2.26 here vs -0.78 full). With the
+   full-test thinking-off costs the same allocation gives ~82% / -2.2 vs the original. Check budgets on Dev / the full test.
 6. Caveat: a forced cut interrupts the original's planned long trace; the equal-cap run (effsame, GPU 2) adds each model cut
    at the OTHER model's caps (curves-<model>-at-<other>/summary.txt, add when it lands).
