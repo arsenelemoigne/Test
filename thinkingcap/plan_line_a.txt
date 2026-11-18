@@ -771,4 +771,5 @@ odpo --name od5f --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 18 --od-st
 # than they did? (offline rpM-60, gentlest offline rpI-120, most aggressive offline rpL-80, online second seed od5r-r16)
 nothink --name ntothers --nt-full --nt-full-models models/rpM-60 models/rpI-120 models/rpL-80 models/od5r-r16
 fullpick --fp-run od5f --fp-kind arena --fp-dev-rounds 14 15 16 17 18 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 2 --rp-dev-vs rpE80 --fp-tag=-f
+nothink --name ntothers2 --nt-full --nt-full-models models/rpL-80 models/od5r-r16
 end
