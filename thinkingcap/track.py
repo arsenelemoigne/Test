@@ -498,7 +498,7 @@ def main():
     parser.add_argument("--ob-into", default="od3g", help="od3branch: the new slice set's name (data/<name>-rK-questions.jsonl)")
     parser.add_argument("--ob-from", type=int, default=20, help="od3branch: first new slice; slices 2..from-1 are od3's (copied)")
     parser.add_argument("--ob-more", type=int, default=5, help="od3branch: how many new slices")
-    parser.add_argument("--ob-tries", type=int, default=80, help="od3branch: draws tried per slice to match every metric")
+    parser.add_argument("--ob-tries", type=int, default=150, help="od3branch: draws tried per slice to match every metric")
     parser.add_argument("--od-init", default="", help="odpo: the adapter round 1 starts from (and its reference)")
     parser.add_argument("--od-answers0", default="", help="odpo: the merged model = --rp-base + --od-init (answers round 1)")
     parser.add_argument("--od-screen-rounds", type=int, nargs="*", default=[2, 4], help="odpo: rounds scored on the 720 x4")
@@ -4212,15 +4212,17 @@ def od3branch(args):
                   if (m := re.match(rf"{into}-r(\d+)-questions\.jsonl$", f.name)) and int(m.group(1)) >= k0)
     for k in have:
         taken |= {json.loads(l)["id"] for l in Path(f"data/{into}-r{k}-questions.jsonl").read_text().splitlines() if l.strip()}
-    target = {p: {"tok": statistics.fmean(stat[q]["tokens"] for q in v), "words": statistics.fmean(words_of(q) for q in v)}
+    qt = lambda xs, f: sorted(xs)[min(len(xs) - 1, int(f * len(xs)))]
+    target = {p: {"tok": statistics.fmean(stat[q]["tokens"] for q in v), "words": statistics.fmean(words_of(q) for q in v),
+                  "med": qt([stat[q]["tokens"] for q in v], .5), "p90": qt([stat[q]["tokens"] for q in v], .9)}
               for p, v in ref.items()}
-    tol = {"tok": 0.12, "words": 0.20}
+    tol = {"tok": 0.12, "words": 0.20, "med": 0.15, "p90": 0.15}  # (19 Nov, user) the spread of lengths too, not only the mean
     cands = defaultdict(list)
     for qid, st in stat.items():
         if qid not in taken and qid in rows:
             cands[st["part"]].append((qid, st["acc"], "held"))
     lines = [f"od3branch {into}: slices 2..{k0 - 1} = od3's; targets per type (slices 2..{k0 - 1}): " + ", ".join(
-        f"{p} tokens {t['tok']:.0f} words {t['words']:.0f}" for p, t in target.items()),
+        f"{p} tokens {t['tok']:.0f} (median {t['med']:.0f}, p90 {t['p90']:.0f}) words {t['words']:.0f}" for p, t in target.items()),
         "candidates left " + str({p: len(v) for p, v in cands.items()})]
     print("\n".join(lines), flush=True)
     for k in range(k0, k0 + more):
@@ -4248,6 +4250,10 @@ def od3branch(args):
                     off.append(f"tokens {tk:.0f} vs {target[p]['tok']:.0f}")
                 if p in target and abs(wd / target[p]["words"] - 1) > tol["words"]:
                     off.append(f"words {wd:.0f} vs {target[p]['words']:.0f}")
+                for key, f in (("med", .5), ("p90", .9)):
+                    v_ = qt([stat[q]["tokens"] for q in ids], f)
+                    if p in target and abs(v_ / target[p][key] - 1) > tol[key]:
+                        off.append(f"{key} tokens {v_:.0f} vs {target[p][key]:.0f}")
                 if off:
                     bad[p] = "; ".join(off)
             score = len(bad)
