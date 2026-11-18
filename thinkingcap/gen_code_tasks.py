@@ -43,6 +43,22 @@ if ..."). English only.
 imports unless needed, no printing), "tests" (6 to 8 assert lines calling the function, at least 3 of them edge cases).
 Return ONLY a JSON array of 10 objects: {{"question": "...", "function_name": "...", "solution": "...", "tests": ["assert ...", ...]}}"""
 
+PROMPT_MEDIUM = """Create 10 Python programming tasks in the style of the MBPP benchmark. Topic: {topic}.
+Each task is a ONE-sentence statement starting with "Write a function to" or "Write a python function to" (at most 30
+words), solvable by a short function (3 to 10 lines). Make them ORDINARY, MEDIUM-DIFFICULTY tasks, like most of MBPP: a
+clear everyday task with one natural solution, no traps. The tests are like MBPP's: 5 or 6 asserts on normal inputs, at most
+one simple edge case. A careful small model should get them right most of the time, but not always (a slip in an index, an
+off-by-one, a wrong return type). Every behaviour the tests check must follow from the statement itself. English only.
+{novel}Each task: "question" (the statement), "function_name" (snake_case), "solution" (the full reference function, no
+imports unless needed, no printing), "tests" (5 or 6 assert lines calling the function).
+Return ONLY a JSON array of 10 objects: {{"question": "...", "function_name": "...", "solution": "...", "tests": ["assert ...", ...]}}"""
+
+NOVEL_MEDIUM = """INVENT NEW TASKS: do NOT reproduce or paraphrase known benchmark problems (MBPP, HumanEval, APPS, LeetCode or
+Codeforces classics, textbook exercises such as Fibonacci, factorial, primes, palindromes, anagrams). Give each task a small
+concrete setting of its own (shelf labels, ticket codes, sensor readings, playlist lengths, seat maps, ...) and word it in
+your own way, not with stock phrases.
+"""
+
 NOVEL = """INVENT NEW TASKS: do NOT reproduce or paraphrase known benchmark problems (MBPP, HumanEval, APPS, LeetCode or
 Codeforces classics, textbook exercises such as Fibonacci, factorial, primes, palindromes, anagrams, binomial
 coefficients, derangements or Stirling numbers). Give each task a small concrete setting of its own (shelf labels, ticket
@@ -115,13 +131,15 @@ def main():
     ap.add_argument("--calls", type=int, default=6)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--medium", action="store_true", help="(18 Nov, user) ordinary medium-difficulty MBPP-like tasks, test-like "
+                    "style, for continuity between the slices (the edge-case batches made slice 20+ code harder than the test)")
     ap.add_argument("--novel", action="store_true", help="(16 Nov) new tasks only, mixed difficulty (most of the first batch "
                     "shared rare 8-word sequences with the test's code questions and was dropped by the contamination check)")
     a = ap.parse_args()
     rng = random.Random(a.seed)
     topics = [rng.choice(TOPICS) for _ in range(a.calls)]
     with ThreadPoolExecutor(6) as ex:
-        items = [dict(x, topic=t) for t, b in zip(topics, ex.map(lambda t: parse(argon(PROMPT.format(topic=t, novel=NOVEL if a.novel else ""))), topics)) for x in b]
+        items = [dict(x, topic=t) for t, b in zip(topics, ex.map(lambda t: parse(argon((PROMPT_MEDIUM if a.medium else PROMPT).format(topic=t, novel=(NOVEL_MEDIUM if a.medium else NOVEL) if a.novel else ""))), topics)) for x in b]
     seen_q, seen_n, cands = set(), set(), []
     for it in items:
         if not well_formed(it):

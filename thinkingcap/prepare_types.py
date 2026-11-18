@@ -57,7 +57,7 @@ def main():
     rng = random.Random(args.seed)
     rows = []
     builders = {"gsm8k": gsm8k, "gsm8k_all": gsm8k_all, "gsm8k_easy": gsm8k_easy, "gsm8k_easy_test": gsm8k_easy_test, "metamath_easy": metamath_easy, "ifeval_built": ifeval_built, "toolace_near_verified": toolace_near_verified, "glaive_nofit_verified": glaive_nofit_verified, "glaive_nofit_hard": glaive_nofit_hard, "xlam_irrelevance": xlam_irrelevance, "gsm8k_std": gsm8k_std, "glaive_tools": glaive_tools, "gsm8k_matched": gsm8k_matched, "metamath_sv": metamath_sv, "mbpp_train": mbpp_train, "hermes_tools": hermes_tools,
-                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_code_argon_pilot": tgt_code_argon_pilot, "tgt_code_argon_b1": tgt_code_argon_b1, "tgt_code_argon_b2": tgt_code_argon_b2, "tgt_nofit_argon_b1": tgt_nofit_argon_b1, "tgt_simple_argon_b1": tgt_simple_argon_b1, "tgt_simple_haiku_b1": tgt_simple_haiku_b1, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
+                "toolace": toolace, "ifeval_like": ifeval_like, "ifeval_bida": ifeval_bida, "glaive_nofit_hard2": glaive_nofit_hard2, "haiku_tools": haiku_tools, "haiku_nofit": haiku_nofit, "haiku_nofit2": haiku_nofit2, "haiku_multiple": haiku_multiple, "haiku_multiple_removed": haiku_multiple_removed, "tgt_nofit_argon": tgt_nofit_argon, "tgt_code_argon_pilot": tgt_code_argon_pilot, "tgt_code_argon_b1": tgt_code_argon_b1, "tgt_code_argon_b2": tgt_code_argon_b2, "tgt_code_argon_m1": tgt_code_argon_m1, "tgt_math_argon_m1": tgt_math_argon_m1, "tgt_nofit_argon_b1": tgt_nofit_argon_b1, "tgt_simple_argon_b1": tgt_simple_argon_b1, "tgt_simple_haiku_b1": tgt_simple_haiku_b1, "tgt_nofit_haiku": tgt_nofit_haiku, "tgt_simple_argon": tgt_simple_argon, "tgt_simple_haiku": tgt_simple_haiku, "haiku_nofit3": haiku_nofit3, "haiku_nofit4": haiku_nofit4, "haiku_nofit5": haiku_nofit5, "kodcode_full": kodcode_full, "mc": multiple_choice, "kodcode": kodcode,
                 "gsm_plus": gsm_plus, "gsm_ic": gsm_ic,
                 "tr_math500": tr_math500, "tr_skywork": tr_skywork, "tr_arc_c": tr_arc_c, "tr_csqa": tr_csqa,
                 "tr_mmlu": tr_mmlu, "tr_humaneval": tr_humaneval, "tr_aime25": tr_aime25,
@@ -704,6 +704,24 @@ def tgt_code_argon_b1(args, rng):
 def tgt_code_argon_b2(args, rng):
     """(16 Nov) second batch, prompt --novel: invented tasks (no benchmark classics), mixed difficulty."""
     yield from tgt_code(args, rng, "tools_tgt_code_argon_b2.jsonl", "tgt-code-ar2")
+
+
+def tgt_code_argon_m1(args, rng):
+    """(18 Nov, user) ordinary medium-difficulty MBPP-like tasks (gen_code_tasks.py --medium --novel): code slices 20-24 that
+    resemble the test and rounds 1-19 (the edge-case batches made slice 20+ code harder than the test)."""
+    yield from tgt_code(args, rng, "tools_tgt_code_argon_m1.jsonl", "tgt-code-am1")
+
+
+def tgt_math_argon_m1(args, rng):
+    """(18 Nov, user) SVAMP-style word problems written by Argon (gen_math_tasks.py; whole-number answers checked from the
+    expression): the easy SVAMP-like math of our pool is used up at slice 24. SVAMP's wording, labelled gsm8k_matched (math)."""
+    path = next((p for p in (Path("/content/T/thinkingcap") / "tools_tgt_math_argon_m1.jsonl",
+                             Path(__file__).with_name("tools_tgt_math_argon_m1.jsonl")) if p.exists()), None)
+    assert path, "tools_tgt_math_argon_m1.jsonl not found"
+    for k, r in enumerate(json.loads(l) for l in path.read_text().splitlines() if l.strip()):
+        row_ = svamp_row(r["question"], r["answer"], "gsm8k_matched")
+        row_["origin"], row_["id"] = "tgt-math-am1", f"tgt-math-am1-{k}"
+        yield row_
 
 
 def tgt_nofit_argon(args, rng):
