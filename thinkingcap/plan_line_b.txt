@@ -825,5 +825,6 @@
 # dropped 18 Nov (user: od6a stalled at 10-28% saved): fullpick --fp-run od6a --fp-kind arena --fp-dev-rounds 16 17 18 19 20 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 2 --rp-dev-vs rpE80 --fp-tag=-a
 nothink --name ntothers2 --nt-full --nt-full-models models/rpL-80 models/od5r-r16
 effprobe --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
+effsame --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
 fullpick --fp-run od5f --fp-kind arena --fp-dev-rounds 14 15 16 17 18 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 1 --fp-skip-tested --rp-dev-vs rpE80 --fp-tag=-g
 end

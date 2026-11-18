@@ -36,6 +36,9 @@ def main():
     ap.add_argument("--samples", default="0,1", help="answers of each question cut at the fractions (settle points)")
     ap.add_argument("--budget-samples", default="0,1,2,3", help="answers of each question cut at the absolute budgets (curves)")
     ap.add_argument("--fracs", default=",".join(f"{x / 100:.2f}" for x in range(0, 100, 5)))
+    ap.add_argument("--budget-levels", default="", help="(18 Nov, user: density at EQUAL caps) a budget_levels.json of another "
+                    "run: use ITS per-type budget levels b0..b9 (e.g. the trained model cut at the original's caps)")
+    ap.add_argument("--no-fracs", action="store_true", help="budget rungs only (no fraction cuts)")
     ap.add_argument("--budgets", default="auto", help="'auto' = per type: 0 and the 10th..90th percentiles of that type's "
                     "natural thinking lengths (this model); or a comma list applied to every type")
     ap.add_argument("--match-rollouts", default="", help="(18 Nov, user) another model's answers to the same questions: adds "
@@ -66,7 +69,11 @@ def main():
                 answers[(q, s)] = r
     nat_len = {k: len(cutter.think_ids(r)) for k, r in answers.items()}
     part_k = {k: part_of(r) for k, r in answers.items()}
-    if args.budgets == "auto":  # per type: 0 and deciles of its natural thinking lengths, as budget INDEX rungs b0..b9
+    if args.budget_levels:
+        lv = json.loads(Path(args.budget_levels).read_text())["levels"]
+        levels = {p: lv[p] for p in lv}
+        rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", j) for j in range(10)]
+    elif args.budgets == "auto":  # per type: 0 and deciles of its natural thinking lengths, as budget INDEX rungs b0..b9
         per = defaultdict(list)
         for k in answers:
             per[part_k[k]].append(nat_len[k])
@@ -76,6 +83,8 @@ def main():
         fixed = [int(x) for x in args.budgets.split(",")]
         levels = defaultdict(lambda: fixed)
         rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", j) for j in range(len(fixed))]
+    if args.no_fracs:
+        rungs = [r for r in rungs if r[0] != "f"]
     match_q, match_t = {}, {}
     if args.match_rollouts:
         mlen = defaultdict(list)
