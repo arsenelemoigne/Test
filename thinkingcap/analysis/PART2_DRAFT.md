@@ -1,12 +1,20 @@
-# Part II — What does it mean? Did it get smarter?
+# Draft: the second half of the article (for review, 18 Nov)
 
-*(Draft for review, 18 Nov. Replaces the current sections 12–13; section 14, legal AI, stays as the close. Part I = sections
-1–11, unchanged. Numbers: original Qwen3-0.6B vs the best model of Part I (online DPO, round 16), full test, 2,759 questions ×
+Layout (no "Part I / II" labels in the article): two big headlines, larger than section titles.
+- Before section 1: **Making a small model think less** (sections 1–11, unchanged).
+- Before section 12: **Did it get smarter?** (the text below; replaces the current sections 12–13; section 14 on legal AI
+  becomes the last section, renumbered 19).
+
+---
+
+# Did it get smarter?
+
+*(Replaces the current sections 12–13. Numbers: original Qwen3-0.6B vs the best model of Part I (online DPO, round 16), full test, 2,759 questions ×
 8 answers each. [GPU] = result arriving from tonight's run; the sentence is written for it and the number goes in.)*
 
 ---
 
-Part I ends with a model that writes 54.8% fewer tokens for 0.78 points of accuracy. On average, almost nothing was lost.
+The first half ends with a model that writes 54.8% fewer tokens for 0.78 points of accuracy. On average, almost nothing was lost.
 That raises the obvious question. A model that reaches the same answers with half the thinking sounds like a model that
 thinks better. Did it get smarter, or did it only get shorter?
 
