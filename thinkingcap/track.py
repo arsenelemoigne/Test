@@ -548,7 +548,8 @@ def main():
                         "best candidate's Dev / monitor saving is below this")
     parser.add_argument("--ep-models", default="base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best",
                         help="effprobe (18 Nov, user): name=model pairs; the first is the reference (the original)")
-    parser.add_argument("--ep-samples", default="0,1", help="effprobe: which answers of each Dev question are cut")
+    parser.add_argument("--ep-samples", default="0,1", help="effprobe: answers of each question cut at 5% steps (settle points)")
+    parser.add_argument("--ep-slices", default="19,20", help="effprobe: unseen training slices (data/od3-r<k>-questions.jsonl)")
     parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
     parser.add_argument("--fp-skip-tested", action="store_true", help="fullpick (15 Nov, user: one full test on each GPU): "
                         "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
@@ -5731,8 +5732,8 @@ def ladder(args):
 
 
 def effprobe(args):
-    """(18 Nov, user; consult30 priorities 1-3) Measurement only, on Dev-512 (never the test): for each model of --ep-models
-    (name=model, default the original and the best model), its natural Dev answers (dev512-<name>, made if missing), then
+    """(18 Nov, user; consult30 priorities 1-3) Measurement only, never the test: the questions are unseen training slices
+    (--ep-slices, test-matched, never trained on by od5c-r16: ~780 each); each model of --ep-models answers them 4 times, then
     (1) forced early-stop curves: budget_curves.py cuts samples 0-1 of every question at 10%..90% of its own thinking and at
     absolute budgets, closes </think> and lets the same model answer (settle points, accuracy-vs-thinking curves);
     (2) surprisal.py: bits per thinking token of both models' traces, each read by both models;
@@ -5742,11 +5743,21 @@ def effprobe(args):
     eff = Path("runs/eff")
     drive_sync("restore", only=[str(eff)] + [m for _, m in pairs if not m.startswith("Qwen/")])
     rolls = {}
+    slices = [int(x) for x in args.ep_slices.split(",")]  # (18 Nov, user: Dev-512 too small / noisy) unseen training slices
+    data = Path("data/eff-questions.jsonl")
+    if not data.exists():
+        drive_sync("restore", only=[f"data/od3-r{k}-questions.jsonl" for k in slices])
+        rows = [l for k in slices for l in Path(f"data/od3-r{k}-questions.jsonl").read_text().splitlines() if l.strip()]
+        data.write_text("\n".join(rows) + "\n")
+    n_q = sum(1 for l in data.read_text().splitlines() if l.strip())
     for name, model in pairs:
-        d = BON / f"dev512-{name}"
-        drive_sync("restore", only=[str(d)])
+        d = eff / f"roll-{name}"
         if not (d / "rollouts.jsonl").exists():
-            print(dev_score_model(name, model), flush=True)
+            py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
+               "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000, "--samples", 4,
+               "--model", model, "--out", d, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+               "--max-questions", n_q, "--seed", 53)
+            drive_sync("save")
         rolls[name] = d / "rollouts.jsonl"
     for name, model in pairs:  # (1) one rung per call, saved between rungs
         out = eff / f"curves-{name}"
@@ -5754,11 +5765,11 @@ def effprobe(args):
             if (out / "CURVES_DONE").exists():
                 break
             py("budget_curves.py", "--rollouts", rolls[name], "--out", out, "--model", model, "--dtype", args.dtype,
-               "--samples", args.ep_samples, "--max-new-rounds", 1)
+               "--samples", args.ep_samples, "--budget-samples", "0,1,2,3", "--max-new-rounds", 1)
             drive_sync("save")
         if not (out / "summary.txt").exists():
             py("budget_curves.py", "--rollouts", rolls[name], "--out", out, "--model", model, "--dtype", args.dtype,
-               "--samples", args.ep_samples)
+               "--samples", args.ep_samples, "--budget-samples", "0,1,2,3")
         print((out / "summary.txt").read_text(), flush=True)
     (a_name, a_model), (b_name, b_model) = pairs[0], pairs[1]
     if not (eff / "surprisal.json").exists():  # (2)

@@ -33,9 +33,11 @@ def main():
     ap.add_argument("--rollouts", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--model", default="Qwen/Qwen3-0.6B", help="the model that wrote the answers AND finishes the cuts")
-    ap.add_argument("--samples", default="0,1", help="which of each question's answers are cut")
-    ap.add_argument("--fracs", default="0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9")
-    ap.add_argument("--budgets", default="0,25,50,100,150,200,300,500,800,1200")
+    ap.add_argument("--samples", default="0,1", help="answers of each question cut at the fractions (settle points)")
+    ap.add_argument("--budget-samples", default="0,1,2,3", help="answers of each question cut at the absolute budgets (curves)")
+    ap.add_argument("--fracs", default=",".join(f"{x / 100:.2f}" for x in range(0, 100, 5)))
+    ap.add_argument("--budgets", default="auto", help="'auto' = per type: 0 and the 10th..90th percentiles of that type's "
+                    "natural thinking lengths (this model); or a comma list applied to every type")
     ap.add_argument("--answer-tokens", type=int, default=2048)
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--max-new-rounds", type=int, default=99)
@@ -46,7 +48,9 @@ def main():
     cutter = Cutter(tok, open_id, close_id)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    keep_s = {int(x) for x in args.samples.split(",")}
+    keep_f = {int(x) for x in args.samples.split(",")}
+    keep_b = {int(x) for x in args.budget_samples.split(",")}
+    keep_s = keep_f | keep_b
     groups = defaultdict(list)
     for r in read_jsonl(Path(args.rollouts)):
         groups[r["id"]].append(r)
@@ -58,10 +62,24 @@ def main():
             if s in keep_s:
                 answers[(q, s)] = r
     nat_len = {k: len(cutter.think_ids(r)) for k, r in answers.items()}
-    rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", int(x)) for x in args.budgets.split(",")]
+    part_k = {k: part_of(r) for k, r in answers.items()}
+    if args.budgets == "auto":  # per type: 0 and deciles of its natural thinking lengths, as budget INDEX rungs b0..b9
+        per = defaultdict(list)
+        for k in answers:
+            per[part_k[k]].append(nat_len[k])
+        levels = {p: [0] + [sorted(v)[min(len(v) - 1, int(q / 10 * len(v)))] for q in range(1, 10)] for p, v in per.items()}
+        rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", j) for j in range(10)]
+    else:
+        fixed = [int(x) for x in args.budgets.split(",")]
+        levels = defaultdict(lambda: fixed)
+        rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", j) for j in range(len(fixed))]
+    (out / "budget_levels.json").write_text(json.dumps({p: levels[p] for p in set(part_k.values())}))
 
     def budget(kind, v, k):
-        return int(v * nat_len[k]) if kind == "f" else v
+        return int(v * nat_len[k]) if kind == "f" else levels[part_k[k]][v]
+
+    def in_rung(kind, k):
+        return k[1] in (keep_f if kind == "f" else keep_b)
 
     def rname(kind, v):
         return f"f{int(round(v * 100)):02d}" if kind == "f" else f"b{v}"
@@ -77,6 +95,8 @@ def main():
             return
         jobs = []
         for k, r in answers.items():
+            if not in_rung(kind, k):
+                continue
             b = budget(kind, v, k)
             if nat_len[k] > b and r.get("prompt_ids"):
                 text = cutter.cut_text(k, r, b)
@@ -94,10 +114,11 @@ def main():
             vf.touch()
         new_rounds += 1
     (out / "CURVES_DONE").write_text("done\n")
-    summarize(out, answers, nat_len, rungs, rname, budget, args)
+    summarize(out, answers, nat_len, rungs, rname, budget, args, in_rung, levels)
 
 
-def summarize(out, answers, nat_len, rungs, rname, budget, args):
+def summarize(out, answers, nat_len, rungs, rname, budget, args, in_rung, levels):
+    import random
     res = {}  # (k, rung name) -> (right, output tokens)
     for kind, v in rungs:
         name = rname(kind, v)
@@ -117,19 +138,41 @@ def summarize(out, answers, nat_len, rungs, rname, budget, args):
                                  "thinking": sum(nat_len[k] for k in ks) / len(ks), "n": len(ks)}}
         for kind, v in rungs:
             name = rname(kind, v)
-            ok, tk = [], []
+            ok, tk, nat_ok, nat_tk, qs = [], [], [], [], []
             for k in ks:
+                if not in_rung(kind, k):
+                    continue
                 if (k, name) in res:
                     a, t = res[(k, name)]
                 else:  # not cut at this rung: its natural outcome
                     a, t = right(answers[k]), answers[k]["output_tokens"]
                 ok.append(a)
                 tk.append(t)
-            curves[p][name] = {"acc": 100 * sum(ok) / len(ok), "tokens": sum(tk) / len(tk), "kind": kind, "value": v}
+                nat_ok.append(right(answers[k]))
+                nat_tk.append(answers[k]["output_tokens"])
+                qs.append(k[0])
+            if not ok:
+                continue
+            # paired change vs the same answers' natural outcome, 95% bootstrap over questions
+            byq = defaultdict(list)
+            for q_, a, n_ in zip(qs, ok, nat_ok):
+                byq[q_].append(a - n_)
+            keys = list(byq)
+            rnd = random.Random(0)
+            boots = []
+            for _ in range(400):
+                smp = [byq[rnd.choice(keys)] for _ in keys]
+                tot = sum(len(x) for x in smp)
+                boots.append(100 * sum(sum(x) for x in smp) / tot)
+            boots.sort()
+            curves[p][name] = {"acc": 100 * sum(ok) / len(ok), "tokens": sum(tk) / len(tk), "kind": kind, "value": v,
+                               "budget": None if kind == "f" else levels[p][v], "n": len(ok),
+                               "nat_acc": 100 * sum(nat_ok) / len(nat_ok), "nat_tokens": sum(nat_tk) / len(nat_tk),
+                               "dacc": 100 * (sum(ok) - sum(nat_ok)) / len(ok), "dacc_ci": [boots[10], boots[389]]}
         fr = [(v, rname("f", v)) for kind, v in rungs if kind == "f"]
         shares = []
         for k in ks:
-            if not right(answers[k]) or nat_len[k] == 0:
+            if not in_rung("f", k) or not right(answers[k]) or nat_len[k] == 0:
                 continue
             f_settle = 1.0
             for v, name in sorted(fr, reverse=True):  # walk down from the longest cut
@@ -148,7 +191,13 @@ def summarize(out, answers, nat_len, rungs, rname, budget, args):
         lines.append(f"== {p}: natural {c['natural']['acc']:.1f}% at {c['natural']['tokens']:.0f} tokens "
                      f"({c['natural']['thinking']:.0f} thinking); post-settlement share "
                      f"{100 * (settle[p]['post_settlement_share'] or 0):.1f}% of the thinking of {settle[p]['answers']} right answers")
-        lines.append("   " + "  ".join(f"{n}: {c[n]['acc']:.1f}%/{c[n]['tokens']:.0f}t" for n in c if n != "natural"))
+        for n in c:
+            if n == "natural":
+                continue
+            x = c[n]
+            lab = n if x["kind"] == "f" else f"{n}={x['budget']}t"
+            lines.append(f"   {lab:10s} acc {x['acc']:5.1f}% ({x['dacc']:+5.1f} [{x['dacc_ci'][0]:+.1f}, {x['dacc_ci'][1]:+.1f}] vs natural) "
+                         f"tokens {x['tokens']:6.0f} (natural {x['nat_tokens']:.0f}), n={x['n']}")
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
     print("\n".join(lines), flush=True)
 
