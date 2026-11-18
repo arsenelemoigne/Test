@@ -59,7 +59,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "effsame", "od3branch", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -419,6 +419,8 @@ def main():
                         "pass need 2; a finished run continues from its saved state)")
     parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
                         "--think-only,ifeval,--prefer-reread)")
+    parser.add_argument("--wf-path", default="", help="waitfor (19 Nov): a Drive-relative path another GPU writes (e.g. data/od5g-fullpick-y.json)")
+    parser.add_argument("--wf-hours", type=float, default=8.0, help="waitfor: give up after this many hours")
     parser.add_argument("--hold-minutes", type=float, default=20, help="hold (11 Nov): minutes to wait")
     parser.add_argument("--hold-tag", default="", help="hold: any text (makes two hold lines differ, so both run)")
     parser.add_argument("--ds-name", default="", help="devscore (11 Nov): the name of the scored model's Dev-512 run")
@@ -4630,7 +4632,11 @@ def fullpick(args):
         if start and start not in {c["label"] for c in cands} and d.exists():  # the result is the last, unmonitored round
             a = json.loads(d.read_text())
             cands.append({"label": start, "model": f"models/{run_name}-best", "saved": a["saved"], "acc": a["acc"]})
-    assert cands, f"fullpick: no scored candidate of {run_name}"
+    if not cands:  # (19 Nov) e.g. the run trained nothing (not enough matched data): say so, do not crash the queue
+        print(f"fullpick {run_name}: NO CANDIDATE (no scored round model): nothing to test", flush=True)
+        Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": []}))
+        drive_sync("save")
+        return
     if getattr(args, "fp_min_save", None) is not None and max(c["saved"] for c in cands) < args.fp_min_save:
         # (15 Nov, user: "if we are not near 50% on the Dev 512, let's not run the full eval")
         print(f"fullpick {run_name}: NO FULL TEST: best Dev saving {max(c['saved'] for c in cands):+.1f}% < --fp-min-save "
@@ -4642,6 +4648,8 @@ def fullpick(args):
               + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}{' PASS' if c in good else ''}" for c in cands), flush=True)
         if not good:
             print(f"fullpick {run_name}: NO FULL TEST: no round passes the gate", flush=True)
+            Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": cands}))
+            drive_sync("save")
             return
         cands = good
 
@@ -4665,7 +4673,10 @@ def fullpick(args):
             print(f"fullpick {run_name}: already full-tested or picked on the other GPU, not picked again: {sorted(tested)}",
                   flush=True)
     pool = [c for c in ranked if c["label"] not in tested]
-    assert pool, f"fullpick {run_name}: every candidate already has a full test"
+    if not pool:  # (19 Nov) nothing left for this GPU (the other GPU took the only good round): not an error
+        print(f"fullpick {run_name}: every passing candidate already has a full test or is picked on the other GPU: nothing to do",
+              flush=True)
+        return
     picks = [pool[0]]
     other = next((c for c in pool if c["label"] == start), None)
     if other is None or other["label"] == picks[0]["label"]:
@@ -4691,6 +4702,7 @@ def fullpick(args):
         models.append(str(model))
     Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(
         json.dumps({"picks": picks, "start": start, "all": cands}, indent=1))
+    drive_sync("save")  # (19 Nov) the other GPU's fullpick --fp-skip-tested / waitfor reads the picks before this full test ends
     a = copy.copy(args)
     a.fm_soup, a.fm_merge, a.nothink_models, a.fm_screen_only, a.fm_no_screen = [], [], models, False, True
     fullmodel(a)
@@ -5726,6 +5738,22 @@ TRANSFER_SIZES = {"tr_math500": 1000, "tr_skywork": 200, "tr_arc_c": 200, "tr_cs
 # tr_bbh: 17 of the 27 BBH tasks have option answers, x 10 per task = 170 (270 asked; the other 10 answer yes/no, numbers or words).
 TRANSFER_V2_SIZES = {"tr_ifbench": 300, "tr_bfcl_live_simple": 120, "tr_bfcl_live_multiple": 100, "tr_bfcl_live_irrelevance": 80,
                      "tr_bbh": 170, "tr_boolq": 200, "tr_math500": 311}
+
+
+def waitfor(args):
+    """(19 Nov, user: the GPUs share the work overnight; each step only starts once what it needs is ready) Wait, checking
+    Drive every 5 min, until --wf-path exists (written by the other GPU); give up after --wf-hours (the next line then finds
+    nothing to do and says so)."""
+    import time
+    end = time.time() + 3600 * args.wf_hours
+    while time.time() < end:
+        drive_sync("restore", only=[args.wf_path])
+        if Path(args.wf_path).exists():
+            print(f"waitfor: {args.wf_path} is there", flush=True)
+            return
+        print(f"waitfor: {args.wf_path} not yet ({(end - time.time()) / 3600:.1f} h left)", flush=True)
+        time.sleep(300)
+    print(f"waitfor: GAVE UP after {args.wf_hours} h: {args.wf_path} never appeared", flush=True)
 
 
 def hold(args):
@@ -7952,7 +7980,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
+    SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
     if stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
     elif stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "wandaod", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
