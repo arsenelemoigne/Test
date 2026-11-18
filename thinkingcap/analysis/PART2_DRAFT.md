@@ -38,7 +38,7 @@ from its 8 answers with each model:
 
 | Model | Tokens saved | Net change | Excess churn |
 |---|---|---|---|
-| Gentlest run (offline) | 48% | −22 questions | +68 |
+| Gentlest run (offline) | 42% | +7 questions | +54 |
 | Best model | 55% | −23 | +73 |
 | Most aggressive run (offline) | 63% | −58 | +95 |
 | Original, thinking off | 94% | −800 | +717 |

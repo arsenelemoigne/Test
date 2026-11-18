@@ -32,7 +32,7 @@ excess churn = Σ(|k0−k1|/8 − E0) with E0 the exact hypergeometric null (mov
 | No function fits | 240 | +14.1 / +5.89 | +8.5 / +3.53 [+4.9, +12.1] |
 | **All** | 2759 | **−23.4 / −0.85** [−40.1, −4.4] | **+73.1 / +2.65** [+61.2, +85.2] |
 
-Other models for comparison (all tasks): rpM-60 (offline, 48% saved) drift −22.2, excess churn +67.6; rpL-80 (offline, 63%)
+Other models for comparison (all tasks): gentlest run rpI-120 (offline, 42% saved, +0.1) drift +6.8, churn +54.4; rpM-60 (offline, 54% saved) drift −22.2, churn +67.6; rpL-80 (offline, 63%)
 drift −57.9, churn +94.7; thinking off drift −800, churn +717. More saving → more churn.
 Replaces the old "questions lost beyond chance" (biased when losses and gains are corrected separately; consult30).
 Per 100 answers (matched slots): 70 right in both, 5 right→wrong, 4 wrong→right, 21 wrong in both.
