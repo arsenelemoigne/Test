@@ -56,6 +56,12 @@ Same script. Pass@8 = solved at least once in 8; 8/8 = solved every time.
   tokens per matched step 17.0 → 16.4.
 - Argon (consult30) on ALL 22,072 pairs, four matchers with no AI model: net trimming 98.8% (word overlap), 98.6% (4-grams),
   97.5% (best-of-8 pairing), 91.4% (many-to-one, an upper bound on merging 8.6%). Gross trimmed 112%, new unmatched steps 14%.
+- Check for HIDDEN condensing (a shorter AND reworded step falls below the threshold and is booked as trimmed + added):
+  `hidden_condense.py` → `runs/hidden_condense/`. 48% of the trained thinking is unmatched one-to-one; those steps are
+  0.95× the length of their closest original step (not shorter rewrites); crediting every close one (similarity ≥ 0.55) with
+  its closest unmatched original step gives an UPPER BOUND of 2.2% of the saving (math 1.5, code 2.3, instructions 2.5,
+  tools 2.5–4.3); and they carry LESS content per token than unmatched original steps (numbers 6.2 vs 7.5). So condensing +
+  merging ≤ ~8% of the saving; trimming ≥ ~90%.
 - `content_density.py` (1,600 pairs) → `runs/density_content/`: merging (a trained step covering several DISTINCT original
   steps; repeats count as trimming) = 6.2% of the saving (math 8.2, code 6.1, instructions 1.8, tools 3.6–7.6).
 

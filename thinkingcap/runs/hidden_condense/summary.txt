@@ -1,0 +1,42 @@
+-- All: unmatched = 48% of the trained thinking; their best similarity to any original step: 0-0.35 2%, 0.35-0.45 5%, 0.45-0.55 11%, 0.55-0.65 23%, 0.65-0.75 39%
+   those >= 0.55: length vs their closest original step 0.95x; UPPER BOUND of hidden condensing = 2.2% of the saving
+   content per 100 tokens, unmatched trained : numbers 6.2, operators 2.4, code 3.2, arguments 0.9, hesitation 1.2
+   content per 100 tokens, unmatched original: numbers 7.5, operators 3.1, code 3.1, arguments 1.3, hesitation 1.3
+   content per 100 tokens, matched trained   : numbers 6.8, operators 2.4, code 3.1, arguments 1.0, hesitation 1.6
+   content per 100 tokens, matched original  : numbers 6.7, operators 2.4, code 3.0, arguments 1.1, hesitation 1.4
+-- Math: unmatched = 28% of the trained thinking; their best similarity to any original step: 0-0.35 3%, 0.35-0.45 7%, 0.45-0.55 13%, 0.55-0.65 18%, 0.65-0.75 36%
+   those >= 0.55: length vs their closest original step 0.92x; UPPER BOUND of hidden condensing = 1.5% of the saving
+   content per 100 tokens, unmatched trained : numbers 6.0, operators 1.6, code 0.7, arguments 0.5, hesitation 1.8
+   content per 100 tokens, unmatched original: numbers 8.5, operators 2.8, code 0.8, arguments 0.7, hesitation 1.6
+   content per 100 tokens, matched trained   : numbers 9.1, operators 1.9, code 0.8, arguments 0.5, hesitation 1.4
+   content per 100 tokens, matched original  : numbers 8.7, operators 1.9, code 0.8, arguments 0.6, hesitation 1.3
+-- Code: unmatched = 55% of the trained thinking; their best similarity to any original step: 0-0.35 1%, 0.35-0.45 4%, 0.45-0.55 10%, 0.55-0.65 23%, 0.65-0.75 40%
+   those >= 0.55: length vs their closest original step 0.96x; UPPER BOUND of hidden condensing = 2.3% of the saving
+   content per 100 tokens, unmatched trained : numbers 7.1, operators 2.9, code 4.0, arguments 1.0, hesitation 1.2
+   content per 100 tokens, unmatched original: numbers 8.6, operators 3.8, code 4.3, arguments 1.3, hesitation 1.2
+   content per 100 tokens, matched trained   : numbers 7.1, operators 3.2, code 4.7, arguments 1.2, hesitation 1.4
+   content per 100 tokens, matched original  : numbers 7.0, operators 3.2, code 4.5, arguments 1.3, hesitation 1.3
+-- Instructions: unmatched = 64% of the trained thinking; their best similarity to any original step: 0-0.35 4%, 0.35-0.45 10%, 0.45-0.55 23%, 0.55-0.65 28%, 0.65-0.75 33%
+   those >= 0.55: length vs their closest original step 0.97x; UPPER BOUND of hidden condensing = 2.5% of the saving
+   content per 100 tokens, unmatched trained : numbers 0.5, operators 0.5, code 1.6, arguments 1.7, hesitation 0.6
+   content per 100 tokens, unmatched original: numbers 0.8, operators 0.4, code 1.4, arguments 2.4, hesitation 1.2
+   content per 100 tokens, matched trained   : numbers 1.0, operators 0.7, code 2.4, arguments 1.6, hesitation 2.2
+   content per 100 tokens, matched original  : numbers 1.1, operators 0.6, code 2.4, arguments 1.8, hesitation 2.2
+-- One function: unmatched = 25% of the trained thinking; their best similarity to any original step: 0-0.35 3%, 0.35-0.45 4%, 0.45-0.55 12%, 0.55-0.65 24%, 0.65-0.75 53%
+   those >= 0.55: length vs their closest original step 0.93x; UPPER BOUND of hidden condensing = 2.5% of the saving
+   content per 100 tokens, unmatched trained : numbers 1.3, operators 0.5, code 0.7, arguments 1.1, hesitation 0.8
+   content per 100 tokens, unmatched original: numbers 2.1, operators 1.4, code 1.0, arguments 1.9, hesitation 1.2
+   content per 100 tokens, matched trained   : numbers 2.6, operators 0.9, code 1.7, arguments 0.8, hesitation 2.3
+   content per 100 tokens, matched original  : numbers 2.7, operators 1.0, code 1.8, arguments 1.3, hesitation 1.7
+-- Several functions: unmatched = 26% of the trained thinking; their best similarity to any original step: 0-0.35 3%, 0.35-0.45 4%, 0.45-0.55 12%, 0.55-0.65 29%, 0.65-0.75 46%
+   those >= 0.55: length vs their closest original step 0.89x; UPPER BOUND of hidden condensing = 3.4% of the saving
+   content per 100 tokens, unmatched trained : numbers 1.7, operators 0.5, code 0.6, arguments 0.8, hesitation 0.7
+   content per 100 tokens, unmatched original: numbers 1.8, operators 1.2, code 1.1, arguments 1.9, hesitation 0.9
+   content per 100 tokens, matched trained   : numbers 2.5, operators 0.7, code 1.5, arguments 1.0, hesitation 2.7
+   content per 100 tokens, matched original  : numbers 2.5, operators 0.9, code 1.9, arguments 1.5, hesitation 2.2
+-- No function fits: unmatched = 36% of the trained thinking; their best similarity to any original step: 0-0.35 5%, 0.35-0.45 8%, 0.45-0.55 18%, 0.55-0.65 24%, 0.65-0.75 40%
+   those >= 0.55: length vs their closest original step 0.86x; UPPER BOUND of hidden condensing = 4.3% of the saving
+   content per 100 tokens, unmatched trained : numbers 0.1, operators 0.1, code 1.0, arguments 0.7, hesitation 0.7
+   content per 100 tokens, unmatched original: numbers 0.5, operators 0.4, code 1.4, arguments 1.1, hesitation 0.9
+   content per 100 tokens, matched trained   : numbers 0.7, operators 0.4, code 2.2, arguments 0.7, hesitation 3.1
+   content per 100 tokens, matched original  : numbers 0.8, operators 0.5, code 2.5, arguments 0.8, hesitation 3.1
