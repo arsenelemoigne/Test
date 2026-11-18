@@ -14,8 +14,14 @@ Qwen3-0.6B ("base") and od5c-best (online DPO od5c round 16, full test 54.8 / -0
 
 Key readings (see EXPERIMENT_LOG.md, 19 Nov 01:00-01:20):
 1. Math at equal tokens: trained 87.9% at ~290 tokens; the original stopped at ~300 tokens 47-57%.
-2. Share of the cut that was working-out (before the answer settles) vs re-checking: math 68/32, code 7/93, IFEval 34/66,
-   one function 12/88, several 28/72, no-fit 10/90.
+2. Share of the cut that was working-out (before the answer settles) vs re-checking, per RIGHT answer (thinking of right
+   answers estimated from each type's mean and the full test's wrong/right length ratio, since the post-settlement share is
+   measured on right answers only): math 67/33 (original ~531 -> trained ~251 thinking tokens: 378+153 -> 190+61),
+   code 4/96, IFEval 34/66, one function 11/88, several 28/73, no-fit 9/91.
+   CAVEAT for code and IFEval: on these slices thinking is worth little (original no-thinking -2.3 code, +2.7 IFEval) while on
+   the full test thinking off costs -9.1 and -5.0: the slices' code / IFEval do not depend on thinking like the test's do, so
+   conclusions for those two types may not transfer. Math and tool calls agree with the full test (thinking-off: simple -9.4
+   here vs -11.6 full, several -15.8 vs -17.2, no-fit +5.3 vs +6.2; math natural 88.6 here vs 88.7 test).
 3. Surprisal: the original reads the trained thinking at 0.81 bits/token vs its own 0.49 (math 0.39 -> 0.68): repetition gone.
 4. No thinking at all: trained 50.2% vs original 47.2% (all types): the model itself improved.
 5. Per-task budgets (math full, code / IFEval / no-fit none, tools small): 82% saved at the same average accuracy ON THESE SLICES,
