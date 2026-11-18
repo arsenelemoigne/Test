@@ -1,0 +1,1350 @@
+{
+ "note": "every full test (2,759 x 8). parts: v math, c code, f IFEval, s one function, m several functions, i no function fits; saved %, acc in points vs the original",
+ "original_thinking_off": {
+  "saved": 94,
+  "acc": -23,
+  "parts": {
+   "v": [
+    98.4,
+    -72.2
+   ],
+   "c": [
+    97.5,
+    -9.1
+   ],
+   "f": [
+    59.6,
+    -5.0
+   ],
+   "s": [
+    87.8,
+    -11.6
+   ],
+   "m": [
+    90.3,
+    -17.2
+   ],
+   "i": [
+    95.9,
+    6.2
+   ]
+  }
+ },
+ "models": [
+  {
+   "key": "pt-mid-full",
+   "name": "Per-type merge \u00b7 mid \u00b7 FULL TEST",
+   "what": "pt-mid (October's 4 per-type adapters merged at .30/.45/.60/.45, no repair) on the full test 2,759 x 8",
+   "saved": 53.6,
+   "acc": -3.3,
+   "parts": {
+    "v": {
+     "saved": 61,
+     "acc": -6.0
+    },
+    "c": {
+     "saved": 62,
+     "acc": -3.9
+    },
+    "f": {
+     "saved": 50,
+     "acc": -1.7
+    },
+    "s": {
+     "saved": 35,
+     "acc": 0.2
+    },
+    "m": {
+     "saved": 38,
+     "acc": 0.4
+    },
+    "i": {
+     "saved": 40,
+     "acc": -5.6
+    }
+   }
+  },
+  {
+   "key": "cleanA-ca1-full",
+   "name": "ca1-soup-10 (clean line A, round 3)",
+   "what": "clean line A DPO round 3 \u00b7 3 seeds averaged \u00b7 full test 2,759 x 8",
+   "saved": 49.1,
+   "acc": -2.4,
+   "parts": {
+    "v": {
+     "saved": 58,
+     "acc": -4.3
+    },
+    "c": {
+     "saved": 53,
+     "acc": -2.2
+    },
+    "f": {
+     "saved": 45,
+     "acc": -2.4
+    },
+    "s": {
+     "saved": 36,
+     "acc": 0.4
+    },
+    "m": {
+     "saved": 38,
+     "acc": 0.6
+    },
+    "i": {
+     "saved": 41,
+     "acc": -3.2
+    }
+   }
+  },
+  {
+   "key": "cleanA-rc1-full",
+   "name": "rc1-soup-30",
+   "what": "clean line A: ca1 (DPO round 3) + one 'stop as soon as you're sure' round (calibrated cuts) \u00b7 3 seeds averaged \u00b7 full test 2,759 x 8",
+   "saved": 57.4,
+   "acc": -3.5,
+   "parts": {
+    "v": {
+     "saved": 67,
+     "acc": -6.6
+    },
+    "c": {
+     "saved": 63,
+     "acc": -3.5
+    },
+    "f": {
+     "saved": 51,
+     "acc": -2.5
+    },
+    "s": {
+     "saved": 41,
+     "acc": -0.1
+    },
+    "m": {
+     "saved": 44,
+     "acc": -0.8
+    },
+    "i": {
+     "saved": 51,
+     "acc": -4.1
+    }
+   }
+  },
+  {
+   "key": "rpe-80full",
+   "name": "Repair rpE \u00b7 step 80",
+   "what": "repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest wrong, own questions only), chosen answer prefers a re-check of the question, ifeval judged on thinking only \u00b7 constant lr \u00b7 1 seed \u00b7 full test 2,759 x 8",
+   "saved": 47.0,
+   "acc": -0.9,
+   "parts": {
+    "v": {
+     "saved": 54,
+     "acc": -1.2
+    },
+    "c": {
+     "saved": 46,
+     "acc": -1.0
+    },
+    "f": {
+     "saved": 45,
+     "acc": -2.6
+    },
+    "s": {
+     "saved": 37,
+     "acc": 0.1
+    },
+    "m": {
+     "saved": 39,
+     "acc": 0.1
+    },
+    "i": {
+     "saved": 50,
+     "acc": 3.4
+    }
+   }
+  },
+  {
+   "key": "rpe-40full",
+   "name": "Repair rpE \u00b7 step 40",
+   "what": "repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest wrong, own questions only), chosen answer prefers a re-check of the question, ifeval judged on thinking only \u00b7 constant lr \u00b7 1 seed \u00b7 full test 2,759 x 8",
+   "saved": 50.6,
+   "acc": -1.9,
+   "parts": {
+    "v": {
+     "saved": 59,
+     "acc": -3.0
+    },
+    "c": {
+     "saved": 53,
+     "acc": -1.7
+    },
+    "f": {
+     "saved": 47,
+     "acc": -2.8
+    },
+    "s": {
+     "saved": 39,
+     "acc": 0.4
+    },
+    "m": {
+     "saved": 41,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 50,
+     "acc": -0.4
+    }
+   }
+  },
+  {
+   "key": "rpe-60full",
+   "name": "Repair rpE \u00b7 step 60",
+   "what": "repair of rc1-soup-30: equal-length 'be right' pairs (shortest right > shortest wrong, own questions only), chosen answer prefers a re-check of the question, ifeval judged on thinking only \u00b7 constant lr \u00b7 1 seed \u00b7 full test 2,759 x 8",
+   "saved": 47.8,
+   "acc": -1.2,
+   "parts": {
+    "v": {
+     "saved": 55,
+     "acc": -1.5
+    },
+    "c": {
+     "saved": 48,
+     "acc": -0.7
+    },
+    "f": {
+     "saved": 46,
+     "acc": -3.0
+    },
+    "s": {
+     "saved": 38,
+     "acc": 0.1
+    },
+    "m": {
+     "saved": 39,
+     "acc": -0.2
+    },
+    "i": {
+     "saved": 49,
+     "acc": 1.4
+    }
+   }
+  },
+  {
+   "key": "rpi-120full",
+   "name": "Repair rpI \u00b7 step 120",
+   "what": "rpE-80 + 40 'be right' DPO steps on its own answers to 5,700 new questions \u00b7 full test 2,759 x 8",
+   "saved": 41.9,
+   "acc": 0.1,
+   "parts": {
+    "v": {
+     "saved": 47,
+     "acc": 0.0
+    },
+    "c": {
+     "saved": 38,
+     "acc": 0.5
+    },
+    "f": {
+     "saved": 41,
+     "acc": -1.5
+    },
+    "s": {
+     "saved": 37,
+     "acc": 0.2
+    },
+    "m": {
+     "saved": 38,
+     "acc": -0.9
+    },
+    "i": {
+     "saved": 50,
+     "acc": 5.8
+    }
+   }
+  },
+  {
+   "key": "rpk-20full",
+   "name": "Typed repair rpK \u00b7 step 20",
+   "what": "rpE-80 + 'think less' pairs only on IFEval and tool calls (11 Nov) \u00b7 full test 2,759 x 8",
+   "saved": 49.9,
+   "acc": -1.3,
+   "parts": {
+    "v": {
+     "saved": 58,
+     "acc": -2.6
+    },
+    "c": {
+     "saved": 51,
+     "acc": -0.3
+    },
+    "f": {
+     "saved": 45,
+     "acc": -3.1
+    },
+    "s": {
+     "saved": 40,
+     "acc": 0.3
+    },
+    "m": {
+     "saved": 42,
+     "acc": -1.5
+    },
+    "i": {
+     "saved": 54,
+     "acc": 3.6
+    }
+   }
+  },
+  {
+   "key": "rpk-40full",
+   "name": "Typed repair rpK \u00b7 step 40",
+   "what": "rpE-80 + 'think less' pairs only on IFEval and tool calls (11 Nov) \u00b7 FIRST FULL TEST IN THE BOX \u00b7 full test 2,759 x 8",
+   "saved": 51.2,
+   "acc": -0.8,
+   "parts": {
+    "v": {
+     "saved": 58,
+     "acc": -2.3
+    },
+    "c": {
+     "saved": 52,
+     "acc": -0.1
+    },
+    "f": {
+     "saved": 46,
+     "acc": -1.9
+    },
+    "s": {
+     "saved": 41,
+     "acc": 0.3
+    },
+    "m": {
+     "saved": 45,
+     "acc": -0.8
+    },
+    "i": {
+     "saved": 58,
+     "acc": 4.7
+    }
+   }
+  },
+  {
+   "key": "rpk-60full",
+   "name": "Typed repair rpK \u00b7 step 60",
+   "what": "rpE-80 + 'think less' pairs only on IFEval and tool calls (11 Nov) \u00b7 full test 2,759 x 8",
+   "saved": 54.4,
+   "acc": -1.4,
+   "parts": {
+    "v": {
+     "saved": 61,
+     "acc": -2.3
+    },
+    "c": {
+     "saved": 55,
+     "acc": -1.2
+    },
+    "f": {
+     "saved": 49,
+     "acc": -3.0
+    },
+    "s": {
+     "saved": 45,
+     "acc": -1.5
+    },
+    "m": {
+     "saved": 48,
+     "acc": -1.0
+    },
+    "i": {
+     "saved": 62,
+     "acc": 6.2
+    }
+   }
+  },
+  {
+   "key": "rpl-60full",
+   "name": "Typed repair rpL \u00b7 step 60",
+   "what": "rpK + IFEval pairs that no longer reward longer answers + anti-loop pairs (11 Nov) \u00b7 full test 2,759 x 8",
+   "saved": 59.3,
+   "acc": -1.7,
+   "parts": {
+    "v": {
+     "saved": 64,
+     "acc": -2.7
+    },
+    "c": {
+     "saved": 62,
+     "acc": -0.9
+    },
+    "f": {
+     "saved": 58,
+     "acc": -3.4
+    },
+    "s": {
+     "saved": 47,
+     "acc": -2.0
+    },
+    "m": {
+     "saved": 49,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 62,
+     "acc": 4.6
+    }
+   }
+  },
+  {
+   "key": "p1r1-200full",
+   "name": "Path 1 round 1 \u00b7 step 200",
+   "what": "from the ORIGINAL Qwen: one shorten-dominant DPO round on its stored answers (10-11 Nov) \u00b7 full test 2,759 x 8",
+   "saved": 43.4,
+   "acc": -1.5,
+   "parts": {
+    "v": {
+     "saved": 59,
+     "acc": -3.2
+    },
+    "c": {
+     "saved": 44,
+     "acc": -3.3
+    },
+    "f": {
+     "saved": 23,
+     "acc": 0.4
+    },
+    "s": {
+     "saved": 40,
+     "acc": -0.2
+    },
+    "m": {
+     "saved": 42,
+     "acc": 1.2
+    },
+    "i": {
+     "saved": 45,
+     "acc": 0.4
+    }
+   }
+  },
+  {
+   "key": "rpl-40full",
+   "name": "Typed repair rpL \u00b7 step 40",
+   "what": "rpK + IFEval pairs that no longer reward longer answers + anti-loop pairs (11 Nov) \u00b7 full test 2,759 x 8",
+   "saved": 55.1,
+   "acc": -1.37,
+   "parts": {
+    "v": {
+     "saved": 60,
+     "acc": -1.5
+    },
+    "c": {
+     "saved": 57,
+     "acc": -1.8
+    },
+    "f": {
+     "saved": 55,
+     "acc": -3.0
+    },
+    "s": {
+     "saved": 43,
+     "acc": -0.3
+    },
+    "m": {
+     "saved": 45,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 58,
+     "acc": 3.9
+    }
+   }
+  },
+  {
+   "key": "rpm-60full",
+   "name": "Typed repair rpM \u00b7 step 60",
+   "what": "rpE-80 + typed repair with math protected (wide guards, length-matched be-right) and IFEval counting pairs only on true length rules (11 Nov) \u00b7 IN THE BOX, best so far \u00b7 full test 2,759 x 8",
+   "saved": 54.1,
+   "acc": -0.93,
+   "parts": {
+    "v": {
+     "saved": 57,
+     "acc": -1.2
+    },
+    "c": {
+     "saved": 58,
+     "acc": -0.9
+    },
+    "f": {
+     "saved": 50,
+     "acc": -2.3
+    },
+    "s": {
+     "saved": 45,
+     "acc": -0.3
+    },
+    "m": {
+     "saved": 47,
+     "acc": -1.6
+    },
+    "i": {
+     "saved": 61,
+     "acc": 4.2
+    }
+   }
+  },
+  {
+   "key": "rpl-80full",
+   "name": "Typed repair rpL \u00b7 step 80",
+   "what": "rpK + IFEval pairs that no longer reward longer answers + anti-loop pairs (11 Nov) \u00b7 full test 2,759 x 8",
+   "saved": 62.8,
+   "acc": -2.06,
+   "parts": {
+    "v": {
+     "saved": 66,
+     "acc": -2.9
+    },
+    "c": {
+     "saved": 66,
+     "acc": -1.8
+    },
+    "f": {
+     "saved": 62,
+     "acc": -2.6
+    },
+    "s": {
+     "saved": 51,
+     "acc": -5.1
+    },
+    "m": {
+     "saved": 53,
+     "acc": -2.9
+    },
+    "i": {
+     "saved": 66,
+     "acc": 7.7
+    }
+   }
+  },
+  {
+   "key": "rpm-20full",
+   "name": "Typed repair rpM \u00b7 step 20",
+   "what": "rpE-80 + typed repair with math protected (wide guards, length-matched be-right) and IFEval counting pairs only on true length rules (11 Nov) \u00b7 in the box (just) \u00b7 full test 2,759 x 8",
+   "saved": 50.1,
+   "acc": -0.94,
+   "parts": {
+    "v": {
+     "saved": 56,
+     "acc": -1.5
+    },
+    "c": {
+     "saved": 52,
+     "acc": -0.7
+    },
+    "f": {
+     "saved": 47,
+     "acc": -2.6
+    },
+    "s": {
+     "saved": 39,
+     "acc": 0.3
+    },
+    "m": {
+     "saved": 42,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 54,
+     "acc": 3.5
+    }
+   }
+  },
+  {
+   "key": "rpm-40full",
+   "name": "Typed repair rpM \u00b7 step 40",
+   "what": "rpE-80 + typed repair with math protected \u00b7 full test 2,759 x 8",
+   "saved": 52.9,
+   "acc": -1.1,
+   "parts": {
+    "v": {
+     "saved": 58,
+     "acc": -1.5
+    },
+    "c": {
+     "saved": 56,
+     "acc": -1.7
+    },
+    "f": {
+     "saved": 50,
+     "acc": -2.5
+    },
+    "s": {
+     "saved": 41,
+     "acc": 0.3
+    },
+    "m": {
+     "saved": 44,
+     "acc": 0.0
+    },
+    "i": {
+     "saved": 57,
+     "acc": 4.1
+    }
+   }
+  },
+  {
+   "key": "r2s1b-160full",
+   "name": "Path 1 \u00b7 recipe 2 step 1 \u00b7 step 160",
+   "what": "Offline DPO from the original (2,880 pairs, test-matched questions, constant 2e-5) \u00b7 full test 2,759 x 8 \u00b7 next: shorten IFEval + tools, then repair",
+   "saved": 49.0,
+   "acc": -1.7,
+   "parts": {
+    "v": {
+     "saved": 60,
+     "acc": -4.0
+    },
+    "c": {
+     "saved": 51,
+     "acc": -3.2
+    },
+    "f": {
+     "saved": 40,
+     "acc": 0.0
+    },
+    "s": {
+     "saved": 41,
+     "acc": -2.6
+    },
+    "m": {
+     "saved": 43,
+     "acc": 0.6
+    },
+    "i": {
+     "saved": 46,
+     "acc": 5.2
+    }
+   }
+  },
+  {
+   "key": "r2s1b-180full",
+   "name": "Path 1 \u00b7 recipe 2 step 1 \u00b7 step 180",
+   "what": "Offline DPO from the original (2,880 pairs, test-matched questions, constant 2e-5) \u00b7 full test 2,759 x 8 \u00b7 starting point of step 2",
+   "saved": 50.3,
+   "acc": -1.7,
+   "parts": {
+    "v": {
+     "saved": 62,
+     "acc": -4.5
+    },
+    "c": {
+     "saved": 54,
+     "acc": -3.1
+    },
+    "f": {
+     "saved": 38,
+     "acc": 1.0
+    },
+    "s": {
+     "saved": 42,
+     "acc": -3.0
+    },
+    "m": {
+     "saved": 45,
+     "acc": 0.9
+    },
+    "i": {
+     "saved": 45,
+     "acc": 3.5
+    }
+   }
+  },
+  {
+   "key": "od3-r3full",
+   "name": "Path 2 \u00b7 online DPO od3 \u00b7 round 3",
+   "what": "Online DPO from the original (fixed reference, type floors, 3 rounds) \u00b7 full test 2,759 x 8 \u00b7 math collapses",
+   "saved": 58.4,
+   "acc": -4.01,
+   "parts": {
+    "v": {
+     "saved": 74,
+     "acc": -8.9
+    },
+    "c": {
+     "saved": 64,
+     "acc": -4.2
+    },
+    "f": {
+     "saved": 43,
+     "acc": -0.9
+    },
+    "s": {
+     "saved": 42,
+     "acc": -1.3
+    },
+    "m": {
+     "saved": 43,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 45,
+     "acc": -4.6
+    }
+   }
+  },
+  {
+   "key": "od3-r4full",
+   "name": "Path 2 \u00b7 online DPO od3 \u00b7 round 4",
+   "what": "Online DPO from the original (fixed reference, type floors, 4 rounds) \u00b7 full test 2,759 x 8 \u00b7 math collapses",
+   "saved": 60.5,
+   "acc": -4.79,
+   "parts": {
+    "v": {
+     "saved": 76,
+     "acc": -9.4
+    },
+    "c": {
+     "saved": 67,
+     "acc": -4.8
+    },
+    "f": {
+     "saved": 44,
+     "acc": -2.2
+    },
+    "s": {
+     "saved": 45,
+     "acc": -2.0
+    },
+    "m": {
+     "saved": 46,
+     "acc": -1.1
+    },
+    "i": {
+     "saved": 48,
+     "acc": -5.4
+    }
+   }
+  },
+  {
+   "key": "r2s2-40full",
+   "name": "Path 1 \u00b7 recipe 2 step 2 \u00b7 step 40",
+   "what": "Step 2 from step 1 (r2s1b-180): 1,600 test-matched pairs, shorten IFEval + tool calls only, constant 1e-5 \u00b7 full test 2,759 x 8 (per-type split not available)",
+   "saved": 52.9,
+   "acc": -1.74
+  },
+  {
+   "key": "r2s2-80full",
+   "name": "Path 1 \u00b7 recipe 2 step 2 \u00b7 step 80",
+   "what": "Step 2 from step 1 (r2s1b-180): 1,600 test-matched pairs, shorten IFEval + tool calls only, constant 1e-5 \u00b7 full test 2,759 x 8 (per-type split not available)",
+   "saved": 53.7,
+   "acc": -1.27
+  },
+  {
+   "key": "od4-r7full",
+   "name": "Path 2 \u00b7 online DPO od4 \u00b7 round 7",
+   "what": "Online DPO from the original, 7 rounds of its own answers on test-matched slices, fixed reference \u00b7 full test 2,759 x 8 (per-type split not available)",
+   "saved": 55.4,
+   "acc": -2.0
+  },
+  {
+   "key": "od4-r8full",
+   "name": "Path 2 \u00b7 online DPO od4 \u00b7 round 8",
+   "what": "Online DPO from the original, 8 rounds (last round with 4 of 6 types held) \u00b7 full test 2,759 x 8 \u00b7 0.3 pt short of the goal (per-type split not available)",
+   "saved": 51.6,
+   "acc": -1.3
+  },
+  {
+   "key": "r2s3-20full",
+   "name": "Path 1 \u00b7 recipe 2 step 3 \u00b7 step 20",
+   "what": "Step 3 = repair from step 2 (r2s2-80): 633 'be right' / anti-loop / format pairs on its own answers, no shortening, constant 8e-6 \u00b7 full test 2,759 x 8 (exact accuracy -0.99 from the loss analysis: inside the goal)",
+   "saved": 52.7,
+   "acc": -0.99,
+   "parts": {
+    "v": {
+     "saved": 59,
+     "acc": -2.86
+    },
+    "c": {
+     "saved": 53,
+     "acc": -1.92
+    },
+    "f": {
+     "saved": 48,
+     "acc": 0.88
+    },
+    "s": {
+     "saved": 48,
+     "acc": -3.5
+    },
+    "m": {
+     "saved": 51,
+     "acc": -0.19
+    },
+    "i": {
+     "saved": 52,
+     "acc": 5.73
+    }
+   }
+  },
+  {
+   "key": "r2s3-30full",
+   "name": "Path 1 \u00b7 recipe 2 step 3 \u00b7 step 30",
+   "what": "Step 3 = repair from step 2 (r2s2-80): 633 'be right' / anti-loop / format pairs on its own answers, no shortening, constant 8e-6 \u00b7 full test 2,759 x 8 \u00b7 INSIDE THE GOAL (clean 3-step offline recipe)",
+   "saved": 51.5,
+   "acc": -0.84,
+   "parts": {
+    "v": {
+     "saved": 57,
+     "acc": -2.8
+    },
+    "c": {
+     "saved": 52,
+     "acc": -1.62
+    },
+    "f": {
+     "saved": 47,
+     "acc": 1.39
+    },
+    "s": {
+     "saved": 48,
+     "acc": -3.78
+    },
+    "m": {
+     "saved": 50,
+     "acc": -0.56
+    },
+    "i": {
+     "saved": 51,
+     "acc": 5.62
+    }
+   }
+  },
+  {
+   "key": "od5c-r10full",
+   "name": "Path 2 \u00b7 online DPO od5c \u00b7 round 10",
+   "what": "Online DPO from the original (od5 v2: per-question rule vs the original, repair pairs, per-type brake), 10 rounds \u00b7 full test 2,759 x 8 (its free monitor had read 52.9 / +0.84: over-read accuracy by 2.5, math 61 / -2.0 vs 65 / -4.6 here)",
+   "saved": 54.1,
+   "acc": -1.68,
+   "parts": {
+    "v": {
+     "saved": 65,
+     "acc": -4.6
+    },
+    "c": {
+     "saved": 54,
+     "acc": -1.3
+    },
+    "f": {
+     "saved": 46,
+     "acc": -0.7
+    },
+    "s": {
+     "saved": 46,
+     "acc": -1.1
+    },
+    "m": {
+     "saved": 48,
+     "acc": -1.1
+    },
+    "i": {
+     "saved": 53,
+     "acc": 2.3
+    }
+   }
+  },
+  {
+   "key": "od5d-r11full",
+   "name": "Path 2 \u00b7 online DPO od5d \u00b7 round 11 (final)",
+   "what": "od5 v3 (consult24: free slots of held types go to healthy types, looser eligibility on healthy types, plain bf16), 11 rounds from the original \u00b7 full test 2,759 x 8 (Dev had read 49.6 / +1.69)",
+   "saved": 49.5,
+   "acc": -1.21,
+   "parts": {
+    "v": {
+     "saved": 50,
+     "acc": -1.8
+    },
+    "c": {
+     "saved": 49,
+     "acc": -2.1
+    },
+    "f": {
+     "saved": 47,
+     "acc": -0.3
+    },
+    "s": {
+     "saved": 50,
+     "acc": -1.7
+    },
+    "m": {
+     "saved": 51,
+     "acc": -3.6
+    },
+    "i": {
+     "saved": 57,
+     "acc": 3.6
+    }
+   }
+  },
+  {
+   "key": "od5c-r15full",
+   "name": "Path 2 \u00b7 online DPO od5c \u00b7 round 15",
+   "what": "Same od5c run, round 15 (checks round 16 was not luck) \u00b7 full test 2,759 x 8 \u00b7 INSIDE THE GOAL and above the 52% margin (its free monitor had read 52.9 / +2.41)",
+   "saved": 54.0,
+   "acc": -0.56,
+   "parts": {
+    "v": {
+     "saved": 62,
+     "acc": -2.8
+    },
+    "c": {
+     "saved": 54,
+     "acc": -0.9
+    },
+    "f": {
+     "saved": 48,
+     "acc": 0.5
+    },
+    "s": {
+     "saved": 48,
+     "acc": -1.6
+    },
+    "m": {
+     "saved": 50,
+     "acc": -1.4
+    },
+    "i": {
+     "saved": 57,
+     "acc": 6.9
+    }
+   }
+  },
+  {
+   "key": "od5c-r16full",
+   "name": "Path 2 \u00b7 online DPO od5c \u00b7 round 16 (final)",
+   "what": "ONE online DPO run from the original (od5 v2: per-question rule vs the original, repair pairs, per-type brake), 16 rounds of its own answers on test-matched slices \u00b7 full test 2,759 x 8 \u00b7 INSIDE THE GOAL and above the 52% margin: best clean result (Dev had read 55.0 / +2.22)",
+   "saved": 54.8,
+   "acc": -0.78,
+   "parts": {
+    "v": {
+     "saved": 61,
+     "acc": -2.8
+    },
+    "c": {
+     "saved": 59,
+     "acc": -2.0
+    },
+    "f": {
+     "saved": 47,
+     "acc": 0.5
+    },
+    "s": {
+     "saved": 49,
+     "acc": -1.1
+    },
+    "m": {
+     "saved": 50,
+     "acc": 0.0
+    },
+    "i": {
+     "saved": 57,
+     "acc": 5.9
+    }
+   }
+  },
+  {
+   "key": "od5c-r19full",
+   "name": "Path 2 \u00b7 online DPO od5c \u00b7 round 19 (extension)",
+   "what": "The same od5c run continued past round 16 on 3 new test-matched slices (17-19; hard tool questions written by Argon / Haiku and checked) with nothing else changed \u00b7 full test 2,759 x 8 \u00b7 inside the goal, at the 52% margin: holds accuracy, gives back 2.3 pts of saving vs round 16",
+   "saved": 52.5,
+   "acc": -0.77,
+   "parts": {
+    "v": {
+     "saved": 58,
+     "acc": -2.5
+    },
+    "c": {
+     "saved": 55,
+     "acc": -1.5
+    },
+    "f": {
+     "saved": 46,
+     "acc": 0.3
+    },
+    "s": {
+     "saved": 47,
+     "acc": -2.0
+    },
+    "m": {
+     "saved": 49,
+     "acc": 0.1
+    },
+    "i": {
+     "saved": 56,
+     "acc": 5.3
+    }
+   }
+  },
+  {
+   "key": "od5d-r10full",
+   "name": "Path 2 \u00b7 online DPO od5d \u00b7 round 10",
+   "what": "od5 v3 (plain bf16), round 10 \u00b7 full test 2,759 x 8 (its monitor had read 50.7 / -0.00: accuracy over-read 1.9)",
+   "saved": 51.6,
+   "acc": -1.95,
+   "parts": {
+    "v": {
+     "saved": 54,
+     "acc": -3.5
+    },
+    "c": {
+     "saved": 52,
+     "acc": -2.3
+    },
+    "f": {
+     "saved": 49,
+     "acc": -1.3
+    },
+    "s": {
+     "saved": 49,
+     "acc": -2.4
+    },
+    "m": {
+     "saved": 50,
+     "acc": -2.2
+    },
+    "i": {
+     "saved": 56,
+     "acc": 3.4
+    }
+   }
+  },
+  {
+   "key": "r2s3b-30full",
+   "name": "Path 1 \u00b7 step 3b (redo) \u00b7 step 30",
+   "what": "Step 3b = consult25's redo of the repair from r2s2-80 (799 pairs, plain bf16, lr 8e-6), step 30 \u00b7 full test 2,759 x 8 \u00b7 inside the goal (same point as step 40)",
+   "saved": 51.7,
+   "acc": -0.86,
+   "parts": {
+    "v": {
+     "saved": 57,
+     "acc": -2.8
+    },
+    "c": {
+     "saved": 52,
+     "acc": -1.8
+    },
+    "f": {
+     "saved": 47,
+     "acc": 1.2
+    },
+    "s": {
+     "saved": 49,
+     "acc": -3.4
+    },
+    "m": {
+     "saved": 51,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 52,
+     "acc": 6.1
+    }
+   }
+  },
+  {
+   "key": "r2s3b-40full",
+   "name": "Path 1 \u00b7 step 3b (redo) \u00b7 step 40",
+   "what": "Step 3b = consult25's redo of the repair from r2s2-80: 799 pairs (math / code / tools pure repair with guards anchored to the original's thinking, IFEval + no-fit safe shortening), plain bf16, lr 8e-6 \u00b7 full test 2,759 x 8 \u00b7 inside the goal",
+   "saved": 51.3,
+   "acc": -0.78,
+   "parts": {
+    "v": {
+     "saved": 55,
+     "acc": -2.1
+    },
+    "c": {
+     "saved": 51,
+     "acc": -1.6
+    },
+    "f": {
+     "saved": 48,
+     "acc": 0.3
+    },
+    "s": {
+     "saved": 49,
+     "acc": -2.9
+    },
+    "m": {
+     "saved": 51,
+     "acc": -0.2
+    },
+    "i": {
+     "saved": 52,
+     "acc": 6.0
+    }
+   }
+  },
+  {
+   "key": "od5r-r15full",
+   "name": "Path 2 \u00b7 online DPO od5r (seed replication) \u00b7 round 15",
+   "what": "od5c's exact recipe with only the random seeds changed (adapter init, pair draws, training order, answer sampling) \u00b7 full test 2,759 x 8 \u00b7 INSIDE THE GOAL: the online DPO result reproduces (od5c round 15: 54.0 / -0.56)",
+   "saved": 51.9,
+   "acc": -0.52,
+   "parts": {
+    "v": {
+     "saved": 59,
+     "acc": -1.2
+    },
+    "c": {
+     "saved": 49,
+     "acc": -1.9
+    },
+    "f": {
+     "saved": 48,
+     "acc": 1.2
+    },
+    "s": {
+     "saved": 48,
+     "acc": -1.8
+    },
+    "m": {
+     "saved": 50,
+     "acc": -0.9
+    },
+    "i": {
+     "saved": 56,
+     "acc": 3.2
+    }
+   }
+  },
+  {
+   "key": "od5r-r16full",
+   "name": "Path 2 \u00b7 online DPO od5r (seed replication) \u00b7 round 16",
+   "what": "od5c's exact recipe with only the random seeds changed \u00b7 full test 2,759 x 8 \u00b7 inside the goal, at the 52% margin (od5c round 16: 54.8 / -0.78)",
+   "saved": 52.1,
+   "acc": -0.58,
+   "parts": {
+    "v": {
+     "saved": 58,
+     "acc": -1.6
+    },
+    "c": {
+     "saved": 50,
+     "acc": -1.3
+    },
+    "f": {
+     "saved": 49,
+     "acc": 1.0
+    },
+    "s": {
+     "saved": 49,
+     "acc": -2.1
+    },
+    "m": {
+     "saved": 50,
+     "acc": -1.1
+    },
+    "i": {
+     "saved": 57,
+     "acc": 2.8
+    }
+   }
+  },
+  {
+   "key": "od5c-r20full",
+   "name": "Path 2 \u00b7 online DPO od5c (od5 v2) \u00b7 round 20",
+   "what": "The same od5c run continued to round 20 (picked from rounds 20-23 on Dev-512, 56.5 / +2.84) \u00b7 full test 2,759 x 8 \u00b7 most saving of any full test, just outside the goal (-1.24)",
+   "saved": 56.9,
+   "acc": -1.24,
+   "parts": {
+    "v": {
+     "saved": 62,
+     "acc": -2.7
+    },
+    "c": {
+     "saved": 61,
+     "acc": -2.7
+    },
+    "f": {
+     "saved": 51,
+     "acc": -0.3
+    },
+    "s": {
+     "saved": 49,
+     "acc": -2.2
+    },
+    "m": {
+     "saved": 51,
+     "acc": -0.4
+    },
+    "i": {
+     "saved": 58,
+     "acc": 6.6
+    }
+   }
+  },
+  {
+   "key": "od5f-r14full",
+   "name": "Path 2 \u00b7 online DPO od5f \u00b7 round 14",
+   "what": "od5c's recipe tuned by consult28 (per-type shortening ratios, floors and caps, a brake that holds a type once its slice accuracy drops) \u00b7 18 rounds from the original \u00b7 full test 2,759 x 8 \u00b7 inside the goal",
+   "saved": 54.6,
+   "acc": -0.94,
+   "parts": {
+    "v": {
+     "saved": 62,
+     "acc": -1.9
+    },
+    "c": {
+     "saved": 52,
+     "acc": -1.1
+    },
+    "f": {
+     "saved": 52,
+     "acc": -0.6
+    },
+    "s": {
+     "saved": 49,
+     "acc": -1.6
+    },
+    "m": {
+     "saved": 50,
+     "acc": -0.5
+    },
+    "i": {
+     "saved": 57,
+     "acc": 2.9
+    }
+   }
+  },
+  {
+   "key": "od5f-r15full",
+   "name": "Path 2 \u00b7 online DPO od5f \u00b7 round 15",
+   "what": "od5c's recipe tuned by consult28 (per-type shortening ratios, floors and caps, a brake that holds a type once its slice accuracy drops) \u00b7 18 rounds from the original \u00b7 full test 2,759 x 8 \u00b7 just outside the goal (-1.09)",
+   "saved": 56.1,
+   "acc": -1.09,
+   "parts": {
+    "v": {
+     "saved": 63,
+     "acc": -2.2
+    },
+    "c": {
+     "saved": 53,
+     "acc": -1.7
+    },
+    "f": {
+     "saved": 55,
+     "acc": -0.3
+    },
+    "s": {
+     "saved": 49,
+     "acc": -1.1
+    },
+    "m": {
+     "saved": 51,
+     "acc": -0.9
+    },
+    "i": {
+     "saved": 58,
+     "acc": 1.8
+    }
+   }
+  },
+  {
+   "key": "od5f-r16full",
+   "name": "Path 2 \u00b7 online DPO od5f \u00b7 round 16",
+   "what": "od5c's recipe tuned by consult28 (per-type shortening ratios, floors and caps, a brake that holds a type once its slice accuracy drops) \u00b7 18 rounds from the original \u00b7 full test 2,759 x 8 \u00b7 inside the goal, more saving and less loss than od5c round 16",
+   "saved": 55.4,
+   "acc": -0.57,
+   "parts": {
+    "v": {
+     "saved": 63,
+     "acc": -1.5
+    },
+    "c": {
+     "saved": 53,
+     "acc": -0.7
+    },
+    "f": {
+     "saved": 53,
+     "acc": -0.6
+    },
+    "s": {
+     "saved": 48,
+     "acc": -0.9
+    },
+    "m": {
+     "saved": 50,
+     "acc": -1.0
+    },
+    "i": {
+     "saved": 57,
+     "acc": 4.2
+    }
+   }
+  },
+  {
+   "key": "od5f-r17full",
+   "name": "Path 2 \u00b7 online DPO od5f \u00b7 round 17",
+   "what": "od5c's recipe tuned by consult28 (per-type shortening ratios, floors and caps, a brake that holds a type once its slice accuracy drops) \u00b7 18 rounds from the original \u00b7 full test 2,759 x 8 \u00b7 inside the goal and above the 52% margin (Dev had read 58.0 / +1.83)",
+   "saved": 57.8,
+   "acc": -0.64,
+   "parts": {
+    "v": {
+     "saved": 67,
+     "acc": -2.3
+    },
+    "c": {
+     "saved": 55,
+     "acc": -1.2
+    },
+    "f": {
+     "saved": 55,
+     "acc": 0.5
+    },
+    "s": {
+     "saved": 49,
+     "acc": -1.5
+    },
+    "m": {
+     "saved": 50,
+     "acc": -0.6
+    },
+    "i": {
+     "saved": 58,
+     "acc": 4.4
+    }
+   }
+  },
+  {
+   "key": "od5f-r18full",
+   "name": "Path 2 \u00b7 online DPO od5f \u00b7 round 18 (most saving in the goal)",
+   "what": "od5c's recipe tuned by consult28 \u00b7 round 18 of 18 \u00b7 full test 2,759 x 8 \u00b7 INSIDE THE GOAL with the most saving of any model (Dev had read 60.4 / +0.88)",
+   "saved": 59.5,
+   "acc": -0.8,
+   "parts": {
+    "v": {
+     "saved": 71,
+     "acc": -3.6
+    },
+    "c": {
+     "saved": 56,
+     "acc": -1.1
+    },
+    "f": {
+     "saved": 56,
+     "acc": 1.4
+    },
+    "s": {
+     "saved": 50,
+     "acc": -2.4
+    },
+    "m": {
+     "saved": 50,
+     "acc": -1.0
+    },
+    "i": {
+     "saved": 59,
+     "acc": 5.5
+    }
+   }
+  }
+ ]
+}
