@@ -7063,3 +7063,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 18 Nov ~10:50 CET **od6a r14 monitor (model od6a-r13): 9.9% / +1.69**: lowest saving since r1 (code -10%). od6a is drifting back to the original.
 - 18 Nov ~11:10 CET fullpick od5f: **od5f-r14 Dev-512: 55.4% [52.8, 57.9] / +1.67 [+0.11, +3.33]** (od5c-r16 on the same Dev: 55.0 / +2.22 -> full 54.8 / -0.78). r15-r17 Dev next.
 - 18 Nov ~11:30 CET (user) **od6a DROPPED after 13 rounds** (stalled at 10-28% saved; last monitor 9.9 / +1.69). GPU 1 gets: nothink ntothers2 (rpL-80, od5r-r16 thinking off; moved from GPU 2), then fullpick od5f --fp-n 1 --fp-skip-tested (tag -g: a third od5f full test, not one GPU 2 picked). GPU 2 keeps fullpick od5f (Dev r14-18, full tests of 2).
+- 18 Nov ~11:30 CET fullpick od5f: **od5f-r15 Dev-512: 56.3% [53.7, 58.8] / +1.72 [+0.06, +3.42]** (r14 55.4 / +1.67; od5c-r16 55.0 / +2.22). GPU 1 still on od6a (user to stop the cell and restart the plan).
