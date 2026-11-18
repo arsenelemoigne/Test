@@ -772,5 +772,6 @@
 # done 18 Nov (skip on restart): nothink --name ntothers --nt-full --nt-full-models models/rpM-60 models/rpI-120 models/rpL-80 models/od5r-r16
 fullpick --fp-run od5f --fp-kind arena --fp-dev-rounds 14 15 16 17 18 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 2 --rp-dev-vs rpE80 --fp-tag=-f
 fullmodel --name full-od5f-r17 --nothink-models models/od5f-r17 --fm-no-screen
+fullmodel --name full-od5f-r18 --nothink-models models/od5f-r18 --fm-no-screen
 # moved to GPU 1 18 Nov: nothink --name ntothers2 --nt-full --nt-full-models models/rpL-80 models/od5r-r16
 end
