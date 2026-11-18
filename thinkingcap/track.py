@@ -5356,6 +5356,9 @@ def odpo_fixed(args):
         assert args.od_init and args.od_answers0, "--od-start-round needs --od-init (adapter) and --od-answers0 (merged model)"
         drive_sync("restore", only=[str(Path(args.od_init).parent), args.od_answers0])
         prev, answerer = args.od_init, args.od_answers0
+        if not (Path(answerer) / "config.json").exists():  # not on Drive (only the last round's merged model is kept): rebuild
+            py("merge.py", "--model", base, "--out", answerer, "--adapters", f"{prev}:1")
+            drive_sync("save")
         print(f"odpo {name}: starts at round {s0} from {prev} (answers: {answerer}), slices data/{sl}-rK", flush=True)
     for k in range(s0 - 1, args.od_rounds):
         done_m = Path("models") / f"{name}-r{k + 1}"  # (13 Nov) a rerun with more rounds skips the finished ones
