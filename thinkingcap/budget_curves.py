@@ -38,6 +38,9 @@ def main():
     ap.add_argument("--fracs", default=",".join(f"{x / 100:.2f}" for x in range(0, 100, 5)))
     ap.add_argument("--budgets", default="auto", help="'auto' = per type: 0 and the 10th..90th percentiles of that type's "
                     "natural thinking lengths (this model); or a comma list applied to every type")
+    ap.add_argument("--match-rollouts", default="", help="(18 Nov, user) another model's answers to the same questions: adds "
+                    "two rungs on --budget-samples, mt = cut at that model's mean thinking length for the TYPE, mq = for the "
+                    "same QUESTION (the original cut where the trained model stops)")
     ap.add_argument("--answer-tokens", type=int, default=2048)
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--max-new-rounds", type=int, default=99)
@@ -73,15 +76,31 @@ def main():
         fixed = [int(x) for x in args.budgets.split(",")]
         levels = defaultdict(lambda: fixed)
         rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", j) for j in range(len(fixed))]
-    (out / "budget_levels.json").write_text(json.dumps({p: levels[p] for p in set(part_k.values())}))
+    match_q, match_t = {}, {}
+    if args.match_rollouts:
+        mlen = defaultdict(list)
+        for r in read_jsonl(Path(args.match_rollouts)):
+            mlen[r["id"]].append((part_of(r), len(cutter.think_ids(r))))
+        tl = defaultdict(list)
+        for q, xs in mlen.items():
+            match_q[q] = int(sum(x[1] for x in xs) / len(xs))
+            tl[xs[0][0]] += [x[1] for x in xs]
+        match_t = {p: int(sum(v) / len(v)) for p, v in tl.items()}
+        rungs += [("m", "t"), ("m", "q")]
+    (out / "budget_levels.json").write_text(json.dumps({"levels": {p: levels[p] for p in set(part_k.values())},
+                                                        "match_type": match_t}))
 
     def budget(kind, v, k):
+        if kind == "m":
+            return match_t.get(part_k[k], 10 ** 9) if v == "t" else match_q.get(k[0], 10 ** 9)
         return int(v * nat_len[k]) if kind == "f" else levels[part_k[k]][v]
 
     def in_rung(kind, k):
         return k[1] in (keep_f if kind == "f" else keep_b)
 
     def rname(kind, v):
+        if kind == "m":
+            return f"m{v}"
         return f"f{int(round(v * 100)):02d}" if kind == "f" else f"b{v}"
 
     new_rounds = 0
@@ -166,7 +185,7 @@ def summarize(out, answers, nat_len, rungs, rname, budget, args, in_rung, levels
                 boots.append(100 * sum(sum(x) for x in smp) / tot)
             boots.sort()
             curves[p][name] = {"acc": 100 * sum(ok) / len(ok), "tokens": sum(tk) / len(tk), "kind": kind, "value": v,
-                               "budget": None if kind == "f" else levels[p][v], "n": len(ok),
+                               "budget": levels[p][v] if kind == "b" else None, "n": len(ok),
                                "nat_acc": 100 * sum(nat_ok) / len(nat_ok), "nat_tokens": sum(nat_tk) / len(nat_tk),
                                "dacc": 100 * (sum(ok) - sum(nat_ok)) / len(ok), "dacc_ci": [boots[10], boots[389]]}
         fr = [(v, rname("f", v)) for kind, v in rungs if kind == "f"]
@@ -195,7 +214,7 @@ def summarize(out, answers, nat_len, rungs, rname, budget, args, in_rung, levels
             if n == "natural":
                 continue
             x = c[n]
-            lab = n if x["kind"] == "f" else f"{n}={x['budget']}t"
+            lab = n if x["kind"] in ("f", "m") else f"{n}={x['budget']}t"
             lines.append(f"   {lab:10s} acc {x['acc']:5.1f}% ({x['dacc']:+5.1f} [{x['dacc_ci'][0]:+.1f}, {x['dacc_ci'][1]:+.1f}] vs natural) "
                          f"tokens {x['tokens']:6.0f} (natural {x['nat_tokens']:.0f}), n={x['n']}")
     (out / "summary.txt").write_text("\n".join(lines) + "\n")

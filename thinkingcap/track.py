@@ -5764,12 +5764,14 @@ def effprobe(args):
         for _ in range(40):
             if (out / "CURVES_DONE").exists():
                 break
+            match = ["--match-rollouts", rolls[pairs[1][0]]] if name == pairs[0][0] else []  # the original cut where the trained model stops
             py("budget_curves.py", "--rollouts", rolls[name], "--out", out, "--model", model, "--dtype", args.dtype,
-               "--samples", args.ep_samples, "--budget-samples", "0,1,2,3", "--max-new-rounds", 1)
+               "--samples", args.ep_samples, "--budget-samples", "0,1,2,3", *match, "--max-new-rounds", 1)
             drive_sync("save")
         if not (out / "summary.txt").exists():
             py("budget_curves.py", "--rollouts", rolls[name], "--out", out, "--model", model, "--dtype", args.dtype,
-               "--samples", args.ep_samples, "--budget-samples", "0,1,2,3")
+               "--samples", args.ep_samples, "--budget-samples", "0,1,2,3",
+               *(["--match-rollouts", rolls[pairs[1][0]]] if name == pairs[0][0] else []))
         print((out / "summary.txt").read_text(), flush=True)
     (a_name, a_model), (b_name, b_model) = pairs[0], pairs[1]
     if not (eff / "surprisal.json").exists():  # (2)
