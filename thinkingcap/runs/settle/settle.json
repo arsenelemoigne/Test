@@ -1,0 +1,282 @@
+{
+ "code: first draft of the final function starts": {
+  "all": {
+   "original": {
+    "answers": 2788,
+    "detected": 0.9960545193687231,
+    "thinking": 1561.2360114777618,
+    "after_tokens": 802.3641618067037,
+    "share_detected": 0.5207355233137927,
+    "share_all": 0.5139288076293086
+   },
+   "trained": {
+    "answers": 3011,
+    "detected": 0.6871471272002657,
+    "thinking": 791.6562603786117,
+    "after_tokens": 233.05190928163861,
+    "share_detected": 0.3635932297180786,
+    "share_all": 0.2943852287231088
+   },
+   "post_share_of_cut": 0.7397703119292659
+  },
+  "right": {
+   "original": {
+    "answers": 1586,
+    "detected": 0.9987389659520807,
+    "thinking": 1084.687263556116,
+    "after_tokens": 562.7767422876922,
+    "share_detected": 0.5190281658121175,
+    "share_all": 0.5188377896525168
+   },
+   "trained": {
+    "answers": 1527,
+    "detected": 0.6149312377210217,
+    "thinking": 473.9803536345776,
+    "after_tokens": 126.72155434884354,
+    "share_detected": 0.3391097335555771,
+    "share_all": 0.2673561327534294
+   },
+   "post_share_of_cut": 0.714017118284893
+  }
+ },
+ "one function: function named": {
+  "all": {
+   "original": {
+    "answers": 3200,
+    "detected": 0.991875,
+    "thinking": 170.644375,
+    "after_tokens": 122.10391187413376,
+    "share_detected": 0.7263442254160806,
+    "share_all": 0.7155460698551227
+   },
+   "trained": {
+    "answers": 3200,
+    "detected": 0.9709375,
+    "thinking": 76.165625,
+    "after_tokens": 39.81347831806581,
+    "share_detected": 0.5403245710921184,
+    "share_all": 0.5227224002700143
+   },
+   "post_share_of_cut": 0.8709940971495489
+  },
+  "right": {
+   "original": {
+    "answers": 2629,
+    "detected": 0.99505515405097,
+    "thinking": 164.1259033853176,
+    "after_tokens": 116.52618662027808,
+    "share_detected": 0.7146944520582751,
+    "share_all": 0.7099804736288952
+   },
+   "trained": {
+    "answers": 2594,
+    "detected": 0.9776407093292213,
+    "thinking": 74.58750963762529,
+    "after_tokens": 39.305740956146174,
+    "share_detected": 0.5398031153854956,
+    "share_all": 0.5269748399847177
+   },
+   "post_share_of_cut": 0.8624283107169558
+  }
+ },
+ "one function: name + all argument values": {
+  "all": {
+   "original": {
+    "answers": 3200,
+    "detected": 0.8515625,
+    "thinking": 170.644375,
+    "after_tokens": 83.78310464201166,
+    "share_detected": 0.5832510683731709,
+    "share_all": 0.49098075832860977
+   },
+   "trained": {
+    "answers": 3200,
+    "detected": 0.6946875,
+    "thinking": 76.165625,
+    "after_tokens": 23.41139082765163,
+    "share_detected": 0.4513610194571917,
+    "share_all": 0.30737476161525135
+   },
+   "post_share_of_cut": 0.6389978044201479
+  },
+  "right": {
+   "original": {
+    "answers": 2629,
+    "detected": 0.8779003423354887,
+    "thinking": 164.1259033853176,
+    "after_tokens": 84.10353255273046,
+    "share_detected": 0.5840816233252281,
+    "share_all": 0.5124330213450888
+   },
+   "trained": {
+    "answers": 2594,
+    "detected": 0.733230531996916,
+    "thinking": 74.58750963762529,
+    "after_tokens": 24.386696327903923,
+    "share_detected": 0.452646008519132,
+    "share_all": 0.32695415688744456
+   },
+   "post_share_of_cut": 0.6669411157084291
+  }
+ },
+ "several functions: function named": {
+  "all": {
+   "original": {
+    "answers": 1600,
+    "detected": 0.98125,
+    "thinking": 192.22125,
+    "after_tokens": 141.6144386224598,
+    "share_detected": 0.7635976753218763,
+    "share_all": 0.736726239281348
+   },
+   "trained": {
+    "answers": 1600,
+    "detected": 0.971875,
+    "thinking": 83.69,
+    "after_tokens": 45.94225284462008,
+    "share_detected": 0.5687242131635755,
+    "share_all": 0.5489574960523369
+   },
+   "post_share_of_cut": 0.8815174042300234
+  },
+  "right": {
+   "original": {
+    "answers": 1217,
+    "detected": 0.9983566146261298,
+    "thinking": 178.92440427280198,
+    "after_tokens": 135.80930016137958,
+    "share_detected": 0.761865752883959,
+    "share_all": 0.7590317302625428
+   },
+   "trained": {
+    "answers": 1217,
+    "detected": 0.9909613804437141,
+    "thinking": 81.78718159408382,
+    "after_tokens": 45.96612429212595,
+    "share_detected": 0.5674657462316623,
+    "share_all": 0.5620211308938291
+   },
+   "post_share_of_cut": 0.9249098686546801
+  }
+ },
+ "several functions: name + all argument values": {
+  "all": {
+   "original": {
+    "answers": 1600,
+    "detected": 0.86625,
+    "thinking": 192.22125,
+    "after_tokens": 100.43313475333831,
+    "share_detected": 0.6113254797433664,
+    "share_all": 0.5224871586951927
+   },
+   "trained": {
+    "answers": 1600,
+    "detected": 0.705625,
+    "thinking": 83.69,
+    "after_tokens": 27.660772226584214,
+    "share_detected": 0.4755314397117702,
+    "share_all": 0.3305146639572734
+   },
+   "post_share_of_cut": 0.6705198965897297
+  },
+  "right": {
+   "original": {
+    "answers": 1217,
+    "detected": 0.9129005751848809,
+    "thinking": 178.92440427280198,
+    "after_tokens": 101.47193070060509,
+    "share_detected": 0.6189855927272181,
+    "share_all": 0.5671218027133579
+   },
+   "trained": {
+    "answers": 1217,
+    "detected": 0.7633525061626951,
+    "thinking": 81.78718159408382,
+    "after_tokens": 29.53303651636153,
+    "share_detected": 0.4755451897381845,
+    "share_all": 0.361096151508635
+   },
+   "post_share_of_cut": 0.7405903957351323
+  }
+ },
+ "math: final number": {
+  "all": {
+   "original": {
+    "answers": 7861,
+    "detected": 0.9926218038417504,
+    "thinking": 616.2032820251876,
+    "after_tokens": 348.1013050602614,
+    "share_detected": 0.576584837554866,
+    "share_all": 0.5649130980221435
+   },
+   "trained": {
+    "answers": 8000,
+    "detected": 0.989125,
+    "thinking": 261.676875,
+    "after_tokens": 110.99774402599006,
+    "share_detected": 0.4310443437182119,
+    "share_all": 0.42417865172835795
+   },
+   "post_share_of_cut": 0.6687895635865175
+  },
+  "right": {
+   "original": {
+    "answers": 7096,
+    "detected": 0.9968996617812852,
+    "thinking": 559.064825253664,
+    "after_tokens": 309.92420796213065,
+    "share_detected": 0.5579384745842152,
+    "share_all": 0.5543618449282853
+   },
+   "trained": {
+    "answers": 6869,
+    "detected": 0.9934488280681322,
+    "thinking": 228.30557577522202,
+    "after_tokens": 85.76602860392053,
+    "share_detected": 0.3793395571635182,
+    "share_all": 0.37566331138737225
+   },
+   "post_share_of_cut": 0.6777079695025132
+  }
+ },
+ "math: final number in an answer context": {
+  "all": {
+   "original": {
+    "answers": 7861,
+    "detected": 0.9924945935631599,
+    "thinking": 616.2032820251876,
+    "after_tokens": 331.6430528526887,
+    "share_detected": 0.5493677406244024,
+    "share_all": 0.5382039702267158
+   },
+   "trained": {
+    "answers": 8000,
+    "detected": 0.98375,
+    "thinking": 261.676875,
+    "after_tokens": 97.72645609668638,
+    "share_detected": 0.3805349160521191,
+    "share_all": 0.373462332491881
+   },
+   "post_share_of_cut": 0.6598002070389739
+  },
+  "right": {
+   "original": {
+    "answers": 7096,
+    "detected": 0.9967587373167982,
+    "thinking": 559.064825253664,
+    "after_tokens": 297.62387390899676,
+    "share_detected": 0.5358464231112368,
+    "share_all": 0.5323602209707186
+   },
+   "trained": {
+    "answers": 6869,
+    "detected": 0.9882078905226379,
+    "thinking": 228.30557577522202,
+    "after_tokens": 76.72610301182063,
+    "share_detected": 0.34033239607937077,
+    "share_all": 0.3360675828932064
+   },
+   "post_share_of_cut": 0.6678506232115926
+  }
+ }
+}
