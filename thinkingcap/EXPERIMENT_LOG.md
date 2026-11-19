@@ -7129,3 +7129,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov: od5g round-20 monitor (od5g-r19 on new slice od3g-r20): 52.1 / +2.85 (od5f round 20 on old slice: 47.8 / +2.90). Brake holds bfcl_simple_python.
 - 19 Nov: od5g round-21 monitor (od5g-r20 on od3g-r21): 55.0 / +2.07 (od5f r21 old slice: 55.1 / +1.99). Code 50/-2.8, math 62/-0.9.
 - 19 Nov: od5g round-22 monitor (od5g-r21 on od3g-r22): 48.0 / +3.73 (code 33/+1.4) — same saving-for-accuracy swing as od5f r22 (42.1/+4.38). New data did not remove the oscillation.
+- 19 Nov: od5g-best (final, = r22) Dev-512: 50.5 [48.0, 53.0] / +3.94 [2.37, 5.77].
