@@ -1,0 +1,4 @@
+fulltests keys: ['note', 'original_thinking_off', 'models']
+note <class 'str'>
+original_thinking_off 94 -23
+models <class 'list'>

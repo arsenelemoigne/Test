@@ -1,0 +1,56 @@
+```python
+from pathlib import Path
+
+pack = Path(
+    "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/pack"
+)
+work = Path(
+    "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/work"
+)
+work.mkdir(parents=True, exist_ok=True)
+
+notes = """# Consult32 Review Notes (od5h Pre-Launch Review)
+
+## 1. Files Read So Far
+- `README_PACK.md`
+- `code_changes.diff`
+- `od5h_plan_lines.txt`
+- `effprobe/effsame.txt`
+- `SMARTER_DATA.md`
+- `NEW_RESULTS_od5f.md`
+- `YOUR_CONSULT31_REPORT.md`
+- `code/repair_pairs.py` (lines 180-338; need lines 338-750 and `code/track.py` around `odpo_fixed` & `fullpick`)
+
+## 2. Corrections to Consult31 Errors Noted by User
+1. **Math 8/8 & Churn (`SMARTER_DATA.md`):**
+   - `od5c-r16` (54.8% saved, -0.78 acc):
+     - Math Pass@8: `96.8 -> 96.4`; Math 8/8: **`70.1 -> 61.7`** (`-8.4` pts, NOT `75.1 -> 69.9`).
+     - All tasks Pass@8: `88.2 -> 88.1`; All tasks 8/8: `56.1 -> 54.3` (`-1.8` pts; No-fit `72.5 -> 81.7`, Several `56.0 -> 64.0`, IFEval `34.0 -> 34.9`, Simple `66.5 -> 64.2`, Code `29.1 -> 29.1`).
+     - Net drift (q / pts): Math `-28.4 / -2.84`, Code `-7.4 / -1.95`, IFEval `+2.6 / +0.49`, Simple `-4.4 / -1.09`, Multiple `0.0 / 0.00`, No-fit `+14.1 / +5.89`, All `-23.4 / -0.85`.
+     - Excess churn (above exact hypergeometric null E0): Math `+21.2 q / +2.12 pts [15.2, 27.0]`, Code `+6.4 / +1.70`, IFEval `+11.5 / +2.12`, Simple `+13.4 / +3.34`, Multiple `+12.1 / +6.07`, No-fit `+8.5 / +3.53`, **All `+73.1 q / +2.65 pts [+61.2, +85.2]`** (vs `rpI-120` `+54.4`, `rpM-60` `+67.6`, `rpL-80` `+94.7`, `nothink` `+717`).
+2. **`r2s3-s80` vs `rpL-80`:**
+   - The `65.9% / +7.7` full-test score on No-Fit is `rpL-80` (offline DPO run) in `fulltests.json`.
+3. **Learning rate:**
+   - `od5c`, `od5r`, `od5f`, `od5g` all used `--rp-lr 1.4e-5` (not `1e-5`). The user's `od5h_plan_lines.txt` rightly keeps `--rp-lr 1.4e-5`.
+
+## 3. New Data Since Consult31
+- **`effsame.txt` (equal thinking caps on unseen slices 19-20):**
+  - Base forced at `od5c-best`'s per-type caps (`b1..b9` percentiles of trained thinking):
+    - `svamp`: original natural `88.6%` at `640t`; at `b1=130t` `12.0%` (trained `38.8%`), at `b5=205t` `30.2%` (trained `67.8%`), at `b8=322t` `59.5%` (trained `80.8%`).
+    - `mbpp`: original natural `52.3%` at `1813t`; at `b0=0t` `50.0%`, `b1=183t` `49.6%` .. `b8=817t` `51.1%` (equal to trained).
+    - `ifeval`: original natural `59.4%` at `333t`; at `b0=0t` `61.2%`, `b1=71t..b8=148t` `57.2-58.4%` (vs trained `~62%`).
+    - `bfcl_simple_python`: original natural `81.2%` at `150t`; at `b1=47t..b9=92t` `80.6-82.8%`.
+    - `bfcl_multiple`: original natural `73.3%` at `207t`; at `b0=0t` `56.7%`, `b1=44t` `65.8%`, `b4=61t` `71.5%`.
+    - `bfcl_irrelevance`: original natural `82.2%` at `210t`; at `b0=0t` **`87.5% (+5.3 [+0.3, +10.5])`**, while at `b1=53t..b9=115t` it drops to `77.8-80.9%`!
+- **`od5g-r20` full test CIs:** `57.4% [56.2, 58.4]`, `+0.14 [-0.63, +0.88]`.
+
+## 4. Open Questions to Check in Code Next
+1. Inspect `repair_pairs.py` lines 338-750 to check all branches of `--od5-held` (held + damaged, held + undamaged, held with no compact pair available, `right_count`/`loop`/`format` pairs taken before `n_rem`, shortfall handling, and whether unused slots should stay unused or go to unheld shortening).
+2. Inspect `track.py` around `odpo_fixed` and `fullpick` to verify `--od-smooth 2` edge cases (round 1 / first rounds, missing part, interaction with `--od-unlatch` and `--od-acc-hold -2.0`, and how `ptrepair` handles fewer than 240 pairs for 15 steps).
+3. Check the flags the user kept from `od5g` vs my consult31 line (`lr 1.4e-5`, `--count-mode atleast`, `--base-stats`, `--base-resp`, `--base-think`, `--think-only`, `--prefer-reread`, `--count-rules`, `--resp-median 0.95 --resp-max 1.05`, no monitor early-stop).
+4. Evaluate 20 vs 22 rounds on `od3g`, `fullpick` Dev rounds (`16..20` vs `17..22`), and the Dev gate (`>= 58.5` saved, `>= +1.65` acc).
+"""
+
+(work / "notes.md").write_text(notes)
+print("Saved notes.md:", (work / "notes.md").stat().st_size, "bytes")
+```

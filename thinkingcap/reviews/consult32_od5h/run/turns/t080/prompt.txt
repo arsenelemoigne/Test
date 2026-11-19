@@ -1,0 +1,2 @@
+<class 'dict'> 3
+['note', 'original_thinking_off', 'models']

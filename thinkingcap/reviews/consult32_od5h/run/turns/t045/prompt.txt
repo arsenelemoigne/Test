@@ -1,0 +1,18 @@
+line  497:     parser.add_argument("--od-smooth", type=int, default=1, help="odpo (19 Nov, consult31): the per-type brake reads the mean "
+line 1124:     start, no_shorten, rollouts = args.start or "adapters/bon-r1", args.no_shorten, BON / "probe" / "rollouts.jsonl"
+line 1134:             no_shorten = no_shorten or recipe.get("no_shorten", "")
+line 1136:         print(f"round from {start} (code guard-only: {bool(no_shorten)})", flush=True)
+line 1149:     pairs = BON / ((f"pairs-{name}" if args.rollouts_from else "pairs" + (f"-noshort-{no_shorten}" if no_shorten else ""))
+line 1153:            "--out", pairs, "--no-shorten", no_shorten, "--drop-sources", args.drop_sources)
+line 1160:         (adapter / "stage.json").write_text(json.dumps({"start": str(start), "no_shorten": no_shorten,
+line 4621: def fullpick(args):
+line 5211:             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+line 5244:             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+line 5277:                   f"shortfall {(pairs / 'shortfall.json').read_text() if (pairs / 'shortfall.json').exists() else '?'}", flush=True)
+line 5339: def odpo(args):
+line 5371: def odpo_fixed(args):
+line 5446:             if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
+line 5448:                 prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
+line 5454:             held = sorted((set() if getattr(args, "od_unlatch", False) else latched)
+line 5455:                           | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
+line 5466:                   f"{held or 'none'} (caps {caps}, accuracy hold <= {args.od_acc_hold})", flush=True)

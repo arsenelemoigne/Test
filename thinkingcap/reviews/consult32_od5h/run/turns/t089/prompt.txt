@@ -1,0 +1,42 @@
+5439:         if args.od_caps and k > 0:  # (13 Nov, od4 brake, user) measure THIS round's answers first, then hold the types at
+5440:             # their saving cap (or losing accuracy): no shortening pairs for them this round, length-held be-right + loops
+5441:             a0 = copy.copy(a)
+5442:             a0.rp_pairs_only, a0.rp_require_full = True, False
+5443:             ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
+5444:             sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
+5445:             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
+5446:             if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
+5447:                 import statistics
+5448:                 prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
+5449:                 per_ = {p_: (statistics.fmean([v[0]] + [h["per_part"][p_][0] for h in prev_h if p_ in h.get("per_part", {})]),
+5450:                              statistics.fmean([v[1]] + [h["per_part"][p_][1] for h in prev_h if p_ in h.get("per_part", {})]))
+5451:                         for p_, v in per_.items()}
+5452:                 print(f"odpo {name}: round {k + 1} brake reads the mean of {1 + len(prev_h)} slices: "
+5453:                       + ", ".join(f"{p_} {v[0]:.0f}/{v[1]:+.1f}" for p_, v in per_.items()), flush=True)
+5454:             held = sorted((set() if getattr(args, "od_unlatch", False) else latched)
+5455:                           | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
+5456:             latched = set(held)
+5457:             latch_f.write_text(json.dumps(held))
+5458:             drive_sync("save", only=[str(latch_f)])
+5459:             # consult20 tweak: no-fit is NOT length-held (its right answers are short refusals; holding them adds length)
+5460:             rh = [p_ for p_ in held if p_ != "bfcl_irrelevance"]
+5461:             if held:
+5462:                 a.rp_pair_args = (args.rp_pair_args + ",--no-shorten-parts," + "+".join(held)
+5463:                                   + ("," + "--right-hold," + "+".join(rh) if rh else ""))
+5464:             a.rp_rebuild_pairs = True
+5465:             print(f"odpo {name}: round {k + 1} brake on {answerer}'s answers ({sv_:+.1f}% / {ac_:+.2f}): held (no shortening) = "
+5466:                   f"{held or 'none'} (caps {caps}, accuracy hold <= {args.od_acc_hold})", flush=True)
+5467:         print(f"odpo {name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO continues {prev or 'a fresh LoRA'}, "
+5468:               f"reference = the original", flush=True)
+5469:         ptrepair(a)
+5470:         roll = BON / f"rp-{a.rp_rollouts_from or a.name}" / "rollouts.jsonl"
+5471:         saved, acc, per = od3_monitor(roll, stats)
+5472:         rec = {"round": k + 1, "answering_model": answerer, "saved": round(saved, 2), "acc": round(acc, 2),
+5473:                "per_part": {p: [round(v[0], 1), round(v[1], 2)] for p, v in per.items()}}
+5474:         if not any(h["round"] == k + 1 for h in history):
+5475:             history.append(rec)
+5476:             log.write_text("".join(json.dumps(h) + "\n" for h in history))
+5477:         print(f"odpo {name}: MONITOR round {k + 1} answers ({answerer}) vs the original on the same questions: saved "
+5478:               f"{saved:+.1f}% / accuracy {acc:+.2f} | " + ", ".join(f"{p} {v[0]:+.0f}/{v[1]:+.1f}" for p, v in per.items()),
+5479:               flush=True)
+5480:         prev = f"adapters/{a.name}-s0/step-{a.rp_steps}"

@@ -1,0 +1,37 @@
+ 449:                         key = (0 if (bt and tw < 0.65 * bt) else 1, 0 if decode and REREAD.search(decode(r)) else 1,
+ 450:                                abs(thinking_len(r) - target))
+ 451:                         if best is None or key < best[0]:
+ 452:                             best = (key, r, w)
+ 453:                 if best:
+ 454:                     cand[part]["recovery"].append((qid, best[1], best[2]))
+ 455:             elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-1.12x, at 1.00)
+ 456:                 best = None
+ 457:                 if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):
+ 458:                     # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
+ 459:                     for r in clean:
+ 460:                         for w in wrongs:
+ 461:                             ratio = thinking_len(r) / max(1, thinking_len(w))
+ 462:                             if 0.50 <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
+ 463:                                                            or response_len(r) <= args.right_resp_cap * response_len(w) + 15):
+ 464:                                 key = (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75))
+ 465:                                 if best is None or key < best[0]:
+ 466:                                     best = (key, r, w)
+ 467:                 for r in (clean if best is None else []):
+ 468:                     for w in wrongs:
+ 469:                         ratio = thinking_len(r) / max(1, thinking_len(w))
+ 470:                         if 0.90 <= ratio <= 1.12:
+ 471:                             key = (round(abs(ratio - 1.0), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+ 472:                             if best is None or key < best[0]:
+ 473:                                 best = (key, r, w)
+ 474:                 if best:
+ 475:                     cand[part]["hold"].append((qid, best[1], best[2]))
+ 476:             continue
+ 477:         if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
+ 478:             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+ 479:                                           length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+ 480:             no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
+ 481:             # (11 Nov, rpL) an answer that RUNS AWAY (loops to the token cap, or never closes its thinking) loses to a
+ 482:             # finished right answer of the same question. Before, an unfinished answer was never used at all, so no pair
+ 483:             # said "do not loop" (runaways hold 26% of rpE-80's IFEval tokens on the full test)
+ 484:             runaway = [r for r in q if not finished(r)]
+ 485:             if base_part in loop_resp_only:  # (rpM) only loops in the RESPONSE (the thinking closed, then cut at the cap)

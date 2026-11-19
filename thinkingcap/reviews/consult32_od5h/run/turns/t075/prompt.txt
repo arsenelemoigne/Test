@@ -1,0 +1,149 @@
+--- track.py 5300-5370 ---
+5300:     steps = 4 if smoke else args.rp_steps
+5301:     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
+5302:         py("dpo.py", "--model", merged, "--pairs", pairs / "pairs.jsonl", "--init-adapter", start, "--out", adapter,
+5303:            "--mix", "all", "--keep-order", "--nll", 0.0, "--beta", getattr(args, "rp_beta", 0.1), "--batch", 16, "--lr", args.rp_lr,
+5304:            "--lr-schedule", "cosine", "--warmup", getattr(args, "rp_warmup", 2),
+5305:            "--lr-min", args.rp_lr if getattr(args, "rp_lr_min", None) is None else args.rp_lr_min, "--max-steps", steps, "--epochs", args.rp_epochs,
+5306:            "--save-every",
+5307:            1 if smoke else (10 ** 6 if getattr(args, "rp_save_at", None) else 5), "--held-out", 0, "--max-len", 8704,
+5308:            "--dtype", args.dtype, "--seed", getattr(args, "rp_dpo_seed", 0),
+5309:            *(["--ref-base"] if getattr(args, "rp_ref_base", False) else []),
+5310:            *(["--save-at", *args.rp_save_at] if getattr(args, "rp_save_at", None) and not smoke else []))
+5311:         drive_sync("save")
+5312:     if smoke:
+5313:         print(f"repair {name}: SMOKE done (answers, pairs, {steps} training steps)", flush=True)
+5314:         return
+5315:     if getattr(args, "rp_dev", False):  # (11 Nov) choices on Dev-512 only (consult6 protocol), never the 720
+5316:         for step in args.rp_screen:
+5317:             if args.rp_base:
+5318:                 spec = f"/content/lupin-models/{name}-{step}={args.rp_base}:{adapter / f'step-{step}'}"
+5319:                 print(dev_score_model(f"{name}-{step}", spec, vs=getattr(args, "rp_dev_vs", "")), flush=True)
+5320:                 if getattr(args, "rp_dev_svamp", False):
+5321:                     print(dev_score_model(f"{name}-{step}", spec, vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
+5322:         return
+5323:     for step in args.rp_screen:
+5324:         out = ROOT / f"s4-{name}-{step}"
+5325:         drive_sync("restore", only=[str(out)])
+5326:         if not (out / "results.json").exists():
+5327:             model = Path("/content/lupin-models") / f"{name}-{step}"
+5328:             if args.rp_base:
+5329:                 py("merge.py", "--model", args.rp_base, "--out", model, "--adapters", f"{adapter / f'step-{step}'}:1")
+5330:             else:
+5331:                 py("merge.py", "--model", "Qwen/Qwen3-0.6B", "--out", model, "--adapters",
+5332:                    *[f"{pt[g]}:{w}" for g, w in PT_MID.items()], f"{adapter / f'step-{step}'}:1")
+5333:             evaluate(out, samples=4, questions=SCREEN, model=model)
+5334:             shutil.rmtree(model, ignore_errors=True)
+5335:             drive_sync("save")
+5336:         print(score_line(f"{name}-{step} (screen 720 x 4)", out, base=ROOT / "s4-base"), flush=True)
+5337: 
+5338: 
+5339: def odpo(args):
+5340:     """Online DPO (10 Nov, user): --od-rounds rounds of: the CURRENT model (--rp-base + the adapter so far, merged) answers a
+5341:     new slice of own questions x --rp-samples; repair_pairs.py builds BOTH kinds from those answers (--rp-kinds guard,shorten:
+5342:     shortest right > shortest wrong, and shortest right > longest right on questions it gets right >= 6 of 8 times); DPO
+5343:     --od-steps steps continuing the adapter, the round's start as the reference. Each round is a ptrepair run named
+5344:     <name>-r<k>; the answering model of the next round is merged to models/<name>-r<k>. 720 x4 at --od-screen-rounds."""
+5345:     import copy
+5346:     if getattr(args, "od_fixed_ref", False):
+5347:         return odpo_fixed(args)
+5348:     prev, answerer = args.od_init, args.od_answers0 or args.rp_base  # no --od-init: round 1 trains a fresh LoRA on --rp-base
+5349:     assert args.rp_base and (answerer or not prev), "odpo needs --rp-base (and --od-answers0 with --od-init)"
+5350:     for k in range(args.od_rounds):
+5351:         a = copy.copy(args)
+5352:         a.name = f"{args.name}-r{k + 1}"
+5353:         a.rp_round = (k, args.od_rounds)
+5354:         a.rp_init_from, a.rp_answers_model = prev, ("" if answerer == args.rp_base else answerer)
+5355:         a.rp_steps = args.od_steps
+5356:         a.rp_epochs = max(args.rp_epochs, 2)  # (10 Nov, reviewer) a round short of 160 pairs still reaches step --od-steps
+5357:         a.rp_screen = [args.od_steps] if k + 1 in args.od_screen_rounds else []
+5358:         print(f"odpo {args.name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO from {prev}", flush=True)
+5359:         ptrepair(a)
+5360:         prev = f"adapters/{a.name}-s0/step-{args.od_steps}"
+5361:         if k + 1 < args.od_rounds:
+5362:             nxt = Path("models") / a.name
+5363:             drive_sync("restore", only=[str(nxt)])
+5364:             if not (nxt / "config.json").exists():
+5365:                 py("merge.py", "--model", args.rp_base, "--out", nxt, "--adapters", f"{prev}:1")
+5366:                 drive_sync("save")
+5367:             answerer = str(nxt)
+5368:     print(f"odpo {args.name}: done; last adapter {prev}", flush=True)
+5369: 
+5370: 
+
+--- track.py 5485-5560 ---
+5485:             prev = f"adapters/{a.name}-s0/step-{steps_done[-1]}"
+5486:             print(f"odpo {name}: round {k + 1} trained {steps_done[-1]} steps (fewer pairs than planned)", flush=True)
+5487:         stop_ok = k + 1 >= getattr(args, "od_stop_from", 0)
+5488:         if stop_ok and k > 0 and saved >= args.od_stop_save and acc >= args.od_stop_acc:
+5489:             best = answerer
+5490:             print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
+5491:             break
+5492:         prev_h = next((h for h in history if h["round"] == k), None)  # (19 Nov) by round number: a branch's history starts late
+5493:         if stop_ok and k >= 4 and prev_h and saved - prev_h["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
+5494:             best = answerer
+5495:             print(f"odpo {name}: STOP (saving stopped growing: {prev_h['saved']:.1f} -> {saved:.1f})", flush=True)
+5496:             break
+5497:         nxt = Path("models") / a.name
+5498:         drive_sync("restore", only=[str(nxt)])
+5499:         if not (nxt / "config.json").exists():
+5500:             py("merge.py", "--model", base, "--out", nxt, "--adapters", f"{prev}:1")
+5501:             drive_sync("save")
+5502:         answerer = str(nxt)
+5503:         if k + 1 in args.od_dev_rounds:
+5504:             print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", "")), flush=True)
+5505:             print(dev_score_model(a.name, answerer, vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
+5506:     best = best or answerer
+5507:     bname = getattr(args, "od_best_name", "") or f"{name}-best"  # (15 Nov) od5c's extension to round 24 must not
+5508:     out = Path("models") / bname  # overwrite models/od5c-best (= round 16, full-tested)
+5509:     best_f = Path(f"data/{bname}.json")
+5510:     drive_sync("restore", only=[str(best_f)])
+5511:     if best_f.exists() and json.loads(best_f.read_text()).get("best") != best:  # (13 Nov) a longer rerun: a new result
+5512:         for d_ in (out, BON / f"dev512-{bname}", BON / f"devsv-{bname}"):  # its old Dev answers too (here and on Drive)
+5513:             shutil.rmtree(d_, ignore_errors=True)
+5514:             if d_ != out:
+5515:                 shutil.rmtree(DRIVE / d_, ignore_errors=True)
+5516:         shutil.rmtree(DRIVE / out, ignore_errors=True)
+5517:     if not (out / "config.json").exists():
+5518:         shutil.rmtree(out, ignore_errors=True)
+5519:         shutil.copytree(best, out)
+5520:     best_f.write_text(json.dumps({"best": best, "history": history}, indent=1))
+5521:     drive_sync("save")
+5522:     print(f"odpo {name}: RESULT {best} -> {out}", flush=True)
+5523:     print(dev_score_model(bname, str(out), vs=getattr(args, "rp_dev_vs", "")), flush=True)
+5524:     print(dev_score_model(bname, str(out), vs=getattr(args, "rp_dev_vs", ""), dev="svamp200"), flush=True)
+5525: 
+5526: 
+5527: DEV_FILE = Path("data/dev512.jsonl")
+5528: DEV_SVAMP_FILE = Path("data/dev-svamp200.jsonl")  # (11 Nov) 200 SVAMP-like math questions: Dev-512's math is hard GSM8K
+5529: DEV_SETS = {"": (DEV_FILE, "dev512", "Dev-512"), "svamp200": (DEV_SVAMP_FILE, "devsv", "Dev-SVAMP-200")}
+5530: DEV_SOURCES = ("toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,gsm8k_easy,gsm8k_easy_test,metamath_easy,"
+5531:                "ifeval_like,ifeval_built")
+5532: 
+5533: 
+5534: def excluded_ids(args):
+5535:     """(11 Nov) questions a new draw must skip: Dev-512 (--rp-exclude-dev) and a JSON id list (--rp-exclude-ids)."""
+5536:     out = set()
+5537:     if getattr(args, "rp_exclude_dev", False):
+5538:         out |= dev_ids() | dev_svamp_ids()
+5539:     f = getattr(args, "rp_exclude_ids", "")
+5540:     if f:
+5541:         drive_sync("restore", only=[f])
+5542:         out |= set(json.loads(Path(f).read_text()))
+5543:     return out or None
+5544: 
+5545: 
+5546: P1_ANSWERS = "lupin-all-dp13-nofit1-tools1-code1-nofit2-nofit4-math1-math2.jsonl"  # the original Qwen's 10 answers per question
+5547: P1_IDS = Path("data/p1-round1-ids.json")
+5548: # (11 Nov) % of each type's questions kept UNSEEN for round 2 (a fixed hash of the id). Sized on real answers: round 2 needs
+5549: # ~1,000 IFEval questions for its counting-rule half (2,998 exist) and ~250 "several functions" questions (716 exist)
+5550: P1_RESERVE = {"ifeval": 33, "bfcl_multiple": 35}
+5551: P1_RESERVE_DEFAULT = 25
+5552: 
+5553: 
+5554: def p1src(args):
+5555:     """(11 Nov, user: consult6 path 1 from the ORIGINAL Qwen; revised after both reviews) Round 1's material:
+5556:     the original's 10 STORED answers per pool question (runs/bon/P1_ANSWERS), public datasets allowed (user, 11 Nov: MetaMath
+5557:     and the math1 / math2 / nofit4 top-ups; recipes stay off-limits), never a Dev-512 question nor a near-duplicate of one, and
+5558:     75% of the questions (a fixed hash of th
+[output cut at 10,000 characters]

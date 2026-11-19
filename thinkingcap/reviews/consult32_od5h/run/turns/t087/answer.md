@@ -1,0 +1,41 @@
+```python
+# Let's carefully trace every branch of Question 1 (--od5-held), Question 2 (--od-smooth 2), Question 3 (no-fit & code), Question 4 (rounds, fullpick, gate), Question 5 (projections & verdict).
+# Let's update /work/notes.md first!
+notes_update = """
+## 6. Detailed Code Audit Findings (Questions 1-4)
+
+### Q1: `--od5-held` Line-by-Line Audit (`repair_pairs.py` lines 455-475 & 680-698)
+1. **Candidate construction (`lines 455-475`):**
+   - `elif clean and wrongs and 1 <= k1 < n_ans:` (Wait: `elif` after `if damaged and src_rec and wrongs:`! Notice: if a question IS `damaged`, it enters the `if damaged and src_rec and wrongs:` block at line 439, even if `best` is `None` (no recovery pair fits `1.08 * tw + 10 <= thinking_len(r) <= hi`). Because of `elif`, a damaged question NEVER enters `cand[part]["hold"]`!).
+   - Inside `elif clean and wrongs and 1 <= k1 < n_ans:` (undamaged mixed question):
+     - Line 457: `if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):`
+       Searches for a compact pair `0.50 <= ratio <= 1.00`, preferring `REREAD`, then shortest `thinking_len(r)`, then `abs(ratio - 0.75)`.
+     - Line 467: `for r in (clean if best is None else []):`
+       If NO compact pair exists (`best is None`, i.e., every right answer is either `< 0.50x` or `> 1.00x` of every wrong answer), it falls through to the `0.90 <= ratio <= 1.12` loop! Since `0.90 <= ratio <= 1.00` was already checked and empty (except possibly on IFEval when `right_resp_cap` rejected a pair in `0.90..1.00`—and note line 470 does NOT check `right_resp_cap`!), any pair found in the fallback on non-IFEval has `1.00 < ratio <= 1.12` (chosen is LONGER than rejected by up to +12%), and on IFEval it bypasses `right_resp_cap`!
+       However, how big is `+0% to +12%` when `best is None`? It is bounded by `1.12x` of a wrong answer (unlike `recovery`, which requires `1.08x + 10` to `1.45x + 50` and prioritizes `tw < 0.65 * bt`). Still, if the intent is strictly non-lengthening (`ratio <= 1.00`), falling through to `1.00 < ratio <= 1.12` when no compact pair exists slightly lengthens on those fallback questions (and on IFEval skips `right_resp_cap`).
+2. **Defect pairs taken BEFORE `n_rem` (`lines 683-687`):**
+   - `got5` takes `right_count` (10% of `n` on IFEval), `loop` (12% of `n`), `format` (10% of `n`).
+   - Then `n_rem = n - len(got5)`.
+3. **Held + undamaged (`dmg > -0.02`, lines 691-695):**
+   - `if dmg > -0.02: n_rem = min(n_rem, int(round(0.40 * n)))`
+   - Total pairs for the part = `len(got5) + n_rem`, which is up to `0.32n + 0.40n = 0.72n` on IFEval (or `0.22n + 0.40n = 0.62n` on other parts) if defect pairs are plentiful, or `0.40n` if `got5` is empty. (Wait: the prompt says "take at most 40% of their quota unless their slice lost > 2 pts, recovery at most 20% of that, 40% if damaged". Because `n_rem` is capped at `0.40 * n` AFTER `got5` is taken, `got5` sits outside the `0.40 * n` cap—which is actually good because `loop`/`format`/`right_count` are defect repairs, not lengthening!).
+   - Inside `n_rem` (e.g. `0.40 * n` = 19 pairs for math `n=48`, or 11 pairs for simple `n=28`):
+     - `rec_h` takes at most `int(round(0.20 * n_rem))` recovery pairs (`~4` pairs for math, `~2` for simple).
+     - `hold_h` takes `n_rem - len(rec_h)` compact hold pairs (`~15` pairs for math, `~9` for simple).
+   - **Can it starve a held part of protection or still lengthen it?**
+     - Unlike old `od5f`/`od5g` (where a held part had `c_sh = 0`, so `n_hold5 = 0.20 * n_rem` and `rec5` took **80% of `n_rem`** = 38 recovery pairs on math, massively lengthening it by 25 pts of saving!), `--od5-held` flips the ratio to **20% recovery / 80% compact hold** when undamaged (`dmg > -0.02`) and **40% recovery / 60% compact hold** when damaged (`dmg <= -0.02`).
+     - What if `cand[part]["hold"]` has fewer candidates than `n_rem - len(rec_h)`? Notice line 694 does NOT backfill missing `hold_h` slots with `recovery` (unlike line 720 in the old code: `rec5 += take(part, "recovery", ...)`!). That is crucial: in old `od5`, whenever `hold` ran short, line 720 dumped all remaining slots into `recovery` (lengthening). Here, if `hold` has fewer candidates, the remaining slots are simply left empty—it NEVER backfills with `recovery`.
+     - Could it starve a held part of protection when `dmg <= -0.02` (held + damaged)? When `dmg <= -0.02`, `n_rem` is NOT capped at `0.40 * n` (it keeps the full `n - len(got5)` quota!), and `rec_h` gets `0.40 * n_rem` (e.g., on math `n=48`, up to 19 recovery pairs + 29 compact hold pairs). That is plenty of protection without the 38-pair recovery flood that caused the 15-25 pt saving oscillation in `od5f`/`od5g`.
+     - What if a held part has `dmg` between `-0.015` and `-0.02` (e.g. `-1.8` pts)? It is treated as undamaged (`n_rem <= 0.40 * n`, `rec_h <= 0.20 * n_rem`). That matches `--od-acc-hold -2.0`.
+4. **Unused slots (`shortfall` and `dpo.py` step count):**
+   - Line 698 `continue` skips `if len(by_part[part]) < n: shortfall[part] = ...` AND skips the summary lines 725-730 (`od5 candidates...`, `od5 shorten/recovery/right/loop/format`, `SHORT of quota`)! (Minor logging omission: for held parts it logs lines 696-697 instead of 725-730, which is fine and clean).
+   - Because `ptrepair` runs with `--rp-epochs 2 --batch 16 --max-steps 15` (`track.py` line 4928, 5303-5305, 5433), `dpo.py` computes `total = math.ceil(len(rows) * 2 / 16)` and `steps = min(total, 15)`. As long as `len(rows) >= 120` pairs across all 6 parts (and even if math + simple + multiple were all held at 40%, `240 - 0.6*(48+28+28) = 178 >= 120`), `dpo.py` STILL runs all **15 optimizer steps of 16 pairs = 240 pair-updates** by wrapping into epoch 2 of the stratified pair file!
+   - Wait: Look at what happens when `len(rows)` is e.g. 190 pairs instead of 240 pairs, and `dpo.py` runs 15 steps of 16 pairs = 240 examples with `--keep-order` and `epochs=2` (`dpo.py` line 127: `order = [i for _ in range(args.epochs) for i in range(len(rows))][:steps * args.batch]`):
+     Because `repair_pairs.py` interleaves parts in stratified order, the first 190 examples are 1.0x of the file, and the remaining `240 - 190 = 50` examples are the first `50/190 = 26%` of the file repeated a second time!
+     Even more importantly: in that stratified file of 190 pairs, the unheld parts (code, IFEval, no-fit) ALREADY make up a larger fraction of the 190 pairs (`(52+48+36)/190 = 71.6%` vs `136/240 = 56.7%`), so across the 240 gradient updates in 15 steps, the unheld parts AUTOMATICALLY receive ~26% more gradient updates (`172` pair updates out of `240` instead of `136`), WITHOUT lowering pair quality by digging deeper into the candidate pool (`extra = take(p_, "shorten", ...)` as `od5_v3` did in `od5d`, which hurt accuracy: `od5d` dropped to `49.5% / -1.21`)!
+     This is a great insight: keeping `ptrepair` at 15 steps with `epochs=2` on the stratified file naturally scales up the step share of the unheld parts using their top-ranked pairs, rather than Scraping bottom-of-barrel pairs like `od5_v3`.
+"""
+with open("/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/work/notes.md", "a") as f:
+    f.write(notes_update)
+print("Updated notes.md")
+```

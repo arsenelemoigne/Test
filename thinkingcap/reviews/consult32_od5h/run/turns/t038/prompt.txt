@@ -1,0 +1,8 @@
+r2s1b-160full  : saved=49.0 acc=-1.7 | parts={'v': {'saved': 60, 'acc': -4.0}, 'c': {'saved': 51, 'acc': -3.2}, 'f': {'saved': 40, 'acc': 0.0}, 's': {'saved': 41, 'acc': -2.6}, 'm': {'saved': 43, 'acc': 0.6}, 'i': {'saved': 46, 'acc': 5.2}}
+r2s1b-180full  : saved=50.3 acc=-1.7 | parts={'v': {'saved': 62, 'acc': -4.5}, 'c': {'saved': 54, 'acc': -3.1}, 'f': {'saved': 38, 'acc': 1.0}, 's': {'saved': 42, 'acc': -3.0}, 'm': {'saved': 45, 'acc': 0.9}, 'i': {'saved': 45, 'acc': 3.5}}
+Traceback (most recent call last):
+  File "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/astra_harness.py", line 140, in kernel_main
+    exec(compile(tree, "<block>", "exec"), env)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<block>", line 11, in <module>
+KeyError: 'parts'

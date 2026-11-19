@@ -1,0 +1,56 @@
+12 pairs from `1.09` pts to **`0.46` pts** (and `0.37` pts on `od5f/g`), predicting `59.54% / -1.26` (or `60.05% / -1.87` on the first Dev run, `61.15% / -1.26` on the re-test) for `od5f-r18` and `57.85% / +0.43` for `od5g-r20`.
+4. **Reducing Dev-512's sampling noise (`+/-0.85` pt SE) using the Free Round Monitor (`780` questions x 8):**
+   - When round `k` is evaluated on both `Dev-512` (`512 x 8`) and round `k+1`'s unseen slice monitor (`780 x 8`), combining them (`0.5 * Dev + 0.5 * Monitor`) covers `1,292` unseen test-matched questions (`2.5x` larger than Dev-512 alone), cutting the standard error to `+/-0.54` pts (`Monitor_acc - Full_acc` on `od5f-r18` is `+2.37 - (-0.80) = +3.17` pts).
+5. **Recommended `fullpick` Rule for Online DPO:**
+   - Use flat calibration: **`--fp-save-bias 0.35 --fp-acc-bias 2.75 --fp-acc-slope 0.0 --fp-acc-gate -0.90`** (so a round counts as inside the `-1.0` full-test goal when `Dev_acc >= +1.85`, with the gate set to `--fp-gate-save 58.5 --fp-gate-acc 1.65`).
+
+---
+
+## 5. Cost on the Article's Second Half: Excess Churn & Math 8/8 Consistency
+
+1. **Why `od5f-r18` (math `70.9% / -3.60`) hurts math 8/8 consistency, whereas the `od5h` target (`60.9% / -0.3`, math `68.0% / -1.8`) preserves it:**
+   - In `SMARTER_DATA.md`, `od5c-best` (`54.8% / -0.78`, math `61.1% / -2.84`) had `+0.8%` net question flips (+168 gained / 145 lost), `10.1%` gross flips vs `9.1%` 8-sample binomial noise (**only `1.0%` excess churn**), and math 8/8 consistency dropped from `75.1% -> 69.9%` (`-5.2` pts) because of `od5c`'s lower math floor (`0.42`).
+   - Pushing math to `70.9% / -3.60` (`od5f-r18`) cuts into the `71%` pre-settlement working-out tokens that `effprobe` identified on math, which lowers math 8/8 consistency by an estimated additional `1.5?2.0` pts (`~68%`) and raises math excess churn by `~0.4` pts.
+   - Conversely, **`od5h` pulls math BACK from `70.9% / -3.60` to `~68.0% / -1.80`** (close to `od5g-r20`'s `66.8% / -1.50`, which lost only half as much math accuracy as `od5c-best`'s `-2.84`!), while getting the extra `+1.4` pts of total saving from **No-Fit (`59% -> 70%`), Code (`56% -> 57.5%`), and IFEval (`56% -> 57.5%`)**.
+2. **Predicted Churn & Consistency for `od5h` (`~60.8% / -0.4`):**
+   - Because `effprobe` proves that on No-Fit (`91.6%`), Code (`84.3%`), and IFEval (`67.1%`) the cut tokens are overwhelmingly **post-settlement self-doubt and re-checking**, cutting them **increases** 8/8 consistency on No-Fit (where 8/8 right rises by `~+6` pts) and IFEval (`+1.5` pts), while keeping math 8/8 consistency at **`71.5?72.5%`** (better than `od5c-best`'s `69.9%`!) and overall excess churn at **`<= 1.0?1.2%`**.
+3. **Three Concrete Safeguards that Keep Churn & Math 8/8 Consistency Tight:**
+   - **Math thinking floor `30:0.46` + smoothed cap `svamp=64`:** Prevents shortening pairs from ever selecting lucky early-stop math answers below `46%` of the original's per-question median thinking `bt`.
+   - **Shortening gate `p1 >= 0.875` on `8/8` (`p0 == 1.0`) questions (`--od5-v2`):** Never shortens a solid `8/8` question if it has dropped below `7/8` (`0.875`), directly protecting the `8/8` consistency bucket.
+   - **Preferring re-reading right answers (`REREAD.search` in `repair_pairs.py` line 460):** In compact `be-right` pairs, sorting first by `0 if REREAD.search(decode(r)) else 1` preserves the brief verification sentence on mixed-reliability questions without keeping multi-paragraph re-checks.
+
+---
+
+## 6. Two Problems Seen in Rounds 19?20: (a) Brake Oscillation & (b) Scarce Medium Code
+
+### Problem (a): Single-Slice Brake Oscillation (and Why Both `od5f` and `od5g` Swung 6?12 pts After Round 18/20)
+- **Diagnosis:** The oscillation has **two interacting causes**:
+  1. **Single-slice measurement noise:** Each round monitor slice has only `60?220` questions per type (`SE ~ 1.5?3.0%` on saving and `1.5?2.5` pts on accuracy). A type near its cap or the `-2.0` accuracy hold triggers and releases randomly from slice to slice.
+  2. **Held-type quota flooding with lengthening pairs (the primary amplifier):** As shown in Section 1B, when a type is held (`part in stop5`), `repair_pairs.py` sets `c_sh = 0` but **keeps its full pair quota `n`** and fills `100%` of those slots with `recovery` pairs (explicitly `1.08?1.45x` longer than wrong answers) and non-compact `hold` pairs (`0.90?1.12x` of long wrong answers). When 3?4 types hit their caps at round 18, `53%` of the DPO batch becomes **active lengthening pairs**, driving saving down by 8?12 pts in a single round (`64% -> 52%` on math) and causing `--od-unlatch` to release them on the next round!
+- **Should the brake act on a smoothed reading (last 2?3 slices) or a fixed check set?**
+  - **Use a 2-slice trailing average (`--od-smooth 2`, averaging the current slice `k+1` and previous slice `k` from `history`) COMBINED with the non-lengthening hold in `repair_pairs.py`:**
+  - A fixed check set would cost `512 x 8 = 4,096` extra rollouts (`~12` minutes of GPU time) on *every* round, doubling arena wall-clock time. By contrast, a **2-slice trailing average** is **100% free** (0 extra rollouts), doubles the sample size to `120?440` questions per type, and still responds within 1 round to genuine drift (whereas a 3-slice window lags too much when a type approaches its cap at ~2.5% per round). Combined with capping held-type pairs to `<= 40%` of quota and using compact `hold` (`0.65?1.00x`), the limit-cycle oscillation disappears completely.
+
+### Problem (b): Hard Generated Code in Slices 20+ (`b1`/`b2` vs `m1`) ? Cost and Optimal Code Mix
+- **How much did the hard code (`b1` solve `25%`, `b2` solve `16%` vs test `52%`) cost in `od5f` rounds 20?23?**
+  - In `repair_pairs.py`, a question only produces a shortening pair if `can_shorten` holds (`p1 >= 0.25` and `len(clean) >= 2` with length spread `>= 1.30`). On `all-wrong` (`0/8`) or `1/8` questions, **zero shortening pairs can be built**, while `damaged` questions generate lengthening `recovery` pairs.
+  - Because `od5f`'s old slices 20?23 drew from `b1`/`b2` after KodCode ran out, code's shortening candidates dried up while `recovery`/`hold` dominated: on `od5f`'s monitor, code saving collapsed from **`59.8% / +2.6` (r19) -> `48.2% / +2.4` (r20) -> `43.2% / -1.9` (r21) -> `30.8% / +2.6` (r22)**?a **29-point collapse in code saving** (`~7.5` pts of total official saving!).
+  - When `od5g` replaced slices 20?22 with matched medium code (`r2x-code-m1`, mean solve `48%`, 58% mixed `1/8?7/8` bin), code saving on the r21 monitor was **`50.0%` vs `43.2%`** (`+6.8` pts better on slice 21, and `+5.5` pts better on Dev-512 at r21: `51.6%` vs `46.8%`).
+- **Why slice 23 failed `od3branch` and what code mix the next run should use:**
+  - `od3g` already has **22 matched rounds** (`slices 1?22`), which is **more than enough for our 20-round `od5h` run** (no new data generation is required for `od5h`!).
+  - If you generate one more code batch to build slices 23?25 later: slice 23 failed in `od3branch` because the remaining code pool had **median tokens too long (`1,409` vs `1,062`) and p90 too short (`2,748` vs `4,025`)**?all medium `m1` tasks clustered around `1,400` tokens with no easy `<800`-token tasks and no hard `4,000`-token tail, and `od3branch`'s `--ob-trim` only trimmed one tail based on the mean (`too_long = mean > target["tok"]`).
+  - **Optimal code mix for any future slices 23+:** Target the MBPP test's exact 3-bin solve-rate & length mixture (`52%` mean solve, `~1,680` mean tokens, `~1,060` median, `~4,025` p90): **30% easy/Always-Right (`7/8?8/8`, `<900` tokens)** + **40% medium/Mixed (`2/8?6/8` from `gen_code_tasks.py --medium --novel`, `1,000?2,200` tokens)** + **30% hard/Rarely-Right (`0/8?1/8` from `b1`/`b2`, `2,500?4,500` tokens)**, and in `od3branch` trim by the **failing metric (`med` vs `p90`)** rather than only the mean.
+
+---
+
+## 7. Using the `effprobe` Causal Analysis: Post-Settlement Waste vs Genuine Working-Out
+
+### A. Why `effprobe` Explains the Per-Type Curves (Math vs Code / IFEval / No-Fit)
+`effprobe` (on unseen slices 19?20, plus `THINKING_OFF.md` on the full test) separates two fundamentally different regimes:
+1. **Math (SVAMP): Genuine Path Compression (`71.1%` pre-settlement working-out, `28.9%` post-settlement re-checking).**
+   - When the original model is force-stopped at `~300` thinking tokens (`b1 = 304t`), math accuracy crashes from `88.6%` to **`56.5%`** (`-32.1` pts) or `47.4%` (`mt`). Yet the trained model (`od5c-best`) naturally finishes in **`281` thinking tokens at `87.9%` accuracy** (`-0.7` pts), and its thinking reads at **`0.68` bits/token** under the original model vs `0.39` bits/token for the original's own math thinking (`+74%` higher information density per token).
+   - **Implication:** On math, the model actually needs `~250?300` tokens (`~45%` of original thinking) to compute the answer; cutting below `~45%` (`>68%` total saving) cuts into the calculation itself (`od5f-r18` at `70.9%` loses `-3.6` pts; `nothink` at `79.6%` loses `-5.6` pts). Therefore, math **must keep a high per-question floor (`30:0.46`) and cap (`64%` monitor / `~68%` full test)**.
+2. **No-Fit (`91.6%` post-settlement), Simple Tools (`88.1%`), Code (`84.3%`), Multiple Tools (`74.9%`), and IFEval (`67.1%`): Post-Settlement Self-Doubt & Re-Checking.**
+   - On **No-Fit (`bfcl_irrelevance`)**, `91.6%` of thinking occurs *after* the model has already decided no tool fits; extra thinking talks the model into hallucinating a tool call! Force-stopping at `b0 = 0` thinking tokens raises slice accuracy by `+5.3` pts (original) and `+4.1` pts (trained, to `92.5%`), and on the **full test**, turning thinking completely off (`THINKING_OFF.md`) saves **`95.9%` of tokens at `+6.2` pts accuracy** (`+6.5` to `+9.6` on trained models)!
+   - On **Code and IFEval**, `effprobe/README.md` point 5 highlights a vital distinction between easy/medium slices and the full test: while `b0 = 0t` costs only `-2.3` (Code) and `-1.1` (I
+[output cut at 10,000 characters]

@@ -1,0 +1,10 @@
+Files in pack: ['YOUR_CONSULT28_REPORT.md', 'effprobe', 'YOUR_CONSULT31_REPORT.md', 'code_changes.diff', 'YOUR_CONSULT30_REPORT.md', 'code', 'pertype_best_full.md', 'SMARTER_DATA.md', 'README_PACK.md', 'EXPERIMENT_LOG.md', 'od5h_plan_lines.txt', 'REPRODUCE_od5c.md', 'THINKING_OFF.md', 'fulltests.json', 'NEW_RESULTS_od5f.md', 'ARTICLE_TEXT.md']
+Files in pack/code: ['probe_curve.py', 'track.py', 'eff_allocate.py', 'dev_score.py', 'repair_pairs.py', 'dpo.py', 'budget_curves.py']
+Traceback (most recent call last):
+  File "/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/astra_harness.py", line 142, in kernel_main
+    value = eval(compile(ast.Expression(last.value), "<block>", "eval"), env)
+  File "<block>", line 6, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/pack/monitors'
+
+
+Reminder: update /Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/work/notes.md now (append new findings with numbers, files read, open questions); it is all that survives a context restart.

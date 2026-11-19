@@ -1,0 +1,158 @@
+=== dpo.py ===
+   1: """DPO on (chosen, rejected) reply pairs, continuing a LoRA, with an NLL anchor and a collapse tripwire.
+   2: 
+   3:     python dpo.py --pairs runs/r1/pairs/pairs.jsonl --init-adapter adapters/start --out adapters/r1
+   4: 
+   5: loss = -log sigmoid(beta * [(pi_c - ref_c) - (pi_r - ref_r)]) + nll * (mean token NLL of chosen)
+   6: 
+   7: pi and ref are summed log-probabilities of the reply tokens (thinking and answer) under the
+   8: policy and under the starting adapter; the reference is scored once before training. The NLL
+   9: anchor on the chosen reply (as in RPO, Pang et al. 2024) stops DPO from widening the margin by
+  10: lowering both sides. Pair kinds are mixed to --mix (shorten, guard, hard, right), or all kept with --mix all.
+  11: 
+  12: --checker (LUPIN0.x, VeriThinker-style practice): every --checker-every pairs, one "is this solution right? Yes/No"
+  13: example (lupin_checker.py) adds --checker-weight x its answer's mean token NLL to the loss. Same model, same step;
+  14: nothing changes at test time, where the model is never asked to judge.
+  15: 
+  16: Every --save-every optimizer steps a checkpoint is saved. The tripwire watches held-out chosen
+  17: replies: if the probability that the reply ends right after </think> rises above --tripwire, a
+  18: collapse known from on-policy truncation DPO, training stops and the last checkpoint is kept.
+  19: """
+  20: 
+  21: import argparse
+  22: import json
+  23: import math
+  24: import random
+  25: import shutil
+  26: from pathlib import Path
+  27: 
+  28: 
+  29: def main():
+  30:     args = parse_arguments()
+  31:     import torch
+  32:     from peft import PeftModel
+  33:     from transformers import AutoModelForCausalLM, AutoTokenizer
+  34: 
+  35:     torch.manual_seed(args.seed)
+  36:     rng = random.Random(args.seed)
+  37:     rows = [json.loads(l) for l in Path(args.pairs).read_text().splitlines() if l.strip()]
+  38:         args.max_len, args.held_out, args.lr_schedule, args.lr_min = 8704, 0, "cosine", 0.0
+  39:     rows = [r for r in rows if len(r["prompt_ids"]) + max(len(r["chosen_ids"]), len(r["rejected_ids"])) <= args.max_len]
+  40:     if args.mix != "all":
+  41:         rows = mix(rows, [float(x) for x in args.mix.split(",")], rng)
+  42:     elif not args.keep_order:  # --keep-order (5 Nov, Track A): the pair file is already in a stratified order
+  43:         rng.shuffle(rows)
+  44:     checks = []
+  45:     if args.checker:
+  46:         checks = [json.loads(l) for l in Path(args.checker).read_text().splitlines() if l.strip()]
+  47:         checks = [c for c in checks if len(c["prompt_ids"]) + len(c["target_ids"]) <= args.max_len]
+  48:         random.Random(args.seed + 1).shuffle(checks)
+  49:         print(f"checker practice: {len(checks)} examples, one every {args.checker_every} pairs, weight {args.checker_weight}",
+  50:               flush=True)
+  51:     held_out, rows = rows[:args.held_out], rows[args.held_out:]
+  52:         args.batch = max(1, math.ceil(len(rows) * args.epochs / args.target_steps))
+  53:     print(f"training on {len(rows)} pairs, {len(held_out)} held out", flush=True)
+  54: 
+  55:     device = "cuda" if torch.cuda.is_available() else "cpu"
+  56:     dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
+  57:         dtype = torch.float16
+  58:     tokenizer = AutoTokenizer.from_pretrained(args.model)
+  59:     close = tokenizer.convert_tokens_to_ids("</think>")
+  60:     ends = {tokenizer.convert_tokens_to_ids("<|im_end|>"), tokenizer.convert_tokens_to_ids("<|endoftext|>")}
+  61:     model = AutoModelForCausalLM.from_pretrained(args.model, dtype=load_dtype).to(device)
+  62:     model.gradient_checkpointing_enable()
+  63:     model.enable_input_require_grads()
+  64:     model = PeftModel.from_pretrained(model, args.init_adapter, is_trainable=True)
+  65:     trainable = [p for p in model.parameters() if p.requires_grad]
+  66:     for p in trainable:
+  67:         p.data = p.data.float()
+  68: 
+  69:     def logps(prompt, reply, grad):
+  70:         ids = torch.tensor([prompt + reply], device=device)
+  71:         with torch.set_grad_enabled(grad), torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+  72:             hidden = model(input_ids=ids, output_hidden_states=False).logits[0]
+  73:         positions = range(len(prompt) - 1, len(prompt) + len(reply) - 1)
+  74:         total = 0.0
+  75:         for start in range(0, len(reply), 1024):  # log-softmax in slices: the full vocabulary is large
+  76:             idx = list(positions)[start:start + 1024]
+  77:             logp = torch.log_softmax(hidden[idx].float(), dim=-1)
+  78:             total = total + logp.gather(1, torch.tensor(reply[start:start + 1024], device=device)[:, None]).sum()
+  79:         return total
+  80: 
+  81:     out = Path(args.out)
+  82:     out.mkdir(parents=True, exist_ok=True)
+  83:     ref_path, latest, state_path = out / "ref.json", out / "latest", out / "resume.pt"
+  84:     model.eval()
+  85:     # the saved reference scores belong to ONE pair file: fingerprint the rows (31 Oct: a rebuilt pair file in another
+  86:     # order was matched to the old scores on resume, and the loss jumped from 0.6 to 8)
+  87:     import hashlib
+  88:     finger = hashlib.sha256(json.dumps([[r["prompt_ids"][:8], r["chosen_ids"][:8], len(r["chosen_ids"]),
+  89:                                          len(r["rejected_ids"])] for r in rows]).encode()).hexdigest()
+  90:     saved = json.loads(ref_path.read_text()) if ref_path.exists() else None
+  91:     if isinstance(saved, dict) and saved.get("rows") != finger:
+  92:         raise SystemExit(f"{out}: the pair file changed since this run started (fingerprint mismatch); "
+  93:                          "resuming would pair old reference scores with new pairs. Start the seed over.")
+  94:     if isinstance(saved, list) and state_path.exists():
+  95:         raise SystemExit(f"{out}: old-style reference file without a fingerprint and a resume point; cannot check the "
+  96:                          "pairs are the same. Start the seed over.")
+  97:     if isinstance(saved, dict):  # a lost runtime: the reference scores are kept (same rows, checked)
+  98:         for r, (c, rj) in zip(rows, saved["ref"]):
+  99:             r["ref_c"], r["ref_r"] = c, rj
+ 100:     else:
+ 101:         import contextlib
+ 102:         # (13 Nov, od3) --ref-base: the reference is the BASE model (adapter switched off), not the starting adapter, so an
+ 103:         # online loop that continues one adapter keeps the same anchor in every round (od2's reference moved every round)
+ 104:         ctx = model.disable_adapter() if args.ref_base else contextlib.nullcontext()
+ 105:         with torch.no_grad(), ctx:  # the reference: the starting adapter (or the base with --ref-base), scored once
+ 106:             for r in rows:
+ 107:                 r["ref_c"] = float(logps(r["prompt_ids"], r["chosen_ids"], False))
+ 108:                 r["ref_r"] = float(logps(r["prompt_ids"], r["rejected_ids"], False))
+ 109:         print(f"reference = {'the base model (adapter off)' if args.ref_base else 'the starting adapter'}", flush=True)
+ 110:         ref_path.write_text(json.dumps({"rows": finger, "ref": [[r["ref_c"], r["ref_r"]] for r in rows]}))
+ 111:     print("reference scored", flush=True)
+ 112: 
+ 113:     def tripwire():
+ 114:         """Mean probability of ending the reply right after </think>, over held-out chosen replies."""
+ 115:         probs = []
+ 116:         with torch.no_grad():
+ 117:             for r in held_out:
+ 118:                 reply = r["chosen_ids"]
+ 119:                 if close not in reply:
+ 120:                     continue
+ 121:                 cut = reply.index(close) + 1
+ 122:                 ids = torch.tensor([r["prompt_ids"] + reply[:cut]], device=device)  # ends with </think>
+ 123:                 with torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+ 124:                     logits = model(input_ids=ids).logits[0, -1].float()
+ 125:                 p = torch.softmax(logits, -1)
+ 126:                 probs.append(float(sum(p[e] for e in ends)))
+ 127:         return sum(probs) / len(probs) if probs else 0.0
+ 128: 
+ 129:     optimizer = torch.optim.AdamW(trainable, lr=args.lr, weight_decay=0.0)
+ 130:     total = math.ceil(len(rows) * args.epochs / args.batch)
+ 131:     steps = min(total, args.max_steps or total)
+ 132:     order = [i for _ in range(args.epochs) for i in (range(len(rows)) if args.keep_order else
+ 133:                                                      rng.sample(range(len(rows)), len(rows)))][:steps * args.batch]
+ 134:     baseline = tripwire()
+ 135:     print(f"tripwire baseline {baseline:.3f}; {steps} steps of {args.batch} pairs", flush=True)
+ 136:     step, stats, check_stats = 0, [], []
+ 137:     if state_path.exists() and (latest / "adapter_config.json").exists():  # resume after the last saved checkpoint
+ 138:         from peft import set_peft_model_state_dict
+ 139:         from safetensors.torch import load_file
+ 140:         set_peft_model_state_dict(model, load_file(str(latest / "adapter_model.safetensors")))
+ 141:         for p in trainable:
+ 142:             p.data = p.data.float()
+ 143:         state = torch.load(state_path, weights_only=False)
+ 144:         optimizer.load_state_dict(state["optimizer"])
+ 145:         torch.set_rng_state(state["torch_rng"])
+ 146:         step = state["step"]
+ 147:         print(f"resuming after step {step}", flush=True)
+ 148:     model.train()
+ 149:     for position, i in enumerate(order, 1):
+ 150:         if position <= step * args.batch:
+ 151:             continue
+ 152:         r = rows[i]
+ 153:         pc = logps(r["prompt_ids"], r["chosen_ids"], True)
+ 154:         pr = logps(r["prompt_ids"], r["rejected_ids"], True)
+ 155:         margin = args.beta * ((pc - r["ref_c"]) - (pr - r["ref_r"]))
+ 156:         loss = -torch.nn.functional.logsigmoid(margi
+[output cut at 10,000 characters]

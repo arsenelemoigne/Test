@@ -1,0 +1,130 @@
+--- repair_pairs.py 870-end ---
+ 870:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 871:                 count_share = 0.20
+ 872:             if args.mix_preset == "hold":
+ 873:                 # (11 Nov, rpN, consult12) an ACCURACY-ONLY repair of an already shortened model: no "think less" pair on any
+ 874:                 # type; math: widened guards + length-matched be-right; code: be-right / guards / loops; IFEval: 40% length-rule
+ 875:                 # counting pairs, the rest be-right with 15% response loops; tool calls: be-right only
+ 876:                 sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+ 877:                             {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+ 878:                             {"shorten": 0.0, "right": 0.85, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+ 879:                             {"shorten": 0.0, "right": 1.0, "guard": 0.0})
+ 880:                 count_share = 0.40
+ 881:             sh_share.setdefault("loop", 0.0)
+ 882:             # (11 Nov, user) HARD RULE: the PROPORTION is fixed, the total is not. Pairs are taken, then every side is cut
+ 883:             # back to the scarcest one, so the final file holds exactly the set mix whatever ran short (a short supply, a
+ 884:             # question's pair limit, or the same pair proposed by two kinds); nothing is ever refilled by another kind.
+ 885:             # IFEval: counting-rule questions never get "shorter" pairs; their be-right pairs hold a FIXED half of the quota
+ 886:             # and the mix below holds the other half, 1 : 1 (before: a short counting half let the other half grow)
+ 887:             if part in stop_sh:  # (13 Nov, od4 brake) this type reached its saving cap: hold it (length-held be-right + loops)
+ 888:                 sh_share = {"shorten": 0.0, "right": 0.90, "guard": 0.0, "loop": 0.10}
+ 889:             want_cnt = int(round(count_share * n)) if cand[part]["right_count"] else 0
+ 890:             cnt = take(part, "right", cand[part]["right_count"], want_cnt)
+ 891:             n_full, n_mix = n, n - want_cnt
+ 892:             s_sh, s_br = sh_share["shorten"], sh_share["right"] + sh_share["guard"] + sh_share["loop"]
+ 893:             n_sh = int(round(s_sh * n_mix))
+ 894:             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
+ 895:             sh += take(part, "shorten", cand[part]["shorten_soft"], n_sh - len(sh))
+ 896:             n_br = n_mix - n_sh
+ 897:             # (no call at all without a loop share: take() shuffles its pool, and an extra shuffle would change which pairs
+ 898:             # the older presets pick: rpK's and round 1's files must stay reproducible)
+ 899:             lp = take(part, "loop", cand[part]["loop"], min(n_br, int(round(sh_share["loop"] * n_mix)))) if sh_share["loop"] > 0 else []
+ 900:             g = take(part, "guard", [c for c in cand[part]["capguard"] if c[0] not in {p["id"] for p in lp}],
+ 901:                      min(n_br - len(lp), int(round(sh_share["guard"] * n_mix))))
+ 902:             guarded = {p["id"] for p in g + lp}  # one be-right pair per question: a guarded / looping question gives no second one
+ 903:             r = take(part, "right", [c for c in cand[part]["right_cr"] if c[0] not in guarded], n_br - len(g) - len(lp))
+ 904:             g = g + lp  # from here the anti-loop pairs travel with the guards (both are the be-right side's rare kinds)
+ 905:             total = float(n_mix)
+ 906:             if s_sh > 0:
+ 907:                 total = min(total, len(sh) / s_sh)
+ 908:             if s_br > 0:
+ 909:                 total = min(total, (len(g) + len(r)) / s_br)
+ 910:             if want_cnt:
+ 911:                 total = min(total, len(cnt) * n_mix / want_cnt)
+ 912:             keep_sh = min(len(sh), int(round(s_sh * total)))
+ 913:             keep_br = min(len(g) + len(r), int(round(s_br * total)))
+ 914:             sh = sh[:keep_sh]
+ 915:             r = r[:max(0, keep_br - len(g))]
+ 916:             g = g[:keep_br - len(r)]
+ 917:             if want_cnt:
+ 918:                 cnt = cnt[:int(round(total * want_cnt / n_mix))]
+ 919:             by_part[part] = sh + g + r + cnt
+ 920:             if len(by_part[part]) < n_full:
+ 921:                 shortfall[part] = n_full - len(by_part[part])  # the REAL gap (what fill-until-full reads)
+ 922:                 counts[(part, "MIX KEPT: total cut to")] = f"{len(by_part[part])} of {n_full} (the scarcest kind limits it)"
+ 923:             for kind, got in (("shorten", sh), ("guard (capped)", [x for x in g if x["kind"] == "guard"]),
+ 924:                               ("anti-loop (finished right > runaway)", [x for x in g if x["kind"] == "loop"]),
+ 925:                               ("be right (compact)", r), ("be right (counting rule)", cnt)):
+ 926:                 counts[(part, kind)] += len(got)
+ 927:             counts[(part, "candidates anti-loop")] = len(cand[part]["loop"])
+ 928:             counts[(part, "candidates shorten (clear + backup) / capped guard / be right / counting rule")] = (
+ 929:                 f"{len(cand[part]['shorten'])} + {len(cand[part]['shorten_soft'])} / {len(cand[part]['capguard'])} / "
+ 930:                 f"{len(cand[part]['right_cr'])} / {len(cand[part]['right_count'])}")
+ 931:             counts[(part, "SHORT of quota")] = max(0, n_full - len(by_part[part]))
+ 932:             continue
+ 933:         if args.kinds == "guard,shorten":  # (10 Nov, odpo) half "be right", half "be shorter when sure"; no backfill
+ 934:             g = take(part, "guard", cand[part]["guard"], n // 2)
+ 935:             sh = take(part, "shorten", cand[part]["shorten"], n - n // 2)
+ 936:             soft = take(part, "shorten", cand[part]["shorten_soft"], n - n // 2 - len(sh))
+ 937:             counts[(part, "shorten from the 1.25-1.5x backup")] += len(soft)
+ 938:             counts[(part, "shorten candidates (>= 1.5x / 1.25-1.5x)")] = f"{len(cand[part]['shorten'])} / {len(cand[part]['shorten_soft'])}"
+ 939:             sh += soft
+ 940:             by_part[part] = g + sh
+ 941:             counts[(part, "guard")] += len(g)
+ 942:             counts[(part, "shorten")] += len(sh)
+ 943:             counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+ 944:             continue
+ 945:         if args.kinds == "guard":
+ 946:             by_part[part] = take(part, "guard", cand[part]["guard"], n)
+ 947:             for p in by_part[part]:
+ 948:                 counts[(part, "guard")] += 1
+ 949:             counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+ 950:             continue
+ 951:         g = take(part, "guard", cand[part]["guard"], n // 2)
+ 952:         r_long = take(part, "right", cand[part]["right_long"], (n - n // 2) // 2)
+ 953:         r_short = take(part, "right", cand[part]["right_short"], n - n // 2 - len(r_long))
+ 954:         if len(g) < n // 2:  # a short guard supply is filled with right pairs, never with another kind
+ 955:             r_short += take(part, "right", cand[part]["right_short"], n // 2 - len(g))
+ 956:         by_part[part] = g + r_long + r_short
+ 957:         for p in by_part[part]:
+ 958:             counts[(part, p["kind"] + ("" if p["kind"] == "guard" else
+ 959:                                        " (right longer)" if p["chosen_tokens"] > p["rejected_tokens"] else " (right shorter)"))] += 1
+ 960:         counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+ 961:     if args.kinds == "mix" and od5 and args.od5_v3:  # (15 Nov, consult24 rule A) free slots -> shorten on the healthy parts
+ 962:         free = sum(quota.values()) - sum(len(v) for v in by_part.values())
+ 963:         h_parts = [p_ for p_ in quota if p_ in by_part and healthy_v3(p_)]
+ 964:         moved = Counter()
+ 965:         while free > 0 and h_parts:
+ 966:             tot_q = sum(quota[p_] for p_ in h_parts)
+ 967:             share = {p_: max(1, int(round(free * quota[p_] / tot_q))) for p_ in h_parts}
+ 968:             got_any = 0
+ 969:             for p_ in h_parts:
+ 970:                 if free <= 0:
+ 971:                     break
+ 972:                 extra = take(p_, "shorten", cand[p_]["shorten"], min(share[p_], free))
+ 973:                 by_part[p_] += extra
+ 974:                 moved[p_] += len(extra)
+ 975:                 free -= len(extra)
+ 976:                 got_any += len(extra)
+ 977:             if not got_any:
+ 978:                 break
+ 979:             h_parts = [p_ for p_ in h_parts if any((id(c), id(w)) not in used for _, c, w in cand[p_]["shorten"])]
+ 980:         for p_ in quota:
+ 981:             if p_ in by_part:
+ 982:                 counts[(p_, "od5 v3 slice accuracy measured first (pts)")] = f"{100 * part_dmg_v3.get(p_, 0.0):+.1f}"
+ 983:                 counts[(p_, "od5 v3 health")] = ("HELD" if p_ in stop_v3 else "healthy" if healthy_v3(p_) else "caution (< 0)")
+ 984:                 counts[(p_, "od5 v3 free slots received (shorten)")] = moved[p_]
+ 985:                 for kind5 in ("shorten", "recovery", "right", "loop", "format"):
+ 986:                     counts[(p_, f"od5 {kind5}")] = sum(1 for x in by_part[p_] if x["kind"] == kind5)
+ 987:                 counts[(p_, "SHORT of quota")] = max(0, quota[p_] - len(by_part[p_]))
+ 988:         counts[("all", "od5 v3 free slots left empty")] = free
+ 989:     # stratified order: interleave the parts by their shares, kinds alternating inside each part
+ 990:     # (11 Nov, review fix) kinds interleaved by their shares (credit scheme), shuffled inside each kind: any prefix of the
+ 991:     # file holds every kind in proportion (before: kinds sorted by name, so with 3 kinds the "shorten" pairs all came last)
+ 992:     queues = {}
+ 993:     for part, ps in by_part.items():
+ 994:         kinds = {}
+ 995:         for pr in sorted(ps, key=lambda p: rng.random()):
+ 996:             kinds.setdefault(pr["kind"], []).append(pr)
+ 997:    
+[output cut at 10,000 characters]

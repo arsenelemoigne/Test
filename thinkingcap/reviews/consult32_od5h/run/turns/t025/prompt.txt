@@ -1,0 +1,127 @@
+=== LINES 4621..4720 ===
+4621: def fullpick(args):
+4622:     """(13 Nov, user) the FULL test (2,759 x 8) of 2 checkpoints per model, chosen once all are scored: (1) the one whose Dev
+4623:     score, corrected by Dev's known over-reading (--fp-save-bias / --fp-acc-bias), lies closest to the objective (> 50% saved
+4624:     at better than -1; inside it, the most saving); (2) the step-2 starting point (dpo: r2pick's gate rule; arena: the stop
+4625:     rule's result models/<run>-best), or the next closest when it is the same. dpo candidates = ptrepair's Dev-scored
+4626:     checkpoints (merged here to models/<run>-sSTEP); arena candidates = the merged round models, scored by the free monitor
+4627:     (round k+1's answers measure round k's model)."""
+4628:     import copy
+4629:     run_name = args.fp_run
+4630:     cands = []  # (label, model path, dev saved, dev acc)
+4631:     if args.fp_kind == "dpo":
+4632:         for step in args.pk_steps:
+4633:             d, v = BON / f"dev512-{run_name}-{step}" / "dev_score.json", BON / f"devsv-{run_name}-{step}" / "dev_score.json"
+4634:             drive_sync("restore", only=[str(d.parent), str(v.parent)])
+4635:             if d.exists():  # (15 Nov, user: Dev-SVAMP is not needed as a first check) Dev-SVAMP optional
+4636:                 a = json.loads(d.read_text())
+4637:                 b = json.loads(v.read_text()) if v.exists() else {"saved": None, "acc": None}
+4638:                 base_tag = "" if args.fp_base == "Qwen/Qwen3-0.6B" else "-on-" + Path(args.fp_base).name  # (14 Nov) never reuse a wrong-base merge
+4639:                 cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}{base_tag}",
+4640:                               "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
+4641:         gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc
+4642:                 and (c["sv_saved"] is None or (c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc))]
+4643:         start = max(gate, key=lambda c: c["saved"])["label"] if gate else None
+4644:     elif getattr(args, "fp_dev_rounds", None):  # (15 Nov, user: "just do the normal 512 tests and we will pick the best 2")
+4645:         for k in args.fp_dev_rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
+4646:             label = f"{run_name}-r{k}"
+4647:             d = BON / f"dev512-{label}" / "dev_score.json"
+4648:             drive_sync("restore", only=[str(d.parent), f"models/{label}"])
+4649:             if not d.exists() and not (Path("models") / label / "config.json").exists():
+4650:                 print(f"fullpick {run_name}: {label} does not exist (fewer rounds ran): skipped", flush=True)
+4651:                 continue
+4652:             if not d.exists():
+4653:                 print(dev_score_model(label, f"models/{label}", vs=getattr(args, "rp_dev_vs", "")), flush=True)
+4654:             if d.exists():
+4655:                 a = json.loads(d.read_text())
+4656:                 cands.append({"label": label, "model": f"models/{label}", "saved": a["saved"], "acc": a["acc"]})
+4657:         start = None  # the 2nd pick is simply the next best
+4658:     else:
+4659:         log = BON / f"{run_name}-monitor.jsonl"
+4660:         best_f = Path(f"data/{run_name}-best.json")
+4661:         drive_sync("restore", only=[str(log), str(best_f)])
+4662:         hist = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+4663:         for h in hist:
+4664:             if h["answering_model"].startswith("models/"):
+4665:                 cands.append({"label": Path(h["answering_model"]).name, "model": h["answering_model"], "saved": h["saved"],
+4666:                               "acc": h["acc"]})
+4667:         start = Path(json.loads(best_f.read_text())["best"]).name if best_f.exists() else None
+4668:         d = BON / f"dev512-{run_name}-best" / "dev_score.json"
+4669:         drive_sync("restore", only=[str(d.parent)])
+4670:         if start and start not in {c["label"] for c in cands} and d.exists():  # the result is the last, unmonitored round
+4671:             a = json.loads(d.read_text())
+4672:             cands.append({"label": start, "model": f"models/{run_name}-best", "saved": a["saved"], "acc": a["acc"]})
+4673:     if not cands:  # (19 Nov) e.g. the run trained nothing (not enough matched data): say so, do not crash the queue
+4674:         print(f"fullpick {run_name}: NO CANDIDATE (no scored round model): nothing to test", flush=True)
+4675:         Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": []}))
+4676:         drive_sync("save")
+4677:         return
+4678:     if getattr(args, "fp_min_save", None) is not None and max(c["saved"] for c in cands) < args.fp_min_save:
+4679:         # (15 Nov, user: "if we are not near 50% on the Dev 512, let's not run the full eval")
+4680:         print(f"fullpick {run_name}: NO FULL TEST: best Dev saving {max(c['saved'] for c in cands):+.1f}% < --fp-min-save "
+4681:               f"{args.fp_min_save} | " + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}" for c in cands), flush=True)
+4682:         return
+4683:     if getattr(args, "fp_gate_save", None) is not None:  # (18 Nov, user) only candidates whose Dev predicts beating the best
+4684:         good = [c for c in cands if c["saved"] >= args.fp_gate_save and c["acc"] >= (args.fp_gate_acc if args.fp_gate_acc is not None else -99)]
+4685:         print(f"fullpick {run_name}: gate Dev saving >= {args.fp_gate_save} and accuracy >= {args.fp_gate_acc}: "
+4686:               + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}{' PASS' if c in good else ''}" for c in cands), flush=True)
+4687:         if not good:
+4688:             print(f"fullpick {run_name}: NO FULL TEST: no round passes the gate", flush=True)
+4689:             Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": cands}))
+4690:             drive_sync("save")
+4691:             return
+4692:         cands = good
+4693: 
+4694:     def dist(c):
+4695:         ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias - getattr(args, "fp_acc_slope", 0.0) * max(0.0, c["saved"] - 53.0)
+4696:         inside = ps > 50 and pa > getattr(args, "fp_acc_gate", -1.0)
+4697:         return (0, -ps) if inside else (1, max(0.0, 50.5 - ps) + 2 * max(0.0, -0.9 - pa))
+4698:     ranked = sorted(cands, key=dist)
+4699:     tested = set()
+4700:     if getattr(args, "fp_skip_tested", False):  # (15 Nov, user) a model full-tested elsewhere (the other GPU) is never re-picked
+4701:         for c in cands:
+4702:             out_c = ROOT / f"full-{Path(c['model']).name}"
+4703:             drive_sync("restore", only=[str(out_c)])
+4704:             if (out_c / "results.json").exists():
+4705:                 tested.add(c["label"])
+4706:         drive_sync("restore", only=[f"data/{run_name}-fullpick*.json"])  # picked on the other GPU (test maybe still running)
+4707:         for f in Path("data").glob(f"{run_name}-fullpick*.json"):
+4708:             if f.name != f"{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json":
+4709:                 tested |= {c["label"] for c in json.loads(f.read_text())["picks"]}
+4710:         if tested:
+4711:             print(f"fullpick {run_name}: already full-tested or picked on the other GPU, not picked again: {sorted(tested)}",
+4712:                   flush=True)
+4713:     pool = [c for c in ranked if c["label"] not in tested]
+4714:     if not pool:  # (19 Nov) nothing left for this GPU (the other GPU took the only good round): not an error
+4715:         print(f"fullpick {run_name}: every passing candidate already has a full test or is picked on the other GPU: nothing to do",
+4716:               flush=True)
+4717:         return
+4718:     picks = [pool[0]]
+4719:     other = next((c for c in pool if c["label"] == start), None)
+4720:     if other is None or other["label"] == picks[0]["label"]:
+=== LINES 4921..5040 ===
+4921: 
+4922: 
+4923: def ptrepair(args):
+4924:     """Track A (GAME_PLAN.md v3, 5 Nov): repair pt-mid. (1) pt-mid (the 4 lpw-pertype adapters merged at PT_MID) answers
+4925:     --rp-questions training questions x4 (the original's mixed-outcome questions first, then all-right and all-wrong);
+4926:     (2) repair_pairs.py: "be right" pairs only (shortest right > shortest finished wrong; similar-length right > wrong,
+4927:     half with the right answer longer), --rp-quota, stratified order; (3) a fresh LoRA on merged pt-mid (reference =
+4928:     pt-mid), float32 + fp16 autocast, beta 0.1, no NLL, batch 16, lr 2.5e-6 then --rp-lr constant, --rp-steps, saved
+4929:     every 5, pairs read in order; (4) pt-mid + the repair adapter at each --rp-screen step on the 720 x4.
+4930:     9 Nov (user: repair the rc line, own data only): --rp-base repairs any merged model instead of pt-mid (it answers,
+4931:     it is DPO's reference, every screen merges onto it); --rp-own-data draws the questions from own_repair_questions()
+4932:     instead of the original's mixed-outcome dp13 questions; --rp-kinds guard keeps only the 21 Oct "be right" pair."""
+4933:     name = args.name
+4934:     smoke = args.rp_smoke
+4935:     if getattr(args, "rp_gate", ""):  # (11 Nov) path 1: round 2 only if round 1 shortened enough (pre-registered)
+4936:         run_n, ref_n, margin = args.rp_gate.split(",")
+4937:         sc = {}
+4938:         for n in (run_n, ref_n):
+4939:             f = BON / f"dev512-{n}" / "dev_score.json"
+4940:             drive_sync("restore", only=[str(f)])
+4941:             sc[n] = json.loads(f.read_text())["saved"] if f.exists() else None
+4942:         ok = None not in sc.values() and sc[run_n] >= sc[ref_n] + float(margin)
+4943:         print(f"repair {name}: GATE {'OPEN' if ok else 'CLOSED'}: Dev-512 saved {run_n} {sc[run_n]} vs {ref_n} {sc[ref_n]} "
+4944:
+[output cut at 10,000 characters]

@@ -1,0 +1,104 @@
+ 821:                             {"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+ 822:                             {"shorten": 0.625, "right": 0.375, "guard": 0.0, "loop": 0.0})
+ 823:                 count_share = 0.25
+ 824:             if args.mix_preset == "r2one":
+ 825:                 # (15 Nov, consult27: Path 1's three steps as ONE offline step from the original) math 45 shorter / 35
+ 826:                 # length-held be-right / 12 bounded early-stop guards / 8 loops; code 58 / 22 / 8 / 12; IFEval 20% at-least
+ 827:                 # counting pairs + 62.5 / 22.5 / 0 / 15 of the rest; one function 45 / 43 / 12; several 55 / 35 / 10; no fit 65 / 35
+ 828:                 sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.12, "loop": 0.08} if base_part == "svamp" else
+ 829:                             {"shorten": 0.58, "right": 0.22, "guard": 0.08, "loop": 0.12} if part == "mbpp" else
+ 830:                             {"shorten": 0.625, "right": 0.225, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+ 831:                             {"shorten": 0.45, "right": 0.43, "guard": 0.12, "loop": 0.0} if part == "bfcl_simple_python" else
+ 832:                             {"shorten": 0.55, "right": 0.35, "guard": 0.10, "loop": 0.0} if part == "bfcl_multiple" else
+ 833:                             {"shorten": 0.65, "right": 0.35, "guard": 0.0, "loop": 0.0})
+ 834:                 count_share = 0.20
+ 835:             if args.mix_preset == "od3_arena":
+ 836:                 # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
+ 837:                 # guards (shortening and protection are not mixed in one step); math 75 / 20 / 5 loops, code 75 / 17.5 / 7.5,
+ 838:                 # IFEval 20% counting pairs + 75 / 18.75 / 6.25, several 70 / 30, one function and no fit 75 / 25
+ 839:                 sh_share = ({"shorten": 0.75, "right": 0.20, "guard": 0.0, "loop": 0.05} if base_part == "svamp" else
+ 840:                             {"shorten": 0.75, "right": 0.175, "guard": 0.0, "loop": 0.075} if part == "mbpp" else
+ 841:                             {"shorten": 0.75, "right": 0.1875, "guard": 0.0, "loop": 0.0625} if part == "ifeval" else
+ 842:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0} if part == "bfcl_multiple" else
+ 843:                             {"shorten": 0.75, "right": 0.25, "guard": 0.0})
+ 844:                 count_share = 0.20
+ 845:             if args.mix_preset == "r2s2":
+ 846:                 # (13 Nov, recipe 2 step 2 as consult16 planned it) shorten again on the step-1 model's own answers, every type:
+ 847:                 # math 40 shorter / 30 be-right / 25 widened guards / 5 loops; code 45 / 35 / 15 / 5; IFEval 20% counting pairs,
+ 848:                 # the rest 56.25 shorter / 31.25 be-right / 12.5 response loops; one function 60 / 40, several 50 / 50, no fit 60 / 40
+ 849:                 sh_share = ({"shorten": 0.40, "right": 0.30, "guard": 0.25, "loop": 0.05} if base_part == "svamp" else
+ 850:                             {"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if part == "mbpp" else
+ 851:                             {"shorten": 0.5625, "right": 0.3125, "guard": 0.0, "loop": 0.125} if part == "ifeval" else
+ 852:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 853:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 854:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0})
+ 855:                 count_share = 0.20
+ 856:             if args.mix_preset == "r2s1":
+ 857:                 # (12 Nov, recipe 2 step 1, consult16) moderate shortening from the original (target ~47% saved, like rpE-80):
+ 858:                 # math 40 shorter / 40 be-right / 15 widened guards / 5 loops; code 60 / 20 / 12.5 / 7.5; IFEval 20% counting
+ 859:                 # pairs (true length rules), the rest 50 shorter / 41.7 be-right / 8.3 response loops; one function 70 / 30,
+ 860:                 # several 50 / 50, no fit 60 / 40. Thinking-only shortness with the response held (--think-only all parts,
+ 861:                 # --resp-median 0.95 --resp-max 1.05): Path 1's --resp-guard 0.9 made IFEval responses longer (263 -> 345)
+ 862:                 # (12 Nov ~18:30, consult17 change A, user: yes) NO widened guards in step 1: from the original they reward
+ 863:                 # ~1,000-token right answers and cancel the shortening (p1cr1s0 stalled at 34% Dev, p1r1s0 without them 47.5%);
+ 864:                 # math 55 shorter / 40 be-right / 5 loops, code 70 / 22.5 / 7.5 (guards come back in steps 2-3, as in rpM)
+ 865:                 sh_share = ({"shorten": 0.55, "right": 0.40, "guard": 0.0, "loop": 0.05} if base_part == "svamp" else
+ 866:                             {"shorten": 0.70, "right": 0.225, "guard": 0.0, "loop": 0.075} if part == "mbpp" else
+ 867:                             {"shorten": 0.50, "right": 0.4167, "guard": 0.0, "loop": 0.0833} if part == "ifeval" else
+ 868:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 869:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 870:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 871:                 count_share = 0.20
+ 872:             if args.mix_preset == "hold":
+ 873:                 # (11 Nov, rpN, consult12) an ACCURACY-ONLY repair of an already shortened model: no "think less" pair on any
+ 874:                 # type; math: widened guards + length-matched be-right; code: be-right / guards / loops; IFEval: 40% length-rule
+ 875:                 # counting pairs, the rest be-right with 15% response loops; tool calls: be-right only
+ 876:                 sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+ 877:                             {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+ 878:                             {"shorten": 0.0, "right": 0.85, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+ 879:                             {"shorten": 0.0, "right": 1.0, "guard": 0.0})
+ 880:                 count_share = 0.40
+ 881:             sh_share.setdefault("loop", 0.0)
+ 882:             # (11 Nov, user) HARD RULE: the PROPORTION is fixed, the total is not. Pairs are taken, then every side is cut
+ 883:             # back to the scarcest one, so the final file holds exactly the set mix whatever ran short (a short supply, a
+ 884:             # question's pair limit, or the same pair proposed by two kinds); nothing is ever refilled by another kind.
+ 885:             # IFEval: counting-rule questions never get "shorter" pairs; their be-right pairs hold a FIXED half of the quota
+ 886:             # and the mix below holds the other half, 1 : 1 (before: a short counting half let the other half grow)
+ 887:             if part in stop_sh:  # (13 Nov, od4 brake) this type reached its saving cap: hold it (length-held be-right + loops)
+ 888:                 sh_share = {"shorten": 0.0, "right": 0.90, "guard": 0.0, "loop": 0.10}
+ 889:             want_cnt = int(round(count_share * n)) if cand[part]["right_count"] else 0
+ 890:             cnt = take(part, "right", cand[part]["right_count"], want_cnt)
+ 891:             n_full, n_mix = n, n - want_cnt
+ 892:             s_sh, s_br = sh_share["shorten"], sh_share["right"] + sh_share["guard"] + sh_share["loop"]
+ 893:             n_sh = int(round(s_sh * n_mix))
+ 894:             sh = take(part, "shorten", cand[part]["shorten"], n_sh)
+ 895:             sh += take(part, "shorten", cand[part]["shorten_soft"], n_sh - len(sh))
+ 896:             n_br = n_mix - n_sh
+ 897:             # (no call at all without a loop share: take() shuffles its pool, and an extra shuffle would change which pairs
+ 898:             # the older presets pick: rpK's and round 1's files must stay reproducible)
+ 899:             lp = take(part, "loop", cand[part]["loop"], min(n_br, int(round(sh_share["loop"] * n_mix)))) if sh_share["loop"] > 0 else []
+ 900:             g = take(part, "guard", [c for c in cand[part]["capguard"] if c[0] not in {p["id"] for p in lp}],
+ 901:                      min(n_br - len(lp), int(round(sh_share["guard"] * n_mix))))
+ 902:             guarded = {p["id"] for p in g + lp}  # one be-right pair per question: a guarded / looping question gives no second one
+ 903:             r = take(part, "right", [c for c in cand[part]["right_cr"] if c[0] not in guarded], n_br - len(g) - len(lp))
+ 904:             g = g + lp  # from here the anti-loop pairs travel with the guards (both are the be-right side's rare kinds)
+ 905:             total = float(n_mix)
+ 906:             if s_sh > 0:
+ 907:                 total = min(total, len(sh) / s_sh)
+ 908:             if s_br > 0:
+ 909:                 total = min(total, (len(g) + len(r)) / s_br)
+ 910:             if want_cnt:
+ 911:                 total = min(total, len(cnt) * n_mix / want_cnt)
+ 912:             keep_sh = min(len(sh), int(round(s_sh * total)))
+ 913:             keep_br = min(len(g) + len(r), int(round(s_br * total)))
+ 914:             sh = sh[:keep_sh]
+ 915:             r = r[:max(0, keep_br - len(g))]
+ 916:             g = g[:keep_br - len(r)]
+ 917:             if want_cnt:
+ 918:                 cnt = cnt[:int(round(total * want_cnt / n_mix))]
+ 919:             by_part[part] = sh + g + r + cnt
+ 920:             if len(by_part[part]) < n_full:
+ 921:                 shortfall[part] = n_full - len(by_part[part])  # the REAL gap (what fill-until-full reads)
+ 922:                 counts[(part, "MIX KEPT: total cut to")] = f"{len(by_part[part])} of {n_full} (the scarcest kind limits it)"
+ 923:             for kind, got in (("shorten", sh), ("guard (capped)", [x for x in g if
+[output cut at 10,000 characters]

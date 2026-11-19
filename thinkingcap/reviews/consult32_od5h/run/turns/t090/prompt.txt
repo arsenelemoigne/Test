@@ -1,0 +1,47 @@
+Found od3_monitor at 4596
+4596: def od3_monitor(rollouts, stats):
+4597:     """The free round monitor: a round's answers vs the ORIGINAL's on the same questions (macro over math / code / IFEval /
+4598:     tool calls, the tool parts weighted 400 / 200 / 240 as in the test). Returns (saved %, accuracy change pts, per part)."""
+4599:     import statistics
+4600:     by = defaultdict(list)
+4601:     for l in open(rollouts):
+4602:         if l.strip():
+4603:             r = json.loads(l)
+4604:             if r["id"] in stats:
+4605:                 by[r["id"]].append(r)
+4606:     part_tok, part_acc = defaultdict(lambda: [0.0, 0.0]), defaultdict(list)
+4607:     for qid, rs in by.items():
+4608:         st = stats[qid]
+4609:         part_tok[st["part"]][0] += statistics.fmean(r["output_tokens"] for r in rs)
+4610:         part_tok[st["part"]][1] += st["tokens"]
+4611:         part_acc[st["part"]].append(statistics.fmean(bool(r["correct"]) for r in rs) - st["acc"])
+4612:     per = {p: (100 * (1 - t[0] / max(1e-9, t[1])), 100 * statistics.fmean(part_acc[p])) for p, t in part_tok.items()}
+4613:     fam = [per[p] for p in ("svamp", "mbpp", "ifeval") if p in per]
+4614:     tools = [(BFCL_W[p], per[p]) for p in BFCL_W if p in per]
+4615:     if tools:
+4616:         w = sum(x for x, _ in tools)
+4617:         fam.append((sum(x * v[0] for x, v in tools) / w, sum(x * v[1] for x, v in tools) / w))
+4618:     return statistics.fmean(f[0] for f in fam), statistics.fmean(f[1] for f in fam), per
+4619: 
+4620: 
+4621: def fullpick(args):
+4622:     """(13 Nov, user) the FULL test (2,759 x 8) of 2 checkpoints per model, chosen once all are scored: (1) the one whose Dev
+4623:     score, corrected by Dev's known over-reading (--fp-save-bias / --fp-acc-bias), lies closest to the objective (> 50% saved
+4624:     at better than -1; inside it, the most saving); (2) the step-2 starting point (dpo: r2pick's gate rule; arena: the stop
+4625:     rule's result models/<run>-best), or the next closest when it is the same. dpo candidates = ptrepair's Dev-scored
+4626:     checkpoints (merged here to models/<run>-sSTEP); arena candidates = the merged round models, scored by the free monitor
+4627:     (round k+1's answers measure round k's model)."""
+4628:     import copy
+4629:     run_name = args.fp_run
+4630:     cands = []  # (label, model path, dev saved, dev acc)
+4631:     if args.fp_kind == "dpo":
+4632:         for step in args.pk_steps:
+4633:             d, v = BON / f"dev512-{run_name}-{step}" / "dev_score.json", BON / f"devsv-{run_name}-{step}" / "dev_score.json"
+4634:             drive_sync("restore", only=[str(d.parent), str(v.parent)])
+4635:             if d.exists():  # (15 Nov, user: Dev-SVAMP is not needed as a first check) Dev-SVAMP optional
+4636:                 a = json.loads(d.read_text())
+4637:                 b = json.loads(v.read_text()) if v.exists() else {"saved": None, "acc": None}
+4638:                 base_tag = "" if args.fp_base == "Qwen/Qwen3-0.6B" else "-on-" + Path(args.fp_base).name  # (14 Nov) never reuse a wrong-base merge
+4639:                 cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}{base_tag}",
+4640:                               "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
+4641:         gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc

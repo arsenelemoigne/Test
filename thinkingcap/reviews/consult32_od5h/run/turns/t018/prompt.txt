@@ -1,0 +1,110 @@
+ 676:                         "chosen_tokens": c["output_tokens"], "rejected_tokens": w["output_tokens"]})
+ 677:         return got
+ 678:     by_part = {}
+ 679:     for part, n in quota.items():
+ 680:         if args.kinds == "mix" and od5:  # (14 Nov) defect pairs first, then shares that FOLLOW the candidate counts
+ 681:             stop5 = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+ 682:             got5 = []
+ 683:             for kind5, cap5 in (("right_count", (0.10 if args.od5_v2 else 0.20) if part == "ifeval" else 0.0), ("loop", 0.12),
+ 684:                                 ("format", 0.10)):
+ 685:                 if cap5 > 0:
+ 686:                     got5 += take(part, "right" if kind5 == "right_count" else kind5, cand[part][kind5], int(round(cap5 * n)))
+ 687:             n_rem = n - len(got5)
+ 688:             dmg = sum(od5_dmg[part]) / max(1, len(od5_dmg[part]))  # the part's accuracy change on this slice
+ 689:             held5 = args.od5_held and part in stop5
+ 690:             if held5:  # (19 Nov, consult31) a held part: compact holds, few recovery pairs, a smaller share of the batch
+ 691:                 if dmg > -0.02:
+ 692:                     n_rem = min(n_rem, int(round(0.40 * n)))
+ 693:                 rec_h = take(part, "recovery", cand[part]["recovery"], int(round((0.40 if dmg <= -0.02 else 0.20) * n_rem)))
+ 694:                 hold_h = take(part, "right", cand[part]["hold"], n_rem - len(rec_h))
+ 695:                 by_part[part] = got5 + rec_h + hold_h
+ 696:                 counts[(part, "od5 slice accuracy vs the original (pts)")] = f"{100 * dmg:+.1f}"
+ 697:                 counts[(part, "od5 held: recovery / compact hold (pairs)")] = f"{len(rec_h)} / {len(hold_h)}"
+ 698:                 continue
+ 699:             c_sh = 0 if part in stop5 else len(cand[part]["shorten"])
+ 700:             c_rec = len(cand[part]["recovery"]) * (2 if dmg < -0.01 else 1)
+ 701:             c_hold = len(cand[part]["hold"])
+ 702:             # (14 Nov, od5b round 2 on) neutral be-right pairs take at most 25% of the slots (od4's be-right share): counted
+ 703:             # in full they crowded out shortening where most questions are "mixed" (IFEval round 1: 129 neutral vs 33 shorten
+ 704:             # candidates -> 12 shorten pairs of 88). Shortening vs recovery still follows the candidate counts (the damage).
+ 705:             n_hold5 = min(c_hold, int(round((0.20 if args.od5_v2 else 0.25) * n_rem))) if (c_sh + c_rec) else n_rem
+ 706:             if args.od5_v3:  # (15 Nov, consult24) neutral pairs never take more than 20%, held parts included
+ 707:                 n_hold5 = min(c_hold, int(round(0.20 * n_rem)))
+ 708:             n_act = n_rem - n_hold5
+ 709:             tot5 = max(1, c_sh + c_rec)
+ 710:             n_sh5 = int(round(n_act * c_sh / tot5))
+ 711:             if args.od5_v2 and not args.od5_v4 and c_sh and dmg > -0.015:  # (14 Nov, consult23) recovery <= 20% unless the slice lost > 1.5 pts
+ 712:                 n_rec_cap = min(len(cand[part]["recovery"]), int(round(0.20 * n_act)))
+ 713:                 n_sh5 = min(c_sh, n_act - n_rec_cap)
+ 714:             sh5 = take(part, "shorten", cand[part]["shorten"], n_sh5) if c_sh else []
+ 715:             healthy5 = args.od5_v3 and part not in stop5 and dmg >= 0.0
+ 716:             rec5 = take(part, "recovery", cand[part]["recovery"],
+ 717:                         min(n_act - len(sh5), int(round(0.20 * n_act))) if healthy5 else n_act - len(sh5))
+ 718:             hold5 = take(part, "right", cand[part]["hold"], n_hold5 if args.od5_v3 else n_rem - len(sh5) - len(rec5))
+ 719:             if len(sh5) + len(rec5) + len(hold5) < n_rem and not healthy5:  # protective kinds fill any gap, never shortening
+ 720:                 rec5 += take(part, "recovery", cand[part]["recovery"], n_rem - len(sh5) - len(rec5) - len(hold5))
+ 721:             by_part[part] = got5 + sh5 + rec5 + hold5
+ 722:             if len(by_part[part]) < n:
+ 723:                 shortfall[part] = n - len(by_part[part])
+ 724:             counts[(part, "od5 slice accuracy vs the original (pts)")] = f"{100 * dmg:+.1f}"
+ 725:             counts[(part, "od5 candidates shorten / recovery / hold / loop / format / count")] = (
+ 726:                 f"{len(cand[part]['shorten'])}{' (held)' if part in stop5 else ''} / {len(cand[part]['recovery'])} / "
+ 727:                 f"{c_hold} / {len(cand[part]['loop'])} / {len(cand[part]['format'])} / {len(cand[part]['right_count'])}")
+ 728:             for kind5 in ("shorten", "recovery", "right", "loop", "format"):
+ 729:                 counts[(part, f"od5 {kind5}")] = sum(1 for x in by_part[part] if x["kind"] == kind5)
+ 730:             counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+ 731:             continue
+ 732:         if args.kinds == "mix":
+ 733:             base_part = "svamp" if part == "svamp_hard" else part
+ 734:             sh_share = {k: float(v) for k, v in (x.split("=") for x in args.mix_shares.split(","))}
+ 735:             if args.mix_preset == "round1":
+ 736:                 # (11 Nov, both reviews) shorten-dominant round 1: it must reach ~53-57% saved for round 2 to repair
+ 737:                 sh_share = ({"shorten": 0.60, "right": 0.40, "guard": 0.0} if part in ("svamp", "bfcl_irrelevance") else
+ 738:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "ifeval" else
+ 739:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 740:             if args.mix_preset == "typed":
+ 741:                 # (11 Nov, the IFEval + tool-call repair) "think less" only where the full-test records show thinking is
+ 742:                 # worth little (IFEval without a counting rule, tool calls); math and code get NO "think less" pair, only
+ 743:                 # "be right" and "don't stop early" pairs (they hold the rest in place)
+ 744:                 sh_share = ({"shorten": 0.0, "right": 0.80, "guard": 0.20} if part in ("svamp", "mbpp") else
+ 745:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 746:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 747:             count_share = args.count_share
+ 748:             stop_sh = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+ 749:             if args.mix_preset == "typed2":
+ 750:                 # (11 Nov, rpL = rpK + consult9's IFEval fixes + the anti-loop pair) tool calls as in "typed"; math and code
+ 751:                 # hold as in "typed", with a tenth of anti-loop pairs; IFEval: 20% counting-rule pairs (true "at least N" rules,
+ 752:                 # --count-mode atleast), 50% "shorter thinking", 15% be-right, 15% anti-loop
+ 753:                 sh_share = ({"shorten": 0.0, "right": 0.70, "guard": 0.20, "loop": 0.10} if part in ("svamp", "mbpp") else
+ 754:                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
+ 755:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 756:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 757:                 count_share = 0.20
+ 758:             if args.mix_preset == "round1b":
+ 759:                 # (11 Nov, Path 1 redesigned) round 1 as launched (60 / 40 on math and no fit, 70 / 30 on code and tool calls)
+ 760:                 # with two changes: anti-loop pairs take 15 points of the be-right side on math and code (the original's
+ 761:                 # runaways hold 30% of its code tokens and 10% of its math tokens), and IFEval uses rpL's rules (20% counting
+ 762:                 # pairs on true "at least N" rules, 50% "shorter thinking", 15% be-right, 15% anti-loop)
+ 763:                 sh_share = ({"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "svamp" else
+ 764:                             {"shorten": 0.70, "right": 0.15, "guard": 0.0, "loop": 0.15} if part == "mbpp" else
+ 765:                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
+ 766:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 767:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 768:                 count_share = 0.20
+ 769:             if args.mix_preset == "typed3":
+ 770:                 # (11 Nov, rpM, consult10 after rpK-20's full test and rpL) math: NO "shorter", NO anti-loop, half widened guards
+ 771:                 # and half length-held be-right; code as rpL; IFEval: 25% counting pairs (true length rules), 45% "shorter"
+ 772:                 # (questions without a counting rule, response held), 22.5% be-right, 7.5% response loops; several functions 50 / 50
+ 773:                 sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+ 774:                             {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+ 775:                             {"shorten": 0.60, "right": 0.30, "guard": 0.0, "loop": 0.10} if part == "ifeval" else
+ 776:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 777:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 778:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 779:                 count_share = 0.25
+ 780:             if args.mix_preset == "round1c":
+ 781:                 # (11 Nov, Path 1's round 1 redesigned, consult10's edits to round1b) math 45% shorter / 35% be-right / 15% widened
+ 782:                 # guards / 5% anti-loop (the first round 1 over-cut math); code 70 / 13 / 10 / 7; IFEval as rpM with 20% counting
+ 783:                 # pairs; several functions 50 / 50; anti-loop pairs 144 instead of 360
+ 784:    
+[output cut at 10,000 characters]

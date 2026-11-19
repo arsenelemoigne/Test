@@ -1,0 +1,126 @@
+=== track.py lines 4620..4710 (fullpick) ===
+4620: 
+4621: def fullpick(args):
+4622:     """(13 Nov, user) the FULL test (2,759 x 8) of 2 checkpoints per model, chosen once all are scored: (1) the one whose Dev
+4623:     score, corrected by Dev's known over-reading (--fp-save-bias / --fp-acc-bias), lies closest to the objective (> 50% saved
+4624:     at better than -1; inside it, the most saving); (2) the step-2 starting point (dpo: r2pick's gate rule; arena: the stop
+4625:     rule's result models/<run>-best), or the next closest when it is the same. dpo candidates = ptrepair's Dev-scored
+4626:     checkpoints (merged here to models/<run>-sSTEP); arena candidates = the merged round models, scored by the free monitor
+4627:     (round k+1's answers measure round k's model)."""
+4628:     import copy
+4629:     run_name = args.fp_run
+4630:     cands = []  # (label, model path, dev saved, dev acc)
+4631:     if args.fp_kind == "dpo":
+4632:         for step in args.pk_steps:
+4633:             d, v = BON / f"dev512-{run_name}-{step}" / "dev_score.json", BON / f"devsv-{run_name}-{step}" / "dev_score.json"
+4634:             drive_sync("restore", only=[str(d.parent), str(v.parent)])
+4635:             if d.exists():  # (15 Nov, user: Dev-SVAMP is not needed as a first check) Dev-SVAMP optional
+4636:                 a = json.loads(d.read_text())
+4637:                 b = json.loads(v.read_text()) if v.exists() else {"saved": None, "acc": None}
+4638:                 base_tag = "" if args.fp_base == "Qwen/Qwen3-0.6B" else "-on-" + Path(args.fp_base).name  # (14 Nov) never reuse a wrong-base merge
+4639:                 cands.append({"label": f"{run_name}-s{step}", "step": step, "model": f"models/{run_name}-s{step}{base_tag}",
+4640:                               "saved": a["saved"], "acc": a["acc"], "sv_saved": b["saved"], "sv_acc": b["acc"]})
+4641:         gate = [c for c in cands if args.pk_save_lo <= c["saved"] <= args.pk_save_hi and c["acc"] >= args.pk_acc
+4642:                 and (c["sv_saved"] is None or (c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc))]
+4643:         start = max(gate, key=lambda c: c["saved"])["label"] if gate else None
+4644:     elif getattr(args, "fp_dev_rounds", None):  # (15 Nov, user: "just do the normal 512 tests and we will pick the best 2")
+4645:         for k in args.fp_dev_rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
+4646:             label = f"{run_name}-r{k}"
+4647:             d = BON / f"dev512-{label}" / "dev_score.json"
+4648:             drive_sync("restore", only=[str(d.parent), f"models/{label}"])
+4649:             if not d.exists() and not (Path("models") / label / "config.json").exists():
+4650:                 print(f"fullpick {run_name}: {label} does not exist (fewer rounds ran): skipped", flush=True)
+4651:                 continue
+4652:             if not d.exists():
+4653:                 print(dev_score_model(label, f"models/{label}", vs=getattr(args, "rp_dev_vs", "")), flush=True)
+4654:             if d.exists():
+4655:                 a = json.loads(d.read_text())
+4656:                 cands.append({"label": label, "model": f"models/{label}", "saved": a["saved"], "acc": a["acc"]})
+4657:         start = None  # the 2nd pick is simply the next best
+4658:     else:
+4659:         log = BON / f"{run_name}-monitor.jsonl"
+4660:         best_f = Path(f"data/{run_name}-best.json")
+4661:         drive_sync("restore", only=[str(log), str(best_f)])
+4662:         hist = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+4663:         for h in hist:
+4664:             if h["answering_model"].startswith("models/"):
+4665:                 cands.append({"label": Path(h["answering_model"]).name, "model": h["answering_model"], "saved": h["saved"],
+4666:                               "acc": h["acc"]})
+4667:         start = Path(json.loads(best_f.read_text())["best"]).name if best_f.exists() else None
+4668:         d = BON / f"dev512-{run_name}-best" / "dev_score.json"
+4669:         drive_sync("restore", only=[str(d.parent)])
+4670:         if start and start not in {c["label"] for c in cands} and d.exists():  # the result is the last, unmonitored round
+4671:             a = json.loads(d.read_text())
+4672:             cands.append({"label": start, "model": f"models/{run_name}-best", "saved": a["saved"], "acc": a["acc"]})
+4673:     if not cands:  # (19 Nov) e.g. the run trained nothing (not enough matched data): say so, do not crash the queue
+4674:         print(f"fullpick {run_name}: NO CANDIDATE (no scored round model): nothing to test", flush=True)
+4675:         Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": []}))
+4676:         drive_sync("save")
+4677:         return
+4678:     if getattr(args, "fp_min_save", None) is not None and max(c["saved"] for c in cands) < args.fp_min_save:
+4679:         # (15 Nov, user: "if we are not near 50% on the Dev 512, let's not run the full eval")
+4680:         print(f"fullpick {run_name}: NO FULL TEST: best Dev saving {max(c['saved'] for c in cands):+.1f}% < --fp-min-save "
+4681:               f"{args.fp_min_save} | " + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}" for c in cands), flush=True)
+4682:         return
+4683:     if getattr(args, "fp_gate_save", None) is not None:  # (18 Nov, user) only candidates whose Dev predicts beating the best
+4684:         good = [c for c in cands if c["saved"] >= args.fp_gate_save and c["acc"] >= (args.fp_gate_acc if args.fp_gate_acc is not None else -99)]
+4685:         print(f"fullpick {run_name}: gate Dev saving >= {args.fp_gate_save} and accuracy >= {args.fp_gate_acc}: "
+4686:               + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}{' PASS' if c in good else ''}" for c in cands), flush=True)
+4687:         if not good:
+4688:             print(f"fullpick {run_name}: NO FULL TEST: no round passes the gate", flush=True)
+4689:             Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": cands}))
+4690:             drive_sync("save")
+4691:             return
+4692:         cands = good
+4693: 
+4694:     def dist(c):
+4695:         ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias - getattr(args, "fp_acc_slope", 0.0) * max(0.0, c["saved"] - 53.0)
+4696:         inside = ps > 50 and pa > getattr(args, "fp_acc_gate", -1.0)
+4697:         return (0, -ps) if inside else (1, max(0.0, 50.5 - ps) + 2 * max(0.0, -0.9 - pa))
+4698:     ranked = sorted(cands, key=dist)
+4699:     tested = set()
+4700:     if getattr(args, "fp_skip_tested", False):  # (15 Nov, user) a model full-tested elsewhere (the other GPU) is never re-picked
+4701:         for c in cands:
+4702:             out_c = ROOT / f"full-{Path(c['model']).name}"
+4703:             drive_sync("restore", only=[str(out_c)])
+4704:             if (out_c / "results.json").exists():
+4705:                 tested.add(c["label"])
+4706:         drive_sync("restore", only=[f"data/{run_name}-fullpick*.json"])  # picked on the other GPU (test maybe still running)
+4707:         for f in Path("data").glob(f"{run_name}-fullpick*.json"):
+4708:             if f.name != f"{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json":
+4709:                 tested |= {c["label"] for c in json.loads(f.read_text())["picks"]}
+4710:         if tested:
+
+=== track.py lines 5180..5510 (ptrepair / odpo / odpo_fixed) ===
+5180:                         g = ngrams(words(r["prompt"]))
+5181:                         if (r["id"] in ex or json.dumps(r["prompt"], sort_keys=True) in pool_texts or g & test_g
+5182:                                 or (g and len(g & dev_g) * 10 >= 3 * len(g))):
+5183:                             continue
+5184:                         keep.append(r)
+5185:                     random.Random(args.rp_seed).shuffle(keep)
+5186:                     print(f"repair {name}: {part_s} extra questions from {src}: {len(keep)} usable, taking {want_x[part_s]}", flush=True)
+5187:                     rows_x += keep[:want_x[part_s]]
+5188:                     # (12 Nov) the rest of this draw, for the fill-until-full batches below (reused answers have no other fill)
+5189:                     Path(f"data/repair-{name}-extra-left-{part_s}.jsonl").write_text(
+5190:                         "".join(json.dumps(r) + "\n" for r in keep[want_x[part_s]:]))
+5191:                 data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
+5192:                 print(f"repair {name}: {len(rows_x)} extra questions (public datasets; ids sv-*), answered by {answerer}", flush=True)
+5193:                 py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+5194:                    args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+5195:                    "--max-questions", len(rows_x), "--seed", 54)
+5196:                 drive_sync("save")
+5197:             rolls.append(roll_x / "rollouts.jsonl")
+5198: 
+5199:         def build():
+5200:             # (15 Nov, r2one crash on a fresh runtime) the data files named in the pair rules (--base-think, --base-stats, ...)
+5201:             drive_sync("restore", only=[y for x in args.rp_pair_args.split(",") for y in x.split("+")
+5202:                                         if y.startswith(("data/", "runs/"))])
+5203:             py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+5204:                "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
+5205:         build()
+5206:         # (12 Nov, user: "enough data for a full pass?") reused answers + new questions from an outside source: if a part
+5207:         # with such a source is still short, answer up to 2 more batches of that source's leftover questions and rebuild
+5208:    
+[output cut at 10,000 characters]
+
+Reminder: update /Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/work/notes.md now (append new findings with numbers, files read, open questions); it is all that survives a context restart.

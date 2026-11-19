@@ -1,0 +1,62 @@
+=== repair_pairs.py lines 960..1020 ===
+ 960:         counts[(part, "SHORT of quota")] = max(0, n - len(by_part[part]))
+ 961:     if args.kinds == "mix" and od5 and args.od5_v3:  # (15 Nov, consult24 rule A) free slots -> shorten on the healthy parts
+ 962:         free = sum(quota.values()) - sum(len(v) for v in by_part.values())
+ 963:         h_parts = [p_ for p_ in quota if p_ in by_part and healthy_v3(p_)]
+ 964:         moved = Counter()
+ 965:         while free > 0 and h_parts:
+ 966:             tot_q = sum(quota[p_] for p_ in h_parts)
+ 967:             share = {p_: max(1, int(round(free * quota[p_] / tot_q))) for p_ in h_parts}
+ 968:             got_any = 0
+ 969:             for p_ in h_parts:
+ 970:                 if free <= 0:
+ 971:                     break
+ 972:                 extra = take(p_, "shorten", cand[p_]["shorten"], min(share[p_], free))
+ 973:                 by_part[p_] += extra
+ 974:                 moved[p_] += len(extra)
+ 975:                 free -= len(extra)
+ 976:                 got_any += len(extra)
+ 977:             if not got_any:
+ 978:                 break
+ 979:             h_parts = [p_ for p_ in h_parts if any((id(c), id(w)) not in used for _, c, w in cand[p_]["shorten"])]
+ 980:         for p_ in quota:
+ 981:             if p_ in by_part:
+ 982:                 counts[(p_, "od5 v3 slice accuracy measured first (pts)")] = f"{100 * part_dmg_v3.get(p_, 0.0):+.1f}"
+ 983:                 counts[(p_, "od5 v3 health")] = ("HELD" if p_ in stop_v3 else "healthy" if healthy_v3(p_) else "caution (< 0)")
+ 984:                 counts[(p_, "od5 v3 free slots received (shorten)")] = moved[p_]
+ 985:                 for kind5 in ("shorten", "recovery", "right", "loop", "format"):
+ 986:                     counts[(p_, f"od5 {kind5}")] = sum(1 for x in by_part[p_] if x["kind"] == kind5)
+ 987:                 counts[(p_, "SHORT of quota")] = max(0, quota[p_] - len(by_part[p_]))
+ 988:         counts[("all", "od5 v3 free slots left empty")] = free
+ 989:     # stratified order: interleave the parts by their shares, kinds alternating inside each part
+ 990:     # (11 Nov, review fix) kinds interleaved by their shares (credit scheme), shuffled inside each kind: any prefix of the
+ 991:     # file holds every kind in proportion (before: kinds sorted by name, so with 3 kinds the "shorten" pairs all came last)
+ 992:     queues = {}
+ 993:     for part, ps in by_part.items():
+ 994:         kinds = {}
+ 995:         for pr in sorted(ps, key=lambda p: rng.random()):
+ 996:             kinds.setdefault(pr["kind"], []).append(pr)
+ 997:         tot = sum(len(v) for v in kinds.values())
+ 998:         kshare = {k: len(v) / max(1, tot) for k, v in kinds.items()}
+ 999:         kcredit, order = Counter(), []
+1000:         while any(kinds.values()):
+1001:             for k, v in kinds.items():
+1002:                 kcredit[k] += kshare[k]
+1003:                 while kcredit[k] >= 1 and v:
+1004:                     order.append(v.pop(0))
+1005:                     kcredit[k] -= 1
+1006:         queues[part] = order
+1007:     total = sum(len(q) for q in queues.values())
+1008:     share = {part: len(q) / max(1, total) for part, q in queues.items()}
+1009:     credit = Counter()
+1010:     while any(queues.values()):  # each round adds every part's share; a part emits a pair per whole unit of credit
+1011:         for part, q in queues.items():
+1012:             credit[part] += share[part]
+1013:             while credit[part] >= 1 and q:
+1014:                 pairs.append(q.pop(0))
+1015:                 credit[part] -= 1
+1016:     out = Path(args.out)
+1017:     out.mkdir(parents=True, exist_ok=True)
+1018:     (out / "pairs.jsonl").write_text("".join(json.dumps(p) + "\n" for p in pairs))
+1019:     (out / "shortfall.json").write_text(json.dumps(shortfall))
+1020:     lines = [f"{len(pairs)} pairs ({len(per_q)} questions)"]

@@ -1,0 +1,115 @@
+ 451:                         if best is None or key < best[0]:
+ 452:                             best = (key, r, w)
+ 453:                 if best:
+ 454:                     cand[part]["recovery"].append((qid, best[1], best[2]))
+ 455:             elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-1.12x, at 1.00)
+ 456:                 best = None
+ 457:                 if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):
+ 458:                     # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
+ 459:                     for r in clean:
+ 460:                         for w in wrongs:
+ 461:                             ratio = thinking_len(r) / max(1, thinking_len(w))
+ 462:                             if 0.50 <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
+ 463:                                                            or response_len(r) <= args.right_resp_cap * response_len(w) + 15):
+ 464:                                 key = (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75))
+ 465:                                 if best is None or key < best[0]:
+ 466:                                     best = (key, r, w)
+ 467:                 for r in (clean if best is None else []):
+ 468:                     for w in wrongs:
+ 469:                         ratio = thinking_len(r) / max(1, thinking_len(w))
+ 470:                         if 0.90 <= ratio <= 1.12:
+ 471:                             key = (round(abs(ratio - 1.0), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+ 472:                             if best is None or key < best[0]:
+ 473:                                 best = (key, r, w)
+ 474:                 if best:
+ 475:                     cand[part]["hold"].append((qid, best[1], best[2]))
+ 476:             continue
+ 477:         if args.kinds == "mix":  # (11 Nov) path 1 rounds and the typed repair: shorten / compact be-right / capped guard
+ 478:             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+ 479:                                           length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+ 480:             no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
+ 481:             # (11 Nov, rpL) an answer that RUNS AWAY (loops to the token cap, or never closes its thinking) loses to a
+ 482:             # finished right answer of the same question. Before, an unfinished answer was never used at all, so no pair
+ 483:             # said "do not loop" (runaways hold 26% of rpE-80's IFEval tokens on the full test)
+ 484:             runaway = [r for r in q if not finished(r)]
+ 485:             if base_part in loop_resp_only:  # (rpM) only loops in the RESPONSE (the thinking closed, then cut at the cap)
+ 486:                 runaway = [r for r in runaway if r["closed_thinking"]]
+ 487:             loop_chosen = rights
+ 488:             if args.loop_finished:  # (14 Nov, consult22) + finished repetition loops; the chosen answer never loops
+ 489:                 runaway = runaway + [r for r in q if finished(r) and not right(r) and loops8(r)]
+ 490:                 loop_chosen = [r for r in rights if not loops8(r)]
+ 491:             if loop_chosen and runaway:
+ 492:                 cand[part]["loop"].append((qid, loop_chosen[0], runaway[0]))
+ 493:             if args.mix_preset in ("r2s3b", "r2one") and args.loop_finished:  # (15 Nov, consult25 / 27) no pair chooses a loop
+ 494:                 rights = [r for r in rights if not loops8(r)] or rights
+ 495:             sh_min = sh_min_part.get(base_part, args.shorten_min_right)
+ 496:             sh_ratio = sh_ratio_part.get(base_part, args.shorten_ratio)
+ 497:             rights_s = rights[1:] if args.shorten_skip_shortest and len(rights) >= 4 else rights  # (r2one) not the outlier
+ 498:             if (len(all_rights) >= 2 and len(all_rights) / len(q) >= sh_min and not no_shorten and rights_s
+ 499:                     and rights_s[0] is not all_rights[-1]):
+ 500:                 long, short = all_rights[-1], rights_s[0]
+ 501:                 if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+ 502:                     # (11 Nov, rpL) thinking shorter, response neither clipped nor longer: at least --resp-median x the
+ 503:                     # question's median right response, at most --resp-max x the rejected answer's response
+ 504:                     rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
+ 505:                     ok = [r for r in rights_s if r is not long and response_len(r) >= args.resp_median * rmed
+ 506:                           and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
+ 507:                           and response_len(r) >= args.resp_near_long * response_len(long)]
+ 508:                     short = ok[0] if ok else long
+ 509:                 elif part in think_only and args.resp_guard > 0:  # (11 Nov) never prefer a notably shorter RESPONSE
+ 510:                     short = next(r for r in rights_s if response_len(r) >= args.resp_guard * response_len(long))
+ 511:                 if short is not long:
+ 512:                     spread = size(long) / max(1, size(short))
+ 513:                     if spread >= sh_ratio:
+ 514:                         cand[part]["shorten"].append((qid, short, long))
+ 515:                     elif spread >= 1.20:  # (11 Nov, consult6 2nd review) backup supply if clear shorten pairs run short
+ 516:                         cand[part]["shorten_soft"].append((qid, short, long))
+ 517:                 if base_part in shorten_second and len(rights) >= 3 and short is not long:
+ 518:                     # (12 Nov) a second pair on two OTHER answers: rejected = the second-longest right answer, chosen = the
+ 519:                     # first other answer passing the same response rules; the same ratio thresholds apply
+ 520:                     long2 = rights[-2]
+ 521:                     if part in think_only and (args.resp_median > 0 or args.resp_max > 0):
+ 522:                         rmed = sorted(response_len(r) for r in rights)[len(rights) // 2]
+ 523:                         ok2 = [r for r in rights[:-2] if r is not short and response_len(r) >= args.resp_median * rmed
+ 524:                                and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long2))
+ 525:                                and response_len(r) >= args.resp_near_long * response_len(long2)]
+ 526:                     else:
+ 527:                         ok2 = [r for r in rights[:-2] if r is not short]
+ 528:                     if ok2:
+ 529:                         spread2 = size(long2) / max(1, size(ok2[0]))
+ 530:                         if spread2 >= args.shorten_ratio:
+ 531:                             cand[part]["shorten"].append((qid, ok2[0], long2))
+ 532:                         elif spread2 >= 1.20:
+ 533:                             cand[part]["shorten_soft"].append((qid, ok2[0], long2))
+ 534:             if rights and wrongs:
+ 535:                 if is_cr:  # a counting rule: the right answer writes at least as much, thinks at most 1.2x
+ 536:                     taken = set()  # (11 Nov) up to 2 pairs per question, on different answers: counting-rule pairs are the
+ 537:                     for rej in wrongs[:2]:  # scarce kind (244 for a half-quota of 400 on the original's real answers)
+ 538:                         need = args.count_resp_min * response_len(rej) + 15 if args.count_resp_min > 0 else response_len(rej)
+ 539:                         fit = [r for r in rights if id(r) not in taken and response_len(r) >= need
+ 540:                                and thinking_len(r) <= 1.2 * thinking_len(rej)
+ 541:                                and (args.count_resp_cap <= 0
+ 542:                                     or response_len(r) <= args.count_resp_cap * response_len(rej) + args.count_resp_pad)]
+ 543:                         if fit:
+ 544:                             pick = min(fit, key=thinking_len)
+ 545:                             taken.add(id(pick))
+ 546:                             cand[part]["right_count"].append((qid, pick, rej))
+ 547:                 else:  # (11 Nov, both reviews) rpE's proven compact "be right" pair: the shortest right answer that re-checks
+ 548:                     # the question (within 1.5x the shortest right's thinking), else the shortest right, over the shortest
+ 549:                     # finished wrong; replaces the equal-length pairs (D6 / runa2: equal-length right>wrong halves the saving)
+ 550:                     pool_r = rights
+ 551:                     tmed = sorted(thinking_len(r) for r in rights)[len(rights) // 2]  # the question's median right thinking
+ 552:                     if part in think_only and args.right_resp_cap > 0:  # (11 Nov, rpL) be right without writing more
+ 553:                         pool_r = [r for r in rights if response_len(r) <= args.right_resp_cap * response_len(wrongs[0]) + 15]
+ 554:                     if base_part in right_hold:
+ 555:                         # (rpM) hold the length: the right / wrong pair of this question whose thinking lengths are closest,
+ 556:                         # kept only if the right answer thinks 0.95-1.25x as long as the wrong one (a pair about being
+ 557:                         # right, with no "be shorter" signal: the shortest right answer over a long wrong one taught math to
+ 558:                         # skip its re-check); among equally close pairs, a right answer that re-reads the question
+ 559:                         best = None
+ 560:                         b3 = args.mix_preset in ("r2s3b", "r2one")  # (15 Nov, consult25 / 27) never length-match an early stop
+ 561:                         for r in rights:
+ 562:                             for w
+[output cut at 10,000 characters]
+
+Reminder: update /Users/arsenelemoigne/Claude Build/Test-mvt-fading/thinkingcap/reviews/consult32_od5h/work/notes.md now (append new findings with numbers, files read, open questions); it is all that survives a context restart.

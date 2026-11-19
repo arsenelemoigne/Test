@@ -1,0 +1,30 @@
+=== EXPERIMENT_LOG tail ===
+v + gate) next on GPU 2.
+- 19 Nov ~03:40 CET od5f-best after the r23 line Dev-512: 46.3% [43.5, 49.0] / +4.06 [+2.28, +5.73] (the r21-line result read 46.8 / +3.62; r18 60.4-61.5): rounds 22-23 did not recover the saving. fullpick od5f 19-23 (gated) next.
+- 19 Nov ~04:20 CET **code m1 screened: 434 x8, mean solve 48%** (test code 52%; b1 25%, b2 16%): sometimes right 250, always 64, never 120 = medium difficulty, close to the test (test bins: never 36%, always 29%; here never 28%, always 15%, in between 58%). Math m1 screen running.
+- 19 Nov ~04:25 CET od5f-r19 Dev-512: 52.7% [50.3, 55.2] / +3.49 (r18 60.4-61.5): below the full-test gate (57.8). Rounds 20-23 Dev next.
+- 19 Nov ~04:40 CET **math m1 screened: 624 x8, mean solve 94%** (always 519, sometimes 95, never 10): easy SVAMP-like, as needed (the pool math left solved 85% vs the test's 89%; the bins mix them). od3branch next (builds + checks slices 20-24).
+- 19 Nov ~04:45 CET **od5f-r20 Dev-512: 57.6% [55.2, 60.0] / +2.72 [+0.86, +4.55]**: misses the full-test gate (57.8) by 0.2; predicted full test ~57.3 / ~+0.3 (bias +0.4 / +2.4): a different trade-off than r18 (59.5 / -0.80): less saving, much better accuracy. Candidate for a manual full test if the user wants it (running fullpick can not be changed).
+
+## 19 Nov ~05:40 ? od3g branch data
+- Retry with length-tail trimming: slices 20, 21, 22 written, every metric within tolerance (e.g. r20 code solve 53 vs 52, tokens 1657 vs 1680; svamp 88 vs 89, 727 vs 728).
+- Slice 23 NOT written: remaining code pool has median too long (1409 vs 1062) and p90 too short (2748 vs 4025); trimming one tail worsens the other. Known flaw: trim direction is chosen from the mean only.
+- Decision: od5g trains rounds 19-22 only (slice 19 = od3's, 20-22 new), Dev gate 57.8 / -0.3, tag -y3; GPU 2 waitfor -> y3, full test tag -z3.
+- 19 Nov: od5f-r21 Dev-512: saved 46.8 [44.1, 49.4], acc +3.42 [1.72, 5.11] (below gate).
+- 19 Nov ~06:30: od5g round-19 monitor (= od5f-r18 on slice 19): 58.6 / +1.81; then crash IndexError (conv check indexed history by position). Fixed (lookup by round), requeued od5g 19-22 + fullpick tag -y4; GPU 2 waitfor -> y4, -z4.
+- 19 Nov ~07:00: GPU 1 reached end at 0334ccf (before the fix); its od5g lines skipped (no candidates). od5g 19-22 + gated fullpick -y4 moved to GPU 2 after the od5f 19-23 fullpick, before effsame/effpara. GPU 1 idle (restart needs the user).
+- 19 Nov: od5f-r22 Dev-512: saved 51.7 [49.1, 54.3], acc +3.23 [1.53, 5.03] (below gate).
+- 19 Nov: od5f-r23 Dev-512: 45.8 [42.8, 48.6] / +3.25. fullpick od5f 19-23: no round passes the gate (best r20 57.6/+2.72) -> no full test. od5g started on GPU 2.
+- 19 Nov: od5g round-20 monitor (od5g-r19 on new slice od3g-r20): 52.1 / +2.85 (od5f round 20 on old slice: 47.8 / +2.90). Brake holds bfcl_simple_python.
+- 19 Nov: od5g round-21 monitor (od5g-r20 on od3g-r21): 55.0 / +2.07 (od5f r21 old slice: 55.1 / +1.99). Code 50/-2.8, math 62/-0.9.
+- 19 Nov: od5g round-22 monitor (od5g-r21 on od3g-r22): 48.0 / +3.73 (code 33/+1.4) ? same saving-for-accuracy swing as od5f r22 (42.1/+4.38). New data did not remove the oscillation.
+- 19 Nov: od5g-best (final, = r22) Dev-512: 50.5 [48.0, 53.0] / +3.94 [2.37, 5.77].
+- 19 Nov: od5g-best Dev-SVAMP-200: 47.8 [44.0, 51.1] / +0.56 [-1.56, 2.69]. fullpick od5g 19-22 (-y4) started.
+- 19 Nov: od5g-r19 Dev-512: 55.0 [52.5, 57.4] / +2.59 (od5f-r19: 52.7 / +3.49).
+- 19 Nov: od5g-r20 Dev-512: 58.2 [55.9, 60.7] / +3.18 [1.45, 4.89] -> PASSES the gate (57.8 / -0.3). Best Dev so far. Expected full test ~57.8 / +0.8 (Dev bias +0.4 / +2.4).
+- 19 Nov: od5g-r21 Dev-512: 51.6 [49.1, 54.2] / +4.17 (below gate; od5f-r21 46.8 / +3.42). Only r20 passes so far.
+- 19 Nov: od5g-r22 Dev-512: 50.6 / +4.49. fullpick od5g: only r20 passes -> FULL TEST od5g-r20 running on GPU 2. fullpick's own correction predicts full ~57.9 / -1.07 (acc bias 2.95 + slope 0.25 per saving point), more pessimistic than the plain +2.4 Dev bias (-> +0.8).
+- **19 Nov: od5g-r20 FULL TEST (2,759 x 8): saved 57.4%, accuracy +0.1** ? best ACCURACY at high saving (no loss at all); od5f-r18 (59.5 / -0.80) still saves more. Neither reaches >60% at better than -1. (Correction of a first note that called it the new best overall.)
+  Per type (saved / acc): math 67 / -1.5, code 54 / -0.4, IFEval 53 / +1.8, one function 49 / -2.2, several 50 / -0.7, no-fit 59 / +6.1.
+  Dev 58.2 / +3.18 -> full 57.4 / +0.1 (Dev bias +0.8 saving, +3.1 accuracy). fullpick's corrected forecast was 57.9 / -1.07.
+

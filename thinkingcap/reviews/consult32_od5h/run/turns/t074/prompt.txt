@@ -1,0 +1,125 @@
+--- track.py 5180-5320 ---
+5180:                         g = ngrams(words(r["prompt"]))
+5181:                         if (r["id"] in ex or json.dumps(r["prompt"], sort_keys=True) in pool_texts or g & test_g
+5182:                                 or (g and len(g & dev_g) * 10 >= 3 * len(g))):
+5183:                             continue
+5184:                         keep.append(r)
+5185:                     random.Random(args.rp_seed).shuffle(keep)
+5186:                     print(f"repair {name}: {part_s} extra questions from {src}: {len(keep)} usable, taking {want_x[part_s]}", flush=True)
+5187:                     rows_x += keep[:want_x[part_s]]
+5188:                     # (12 Nov) the rest of this draw, for the fill-until-full batches below (reused answers have no other fill)
+5189:                     Path(f"data/repair-{name}-extra-left-{part_s}.jsonl").write_text(
+5190:                         "".join(json.dumps(r) + "\n" for r in keep[want_x[part_s]:]))
+5191:                 data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
+5192:                 print(f"repair {name}: {len(rows_x)} extra questions (public datasets; ids sv-*), answered by {answerer}", flush=True)
+5193:                 py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+5194:                    args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+5195:                    "--max-questions", len(rows_x), "--seed", 54)
+5196:                 drive_sync("save")
+5197:             rolls.append(roll_x / "rollouts.jsonl")
+5198: 
+5199:         def build():
+5200:             # (15 Nov, r2one crash on a fresh runtime) the data files named in the pair rules (--base-think, --base-stats, ...)
+5201:             drive_sync("restore", only=[y for x in args.rp_pair_args.split(",") for y in x.split("+")
+5202:                                         if y.startswith(("data/", "runs/"))])
+5203:             py("repair_pairs.py", "--rollouts", *rolls, "--out", pairs, "--quota", quota, "--kinds", args.rp_kinds,
+5204:                "--seed", getattr(args, "rp_dpo_seed", 0), *[x for x in args.rp_pair_args.split(",") if x])
+5205:         build()
+5206:         # (12 Nov, user: "enough data for a full pass?") reused answers + new questions from an outside source: if a part
+5207:         # with such a source is still short, answer up to 2 more batches of that source's leftover questions and rebuild
+5208:         srcs_fill = {k for k, v in (x.split("=") for x in getattr(args, "rp_extra_source", "").split(",") if x)} \
+5209:             if reuse and getattr(args, "rp_extra_questions", "") and not smoke else set()
+5210:         for extra in range(1, 4 if srcs_fill else 1):  # up to 3 batches
+5211:             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+5212:             short = {k: v for k, v in short.items() if v > 0 and k in srcs_fill}
+5213:             if not short:
+5214:                 break
+5215:             taken = {json.loads(l)["id"] for f in rolls for l in open(f) if l.strip()}
+5216:             rows_x = []
+5217:             for part_s in short:
+5218:                 left_f = Path(f"data/repair-{name}-extra-left-{part_s}.jsonl")
+5219:                 left = [json.loads(l) for l in (left_f.read_text().splitlines() if left_f.exists() else []) if l.strip()]
+5220:                 left = [r for r in left if r["id"] not in taken and f"sv-{r['id']}" not in taken]
+5221:                 n_more = min(len(left), max(400, 6 * short[part_s]))
+5222:                 rows_x += left[:n_more]
+5223:                 left_f.write_text("".join(json.dumps(r) + "\n" for r in left[n_more:]))
+5224:             print(f"repair {name}: outside-source fill, batch {extra}: short {short}; answering {len(rows_x)} more questions",
+5225:                   flush=True)
+5226:             if not rows_x:
+5227:                 break
+5228:             data_x = Path(f"data/repair-{name}-xs{extra}.jsonl")
+5229:             roll_x = BON / f"rp-{name}-xs{extra}"
+5230:             data_x.write_text("".join(json.dumps(r | {"pool_id": f"sv-{r['id']}"}) + "\n" for r in rows_x))
+5231:             drive_sync("restore", only=[str(roll_x)])
+5232:             if not (roll_x / "rollouts.jsonl").exists():
+5233:                 py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+5234:                    args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+5235:                    "--max-questions", len(rows_x), "--seed", 54 + extra)
+5236:                 drive_sync("save")
+5237:             rolls.append(roll_x / "rollouts.jsonl")
+5238:             shutil.rmtree(pairs, ignore_errors=True)
+5239:             build()
+5240:         # (11 Nov, user) fill until full: with --kinds mix the proportion is fixed, so a short part means fewer pairs; on an
+5241:         # own-question draw, answer MORE new questions for the short parts (up to 2 extra batches) and rebuild
+5242:         for extra in range(1, 3 if own and args.rp_kinds == "mix" and not smoke and not getattr(args, "rp_question_file", "")
+5243:                            and not getattr(args, "rp_no_fill", False) else 1):  # (15 Nov) --rp-no-fill: never off-matched fills
+5244:             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+5245:             short = {k: v for k, v in short.items() if v > 0.1 * dict((x.split("=")[0], int(x.split("=")[1]))
+5246:                                                                        for x in quota.split(",")).get(k, 0)}
+5247:             if not short:
+5248:                 break
+5249:             more = {k: max(100, 3 * v) for k, v in short.items()}
+5250:             taken = {json.loads(l)["id"] for f in rolls for l in open(f) if l.strip()}
+5251:             ex = (excluded_ids(args) or set()) | taken
+5252:             rows_x = [r for r in own_repair_questions(more, seed=args.rp_seed + 100 * extra, exclude=ex,
+5253:                                                        public=getattr(args, "rp_public", False),
+5254:                                                        avoid_grams=dev_gram_set() if getattr(args, "rp_exclude_dev", False) else None)]
+5255:             print(f"repair {name}: fill until full, batch {extra}: short {short}; answering {len(rows_x)} more questions", flush=True)
+5256:             if not rows_x:
+5257:                 break
+5258:             data_x = Path(f"data/repair-{name}-x{extra}.jsonl")
+5259:             data_x.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in rows_x))
+5260:             roll_x = BON / f"rp-{name}-x{extra}"
+5261:             drive_sync("restore", only=[str(roll_x)])
+5262:             if not (roll_x / "rollouts.jsonl").exists():
+5263:                 py("probe_curve.py", "--data", data_x, "--sources", DEV_SOURCES, "--per-source", 1000000, "--samples",
+5264:                    args.rp_samples, "--model", answerer, "--out", roll_x, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+5265:                    "--max-questions", len(rows_x), "--seed", 53 + extra)
+5266:                 drive_sync("save")
+5267:             rolls.append(roll_x / "rollouts.jsonl")
+5268:             shutil.rmtree(pairs, ignore_errors=True)
+5269:             build()
+5270:         drive_sync("save")
+5271:     print((pairs / "summary.txt").read_text(), flush=True)
+5272:     if getattr(args, "rp_require_full", False) and not smoke:  # (12 Nov, user: "do not start until we have enough pairs")
+5273:         need = sum(int(x.split("=")[1]) for x in args.rp_quota.split(",") if x)
+5274:         have = sum(1 for l in open(pairs / "pairs.jsonl") if l.strip())
+5275:         if have < need:
+5276:             print(f"repair {name}: STOPPED BEFORE TRAINING: {have} pairs < {need} (a full pass needs all of them); "
+5277:                   f"shortfall {(pairs / 'shortfall.json').read_text() if (pairs / 'shortfall.json').exists() else '?'}", flush=True)
+5278:             drive_sync("save")
+5279:             return
+5280:         print(f"repair {name}: {have} pairs = the full {need}", flush=True)
+5281:     need_files = [x for x in re.split(r"[,+]", getattr(args, "rp_require_files", "")) if x]
+5282:     if need_files and not smoke:  # (13 Nov, user) step 1 trains only once steps 2 / 3 have their question sets too
+5283:         drive_sync("restore", only=need_files)
+5284:         missing = [f for f in need_files if not Path(f).exists() or not Path(f).read_text().strip()]
+5285:         if missing:
+5286:             print(f"repair {name}: STOPPED BEFORE TRAINING: missing {missing}", flush=True)
+5287:             return
+5288:     if getattr(args, "rp_pairs_only", False):  # (12 Nov, user: "nothing starts until we have the IFEval data ready")
+5289:         print(f"repair {name}: PAIRS ONLY: answers and pairs saved ({pairs}); no training. Rerun the line without "
+5290:               f"--rp-pairs-only to train on exactly these pairs.", flush=True)
+5291:         drive_sync("save")
+5292:         return
+5293:     adapter = Path("adapters") / f"{name}-s0"
+5294:     start = Path(args.rp_init_from) if args.rp_init_from else Path("adapters") / f"fresh-{name}"  # (10 Nov) continue an adapter
+5295:     drive_sync("restore", only=[str(adapter), str(start)])
+5296:     if args.rp_init_from:
+5297:         assert (start / "adapter_config.json").exists(), f"{start} is not on Drive"
+5298:     elif not (start / "adapter_config.json").exists():
+5299:         py("sft.py", "--init-only", "--model", merged, "--out", start, "--seed", getattr(args, "rp_dpo_seed", 0))
+5300:     steps = 4 if smoke else args.rp_steps
+5301:     if not (adapter / f"step-{steps}" / "adapter_config.json").exists():
+5302:         py("dpo.py", "--model", merged, "--p
+[output cut at 10,000 characters]

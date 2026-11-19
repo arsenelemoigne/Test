@@ -1,0 +1,246 @@
+5381:     name, base = args.name, "Qwen/Qwen3-0.6B"
+
+5382:     stats_f = Path("data/od3-base-stats.json")
+
+5383:     sl = getattr(args, "od_slices", "od3") or "od3"
+
+5384:     drive_sync("restore", only=[str(stats_f), "data/od3-*", f"data/{sl}-*"])
+
+5385:     stats = json.loads(stats_f.read_text())
+
+5386:     log = BON / f"{name}-monitor.jsonl"
+
+5387:     drive_sync("restore", only=[str(log)])
+
+5388:     history = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
+
+5389:     prev, answerer, best = None, base, None
+
+5390:     n_sl = 1  # round 1 = the stored answers; rounds k >= 2 need data/od3-rK-questions.jsonl
+
+5391:     while Path(f"data/{sl}-r{n_sl + 1}-questions.jsonl").exists():
+
+5392:         n_sl += 1
+
+5393:     if getattr(args, "od_min_rounds", 0) and n_sl < args.od_min_rounds:
+
+5394:         print(f"odpo {name}: NOT ENOUGH DATA: {n_sl} round slices < --od-min-rounds {args.od_min_rounds}: skipped, nothing "
+
+5395:               f"trained", flush=True)
+
+5396:         return
+
+5397:     if args.od_rounds > n_sl:
+
+5398:         print(f"odpo {name}: {args.od_rounds} rounds asked, {n_sl} slices exist: {n_sl} rounds", flush=True)
+
+5399:         args.od_rounds = n_sl
+
+5400:     latch_f = BON / f"{name}-latch.json"  # (13 Nov, consult20 tweak) a type braked once stays braked in later rounds
+
+5401:     drive_sync("restore", only=[str(latch_f)])
+
+5402:     latched = set(json.loads(latch_f.read_text())) if latch_f.exists() else set()
+
+5403:     s0 = max(1, getattr(args, "od_start_round", 1))
+
+5404:     if s0 > 1:  # (18 Nov, user) continue another run from its round s0-1 model on these slices
+
+5405:         assert args.od_init and args.od_answers0, "--od-start-round needs --od-init (adapter) and --od-answers0 (merged model)"
+
+5406:         drive_sync("restore", only=[str(Path(args.od_init).parent), args.od_answers0])
+
+5407:         prev, answerer = args.od_init, args.od_answers0
+
+5408:         if not (Path(answerer) / "config.json").exists():  # not on Drive (only the last round's merged model is kept): rebuild
+
+5409:             py("merge.py", "--model", base, "--out", answerer, "--adapters", f"{prev}:1")
+
+5410:             drive_sync("save")
+
+5411:         print(f"odpo {name}: starts at round {s0} from {prev} (answers: {answerer}), slices data/{sl}-rK", flush=True)
+
+5412:     for k in range(s0 - 1, args.od_rounds):
+
+5413:         done_m = Path("models") / f"{name}-r{k + 1}"  # (13 Nov) a rerun with more rounds skips the finished ones
+
+5414:         if k + 1 < args.od_rounds and any(h["round"] == k + 1 for h in history):
+
+5415:             drive_sync("restore", only=[str(done_m), f"adapters/{name}-r{k + 1}-s0"])
+
+5416:             steps_done = sorted(int(p_.name.split("-")[1]) for p_ in Path(f"adapters/{name}-r{k + 1}-s0").glob("step-*")
+
+5417:                                 if (p_ / "adapter_config.json").exists())
+
+5418:             if steps_done:
+
+5419:                 prev = f"adapters/{name}-r{k + 1}-s0/step-{steps_done[-1]}"
+
+5420:                 # (16 Nov, Drive full) only the LAST finished round's merged model is needed (it answers the next round):
+
+5421:                 # earlier ones are not rebuilt, so a restart does not refill Drive with ~1.1 GB per round
+
+5422:                 if not (done_m / "config.json").exists() and not any(h["round"] == k + 2 for h in history):
+
+5423:                     py("merge.py", "--model", base, "--out", done_m, "--adapters", f"{prev}:1")
+
+5424:                     drive_sync("save")
+
+5425:                 answerer = str(done_m)
+
+5426:                 print(f"odpo {name}: round {k + 1} already done ({done_m}, step {steps_done[-1]}), skipped", flush=True)
+
+5427:                 continue
+
+5428:         a = copy.copy(args)
+
+5429:         a.name = f"{name}-r{k + 1}"
+
+5430:         a.rp_base, a.rp_ref_base, a.rp_init_from = base, True, prev
+
+5431:         a.rp_answers_model = "" if answerer == base else answerer
+
+5432:         a.rp_steps = args.od_r1_steps if k == 0 else args.od_steps
+
+5433:         a.rp_epochs = max(args.rp_epochs, 2)
+
+5434:         a.rp_screen, a.rp_dev, a.rp_dev_svamp = [], False, False
+
+5435:         a.rp_quota = args.od_r1_quota if k == 0 and args.od_r1_quota else args.rp_quota
+
+5436:         a.rp_rollouts_from = "od3-r1-stored" if k == 0 else ""
+
+5437:         a.rp_question_file = "" if k == 0 else f"data/{sl}-r{k + 1}-questions.jsonl"  # od3prep's test-matched slices
+
+5438:         a.rp_extra_questions, a.rp_extra_source, a.rp_extra_top, a.rp_drop = "", "", "", ""
+
+5439:         if args.od_caps and k > 0:  # (13 Nov, od4 brake, user) measure THIS round's answers first, then hold the types at
+
+5440:             # their saving cap (or losing accuracy): no shortening pairs for them this round, length-held be-right + loops
+
+5441:             a0 = copy.copy(a)
+
+5442:             a0.rp_pairs_only, a0.rp_require_full = True, False
+
+5443:             ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
+
+5444:             sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
+
+5445:             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
+
+5446:             if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
+
+5447:                 import statistics
+
+5448:                 prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
+
+5449:                 per_ = {p_: (statistics.fmean([v[0]] + [h["per_part"][p_][0] for h in prev_h if p_ in h.get("per_part", {})]),
+
+5450:                              statistics.fmean([v[1]] + [h["per_part"][p_][1] for h in prev_h if p_ in h.get("per_part", {})]))
+
+5451:                         for p_, v in per_.items()}
+
+5452:                 print(f"odpo {name}: round {k + 1} brake reads the mean of {1 + len(prev_h)} slices: "
+
+5453:                       + ", ".join(f"{p_} {v[0]:.0f}/{v[1]:+.1f}" for p_, v in per_.items()), flush=True)
+
+5454:             held = sorted((set() if getattr(args, "od_unlatch", False) else latched)
+
+5455:                           | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
+
+5456:             latched = set(held)
+
+5457:             latch_f.write_text(json.dumps(held))
+
+5458:             drive_sync("save", only=[str(latch_f)])
+
+5459:             # consult20 tweak: no-fit is NOT length-held (its right answers are short refusals; holding them adds length)
+
+5460:             rh = [p_ for p_ in held if p_ != "bfcl_irrelevance"]
+
+5461:             if held:
+
+5462:                 a.rp_pair_args = (args.rp_pair_args + ",--no-shorten-parts," + "+".join(held)
+
+5463:                                   + ("," + "--right-hold," + "+".join(rh) if rh else ""))
+
+5464:             a.rp_rebuild_pairs = True
+
+5465:             print(f"odpo {name}: round {k + 1} brake on {answerer}'s answers ({sv_:+.1f}% / {ac_:+.2f}): held (no shortening) = "
+
+5466:                   f"{held or 'none'} (caps {caps}, accuracy hold <= {args.od_acc_hold})", flush=True)
+
+5467:         print(f"odpo {name}: round {k + 1}/{args.od_rounds}: {answerer} answers, DPO continues {prev or 'a fresh LoRA'}, "
+
+5468:               f"reference = the original", flush=True)
+
+5469:         ptrepair(a)
+
+5470:         roll = BON / f"rp-{a.rp_rollouts_from or a.name}" / "rollouts.jsonl"
+
+5471:         saved, acc, per = od3_monitor(roll, stats)
+
+5472:         rec = {"round": k + 1, "answering_model": answerer, "saved": round(saved, 2), "acc": round(acc, 2),
+
+5473:                "per_part": {p: [round(v[0], 1), round(v[1], 2)] for p, v in per.items()}}
+
+5474:         if not any(h["round"] == k + 1 for h in history):
+
+5475:             history.append(rec)
+
+5476:             log.write_text("".join(json.dumps(h) + "\n" for h in history))
+
+5477:         print(f"odpo {name}: MONITOR round {k + 1} answers ({answerer}) vs the original on the same questions: saved "
+
+5478:               f"{saved:+.1f}% / accuracy {acc:+.2f} | " + ", ".join(f"{p} {v[0]:+.0f}/{v[1]:+.1f}" for p, v in per.items()),
+
+5479:               flush=True)
+
+5480:         prev = f"adapters/{a.name}-s0/step-{a.rp_steps}"
+
+5481:         if not (Path(prev) / "adapter_config.json").exists():  # (13 Nov, od3 round 6) fewer steps than planned: last saved one
+
+5482:             steps_done = sorted(int(p_.name.split("-")[1]) for p_ in Path(f"adapters/{a.name}-s0").glob("step-*")
+
+5483:                                 if (p_ / "adapter_config.json").exists())
+
+5484:             assert steps_done, f"odpo {name}: round {k + 1} saved no adapter"
+
+5485:             prev = f"adapters/{a.name}-s0/step-{steps_done[-1]}"
+
+5486:             print(f"odpo {name}: round {k + 1} trained {steps_done[-1]} steps (fewer pairs than planned)", flush=True)
+
+5487:         stop_ok = k + 1 >= getattr(args, "od_stop_from", 0)
+
+5488:         if stop_ok and k > 0 and saved >= args.od_stop_save and acc >= args.od_stop_acc:
+
+5489:             best = answerer
+
+5490:             print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
+
+5491:             break
+
+5492:         prev_h = next((h for h in history if h["round"] == k), None)  # (19 Nov) by round number: a branch's history starts late
+
+5493:         if stop_ok and k >= 4 and prev_h and saved - prev_h["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
+
+5494:             best = answerer
+
+5495:             print(f"odpo {name}: STOP (saving stopped growing: {prev_h['saved']:.1f} -> {saved:.1f})", flush=True)
+
+5496:             break
+
+5497:         nxt = Path("models") / a.name
+
+5498:         drive_sync("restore", only=[str(nxt)])
+
+5499:         if not (nxt / "config.json").exists():
+
+5500:             py("merge.py", "--model", base, "--out", nxt, "--adapters", f"{prev}:1")
+
+5501:             drive_sync("save")
+
+5502:         answerer = str(nxt)
+
+5503:         if k + 1 in a
+[output cut at 10,000 characters]

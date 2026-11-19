@@ -1,0 +1,87 @@
+  50: 
+  51: 
+  52: def counting(r):
+  53:     return any(rule.startswith(COUNT_RULES) for rule in (r.get("instruction_id_list") or []))
+  54: 
+  55: 
+  56: def at_least(r):
+  57:     """(11 Nov, rpL) An IFEval question with a rule that asks for a MINIMUM amount of text: at least N words / sentences, a
+  58:     keyword or a letter at least N times, at least N placeholders or highlighted sections. The full-test records show these
+  59:     (not every counting rule) are where a shortened response fails."""
+  60:     for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+  61:         kw = kw or {}
+  62:         if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+  63:             if kw.get("relation") == "at least":
+  64:                 return True
+  65:         elif rule == "keywords:letter_frequency":
+  66:             if kw.get("let_relation") == "at least":
+  67:                 return True
+  68:         elif rule in ("detectable_content:number_placeholders", "detectable_format:number_highlighted_sections"):
+  69:             return True
+  70:     return False
+  71: 
+  72: 
+  73: def length_rule(r):
+  74:     """(11 Nov, rpM, consult10) An IFEval question where a SHORT response is what fails: at least N words / sentences, a keyword at
+  75:     least N times, N paragraphs (N >= 2). Narrower than at_least(): in rpL, placeholders / highlighted sections / letter
+  76:     frequency took two thirds of the counting pairs, and the true word-count questions fell from 37.5% to 19.6% right."""
+  77:     for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+---
+  54: 
+  55: 
+  56: def at_least(r):
+  57:     """(11 Nov, rpL) An IFEval question with a rule that asks for a MINIMUM amount of text: at least N words / sentences, a
+  58:     keyword or a letter at least N times, at least N placeholders or highlighted sections. The full-test records show these
+  59:     (not every counting rule) are where a shortened response fails."""
+  60:     for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+  61:         kw = kw or {}
+  62:         if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+  63:             if kw.get("relation") == "at least":
+  64:                 return True
+  65:         elif rule == "keywords:letter_frequency":
+  66:             if kw.get("let_relation") == "at least":
+  67:                 return True
+  68:         elif rule in ("detectable_content:number_placeholders", "detectable_format:number_highlighted_sections"):
+  69:             return True
+  70:     return False
+  71: 
+  72: 
+  73: def length_rule(r):
+  74:     """(11 Nov, rpM, consult10) An IFEval question where a SHORT response is what fails: at least N words / sentences, a keyword at
+  75:     least N times, N paragraphs (N >= 2). Narrower than at_least(): in rpL, placeholders / highlighted sections / letter
+  76:     frequency took two thirds of the counting pairs, and the true word-count questions fell from 37.5% to 19.6% right."""
+  77:     for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+  78:         kw = kw or {}
+  79:         if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+  80:             if kw.get("relation") == "at least":
+  81:                 return True
+---
+  71: 
+  72: 
+  73: def length_rule(r):
+  74:     """(11 Nov, rpM, consult10) An IFEval question where a SHORT response is what fails: at least N words / sentences, a keyword at
+  75:     least N times, N paragraphs (N >= 2). Narrower than at_least(): in rpL, placeholders / highlighted sections / letter
+  76:     frequency took two thirds of the counting pairs, and the true word-count questions fell from 37.5% to 19.6% right."""
+  77:     for rule, kw in zip(r.get("instruction_id_list") or [], r.get("kwargs") or []):
+  78:         kw = kw or {}
+  79:         if rule in ("length_constraints:number_words", "length_constraints:number_sentences", "keywords:frequency"):
+  80:             if kw.get("relation") == "at least":
+  81:                 return True
+  82:         elif rule == "length_constraints:number_paragraphs":
+  83:             if (kw.get("num_paragraphs") or 0) >= 2:
+  84:                 return True
+  85:     return False
+  86: 
+  87: 
+  88: def response_len(r):
+  89:     return len(r["output_ids"]) - len(r.get("thinking_ids") or [])
+  90: 
+  91: 
+  92: def thinking_len(r):  # (10 Nov, reviewer) an EMPTY thinking is 0 tokens, not the whole answer; only a missing field falls back
+  93:     ids = r.get("thinking_ids")
+  94:     return len(ids) if ids is not None else r["output_tokens"]
+  95: 
+  96: 
+  97: def finished(r):
+  98:     return r["closed_thinking"] and not r["truncated"]
+---

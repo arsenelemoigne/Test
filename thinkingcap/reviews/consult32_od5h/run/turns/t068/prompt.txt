@@ -1,0 +1,96 @@
+--- repair_pairs.py 780-end ---
+ 780:             if args.mix_preset == "round1c":
+ 781:                 # (11 Nov, Path 1's round 1 redesigned, consult10's edits to round1b) math 45% shorter / 35% be-right / 15% widened
+ 782:                 # guards / 5% anti-loop (the first round 1 over-cut math); code 70 / 13 / 10 / 7; IFEval as rpM with 20% counting
+ 783:                 # pairs; several functions 50 / 50; anti-loop pairs 144 instead of 360
+ 784:                 sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
+ 785:                             {"shorten": 0.70, "right": 0.13, "guard": 0.10, "loop": 0.07} if part == "mbpp" else
+ 786:                             {"shorten": 0.55, "right": 0.375, "guard": 0.0, "loop": 0.075} if part == "ifeval" else
+ 787:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 788:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 789:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 790:                 count_share = 0.20
+ 791:             if args.mix_preset == "r2s2a":
+ 792:                 # (13 Nov, consult19, user: go) step 2 = shorten ONLY IFEval and tools; math and code get no shorten and no
+ 793:                 # guards (length-held be-right via --right-hold, + loops; guards wait for step 3). Math 90 be-right / 10 loops,
+ 794:                 # code 80 / 20, IFEval 20% counting + 62.5 shorten / 25 be-right / 12.5 loops, one function 50 / 50, several
+ 795:                 # 55 / 45, no fit 60 / 40
+ 796:                 sh_share = ({"shorten": 0.0, "right": 0.90, "guard": 0.0, "loop": 0.10} if base_part == "svamp" else
+ 797:                             {"shorten": 0.0, "right": 0.80, "guard": 0.0, "loop": 0.20} if part == "mbpp" else
+ 798:                             {"shorten": 0.625, "right": 0.25, "guard": 0.0, "loop": 0.125} if part == "ifeval" else
+ 799:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_simple_python" else
+ 800:                             {"shorten": 0.55, "right": 0.45, "guard": 0.0} if part == "bfcl_multiple" else
+ 801:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0})
+ 802:                 count_share = 0.20
+ 803:             if args.mix_preset == "r2s3":
+ 804:                 # (14 Nov, consult22, user: go) step 3 = a PURE repair from r2s2-s80: no shortening anywhere; math 60 length-held
+ 805:                 # be-right / 30 widened guards / 10 loops, code 60 / 25 / 15, simple 75 / 25, IFEval 25% counting pairs + the rest
+ 806:                 # 83.3 be-right / 16.7 loops, several and no-fit be-right only
+ 807:                 sh_share = ({"shorten": 0.0, "right": 0.60, "guard": 0.30, "loop": 0.10} if base_part == "svamp" else
+ 808:                             {"shorten": 0.0, "right": 0.60, "guard": 0.25, "loop": 0.15} if part == "mbpp" else
+ 809:                             {"shorten": 0.0, "right": 0.75, "guard": 0.25, "loop": 0.0} if part == "bfcl_simple_python" else
+ 810:                             {"shorten": 0.0, "right": 0.8333, "guard": 0.0, "loop": 0.1667} if part == "ifeval" else
+ 811:                             {"shorten": 0.0, "right": 1.0, "guard": 0.0, "loop": 0.0})
+ 812:                 count_share = 0.25
+ 813:             if args.mix_preset == "r2s3b":
+ 814:                 # (15 Nov, consult25, user: go) from r2s2-s80: math / code / simple / several = pure repair (length-held
+ 815:                 # be-right that never matches an early stop, guards anchored to the original's thinking, loops); IFEval
+ 816:                 # 25% counting pairs + 60 / 25 / 15 shorten / compact / loops; no-fit 62.5 shorten / 37.5 compact
+ 817:                 sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.40, "loop": 0.10} if base_part == "svamp" else
+ 818:                             {"shorten": 0.0, "right": 0.55, "guard": 0.25, "loop": 0.20} if part == "mbpp" else
+ 819:                             {"shorten": 0.0, "right": 0.60, "guard": 0.40, "loop": 0.0} if part == "bfcl_simple_python" else
+ 820:                             {"shorten": 0.0, "right": 0.75, "guard": 0.25, "loop": 0.0} if part == "bfcl_multiple" else
+ 821:                             {"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+ 822:                             {"shorten": 0.625, "right": 0.375, "guard": 0.0, "loop": 0.0})
+ 823:                 count_share = 0.25
+ 824:             if args.mix_preset == "r2one":
+ 825:                 # (15 Nov, consult27: Path 1's three steps as ONE offline step from the original) math 45 shorter / 35
+ 826:                 # length-held be-right / 12 bounded early-stop guards / 8 loops; code 58 / 22 / 8 / 12; IFEval 20% at-least
+ 827:                 # counting pairs + 62.5 / 22.5 / 0 / 15 of the rest; one function 45 / 43 / 12; several 55 / 35 / 10; no fit 65 / 35
+ 828:                 sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.12, "loop": 0.08} if base_part == "svamp" else
+ 829:                             {"shorten": 0.58, "right": 0.22, "guard": 0.08, "loop": 0.12} if part == "mbpp" else
+ 830:                             {"shorten": 0.625, "right": 0.225, "guard": 0.0, "loop": 0.15} if part == "ifeval" else
+ 831:                             {"shorten": 0.45, "right": 0.43, "guard": 0.12, "loop": 0.0} if part == "bfcl_simple_python" else
+ 832:                             {"shorten": 0.55, "right": 0.35, "guard": 0.10, "loop": 0.0} if part == "bfcl_multiple" else
+ 833:                             {"shorten": 0.65, "right": 0.35, "guard": 0.0, "loop": 0.0})
+ 834:                 count_share = 0.20
+ 835:             if args.mix_preset == "od3_arena":
+ 836:                 # (13 Nov, consult18 od3) the online arena's rounds: mostly "shorter", floored by type (--floor-by-part), no
+ 837:                 # guards (shortening and protection are not mixed in one step); math 75 / 20 / 5 loops, code 75 / 17.5 / 7.5,
+ 838:                 # IFEval 20% counting pairs + 75 / 18.75 / 6.25, several 70 / 30, one function and no fit 75 / 25
+ 839:                 sh_share = ({"shorten": 0.75, "right": 0.20, "guard": 0.0, "loop": 0.05} if base_part == "svamp" else
+ 840:                             {"shorten": 0.75, "right": 0.175, "guard": 0.0, "loop": 0.075} if part == "mbpp" else
+ 841:                             {"shorten": 0.75, "right": 0.1875, "guard": 0.0, "loop": 0.0625} if part == "ifeval" else
+ 842:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0} if part == "bfcl_multiple" else
+ 843:                             {"shorten": 0.75, "right": 0.25, "guard": 0.0})
+ 844:                 count_share = 0.20
+ 845:             if args.mix_preset == "r2s2":
+ 846:                 # (13 Nov, recipe 2 step 2 as consult16 planned it) shorten again on the step-1 model's own answers, every type:
+ 847:                 # math 40 shorter / 30 be-right / 25 widened guards / 5 loops; code 45 / 35 / 15 / 5; IFEval 20% counting pairs,
+ 848:                 # the rest 56.25 shorter / 31.25 be-right / 12.5 response loops; one function 60 / 40, several 50 / 50, no fit 60 / 40
+ 849:                 sh_share = ({"shorten": 0.40, "right": 0.30, "guard": 0.25, "loop": 0.05} if base_part == "svamp" else
+ 850:                             {"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if part == "mbpp" else
+ 851:                             {"shorten": 0.5625, "right": 0.3125, "guard": 0.0, "loop": 0.125} if part == "ifeval" else
+ 852:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 853:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 854:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0})
+ 855:                 count_share = 0.20
+ 856:             if args.mix_preset == "r2s1":
+ 857:                 # (12 Nov, recipe 2 step 1, consult16) moderate shortening from the original (target ~47% saved, like rpE-80):
+ 858:                 # math 40 shorter / 40 be-right / 15 widened guards / 5 loops; code 60 / 20 / 12.5 / 7.5; IFEval 20% counting
+ 859:                 # pairs (true length rules), the rest 50 shorter / 41.7 be-right / 8.3 response loops; one function 70 / 30,
+ 860:                 # several 50 / 50, no fit 60 / 40. Thinking-only shortness with the response held (--think-only all parts,
+ 861:                 # --resp-median 0.95 --resp-max 1.05): Path 1's --resp-guard 0.9 made IFEval responses longer (263 -> 345)
+ 862:                 # (12 Nov ~18:30, consult17 change A, user: yes) NO widened guards in step 1: from the original they reward
+ 863:                 # ~1,000-token right answers and cancel the shortening (p1cr1s0 stalled at 34% Dev, p1r1s0 without them 47.5%);
+ 864:                 # math 55 shorter / 40 be-right / 5 loops, code 70 / 22.5 / 7.5 (guards come back in steps 2-3, as in rpM)
+ 865:                 sh_share = ({"shorten": 0.55, "right": 0.40, "guard": 0.0, "loop": 0.05} if base_part == "svamp" else
+ 866:                             {"shorten": 0.70, "right": 0.225, "guard": 0.0, "loop": 0.075} if part == "mbpp" else
+ 867:                             {"shorten": 0.50, "right": 0.4167, "guard": 0.0, "loop": 0.0833} if part == "ifeval" else
+ 868:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 869:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 870:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 871:                 count_share = 0.20
+ 872:             if args.mix_preset == "hold":
+ 873:                 # (11 Nov, rpN, consult12) an ACCURACY-ONLY repair of an already shortened model: no "think less" pa
+[output cut at 10,000 characters]

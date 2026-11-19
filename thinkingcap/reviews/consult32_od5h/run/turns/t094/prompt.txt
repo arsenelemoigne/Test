@@ -1,0 +1,2 @@
+['NAMES', 'load', 'load_original', 'save_edit', 'drop_edit', 'edited', 'tok', 'torch', 'Path', 'pack', 'name', 'p', 'txt', 'eff', 'rp', 'i', 'work', 'notes', 'tr', 'f', 'lines', 'line', 'tlines', 'a', 'b', 'os', 'root', 'dirs', 'files', 'json', 'ft', 'k', 'el', 'm', 'fn', 'j', 'rp_lines', 'tr_lines', 'start', 'end', 'dp_lines', 'v', 's', 'exp_lines', 'idx', 'l', 'row', 'exp_log', 'notes_update', 'glob']
+FOUND: notes.md

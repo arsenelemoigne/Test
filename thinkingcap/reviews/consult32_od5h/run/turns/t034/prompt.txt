@@ -1,0 +1,2 @@
+Type of ft: <class 'dict'> len: 3
+['note', 'original_thinking_off', 'models']

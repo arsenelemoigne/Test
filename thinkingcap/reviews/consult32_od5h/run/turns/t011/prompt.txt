@@ -1,0 +1,58 @@
+3.6` pts; `nothink` at `79.6%` loses `-5.6` pts). Therefore, math **must keep a high per-question floor (`30:0.46`) and cap (`64%` monitor / `~68%` full test)**.
+2. **No-Fit (`91.6%` post-settlement), Simple Tools (`88.1%`), Code (`84.3%`), Multiple Tools (`74.9%`), and IFEval (`67.1%`): Post-Settlement Self-Doubt & Re-Checking.**
+   - On **No-Fit (`bfcl_irrelevance`)**, `91.6%` of thinking occurs *after* the model has already decided no tool fits; extra thinking talks the model into hallucinating a tool call! Force-stopping at `b0 = 0` thinking tokens raises slice accuracy by `+5.3` pts (original) and `+4.1` pts (trained, to `92.5%`), and on the **full test**, turning thinking completely off (`THINKING_OFF.md`) saves **`95.9%` of tokens at `+6.2` pts accuracy** (`+6.5` to `+9.6` on trained models)!
+   - On **Code and IFEval**, `effprobe/README.md` point 5 highlights a vital distinction between easy/medium slices and the full test: while `b0 = 0t` costs only `-2.3` (Code) and `-1.1` (IFEval) on slices 19?20, **full-test `thinking-off` costs `-9.1` pts on Code (`74.6%` saved) and `-5.0` pts on IFEval (`70.6%` saved)** (or `-4.6` and `-1.3` for `od5c-best` thinking-off). Why? Because on Code (`210` tokens before settlement) and hard IFEval constraints (`166` tokens before settlement), the model needs a **short 80?200 token working-out burst (`24?32%` of original thinking)** to draft the algorithm or plan the constraints, after which the remaining `68?84%` of thinking is redundant verification.
+
+### B. Can One Online DPO Run Teach the Model to Think Very Little on the First Kind Within the Rules, and What Would It Score?
+- **YES.** Because the user's rules prohibit inference-time prompt routing or stripping `<think>` tags at test time (*"one training procedure... general rules measured per question / per type"*), we teach the model to think minimally on No-Fit (`~10%` of original thinking, `~40?60` thinking tokens) and compactly on IFEval (`~24%` floor) and Code (`~32%` floor) **purely through the online DPO pair builder (`repair_pairs.py`)**:
+  - Setting `--min-think-by-part bfcl_irrelevance=4:0.10,ifeval=12:0.24,mbpp=28:0.32` and `--shorten-ratio-by-part bfcl_irrelevance=1.20,ifeval=1.22,mbpp=1.25` with `--shorten-second mbpp+ifeval+bfcl_irrelevance` and cap `bfcl_irrelevance=76` allows DPO to continuously prefer the shortest 1-sentence `<think>` blocks on No-Fit and non-counting IFEval whenever the model solves the question (`p1 >= 0.875`).
+  - Why not push Code or IFEval to `0` thinking tokens (`floor = 0`)? Because full-test thinking-off loses `-9.1` on Code and `-5.0` on IFEval! Keeping floors at `0.32 * bt` on Code and `0.24 * bt` on IFEval preserves the pre-settlement working-out (`~210t` on Code, `~166t` on IFEval) while stripping the `68?84%` post-settlement tail.
+  - **Expected Full-Test Score from This Allocation:** As calculated in Section 2C, this single run yields **Math `68.0% / -1.8`, Code `57.5% / -1.1`, IFEval `57.5% / +0.8`, Simple `48.5% / -1.2`, Multiple `51.5% / -0.8`, No-Fit `70.0% / +6.0` (BFCL pooled `57.0% / +0.95`) -> Official Full Test `60.9%` saved at `-0.29` accuracy** (range **`60.2% to 61.4%` saved at `-0.2` to `-0.8` accuracy**).
+
+---
+
+## 8. Exact Code Changes in Words and Queue Lines
+
+### A. Exact Code Changes (2 Files: `repair_pairs.py` and `track.py`)
+1. **`code/repair_pairs.py` ? Stop Held Types (`part in stop5`) from Flooding the DPO Batch with Lengthening Pairs:**
+   - **In `main()` around line 453 (inside `elif clean and wrongs and 1 <= k1 < n_ans:`):**
+     Remove `and part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))` (or replace it with `and (part not in right_hold)` for held parts) so that when a part is held, its `hold` (`be-right`) candidates still select **compact right answers no longer than the wrong answer** (`0.50 <= ratio <= 1.00`, preferring `REREAD` and `ratio ~ 0.85`, capped at `thinking_len(r) <= 1.05 * tmed`), instead of falling through to lines 463?469 which match `0.90?1.12x` of long wrong answers.
+   - **In `main()` around lines 683?707 (inside `for part, n in quota.items(): if args.kinds == "mix" and od5:`):**
+     When `part in stop5` (the type is held by the brake):
+     - Scale down the active pair budget on the held part if it is not heavily damaged: if `part in stop5 and dmg > -0.02`, cap the total pairs taken for `part` at `n_rem = min(n_rem, int(round(0.40 * n)))` (so held types maintain accuracy without occupying 53% of the gradient update), and cap `recovery` pairs on a held part at `int(round((0.40 if dmg <= -0.02 else 0.20) * n_rem))`, filling the rest of `n_rem` with compact `hold` pairs (and leaving `shortfall[part]` ignored when `part in stop5`).
+   - **In `main()` around line 526 (inside `if base_part in shorten_second` in the non-od5 branch, for completeness):** Use `sh_ratio` instead of `args.shorten_ratio` (note: line 428 in the `od5` branch already uses `ratio_need = sh_ratio_part.get(base_part, args.shorten_ratio)`).
+
+2. **`code/track.py` ? Add 2-Slice Smoothed Brake (`--od-smooth`) in `odpo_fixed`:**
+   - **In `main()` parser setup (around line 305):** Add argument `--od-smooth` (`type=int, default=1`, help `"odpo: average per-part monitor saving and accuracy over the last N slices for the brake"`).
+   - **In `odpo_fixed(args)` (lines 5442?5446):** After computing `sv_, ac_, per_ = od3_monitor(...)` on the current round `k + 1`'s rollouts, if `getattr(args, "od_smooth", 1) > 1` and `history` has recent rounds (up to `args.od_smooth - 1` previous rounds from `history[-(args.od_smooth - 1):]`), compute the smoothed per-part dictionary `per_use` by averaging `per_[p_][0]` (saving) and `per_[p_][1]` (accuracy) with the `[sv, ac]` entries of `h["per_part"][p_]` from those previous rounds. Use `per_use` instead of single-slice `per_` in line 5445 (`{p_ for p_, (sv, ac) in per_use.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold}`).
+
+### B. Queue Lines (Plain Text)
+1. **Run `od5h` (20 rounds from the original Qwen3-0.6B on the matched `od3g` slices 1?20, with Dev-512 scored on rounds 16, 17, 18, 19, 20):**
+   python3 -u track.py --stage odpo --name od5h --od-fixed-ref --od-slices od3g --od-rounds 20 --od-min-rounds 20 --od-r1-steps 20 --od-steps 15 --od-r1-quota svamp=76,mbpp=60,ifeval=84,bfcl_simple_python=32,bfcl_multiple=28,bfcl_irrelevance=40 --rp-quota svamp=50,mbpp=56,ifeval=60,bfcl_simple_python=20,bfcl_multiple=22,bfcl_irrelevance=32 --rp-lr 1e-5 --od-caps svamp=64,mbpp=62,ifeval=59,bfcl_simple_python=45,bfcl_multiple=53,bfcl_irrelevance=76 --od-acc-hold -2.0 --od-unlatch --od-smooth 2 --od-stop-from 18 --od-stop-save 61.5 --od-stop-acc -0.5 --od-conv-gain 0.3 --od-conv-min 60.0 --od-dev-rounds 16 17 18 19 20 --rp-pair-args=--kinds,mix,--mix-preset,od5,--od5-v2,--shorten-ratio,1.30,--shorten-ratio-by-part,mbpp=1.25+ifeval=1.22+bfcl_irrelevance=1.20,--shorten-second,mbpp+ifeval+bfcl_irrelevance,--min-think-by-part,svamp=30:0.46+mbpp=28:0.32+ifeval=12:0.24+bfcl_simple_python=25:0.44+bfcl_multiple=20:0.36+bfcl_irrelevance=4:0.10,--count-mode,length,--no-shorten-counting,--resp-median,0.95,--resp-max,1.15,--right-resp-cap,1.15,--loop-finished
+
+2. **Pick and run the top 2 checkpoints on the full test (using the recalibrated flat online-DPO Dev correction):**
+   python3 -u track.py --stage fullpick --fp-run od5h --fp-kind arena --fp-dev-rounds 16 17 18 19 20 --fp-save-bias 0.35 --fp-acc-bias 2.75 --fp-acc-slope 0.0 --fp-acc-gate -0.90 --fp-gate-save 59.5 --fp-gate-acc 1.75 --fp-n 2 --fp-skip-tested
+
+### C. Expected Landing and Main Risks
+- **Expected Full-Test Landing:** **`60.7%` saved at `-0.45` accuracy** (range: **`60.2% to 61.4%` saved at `-0.20` to `-0.85` accuracy**), peaking at round 18, 19, or 20 without the r19?22 oscillation.
+- **Main Risks & Mitigations:**
+  1. *Risk:* Lowering No-Fit's floor to `4:0.10` and Code's floor to `28:0.32` could cause a format/syntax dip if a truncated response is chosen. *Mitigation:* `od5` builds shortening pairs strictly from `clean` answers (`correct and closed_thinking and not truncated and not loops8 and not broken`), so every chosen short thought has a verified valid tool refusal or passing code block.
+  2. *Risk:* Reducing held-type pair count to `40%` of quota makes the round's total pair count `< 240` (`~180?210` pairs when 2?3 types are held). *Mitigation:* `ptrepair` already sets `a.rp_epochs = max(args.rp_epochs, 2)` (`track.py` line 5431), so 15 steps (`240` examples) are always completed cleanly, and active (unheld) types receive slightly higher effective gradient weight, accelerating Code/IFEval/No-Fit convergence in rounds 17?20.
+
+================ effsame second half ================
+atural) tokens    346 (natural 596), n=1600
+   b8=148t    acc  58.4% ( -0.9 [-3.1, +1.0] vs natural) tokens    358 (natural 596), n=1600
+   b9=176t    acc  59.3% ( -0.1 [-2.1, +1.9] vs natural) tokens    376 (natural 596), n=1600
+== bfcl_simple_python: natural 81.2% at 174 tokens (150 thinking); post-settlement share 0.0% of the thinking of 257 right answers
+   b0=0t      acc  71.9% ( -9.4 [-15.3, -3.3] vs natural) tokens     24 (natural 174), n=640
+   b1=47t     acc  80.6% ( -0.6 [-4.5, +3.3] vs natural) tokens     63 (natural 174), n=640
+   b2=52t     acc  81.1% ( -0.2 [-3.8, +3.3] vs natural) tokens     68 (natural 174), n=640
+   b3=54t     acc  81.9% ( +0.6 [-2.7, +3.9] vs natural) tokens     69 (natural 174), n=640
+   b4=58t     acc  82.2% ( +0.9 [-2.3, +4.2] vs natural) tokens     73 (natural 174), n=640
+   b5=61t     acc  81.2% ( +0.0 [-3.4, +3.1] vs natural) tokens     76 (natural 174), n=640
+   b6=67t     acc  81.6% ( +0.3 [-3.4, +3.9] vs natural) tokens     81 (natural 174), n=640
+   b7=74t     acc  81.6% ( +0.3 [-3.0, +3.4] vs natural) tokens     88 (natural 174), n=640
+   b8=81t     acc  81.6% ( +0.3 [-2.3, +3.1] vs natural) tokens     95 (natural 174), n=640
+   b9=92t     acc  82.8% ( +1.6 [-1.2, +4.5] vs natural) tokens    106 (natural 174), n=640
+== bf
+[output cut at 10,000 characters]

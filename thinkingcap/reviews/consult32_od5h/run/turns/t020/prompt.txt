@@ -1,0 +1,127 @@
+ 561:                         for r in rights:
+ 562:                             for w in wrongs:
+ 563:                                 ratio = thinking_len(r) / max(1, thinking_len(w))
+ 564:                                 lo_, hi_, ce_ = (float(x) for x in re.split(r"[,+]", args.right_hold_band))
+ 565:                                 if lo_ <= ratio <= hi_ and (not b3 or thinking_len(w) >= 0.65 * tmed):
+ 566:                                     key = ((0 if broken(w, base_part) else 1) if args.right_hold_format else 0,
+ 567:                                            round(abs(ratio - ce_), 2), 0 if decode and REREAD.search(decode(r)) else 1)
+ 568:                                     if best is None or key < best[0]:
+ 569:                                         best = (key, r, w)
+ 570:                         if best is None and b3 and args.right_hold_format:  # a broken-format wrong answer, any length
+ 571:                             for w in (w for w in wrongs if broken(w, base_part)):
+ 572:                                 for r in rights:
+ 573:                                     if 0.80 * tmed <= thinking_len(r) <= 1.15 * tmed:
+ 574:                                         key = (round(abs(thinking_len(r) / max(1, tmed) - 1.0), 2),
+ 575:                                                0 if decode and REREAD.search(decode(r)) else 1)
+ 576:                                         if best is None or key < best[0]:
+ 577:                                             best = (key, r, w)
+ 578:                         if best:
+ 579:                             cand[part]["right_cr"].append((qid, best[1], best[2]))
+ 580:                     elif pool_r:
+ 581:                         checked = [r for r in pool_r if decode and thinking_len(r) <= 1.5 * thinking_len(pool_r[0]) and REREAD.search(decode(r))]
+ 582:                         cand[part]["right_cr"].append((qid, (checked or pool_r)[0], wrongs[0]))
+ 583:                     # the capped "don't stop too early" guard (non-counting questions only: counting-rule questions belong
+ 584:                     # to IFEval's counting half; consult8)
+ 585:                     bt3 = float(base_think.get(str(qid)) or 0) if args.mix_preset == "r2s3b" else 0.0
+ 586:                     if base_part in guard_wide and r2one:
+ 587:                         # (15 Nov, consult27) from the ORIGINAL's own answers: rejected = a finished wrong answer that stopped
+ 588:                         # thinking early (< --guard-wide-max x the question's median right thinking), the longest such one
+ 589:                         # that has a partner; chosen = the shortest clean right answer just longer than it and at most
+ 590:                         # min(1.05 x median, 1.35 x the wrong one + 35): "don't stop that early", never "think more than usual"
+ 591:                         early, capped = [], []
+ 592:                         for w_g in sorted((w for w in wrongs if thinking_len(w) < args.guard_wide_max * tmed),
+ 593:                                           key=thinking_len, reverse=True):
+ 594:                             tw_g = thinking_len(w_g)
+ 595:                             ok_g = sorted((r for r in rights if tw_g < thinking_len(r) <= min(1.05 * tmed, 1.35 * tw_g + 35)),
+ 596:                                           key=thinking_len)
+ 597:                             if ok_g:
+ 598:                                 early, capped = [w_g], ok_g
+ 599:                                 break
+ 600:                     elif base_part in guard_wide and args.mix_preset == "r2s3b":
+ 601:                         # (15 Nov, consult25) "too short" is measured against the ORIGINAL's right thinking too: rejected = a
+ 602:                         # wrong answer under 0.85x max(own median, 0.70x the original's), a broken one first, else nearest
+ 603:                         # 0.70x; chosen = a right answer just longer than it, at most min(1.30x own median, 0.90x original's)
+ 604:                         ref_t = max(tmed, 0.70 * bt3) if bt3 else tmed
+ 605:                         early = sorted((w for w in wrongs if thinking_len(w) < args.guard_wide_max * ref_t),
+ 606:                                        key=lambda w: (1 if broken(w, base_part) else 0, -abs(thinking_len(w) - 0.70 * ref_t)))
+ 607:                         hi3 = min(1.30 * tmed, 0.90 * bt3) if bt3 else 1.30 * tmed
+ 608:                         capped = sorted((r for r in rights if early and max(0.95 * tmed, 1.08 * thinking_len(early[-1]) + 10)
+ 609:                                          <= thinking_len(r) <= hi3), key=thinking_len)
+ 610:                     elif base_part in guard_wide:  # (rpM) the 0.5-1.0x band: a calculation that skipped its re-check
+ 611:                         capped = sorted((r for r in rights if 0.95 * tmed <= thinking_len(r) <= 1.25 * tmed), key=thinking_len)
+ 612:                         # the rejected answer: the wrong one nearest 0.75x the median right thinking (a clear, bounded gap),
+ 613:                         # listed last so that the line below takes it
+ 614:                         early = sorted((w for w in wrongs if thinking_len(w) < args.guard_wide_max * tmed),
+ 615:                                        key=lambda w: -abs(thinking_len(w) - 0.75 * tmed))
+ 616:                     else:
+ 617:                         capped = [r for r in rights if thinking_len(r) <= 1.15 * tmed]
+ 618:                         early = sorted((w for w in wrongs if thinking_len(w) < 0.5 * tmed), key=thinking_len)
+ 619:                     if capped and early:
+ 620:                         pick = ([r for r in capped if decode and REREAD.search(decode(r))] or capped)[0]
+ 621:                         cand[part]["capguard"].append((qid, pick, early[-1]))  # the LONGEST early stop: the smallest length gap
+ 622:             continue
+ 623:         if (args.kinds == "guard,shorten" and len(rights) >= 2 and len(rights) / len(q) >= args.shorten_min_right
+ 624:                 and not (part == "ifeval" and counting(q[0]))):  # (10 Nov, odpo) a counting rule needs its full response
+ 625:             spread = size(rights[-1]) / max(1, size(rights[0]))
+ 626:             if spread >= args.shorten_ratio:
+ 627:                 cand[part]["shorten"].append((qid, rights[0], rights[-1]))
+ 628:             elif spread >= 1.25:  # backup supply: used only if the clear (>= 1.5x) pairs run short
+ 629:                 cand[part]["shorten_soft"].append((qid, rights[0], rights[-1]))
+ 630:         if not rights or not wrongs:
+ 631:             continue
+ 632:         chosen = rights[0]
+ 633:         if args.count_rules and part == "ifeval" and counting(q[0]):
+ 634:             rej = wrongs[0]
+ 635:             fit = [r for r in rights if response_len(r) >= response_len(rej) and thinking_len(r) <= 1.2 * thinking_len(rej)]
+ 636:             rereads[("ifeval", "counting-rule questions")] += 1
+ 637:             if not fit:
+ 638:                 rereads[("ifeval", "counting-rule questions without a fitting right answer (no pair)")] += 1
+ 639:                 continue
+ 640:             chosen = min(fit, key=thinking_len)
+ 641:             rereads[("ifeval", "counting-rule pairs")] += 1
+ 642:             cand[part]["guard"].append((qid, chosen, rej))
+ 643:             continue
+ 644:         if decode:
+ 645:             checked = [r for r in rights if thinking_len(r) <= 1.5 * thinking_len(rights[0]) and REREAD.search(decode(r))]
+ 646:             chosen = checked[0] if checked else rights[0]
+ 647:             rereads[(part, "chosen re-checks")] += bool(checked)
+ 648:             rereads[(part, "rejected re-checks")] += bool(REREAD.search(decode(wrongs[0])))
+ 649:             rereads[(part, "guard questions")] += 1
+ 650:         cand[part]["guard"].append((qid, chosen, wrongs[0]))
+ 651:         close = [(r, w) for r in rights for w in wrongs
+ 652:                  if max(r["output_tokens"], w["output_tokens"]) <= args.ratio * min(r["output_tokens"], w["output_tokens"])]
+ 653:         rng.shuffle(close)
+ 654:         for r, w in close:
+ 655:             cand[part]["right_long" if r["output_tokens"] > w["output_tokens"] else "right_short"].append((qid, r, w))
+ 656:     pairs, counts = [], Counter()
+ 657:     for part_f, n_f in floor_drop.items():
+ 658:         counts[(part_f, "right answers below the type floor (never chosen)")] = n_f
+ 659:     shortfall = {}  # (11 Nov) part -> pairs missing to reach the quota at the fixed mix (written to shortfall.json)
+ 660:     per_q, right_q, used = Counter(), Counter(), set()
+ 661: 
+ 662:     def take(part, kind, pool, n):
+ 663:         rng.shuffle(pool)
+ 664:         got = []
+ 665:         for qid, c, w in pool:
+ 666:             if len(got) >= n:
+ 667:                 break
+ 668:             key = (id(c), id(w))
+ 669:             if key in used or per_q[qid] >= 3 or (kind != "guard" and right_q[qid] >= 2):
+ 670:                 continue
+ 671:             used.add(key)
+ 672:             per_q[qid] += 1
+ 673:             right_q[qid] += kind != "guard"
+ 674:             got.append({"id": qid, "source": c["source"], "part": part, "kind": kind, "prompt_ids": list(c["prompt_ids"]),
+ 675:                         "chosen_ids": list(c["output_ids"]), "rejected_ids": list(w["output_ids"]),
+ 676:                         "chosen_tokens": c["output_tokens"], "rejected_tokens": w["output_tokens"]})
+ 677:         return got
+ 678:     by_part = {}
+ 679:     for part, n in quota.items():
+ 680:         if args.kinds == "mix" and od5:  # (14 Nov) defect pairs first, then shares that FOLLOW the candidate counts
+ 681:             stop5 = set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+ 682:             got5 = []
+ 683:             for kind5, cap5 in (("right_count", (0.10 if args.od5_v2 else 0.20) if part == "ifeval" else 0.0), ("loop", 0.12),
+ 684:                                 ("format", 0.10)):
+ 685:                 if cap5 > 0:
+ 686:                     got5 += take(part, "right" if kind5 == "right_count" else 
+[output cut at 10,000 characters]

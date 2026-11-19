@@ -1,0 +1,126 @@
+--- track.py 5050-5170 ---
+5050:     drive_sync("restore", only=[str(pairs)])
+5051:     if getattr(args, "rp_rebuild_if_short", False) and (pairs / "pairs.jsonl").exists():  # (12 Nov) only when not full
+5052:         need_q = sum(int(x.split("=")[1]) for x in args.rp_quota.split(",") if x)
+5053:         have_q = sum(1 for l in open(pairs / "pairs.jsonl") if l.strip())
+5054:         args.rp_rebuild_pairs = have_q < need_q
+5055:         print(f"repair {name}: --rp-rebuild-if-short: {have_q} of {need_q} pairs -> "
+5056:               f"{'REBUILD' if have_q < need_q else 'full, kept as is'}", flush=True)
+5057:     if getattr(args, "rp_rebuild_pairs", False) and (pairs / "pairs.jsonl").exists():  # (12 Nov) answers kept, pairs rebuilt
+5058:         old_dir = pairs.with_name(pairs.name + "-prev")
+5059:         shutil.rmtree(old_dir, ignore_errors=True)
+5060:         shutil.move(str(pairs), str(old_dir))
+5061:         print(f"repair {name}: --rp-rebuild-pairs: previous pairs moved to {old_dir}; answers reused", flush=True)
+5062:     if not (pairs / "pairs.jsonl").exists():
+5063:         quota = args.rp_quota if not smoke else ",".join(f"{k}=8" for k in want)
+5064:         rolls = [roll / "rollouts.jsonl"]
+5065:         drops = [x for x in re.split(r"[,+]", getattr(args, "rp_drop", "")) if x]
+5066:             kept_f = BON / f"rp-{name}-kept" / "rollouts.jsonl"
+5067:             kept_f.parent.mkdir(parents=True, exist_ok=True)
+5068:             n_in = n_out = 0
+5069:             with open(roll / "rollouts.jsonl") as src_f, open(kept_f, "w") as dst_f:
+5070:                 for l in src_f:
+5071:                     if not l.strip():
+5072:                         continue
+5073:                     n_in += 1
+5074:                     r = json.loads(l)
+5075:                     # an item matches when ALL its &-joined conditions do (e.g. id:nofit4-&source:glaive_tools)
+5076:                     if any(all(r.get("source") == c[len("source:"):] if c.startswith("source:") else
+5077:                                str(r.get("id", "")).startswith(c[len("id:"):]) for c in d.split("&")) for d in drops):
+5078:                         continue
+5079:                     dst_f.write(l)
+5080:                     n_out += 1
+5081:             print(f"repair {name}: --rp-drop {drops}: kept {n_out} of {n_in} stored answers", flush=True)
+5082:             rolls = [kept_f]
+5083:         for i_m, mf in enumerate([x for x in re.split(r"[,+]", getattr(args, "rp_more_files", "")) if x]
+5084:                                  if own and not reuse and not smoke else [], 1):
+5085:             # (13 Nov, user: "repeat until we actually have enough data") extra test-matched questions, own answerer
+5086:             drive_sync("restore", only=[mf])
+5087:             assert Path(mf).exists(), f"{mf} is not on Drive"
+5088:             roll_m = BON / f"rp-{name}-m{i_m}"
+5089:             drive_sync("restore", only=[str(roll_m)])
+5090:             if not (roll_m / "rollouts.jsonl").exists():
+5091:                 qm = [json.loads(l) for l in Path(mf).read_text().splitlines() if l.strip()]
+5092:                 data_m = Path(f"data/repair-{name}-m{i_m}.jsonl")
+5093:                 data_m.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in qm))
+5094:                 print(f"repair {name}: + {len(qm)} extra questions from {mf}: {dict(Counter(part_of(r) for r in qm))}, "
+5095:                       f"answered by {answerer}", flush=True)
+5096:                 py("probe_curve.py", "--data", data_m, "--per-source", 1000000,  # every row: the file is already curated
+5097:                    "--samples", args.rp_samples, "--model", answerer, "--out", roll_m, "--dtype", args.dtype, "--generate-only",
+5098:                    "--chunk", 300, "--max-questions", len(qm), "--seed", 60 + i_m)
+5099:                 drive_sync("save")
+5100:             rolls.append(roll_m / "rollouts.jsonl")
+5101:         for i_m, mf in enumerate([x for x in re.split(r"[,+]", getattr(args, "rp_more_files", "")) if x]
+5102:                                  if reuse and not smoke else [], 1):
+5103:             # (15 Nov, consult25) with --rp-rollouts-from, the stored answers of that run's extra files are reused too
+5104:             src_m = BON / f"rp-{reuse}-m{i_m}"
+5105:             drive_sync("restore", only=[str(src_m)])
+5106:             if not (src_m / "rollouts.jsonl").exists():  # (15 Nov, user: more IFEval for r2s3b) a NEW extra file: answer it
+5107:                 src_m = BON / f"rp-{name}-m{i_m}"  # with this run's answerer (the --rp-base model), as without reuse
+5108:                 drive_sync("restore", only=[mf, str(src_m)])
+5109:                 assert Path(mf).exists(), f"{mf} is not on Drive"
+5110:                 if not (src_m / "rollouts.jsonl").exists():
+5111:                     qm = [json.loads(l) for l in Path(mf).read_text().splitlines() if l.strip()]
+5112:                     data_m = Path(f"data/repair-{name}-m{i_m}.jsonl")
+5113:                     data_m.write_text("".join(json.dumps(r | {"pool_id": r.get("pool_id") or r["id"]}) + "\n" for r in qm))
+5114:                     print(f"repair {name}: + {len(qm)} NEW extra questions from {mf}: {dict(Counter(part_of(r) for r in qm))}, "
+5115:                           f"answered by {answerer}", flush=True)
+5116:                     py("probe_curve.py", "--data", data_m, "--per-source", 1000000, "--samples", args.rp_samples,
+5117:                        "--model", answerer, "--out", src_m, "--dtype", args.dtype, "--generate-only", "--chunk", 300,
+5118:                        "--max-questions", len(qm), "--seed", 60 + i_m)
+5119:                     drive_sync("save")
+5120:             rolls.append(src_m / "rollouts.jsonl")
+5121:             print(f"repair {name}: + answers {src_m} (extra file {mf})", flush=True)
+5122:         for spec in [x for x in getattr(args, "rp_extra_top", "").split(",") if x] if reuse else []:
+5123:             # (12 Nov, user) the original's answers on chosen NEW questions (newtop set, ids picked by r2prep)
+5124:             top, ids_f = spec.split("=")
+5125:             drive_sync("restore", only=[str(BON / f"tooltop-{top}"), ids_f])
+5126:             want_ids = set(json.loads(Path(ids_f).read_text()))
+5127:             dst = BON / f"rp-{name}-top-{top}" / "rollouts.jsonl"
+5128:             dst.parent.mkdir(parents=True, exist_ok=True)
+5129:             n_x, q_x = 0, set()
+5130:             with open(BON / f"tooltop-{top}" / "rollouts.jsonl") as src_f, open(dst, "w") as dst_f:
+5131:                 for l in src_f:
+5132:                     if l.strip() and json.loads(l)["id"] in want_ids:
+5133:                         dst_f.write(l)
+5134:                         n_x += 1
+5135:                         q_x.add(json.loads(l)["id"])
+5136:             print(f"repair {name}: + {len(q_x)} new questions ({n_x} answers) from tooltop-{top} ({ids_f})", flush=True)
+5137:             assert q_x, f"no answers of {ids_f} in tooltop-{top}"
+5138:             rolls.append(dst)
+5139:         if getattr(args, "rp_extra_questions", "") and reuse:  # (11 Nov, rpM) new SVAMP-like math beside the reused answers
+5140:             want_x = {k: int(v) for k, v in (x.split("=") for x in args.rp_extra_questions.split(","))}
+5141:             roll_x = BON / f"rp-{name}-extra"
+5142:             data_x = Path(f"data/repair-{name}-extra.jsonl")
+5143:             drive_sync("restore", only=[str(roll_x), str(data_x)])
+5144:             if not (roll_x / "rollouts.jsonl").exists():
+5145:                 ex = dev_ids() | dev_svamp_ids() | (excluded_ids(args) or set())
+5146:                 srcs = {k: v for k, v in (x.split("=") for x in getattr(args, "rp_extra_source", "").split(",") if x)}
+5147:                 rows_x = own_repair_questions({k: v for k, v in want_x.items() if k not in srcs}, seed=args.rp_seed, exclude=ex,
+5148:                                               public=True, avoid_grams=dev_gram_set()) if set(want_x) - set(srcs) else []
+5149:                 for part_s, src in srcs.items():  # (12 Nov) new questions from a source outside the pool
+5150:                     from build_pool import ngrams, words
+5151:                     if not Path("questions/questions.jsonl").exists():  # (12 Nov, consult17 bug 1) a fresh runtime
+5152:                         py("utils/eval/benchmarks.py")
+5153:                     # each instruction id's share follow IFEval's 541 prompts) with a seed of their own, so the draw is not
+5154:                     # the pool's (the pool's own IFEval rows are dropped below by exact prompt anyway)
+5155:                     prep = (["--ifeval-match", 4 * want_x[part_s], "--seed", 1000 + args.rp_seed]
+5156:                             if src in ("ifeval_like", "ifeval_built") else [])
+5157:                     cache = Path(f"data/extra-src-{src}" + (f"-m{4 * want_x[part_s]}-s{1000 + args.rp_seed}" if prep else "")
+5158:                                  + ".jsonl")
+5159:                     drive_sync("restore", only=[str(cache)])
+5160:                     if not cache.exists():
+5161:                         py("prepare_types.py", "--sources", src, "--per-source", 1000000, *prep, "--out", cache)
+5162:                     pool_texts = set()
+5163:                     drive_sync("restore", only=["runs/bon/tooltop-*/questions.jsonl"])
+5164:                     for f in [Path("data/pool-dp13.jsonl"), *BON.glob("tooltop-*/questions.jsonl")]:  # (consult17 bug 2)
+5165:                         for l in (f.read_text().splitlines() if f.exists() else []):
+5166:                             if l.strip():
+5167:                                 pr = json.loads(l).get("prompt")
+5168:                                 pool_texts.add(json.dumps(pr, sort_keys=True))
+5169:                     seen_t = Counter()
+5170:                     for l in Path("questions/questions.jsonl").read_text().splitlines():
+
+--- track.py 5485-5560 ---
+5485:             prev = f"adapters/{a.name}-
+[output cut at 10,000 characters]

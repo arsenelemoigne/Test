@@ -1,0 +1,9 @@
+4621: def fullpick(args):
+4923: def ptrepair(args):
+5211:             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+5244:             short = json.loads((pairs / "shortfall.json").read_text()) if (pairs / "shortfall.json").exists() else {}
+5277:                   f"shortfall {(pairs / 'shortfall.json').read_text() if (pairs / 'shortfall.json').exists() else '?'}", flush=True)
+5339: def odpo(args):
+5371: def odpo_fixed(args):
+5446:             if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
+5448:                 prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]

@@ -1,0 +1,268 @@
+4761:     lo, hi = (float(x) for x in args.op_band.split(","))
+
+4762:     think = defaultdict(list)
+
+4763:     for line in open(src / "rollouts.jsonl"):
+
+4764:         if line.strip():
+
+4765:             r = json.loads(line)
+
+4766:             think[r["id"]].append(len(r["thinking_ids"]))
+
+4767:     keep = {i for i, v in think.items() if lo <= statistics.fmean(v) < hi}
+
+4768:     rows = [json.loads(l) for l in (src / "questions.jsonl").read_text().splitlines() if l.strip()]
+
+4769:     rows = [r for r in rows if r.get("pool_id", r.get("id")) in keep]
+
+4770:     data = Path(f"data/onp-{name}.jsonl")
+
+4771:     data.write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+4772:     print(f"onpolicy {name}: {len(rows)} questions of {src.name} in the {lo:.0f}-{hi:.0f} band", flush=True)
+
+4773:     py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv",
+
+4774:        "--per-source", 1000000, "--samples", args.op_samples, "--model", "Qwen/Qwen3-0.6B", "--adapter", adapter,
+
+4775:        "--out", out, "--dtype", args.dtype, "--generate-only", "--chunk", 300, "--max-questions", len(rows), "--seed", 43)
+
+4776:     rate = defaultdict(list)
+
+4777:     for line in open(out / "rollouts.jsonl"):
+
+4778:         r = json.loads(line)
+
+4779:         rate[r["id"]].append((bool(r["correct"]) and not r["truncated"], len(r["thinking_ids"])))
+
+4780:     allv = [a for v in rate.values() for a in v]
+
+4781:     print(f"onpolicy {name}: {len(rate)} questions x{args.op_samples}; right {statistics.fmean(c for c, _ in allv):.1%}, "
+
+4782:           f"mean thinking {statistics.fmean(t for _, t in allv):.0f}; wrong answers {sum(not c for c, _ in allv)}", flush=True)
+
+4783:     drive_sync("save")
+
+4784: 
+
+4785: 
+
+4786: TYPE_PARTS = ("svamp", "mbpp", "ifeval", "bfcl_simple_python", "bfcl_multiple", "bfcl_irrelevance")
+
+4787: 
+
+4788: 
+
+4789: def typeonly(args):
+
+4790:     """One adapter per type AND subtype (user, 2 Nov: "build per type data only shorten and hold accuracy, see how much
+
+4791:     it spills over"): from --cc-base's pairs (runs/bon/pairs-<cc_base>), each of the 6 parts trained alone on its own
+
+4792:     Scored afterwards with rescreen --cx-names <name>-<part> (every part's score = its own effect + its spill-over)."""
+
+4793:     base = BON / f"pairs-{args.cc_base}"
+
+4794:     drive_sync("restore", only=[str(base)])
+
+4795:     rows = [json.loads(l) for l in (base / "pairs.jsonl").read_text().splitlines() if l.strip()]
+
+4796:     for part in [p for p in TYPE_PARTS if p in args.to_parts.split(",")]:
+
+4797:         mine = [r for r in rows if r["part"] == part]
+
+4798:         pairs = BON / f"pairs-{args.name}-{part}"
+
+4799:         drive_sync("restore", only=[str(pairs)])
+
+4800:         if not (pairs / "pairs.jsonl").exists():
+
+4801:             pairs.mkdir(parents=True, exist_ok=True)
+
+4802:             (pairs / "pairs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in mine))
+
+4803:         counts = [sum(r["kind"] == k for r in mine) for k in ("shorten", "guard", "hard", "right")]
+
+4804:         print(f"typeonly {args.name}: {part} {len(mine)} pairs (shorten {counts[0]}, guard {counts[1]})", flush=True)
+
+4805:         start = Path("adapters") / f"fresh-{args.name}-{part}"
+
+4806:         drive_sync("restore", only=[str(start)] + [str(Path("adapters") / f"{args.name}-{part}-s{s}") for s in args.seeds])
+
+4807:         if not (start / "adapter_config.json").exists():
+
+4808:             py("sft.py", "--init-only", "--model", "Qwen/Qwen3-0.6B", "--out", start)
+
+4809:         for seed in args.seeds:
+
+4810:             adapter = Path("adapters") / f"{args.name}-{part}-s{seed}"
+
+4811:             if not (adapter / "adapter_config.json").exists():
+
+4812:                 py("dpo.py", "--model", "Qwen/Qwen3-0.6B", "--pairs", pairs / "pairs.jsonl", "--init-adapter", start,
+
+4813:                    "--out", adapter, "--mix", ",".join(f"{c / max(1, sum(counts)):.4f}" for c in counts),
+
+4814:                    "--save-every", 10, "--epochs", 1, "--dtype", args.dtype, "--seed", seed, "--nll", 0.0,
+
+4815:                    "--lr-schedule", "cosine", *args.lp_dpo.replace(",", " ").split())
+
+4816:                 drive_sync("save")
+
+4817: 
+
+4818: 
+
+4819: def polans(args):
+
+4820:     """On-policy answers on the WHOLE training pool (2 Nov, user: the on-policy round): adapters/<--op-adapter> answers
+
+4821:     every question of data/pool-<--lp-pool>.jsonl plus the --lp-add-q top-ups, --op-samples times (seed 47), half the
+
+4822:     questions per runtime (--dp-step a / b) -> runs/bon/onp-<name>-<half>/rollouts.jsonl. lupin_pairs.py --recipe four
+
+4823:     takes them as --trained (lupin --lp-trained <name>-a,<name>-b)."""
+
+4824:     name, adapter = args.name, Path("adapters") / args.op_adapter
+
+4825:     out = BON / f"onp-{name}-{args.dp_step}"
+
+4826:     pool = Path(f"data/pool-{args.lp_pool}.jsonl")
+
+4827:     extras = [BON / f"tooltop-{x}" for x in args.lp_add_q.split(",") if x]
+
+4828:     drive_sync("restore", only=[str(out), str(adapter), str(pool), *[str(e) for e in extras]])
+
+4829:     if (out / "rollouts.jsonl").exists():
+
+4830:         print(f"polans {name}-{args.dp_step}: done", flush=True)
+
+4831:         return
+
+4832:     rows = [json.loads(l) for l in pool.read_text().splitlines() if l.strip()]
+
+4833:     for e in extras:
+
+4834:         rows += [json.loads(l) for l in (e / "questions.jsonl").read_text().splitlines() if l.strip()]
+
+4835:     parity = 0 if args.dp_step == "a" else 1
+
+4836:     data = Path(f"data/polans-{name}-{args.dp_step}.jsonl")
+
+4837:     data.write_text("".join(json.dumps(r) + "\n" for k, r in enumerate(rows) if k % 2 == parity))
+
+4838:     n = sum(1 for _ in open(data))
+
+4839:     print(f"polans {name}-{args.dp_step}: {n} questions x{args.op_samples} by {adapter}", flush=True)
+
+4840:     py("probe_curve.py", "--data", data, "--sources", "toolace,hermes_tools,glaive_tools,kodcode,gsm8k_matched,metamath_sv,"
+
+4841:        "gsm8k_easy,gsm8k_easy_test,metamath_easy,ifeval_like,ifeval_built", "--per-source", 1000000,
+
+4842:        "--samples", args.op_samples, "--model", "Qwen/Qwen3-0.6B", "--adapter", adapter, "--out", out, "--dtype", args.dtype,
+
+4843:        "--generate-only", "--chunk", 300, "--max-questions", n, "--seed", 47)
+
+4844:     drive_sync("save")
+
+4845: 
+
+4846: 
+
+4847: PT_MID = {"svamp": 0.30, "mbpp": 0.45, "ifeval": 0.60, "bfcl": 0.45}  # pt-mid = lpw-pertype merged at these strengths
+
+4848: 
+
+4849: 
+
+4850: def own_repair_questions(want, seed=0, exclude=None, public=False, avoid_grams=None):
+
+4851:     test part, drawn at random (the trained model's own 4 answers then decide which give pairs):
+
+4852:       math         GSM8K train + test at EVERY difficulty, in SVAMP's wording (prepare_types.py gsm8k_std; GSM8K is in the
+
+4853:                    data since night 1, 20 Oct): harder than the pool's SVAMP-like math, so the model is sometimes wrong
+
+4854:                    and math gets "be right" pairs; questions already trained on in rounds 1-4 dropped
+
+4855:       code, instructions, tools
+
+4856:                    pool-dp13 rows (KodCode, IFEval built / argilla, Glaive / ToolACE / Hermes) and the own top-ups
+
+4857:                    nofit1, nofit2 (Haiku-verified no-fit), tools1, code1
+
+4858:     question sharing an 8-word sequence with an evaluation question is dropped (as build_pool.py)."""
+
+4859:     from build_pool import ngrams, part_of, words
+
+4860:     own_extras = ["nofit1", "nofit2", "tools1", "code1"] + (["nofit4", "math1", "math2"] if public else [])
+
+4861:     # from GSM8K / MetaMath / xLAM) are allowed (recipes stay off-limits); math then comes from these SVAMP-like sources,
+
+4862:     # not from full-difficulty GSM8K (harder than the test's SVAMP)
+
+4863:     pool = Path("data/pool-dp13.jsonl")
+
+4864:     used_globs = [f"data/{prefix}*.jsonl" for prefix in ("bon", "bal", "chain", "trapmath", "rlcal", "rl-", "lot-")]
+
+4865:     drive_sync("restore", only=[str(pool), *[str(BON / f"tooltop-{x}" / "questions.jsonl") for x in own_extras], *used_globs])
+
+4866:     if not Path("questions/questions.jsonl").exists():
+
+4867:         py("utils/eval/benchmarks.py")
+
+4868:     gsm = Path("data/gsm8k-std-all.jsonl")
+
+4869:     if not gsm.exists():
+
+4870:         py("prepare_types.py", "--sources", "gsm8k_std", "--per-source", 1000000, "--out", gsm)
+
+4871: 
+
+4872:     def read(path):
+
+4873:         return [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()] if Path(path).exists() else []
+
+4874:     seen = Counter()
+
+4875:     for q in read("questions/questions.jsonl"):
+
+4876:         seen.update(ngrams(words(q["messages"])))
+
+4877:     eval_grams = {g for g, n in seen.items() if n < 3}  # shared templates (>= 3 questions) are not evidence of copying
+
+4878:     used = Counter()  # math already trained on (rounds 1-4: bon, chain, trap math, rlcal draws), any wording
+
+4879:     for f in sorted({str(x) for pattern in used_globs for x in Path(".").glob(pattern)}):
+
+4880:         for r in read(f):
+
+4881:             if str(r.get("source", "")).startswith("gsm") and r.get("prompt"):
+
+4882:                 used.update(ngrams(words(r["prompt"])))
+
+4883:     used_grams = {g for g, n in used.items() if n < 3}
+
+4884:     cands, texts, dropped = defaultdict(list), set(), Counter()
+
+4885:     gsm_rows = [r | {"id": f"gsm8k-std-{i}"} for i, r in enumerate(read(gsm))]
+
+4886:     other = [r | {"id": r.get("pool_id", r.get("id"))} for r in read(pool)]
+
+4887:     for x in own_extras:
+
+4888:         other += [r | {"id": r.get("pool_id", r.get("id"))} for r in read(BON / f"tooltop-{x}" / "questions.jsonl")]
+
+4889:     for r in gsm_rows + other:
+
+4890:         part = part_of(r)
+
+4891:         if part not in want or (str(r["source"]).startswith("metamath") and not public):
+
+4892:             continue
+
+4893:         if part == "svamp" and (r["id"].startswith("gsm8k-std-") == public):  # own: full GSM8K only; public: SVAMP-like only
+
+4894:     
+[output cut at 10,000 characters]

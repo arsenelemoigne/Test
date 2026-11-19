@@ -1,0 +1,123 @@
+================ repair_pairs.py lines 335-755 ================
+ 335:                 bt = sorted(thinking_len(r) for r in rights)[len(rights) // 2] if rights else 0
+ 336:             ftok = max(abs_min, ratio_min * bt)
+ 337:             rights = [r for r in all_rights if thinking_len(r) >= ftok]
+ 338:             floor_drop[part] += len(all_rights) - len(rights)
+ 339:         if args.kinds == "mix" and od5:  # (14 Nov, user's od5 rule, consult21's refinements) per question vs the ORIGINAL
+ 340:             st = base_stats.get(str(qid))
+ 341:             k1, n_ans = len(all_rights), len(q)
+ 342:             p1 = k1 / max(1, n_ans)
+ 343:             p0 = st["acc"] if st else None
+ 344:             bt = base_think.get(str(qid)) or (sorted(thinking_len(r) for r in all_rights)[len(all_rights) // 2] if all_rights else 0)
+ 345:             # (14 Nov, od5b) the original's MEDIAN RIGHT response; od5's "mean tokens - median right thinking" counted the
+ 346:             # original's runaway answers and put the IFEval floor above almost every real response (6 shorten pairs of 88)
+ 347:             b_resp = float(base_resp.get(str(qid), 0.0)) if args.base_resp else 0.0
+ 348:             if p0 is not None:
+ 349:                 od5_dmg[part].append(p1 - p0)
+ 350:             is_cr = part == "ifeval" and (at_least(q[0]) if args.count_mode == "atleast" else
+ 351:                                           length_rule(q[0]) if args.count_mode == "length" else counting(q[0]))
+ 352:             no_shorten = is_cr or (args.no_shorten_counting and part == "ifeval" and counting(q[0]))
+ 353: 
+ 354:             def looping(r):
+ 355:                 if not finished(r):
+ 356:                     return True
+ 357:                 if decode_full is None:
+ 358:                     return False
+ 359:                 w_ = re.findall(r"\w+", decode_full(r).lower())
+ 360:                 g_ = Counter(tuple(w_[i:i + 8]) for i in range(max(0, len(w_) - 7)))
+ 361:                 return bool(g_) and max(g_.values()) >= 4
+ 362:             clean = [r for r in rights if not looping(r)]  # chosen answers never loop
+ 363:             loops = [r for r in q if looping(r) and not right(r)]
+ 364:             if clean and loops:
+ 365:                 cand[part]["loop"].append((qid, clean[0], min(loops, key=lambda r: -r["output_tokens"])))
+ 366: 
+ 367:             def bad_format(r):
+ 368:                 if response_len(r) == 0:
+ 369:                     return True
+ 370:                 if base_part == "svamp":
+ 371:                     return r.get("_nofinal", False)
+ 372:                 if base_part.startswith("bfcl") and base_part != "bfcl_irrelevance" and decode_full is not None:
+ 373:                     return "(" not in decode_full(r).split("</think>")[-1]
+ 374:                 return False
+ 375:             bad = [w for w in wrongs if bad_format(w)]
+ 376:             if clean and bad:
+ 377:                 w = bad[0]
+ 378:                 near = sorted(clean, key=lambda r: abs(thinking_len(r) / max(1, thinking_len(w)) - 1.0))
+ 379:                 if near and 0.85 <= thinking_len(near[0]) / max(1, thinking_len(w)) <= 1.25:
+ 380:                     cand[part]["format"].append((qid, near[0], w))
+ 381:             if is_cr and clean and wrongs:  # IFEval length rules: as before (write at least as much, think at most 1.2x)
+ 382:                 rej = wrongs[0]
+ 383:                 need = args.count_resp_min * response_len(rej) + 15 if args.count_resp_min > 0 else response_len(rej)
+ 384:                 fit = [r for r in clean if response_len(r) >= need and thinking_len(r) <= 1.2 * thinking_len(rej)
+ 385:                        and (args.count_resp_cap <= 0 or response_len(r) <= args.count_resp_cap * response_len(rej) + args.count_resp_pad)]
+ 386:                 if fit:
+ 387:                     cand[part]["right_count"].append((qid, min(fit, key=thinking_len), rej))
+ 388:             if p0 is None:
+ 389:                 can_shorten, damaged = p1 >= args.shorten_min_right, False
+ 390:             else:
+ 391:                 if args.od5_v3 and healthy_v3(part):  # (15 Nov, consult24 rule B) healthy type: within one answer in 8
+ 392:                     can_shorten = (p1 >= 0.75 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.25) if p0 >= 0.50
+ 393:                                    else p1 >= max(0.25, p0 - 0.125))
+ 394:                     damaged = 1 <= k1 < n_ans and ((p1 <= p0 - 0.25) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+ 395:                 elif args.od5_v4:  # (17 Nov, consult29 od6a) never shorten below the original; any drop of a solid question is damage
+ 396:                     can_shorten = p1 >= p0 and (p0 < 0.875 or p1 >= 1.0)
+ 397:                     damaged = k1 < n_ans and ((p1 < p0) if p0 >= 0.75 else (p1 <= p0 - 0.25))
+ 398:                 elif args.od5_v2:  # (14 Nov, consult23) as good as the original; real damage only
+ 399:                     can_shorten = (p1 >= 0.875 if p0 >= 1.0 else p1 >= max(0.50, p0 - 0.125) if p0 >= 0.50
+ 400:                                    else p1 >= max(0.25, p0))
+ 401:                     damaged = 1 <= k1 < n_ans and ((p1 <= p0 - 0.25) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+ 402:                 else:
+ 403:                     can_shorten = (p1 == 1.0) if p0 >= 1.0 else (p1 >= max(0.75, p0 - 0.125))
+ 404:                     damaged = 1 <= k1 < n_ans and ((p1 < p0) if p0 >= 0.875 else (p1 <= p0 - 0.125))
+ 405:             rule_c = args.od5_v3 and base_part == "ifeval" and is_cr and healthy_v3(part)
+ 406:             if can_shorten and (not no_shorten or rule_c) and len(clean) >= 2:
+ 407:                 long = max(clean, key=size)
+ 408:                 pool_s = [r for r in clean if r is not long]
+ 409:                 if rule_c:  # (15 Nov, consult24 rule C) think less, write no less, and fewer tokens in all
+ 410:                     pool_s = [r for r in pool_s if response_len(r) >= max(response_len(long), 0.92 * b_resp)
+ 411:                               and r["output_tokens"] < long["output_tokens"]]
+ 412:                 elif (part in think_only and (args.resp_median > 0 or args.resp_max > 0)
+ 413:                         and (not args.od5_v2 or base_part == "ifeval")):  # v2: response rules on IFEval only
+ 414:                     rmed = sorted(response_len(r) for r in clean)[len(clean) // 2]
+ 415:                     floor_r = max(args.resp_median * rmed, 0.92 * b_resp if base_part == "ifeval" else 0.0)
+ 416:                     pool_s = [r for r in pool_s if response_len(r) >= floor_r
+ 417:                               and (args.resp_max <= 0 or response_len(r) <= args.resp_max * response_len(long))
+ 418:                               and (args.od5_v2 or response_len(r) >= args.resp_near_long * response_len(long))]
+ 419:                 if args.od5_v4 and bt and p0 is not None:  # (17 Nov, od6a) reliability-scaled floor on the chosen answer
+ 420:                     pool_s = [r for r in pool_s if thinking_len(r) >= (0.35 + 0.15 * p0) * bt]
+ 421:                 if pool_s:
+ 422:                     ratio_need = sh_ratio_part.get(base_part, args.shorten_ratio)
+ 423:                     ordered = sorted(pool_s, key=size)
+ 424:                     short = ordered[0]
+ 425:                     if args.od5_v4 and len(ordered) >= 2 and size(long) / max(1, size(ordered[1])) >= ratio_need:
+ 426:                         short = ordered[1]  # (17 Nov, od6a) the 2nd-shortest right answer, not a lucky early stop
+ 427:                     if size(long) / max(1, size(short)) >= ratio_need:
+ 428:                         cand[part]["shorten"].append((qid, short, long))
+ 429:                         if base_part in shorten_second and len(clean) >= 3:  # (17 Nov) a 2nd pair on this question
+ 430:                             rest = [r for r in clean if r is not long and r is not short]
+ 431:                             long2 = max(rest, key=size) if rest else None
+ 432:                             if long2 is not None and size(long2) / max(1, size(short)) >= ratio_need:
+ 433:                                 cand[part]["shorten"].append((qid, short, long2))
+ 434:             src_rec = clean
+ 435:             if args.od5_v4 and damaged and wrongs and bt:  # (17 Nov, od6a) no fitting right answer of its own: the ORIGINAL's
+ 436:                 tw0 = thinking_len(min(wrongs, key=thinking_len))
+ 437:                 if not any(1.08 * tw0 + 10 <= thinking_len(r) <= min(1.05 * bt, 1.45 * tw0 + 50) for r in clean):
+ 438:                     src_rec = [r for r in base_right.get(str(qid), []) if max(0.60 * bt, 1.08 * tw0 + 10) <= thinking_len(r) <= 1.05 * bt][:4] or clean
+ 439:             if damaged and src_rec and wrongs:  # bounded recovery: chosen a little longer than the wrong one, never past ~the original
+ 440:                 clean_rec = src_rec
+ 441:                 tmed = sorted(thinking_len(r) for r in clean_rec)[len(clean_rec) // 2]
+ 442:                 target = min(0.85 * bt, 1.25 * tmed) if bt else 1.25 * tmed
+ 443:                 best = None
+ 444:                 for w in sorted((w for w in wrongs if not bt or thinking_len(w) < 0.85 * bt), key=thinking_len):
+ 445:                     tw = thinking_len(w)
+ 446:                     hi = (1.05 * bt if clean_rec is not clean else min(1.05 * bt, 1.45 * tw + 50)) if bt else 1.45 * tw + 50
+ 447:                     ok_r = [r for r in clean_rec if 1.08 * tw + 10 <= thinking_len(r) <= hi]
+ 448:                     for r in ok_r:
+ 449:                         key = (0 if (bt and tw < 0.65 * bt) else 1, 0 if decode and REREAD.search(decode(r)) else 1,
+ 450:                                abs(thinking_len(r) - target))
+ 451:                         if best is None or key < best[0]:
+ 452:                             best = (key, r, w)
+ 453:                 if best:
+ 454:                     cand[part]["recovery"].append((qid, best[1], best[2]))
+ 455:             elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-
+[output cut at 10,000 characters]

@@ -1,0 +1,75 @@
+"""DPO on (chosen, rejected) reply pairs, continuing a LoRA, with an NLL anchor and a collapse tripwire.
+
+    python dpo.py --pairs runs/r1/pairs/pairs.jsonl --init-adapter adapters/start --out adapters/r1
+
+loss = -log sigmoid(beta * [(pi_c - ref_c) - (pi_r - ref_r)]) + nll * (mean token NLL of chosen)
+
+pi and ref are summed log-probabilities of the reply tokens (thinking and answer) under the
+policy and under the starting adapter; the reference is scored once before training. The NLL
+anchor on the chosen reply (as in RPO, Pang et al. 2024) stops DPO from widening the margin by
+lowering both sides. Pair kinds are mixed to --mix (shorten, guard, hard, right), or all kept with --mix all.
+
+--checker (LUPIN0.x, VeriThinker-style practice): every --checker-every pairs, one "is this solution right? Yes/No"
+example (lupin_checker.py) adds --checker-weight x its answer's mean token NLL to the loss. Same model, same step;
+nothing changes at test time, where the model is never asked to judge.
+
+Every --save-every optimizer steps a checkpoint is saved. The tripwire watches held-out chosen
+replies: if the probability that the reply ends right after </think> rises above --tripwire, a
+collapse known from on-policy truncation DPO, training stops and the last checkpoint is kept.
+"""
+
+import argparse
+import json
+import math
+import random
+import shutil
+from pathlib import Path
+
+
+def main():
+    args = parse_arguments()
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    torch.manual_seed(args.seed)
+    rng = random.Random(args.seed)
+    rows = [json.loads(l) for l in Path(args.pairs).read_text().splitlines() if l.strip()]
+        args.max_len, args.held_out, args.lr_schedule, args.lr_min = 8704, 0, "cosine", 0.0
+    rows = [r for r in rows if len(r["prompt_ids"]) + max(len(r["chosen_ids"]), len(r["rejected_ids"])) <= args.max_len]
+    if args.mix != "all":
+        rows = mix(rows, [float(x) for x in args.mix.split(",")], rng)
+    elif not args.keep_order:  # --keep-order (5 Nov, Track A): the pair file is already in a stratified order
+        rng.shuffle(rows)
+    checks = []
+    if args.checker:
+        checks = [json.loads(l) for l in Path(args.checker).read_text().splitlines() if l.strip()]
+        checks = [c for c in checks if len(c["prompt_ids"]) + len(c["target_ids"]) <= args.max_len]
+        random.Random(args.seed + 1).shuffle(checks)
+        print(f"checker practice: {len(checks)} examples, one every {args.checker_every} pairs, weight {args.checker_weight}",
+              flush=True)
+    held_out, rows = rows[:args.held_out], rows[args.held_out:]
+        args.batch = max(1, math.ceil(len(rows) * args.epochs / args.target_steps))
+    print(f"training on {len(rows)} pairs, {len(held_out)} held out", flush=True)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = getattr(torch, args.dtype) if device == "cuda" else torch.float32
+        dtype = torch.float16
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    close = tokenizer.convert_tokens_to_ids("</think>")
+    ends = {tokenizer.convert_tokens_to_ids("<|im_end|>"), tokenizer.convert_tokens_to_ids("<|endoftext|>")}
+    model = AutoModelForCausalLM.from_pretrained(args.model, dtype=load_dtype).to(device)
+    model.gradient_checkpointing_enable()
+    model.enable_input_require_grads()
+    model = PeftModel.from_pretrained(model, args.init_adapter, is_trainable=True)
+    trainable = [p for p in model.parameters() if p.requires_grad]
+    for p in trainable:
+        p.data = p.data.float()
+
+    def logps(prompt, reply, grad):
+        ids = torch.tensor([prompt + reply], device=device)
+        with torch.set_grad_enabled(grad), torch.autocast(device_type=device, dtype=dtype, enabled=dtype != torch.float32):
+            hidden = model(input_ids=ids, output_hidden_states=False).logits[0]
+        positions = range(len(prompt) - 1, len(prompt) + len(reply) - 1)
+        total = 0.0
+        for start in 

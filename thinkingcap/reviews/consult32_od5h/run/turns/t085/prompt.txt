@@ -1,0 +1,40 @@
+--- THINKING_OFF.md ---
+# Thinking switched off: the original and trained models, per type (log lines)
+
+**25 Oct, queued (user): thinking OFF.** How much does thinking add at this scale? `track.py nothink` (runtime 2, right after
+**nothink nt1 (runtime 2): the original Qwen with thinking OFF, fresh x8** (it then crashed in compare.py, which refuses two
+worse on BFCL irrelevance (thinking OFF 87.2% vs ON 80.9%, +6.3), and cut-curve data point the same way for parts of the
+nt2, original Qwen thinking OFF vs ON (records diff, fresh x8): bfcl irrelevance 80.9 -> 87.2 (+6.2; tokens 195 -> 8, 96% saved);
+mbpp 46.2 -> 37.2 (-9.1; 2,098 -> 53); svamp 89.7 -> 17.5 (-72.2; 644 -> 10). rc1-rl-40 thinking OFF being scored.
+nt2, rc1-rl-40 thinking OFF vs rc1-rl-40 thinking (fresh x8): bfcl irrelevance 79.7 -> 86.6 (+6.9; tokens 106 -> 5); bfcl
+rough, a little optimistic. IFEval's reply is 284 tokens even with thinking off (703 with), so it cannot be cut as deep.
+So this is not "stopping early": the model no longer writes an answer at all. Thinking-off would score far better.
+- Bug found: my --nt-full code (3 Nov) was inserted into drpo() instead of nothink(), so "ntfull" re-printed the old fresh-240
+  numbers. Moved into nothink(); re-queued as ntfull2 on GPU 2 (next after lpd-st1).
+- **ntfull2: the original Qwen with thinking OFF on the FULL test (2,759 x 8)** (measurement for the blog curves; not allowed as a
+  Data in runs/mvtf/full-base-nothink (Drive).
+  started; (2) Track A (code to build and test on the Mac, then GPU 2); (3) one sandbox with EVERYTHING (raw Qwen, thinking off,
+  scratchpad; data-only pack: all_runs.json 132 runs, per_type.md, test card, thinking-off, his lpt6 reply; $3.17, 11 code
+- ~22:50 (user) **consult4** started: the consultant FROM SCRATCH (no earlier reports, none of our decisions) on all per-type data: raw Qwen per full-test question, thinking off, 144 checkpoints, run summaries, references, per-type families, every run command + code; question = best strategy for > 50% / better than -1 with our compute. Cap $25, 60 code runs.
+  fullmodel --name full-ca1 --nothink-models models/ca1-soup-10            (GPU 1)
+  fullmodel --name full-rc1soup --nothink-models models/rc1-soup-30         (GPU 2)
+  plan_line_b now: fullmodel --name full-ca1 --nothink-models models/ca1-soup-10 --fm-soup ca1:10 (needs full_eval_colab re-run).
+  the box; round 1 still worth running (cheap, gated). Unexploited lever: IFEval and no-fit (raw Qwen thinking OFF on the full
+  (original, thinking off, rc1-soup-30, rpE-80, rpI-120), the original's 10 stored answers (1.7 GB, 17,870 questions), rc1-soup-30's
+  0.57-0.65), not missing thinking (thinking off: -0.16 on that class, +0.65 on the 264 questions without a counting rule); thinking
+  only matters on the other counting rules (thinking off -1.69). No-fit: 28 near-fit questions hold the errors (original 2%,
+  thinking off 59%, rpI-120 27%); the other 212 are at 94-97% whatever the thinking. One / several functions: without thinking
+
+--- pertype_best_full.md ---
+# Best per-type saving on the FULL test (2,759 x 8) at a per-type accuracy change >= -1 and >= -2 (15 Nov 14:00)
+| type | best saved at >= -1 | best saved at >= -2 |
+|---|---|---|
+| math (SVAMP) | 47% at 0.0 (rpI-120) | 60% at -1.5 (rpL-40) |
+| code (MBPP+) | 62% at -0.9 (rpL-60) | 66% at -1.8 (rpL-80) |
+| IFEval | 48% at +0.9 (r2s3-s20) | 50% at -1.7 (pt-mid) |
+| simple tools | 45% at -0.3 (rpM-60) | 50% at -1.7 (od5d-r11) |
+| several tools | 51% at -0.2 (r2s3-s20) | 51% at -0.2 (r2s3-s20) |
+| no-fit | 66% at +7.7 (rpL-80) | 66% at +7.7 (rpL-80) |
+Composite if ONE model matched each type's >= -1 best: ~52.8% saved / +0.5 (official weighting); each type's >= -2 best:
+~58% / -0.9. Math is the binding limit (no full test above 47% math saving within -1).
+

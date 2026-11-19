@@ -1,0 +1,123 @@
+=== dpo.py lines 155..220 ===
+ 155:         margin = args.beta * ((pc - r["ref_c"]) - (pr - r["ref_r"]))
+ 156:         loss = -torch.nn.functional.logsigmoid(margin) + args.nll * (-pc / len(r["chosen_ids"]))
+ 157:         if checks and position % args.checker_every == 0:  # a fixed example per position: a resumed run sees the same
+ 158:             c = checks[(position // args.checker_every) % len(checks)]
+ 159:             check_nll = -logps(c["prompt_ids"], c["target_ids"], True) / len(c["target_ids"])
+ 160:             loss = loss + args.checker_weight * check_nll
+ 161:             check_stats.append(float(check_nll))
+ 162:         (scaler.scale(loss / args.batch) if scaler else loss / args.batch).backward()
+ 163:         stats.append((float(loss), float(margin) > 0))
+ 164:         if position % args.batch == 0 or position == len(order):  # the last, partial batch too
+ 165:             if scaler:
+ 166:                 scaler.unscale_(optimizer)
+ 167:             torch.nn.utils.clip_grad_norm_(trainable, 1.0)
+ 168:                 warm = max(1, steps // 20)
+ 169:                 lr = args.lr * (step / warm if step < warm else
+ 170:                                 max(0.0, 0.5 * (1 + math.cos(math.pi * (step - warm) / max(1, steps - warm)))))
+ 171:                 for group in optimizer.param_groups:
+ 172:                     group["lr"] = lr
+ 173:             elif args.lr_schedule == "cosine":  # warm-up, then cosine down to --lr-min at the last step (30 Oct build spec)
+ 174:                 if step < args.warmup:
+ 175:                     lr = args.lr * (step + 1) / args.warmup
+ 176:                 else:
+ 177:                     lr = args.lr_min + 0.5 * (args.lr - args.lr_min) * (
+ 178:                         1 + math.cos(math.pi * (step - args.warmup) / max(1, steps - 1 - args.warmup)))
+ 179:                 for group in optimizer.param_groups:
+ 180:                     group["lr"] = lr
+ 181:             if scaler:
+ 182:                 scaler.step(optimizer)
+ 183:                 scaler.update()
+ 184:             else:
+ 185:                 optimizer.step()
+ 186:             optimizer.zero_grad(set_to_none=True)
+ 187:             step += 1
+ 188:             if step % args.log_every == 0:
+ 189:                 loss_avg = sum(s[0] for s in stats) / len(stats)
+ 190:                 acc = sum(s[1] for s in stats) / len(stats)
+ 191:                 extra = f"  checker NLL {sum(check_stats) / len(check_stats):.3f}" if check_stats else ""
+ 192:                 print(f"step {step}/{steps}  loss {loss_avg:.4f}  pairs ordered right {acc:.0%}{extra}", flush=True)
+ 193:                 stats, check_stats = [], []
+ 194:             if step % args.save_every == 0 or step == steps or step in args.save_at:
+ 195:                 model.eval()
+ 196:                 wire = tripwire()
+ 197:                 model.train()
+ 198:                 print(f"step {step}: tripwire {wire:.3f} (baseline {baseline:.3f})", flush=True)
+ 199:                 if wire > max(args.tripwire, 3 * baseline):
+ 200:                     print(f"tripwire: replies start ending right after </think>; stopped at step {step}, "
+ 201:                           "keeping the previous checkpoint", flush=True)
+ 202:                     break
+ 203:                 model.save_pretrained(out / f"step-{step}")
+ 204:                 model.save_pretrained(latest)  # not args.out: an adapter there means "finished" to track.py
+ 205:                 torch.save({"step": step, "optimizer": optimizer.state_dict(), "torch_rng": torch.get_rng_state()},
+ 206:                            state_path)
+ 207:     if (latest / "adapter_config.json").exists():  # the last checkpoint (before a tripwire stop, the previous one)
+ 208:         shutil.copytree(latest, out, dirs_exist_ok=True)
+ 209:     else:
+ 210:         model.save_pretrained(out)
+ 211:     print(f"saved {args.out}")
+ 212: 
+ 213: 
+ 214: def mix(rows, shares, rng):
+ 215:     """Pairs subsampled to the shares of shorten, guard, hard and right, keeping as many as the scarcest allows."""
+ 216:     kinds = {k: [r for r in rows if r["kind"] == k] for k in ("shorten", "guard", "hard", "right")}
+ 217:     shares = list(shares) + [0.0] * (len(kinds) - len(shares))  # a three-share --mix leaves "right" out
+ 218:     total = min(len(kinds[k]) / s for k, s in zip(kinds, shares) if s > 0) if rows else 0
+ 219:     picked = []
+ 220:     for (k, pool), s in zip(kinds.items(), shares):
+
+=== repair_pairs.py lines 750..870 ===
+ 750:                 # (11 Nov, rpL = rpK + consult9's IFEval fixes + the anti-loop pair) tool calls as in "typed"; math and code
+ 751:                 # hold as in "typed", with a tenth of anti-loop pairs; IFEval: 20% counting-rule pairs (true "at least N" rules,
+ 752:                 # --count-mode atleast), 50% "shorter thinking", 15% be-right, 15% anti-loop
+ 753:                 sh_share = ({"shorten": 0.0, "right": 0.70, "guard": 0.20, "loop": 0.10} if part in ("svamp", "mbpp") else
+ 754:                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
+ 755:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 756:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 757:                 count_share = 0.20
+ 758:             if args.mix_preset == "round1b":
+ 759:                 # (11 Nov, Path 1 redesigned) round 1 as launched (60 / 40 on math and no fit, 70 / 30 on code and tool calls)
+ 760:                 # with two changes: anti-loop pairs take 15 points of the be-right side on math and code (the original's
+ 761:                 # runaways hold 30% of its code tokens and 10% of its math tokens), and IFEval uses rpL's rules (20% counting
+ 762:                 # pairs on true "at least N" rules, 50% "shorter thinking", 15% be-right, 15% anti-loop)
+ 763:                 sh_share = ({"shorten": 0.60, "right": 0.25, "guard": 0.0, "loop": 0.15} if part == "svamp" else
+ 764:                             {"shorten": 0.70, "right": 0.15, "guard": 0.0, "loop": 0.15} if part == "mbpp" else
+ 765:                             {"shorten": 0.625, "right": 0.1875, "guard": 0.0, "loop": 0.1875} if part == "ifeval" else
+ 766:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 767:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 768:                 count_share = 0.20
+ 769:             if args.mix_preset == "typed3":
+ 770:                 # (11 Nov, rpM, consult10 after rpK-20's full test and rpL) math: NO "shorter", NO anti-loop, half widened guards
+ 771:                 # and half length-held be-right; code as rpL; IFEval: 25% counting pairs (true length rules), 45% "shorter"
+ 772:                 # (questions without a counting rule, response held), 22.5% be-right, 7.5% response loops; several functions 50 / 50
+ 773:                 sh_share = ({"shorten": 0.0, "right": 0.50, "guard": 0.50, "loop": 0.0} if base_part == "svamp" else
+ 774:                             {"shorten": 0.0, "right": 0.7125, "guard": 0.20, "loop": 0.0875} if part == "mbpp" else
+ 775:                             {"shorten": 0.60, "right": 0.30, "guard": 0.0, "loop": 0.10} if part == "ifeval" else
+ 776:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 777:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 778:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 779:                 count_share = 0.25
+ 780:             if args.mix_preset == "round1c":
+ 781:                 # (11 Nov, Path 1's round 1 redesigned, consult10's edits to round1b) math 45% shorter / 35% be-right / 15% widened
+ 782:                 # guards / 5% anti-loop (the first round 1 over-cut math); code 70 / 13 / 10 / 7; IFEval as rpM with 20% counting
+ 783:                 # pairs; several functions 50 / 50; anti-loop pairs 144 instead of 360
+ 784:                 sh_share = ({"shorten": 0.45, "right": 0.35, "guard": 0.15, "loop": 0.05} if base_part == "svamp" else
+ 785:                             {"shorten": 0.70, "right": 0.13, "guard": 0.10, "loop": 0.07} if part == "mbpp" else
+ 786:                             {"shorten": 0.55, "right": 0.375, "guard": 0.0, "loop": 0.075} if part == "ifeval" else
+ 787:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_multiple" else
+ 788:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0} if part == "bfcl_irrelevance" else
+ 789:                             {"shorten": 0.70, "right": 0.30, "guard": 0.0})
+ 790:                 count_share = 0.20
+ 791:             if args.mix_preset == "r2s2a":
+ 792:                 # (13 Nov, consult19, user: go) step 2 = shorten ONLY IFEval and tools; math and code get no shorten and no
+ 793:                 # guards (length-held be-right via --right-hold, + loops; guards wait for step 3). Math 90 be-right / 10 loops,
+ 794:                 # code 80 / 20, IFEval 20% counting + 62.5 shorten / 25 be-right / 12.5 loops, one function 50 / 50, several
+ 795:                 # 55 / 45, no fit 60 / 40
+ 796:                 sh_share = ({"shorten": 0.0, "right": 0.90, "guard": 0.0, "loop": 0.10} if base_part == "svamp" else
+ 797:                             {"shorten": 0.0, "right": 0.80, "guard": 0.0, "loop": 0.20} if part == "mbpp" else
+ 798:                             {"shorten": 0.625, "right": 0.25, "guard": 0.0, "loop": 0.125} if part == "ifeval" else
+ 799:                             {"shorten": 0.50, "right": 0.50, "guard": 0.0} if part == "bfcl_simple_python" else
+ 800:                             {"shorten": 0.55, "right": 0.45, "guard": 0.0} if part == "bfcl_multiple" else
+ 801:                             {"shorten": 0.60, "right": 0.40, "guard": 0.0})
+ 802:                 count_sh
+[output cut at 10,000 characters]

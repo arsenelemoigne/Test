@@ -1,0 +1,60 @@
+EXPERIMENT_LOG total lines: 6820
+6501: - ~11:20 CET od5c reached round 16 (user rule met). od5c's second full test + lossan moved to GPU 2 after od5d's tests (GPU 1: r2s3b with the IFEval refill, its 2 full tests, lossan). Mac keep-awake renewed for 24 h.
+6502: - ~11:25 CET GPU 2: fullpick od5d picked **od5d-r10** (monitor 50.7 / -0.00 -> corrected 49.7 / -2.50) and **od5d-r11** (= od5d-best, Dev 49.6 / +1.69 -> corrected 48.6 / -0.81) for full tests; first running (512 / 22,072). GPU 1: Dev of od5c-best (round 16's model) at 300 / 512, then the IFEval refill and r2s3b.
+6503: - ~11:58 CET r2s3b rebuilt with the 600 IFEval (s3m3): **799 / 800 pairs**: IFEval 211 / 212 = shorten 95, counting 53, compact 39, loops 24 (the fixed shares round to 211); all other types full -> stopped by the all-pairs rule. Not a data shortage: IFEval quota set to 211 (shares unchanged), r2s3b retrains with the 799 pairs (pairs reused).
+6504: - ~12:20 CET **r2s3b training started** on 799 pairs (rebuild-if-short: 799 of 799, kept), plain bf16, 50 steps; Dev at 20/30/40/50 next. GPU 2: od5d-r10 full test ~5,000 / 22,072.
+6505: - ~12:28 CET r2s3b training: loss 0.691 / 0.690 / 0.686 / 0.669 / 0.663 at steps 5-25, ordered right 52 / 49 / 44 / 68 / 61% (slow, as r2s3). GPU 2: od5d-r10 full test 15,616 / 22,072 (~30 min).
+6506: - ~13:05 CET **od5d-best (= round 11's model) FULL TEST 2,759 x 8: +49.5% saved / -1.2** (official mean from per type -1.21;
+6507:   curve at 49.5 = -2.80 -> +1.59 above). Dev had read 49.6 / +1.69 (over-read accuracy by 2.9). Per type: math 50 / -1.8,
+6508:   code 49 / -2.1, IFEval 47 / -0.3, simple 50 / -1.7, several 51 / -3.6, no-fit 57 / +3.6. Outside the goal (saving < 50 and
+6509:   accuracy < -1). Frontier artifact v14 (new family od5d). Full test of od5d-r10 running next on GPU 2.
+6510: - ~13:00 CET **r2s3b-s20 Dev-512 53.7 / +1.63** (r2s3-s20 52.8 / +2.54), **Dev-SVAMP 51.5 / +0.00** (r2s3-s20 50.1 / -0.69):
+6511:   more saving and better math, but lower Dev-512 accuracy; with this lineage's Dev bias (3.3-3.5) ~52.4 / -1.9 on the full
+6512:   test. Steps 30 / 40 / 50 next. Training ended loss 0.621, ordered right 70%.
+6513: - ~13:15 CET GPU 2: my synthetic click on the plan cell DID interrupt it (^C during the od5d-r10 full test, ~800 / 22,072;
+6514:   runtime still connected). Plan a had been made restart-safe (finished lines commented, od5c's test first), so I restarted
+6515:   the plan cell (user asked for the swap). fullpick od5c --fp-tag=-b skipped od5c-r10 (tested) and picked **od5c-r16
+6516:   (= od5c-best: Dev-512 55.0 / +2.22 -> corrected 54.0 / -0.28)**; its full test is running. Then lossan od5c (r10 + r16),
+6517:   then od5d-r10's full test (restarted), lossan od5d. Checked GPU 1's queue: r2s3b Dev 30-50 -> fullpick r2s3b (2 tests)
+6518:   -> lossan r2s3bf, nothing else; both finish before the ~21:50 24 h runtime limit.
+6519: - ~13:25 CET **r2s3b-s30 Dev-512 53.4 / +2.34** (r2s3-s30 52.8 / +2.50; r2s3b-s20 53.7 / +1.63) -> with the 3.3-3.5 Dev bias ~52.1 / -1.1. Dev-SVAMP s30 running. GPU 2: od5c-best (r16) full test 512 / 22,072.
+6520: - ~13:45 CET r2s3b-s30 Dev-SVAMP 48.6 / -0.31 (s20 51.5 / 0.00). Step 40 Dev running. GPU 2 od5c-best full test 1,792 / 22,072.
+6521: - ~13:50 CET (user): Argon consult26 (online DPO only: one online run to > 52% at better than -1 on the full test) launches ONLY when all online evaluations are done: od5c-r16 full test, lossan od5c, od5d-r10 full test, lossan od5d (~17:30); 120 turns, $3.
+6522: - ~13:55 CET (user): Argon consult27 OFFLINE launches when r2s3b's 2 full tests + lossan are in: ONE offline DPO run from the original (any number of steps) to > 52% at better than -1, with ALL offline DPO data (Path 1 + r2s3b, rpE/K/L/M, clean line A), reports and logs; 120 turns, $3.
+6523: - ~14:15 CET r2s3b-s40 Dev-512 51.9 / +2.39, Dev-SVAMP 45.2 / +0.12 (saving falling with steps: s20 53.7, s30 53.4, s40 51.9). Step 50 next. GPU 2 od5c-r16 full test 15,872 / 22,072 (~30 min).
+6524: 
+6525: ## 15 Nov ~14:40 CET ? **od5c-best (= round 16's model) FULL TEST 2,759 x 8: +54.8% saved / -0.8 -> INSIDE THE GOAL, above the user's 52% margin target**
+6526: Official mean from per type: -0.78 (BFCL pooled 400/200/240 = +1.16). Curve at 54.8 = -3.87 -> **+3.09 above: the best
+6527: point of any run** (rpM-60 54.1 / -0.93 = +2.79; r2s3-s20 52.7 / -0.99 = +2.43). ONE online DPO algorithm from the original
+6528: (od5 v2, 16 rounds of its own answers on test-matched slices, fixed reference = the original, LoRA rank 16, constant lr
+6529: 1.4e-5, no repair stage). Per type: math 61 / -2.8, code 59 / -2.0, IFEval 47 / +0.5, simple 49 / -1.1, several 50 / 0.0,
+6530: no-fit 57 / +5.9. Dev-512 had read 55.0 / +2.22 (accuracy over-read 3.0). Frontier artifact v16.
+6531: - r2s3b Dev s50 51.2 / +3.03 (SVAMP 45.2 / +0.50); fullpick picked **s30** (corrected 52.1 / -1.16) and **s40** (50.6 / -1.11)
+6532:   for full tests (running on GPU 1).
+6533: - ~14:55 CET lossan od5c -> reviews/loss_analysis/od5c.txt. Exact od5c-best = -0.78 (math -2.84, code -1.95, IFEval +0.49, simple -1.09, several 0.00, no-fit +5.89); od5c-r10 math -4.58 (the gap closed by rounds 11-16). GPU 2 now: od5d-r10 full test (768 / 22,072); GPU 1: r2s3b-s30 full test (768 / 22,072).
+6534: - ~15:45 CET (user: save everything about the online DPO so it can be reproduced): **reviews/od5c/REPRODUCE_od5c.md** = the
+6535:   full record of od5c (method, code versions, training data and how every slice was built incl. the Haiku files, the exact
+6536:   pair policy, brake, quotas, hyper-parameters, the queue line, round-by-round monitor per type + held types + pairs +
+6537:   training losses, Dev / full tests and their biases, where every artifact lives on Drive, how to rerun). Raw round logs
+6538:   (rounds 12-16) reviews/od5c/raw_gpu1_log_rounds3to16.txt, per-type pairs r3-r7 reviews/od5c/pairs_r3_r7_per_type.md,
+6539:   loss analysis reviews/od5c/loss_analysis_od5c.txt.
+6540: - ~16:00 CET (user: "change only the seed and else yes queue it"): queued on GPU 2 after od5d's test + lossan: (1) full
+6541:   test of od5c-r15 (fullpick --fp-skip-tested --fp-tag=-c; r10 and r16 are tested) + lossan od5c3; (2) **od5r** = exact
+6542:   (pair sampling, adapter init, batch order) and the answer sampling seed 53 -> 54 (new track flag --rp-gen-seed, default 53
+6543:   = unchanged for every other run); then fullpick od5r (2 full tests) + lossan od5r. consult26 waits for od5c-r15's full
+6544:   test too. Note: the runtimes' 24 h limit (~21:50) will interrupt od5r after ~5 rounds; it resumes after a reconnect.
+6545: - ~16:12 CET **od5d-r10 FULL TEST: +51.6% saved / -1.9** (official mean -1.95; curve at 51.6 = -3.20 -> +1.25 above). Its monitor had read 50.7 / -0.00 (accuracy over-read 1.9). Per type: math 54 / -3.5, code 52 / -2.3, IFEval 49 / -1.3, simple 49 / -2.4, several 50 / -2.2, no-fit 56 / +3.4. Frontier artifact v17. od5d is done (both full tests outside the goal); od5c's recipe (v2) beat its v3 rules.
+6546: - ~16:25 CET **BOTH runtimes disconnected** (Reconnect L4), ~5 h before the 24 h limit (probably the session / compute units). GPU 1 was at 21,248 / 22,072 of r2s3b-s30's full test; GPU 2 had finished lossan od5d (saved from the page: reviews/loss_analysis/od5d.txt). Both plans made restart-safe (every finished line commented): GPU 1 restarts at fullpick r2s3b (s30 + s40 full tests) -> lossan r2s3bf; GPU 2 at the od5c-r15 full test -> lossan od5c3 -> od5r -> its full tests. Waiting for the user to reconnect both + mount Drive.
+6547: - ~16:45 CET (user: extend od5c to round 24, do NOT loosen the matching): supply after slice 16 (test-matchable candidates
+6548:   left): math 1,195 (need 1,760 for 8 slices), code 983 (need 1,120; hardest bin scarce), IFEval 5,242 (1,600), simple 2,033
+6549:   (640), several 1,038 (480), no-fit 3,046 but too easy (slices 13-16 each used ~90-180 new hard Haiku no-fit). Plan: 12 hard
+6550:   Haiku no-fit batches (~$25, generating now in 3 streams -> nofit_haiku5.jsonl, builder haiku_nofit5); ~1,200 more math
+6551:   (metamath_easy, as r2g-math) and ~1,000 more code (KodCode easy/medium/hard, as r2g-code) answered x8 by the original on
+6552:   GPU 1 after r2s3b's tests, then od3prep --od3-more 8 (same strict tolerances), odpo od5c --od-rounds 24 (continues the same
+6553:   adapter from round 16), full tests of the 2 best new rounds.
+6554: - ~16:50 CET (user: max $5 on Haiku): the 12-batch hard no-fit generation STOPPED after ~5 min (no file written). OpenRouter usage today $20.97 (Argon consult24 $1.96 + consult25 $1.59 + Haiku several-tool and hard no-fit batches 3-5 + the stopped run). No more Haiku spending; alternatives: no-fit built from our existing tool questions with the right function removed (free), math / code from MetaMath / KodCode via newtop (free, GPU only).
+6555: - ~17:00 CET (user): Argon consults now on the user's personal Google AI Studio key (Keychain service google-ai-studio-key; --provider google --llm gemini-4-argon); tested OK. Haiku (OpenRouter) capped at $5 (user).
+6556: - ~17:35 CET user reconnected both runtimes and mounted Drive; I started cells 2-6. GPU 1 restarted at fullpick r2s3b (s30 + s40 full tests); GPU 2 at fullpick od5c -c: skipped r10 and r16 (tested) and picked **od5c-r15** for its full test, then lossan od5c3, then od5r.
+6557: - ~17:50 CET **r2s3b-s40 FULL TEST: +51.3% saved / -0.8** (official mean -0.78; curve at 51.3 = -3.15 -> +2.37 above): inside the goal, under the 52% margin. (Its test had finished before the 16:25 disconnect; the interrupted one was s30, restarting from 0 now.) Per type: math 55 / -2.1, code 51 / -1.6, IFEval 48 / +0.3, simple 49 / -2.9, several 51 / -0.2, no-fit 52 / +6.0. vs r2s3-s30 (51.5 / -0.84): same point; math better (-2.1 vs -2.8), simple worse (-2.9 vs -3.8... -> better), consult25 expected 53.1 / -0.58. Frontier artifact v18.
+6558:   (correction to the line above: vs r2s3-s30, r2s3b-s40 is better on math (-2.1 vs -2.8) AND on simple (-2.
+[output cut at 10,000 characters]

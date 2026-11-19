@@ -1,0 +1,73 @@
+with `--od-acc-hold -2.0` (vs `-1.5`).
+
+| Benchmark (Full Test 2,759 x 8) | `od5c-r16` (54.8 / -0.78) | `od5c-r20` (56.9 / -1.24) | `od5f-r16` (55.4 / -0.57) | `od5f-r17` (57.8 / -0.64) | `od5f-r18` (59.5 / -0.80) | `od5g-r20` (57.4 / +0.14) |
+|---|---|---|---|---|---|---|
+| **Math (SVAMP 700)** | 61.1% / -2.84 | 62.4% / -2.70 | 63.3% / -1.50 | 66.8% / -2.30 | 70.9% / -3.60 | 66.8% / -1.50 |
+| **Code (MBPP 519)** | 58.6% / -1.95 | 61.1% / -2.70 | 53.0% / -0.70 | 55.2% / -1.20 | 56.1% / -1.10 | 53.7% / -0.40 |
+| **IFEval (700)** | 46.9% / +0.49 | 51.3% / -0.30 | 52.8% / -0.60 | 55.4% / +0.50 | 56.2% / +1.40 | 53.4% / +1.80 |
+| **BFCL Simple (400)** | 48.6% / -1.09 | 49.3% / -2.20 | 48.0% / -0.90 | 48.7% / -1.50 | 49.7% / -2.40 | 49.0% / -2.20 |
+| **BFCL Multiple (200)** | 50.1% / 0.00 | 50.5% / -0.40 | 49.8% / -1.00 | 50.4% / -0.60 | 50.1% / -1.00 | 50.2% / -0.70 |
+| **BFCL No-Fit (240)** | 57.0% / +5.89 | 57.9% / +6.60 | 56.9% / +4.20 | 57.7% / +4.40 | 58.7% / +5.50 | 58.6% / +6.10 |
+| **BFCL Pooled (840)** | 51.6% / +1.16 | 52.2% / +0.74 | 51.2% / +0.53 | 51.9% / +0.40 | 52.7% / +0.19 | 52.2% / +0.53 |
+| **Official Total** | **54.8% / -0.78** | **56.9% / -1.24** | **55.4% / -0.57** | **57.8% / -0.64** | **59.5% / -0.80** | **57.4% / +0.14** |
+
+- **IFEval (`+9.3` pts saving, `+0.9` pts accuracy vs `od5c-r16`):** The activated `1.25` ratio, second shortening pair, and `0.30` floor lifted IFEval from `46.9% / +0.49` (`od5c-r16`) to `56.2% / +1.40` (`od5f-r18`).
+- **Math (`+9.8` pts saving vs `od5c-r16`, or `+5.7` pts at half the loss in `od5g-r20`):** The `0.45` floor protected math through round 17 (`od5f-r16` `63.3% / -1.50` and `od5g-r20` `66.8% / -1.50` vs `od5c-r16` `61.1% / -2.84`), before an unbraked round 18 pushed `od5f-r18` math to `70.9% / -3.60`.
+- **Code (`-2.5` pts saving, `+0.85` pts accuracy vs `od5c-r16`):** Smaller quota (`56 -> 52`) and keeping ratio `1.30` slowed code from `58.6% / -1.95` to `56.1% / -1.10` (`od5f-r18`) and `53.7% / -0.40` (`od5g-r20`).
+- **BFCL Pooled (`+1.1` pts saving, `-0.97` pts accuracy vs `od5c-r16`):** No-fit barely moved (`57.0% -> 58.7%`) because its `16:0.28` floor and single-slice cap (`64%`) stopped it early, while Simple (`48.6% -> 49.7%`, `-1.09 -> -2.40`) crossed its cliff when its single-slice monitor dipped below `45%` in rounds 17?18.
+
+#### B. What rounds 19?23 (`od5f`) and 19?22 (`od5g`) show: brake-induced limit-cycle oscillation
+Neither run plateaued from capacity or paid in accuracy; instead, **both entered a 2-round limit-cycle oscillation caused by how `repair_pairs.py` fills the quota of held types**, trading 6?14 pts of saving back for `+3` to `+4` pts of slice accuracy:
+- At the round 19 monitor (`od5f-r18` answering slice 19: `59.0% / +2.37`), **four types hit their cap or accuracy hold simultaneously**: `svamp` (`64.2% / -2.56`), `bfcl_simple_python` (`50.3% >= 45`), `bfcl_multiple` (`58.1% >= 53`), and `bfcl_irrelevance` (`65.4% >= 64`).
+- In `repair_pairs.py`, when a type `part` is in `--no-shorten-parts` (`stop5`), `c_sh = 0`, **but its quota `n` is unchanged**. Those 4 held types occupy `56 + 24 + 22 + 26 = 128` of the 240 pairs (**53.3% of the entire DPO batch**). Worse:
+  1. All `n_act` slots (`80%` of `n_rem`) on held types are filled by `recovery` pairs (lines 435?450, 702?706), which explicitly select `chosen` **1.08x to 1.45x (+10 to +50 tokens) LONGER** than `rejected` (targeting `0.85 * bt`).
+  2. At line 453 (`if args.od5_v2 and part not in stop5`), held types are **excluded from compact `be-right` pairs** (`0.50?1.00x`) and fall through to length-matching `0.90?1.12x` of the *wrong* answer's thinking (`hold`, lines 463?471). Because wrong answers think 2?3x longer than right answers, matching `0.90?1.12x` of a wrong answer selects the **longest right answers**. Even `bfcl_irrelevance` (which `track.py` excluded from `--right-hold` at line 5450) still executes lines 435?471 in `repair_pairs.py` because the `od5` block (`continue` at line 472) never checks `right_hold`.
+- Training 15 steps on 128 lengthening pairs caused a global length rebound in one round: Dev-512 dropped from `60.4% / +0.88` (r18) to `52.7% / +3.49` (r19) in `od5f` and `55.0% / +2.59` in `od5g` (math monitor fell from `64.2%` to `51.8%`).
+- In round 20, because r19 lengthened the model below the caps, `--od-unlatch` **released** the brake on math, multiple, and no-fit. Round 20 shortened them again (`od5f-r20` Dev `57.6% / +2.72`; `od5g-r20` Dev `58.2% / +3.18`, full test `57.4% / +0.14`).
+- At the end of round 20 they crossed the caps again, so rounds 21?23 repeated the lengthening rebound (`od5f` Dev r21 `46.8%`, r22 `51.7%`, r23 `45.8%`; `od5g` Dev r21 `51.6%`, r22 `50.6%`).
+
+#### C. Where each type stops at `<= 1 pt` accuracy loss now (full-test empirical curves)
+- **Math (SVAMP):** **64?65%** (`od5f-r16` `63.3% / -1.5`, `od5g-r20` `66.8% / -1.5`, `od5r-r15` `59.4% / -1.2`; crosses `-1.0` at `~64.5%` and `-1.5` at `66.8%`).
+- **Code (MBPP):** **56?58%** (`od5g-r20` `53.7% / -0.4`, `od5f-r16` `53.0% / -0.7`, `od5f-r18` `56.1% / -1.1`, `rpl-60` `61.7% / -0.9`).
+- **IFEval:** **57?58%** (`od5g-r20` `53.4% / +1.8`, `od5f-r18` `56.2% / +1.4`, `od5c-r20` `51.3% / -0.3`; under `od5f` guards it is still `+1.4` at `56.2%` and crosses `-1.0` around `58%`).
+- **BFCL Simple (400):** **48%** (`od5f-r16` `48.0% / -0.9`, `od5c-r16` `48.6% / -1.09`; above `48.5%` loss jumps to `-1.5` to `-2.4`).
+- **BFCL Multiple (200):** **50?51%** (`od5c-r20` `50.5% / -0.4`, `od5f-r17` `50.4% / -0.6`, `od5g-r20` `50.2% / -0.7`, `od5f-r18` `50.1% / -1.0`).
+- **BFCL No-Fit / Irrelevance (240):** **75?96%** (never loses accuracy: `+5.5` at `58.7%` in `od5f-r18`, `+6.1` at `58.6%` in `od5g-r20`, `+7.7` at `65.9%` in `r2s3-s80`, and **`+6.2` at `95.9%` saved** when thinking is turned off).
+
+---
+
+### 2. Is `> 60%` at Better Than `-1` Reachable?
+
+**YES.** Both the KKT marginal-cost arithmetic and the measured per-type ceilings show that **60.5% to 61.4% saved at `-0.3` to `-0.8` accuracy change** is reachable within our single-run online DPO rules.
+
+#### A. Official-Score Arithmetic
+Official saving is `S = 1 - (r_math * r_code * r_ifeval * r_bfcl)**(1/4)`, where `r_b = 1 - s_b`. On BFCL (840 questions), original total tokens are: Simple `400 * 351.84 = 140,736` (`39.35%`), Multiple `200 * 442.81 = 88,562` (`24.76%`), No-Fit `240 * 535.29 = 128,470` (`35.90%`). Because No-Fit has the longest original answers (`535.3` tokens), **No-Fit carries 35.9% of BFCL's token weight** (`ds_bfcl / ds_nofit = 0.359`), whereas accuracy is weighted by question counts (`400 : 200 : 240`, so No-Fit is `28.57%` of BFCL accuracy).
+- Crossing `S = 60.0%` requires `r_geom < 0.4000`, or `r_math * r_code * r_ifeval * r_bfcl < 0.02560`.
+- `od5f-r18` (`59.51% / -0.80`) has `r = (0.291, 0.439, 0.438, 0.473)`, product `0.02646` (0.49 pts short of 60%).
+- `od5g-r20` (`57.41% / +0.14`) has `r = (0.332, 0.463, 0.466, 0.478)`, product `0.03424` (2.59 pts short of 60%, with `+1.14` pts of accuracy slack above `-1.0`).
+
+#### B. Which Benchmarks Give the Next Points of Saving vs Give Back Accuracy
+1. **Math must GIVE BACK 2.5?3.0 pts of saving relative to `od5f-r18` (`70.9% / -3.60 -> 68.0% / -1.80`):** Between `66.8%` (`od5g-r20`: `-1.50`) and `70.9%` (`od5f-r18`: `-3.60`), math pays `-0.51` accuracy points per saving point. Holding math at `68.0%` recovers `+1.8` math accuracy points (`+0.45` macro accuracy).
+2. **BFCL Simple must STAY at `48.5%` (`-1.20` pts):** Keeping Simple below `49%` recovers `+1.0` to `+1.2` pts on Simple (`+0.12` macro accuracy).
+3. **The next points of saving must come from the three types where `effprobe` proves 67?92% of thinking is post-settlement re-checking:**
+   - **BFCL No-Fit (`58.7% -> 70.0%` saved, accuracy `+6.0`):** `91.6%` of original thinking is after answer settlement, and `0` thinking tokens gives `+6.2` pts on the full test. Lifting No-Fit from `58.7%` to `70.0%` adds **`+4.1` pts to pooled BFCL saving** (`52.7% -> 57.0%`, `r_bfcl: 0.473 -> 0.430`) at **zero accuracy cost** (`r2s3-s80` already proved `65.9% / +7.7` on the full test).
+   - **Code (`53.7?56.1% -> 57.5%` saved, accuracy `-1.10`):** Adding `+1.4` pts on code over `od5f-r18` (`+3.8` pts over `od5g-r20`) costs `~0.0?0.7` pts on code (`rpl-60` proved `61.7% / -0.90`).
+   - **IFEval (`53.4?56.2% -> 57.5%` saved, accuracy `+0.80`):** Adding `+1.3` pts over `od5f-r18` (`+4.1` pts over `od5g-r20`) keeps IFEval positive (`+0.80`).
+
+| Benchmark | `od5f-r18` (Full) | `od5g-r20` (Full) | **Target `od5h` Allocation** | Measured Full-Test Ceiling Allowing It |
+|---|---|---|---|---|
+| **Math (SVAMP 700)** | 70.9% / -3.60 | 66.8% / -1.50 | **68.0% / -1.80** (`r = 0.320`) | `od5g-r20` (66.8% / -1.50), `od5f-r17` (66.8% / -2.30) |
+| **Code (MBPP 519)** | 56.1% / -1.10 | 53.7% / -0.40 | **57.5% / -1.10** (`r = 0.425`) | `od5f-r18` (56.1% / -1.10), `rpl-60` (61.7% / -0.90) |
+| **IFEval (700)** | 56.2% / +1.40 | 53.4% / +1.80 | **57.5% / +0.80** (`r = 0.425`) | `od5f-r18` (56.2% / +1.40) |
+| **BFCL Simple (400)** | 49.7% / -2.40 | 49.0% / -2.20 | **48.5% / -1.20** | `od5f-r16` (48.0% / -0.90), `od5c-r16` (48.6% / -1.09) |
+| **BFCL Multiple (200)** | 50.1% / -1.00 | 50.2% / -0.70 | **51.5% / -0.80** | `od5c-r20` (50.5% / -0.40), `r2s2-s40` (54.4% / -0.60) |
+| **BFCL No-Fit (240)** | 58.7% / +5.50 | 58.6% / +6.10 | **70.0% / +6.00** | `r2s3-s80` (65.9% / +7.70), `nothink` (95.9% / +6.20) |
+| **BFCL Pooled (840)** | 52.7% / +0.19 | 52.2% / +0.53 | **57.0% / +0.95** (`r = 0.430`) | Weighted sum (`39.35% Simple, 24.76% Mult, 35.90% No-Fit`) |
+| **Official Total** | **59.51% / -0.80** | **57.41% / +0.14** | **60.87% / -0.29** (`r_geom = 0.3913`) | Comfortably inside `>60.0%` at `> -1.00` (`+0.71` pt buffer) |
+
+Even a conservative landing (`Math 67.5% / -1.9, Code 56.5% / -1.1, IFEval 56.5% / +1.0, Simple 48.5% / -1.4, Multiple 50.5% / -0.8, No-Fit 67.0% / +5.8 -> BFCL 55.6% / +0.80`) yields **`60.15%` saved at `-0.55` accuracy**.
+
+---
+
+### 3. Design o
+[output cut at 10,000 characters]
