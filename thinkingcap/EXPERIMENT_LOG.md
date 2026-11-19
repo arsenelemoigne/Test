@@ -7131,3 +7131,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov: od5g round-22 monitor (od5g-r21 on od3g-r22): 48.0 / +3.73 (code 33/+1.4) — same saving-for-accuracy swing as od5f r22 (42.1/+4.38). New data did not remove the oscillation.
 - 19 Nov: od5g-best (final, = r22) Dev-512: 50.5 [48.0, 53.0] / +3.94 [2.37, 5.77].
 - 19 Nov: od5g-best Dev-SVAMP-200: 47.8 [44.0, 51.1] / +0.56 [-1.56, 2.69]. fullpick od5g 19-22 (-y4) started.
+- 19 Nov: od5g-r19 Dev-512: 55.0 [52.5, 57.4] / +2.59 (od5f-r19: 52.7 / +3.49).
