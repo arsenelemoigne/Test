@@ -296,7 +296,7 @@ def main():
     sh_ratio_part = {k: float(v) for k, v in (x.split("=") for x in re.split(r"[,+]", args.shorten_ratio_by_part) if x)}
     r2one = args.mix_preset == "r2one"
     floor_drop = Counter()
-    cand = defaultdict(lambda: {"guard": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
+    cand = defaultdict(lambda: {"guard": [], "hold_dmg": [], "right_long": [], "right_short": [], "shorten": [], "shorten_soft": [],
                                 "right_cr": [], "capguard": [], "right_count": [], "loop": [],
                                 "recovery": [], "hold": [], "format": []})  # mix: right_cr = counting-rule OR compact re-read pairs
     loop_resp_only = set(filter(None, re.split(r"[,+]", args.loop_response_only)))
@@ -363,7 +363,8 @@ def main():
             clean = [r for r in rights if not looping(r)]  # chosen answers never loop
             loops = [r for r in q if looping(r) and not right(r)]
             if clean and loops:
-                cand[part]["loop"].append((qid, clean[0], min(loops, key=lambda r: -r["output_tokens"])))
+                lp_c = clean[len(clean) // 2] if (args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))) else clean[0]  # (20 Nov, consult33) a held part: median right answer, never the shortest
+                cand[part]["loop"].append((qid, lp_c, min(loops, key=lambda r: -r["output_tokens"])))
 
             def bad_format(r):
                 if response_len(r) == 0:
@@ -455,6 +456,21 @@ def main():
                     cand[part]["recovery"].append((qid, best[1], best[2]))
             elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-1.12x, at 1.00)
                 best = None
+                if (args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):  # (20 Nov, consult33) a held part: two windows, chosen per slice at the quota stage
+                    bu = bd = None
+                    for r in clean:
+                        for w in wrongs:
+                            ratio = thinking_len(r) / max(1, thinking_len(w))
+                            rr = 0 if decode and REREAD.search(decode(r)) else 1
+                            if 0.90 <= ratio <= 1.05 and (bu is None or (rr, abs(ratio - 1.00)) < bu[0]):
+                                bu = ((rr, abs(ratio - 1.00)), r, w)  # undamaged slice: length-neutral, nearest 1.00
+                            if 0.95 <= ratio <= 1.10 and (bd is None or (rr, abs(ratio - 1.03)) < bd[0]):
+                                bd = ((rr, abs(ratio - 1.03)), r, w)  # damaged slice: a small +3% cushion, nearest 1.03
+                    if bu:
+                        cand[part]["hold"].append((qid, bu[1], bu[2]))
+                    if bd:
+                        cand[part]["hold_dmg"].append((qid, bd[1], bd[2]))
+                    continue
                 if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):
                     # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
                     held_c = args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
@@ -695,8 +711,10 @@ def main():
             if held5:  # (19 Nov, consult31) a held part: compact holds, few recovery pairs, a smaller share of the batch
                 if dmg > -0.02:
                     n_rem = min(n_rem, int(round(0.40 * n)))
-                rec_h = take(part, "recovery", cand[part]["recovery"], int(round((0.40 if dmg <= -0.02 else 0.20) * n_rem)))
-                hold_h = take(part, "right", cand[part]["hold"], n_rem - len(rec_h))
+                rec_h = take(part, "recovery", cand[part]["recovery"], int(round((0.55 if dmg <= -0.02 else 0.25) * n_rem)))  # (20 Nov, consult33)
+                dm_ids = {x[0] for x in cand[part]["hold_dmg"]}
+                h_pool = (cand[part]["hold_dmg"] + [x for x in cand[part]["hold"] if x[0] not in dm_ids]) if dmg <= -0.02 else cand[part]["hold"]
+                hold_h = take(part, "right", h_pool, n_rem - len(rec_h))
                 by_part[part] = got5 + rec_h + hold_h
                 counts[(part, "od5 slice accuracy vs the original (pts)")] = f"{100 * dmg:+.1f}"
                 counts[(part, "od5 held: recovery / compact hold (pairs)")] = f"{len(rec_h)} / {len(hold_h)}"
