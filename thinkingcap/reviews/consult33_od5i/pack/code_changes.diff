@@ -1,0 +1,69 @@
+diff --git a/thinkingcap/repair_pairs.py b/thinkingcap/repair_pairs.py
+index 1230223..f58a440 100644
+--- a/thinkingcap/repair_pairs.py
++++ b/thinkingcap/repair_pairs.py
+@@ -189,6 +189,10 @@ def main():
+                          "answers when the model has none that fit), recovery never capped")
+     ap.add_argument("--base-rollouts", default="",
+                     help="(17 Nov, od5-v4) the ORIGINAL's stored answers (rollouts.jsonl files, comma/+ separated): recovery fallback")
++    ap.add_argument("--od5-held", action="store_true",
++                    help="(19 Nov, consult31) non-lengthening hold: a held part (--no-shorten-parts) keeps COMPACT be-right "
++                         "pairs (right answer no longer than the wrong one), takes at most 40%% of its quota (all of it if its slice "
++                         "lost > 2 pts), recovery at most 20%% of that (40%% if damaged), and its unused slots are not a shortfall")
+     ap.add_argument("--od5-v2", action="store_true",
+                     help="(14 Nov, consult23, user: go od5b) od5 v2: shorten where the model is as good as the original (7/8 counts "
+                          "on 8/8 questions; mixed questions too), damage = a 2-answer drop on 7-8/8 questions, response rules only on "
+@@ -451,7 +455,7 @@ def main():
+                     cand[part]["recovery"].append((qid, best[1], best[2]))
+             elif clean and wrongs and 1 <= k1 < n_ans:  # undamaged, mixed: a length-neutral be-right pair (0.90-1.12x, at 1.00)
+                 best = None
+-                if args.od5_v2 and part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts))):
++                if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):
+                     # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
+                     for r in clean:
+                         for w in wrongs:
+@@ -683,6 +687,16 @@ def main():
+                     got5 += take(part, "right" if kind5 == "right_count" else kind5, cand[part][kind5], int(round(cap5 * n)))
+             n_rem = n - len(got5)
+             dmg = sum(od5_dmg[part]) / max(1, len(od5_dmg[part]))  # the part's accuracy change on this slice
++            held5 = args.od5_held and part in stop5
++            if held5:  # (19 Nov, consult31) a held part: compact holds, few recovery pairs, a smaller share of the batch
++                if dmg > -0.02:
++                    n_rem = min(n_rem, int(round(0.40 * n)))
++                rec_h = take(part, "recovery", cand[part]["recovery"], int(round((0.40 if dmg <= -0.02 else 0.20) * n_rem)))
++                hold_h = take(part, "right", cand[part]["hold"], n_rem - len(rec_h))
++                by_part[part] = got5 + rec_h + hold_h
++                counts[(part, "od5 slice accuracy vs the original (pts)")] = f"{100 * dmg:+.1f}"
++                counts[(part, "od5 held: recovery / compact hold (pairs)")] = f"{len(rec_h)} / {len(hold_h)}"
++                continue
+             c_sh = 0 if part in stop5 else len(cand[part]["shorten"])
+             c_rec = len(cand[part]["recovery"]) * (2 if dmg < -0.01 else 1)
+             c_hold = len(cand[part]["hold"])
+diff --git a/thinkingcap/track.py b/thinkingcap/track.py
+index f5889ba..f51d032 100644
+--- a/thinkingcap/track.py
++++ b/thinkingcap/track.py
+@@ -500,6 +500,8 @@ def main():
+     parser.add_argument("--ob-into", default="od3g", help="od3branch: the new slice set's name (data/<name>-rK-questions.jsonl)")
+     parser.add_argument("--ob-from", type=int, default=20, help="od3branch: first new slice; slices 2..from-1 are od3's (copied)")
+     parser.add_argument("--ob-more", type=int, default=5, help="od3branch: how many new slices")
++    parser.add_argument("--od-smooth", type=int, default=1, help="odpo (19 Nov, consult31): the per-type brake reads the mean "
++                        "saving / accuracy of the last N slices (this round's answers + N-1 earlier monitors); 1 = this slice only")
+     parser.add_argument("--ob-trim", type=float, default=0.0, help="od3branch (19 Nov): when a type's draw is too long (or too short) "
+                         "vs slices 2..19, drop this share of its longest (shortest) candidates and draw again, up to --ob-trim-max in all")
+     parser.add_argument("--ob-trim-max", type=float, default=0.4, help="od3branch: most of a type's candidates that trimming may drop")
+@@ -5464,6 +5466,14 @@ def odpo_fixed(args):
+             ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
+             sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
+             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
++            if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
++                import statistics
++                prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
++                per_ = {p_: (statistics.fmean([v[0]] + [h["per_part"][p_][0] for h in prev_h if p_ in h.get("per_part", {})]),
++                             statistics.fmean([v[1]] + [h["per_part"][p_][1] for h in prev_h if p_ in h.get("per_part", {})]))
++                        for p_, v in per_.items()}
++                print(f"odpo {name}: round {k + 1} brake reads the mean of {1 + len(prev_h)} slices: "
++                      + ", ".join(f"{p_} {v[0]:.0f}/{v[1]:+.1f}" for p_, v in per_.items()), flush=True)
+             held = sorted((set() if getattr(args, "od_unlatch", False) else latched)
+                           | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
+             latched = set(held)

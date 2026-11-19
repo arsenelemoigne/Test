@@ -1,0 +1,426 @@
+odpo od5ht: round 1/2: Qwen/Qwen3-0.6B answers, DPO continues a fresh LoRA, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 261 / 0 / 28 / 9 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 90 / 0 / 40 / 2 / 8 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 134 / 0 / 39 / 0 / 4 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 162 / 0 / 145 / 75 / 0 / 26
+  ifeval / od5 slice accuracy vs the original (pts): +0.0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 228 / 0 / 90 / 82 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 383 / 0 / 81 / 60 / 20 / 0
+  svamp / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 261 / 0 / 28 / 9 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 90 / 0 / 40 / 2 / 8 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 134 / 0 / 39 / 0 / 4 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 162 / 0 / 145 / 75 / 0 / 26
+  ifeval / od5 slice accuracy vs the original (pts): +0.0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 228 / 0 / 90 / 82 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 383 / 0 / 81 / 60 / 20 / 0
+  svamp / od5 slice accuracy vs the original (pts): +0.0
+training on 320 pairs, 0 held out
+odpo od5ht: MONITOR round 1 answers (Qwen/Qwen3-0.6B) vs the original on the same questions: saved +0.0% / accuracy +0.00 | svamp +0/+0.0, mbpp +0/+0.0, ifeval +0/+0.0, bfcl_simple_python +0/+0.0, bfcl_multiple +0/+0.0, bfcl_irrelevance +0/+0.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 119 / 2 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 42 / 4 / 16 / 0 / 5 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.9
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 50 / 2 / 13 / 0 / 0 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 56 / 13 / 38 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 117 / 9 / 31 / 24 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -0.2
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 152 / 19 / 30 / 11 / 1 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.2
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 119 / 2 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 42 / 4 / 16 / 0 / 5 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.9
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 50 / 2 / 13 / 0 / 0 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 56 / 13 / 38 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 117 / 9 / 31 / 24 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -0.2
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 152 / 19 / 30 / 11 / 1 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.2
+odpo od5ht: round 2 brake reads the mean of 2 slices: bfcl_irrelevance 15/+0.3, mbpp 16/-0.1, svamp 18/-1.1, ifeval 13/+0.3, bfcl_multiple 10/+0.5, bfcl_simple_python 12/+0.6
+odpo od5ht: round 2 brake on models/od5ht-r1's answers (+29.6% / -0.22): held (no shortening) = ['bfcl_multiple', 'bfcl_simple_python', 'svamp'] (caps {'svamp': 10.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 10.0, 'bfcl_multiple': 10.0, 'bfcl_irrele
+odpo od5ht: round 2/2: models/od5ht-r1 answers, DPO continues adapters/od5ht-r1-s0/step-20, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 119 / 2 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_multiple / od5 held: recovery / compact hold (pairs): 2 / 7
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.9
+  bfcl_simple_python / od5 held: recovery / compact hold (pairs): 2 / 6
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 56 / 13 / 38 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 117 / 9 / 31 / 24 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -0.2
+  svamp / od5 held: recovery / compact hold (pairs): 17 / 25
+  svamp / od5 slice accuracy vs the original (pts): -2.2
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 119 / 2 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_multiple / od5 held: recovery / compact hold (pairs): 2 / 7
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.9
+  bfcl_simple_python / od5 held: recovery / compact hold (pairs): 2 / 6
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 56 / 13 / 38 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 117 / 9 / 31 / 24 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -0.2
+  svamp / od5 held: recovery / compact hold (pairs): 17 / 25
+  svamp / od5 slice accuracy vs the original (pts): -2.2
+training on 216 pairs, 0 held out
+odpo od5ht: MONITOR round 2 answers (models/od5ht-r1) vs the original on the same questions: saved +29.6% / accuracy -0.22 | bfcl_irrelevance +29/+0.5, mbpp +33/-0.2, svamp +36/-2.2, ifeval +25/+0.6, bfcl_multiple +21/+0.9, bfcl_simple_python +24/+1.2
+odpo od5ht: RESULT models/od5ht-r2 -> models/od5ht-best
+odpo od5h: round 1/22: Qwen/Qwen3-0.6B answers, DPO continues a fresh LoRA, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 261 / 0 / 28 / 9 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 90 / 0 / 40 / 2 / 8 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 134 / 0 / 39 / 0 / 4 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 162 / 0 / 145 / 75 / 0 / 26
+  ifeval / od5 slice accuracy vs the original (pts): +0.0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 228 / 0 / 90 / 82 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 383 / 0 / 81 / 60 / 20 / 0
+  svamp / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 261 / 0 / 28 / 9 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 90 / 0 / 40 / 2 / 8 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.0
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 134 / 0 / 39 / 0 / 4 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.0
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 162 / 0 / 145 / 75 / 0 / 26
+  ifeval / od5 slice accuracy vs the original (pts): +0.0
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 228 / 0 / 90 / 82 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 383 / 0 / 81 / 60 / 20 / 0
+  svamp / od5 slice accuracy vs the original (pts): +0.0
+training on 320 pairs, 0 held out
+odpo od5h: MONITOR round 1 answers (Qwen/Qwen3-0.6B) vs the original on the same questions: saved +0.0% / accuracy +0.00 | svamp +0/+0.0, mbpp +0/+0.0, ifeval +0/+0.0, bfcl_simple_python +0/+0.0, bfcl_multiple +0/+0.0, bfcl_irrelevance +0/+0.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 113 / 1 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -0.1
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 37 / 5 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 49 / 0 / 14 / 0 / 2 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 19 / 41 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.5
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 110 / 6 / 31 / 26 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 161 / 13 / 31 / 12 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -1.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 113 / 1 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -0.1
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 37 / 5 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 49 / 0 / 14 / 0 / 2 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 19 / 41 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.5
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 110 / 6 / 31 / 26 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 161 / 13 / 31 / 12 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -1.0
+odpo od5h: round 2 brake reads the mean of 1 slices: bfcl_irrelevance 28/-0.1, mbpp 33/+0.0, svamp 36/-1.0, ifeval 26/+0.5, bfcl_multiple 21/+0.1, bfcl_simple_python 25/+0.5
+odpo od5h: round 2 brake on models/od5h-r1's answers (+30.1% / -0.06): held (no shortening) = none (caps {'svamp': 64.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 45.0, 'bfcl_multiple': 53.0, 'bfcl_irrelevance': 76.0}, accuracy hold <= -2.0)
+odpo od5h: round 2/22: models/od5h-r1 answers, DPO continues adapters/od5h-r1-s0/step-20, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 113 / 1 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -0.1
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 37 / 5 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 49 / 0 / 14 / 0 / 2 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 19 / 41 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.5
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 110 / 6 / 31 / 26 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 161 / 13 / 31 / 12 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -1.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 113 / 1 / 13 / 1 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -0.1
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 37 / 5 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 49 / 0 / 14 / 0 / 2 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 54 / 19 / 41 / 22 / 0 / 7
+  ifeval / od5 slice accuracy vs the original (pts): +0.5
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 110 / 6 / 31 / 26 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): +0.0
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 161 / 13 / 31 / 12 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -1.0
+training on 240 pairs, 0 held out
+odpo od5h: MONITOR round 2 answers (models/od5h-r1) vs the original on the same questions: saved +30.1% / accuracy -0.06 | bfcl_irrelevance +28/-0.1, mbpp +33/+0.0, svamp +36/-1.0, ifeval +26/+0.5, bfcl_multiple +21/+0.1, bfcl_simple_python +25/+0.5
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 109 / 5 / 11 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -2.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 2 / 14 / 0 / 1 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.2
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 9 / 1 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 43 / 22 / 50 / 14 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -1.5
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 104 / 14 / 31 / 15 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -4.1
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 128 / 17 / 32 / 10 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.8
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 109 / 5 / 11 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -2.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 2 / 14 / 0 / 1 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.2
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 9 / 1 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 43 / 22 / 50 / 14 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -1.5
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 104 / 14 / 31 / 15 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -4.1
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 128 / 17 / 32 / 10 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.8
+odpo od5h: round 3 brake reads the mean of 2 slices: bfcl_irrelevance 35/-1.2, mbpp 40/-2.1, svamp 42/-1.9, ifeval 31/-0.5, bfcl_simple_python 28/+0.4, bfcl_multiple 33/-0.1
+odpo od5h: round 3 brake on models/od5h-r2's answers (+42.1% / -2.25): held (no shortening) = ['mbpp'] (caps {'svamp': 64.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 45.0, 'bfcl_multiple': 53.0, 'bfcl_irrelevance': 76.0}, accuracy hold <= -2.0)
+odpo od5h: round 3/22: models/od5h-r2 answers, DPO continues adapters/od5h-r2-s0/step-15, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 109 / 5 / 11 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -2.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 2 / 14 / 0 / 1 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.2
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 9 / 1 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 43 / 22 / 50 / 14 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -1.5
+  mbpp / od5 held: recovery / compact hold (pairs): 14 / 29
+  mbpp / od5 slice accuracy vs the original (pts): -4.1
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 128 / 17 / 32 / 10 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.8
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 109 / 5 / 11 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -2.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 2 / 14 / 0 / 1 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.2
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 9 / 1 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.2
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 43 / 22 / 50 / 14 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -1.5
+  mbpp / od5 held: recovery / compact hold (pairs): 14 / 29
+  mbpp / od5 slice accuracy vs the original (pts): -4.1
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 128 / 17 / 32 / 10 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.8
+training on 234 pairs, 0 held out
+odpo od5h: MONITOR round 3 answers (models/od5h-r2) vs the original on the same questions: saved +42.1% / accuracy -2.25 | bfcl_irrelevance +42/-2.2, mbpp +47/-4.1, svamp +48/-2.8, ifeval +35/-1.5, bfcl_simple_python +32/+0.2, bfcl_multiple +44/-0.2
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 0 / 14 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 3 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 10 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.4
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 44 / 13 / 57 / 19 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.1
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 98 / 21 / 36 / 17 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -4.3
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 89 / 13 / 20 / 7 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 0 / 14 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 3 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 10 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.4
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 44 / 13 / 57 / 19 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.1
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 98 / 21 / 36 / 17 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -4.3
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 89 / 13 / 20 / 7 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -2.0
+odpo od5h: round 4 brake reads the mean of 2 slices: bfcl_multiple 41/-0.5, mbpp 51/-4.2, svamp 51/-2.4, ifeval 36/-0.7, bfcl_irrelevance 41/-0.5, bfcl_simple_python 34/+0.3
+odpo od5h: round 4 brake on models/od5h-r3's answers (+45.6% / -1.44): held (no shortening) = ['mbpp', 'svamp'] (caps {'svamp': 64.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 45.0, 'bfcl_multiple': 53.0, 'bfcl_irrelevance': 76.0}, accuracy hold <= -
+odpo od5h: round 4/22: models/od5h-r3 answers, DPO continues adapters/od5h-r3-s0/step-15, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 0 / 14 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 3 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 10 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.4
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 44 / 13 / 57 / 19 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.1
+  mbpp / od5 held: recovery / compact hold (pairs): 20 / 27
+  mbpp / od5 slice accuracy vs the original (pts): -4.3
+  svamp / od5 held: recovery / compact hold (pairs): 4 / 13
+  svamp / od5 slice accuracy vs the original (pts): -2.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 0 / 14 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.2
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 3 / 13 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -0.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 47 / 0 / 10 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.4
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 44 / 13 / 57 / 19 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): +0.1
+  mbpp / od5 held: recovery / compact hold (pairs): 20 / 27
+  mbpp / od5 slice accuracy vs the original (pts): -4.3
+  svamp / od5 held: recovery / compact hold (pairs): 4 / 13
+  svamp / od5 slice accuracy vs the original (pts): -2.0
+training on 211 pairs, 0 held out
+odpo od5h: MONITOR round 4 answers (models/od5h-r3) vs the original on the same questions: saved +45.6% / accuracy -1.44 | bfcl_multiple +37/-0.7, mbpp +55/-4.3, svamp +55/-2.0, ifeval +36/+0.1, bfcl_irrelevance +40/+1.2, bfcl_simple_python +35/+0.4
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 114 / 3 / 8 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 30 / 2 / 12 / 0 / 7 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 42 / 0 / 10 / 0 / 5 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 20 / 42 / 18 / 0 / 10
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 103 / 12 / 26 / 5 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -1.2
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 61 / 13 / 21 / 7 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -5.2
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 114 / 3 / 8 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 30 / 2 / 12 / 0 / 7 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 42 / 0 / 10 / 0 / 5 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 20 / 42 / 18 / 0 / 10
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 103 / 12 / 26 / 5 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -1.2
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 61 / 13 / 21 / 7 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -5.2
+odpo od5h: round 5 brake reads the mean of 2 slices: bfcl_simple_python 38/+0.5, mbpp 58/-2.8, svamp 57/-3.6, ifeval 38/-0.3, bfcl_irrelevance 45/-0.2, bfcl_multiple 39/+0.5
+odpo od5h: round 5 brake on models/od5h-r4's answers (+51.5% / -1.71): held (no shortening) = ['mbpp', 'svamp'] (caps {'svamp': 64.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 45.0, 'bfcl_multiple': 53.0, 'bfcl_irrelevance': 76.0}, accuracy hold <= -
+odpo od5h: round 5/22: models/od5h-r4 answers, DPO continues adapters/od5h-r4-s0/step-15, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 114 / 3 / 8 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 30 / 2 / 12 / 0 / 7 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 42 / 0 / 10 / 0 / 5 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 20 / 42 / 18 / 0 / 10
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 held: recovery / compact hold (pairs): 4 / 18
+  mbpp / od5 slice accuracy vs the original (pts): -1.2
+  svamp / od5 held: recovery / compact hold (pairs): 13 / 14
+  svamp / od5 slice accuracy vs the original (pts): -5.2
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 114 / 3 / 8 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): -1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 30 / 2 / 12 / 0 / 7 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 42 / 0 / 10 / 0 / 5 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +0.5
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 39 / 20 / 42 / 18 / 0 / 10
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 held: recovery / compact hold (pairs): 4 / 18
+  mbpp / od5 slice accuracy vs the original (pts): -1.2
+  svamp / od5 held: recovery / compact hold (pairs): 13 / 14
+  svamp / od5 slice accuracy vs the original (pts): -5.2
+training on 194 pairs, 0 held out
+odpo od5h: MONITOR round 5 answers (models/od5h-r4) vs the original on the same questions: saved +51.5% / accuracy -1.71 | bfcl_simple_python +42/+0.5, mbpp +62/-1.2, svamp +60/-5.2, ifeval +41/-0.6, bfcl_irrelevance +49/-1.5, bfcl_multiple +42/+1.7
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 5 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 33 / 4 / 7 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): -0.1
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 21 / 34 / 18 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 91 / 15 / 33 / 15 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -4.6
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 101 / 18 / 24 / 10 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -3.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 5 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 33 / 4 / 7 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): -0.1
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 21 / 34 / 18 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 91 / 15 / 33 / 15 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -4.6
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 101 / 18 / 24 / 10 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -3.0
+odpo od5h: round 6 brake reads the mean of 2 slices: bfcl_simple_python 41/+0.2, mbpp 63/-2.9, svamp 56/-4.1, ifeval 44/-0.6, bfcl_multiple 46/+1.1, bfcl_irrelevance 50/+0.0
+odpo od5h: round 6 brake on models/od5h-r5's answers (+52.0% / -1.91): held (no shortening) = ['mbpp', 'svamp'] (caps {'svamp': 64.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 45.0, 'bfcl_multiple': 53.0, 'bfcl_irrelevance': 76.0}, accuracy hold <= -
+odpo od5h: round 6/22: models/od5h-r5 answers, DPO continues adapters/od5h-r5-s0/step-15, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 5 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 33 / 4 / 7 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): -0.1
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 21 / 34 / 18 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 held: recovery / compact hold (pairs): 15 / 29
+  mbpp / od5 slice accuracy vs the original (pts): -4.6
+  svamp / od5 held: recovery / compact hold (pairs): 18 / 19
+  svamp / od5 slice accuracy vs the original (pts): -3.0
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 123 / 5 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.5
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 33 / 4 / 7 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): +0.5
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 40 / 1 / 7 / 0 / 3 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): -0.1
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 21 / 34 / 18 / 0 / 12
+  ifeval / od5 slice accuracy vs the original (pts): -0.6
+  mbpp / od5 held: recovery / compact hold (pairs): 15 / 29
+  mbpp / od5 slice accuracy vs the original (pts): -4.6
+  svamp / od5 held: recovery / compact hold (pairs): 18 / 19
+  svamp / od5 slice accuracy vs the original (pts): -3.0
+training on 228 pairs, 0 held out
+odpo od5h: MONITOR round 6 answers (models/od5h-r5) vs the original on the same questions: saved +52.0% / accuracy -1.91 | bfcl_simple_python +40/-0.1, mbpp +64/-4.6, svamp +53/-3.0, ifeval +47/-0.6, bfcl_multiple +49/+0.5, bfcl_irrelevance +51/+1.5
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 1 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 10 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 14 / 0 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.7
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 21 / 51 / 13 / 0 / 8
+  ifeval / od5 slice accuracy vs the original (pts): -0.7
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 102 / 17 / 29 / 7 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -1.6
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 82 / 8 / 27 / 2 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -3.3
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 1 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 10 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 14 / 0 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.7
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 21 / 51 / 13 / 0 / 8
+  ifeval / od5 slice accuracy vs the original (pts): -0.7
+  mbpp / od5 candidates shorten / recovery / hold / loop / format / count: 102 / 17 / 29 / 7 / 0 / 0
+  mbpp / od5 slice accuracy vs the original (pts): -1.6
+  svamp / od5 candidates shorten / recovery / hold / loop / format / count: 82 / 8 / 27 / 2 / 0 / 0
+  svamp / od5 slice accuracy vs the original (pts): -3.3
+odpo od5h: round 7 brake reads the mean of 2 slices: bfcl_irrelevance 50/+1.6, mbpp 66/-3.1, svamp 55/-3.1, ifeval 47/-0.7, bfcl_multiple 51/-0.3, bfcl_simple_python 43/+0.8
+odpo od5h: round 7 brake on models/od5h-r6's answers (+55.6% / -1.15): held (no shortening) = ['mbpp', 'svamp'] (caps {'svamp': 64.0, 'mbpp': 62.0, 'ifeval': 59.0, 'bfcl_simple_python': 45.0, 'bfcl_multiple': 53.0, 'bfcl_irrelevance': 76.0}, accuracy hold <= -
+odpo od5h: round 7/22: models/od5h-r6 answers, DPO continues adapters/od5h-r6-s0/step-15, reference = the original
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 1 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 10 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 14 / 0 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.7
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 21 / 51 / 13 / 0 / 8
+  ifeval / od5 slice accuracy vs the original (pts): -0.7
+  mbpp / od5 held: recovery / compact hold (pairs): 4 / 18
+  mbpp / od5 slice accuracy vs the original (pts): -1.6
+  svamp / od5 held: recovery / compact hold (pairs): 8 / 23
+  svamp / od5 slice accuracy vs the original (pts): -3.3
+  bfcl_irrelevance / od5 candidates shorten / recovery / hold / loop / format / count: 122 / 1 / 13 / 0 / 0 / 0
+  bfcl_irrelevance / od5 slice accuracy vs the original (pts): +1.7
+  bfcl_multiple / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 10 / 0 / 4 / 0
+  bfcl_multiple / od5 slice accuracy vs the original (pts): -1.1
+  bfcl_simple_python / od5 candidates shorten / recovery / hold / loop / format / count: 28 / 2 / 14 / 0 / 1 / 0
+  bfcl_simple_python / od5 slice accuracy vs the original (pts): +1.7
+  ifeval / od5 candidates shorten / recovery / hold / loop / format / count: 25 / 21 / 51 / 13 / 0 / 8
+  ifeval / od5 slice accuracy vs the original (pts): -0.7
+  mbpp / od5 held: recovery / compact hold (pairs): 4 / 18
+  mbpp / od5 slice accuracy vs the original (pts): -1.6
+  svamp / od5 held: recovery / compact hold (pairs): 8 / 23
+  svamp / od5 slice accuracy vs the original (pts): -3.3
+training on 196 pairs, 0 held out
+odpo od5h: MONITOR round 7 answers (models/od5h-r6) vs the original on the same questions: saved +55.6% / accuracy -1.15 | bfcl_irrelevance +49/+1.7, mbpp +68/-1.6, svamp +58/-3.3, ifeval +48/-0.7, bfcl_multiple +52/-1.1, bfcl_simple_python +46/+1.7
