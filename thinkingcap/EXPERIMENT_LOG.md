@@ -7134,3 +7134,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov: od5g-r19 Dev-512: 55.0 [52.5, 57.4] / +2.59 (od5f-r19: 52.7 / +3.49).
 - 19 Nov: od5g-r20 Dev-512: 58.2 [55.9, 60.7] / +3.18 [1.45, 4.89] -> PASSES the gate (57.8 / -0.3). Best Dev so far. Expected full test ~57.8 / +0.8 (Dev bias +0.4 / +2.4).
 - 19 Nov: od5g-r21 Dev-512: 51.6 [49.1, 54.2] / +4.17 (below gate; od5f-r21 46.8 / +3.42). Only r20 passes so far.
+- 19 Nov: od5g-r22 Dev-512: 50.6 / +4.49. fullpick od5g: only r20 passes -> FULL TEST od5g-r20 running on GPU 2. fullpick's own correction predicts full ~57.9 / -1.07 (acc bias 2.95 + slope 0.25 per saving point), more pessimistic than the plain +2.4 Dev bias (-> +0.8).
