@@ -7116,3 +7116,8 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov ~04:25 CET od5f-r19 Dev-512: 52.7% [50.3, 55.2] / +3.49 (r18 60.4-61.5): below the full-test gate (57.8). Rounds 20-23 Dev next.
 - 19 Nov ~04:40 CET **math m1 screened: 624 x8, mean solve 94%** (always 519, sometimes 95, never 10): easy SVAMP-like, as needed (the pool math left solved 85% vs the test's 89%; the bins mix them). od3branch next (builds + checks slices 20-24).
 - 19 Nov ~04:45 CET **od5f-r20 Dev-512: 57.6% [55.2, 60.0] / +2.72 [+0.86, +4.55]**: misses the full-test gate (57.8) by 0.2; predicted full test ~57.3 / ~+0.3 (bias +0.4 / +2.4): a different trade-off than r18 (59.5 / -0.80): less saving, much better accuracy. Candidate for a manual full test if the user wants it (running fullpick can not be changed).
+
+## 19 Nov ~05:40 — od3g branch data
+- Retry with length-tail trimming: slices 20, 21, 22 written, every metric within tolerance (e.g. r20 code solve 53 vs 52, tokens 1657 vs 1680; svamp 88 vs 89, 727 vs 728).
+- Slice 23 NOT written: remaining code pool has median too long (1409 vs 1062) and p90 too short (2748 vs 4025); trimming one tail worsens the other. Known flaw: trim direction is chosen from the mean only.
+- Decision: od5g trains rounds 19-22 only (slice 19 = od3's, 20-22 new), Dev gate 57.8 / -0.3, tag -y3; GPU 2 waitfor -> y3, full test tag -z3.
