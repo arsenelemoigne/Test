@@ -1,0 +1,26 @@
+TASK (consult35, budget $5, up to 120 turns; answer earlier if you are sure). Read {DATA}/README_PACK.md first, then:
+{DATA}/OD5F_ROUNDS_1_19_VS_AFTER.md (the best clean run, round by round, and what came after round 19), {DATA}/WHAT_WE_RAN.md (od5f vs
+the consult31 plan as run (od5h) vs od5i = od5h + your consult33 fix), {DATA}/SUSPECTED_MISTAKES.md (what the lab thinks went wrong,
+to be checked, not assumed), {DATA}/ARGON_CONSULT33_ANSWER.md (your consult33 answer), {DATA}/YOUR_CONSULT31_REPORT.md (your consult31
+plan), {DATA}/CODE_FIX_CONSULT33.diff, {DATA}/OD5F_BEST_LINE.txt, {DATA}/OD5H_LINE.txt, {DATA}/OD5I_NOW_LINES.txt, {DATA}/fulltests.json,
+{DATA}/NEW_RESULTS_od5f.md, {DATA}/OD5H_ROUNDS.md, {DATA}/EXPERIMENT_LOG.md (every online DPO run, every number).
+
+GOAL: a final online DPO plan that gets more than 60% of tokens saved on the full test (2,759 questions x 8 answers, official score)
+at better than -1 point of accuracy. Best so far: od5f round 18, 59.5% saved / -0.80 (inside the goal, below 60%). Our preference:
+stay close to od5f round 18 and change only a few small things that could push saving past 60 without losing accuracy. If you think
+a different recipe is safer, say so and say why.
+
+WHAT WE NEED FROM YOU:
+1. Do you still stand by your consult33 plan (od5i) now that we point out: (a) the training question sets changed from the original to
+   od3g in od5h/od5i and od5f did not use them; (b) the 2-round brake is slower than od5f's 1-round brake; (c) the round quotas and the
+   caps / floors / ratios are larger or looser than od5f's. Say which of these you think matter, with numbers and citations.
+2. Name the mistakes in your consult31/consult33 plan, if any. Be specific: which line, which number, what it should be.
+3. Give the FINAL plan: exact flag lines (or code lines) for every run, the round schedule, the dev / full-test schedule, and for every
+   change the expected effect on saving and accuracy, with the evidence from the pack.
+4. Explain every step and cite everything: file name and line, the round, the number. Quote the exact log line for each number you use.
+   Mark any claim you cannot verify from the pack as UNVERIFIED. Do not reuse numbers you have not checked against the pack
+   (several of your past reviews had wrong numbers).
+
+RULES WE KEEP: start from the original Qwen3-0.6B; the model's own answers only; test-matched training questions allowed only if you
+justify them; online DPO; LoRA r16; constant learning rate; no new datasets; no methods copied from other competitors of the challenge.
+Keep rules general (measured per question / per task).
