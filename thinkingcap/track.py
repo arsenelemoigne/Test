@@ -8070,7 +8070,7 @@ def plan(args):
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
     SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
-    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
+    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick", "odpo"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
         print("drive: plan start restore skipped (stages restore their own inputs)", flush=True)
     elif stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
