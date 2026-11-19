@@ -59,7 +59,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -5982,6 +5982,32 @@ def effsame(args):
     drive_sync("save")
 
 
+def effpara(args):
+    """(19 Nov, user: "compare them at the end of each paragraph, never cut mid-doubt") Math only: both models' effprobe answers
+    (samples 0-1) cut after their K-th paragraph (pK) and after their K-th NON-doubt paragraph (sK: a paragraph that does not
+    open with Wait / But / Hmm / Alternatively / Maybe / Let me check...), K = 1..8, the same model answering at once. Accuracy
+    against mean tokens per rung, both models: density at equal tokens without cutting a model in the middle of a doubt.
+    Results: runs/eff/para-<name>/summary.txt."""
+    pairs = [x.split("=", 1) for x in args.ep_models.split(",")]
+    eff = Path("runs/eff")
+    drive_sync("restore", only=[str(eff)] + [m for _, m in pairs if not m.startswith("Qwen/")])
+    for name, model in pairs:
+        out = eff / f"para-{name}"
+        base = ["budget_curves.py", "--rollouts", eff / f"roll-{name}" / "rollouts.jsonl", "--out", out, "--model", model,
+                "--dtype", args.dtype, "--samples", args.ep_samples, "--types", "svamp", "--no-fracs", "--no-budgets",
+                "--para-rungs", 8]
+        for _ in range(20):
+            if (out / "CURVES_DONE").exists():
+                break
+            py(*base, "--max-new-rounds", 1)
+            drive_sync("save")
+        if not (out / "summary.txt").exists():
+            py(*base)
+        print(f"== paragraph-aligned cuts, {name}", flush=True)
+        print((out / "summary.txt").read_text(), flush=True)
+    drive_sync("save")
+
+
 def mixscreen(args):
     """Merge per-type adapters at chosen strengths and score the merge on the 720 x4 (5 Nov, finishing lpt6 as the
     consultant specified): each part's adapter is the average of --mx-seeds (weight split across seeds), parts at
@@ -7980,7 +8006,7 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
+    SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
     if stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
     elif stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "wandaod", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model

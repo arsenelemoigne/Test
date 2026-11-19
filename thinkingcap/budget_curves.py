@@ -39,6 +39,11 @@ def main():
     ap.add_argument("--budget-levels", default="", help="(18 Nov, user: density at EQUAL caps) a budget_levels.json of another "
                     "run: use ITS per-type budget levels b0..b9 (e.g. the trained model cut at the original's caps)")
     ap.add_argument("--no-fracs", action="store_true", help="budget rungs only (no fraction cuts)")
+    ap.add_argument("--no-budgets", action="store_true", help="(19 Nov) no fixed-budget rungs")
+    ap.add_argument("--types", default="", help="(19 Nov) only these parts, e.g. svamp")
+    ap.add_argument("--para-rungs", type=int, default=0, help="(19 Nov, user: cut at the end of a STEP, never mid-doubt) rungs pK = "
+                    "cut after the K-th paragraph of the thinking; sK = after the K-th paragraph that is NOT a doubt paragraph "
+                    "(one opening with Wait / But / Hmm / Alternatively / Maybe / Let me check...), K = 1..N")
     ap.add_argument("--budgets", default="auto", help="'auto' = per type: 0 and the 10th..90th percentiles of that type's "
                     "natural thinking lengths (this model); or a comma list applied to every type")
     ap.add_argument("--match-rollouts", default="", help="(18 Nov, user) another model's answers to the same questions: adds "
@@ -62,7 +67,7 @@ def main():
         groups[r["id"]].append(r)
     answers = {}
     for q, g in groups.items():
-        if part_of(g[0]) not in PARTS:
+        if part_of(g[0]) not in PARTS or (args.types and part_of(g[0]) not in args.types.split(",")):
             continue
         for s, r in enumerate(g):
             if s in keep_s:
@@ -85,6 +90,25 @@ def main():
         rungs = [("f", float(x)) for x in args.fracs.split(",")] + [("b", j) for j in range(len(fixed))]
     if args.no_fracs:
         rungs = [r for r in rungs if r[0] != "f"]
+    if args.no_budgets:
+        rungs = [r for r in rungs if r[0] != "b"]
+    if args.para_rungs:
+        rungs += [("p", j) for j in range(1, args.para_rungs + 1)] + [("s", j) for j in range(1, args.para_rungs + 1)]
+    import re as _re
+    DOUBT = _re.compile(r"^\W*(wait|but|hmm+|alternatively|maybe|perhaps|let me (?:check|verify|double-check|make sure|re-?check)|"
+                        r"actually|hold on|however|on second thought|is that right|is this correct)\b", _re.I)
+
+    def para_text(kind, v, r):
+        """the thinking up to the end of the v-th paragraph (sK: counting only non-doubt paragraphs); None = not cut"""
+        text = tok.decode(cutter.think_ids(r)).strip()
+        paras = [x for x in _re.split(r"\n\s*\n", text) if x.strip()]
+        n = 0
+        for i, para in enumerate(paras[:-1]):  # never "cut" after the last paragraph (= the natural answer)
+            if kind == "p" or not DOUBT.match(para):
+                n += 1
+                if n == v:
+                    return "\n\n".join(paras[:i + 1])
+        return None
     match_q, match_t = {}, {}
     if args.match_rollouts:
         mlen = defaultdict(list)
@@ -105,11 +129,13 @@ def main():
         return int(v * nat_len[k]) if kind == "f" else levels[part_k[k]][v]
 
     def in_rung(kind, k):
-        return k[1] in (keep_f if kind == "f" else keep_b)
+        return k[1] in (keep_f if kind in ("f", "p", "s") else keep_b)
 
     def rname(kind, v):
         if kind == "m":
             return f"m{v}"
+        if kind in ("p", "s"):
+            return f"{kind}{v}"
         return f"f{int(round(v * 100)):02d}" if kind == "f" else f"b{v}"
 
     new_rounds = 0
@@ -125,9 +151,12 @@ def main():
         for k, r in answers.items():
             if not in_rung(kind, k):
                 continue
-            b = budget(kind, v, k)
-            if nat_len[k] > b and r.get("prompt_ids"):
-                text = cutter.cut_text(k, r, b)
+            if kind in ("p", "s"):
+                text = para_text(kind, v, r) if r.get("prompt_ids") else None
+            else:
+                b = budget(kind, v, k)
+                text = cutter.cut_text(k, r, b) if nat_len[k] > b and r.get("prompt_ids") else None
+            if text is not None:
                 jobs.append({"key": f"{k[0]}|{k[1]}", "prompt_ids": r["prompt_ids"],
                              "thinking_ids": tok.encode(thinking_text([text]), add_special_tokens=False),
                              "max_tokens": args.answer_tokens, "row": {g: r[g] for g in GRADE_FIELDS if g in r}})
@@ -223,7 +252,7 @@ def summarize(out, answers, nat_len, rungs, rname, budget, args, in_rung, levels
             if n == "natural":
                 continue
             x = c[n]
-            lab = n if x["kind"] in ("f", "m") else f"{n}={x['budget']}t"
+            lab = n if x["kind"] in ("f", "m", "p", "s") else f"{n}={x['budget']}t"
             lines.append(f"   {lab:10s} acc {x['acc']:5.1f}% ({x['dacc']:+5.1f} [{x['dacc_ci'][0]:+.1f}, {x['dacc_ci'][1]:+.1f}] vs natural) "
                          f"tokens {x['tokens']:6.0f} (natural {x['nat_tokens']:.0f}), n={x['n']}")
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
