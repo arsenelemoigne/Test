@@ -7132,3 +7132,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov: od5g-best (final, = r22) Dev-512: 50.5 [48.0, 53.0] / +3.94 [2.37, 5.77].
 - 19 Nov: od5g-best Dev-SVAMP-200: 47.8 [44.0, 51.1] / +0.56 [-1.56, 2.69]. fullpick od5g 19-22 (-y4) started.
 - 19 Nov: od5g-r19 Dev-512: 55.0 [52.5, 57.4] / +2.59 (od5f-r19: 52.7 / +3.49).
+- 19 Nov: od5g-r20 Dev-512: 58.2 [55.9, 60.7] / +3.18 [1.45, 4.89] -> PASSES the gate (57.8 / -0.3). Best Dev so far. Expected full test ~57.8 / +0.8 (Dev bias +0.4 / +2.4).
