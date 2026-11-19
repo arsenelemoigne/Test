@@ -500,6 +500,9 @@ def main():
     parser.add_argument("--ob-into", default="od3g", help="od3branch: the new slice set's name (data/<name>-rK-questions.jsonl)")
     parser.add_argument("--ob-from", type=int, default=20, help="od3branch: first new slice; slices 2..from-1 are od3's (copied)")
     parser.add_argument("--ob-more", type=int, default=5, help="od3branch: how many new slices")
+    parser.add_argument("--ob-trim", type=float, default=0.0, help="od3branch (19 Nov): when a type's draw is too long (or too short) "
+                        "vs slices 2..19, drop this share of its longest (shortest) candidates and draw again, up to --ob-trim-max in all")
+    parser.add_argument("--ob-trim-max", type=float, default=0.4, help="od3branch: most of a type's candidates that trimming may drop")
     parser.add_argument("--ob-tries", type=int, default=150, help="od3branch: draws tried per slice to match every metric")
     parser.add_argument("--od-init", default="", help="odpo: the adapter round 1 starts from (and its reference)")
     parser.add_argument("--od-answers0", default="", help="odpo: the merged model = --rp-base + --od-init (answers round 1)")
@@ -4264,6 +4267,55 @@ def od3branch(args):
             if not bad:
                 break
         score, sel, bad, met = best
+        trims = defaultdict(float)
+        while bad and getattr(args, "ob_trim", 0.0) > 0:  # (19 Nov) trim the length tail of the types that miss on tokens
+            moved = False
+            for p, why in bad.items():
+                if "tokens" not in why or trims[p] + args.ob_trim > args.ob_trim_max + 1e-9:
+                    continue
+                too_long = statistics.fmean(stat[q]["tokens"] for q in sel[p]["step2"]) > target[p]["tok"] if sel[p]["step2"] else True
+                pool_p = sorted((c for c in cands[p] if c[0] not in taken), key=lambda c: stat[c[0]]["tokens"], reverse=too_long)
+                drop = {c[0] for c in pool_p[:int(args.ob_trim * len(pool_p))]}
+                cands[p] = [c for c in cands[p] if c[0] not in drop]
+                trims[p] += args.ob_trim
+                moved = True
+                print(f"od3branch round {k}: {p} {'too long' if too_long else 'too short'} ({why}): dropped the "
+                      f"{'longest' if too_long else 'shortest'} {len(drop)} candidates (total trimmed {100 * trims[p]:.0f}%)", flush=True)
+            if not moved:
+                break
+            best = None
+            for t in range(args.ob_tries):
+                left = {p: [c for c in v if c[0] not in taken] for p, v in cands.items()}
+                sel = r2_select(left, {p: test[p]["bins"] for p in OD3_ROUND}, OD3_ROUND, {p: 0 for p in OD3_ROUND},
+                                seed=args.data_seed + 1000 * k + t)
+                bad, met = {}, {}
+                for p in OD3_ROUND:
+                    ids = sel[p]["step2"]
+                    if len(ids) < OD3_ROUND[p]:
+                        bad[p] = f"{len(ids)}/{OD3_ROUND[p]}"
+                        continue
+                    sr = 100 * statistics.fmean(stat[q]["acc"] for q in ids)
+                    tk = statistics.fmean(stat[q]["tokens"] for q in ids)
+                    wd = statistics.fmean(words_of(q) for q in ids)
+                    met[p] = (sr, tk, wd)
+                    off = []
+                    if abs(sr - 100 * test[p]["solve"]) > 3.0:
+                        off.append(f"solve {sr:.0f} vs {100 * test[p]['solve']:.0f}")
+                    if p in target and abs(tk / target[p]["tok"] - 1) > tol["tok"]:
+                        off.append(f"tokens {tk:.0f} vs {target[p]['tok']:.0f}")
+                    if p in target and abs(wd / target[p]["words"] - 1) > tol["words"]:
+                        off.append(f"words {wd:.0f} vs {target[p]['words']:.0f}")
+                    for key, f in (("med", .5), ("p90", .9)):
+                        v_ = qt([stat[q]["tokens"] for q in ids], f)
+                        if p in target and abs(v_ / target[p][key] - 1) > tol[key]:
+                            off.append(f"{key} tokens {v_:.0f} vs {target[p][key]:.0f}")
+                    if off:
+                        bad[p] = "; ".join(off)
+                if best is None or len(bad) < best[0]:
+                    best = (len(bad), sel, bad, met)
+                if not bad:
+                    break
+            _, sel, bad, met = best
         if bad:
             lines.append(f"round {k}: NOT WRITTEN, no draw in {args.ob_tries} matches every metric: {bad}")
             print(lines[-1], flush=True)
