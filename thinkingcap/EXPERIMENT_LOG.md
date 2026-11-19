@@ -7149,3 +7149,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov ~17:30 (user): surprisal 'more information per token' DROPPED as evidence: depends on the reader (original reads trained thinking +65%, trained reads it +7%, math equal 0.62/0.62). Removed from the article (section 13). Equal-budget test is the evidence.
 - 19 Nov ~17:45 (user): od5h extended to 22 rounds (od3g slices 21-22 exist), fullpick Dev rounds 15-22.
 - 19 Nov ~18:00 (user): od5h fullpick = Dev only (rounds 15-22), no full test (Colab 24 h limit on GPU 2 ~14:00 tomorrow); full tests decided after.
+- 19 Nov ~18:05 (user): od5h full tests queued on GPU 1 (waitfor GPU 2's Dev picks file -hdev, then fullpick gate 59.0/+1.0, 2 full tests). User reconnects GPU 1 tomorrow morning.
