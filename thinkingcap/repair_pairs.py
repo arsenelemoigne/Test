@@ -457,12 +457,15 @@ def main():
                 best = None
                 if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):
                     # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
+                    held_c = args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+                    lo_c = 0.85 if held_c else 0.50  # (19 Nov) a held part: length-NEUTRAL hold (0.85-1.00x, at ~0.95), never the shortest right
                     for r in clean:
                         for w in wrongs:
                             ratio = thinking_len(r) / max(1, thinking_len(w))
-                            if 0.50 <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
+                            if lo_c <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
                                                            or response_len(r) <= args.right_resp_cap * response_len(w) + 15):
-                                key = (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75))
+                                key = ((0 if decode and REREAD.search(decode(r)) else 1, abs(ratio - 0.95)) if held_c else
+                                       (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75)))
                                 if best is None or key < best[0]:
                                     best = (key, r, w)
                 held_now = args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
