@@ -567,6 +567,11 @@ def main():
     parser.add_argument("--fp-gate-save", type=float, default=None, help="fullpick (18 Nov, user: full tests only if the scores "
                         "are any good): a candidate is full-tested only if its Dev saving >= this AND its Dev accuracy >= --fp-gate-acc")
     parser.add_argument("--fp-gate-acc", type=float, default=None, help="fullpick (18 Nov): Dev accuracy gate (see --fp-gate-save)")
+    parser.add_argument("--fp-dev-top", type=int, default=0, help="fullpick arena (20 Nov, user): Dev-score only the N best "
+                        "rounds by their monitor (highest monitor saving among rounds with monitor accuracy >= --fp-dev-top-acc, "
+                        "then the most accurate ones if fewer pass); 0 = every round in --fp-dev-rounds")
+    parser.add_argument("--fp-dev-top-acc", type=float, default=1.5, help="fullpick --fp-dev-top: monitor accuracy gate (the "
+                        "monitor reads ~2.5 pts optimistic, so +1.5 is about -1 on the full test)")
     parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
     parser.add_argument("--fp-skip-tested", action="store_true", help="fullpick (15 Nov, user: one full test on each GPU): "
                         "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
@@ -4658,7 +4663,26 @@ def fullpick(args):
                 and (c["sv_saved"] is None or (c["sv_saved"] >= args.pk_sv_save and c["sv_acc"] >= args.pk_sv_acc))]
         start = max(gate, key=lambda c: c["saved"])["label"] if gate else None
     elif getattr(args, "fp_dev_rounds", None):  # (15 Nov, user: "just do the normal 512 tests and we will pick the best 2")
-        for k in args.fp_dev_rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
+        rounds = list(args.fp_dev_rounds)
+        top = getattr(args, "fp_dev_top", 0) or 0
+        if top:  # (20 Nov, user) only the N best rounds by monitor (model r_j's monitor = the round j+1 entry)
+            mon = BON / f"{run_name}-monitor.jsonl"
+            drive_sync("restore", only=[str(mon)])
+            hist = [json.loads(l) for l in mon.read_text().splitlines() if l.strip()] if mon.exists() else []
+            score = {}
+            for h in hist:
+                m = re.match(rf"models/{re.escape(run_name)}-r(\d+)$", str(h.get("answering_model", "")))
+                if m:
+                    score[int(m.group(1))] = (h["saved"], h["acc"])
+            known = [k for k in rounds if k in score]
+            ok = sorted([k for k in known if score[k][1] >= args.fp_dev_top_acc], key=lambda k: -score[k][0])[:top]
+            rest = sorted([k for k in known if k not in ok], key=lambda k: -score[k][1])[:max(0, top - len(ok))]
+            pick = sorted(ok + rest)
+            print(f"fullpick {run_name}: monitor top {top} of {rounds}: "
+                  + ", ".join(f"r{k} {score[k][0]:.1f}/{score[k][1]:+.2f}" for k in pick)
+                  + (f" (no monitor for {[k for k in rounds if k not in score]})" if len(known) < len(rounds) else ""), flush=True)
+            rounds = pick or rounds
+        for k in rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
             label = f"{run_name}-r{k}"
             d = BON / f"dev512-{label}" / "dev_score.json"
             drive_sync("restore", only=[str(d.parent), f"models/{label}"])
