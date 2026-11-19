@@ -845,5 +845,5 @@
 # (19 Nov, done / moved to GPU 2) fullpick --fp-run od5g --fp-kind arena --fp-dev-rounds 19 20 21 22 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 1 --fp-gate-save 57.8 --fp-gate-acc -0.3 --rp-dev-vs rpE80 --fp-tag=-y4
 # (19 Nov) user restarts GPU 1: effsame + effpara moved here from GPU 2
 effsame --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
-effpara --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
+# (19 Nov, moved to GPU 2 which was idle) effpara --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
 end
