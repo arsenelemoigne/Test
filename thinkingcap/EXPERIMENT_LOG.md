@@ -7121,3 +7121,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - Retry with length-tail trimming: slices 20, 21, 22 written, every metric within tolerance (e.g. r20 code solve 53 vs 52, tokens 1657 vs 1680; svamp 88 vs 89, 727 vs 728).
 - Slice 23 NOT written: remaining code pool has median too long (1409 vs 1062) and p90 too short (2748 vs 4025); trimming one tail worsens the other. Known flaw: trim direction is chosen from the mean only.
 - Decision: od5g trains rounds 19-22 only (slice 19 = od3's, 20-22 new), Dev gate 57.8 / -0.3, tag -y3; GPU 2 waitfor -> y3, full test tag -z3.
+- 19 Nov: od5f-r21 Dev-512: saved 46.8 [44.1, 49.4], acc +3.42 [1.72, 5.11] (below gate).
