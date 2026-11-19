@@ -568,8 +568,10 @@ def main():
                         "are any good): a candidate is full-tested only if its Dev saving >= this AND its Dev accuracy >= --fp-gate-acc")
     parser.add_argument("--fp-gate-acc", type=float, default=None, help="fullpick (18 Nov): Dev accuracy gate (see --fp-gate-save)")
     parser.add_argument("--fp-dev-top", type=int, default=0, help="fullpick arena (20 Nov, user): Dev-score only the N best "
-                        "rounds by their monitor (highest monitor saving among rounds with monitor accuracy >= --fp-dev-top-acc, "
-                        "then the most accurate ones if fewer pass); 0 = every round in --fp-dev-rounds")
+                        "rounds by their monitor (highest monitor saving among rounds passing --fp-dev-top-save and --fp-dev-top-acc; "
+                        "none pass = no Dev and no full test); 0 = every round in --fp-dev-rounds")
+    parser.add_argument("--fp-dev-top-save", type=float, default=55.0, help="fullpick --fp-dev-top (20 Nov, user): only rounds "
+                        "whose monitor saving is at least this are Dev-scored")
     parser.add_argument("--fp-dev-top-acc", type=float, default=1.5, help="fullpick --fp-dev-top: monitor accuracy gate (the "
                         "monitor reads ~2.5 pts optimistic, so +1.5 is about -1 on the full test)")
     parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
@@ -4675,13 +4677,17 @@ def fullpick(args):
                 if m:
                     score[int(m.group(1))] = (h["saved"], h["acc"])
             known = [k for k in rounds if k in score]
-            ok = sorted([k for k in known if score[k][1] >= args.fp_dev_top_acc], key=lambda k: -score[k][0])[:top]
-            rest = sorted([k for k in known if k not in ok], key=lambda k: -score[k][1])[:max(0, top - len(ok))]
-            pick = sorted(ok + rest)
-            print(f"fullpick {run_name}: monitor top {top} of {rounds}: "
-                  + ", ".join(f"r{k} {score[k][0]:.1f}/{score[k][1]:+.2f}" for k in pick)
+            pick = sorted(sorted([k for k in known if score[k][0] >= args.fp_dev_top_save and score[k][1] >= args.fp_dev_top_acc],
+                                 key=lambda k: -score[k][0])[:top])  # (20 Nov, user) only rounds that could be good; no fill-in
+            print(f"fullpick {run_name}: monitor gate saving >= {args.fp_dev_top_save} and accuracy >= {args.fp_dev_top_acc}, "
+                  f"at most {top} of {rounds}: " + (", ".join(f"r{k} {score[k][0]:.1f}/{score[k][1]:+.2f}" for k in pick) or "none")
                   + (f" (no monitor for {[k for k in rounds if k not in score]})" if len(known) < len(rounds) else ""), flush=True)
-            rounds = pick or rounds
+            if not pick:
+                print(f"fullpick {run_name}: NO DEV, NO FULL TEST: no round passes the monitor gate", flush=True)
+                Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": []}))
+                drive_sync("save")
+                return
+            rounds = pick
         for k in rounds:  # the chosen round models of an online run, each scored on Dev-512 (x8)
             label = f"{run_name}-r{k}"
             d = BON / f"dev512-{label}" / "dev_score.json"
