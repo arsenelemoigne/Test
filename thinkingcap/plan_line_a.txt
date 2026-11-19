@@ -782,7 +782,7 @@ fullpick --fp-run od5f --fp-kind arena --fp-dev-rounds 19 20 21 22 23 --fp-save-
 # (19 Nov, user asleep: balance the GPUs) GPU 2 finishes first: the equal-cap analysis moves here, then the 2nd od5g full test
 effsame --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
 effpara --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
-waitfor --wf-path data/od5g-fullpick-y3.json --wf-hours 9
+waitfor --wf-path data/od5g-fullpick-y4.json --wf-hours 9
 fullpick --fp-run od5g --fp-kind arena --fp-dev-rounds 19 20 21 22 23 24 --fp-save-bias 0.3 --fp-acc-bias 2.95 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 1 --fp-skip-tested --fp-gate-save 57.8 --fp-gate-acc -0.3 --rp-dev-vs rpE80 --fp-tag=-z
 # moved to GPU 1 18 Nov: nothink --name ntothers2 --nt-full --nt-full-models models/rpL-80 models/od5r-r16
 end

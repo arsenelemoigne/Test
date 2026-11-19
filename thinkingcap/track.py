@@ -5502,9 +5502,10 @@ def odpo_fixed(args):
             best = answerer
             print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
             break
-        if stop_ok and k >= 4 and saved - history[k - 1]["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
+        prev_h = next((h for h in history if h["round"] == k), None)  # (19 Nov) by round number: a branch's history starts late
+        if stop_ok and k >= 4 and prev_h and saved - prev_h["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
             best = answerer
-            print(f"odpo {name}: STOP (saving stopped growing: {history[k - 1]['saved']:.1f} -> {saved:.1f})", flush=True)
+            print(f"odpo {name}: STOP (saving stopped growing: {prev_h['saved']:.1f} -> {saved:.1f})", flush=True)
             break
         nxt = Path("models") / a.name
         drive_sync("restore", only=[str(nxt)])
