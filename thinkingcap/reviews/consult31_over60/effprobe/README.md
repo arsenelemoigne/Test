@@ -30,3 +30,4 @@ Key readings (see EXPERIMENT_LOG.md, 19 Nov 01:00-01:20):
    full-test thinking-off costs the same allocation gives ~82% / -2.2 vs the original. Check budgets on Dev / the full test.
 6. Caveat: a forced cut interrupts the original's planned long trace; the equal-cap run (effsame, GPU 2) adds each model cut
    at the OTHER model's caps (curves-<model>-at-<other>/summary.txt, add when it lands).
+7. First ~290 math thinking tokens, full test (979 pairs): final answer already written original 78% vs trained 92%; hesitation 2.02 vs 1.42 per 100 words; same computations. At that point the original is often mid-doubt, so a forced answer picks the doubted variant: the math "working-out before settling" is largely self-doubt that destabilises the answer, not different arithmetic.
