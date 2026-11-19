@@ -59,7 +59,7 @@ def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
-                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
+                                          "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
     parser.add_argument("--rounds", type=int, default=5)
@@ -415,6 +415,8 @@ def main():
                         "pass need 2; a finished run continues from its saved state)")
     parser.add_argument("--rp-pair-args", default="", help="ptrepair: extra repair_pairs.py flags, comma-separated (9 Nov: "
                         "--think-only,ifeval,--prefer-reread)")
+    parser.add_argument("--wf-path", default="", help="waitfor (19 Nov): a Drive-relative path another GPU writes (e.g. data/od5g-fullpick-y.json)")
+    parser.add_argument("--wf-hours", type=float, default=8.0, help="waitfor: give up after this many hours")
     parser.add_argument("--hold-minutes", type=float, default=20, help="hold (11 Nov): minutes to wait")
     parser.add_argument("--hold-tag", default="", help="hold: any text (makes two hold lines differ, so both run)")
     parser.add_argument("--ds-name", default="", help="devscore (11 Nov): the name of the scored model's Dev-512 run")
@@ -486,6 +488,16 @@ def main():
     parser.add_argument("--ld-tolerance", type=int, default=1, help="ladder: answers a rung may lose vs the natural ones")
     parser.add_argument("--od-rounds", type=int, default=4, help="odpo (10 Nov, user): online DPO rounds")
     parser.add_argument("--od-steps", type=int, default=10, help="odpo: training steps per round (16 pairs each)")
+    parser.add_argument("--od-slices", default="od3", help="odpo (18 Nov): question slices data/<this>-rK-questions.jsonl")
+    parser.add_argument("--od-start-round", type=int, default=1, help="odpo (18 Nov, user): start at this round from --od-init "
+                        "(adapter) answered by --od-answers0 (merged model): continue another run on other slices")
+    parser.add_argument("--ob-into", default="od3g", help="od3branch: the new slice set's name (data/<name>-rK-questions.jsonl)")
+    parser.add_argument("--ob-from", type=int, default=20, help="od3branch: first new slice; slices 2..from-1 are od3's (copied)")
+    parser.add_argument("--ob-more", type=int, default=5, help="od3branch: how many new slices")
+    parser.add_argument("--ob-trim", type=float, default=0.0, help="od3branch (19 Nov): when a type's draw is too long (or too short) "
+                        "vs slices 2..19, drop this share of its longest (shortest) candidates and draw again, up to --ob-trim-max in all")
+    parser.add_argument("--ob-trim-max", type=float, default=0.4, help="od3branch: most of a type's candidates that trimming may drop")
+    parser.add_argument("--ob-tries", type=int, default=150, help="od3branch: draws tried per slice to match every metric")
     parser.add_argument("--od-init", default="", help="odpo: the adapter round 1 starts from (and its reference)")
     parser.add_argument("--od-answers0", default="", help="odpo: the merged model = --rp-base + --od-init (answers round 1)")
     parser.add_argument("--od-screen-rounds", type=int, nargs="*", default=[2, 4], help="odpo: rounds scored on the 720 x4")
@@ -543,6 +555,9 @@ def main():
                         help="effprobe (18 Nov, user): name=model pairs; the first is the reference (the original)")
     parser.add_argument("--ep-samples", default="0,1", help="effprobe: answers of each question cut at 5% steps (settle points)")
     parser.add_argument("--ep-slices", default="19,20", help="effprobe: unseen training slices (data/od3-r<k>-questions.jsonl)")
+    parser.add_argument("--fp-gate-save", type=float, default=None, help="fullpick (18 Nov, user: full tests only if the scores "
+                        "are any good): a candidate is full-tested only if its Dev saving >= this AND its Dev accuracy >= --fp-gate-acc")
+    parser.add_argument("--fp-gate-acc", type=float, default=None, help="fullpick (18 Nov): Dev accuracy gate (see --fp-gate-save)")
     parser.add_argument("--fp-n", type=int, default=2, help="fullpick (15 Nov, user): how many checkpoints to full-test")
     parser.add_argument("--fp-skip-tested", action="store_true", help="fullpick (15 Nov, user: one full test on each GPU): "
                         "never pick a model that already has a full test (runs/mvtf/full-<model>/results.json on Drive)")
@@ -4099,6 +4114,212 @@ OD3_ROUND = {"svamp": 220, "mbpp": 140, "ifeval": 200, "bfcl_simple_python": 80,
 BFCL_W = {"bfcl_simple_python": 400, "bfcl_multiple": 200, "bfcl_irrelevance": 240}
 
 
+def od3_merge_tops(args, stat, done):
+    """(18 Nov, factored out of od3prep) merge newtop sets (--od3-tops: tooltop-NAME, the original's answers x8) into the
+    candidate stats (data/od3-base-stats.json, -think, -resp): Dev / Dev-SVAMP, their near-duplicates and --r2-drop out."""
+    import statistics
+    for top in [x for x in getattr(args, "od3_tops", "").split(",") if x]:  # (14 Nov) new candidates with their stats
+        from build_pool import ngrams, part_of, words
+        qf, rf = BON / f"tooltop-{top}" / "questions.jsonl", BON / f"tooltop-{top}" / "rollouts.jsonl"
+        drive_sync("restore", only=[str(qf.parent)])
+        assert qf.exists() and rf.exists(), f"tooltop-{top} is not on Drive"
+        think_f, resp_f = Path("data/od3-base-think.json"), Path("data/od3-base-resp.json")
+        bthink = json.loads(think_f.read_text()) if think_f.exists() else {}
+        bresp = json.loads(resp_f.read_text()) if resp_f.exists() else {}
+        qrows = {}
+        for l in qf.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)
+                qrows[q.get("pool_id", q.get("id"))] = q
+        ans = defaultdict(list)
+        for l in open(rf):
+            if l.strip():
+                r = json.loads(l)
+                ans[r["id"]].append(r)
+        dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
+        drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
+        added = 0
+        for qid, a in ans.items():
+            row = qrows.get(qid)
+            if row is None or str(qid) in stat or qid in dev or r2_drop_match(row | {"id": qid}, drops):
+                continue
+            g = ngrams(words(row.get("prompt") or ""))
+            if g and len(g & dev_g) * 10 >= 3 * len(g):
+                continue
+            ok = [r for r in a if bool(r["correct"]) and r.get("closed_thinking", True) and not r.get("truncated")]
+            stat[str(qid)] = {"part": part_of(row), "tokens": statistics.fmean(r["output_tokens"] for r in a),
+                              "acc": statistics.fmean(bool(r["correct"]) for r in a)}
+            if ok:
+                bthink[str(qid)] = sorted(r2_think_len(r) for r in ok)[len(ok) // 2]
+                bresp[str(qid)] = sorted(max(0, r["output_tokens"] - r2_think_len(r)) for r in ok)[len(ok) // 2]
+            added += 1
+        done.write_text(json.dumps(stat))
+        think_f.write_text(json.dumps(bthink))
+        resp_f.write_text(json.dumps(bresp))
+        print(f"od3prep --od3-tops: + {added} candidates from tooltop-{top} (stats merged)", flush=True)
+        drive_sync("save")
+
+
+def od3branch(args):
+    """(18 Nov, user) A NEW slice set for continuing a run past round 19 on questions of the SAME kind as rounds 1-19: od3's
+    slices 2..--ob-from-1 are copied (the questions rounds 1-19 trained on), then --ob-more new slices are drawn from every
+    candidate NOT used by those rounds (od3's later slices are free again: this branch never trained on them), with the
+    newtop sets of --od3-tops merged in (medium code, SVAMP-style math). Each new slice must resemble the TEST and the
+    earlier slices on every metric, per type: the original's solve-rate bins (r2_select) and mean solve rate (within 3 pts
+    of the test), its mean output tokens and the prompt length in words (within --ob-tol of slices 2..19, which were matched
+    to the test). --ob-tries draws per slice; the first that passes all, else none (the slice is not written). Writes
+    data/<into>-rK-questions.jsonl and runs/bon/<into>-report.txt."""
+    import statistics
+    from test_difficulty_data import TEST_DIFFICULTY as test
+    into, k0, more = args.ob_into, args.ob_from, args.ob_more
+    done = Path("data/od3-base-stats.json")
+    drive_sync("restore", only=["data/od3-*", f"data/{into}-*", str(BON / "rp-od3-r1-stored")])
+    stat = json.loads(done.read_text())
+    od3_merge_tops(args, stat, done)
+    stat = json.loads(done.read_text())
+    s2, s3, pool_f = Path("data/r2-step2-questions.jsonl"), Path("data/r2-step3-questions.jsonl"), Path("data/pool-dp13.jsonl")
+    drive_sync("restore", only=[str(pool_f), str(s2), str(s3), "runs/bon/tooltop-*/questions.jsonl"])
+    rows = {}
+    for f in [pool_f, *BON.glob("tooltop-*/questions.jsonl")]:
+        for l in f.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)
+                rows[q.get("pool_id", q.get("id"))] = q
+    words_of = lambda q: len(re.findall(r"\w+", " ".join(m.get("content", "") for m in rows[q].get("prompt", []))
+                                        if isinstance(rows[q].get("prompt"), list) else str(rows[q].get("prompt", ""))))
+    taken, ref = set(), defaultdict(list)
+    for k in range(2, k0):
+        src = Path(f"data/od3-r{k}-questions.jsonl")
+        assert src.exists(), f"{src} missing"
+        dst = Path(f"data/{into}-r{k}-questions.jsonl")
+        if not dst.exists():
+            shutil.copy(src, dst)
+        for l in src.read_text().splitlines():
+            if l.strip():
+                q = json.loads(l)["id"]
+                taken.add(q)
+                if q in stat and q in rows:
+                    ref[stat[q]["part"]].append(q)
+    for f in (s2, s3):
+        taken |= {json.loads(l)["id"] for l in f.read_text().splitlines() if l.strip()}
+    have = sorted(int(m.group(1)) for f in Path("data").glob(f"{into}-r*-questions.jsonl")
+                  if (m := re.match(rf"{into}-r(\d+)-questions\.jsonl$", f.name)) and int(m.group(1)) >= k0)
+    for k in have:
+        taken |= {json.loads(l)["id"] for l in Path(f"data/{into}-r{k}-questions.jsonl").read_text().splitlines() if l.strip()}
+    qt = lambda xs, f: sorted(xs)[min(len(xs) - 1, int(f * len(xs)))]
+    target = {p: {"tok": statistics.fmean(stat[q]["tokens"] for q in v), "words": statistics.fmean(words_of(q) for q in v),
+                  "med": qt([stat[q]["tokens"] for q in v], .5), "p90": qt([stat[q]["tokens"] for q in v], .9)}
+              for p, v in ref.items()}
+    tol = {"tok": 0.12, "words": 0.20, "med": 0.15, "p90": 0.15}  # (19 Nov, user) the spread of lengths too, not only the mean
+    cands = defaultdict(list)
+    for qid, st in stat.items():
+        if qid not in taken and qid in rows:
+            cands[st["part"]].append((qid, st["acc"], "held"))
+    lines = [f"od3branch {into}: slices 2..{k0 - 1} = od3's; targets per type (slices 2..{k0 - 1}): " + ", ".join(
+        f"{p} tokens {t['tok']:.0f} (median {t['med']:.0f}, p90 {t['p90']:.0f}) words {t['words']:.0f}" for p, t in target.items()),
+        "candidates left " + str({p: len(v) for p, v in cands.items()})]
+    print("\n".join(lines), flush=True)
+    for k in range(k0, k0 + more):
+        if k in have:
+            continue
+        best = None
+        for t in range(args.ob_tries):
+            left = {p: [c for c in v if c[0] not in taken] for p, v in cands.items()}
+            sel = r2_select(left, {p: test[p]["bins"] for p in OD3_ROUND}, OD3_ROUND, {p: 0 for p in OD3_ROUND},
+                            seed=args.data_seed + 1000 * k + t)
+            bad, met = {}, {}
+            for p in OD3_ROUND:
+                ids = sel[p]["step2"]
+                if len(ids) < OD3_ROUND[p]:
+                    bad[p] = f"{len(ids)}/{OD3_ROUND[p]}"
+                    continue
+                sr = 100 * statistics.fmean(stat[q]["acc"] for q in ids)
+                tk = statistics.fmean(stat[q]["tokens"] for q in ids)
+                wd = statistics.fmean(words_of(q) for q in ids)
+                met[p] = (sr, tk, wd)
+                off = []
+                if abs(sr - 100 * test[p]["solve"]) > 3.0:
+                    off.append(f"solve {sr:.0f} vs {100 * test[p]['solve']:.0f}")
+                if p in target and abs(tk / target[p]["tok"] - 1) > tol["tok"]:
+                    off.append(f"tokens {tk:.0f} vs {target[p]['tok']:.0f}")
+                if p in target and abs(wd / target[p]["words"] - 1) > tol["words"]:
+                    off.append(f"words {wd:.0f} vs {target[p]['words']:.0f}")
+                for key, f in (("med", .5), ("p90", .9)):
+                    v_ = qt([stat[q]["tokens"] for q in ids], f)
+                    if p in target and abs(v_ / target[p][key] - 1) > tol[key]:
+                        off.append(f"{key} tokens {v_:.0f} vs {target[p][key]:.0f}")
+                if off:
+                    bad[p] = "; ".join(off)
+            score = len(bad)
+            if best is None or score < best[0]:
+                best = (score, sel, bad, met)
+            if not bad:
+                break
+        score, sel, bad, met = best
+        trims = defaultdict(float)
+        while bad and getattr(args, "ob_trim", 0.0) > 0:  # (19 Nov) trim the length tail of the types that miss on tokens
+            moved = False
+            for p, why in bad.items():
+                if "tokens" not in why or trims[p] + args.ob_trim > args.ob_trim_max + 1e-9:
+                    continue
+                too_long = statistics.fmean(stat[q]["tokens"] for q in sel[p]["step2"]) > target[p]["tok"] if sel[p]["step2"] else True
+                pool_p = sorted((c for c in cands[p] if c[0] not in taken), key=lambda c: stat[c[0]]["tokens"], reverse=too_long)
+                drop = {c[0] for c in pool_p[:int(args.ob_trim * len(pool_p))]}
+                cands[p] = [c for c in cands[p] if c[0] not in drop]
+                trims[p] += args.ob_trim
+                moved = True
+                print(f"od3branch round {k}: {p} {'too long' if too_long else 'too short'} ({why}): dropped the "
+                      f"{'longest' if too_long else 'shortest'} {len(drop)} candidates (total trimmed {100 * trims[p]:.0f}%)", flush=True)
+            if not moved:
+                break
+            best = None
+            for t in range(args.ob_tries):
+                left = {p: [c for c in v if c[0] not in taken] for p, v in cands.items()}
+                sel = r2_select(left, {p: test[p]["bins"] for p in OD3_ROUND}, OD3_ROUND, {p: 0 for p in OD3_ROUND},
+                                seed=args.data_seed + 1000 * k + t)
+                bad, met = {}, {}
+                for p in OD3_ROUND:
+                    ids = sel[p]["step2"]
+                    if len(ids) < OD3_ROUND[p]:
+                        bad[p] = f"{len(ids)}/{OD3_ROUND[p]}"
+                        continue
+                    sr = 100 * statistics.fmean(stat[q]["acc"] for q in ids)
+                    tk = statistics.fmean(stat[q]["tokens"] for q in ids)
+                    wd = statistics.fmean(words_of(q) for q in ids)
+                    met[p] = (sr, tk, wd)
+                    off = []
+                    if abs(sr - 100 * test[p]["solve"]) > 3.0:
+                        off.append(f"solve {sr:.0f} vs {100 * test[p]['solve']:.0f}")
+                    if p in target and abs(tk / target[p]["tok"] - 1) > tol["tok"]:
+                        off.append(f"tokens {tk:.0f} vs {target[p]['tok']:.0f}")
+                    if p in target and abs(wd / target[p]["words"] - 1) > tol["words"]:
+                        off.append(f"words {wd:.0f} vs {target[p]['words']:.0f}")
+                    for key, f in (("med", .5), ("p90", .9)):
+                        v_ = qt([stat[q]["tokens"] for q in ids], f)
+                        if p in target and abs(v_ / target[p][key] - 1) > tol[key]:
+                            off.append(f"{key} tokens {v_:.0f} vs {target[p][key]:.0f}")
+                    if off:
+                        bad[p] = "; ".join(off)
+                if best is None or len(bad) < best[0]:
+                    best = (len(bad), sel, bad, met)
+                if not bad:
+                    break
+            _, sel, bad, met = best
+        if bad:
+            lines.append(f"round {k}: NOT WRITTEN, no draw in {args.ob_tries} matches every metric: {bad}")
+            print(lines[-1], flush=True)
+            break
+        ids = [q for p in OD3_ROUND for q in sel[p]["step2"]]
+        taken |= set(ids)
+        Path(f"data/{into}-r{k}-questions.jsonl").write_text("".join(json.dumps(rows[q] | {"id": q, "pool_id": q}) + "\n"
+                                                                      for q in ids))
+        lines.append(f"round {k}: " + ", ".join(f"{p} solve {met[p][0]:.0f} (test {100 * test[p]['solve']:.0f}) tokens "
+                                                f"{met[p][1]:.0f} words {met[p][2]:.0f}" for p in OD3_ROUND))
+        print(lines[-1], flush=True)
+    (BON / f"{into}-report.txt").write_text("\n".join(lines) + "\n")
+    drive_sync("save")
+
+
 def od3prep(args):
     """(13 Nov, consult18) the arena's questions, fixed before round 1: --od-rounds disjoint slices, each matched to the full
     test's difficulty profile per type (the original's solve-rate bins, test_difficulty_data), from every question we hold
@@ -4136,46 +4357,7 @@ def od3prep(args):
         return
     if getattr(args, "od3_more", 0):  # (13 Nov, user: "keep running more until each data type hits its cap") more slices
         assert done.exists(), "od3prep --od3-more needs the first build (data/od3-base-stats.json)"
-        for top in [x for x in getattr(args, "od3_tops", "").split(",") if x]:  # (14 Nov) new candidates with their stats
-            from build_pool import ngrams, part_of, words
-            qf, rf = BON / f"tooltop-{top}" / "questions.jsonl", BON / f"tooltop-{top}" / "rollouts.jsonl"
-            drive_sync("restore", only=[str(qf.parent)])
-            assert qf.exists() and rf.exists(), f"tooltop-{top} is not on Drive"
-            think_f, resp_f = Path("data/od3-base-think.json"), Path("data/od3-base-resp.json")
-            bthink = json.loads(think_f.read_text()) if think_f.exists() else {}
-            bresp = json.loads(resp_f.read_text()) if resp_f.exists() else {}
-            qrows = {}
-            for l in qf.read_text().splitlines():
-                if l.strip():
-                    q = json.loads(l)
-                    qrows[q.get("pool_id", q.get("id"))] = q
-            ans = defaultdict(list)
-            for l in open(rf):
-                if l.strip():
-                    r = json.loads(l)
-                    ans[r["id"]].append(r)
-            dev, dev_g = dev_ids() | dev_svamp_ids(), dev_gram_set()
-            drops = [x for x in re.split(r"[,+]", args.r2_drop) if x]
-            added = 0
-            for qid, a in ans.items():
-                row = qrows.get(qid)
-                if row is None or str(qid) in stat or qid in dev or r2_drop_match(row | {"id": qid}, drops):
-                    continue
-                g = ngrams(words(row.get("prompt") or ""))
-                if g and len(g & dev_g) * 10 >= 3 * len(g):
-                    continue
-                ok = [r for r in a if bool(r["correct"]) and r.get("closed_thinking", True) and not r.get("truncated")]
-                stat[str(qid)] = {"part": part_of(row), "tokens": statistics.fmean(r["output_tokens"] for r in a),
-                                  "acc": statistics.fmean(bool(r["correct"]) for r in a)}
-                if ok:
-                    bthink[str(qid)] = sorted(r2_think_len(r) for r in ok)[len(ok) // 2]
-                    bresp[str(qid)] = sorted(max(0, r["output_tokens"] - r2_think_len(r)) for r in ok)[len(ok) // 2]
-                added += 1
-            done.write_text(json.dumps(stat))
-            think_f.write_text(json.dumps(bthink))
-            resp_f.write_text(json.dumps(bresp))
-            print(f"od3prep --od3-tops: + {added} candidates from tooltop-{top} (stats merged)", flush=True)
-            drive_sync("save")
+        od3_merge_tops(args, stat, done)
         have = sorted(int(m.group(1)) for f in Path("data").glob("od3-r*-questions.jsonl")
                       if (m := re.match(r"od3-r(\d+)-questions\.jsonl$", f.name)))
         n0 = have[-1] if have else 0
@@ -4486,12 +4668,26 @@ def fullpick(args):
         if start and start not in {c["label"] for c in cands} and d.exists():  # the result is the last, unmonitored round
             a = json.loads(d.read_text())
             cands.append({"label": start, "model": f"models/{run_name}-best", "saved": a["saved"], "acc": a["acc"]})
-    assert cands, f"fullpick: no scored candidate of {run_name}"
+    if not cands:  # (19 Nov) e.g. the run trained nothing (not enough matched data): say so, do not crash the queue
+        print(f"fullpick {run_name}: NO CANDIDATE (no scored round model): nothing to test", flush=True)
+        Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": []}))
+        drive_sync("save")
+        return
     if getattr(args, "fp_min_save", None) is not None and max(c["saved"] for c in cands) < args.fp_min_save:
         # (15 Nov, user: "if we are not near 50% on the Dev 512, let's not run the full eval")
         print(f"fullpick {run_name}: NO FULL TEST: best Dev saving {max(c['saved'] for c in cands):+.1f}% < --fp-min-save "
               f"{args.fp_min_save} | " + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}" for c in cands), flush=True)
         return
+    if getattr(args, "fp_gate_save", None) is not None:  # (18 Nov, user) only candidates whose Dev predicts beating the best
+        good = [c for c in cands if c["saved"] >= args.fp_gate_save and c["acc"] >= (args.fp_gate_acc if args.fp_gate_acc is not None else -99)]
+        print(f"fullpick {run_name}: gate Dev saving >= {args.fp_gate_save} and accuracy >= {args.fp_gate_acc}: "
+              + ", ".join(f"{c['label']} {c['saved']:+.1f} / {c['acc']:+.2f}{' PASS' if c in good else ''}" for c in cands), flush=True)
+        if not good:
+            print(f"fullpick {run_name}: NO FULL TEST: no round passes the gate", flush=True)
+            Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(json.dumps({"picks": [], "all": cands}))
+            drive_sync("save")
+            return
+        cands = good
 
     def dist(c):
         ps, pa = c["saved"] - args.fp_save_bias, c["acc"] - args.fp_acc_bias - getattr(args, "fp_acc_slope", 0.0) * max(0.0, c["saved"] - 53.0)
@@ -4513,7 +4709,10 @@ def fullpick(args):
             print(f"fullpick {run_name}: already full-tested or picked on the other GPU, not picked again: {sorted(tested)}",
                   flush=True)
     pool = [c for c in ranked if c["label"] not in tested]
-    assert pool, f"fullpick {run_name}: every candidate already has a full test"
+    if not pool:  # (19 Nov) nothing left for this GPU (the other GPU took the only good round): not an error
+        print(f"fullpick {run_name}: every passing candidate already has a full test or is picked on the other GPU: nothing to do",
+              flush=True)
+        return
     picks = [pool[0]]
     other = next((c for c in pool if c["label"] == start), None)
     if other is None or other["label"] == picks[0]["label"]:
@@ -4539,6 +4738,7 @@ def fullpick(args):
         models.append(str(model))
     Path(f"data/{run_name}-fullpick{getattr(args, 'fp_tag', '')}.json").write_text(
         json.dumps({"picks": picks, "start": start, "all": cands}, indent=1))
+    drive_sync("save")  # (19 Nov) the other GPU's fullpick --fp-skip-tested / waitfor reads the picks before this full test ends
     a = copy.copy(args)
     a.fm_soup, a.fm_merge, a.nothink_models, a.fm_screen_only, a.fm_no_screen = [], [], models, False, True
     fullmodel(a)
@@ -5178,14 +5378,15 @@ def odpo_fixed(args):
     import copy
     name, base = args.name, "Qwen/Qwen3-0.6B"
     stats_f = Path("data/od3-base-stats.json")
-    drive_sync("restore", only=[str(stats_f), "data/od3-*"])
+    sl = getattr(args, "od_slices", "od3") or "od3"
+    drive_sync("restore", only=[str(stats_f), "data/od3-*", f"data/{sl}-*"])
     stats = json.loads(stats_f.read_text())
     log = BON / f"{name}-monitor.jsonl"
     drive_sync("restore", only=[str(log)])
     history = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
     prev, answerer, best = None, base, None
     n_sl = 1  # round 1 = the stored answers; rounds k >= 2 need data/od3-rK-questions.jsonl
-    while Path(f"data/od3-r{n_sl + 1}-questions.jsonl").exists():
+    while Path(f"data/{sl}-r{n_sl + 1}-questions.jsonl").exists():
         n_sl += 1
     if getattr(args, "od_min_rounds", 0) and n_sl < args.od_min_rounds:
         print(f"odpo {name}: NOT ENOUGH DATA: {n_sl} round slices < --od-min-rounds {args.od_min_rounds}: skipped, nothing "
@@ -5197,7 +5398,16 @@ def odpo_fixed(args):
     latch_f = BON / f"{name}-latch.json"  # (13 Nov, consult20 tweak) a type braked once stays braked in later rounds
     drive_sync("restore", only=[str(latch_f)])
     latched = set(json.loads(latch_f.read_text())) if latch_f.exists() else set()
-    for k in range(args.od_rounds):
+    s0 = max(1, getattr(args, "od_start_round", 1))
+    if s0 > 1:  # (18 Nov, user) continue another run from its round s0-1 model on these slices
+        assert args.od_init and args.od_answers0, "--od-start-round needs --od-init (adapter) and --od-answers0 (merged model)"
+        drive_sync("restore", only=[str(Path(args.od_init).parent), args.od_answers0])
+        prev, answerer = args.od_init, args.od_answers0
+        if not (Path(answerer) / "config.json").exists():  # not on Drive (only the last round's merged model is kept): rebuild
+            py("merge.py", "--model", base, "--out", answerer, "--adapters", f"{prev}:1")
+            drive_sync("save")
+        print(f"odpo {name}: starts at round {s0} from {prev} (answers: {answerer}), slices data/{sl}-rK", flush=True)
+    for k in range(s0 - 1, args.od_rounds):
         done_m = Path("models") / f"{name}-r{k + 1}"  # (13 Nov) a rerun with more rounds skips the finished ones
         if k + 1 < args.od_rounds and any(h["round"] == k + 1 for h in history):
             drive_sync("restore", only=[str(done_m), f"adapters/{name}-r{k + 1}-s0"])
@@ -5222,7 +5432,7 @@ def odpo_fixed(args):
         a.rp_screen, a.rp_dev, a.rp_dev_svamp = [], False, False
         a.rp_quota = args.od_r1_quota if k == 0 and args.od_r1_quota else args.rp_quota
         a.rp_rollouts_from = "od3-r1-stored" if k == 0 else ""
-        a.rp_question_file = "" if k == 0 else f"data/od3-r{k + 1}-questions.jsonl"  # od3prep's test-matched slices
+        a.rp_question_file = "" if k == 0 else f"data/{sl}-r{k + 1}-questions.jsonl"  # od3prep's test-matched slices
         a.rp_extra_questions, a.rp_extra_source, a.rp_extra_top, a.rp_drop = "", "", "", ""
         if args.od_caps and k > 0:  # (13 Nov, od4 brake, user) measure THIS round's answers first, then hold the types at
             # their saving cap (or losing accuracy): no shortening pairs for them this round, length-held be-right + loops
@@ -5269,9 +5479,10 @@ def odpo_fixed(args):
             best = answerer
             print(f"odpo {name}: STOP (target): {answerer} saves {saved:.1f}% at {acc:+.2f}", flush=True)
             break
-        if stop_ok and k >= 4 and saved - history[k - 1]["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
+        prev_h = next((h for h in history if h["round"] == k), None)  # (19 Nov) by round number: a branch's history starts late
+        if stop_ok and k >= 4 and prev_h and saved - prev_h["saved"] < args.od_conv_gain and saved >= args.od_conv_min:
             best = answerer
-            print(f"odpo {name}: STOP (saving stopped growing: {history[k - 1]['saved']:.1f} -> {saved:.1f})", flush=True)
+            print(f"odpo {name}: STOP (saving stopped growing: {prev_h['saved']:.1f} -> {saved:.1f})", flush=True)
             break
         nxt = Path("models") / a.name
         drive_sync("restore", only=[str(nxt)])
@@ -5554,6 +5765,22 @@ TRANSFER_V2_SIZES = {"tr_ifbench": 300, "tr_bfcl_live_simple": 120, "tr_bfcl_liv
                      "tr_bbh": 170, "tr_boolq": 200, "tr_math500": 311}
 
 
+def waitfor(args):
+    """(19 Nov, user: the GPUs share the work overnight; each step only starts once what it needs is ready) Wait, checking
+    Drive every 5 min, until --wf-path exists (written by the other GPU); give up after --wf-hours (the next line then finds
+    nothing to do and says so)."""
+    import time
+    end = time.time() + 3600 * args.wf_hours
+    while time.time() < end:
+        drive_sync("restore", only=[args.wf_path])
+        if Path(args.wf_path).exists():
+            print(f"waitfor: {args.wf_path} is there", flush=True)
+            return
+        print(f"waitfor: {args.wf_path} not yet ({(end - time.time()) / 3600:.1f} h left)", flush=True)
+        time.sleep(300)
+    print(f"waitfor: GAVE UP after {args.wf_hours} h: {args.wf_path} never appeared", flush=True)
+
+
 def hold(args):
     """(12 Nov) Keep the runtime alive and idle for --hold-minutes (a plan whose next line is `end`, or an empty queue for
     12 minutes, stops the runtime). Used to wait for the user's go between steps. The function was missing (KeyError)."""
@@ -5750,6 +5977,57 @@ def effprobe(args):
         drive_sync("save")
     py("eff_allocate.py", "--base", eff / f"curves-{a_name}" / "curves.json",  # (3)
        "--model", eff / f"curves-{b_name}" / "curves.json", "--out", eff / "allocate.txt")
+    drive_sync("save")
+
+
+def effsame(args):
+    """(18 Nov, user) Thinking density at EQUAL thinking caps: effprobe gave each model budget rungs b0..b9 at ITS OWN per-type
+    length deciles; here each model is also cut at the OTHER model's caps (same tokens for both), sentence-aligned, answers
+    already shorter than a cap keep their natural outcome. Needs effprobe's rollouts and budget_levels.json (runs/eff).
+    Results: runs/eff/curves-<model>-at-<other>/summary.txt, saved to Drive after every rung."""
+    pairs = [x.split("=", 1) for x in args.ep_models.split(",")]
+    eff = Path("runs/eff")
+    drive_sync("restore", only=[str(eff)] + [m for _, m in pairs if not m.startswith("Qwen/")])
+    for (name, model), (other, _) in ((pairs[1], pairs[0]), (pairs[0], pairs[1])):
+        out = eff / f"curves-{name}-at-{other}"
+        lv = eff / f"curves-{other}" / "budget_levels.json"
+        base = ["budget_curves.py", "--rollouts", eff / f"roll-{name}" / "rollouts.jsonl", "--out", out, "--model", model,
+                "--dtype", args.dtype, "--samples", args.ep_samples, "--budget-samples", "0,1,2,3", "--budget-levels", lv, "--no-fracs"]
+        for _ in range(15):
+            if (out / "CURVES_DONE").exists():
+                break
+            py(*base, "--max-new-rounds", 1)
+            drive_sync("save")
+        if not (out / "summary.txt").exists():
+            py(*base)
+        print(f"== {name} at {other}'s caps", flush=True)
+        print((out / "summary.txt").read_text(), flush=True)
+    drive_sync("save")
+
+
+def effpara(args):
+    """(19 Nov, user: "compare them at the end of each paragraph, never cut mid-doubt") Math only: both models' effprobe answers
+    (samples 0-1) cut after their K-th paragraph (pK) and after their K-th NON-doubt paragraph (sK: a paragraph that does not
+    open with Wait / But / Hmm / Alternatively / Maybe / Let me check...), K = 1..8, the same model answering at once. Accuracy
+    against mean tokens per rung, both models: density at equal tokens without cutting a model in the middle of a doubt.
+    Results: runs/eff/para-<name>/summary.txt."""
+    pairs = [x.split("=", 1) for x in args.ep_models.split(",")]
+    eff = Path("runs/eff")
+    drive_sync("restore", only=[str(eff)] + [m for _, m in pairs if not m.startswith("Qwen/")])
+    for name, model in pairs:
+        out = eff / f"para-{name}"
+        base = ["budget_curves.py", "--rollouts", eff / f"roll-{name}" / "rollouts.jsonl", "--out", out, "--model", model,
+                "--dtype", args.dtype, "--samples", args.ep_samples, "--types", "svamp", "--no-fracs", "--no-budgets",
+                "--para-rungs", 8]
+        for _ in range(20):
+            if (out / "CURVES_DONE").exists():
+                break
+            py(*base, "--max-new-rounds", 1)
+            drive_sync("save")
+        if not (out / "summary.txt").exists():
+            py(*base)
+        print(f"== paragraph-aligned cuts, {name}", flush=True)
+        print((out / "summary.txt").read_text(), flush=True)
     drive_sync("save")
 
 
@@ -7748,8 +8026,10 @@ def plan(args):
     wanted = {m for l in plan_text.splitlines() if l.strip() and not l.startswith("#")
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
-    SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
-    if stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
+    SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
+    if stages and stages <= {"effsame", "effpara", "waitfor"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
+        print("drive: plan start restore skipped (stages restore their own inputs)", flush=True)
+    elif stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
     elif stages and stages <= {"callot", "probezoo", "targeted", "decide", "zooreport", "benchlot", "drpo", "teach", "wronglen", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "od3prep", "oneprep", "wandaod", "odpo", "fullpick", "fullmodel", "lossan"}:  # label lots + zoo need only their own files, the draws and the model
         # (4 Nov) old-line adapters (tg/stop/mf/drpo/sb/teach/tsk) no longer restored at plan start: hours on a fresh runtime

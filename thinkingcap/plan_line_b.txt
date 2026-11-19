@@ -846,4 +846,6 @@
 # (19 Nov) user restarts GPU 1: effsame + effpara moved here from GPU 2
 effsame --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
 # (19 Nov, moved to GPU 2 which was idle) effpara --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
+# (19 Nov) keep the GPU 90 min after its work so new lines are picked up without a restart
+hold --hold-minutes 90 --hold-tag gpu1-a
 end

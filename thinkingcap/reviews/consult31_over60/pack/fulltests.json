@@ -1345,6 +1345,39 @@
      "acc": 5.5
     }
    }
+  },
+  {
+   "key": "od5g-r20full",
+   "name": "Path 2 \u00b7 online DPO od5g \u00b7 round 20 (od5f r18 continued on matched slices)",
+   "what": "od5f-r18 continued with the same recipe on 3 new slices matched to the test and to slices 2-19 on every metric (od3g 20-22; Argon-written medium code + SVAMP-style math) \u00b7 full test 2,759 x 8 \u00b7 inside the goal, NO accuracy loss (Dev had read 58.2 / +3.18)",
+   "saved": 57.4,
+   "acc": 0.14,
+   "parts": {
+    "v": {
+     "saved": 67,
+     "acc": -1.5
+    },
+    "c": {
+     "saved": 54,
+     "acc": -0.4
+    },
+    "f": {
+     "saved": 53,
+     "acc": 1.8
+    },
+    "s": {
+     "saved": 49,
+     "acc": -2.2
+    },
+    "m": {
+     "saved": 50,
+     "acc": -0.7
+    },
+    "i": {
+     "saved": 59,
+     "acc": 6.1
+    }
+   }
   }
  ]
 }

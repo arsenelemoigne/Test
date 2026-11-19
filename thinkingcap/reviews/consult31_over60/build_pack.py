@@ -7,7 +7,7 @@ import argparse, json, re, shutil
 from pathlib import Path
 
 R = Path(__file__).resolve().parent; ROOT = R.parents[1]
-BAN = re.compile(r"bida|michal|herz1c|matousek|senkyr|mcqwen|lightning|khudgins|competitor|other team|bottlecap'?s? (own )?(method|recipe)|bottlecap method", re.I)
+BAN = re.compile(r"bida|basta|michal|herz1c|matousek|senkyr|mcqwen|lightning|khudgins|competitor|other team|bottlecap'?s? (own )?(method|recipe)|bottlecap method", re.I)
 
 def clean(text):
     return "\n".join(l for l in text.splitlines() if not BAN.search(l)) + "\n"
@@ -20,8 +20,8 @@ def main():
     log = (ROOT / "EXPERIMENT_LOG.md").read_text()
     (P / "EXPERIMENT_LOG.md").write_text(clean(log))
     L = log.splitlines()
-    (P / "NEW_RESULTS_od5f.md").write_text("# od5f: every log line since its launch (monitors, Dev, full tests; rounds 19-21 at the end)\n\n" +
-        clean("\n".join(l for l in L if "od5f" in l)))
+    (P / "NEW_RESULTS_od5f.md").write_text("# od5f: every log line since its launch (monitors, Dev, full tests; rounds 19-23, then the od5g branch on matched slices)\n\n" +
+        clean("\n".join(l for l in L if re.search(r"od5f|od5g|od3g", l))))
     (P / "THINKING_OFF.md").write_text("# Thinking switched off: the original and trained models, per type (log lines)\n\n" +
         clean("\n".join(l for l in L if re.search(r"nothink|thinking[ -]off|thinking OFF|ntothers", l, re.I))))
     for src, dst in (("reviews/consult28_online60/REPORT.md", "YOUR_CONSULT28_REPORT.md"), ("reviews/consult30_efficiency/REPORT.md", "YOUR_CONSULT30_REPORT.md"),

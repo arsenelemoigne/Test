@@ -790,4 +790,6 @@
 # moved to GPU 1 18 Nov: nothink --name ntothers2 --nt-full --nt-full-models models/rpL-80 models/od5r-r16
 # (19 Nov) GPU 2 idle after od5g full test: effpara here, in parallel with effsame on GPU 1
 effpara --ep-models base=Qwen/Qwen3-0.6B,od5c-best=models/od5c-best --ep-samples 0,1
+# (19 Nov) keep the GPU 90 min after its work so new lines are picked up without a restart
+hold --hold-minutes 90 --hold-tag gpu2-a
 end

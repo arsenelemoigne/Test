@@ -1,4 +1,4 @@
-16 November 2026 · BottleCap AI challenge · Read full screen ⤢
+16 November 2026 · BottleCap AI challenge · Read full screen ⤢ Journal view ▤
 
 The small model already knew the short answer
 
@@ -26,8 +26,12 @@ Wrong answers run 3 times longer than right ones.
 
 Thinking pays very unevenly across task types.
 
-Method. Online DPO. Each round the model answers fresh questions, learns from pairs of its own answers, and is checked on a hold-out sample. The pair rule, in one line:
-          right ≻ wrong · shorter right ≻ longer right (by 1.3×) · except: floor and cap per task type
+Method. Online DPO. Each round the model answers fresh questions, learns from pairs of its own answers, and is checked on a hold-out sample. The pair rule:
+          Rule Pairing, for each question and its 8 answers
+1prefer     right ≻ wrong
+2prefer     shorter right ≻ longer right   if ≥ 1.3× shorter
+3except if  shorter &lt; floor(task)  or  saving(task) ≥ cap(task)
+4             → keep only rule 1 and recovery pairs for that task
           Every round is measured against the original model, and a floor, a cap and a brake per task type stop the shortening before accuracy falls.
 
 Results. 54.8% fewer tokens at −0.78 points; a second run with new seeds lands at 52.1% / −0.58. Per task type, the average hides a cost on math (−2.8) and code (−2.0), offset by "no function fits" (+5.9). For comparison, asking for brief thinking in the prompt saves 22% at −2.7. And question by question, some easy questions it used to solve now sometimes come out wrong. Which raises the question: is it shorter because it got smarter?
@@ -229,71 +233,79 @@ After training
 
 5. What I tried, and why most of it failed
 
-This was my first machine learning project, and I treated it as one: a place to learn by trying ideas, not only to win. I chose exploring over exploiting, following my own intuitions about what should work.
+This was my first machine learning project, and I treated it as one: a place to explore first and exploit later, following my own intuitions about what should work.
 
-Grouped by kind, the families were:
+Grouped by kind, my tries were:
 
-Without training: prompts and test-time tricks. Example: a system prompt asking it to think briefly.
+Without training: prompts and test-time tricks.
 
-Changing the weights directly: steering, pruning. Example: pushing its internal activations toward "brief".
+Changing the weights directly: steering, pruning.
 
-Imitation (SFT): fine-tuning on short answers; cutting traces at a "settle point". Example: training it to reproduce its own shortest right answer.
+Imitation (SFT and distillation): fine-tuning on short answers; cutting traces at a "settle point"; a 4B model as a teacher. Example: training it to reproduce its own shortest right answer.
 
-Reinforcement learning: GRPO, DRPO, length rewards, a bigger model as a coach. Example: rewarding right answers, minus a penalty per token.
+Reinforcement learning: GRPO, DRPO, length rewards. Example: rewarding right answers, minus a penalty per token.
 
-Preference training (DPO): per-task adapters, offline DPO, online DPO. Example: "this short right answer beats that long one".
+Preference training (DPO): per-task adapters, offline DPO, online DPO. Example: "this short right answer beats that long one", if it is at least 1.3× shorter.
 
 Without training
 
-Prompts. A system prompt asking the model to think briefly saves about 22%, at −2.7 points. Math follows the instruction; code and tool calls mostly ignore it. Switching thinking off entirely saves 94% and costs 22.3 points. A prompt changes how long the model writes on average, not its judgement of when it is done.
+Prompts. A system prompt asking the model to think briefly saves about 22%, at −2.7 points. Math follows the instruction; code and tool calls mostly ignore it. A prompt changes how long the model writes on average, not its judgement of when it is done.
 
 Changing the weights directly
 
 Steering is different from prompting: instead of asking, it edits the model's internal activations. I computed a "brief versus verbose" direction from the model's own short and long answers and added it to the activations while it writes. It shortened answers by up to 18% at no cost on a small screen, but stronger pushes cost 5 to 8 points, and it did not make the model better at knowing when to stop.
 
-Pruning removes the least important weights (Wanda14). At 10% removed the model behaved the same; beyond 20% it thought longer. Removing weights does not remove habits.
+Pruning removes the least important weights14. At 10% removed the model behaved the same; beyond 20% it thought longer. Removing weights does not remove habits.
 
 Imitation
 
 Fine-tuning on short answers. For each question I kept the model's shortest correct answer out of 8 and trained it to reproduce those answers. It saved only 12% at −0.7 on my screen. The surprise came when I used the very same answers differently, as pairs ("this short right answer is better than that long one"): the saving jumped to 40–48%. Imitation shows the model a short answer; a pair shows it what to prefer, and why. That contrast pointed me to preference training.
 
-Cutting at a "settle point". Find, for each answer, the earliest point where its final answer is already decided, cut the trace there, and train the model to stop at that point. It reached 57% saved on the full test, but at −3.5, and math paid most. Fixing the accuracy needed a second "repair" stage on top. It worked in the end, but it required an oracle to find the cuts and a separate repair step, it was hard to reproduce cleanly, and it felt like fitting the benchmarks rather than teaching the model something.
+Cutting at a "settle point". Find, for each answer, the earliest point where its final answer is already decided, cut the trace there, and train the model to stop at that point, with pairs (the cut answer preferred over the full one). It was not trained from the original model: it started from a model already through three earlier rounds of preference training. It reached 57.4% saved on the full test, but at −3.5, and math paid most. Fixing the accuracy needed a second "repair" stage on top. It worked in the end, but it required an oracle to find the cuts and a separate repair step, it was hard to reproduce cleanly, and it felt like fitting the benchmarks rather than teaching the model something.
 
 Reinforcement learning
 
-BottleCap itself warns that reinforcement learning works poorly on models this small. I wanted to see it for myself. GRPO11 with a length penalty, DRPO12, a ShorterBetter-style reward13 and a larger model as a coach all barely shortened the original model: the best run saved 11% on my screen. This is not proof that reinforcement learning cannot work here. I tuned these runs much less than the DPO ones, and the likeliest cause is a settings problem: the length penalty was tiny next to the right-or-wrong reward, so the model had little reason to shorten. A stronger penalty risks the opposite, cutting steps the model needs, and finding the balance would have taken many more runs. Preference training needed no such balance: a pair says directly which answer is better.
+BottleCap itself warns that reinforcement learning works poorly on models this small. I wanted to see it for myself. GRPO11 with a length penalty, DRPO12, a ShorterBetter-style reward13 and a larger model as a coach all barely shortened the original model. This is not proof that reinforcement learning cannot work here: I tuned these runs much less than the DPO ones, and the length penalty was tiny next to the right-or-wrong reward. Finding the balance would have taken many more runs; a pair says directly which answer is better.
 
 Preference training
 
+I built this approach over time, one step after another, each fixing what the previous one could not do.
+
 One adapter per task. I trained a separate small adapter for each task, each allowed to cut as much as its task tolerated, and merged them. On the full test the merge saved 53.6% but at −3.3 points: the adapters interfered with each other once combined.
 
-Offline DPO15,3. Pairs built once from answers stored before training, then trained in one go: the model never learns from the new, shorter answers it starts to write. Its best model reached the goal, 54.1% at −0.93, but only at the end of a six-stage chain of rounds and repairs. Rebuilt in a clean three-step procedure from the original model, it stopped at 51.7% / −0.86: inside the box, short of the margin, and still not the single procedure I wanted.
+Offline DPO15,3. Pairs built once from answers stored before training, then trained in one go: the model never learns from the new, shorter answers it starts to write. Its best model reached the goal, 54.1% at −0.93, but only at the end of a six-stage chain of rounds and repairs. Rebuilt in a clean three-step procedure from the original model, it stopped at 51.7% / −0.86: inside the box, short of the margin, and still not the single procedure I wanted. Still, offline DPO was the first method to land above my trade-off curve (Exhibit 2): pairs worked.
 
 Online DPO rebuilds the pairs every round from the model's own latest answers. Its first version, without any brake, went too far: 60.5% at −4.8, with math losing 9 points. With the brake and the other rules of section 7, it gave the best model, reproduced with a second seed.
 
 6. Hypotheses
 
-By the time I settled on online DPO, the analysis and the failures had turned into four working hypotheses:
+By the time I settled on online DPO, the analysis and the failures had turned into four working hypotheses. I built the online DPO recipe on them:
 
-Thinking density can rise. A large share of the thinking adds nothing (section 3), so accuracy per thinking token can go up a lot without new knowledge.→ Judge every model on saving and accuracy together, never on length alone.
+Thinking density can rise. A large share of the thinking adds nothing (section 3), so accuracy per thinking token can go up a lot without new knowledge. This is what showed the potential.
 
-The model already knows the short way. Among its 8 answers to a question there is usually one that reaches the right result without the extra checks. The knowledge is there; the habit of using it is not.→ Train on the model's own answers, not on a bigger model's.
+The model already knows the short way. Among its 8 answers to a question there is usually one that reaches the right result without the extra checks. The knowledge is there; the habit of using it is not.
 
 More thinking would not make it better. Its long answers are mostly its wrong ones (section 3.2); adding thinking mostly adds loops.→ Prefer the shorter right answer, and the right answer over the wrong one.
 
-Less thinking should not make it worse, as long as the cut removes repetition and not the steps a task actually needs: on instructions thinking is worth one point, on math 68 (section 3.3).→ A minimum length and a brake per task.
+Less thinking should not make it worse, as long as the cut removes repetition and not the steps a task actually needs: on instructions thinking is worth one point, on math 68 (section 3.3). So each task can be cut only as far as its thinking is worth little.→ A minimum length and a brake per task.
 
-The strategy follows: do not teach the model a new style. Help it get to the answer it already reaches, by the shorter path it already sometimes takes.
+Mixed together, hypotheses 3 and 4 give the method: DPO with its pairing rules (section 7.2), plus a floor and a brake per task. The strategy follows: do not teach the model a new style. Help it get to the answer it already reaches, by the shorter path it already sometimes takes.
 
 7. The recipe: online DPO against a fixed reference
 
-DPO16Trains on pairs: for one question, answer A is better than answer B. A becomes more likely, B less.
+DPO (Direct Preference Optimization)16Trains on pairs: for one question, answer A is better than answer B. A becomes more likely, B less.
 
 No reward modelNo reward to design, no sampling during the update: stable and cheap on one GPU.
 
 Online, not offlinePairs are rebuilt every round from the current model's answers, so it learns from its latest behaviour.
 
-Why I bet on online. Offline pairs go stale: after a few steps the model no longer writes the long answers it is being told to avoid, so the pairs stop teaching anything, and each further gain needed a new stage. Online pairs follow the model as it changes. The cost is control: a model that keeps learning from its own outputs can run away from itself. The first online runs did exactly that, and most of the recipe below exists to stop it.
+Why I bet on online. Offline pairs go stale: after a few steps the model no longer writes the long answers it is being told to avoid, so the pairs stop teaching anything, and each further gain needed a new stage. Online pairs follow the model as it changes. The cost is control: a model that keeps learning from its own outputs can run away from itself. The first online runs did exactly that, and most of the recipe below exists to stop it:
+
+a brake per task type that stops the shortening (7.3);
+
+the original model as the fixed reference (7.4);
+
+many runs to find the best settings (7.5).
 
 FigureOne round of online DPO
 
@@ -306,6 +318,8 @@ FigureOne round of online DPO
 4 · Brakea task that saved enough or lost 2 points gets no "think less" pairs next round
 
 5 · Train15 small steps, the original model as the fixed reference
+
+↻ repeat: the trained model answers the next round's fresh questions
 
 7.1 Training data17
 
@@ -353,7 +367,13 @@ The aim was to bring each task close to its own limit, and no further. Math went
 
 7.3 The brake
 
-After each round, each task is checked on that round's questions. If it has saved more than its cap, or lost 2 points of accuracy, it gets no "think less" pairs in the next round, only right-over-wrong and recovery pairs. The brake is checked again every round, so a task can resume once it is safe.
+After each round, each task is checked on that round's questions. If:
+
+it saved more than its cap,
+
+or it lost 2 points of accuracy,
+
+it gets no "think less" pairs in the next round, only right-over-wrong and recovery pairs. The brake is checked again every round, so a task can resume once it is safe.
 
 7.4 The fixed reference
 
@@ -407,9 +427,9 @@ What training changed, beyond noise
 
 Questions that got worse (left) or better (right) more often than chance would explain.
 
-On math, 75 more questions got worse than chance explains19, and none got better. On "no function fits" it is the reverse: 21 more got better and 13 fewer got worse. On instructions, it is all chance.
+On math, 75 more questions got worse than noise explains19, and none got better. On "no function fits" it is the reverse: 21 more got better and 13 fewer got worse. On instructions, it is all chance.
 
-The clearest cost is reliability. On math, the share of questions the model gets right in all 8 attempts (G-Pass@820) falls from 70% to 62%, while average math accuracy fell only 2.8 points. So the trained model now misses some questions the original always solved. This qualifies the fourth hypothesis: less thinking does not hurt when it removes repetition, but now and then the model also skips a check it needed.
+The clearest cost is reliability. On math, the share of questions the model gets right in all 8 attempts (G-Pass@820) falls from 70% to 62%, while average math accuracy fell only 2.8 points. So the trained model now misses some questions the original always solved. This qualifies the fourth hypothesis. Less thinking does not hurt when the cut removes repetition. But sometimes the cut also removes a check the question needed, and then the answer changes.
 
 The longer the question, the bigger the saving
 
@@ -423,19 +443,27 @@ Four tasks it never saw
 
 Four benchmarks never used in training, 8 answers per question, against the original model.
 
-The four tasks are ARC-Challenge, CommonsenseQA, MMLU and HumanEval21. The shorter thinking carries over: 52% to 63% fewer tokens on tasks it never saw, with accuracy within a few points of the original. ARC-Challenge (−3.4) is the only change clearly beyond the noise. An earlier offline model, which saved less on the official test, saved slightly more on these unseen tasks and lost less on two of them. My reading is that online DPO pushed the model further down in thinking than any earlier model, and on unfamiliar tasks that deeper cut shows up first as lost accuracy. The brake is the lever for this: tighter caps per task would trade some saving for safety on unfamiliar tasks. I have not tested that yet.
+The shorter thinking carries over21: 52% to 63% fewer tokens on tasks it never saw, with accuracy within a few points of the original. ARC-Challenge (−3.4) is the only change clearly beyond the noise. An earlier offline model, which saved less on the official test, saved slightly more on these unseen tasks and lost less on two of them. My reading is that online DPO pushed the model further down in thinking than any earlier model, and on unfamiliar tasks that deeper cut shows up first as lost accuracy. The brake is the lever for this: tighter caps per task would trade some saving for safety on unfamiliar tasks. I chose the model that pushes the score on the challenge's test; a model could instead be chosen, or trained, to generalize.
 
 11. Why it works
 
-The short answers were already there. Among the original's 8 answers to a question, there is usually one that reaches the right result without the extra checks. Online DPO does not have to teach a new style, only to move probability toward a behaviour the model already produces. That is a much easier thing to learn from a few hundred pairs per round, and it explains why the paragraphs themselves did not change (57 → 55 words each): the model is choosing among its own ways of writing, not inventing a new one.
+Taking the four hypotheses of section 6 in order:
+
+1. Thinking density can rise: confirmed. It rose from 4.3 to 10.9 points per 100 thinking tokens, almost entirely by trimming whole steps (section 3.4).
+
+2. The model already knew the short way: confirmed. Among the original's 8 answers to a question, there is usually one that reaches the right result without the extra checks. Online DPO does not have to teach a new style, only to move probability toward a behaviour the model already produces. That is a much easier thing to learn from a few hundred pairs per round, and it explains why the paragraphs themselves did not change (57 → 55 words each): the model is choosing among its own ways of writing, not inventing a new one. The replays of section 4 show it on real questions: the same step, written once instead of re-checked.
+
+3. More thinking would not make it better: confirmed. The long answers were the wrong ones. After training, a wrong answer is no longer three times as long as a right one on math (×2.8 → ×2.0) and code (×2.9 → ×2.4), and accuracy held while thinking was cut by more than half.
+
+4. Less thinking should not make it worse: partly. Thinking is worth 68 points on math and minus 7 on "no function fits". Floors, caps and the brake let each task go as far as its own value allows, which is why the average lands about three points of accuracy above the curve that a single global pressure falls on (Exhibit 2). But on math the cut sometimes removes a check the question needed (section 9).
+
+Two parts of the method made this work:
 
 Learning from its latest self keeps the signal alive. Offline pairs describe a model that no longer exists after a few steps. Online pairs always contrast what the model does now with what the original did, so every round has something left to teach, until the brake says it is enough. Offline, my clean three-step run stopped at 51.7%; online, one procedure reached 54.8%.
 
 The fixed reference keeps it anchored. Measuring every round against the original model, both in the pairs and in the loss, turns sixteen rounds of training into sixteen small steps from the same starting point, not a random walk. Two runs with different random seeds land close together: 54.8% / −0.78 and 52.1% / −0.58.
 
-Per-task control matches per-task value. Thinking is worth 68 points on math and minus 7 on "no function fits". Floors, caps and the brake let each task go as far as its own value allows, which is why the average lands about three points of accuracy above the curve that a single global pressure falls on (Exhibit 2).
-
-The failures point the same way. Every method that taught length directly (imitation, cuts, length rewards, prompts) taught the model to be short, not to know when to stop. The method that compared the model's own answers taught it to choose: the same short answers saved 12% as imitation targets, and 40–48% as pairs.
+The failures point the same way. Every method that taught length directly (imitation, cuts, length rewards, prompts) taught the model to be short, not to know when to stop.
 
 Did it get smarter?
 
@@ -475,21 +503,21 @@ Reasoning efficiency: the same answers, question by question, for fewer tokens. 
 
 Telling the two apart takes more than one number:
 
-Thinking density: the accuracy thinking adds, per 100 thinking tokens. 4.3 → 10.9: much better.
+Thinking density (section 3.4): how many points of accuracy thinking adds, per 100 thinking tokens, compared with the same model with thinking switched off. 4.3 → 10.9: much better, but only because the useless part was cut.
 
-Retention: the share of the original's right answers the model keeps. 93.1%: some are lost.
+Retention and rescue: the trained model keeps 93.1% of the original's right answers and fixes 17.9% of its wrong ones. The two balance each other, which is why the average barely moves:
 
-Rescue: the share of the original's wrong answers the model fixes. 17.9%: on average this makes up for the losses, which is why the average barely moves.
+Lost5 in 100 answers (6.9% of the 75 right ones)
 
-Accuracy at a fixed thinking budget: cap both models at the same number of thinking tokens. A model that truly thinks better should be more accurate at every cap. I have not run this one yet.
+Fixed4 in 100 answers (17.9% of the 25 wrong ones)
+
+Accuracy at a fixed thinking budget: cap both models at the same number of thinking tokens. A model that truly thinks better should be more accurate at every cap. This test is running on the GPU now; the result will be added here.
 
 Two more observations:
 
 It is close to its cheapest answer. Take, for each question, the shortest right answer either model ever wrote: the original spends 409 tokens above it on average, the trained model 58.22
 
-The model itself changed only a little. With thinking switched off in both, the trained model answers 2.1 points better than the original. That is a hint, not proof: part of it is formatting, and I have not yet run the same check on other trained models.
-
-Why it matters: for anyone who relies on a model, a swap is not neutral. A model that gets the same average by solving different questions is less predictable than the one it replaced. Measuring that properly is the subject of the next section.
+Training improved the model itself a little. Switch thinking off in both models: the trained model now answers 2.1 points better than the original. So training changed more than the length of its thinking. The same check on other trained models: the second online run is also better without thinking (+1.9), the two offline runs are not (−0.3 and −3.7).
 
 13. Measuring how much the answers move
 
@@ -497,15 +525,15 @@ BottleCap states the goal of this kind of work as spending "fewer tokens getting
 
 13.1 The test
 
-One question at a time. Both models answer each question 8 times. Run the original twice and it already disagrees with itself, so a drop only counts if it is bigger than chance.
+One question at a time. Both models answer each question 8 times. Run the original twice and it already disagrees with itself, so a drop only counts if it is bigger than noise.
 
-Chance, computed exactly. If the two models were the same, any split of a question's 16 answers into 8 and 8 would be equally likely. That gives, per question, the drop chance alone would produce.
+Noise, computed exactly. If the two models were the same, any split of a question's 16 answers into 8 and 8 would be equally likely. That gives, per question, the drop noise alone would produce.
 
 Two numbers. The net change: how many questions' worth of accuracy was gained or lost. And the excess churn: how much the answers moved in either direction, beyond what chance alone produces, added up over the 2,759 questions. "73 questions" means as much movement as 73 questions going from always right to always wrong, or the reverse.
 
 A check that it is fair. The original against a second run of itself gives an excess churn of +2 questions [−9, +11]: zero, within noise.
 
-The closest earlier measures count losses question by question, but from a single answer and without correcting for chance19, or correct for chance approximately without giving a verdict per task24.
+Other papers also count the questions a model loses. Most look at one answer per question, so they cannot tell a real loss from noise19; the one that does allow for noise does it only roughly, and gives no verdict per task24.
 
 13.2 What it shows
 
@@ -529,37 +557,29 @@ Most aggressive run63%−2.1−58 questions95 questions
 
 Original, thinking off94%−22.3−800 questions717 questions
 
-Every model I trained moves answers beyond chance, on every task, even where its average does not change: on "several functions" the best model's net change is exactly zero, yet 12 questions' worth of answers moved each way.
+Answers move even where the average does not. On "several functions" the best model's average did not change at all, yet about 12 questions went from right to wrong and about 12 others from wrong to right, beyond noise. It is true of every model I trained, on every task.
 
 The real trade-off is steeper than the average suggests. The more a model saves, the more its answers move: 54 questions at 42% saved, 73 at 55%, 95 at 63%.
 
-Crude cuts pay more. The run that cut each answer at a fixed "settle point" saved 57% but lost a net 104 questions, four times the best model.
-
-The saving generalizes. On four benchmarks it never trained on (ARC-Challenge, CommonsenseQA, MMLU, HumanEval), the model saves 52% to 63% with accuracy within a few points of the original; only ARC-Challenge (−3.4) drops beyond noise. So the shorter thinking is not tied to the training tasks. I have not yet run the per-question test on those benchmarks: that is the next check.
+Cutting answers at a fixed point costs much more. The model trained on answers cut at their "settle point" (section 5) saved 57%, but lost 104 questions net: four times as many as the best model.
 
 13.3 Why this is useful
 
 For evaluating any method that shortens reasoning: report the net change and the excess churn per task next to the saving, not just the average.
 
-For training: the same test can drive the brake (stop shortening a task once its losses go beyond chance) and the choice of the final model (the biggest saving within a loss budget). A run with stricter rules, designed from this analysis, is training now.
+For training: the same test can drive the brake (stop shortening a task once its losses go beyond chance) and the choice of the final model (the biggest saving within a loss budget). A first run with stricter rules, designed from this analysis, stalled at 10 to 28% saved: making a model think less without moving its answers is still open.
 
 The honest claim for this work is answer efficiency: the model is about half as expensive to get an answer from, at nearly the same average accuracy. It does not yet think more efficiently, by this test.
 
 14. What this means for legal AI
 
-Most of a reasoning model's work is deliberation; only a small part reaches the reader. This project showed that much of that deliberation can go, and that the hard part is proving nothing important went with it.
+Two findings of this project carry over to legal work.
 
-That second part is the one I care about. I am training to be a lawyer, and legal work has the same shape as what I studied here: long reasoning in writing, a short output that matters. But in law, tokens are not the bottleneck. Even a long model answer costs far less than an hour of a lawyer's time. What matters is reliability: whether the answer is right, and right every time the same question is asked.
+Knowing when to stop is a legal skill too. The model's waste was re-checking an answer it already had. In contract review, the same habit shows up as over-editing: on Crosby's RedlineBench, models change three to five times more text per edit than the attorneys did (318 to 518 characters, against about 101)25. A good lawyer changes only what needs to change. Teaching a model that restraint is the problem this project studied: prefer the shorter answer that is still right.
 
-Three directions follow, and they are what I would like to work on:
+The average hides what a lawyer needs. Section 13 showed that a model can keep its average while answering different questions. A lawyer relying on a model needs the same answer to the same question, so legal benchmarks should report how much answers move, not only the pass rate.
 
-Evaluating legal AI question by question. Ask the same legal question many times and measure how often the answer changes, against chance, as in section 13. A lawyer cannot rely on a model that is right on average.
-
-Building verifiers for legal work. Everything in this project depended on telling a right answer from a wrong one thousands of times. Math has a number and code has unit tests; legal tasks need their own checks: that a citation exists and says what is claimed, that a redline matches the instruction, that a clause cross-reference is consistent.
-
-Post-training on legal tasks. With such checks, the method in this write-up applies directly: let a model compare its own answers and learn to prefer the reliable ones.
-
-There are early signs this works at scale: Trajectory reports4 that density-aware training on Harvey's Legal Agent Benchmark kept the same pass rate while cutting a model's output from about 90,000 to 37,000 tokens per task. The next step is to make the same gains measurable, question by question, in the terms a lawyer would accept.
+My objective is to do this research on legal tasks: post-train open models on the benchmarks legal-AI teams publish, and measure them question by question, with a lawyer's judgement on what counts as right.
 
 If you work on legal AI evaluation or post-training, I would like to hear from you.
 
@@ -615,6 +635,9 @@ BottleCap AI, 23 October 2026. ThinkingCap Gemma-4-26B-A4B, company blog post: b
 
 Cacioli, 2026. arXiv 2604.27405: a Reliable Change Index (Jacobson and Truax, 1991) adapted to compare two LLM versions item by item, 10 samples per item.
 
+Crosby, 2026. RedlineBench (benchmark report and leaderboard): edit size of models against attorney redlines.
+
 Draft notes: a reproducibility section (code, data, exact commands) is still to come.
 
   Exit full screen ✕
+  ‹1 / 1›Scroll view
