@@ -1,0 +1,387 @@
+forced early-stop curves of Qwen/Qwen3-0.6B on runs/eff/roll-base/rollouts.jsonl (samples 0,1)
+== svamp: natural 88.6% at 654 tokens (640 thinking); post-settlement share 28.9% of the thinking of 778 right answers
+   f00        acc   5.9% (-82.5 [-85.8, -79.2] vs natural) tokens     17 (natural 656), n=880
+   f05        acc   3.2% (-85.2 [-88.0, -82.4] vs natural) tokens    124 (natural 656), n=880
+   f10        acc   5.5% (-83.0 [-85.9, -80.1] vs natural) tokens    106 (natural 656), n=880
+   f15        acc   7.0% (-81.4 [-84.3, -78.0] vs natural) tokens    139 (natural 656), n=880
+   f20        acc   8.4% (-80.0 [-83.3, -76.9] vs natural) tokens    162 (natural 656), n=880
+   f25        acc  10.0% (-78.4 [-81.8, -75.3] vs natural) tokens    191 (natural 656), n=880
+   f30        acc  13.0% (-75.5 [-78.9, -72.6] vs natural) tokens    222 (natural 656), n=880
+   f35        acc  15.8% (-72.6 [-75.9, -69.1] vs natural) tokens    250 (natural 656), n=880
+   f40        acc  17.5% (-70.9 [-74.4, -67.2] vs natural) tokens    277 (natural 656), n=880
+   f45        acc  23.4% (-65.0 [-69.0, -61.2] vs natural) tokens    302 (natural 656), n=880
+   f50        acc  30.5% (-58.0 [-61.8, -54.3] vs natural) tokens    332 (natural 656), n=880
+   f55        acc  39.1% (-49.3 [-53.1, -45.6] vs natural) tokens    361 (natural 656), n=880
+   f60        acc  48.6% (-39.8 [-43.3, -36.0] vs natural) tokens    388 (natural 656), n=880
+   f65        acc  57.0% (-31.4 [-35.1, -27.7] vs natural) tokens    415 (natural 656), n=880
+   f70        acc  64.8% (-23.6 [-26.9, -20.3] vs natural) tokens    441 (natural 656), n=880
+   f75        acc  70.2% (-18.2 [-21.0, -15.0] vs natural) tokens    469 (natural 656), n=880
+   f80        acc  74.3% (-14.1 [-16.2, -11.5] vs natural) tokens    499 (natural 656), n=880
+   f85        acc  77.4% (-11.0 [-13.4, -8.8] vs natural) tokens    527 (natural 656), n=880
+   f90        acc  81.2% ( -7.2 [-9.2, -5.0] vs natural) tokens    555 (natural 656), n=880
+   f95        acc  81.6% ( -6.8 [-9.0, -4.7] vs natural) tokens    585 (natural 656), n=880
+   b0=0t      acc   5.4% (-83.2 [-86.1, -80.5] vs natural) tokens     18 (natural 654), n=1760
+   b1=304t    acc  56.5% (-32.1 [-35.2, -29.0] vs natural) tokens    314 (natural 654), n=1760
+   b2=347t    acc  65.9% (-22.8 [-25.9, -19.9] vs natural) tokens    344 (natural 654), n=1760
+   b3=381t    acc  70.5% (-18.1 [-21.0, -15.6] vs natural) tokens    370 (natural 654), n=1760
+   b4=415t    acc  74.3% (-14.4 [-16.9, -12.1] vs natural) tokens    390 (natural 654), n=1760
+   b5=454t    acc  77.3% (-11.4 [-13.5, -9.3] vs natural) tokens    410 (natural 654), n=1760
+   b6=504t    acc  80.5% ( -8.2 [-9.9, -6.4] vs natural) tokens    433 (natural 654), n=1760
+   b7=575t    acc  82.2% ( -6.4 [-8.0, -4.8] vs natural) tokens    461 (natural 654), n=1760
+   b8=707t    acc  85.3% ( -3.4 [-4.5, -2.4] vs natural) tokens    493 (natural 654), n=1760
+   b9=1108t   acc  87.2% ( -1.4 [-2.2, -0.7] vs natural) tokens    550 (natural 654), n=1760
+   mt         acc  47.4% (-41.2 [-44.7, -37.9] vs natural) tokens    296 (natural 654), n=1760
+   mq         acc  30.5% (-58.2 [-61.3, -54.7] vs natural) tokens    286 (natural 654), n=1760
+== mbpp: natural 52.3% at 1865 tokens (1813 thinking); post-settlement share 84.3% of the thinking of 294 right answers
+   f00        acc  50.0% ( -2.5 [-6.2, +1.2] vs natural) tokens     62 (natural 1832), n=560
+   f05        acc  48.9% ( -3.6 [-7.3, -0.5] vs natural) tokens    151 (natural 1832), n=560
+   f10        acc  49.5% ( -3.0 [-6.1, +0.4] vs natural) tokens    230 (natural 1832), n=560
+   f15        acc  51.6% ( -0.9 [-3.8, +2.1] vs natural) tokens    310 (natural 1832), n=560
+   f20        acc  49.5% ( -3.0 [-5.7, +0.2] vs natural) tokens    391 (natural 1832), n=560
+   f25        acc  49.5% ( -3.0 [-5.9, +0.4] vs natural) tokens    473 (natural 1832), n=560
+   f30        acc  50.4% ( -2.1 [-5.4, +0.5] vs natural) tokens    565 (natural 1832), n=560
+   f35        acc  50.7% ( -1.8 [-4.5, +0.9] vs natural) tokens    639 (natural 1832), n=560
+   f40        acc  50.9% ( -1.6 [-4.3, +1.2] vs natural) tokens    725 (natural 1832), n=560
+   f45        acc  50.9% ( -1.6 [-4.3, +1.1] vs natural) tokens    805 (natural 1832), n=560
+   f50        acc  51.1% ( -1.4 [-3.9, +0.7] vs natural) tokens    892 (natural 1832), n=560
+   f55        acc  52.0% ( -0.5 [-2.5, +1.6] vs natural) tokens    974 (natural 1832), n=560
+   f60        acc  50.4% ( -2.1 [-3.9, -0.2] vs natural) tokens   1063 (natural 1832), n=560
+   f65        acc  51.6% ( -0.9 [-2.5, +1.2] vs natural) tokens   1136 (natural 1832), n=560
+   f70        acc  51.6% ( -0.9 [-2.3, +0.5] vs natural) tokens   1219 (natural 1832), n=560
+   f75        acc  51.8% ( -0.7 [-2.1, +0.7] vs natural) tokens   1304 (natural 1832), n=560
+   f80        acc  52.1% ( -0.4 [-1.8, +1.1] vs natural) tokens   1386 (natural 1832), n=560
+   f85        acc  53.4% ( +0.9 [-0.2, +2.0] vs natural) tokens   1467 (natural 1832), n=560
+   f90        acc  53.6% ( +1.1 [+0.0, +2.1] vs natural) tokens   1553 (natural 1832), n=560
+   f95        acc  53.0% ( +0.5 [-0.5, +1.6] vs natural) tokens   1634 (natural 1832), n=560
+   b0=0t      acc  50.0% ( -2.3 [-6.2, +0.9] vs natural) tokens     61 (natural 1865), n=1120
+   b1=443t    acc  50.6% ( -1.7 [-3.6, +0.1] vs natural) tokens    471 (natural 1865), n=1120
+   b2=564t    acc  51.1% ( -1.2 [-2.7, +0.1] vs natural) tokens    570 (natural 1865), n=1120
+   b3=662t    acc  51.8% ( -0.5 [-2.0, +1.0] vs natural) tokens    642 (natural 1865), n=1120
+   b4=777t    acc  51.8% ( -0.5 [-1.9, +0.8] vs natural) tokens    721 (natural 1865), n=1120
+   b5=904t    acc  51.5% ( -0.8 [-2.1, +0.4] vs natural) tokens    791 (natural 1865), n=1120
+   b6=1090t   acc  52.1% ( -0.2 [-1.2, +1.0] vs natural) tokens    874 (natural 1865), n=1120
+   b7=1452t   acc  51.6% ( -0.7 [-1.5, +0.1] vs natural) tokens    995 (natural 1865), n=1120
+   b8=2242t   acc  52.1% ( -0.2 [-0.8, +0.5] vs natural) tokens   1183 (natural 1865), n=1120
+   b9=5570t   acc  52.4% ( +0.1 [-0.3, +0.5] vs natural) tokens   1620 (natural 1865), n=1120
+   mt         acc  51.6% ( -0.7 [-1.8, +0.5] vs natural) tokens    736 (natural 1865), n=1120
+   mq         acc  51.1% ( -1.2 [-3.1, +0.4] vs natural) tokens    765 (natural 1865), n=1120
+== ifeval: natural 59.4% at 596 tokens (333 thinking); post-settlement share 67.1% of the thinking of 471 right answers
+   f00        acc  59.0% ( +0.1 [-4.1, +4.8] vs natural) tokens    211 (natural 599), n=800
+   f05        acc  58.4% ( -0.5 [-4.2, +3.5] vs natural) tokens    249 (natural 599), n=800
+   f10        acc  59.9% ( +1.0 [-2.2, +4.6] vs natural) tokens    247 (natural 599), n=800
+   f15        acc  58.8% ( -0.1 [-3.6, +3.4] vs natural) tokens    252 (natural 599), n=800
+   f20        acc  57.0% ( -1.9 [-5.1, +1.2] vs natural) tokens    272 (natural 599), n=800
+   f25        acc  58.8% ( -0.1 [-3.5, +3.6] vs natural) tokens    297 (natural 599), n=800
+   f30        acc  58.1% ( -0.8 [-4.0, +2.4] vs natural) tokens    321 (natural 599), n=800
+   f35        acc  57.9% ( -1.0 [-4.2, +2.4] vs natural) tokens    327 (natural 599), n=800
+   f40        acc  58.2% ( -0.6 [-4.0, +2.1] vs natural) tokens    333 (natural 599), n=800
+   f45        acc  56.2% ( -2.6 [-5.2, +0.2] vs natural) tokens    351 (natural 599), n=800
+   f50        acc  59.4% ( +0.5 [-1.8, +3.1] vs natural) tokens    366 (natural 599), n=800
+   f55        acc  60.0% ( +1.1 [-1.4, +3.9] vs natural) tokens    366 (natural 599), n=800
+   f60        acc  56.1% ( -2.8 [-5.8, +0.1] vs natural) tokens    396 (natural 599), n=800
+   f65        acc  58.1% ( -0.8 [-3.5, +1.9] vs natural) tokens    404 (natural 599), n=800
+   f70        acc  60.2% ( +1.4 [-1.1, +3.9] vs natural) tokens    429 (natural 599), n=800
+   f75        acc  61.1% ( +2.2 [-0.1, +4.8] vs natural) tokens    444 (natural 599), n=800
+   f80        acc  59.9% ( +1.0 [-1.9, +3.5] vs natural) tokens    449 (natural 599), n=800
+   f85        acc  60.2% ( +1.4 [-1.4, +4.1] vs natural) tokens    474 (natural 599), n=800
+   f90        acc  58.1% ( -0.8 [-3.1, +1.5] vs natural) tokens    486 (natural 599), n=800
+   f95        acc  59.6% ( +0.8 [-2.0, +3.1] vs natural) tokens    510 (natural 599), n=800
+   b0=0t      acc  62.1% ( +2.7 [-1.2, +6.9] vs natural) tokens    199 (natural 596), n=1600
+   b1=144t    acc  58.6% ( -0.8 [-3.1, +1.5] vs natural) tokens    353 (natural 596), n=1600
+   b2=176t    acc  60.2% ( +0.8 [-1.3, +3.1] vs natural) tokens    375 (natural 596), n=1600
+   b3=201t    acc  59.2% ( -0.2 [-2.2, +1.8] vs natural) tokens    396 (natural 596), n=1600
+   b4=224t    acc  59.8% ( +0.4 [-1.4, +1.8] vs natural) tokens    422 (natural 596), n=1600
+   b5=253t    acc  58.9% ( -0.4 [-2.0, +1.0] vs natural) tokens    440 (natural 596), n=1600
+   b6=280t    acc  59.3% ( -0.1 [-1.3, +1.2] vs natural) tokens    464 (natural 596), n=1600
+   b7=314t    acc  59.5% ( +0.1 [-1.0, +1.2] vs natural) tokens    486 (natural 596), n=1600
+   b8=362t    acc  59.6% ( +0.2 [-0.6, +1.1] vs natural) tokens    506 (natural 596), n=1600
+   b9=491t    acc  59.7% ( +0.3 [-0.5, +1.2] vs natural) tokens    532 (natural 596), n=1600
+   mt         acc  57.3% ( -2.1 [-4.4, +0.4] vs natural) tokens    340 (natural 596), n=1600
+   mq         acc  57.4% ( -1.9 [-4.5, +0.5] vs natural) tokens    344 (natural 596), n=1600
+== bfcl_simple_python: natural 81.2% at 174 tokens (150 thinking); post-settlement share 88.1% of the thinking of 257 right answers
+   f00        acc  71.2% ( -9.1 [-15.3, -3.4] vs natural) tokens     24 (natural 174), n=320
+   f05        acc  77.5% ( -2.8 [-7.5, +2.2] vs natural) tokens     31 (natural 174), n=320
+   f10        acc  75.0% ( -5.3 [-10.9, +0.6] vs natural) tokens     36 (natural 174), n=320
+   f15        acc  78.4% ( -1.9 [-6.2, +3.1] vs natural) tokens     42 (natural 174), n=320
+   f20        acc  80.9% ( +0.6 [-3.1, +5.0] vs natural) tokens     49 (natural 174), n=320
+   f25        acc  80.3% ( +0.0 [-4.4, +4.4] vs natural) tokens     56 (natural 174), n=320
+   f30        acc  80.0% ( -0.3 [-4.4, +4.1] vs natural) tokens     62 (natural 174), n=320
+   f35        acc  78.4% ( -1.9 [-6.2, +2.8] vs natural) tokens     69 (natural 174), n=320
+   f40        acc  80.9% ( +0.6 [-3.4, +5.0] vs natural) tokens     75 (natural 174), n=320
+   f45        acc  82.5% ( +2.2 [-1.9, +6.2] vs natural) tokens     82 (natural 174), n=320
+   f50        acc  82.2% ( +1.9 [-1.9, +5.9] vs natural) tokens     89 (natural 174), n=320
+   f55        acc  81.2% ( +0.9 [-2.5, +4.4] vs natural) tokens     95 (natural 174), n=320
+   f60        acc  80.6% ( +0.3 [-3.1, +3.8] vs natural) tokens    102 (natural 174), n=320
+   f65        acc  80.3% ( +0.0 [-3.4, +3.4] vs natural) tokens    108 (natural 174), n=320
+   f70        acc  80.6% ( +0.3 [-3.1, +3.8] vs natural) tokens    115 (natural 174), n=320
+   f75        acc  80.3% ( +0.0 [-3.1, +3.1] vs natural) tokens    123 (natural 174), n=320
+   f80        acc  80.3% ( +0.0 [-2.5, +2.5] vs natural) tokens    129 (natural 174), n=320
+   f85        acc  80.3% ( +0.0 [-2.5, +2.2] vs natural) tokens    137 (natural 174), n=320
+   f90        acc  80.3% ( +0.0 [-1.9, +1.9] vs natural) tokens    144 (natural 174), n=320
+   f95        acc  80.3% ( +0.0 [-2.2, +2.2] vs natural) tokens    151 (natural 174), n=320
+   b0=0t      acc  71.9% ( -9.4 [-15.3, -3.3] vs natural) tokens     24 (natural 174), n=640
+   b1=89t     acc  82.8% ( +1.6 [-1.2, +4.7] vs natural) tokens    103 (natural 174), n=640
+   b2=96t     acc  83.1% ( +1.9 [-0.8, +4.7] vs natural) tokens    110 (natural 174), n=640
+   b3=105t    acc  83.6% ( +2.3 [-0.5, +4.8] vs natural) tokens    117 (natural 174), n=640
+   b4=115t    acc  81.2% ( +0.0 [-2.2, +2.3] vs natural) tokens    124 (natural 174), n=640
+   b5=127t    acc  80.3% ( -0.9 [-3.0, +0.8] vs natural) tokens    132 (natural 174), n=640
+   b6=142t    acc  79.7% ( -1.6 [-3.9, +0.5] vs natural) tokens    139 (natural 174), n=640
+   b7=164t    acc  80.6% ( -0.6 [-2.0, +0.9] vs natural) tokens    148 (natural 174), n=640
+   b8=191t    acc  80.9% ( -0.3 [-1.6, +0.9] vs natural) tokens    156 (natural 174), n=640
+   b9=229t    acc  80.9% ( -0.3 [-1.4, +0.5] vs natural) tokens    163 (natural 174), n=640
+   mt         acc  81.6% ( +0.3 [-3.3, +3.8] vs natural) tokens     80 (natural 174), n=640
+   mq         acc  80.9% ( -0.3 [-3.4, +2.8] vs natural) tokens     81 (natural 174), n=640
+== bfcl_multiple: natural 73.3% at 233 tokens (207 thinking); post-settlement share 74.9% of the thinking of 176 right answers
+   f00        acc  56.7% (-16.7 [-25.8, -9.2] vs natural) tokens     26 (natural 239), n=240
+   f05        acc  54.6% (-18.8 [-27.5, -11.7] vs natural) tokens     34 (natural 239), n=240
+   f10        acc  55.4% (-17.9 [-25.4, -11.2] vs natural) tokens     43 (natural 239), n=240
+   f15        acc  55.8% (-17.5 [-24.6, -10.4] vs natural) tokens     52 (natural 239), n=240
+   f20        acc  60.8% (-12.5 [-20.0, -5.8] vs natural) tokens     62 (natural 239), n=240
+   f25        acc  63.3% (-10.0 [-16.7, -3.8] vs natural) tokens     71 (natural 239), n=240
+   f30        acc  64.6% ( -8.8 [-15.0, -2.9] vs natural) tokens     81 (natural 239), n=240
+   f35        acc  65.4% ( -7.9 [-13.8, -2.5] vs natural) tokens     89 (natural 239), n=240
+   f40        acc  67.5% ( -5.8 [-10.8, -1.2] vs natural) tokens    100 (natural 239), n=240
+   f45        acc  67.5% ( -5.8 [-11.2, -0.8] vs natural) tokens    109 (natural 239), n=240
+   f50        acc  68.8% ( -4.6 [-8.8, +0.0] vs natural) tokens    120 (natural 239), n=240
+   f55        acc  69.6% ( -3.8 [-8.3, +0.8] vs natural) tokens    130 (natural 239), n=240
+   f60        acc  67.9% ( -5.4 [-10.0, -1.2] vs natural) tokens    140 (natural 239), n=240
+   f65        acc  67.9% ( -5.4 [-9.6, -1.7] vs natural) tokens    149 (natural 239), n=240
+   f70        acc  69.2% ( -4.2 [-7.9, -0.8] vs natural) tokens    158 (natural 239), n=240
+   f75        acc  67.1% ( -6.2 [-10.0, -2.5] vs natural) tokens    170 (natural 239), n=240
+   f80        acc  67.5% ( -5.8 [-10.0, -2.1] vs natural) tokens    180 (natural 239), n=240
+   f85        acc  68.3% ( -5.0 [-8.8, -2.1] vs natural) tokens    189 (natural 239), n=240
+   f90        acc  68.8% ( -4.6 [-7.1, -1.7] vs natural) tokens    199 (natural 239), n=240
+   f95        acc  69.6% ( -3.8 [-7.1, -0.8] vs natural) tokens    210 (natural 239), n=240
+   b0=0t      acc  57.5% (-15.8 [-25.0, -8.1] vs natural) tokens     26 (natural 233), n=480
+   b1=86t     acc  71.0% ( -2.3 [-6.2, +1.9] vs natural) tokens    100 (natural 233), n=480
+   b2=96t     acc  71.9% ( -1.5 [-4.6, +2.1] vs natural) tokens    110 (natural 233), n=480
+   b3=110t    acc  73.3% ( +0.0 [-3.1, +3.3] vs natural) tokens    120 (natural 233), n=480
+   b4=128t    acc  73.1% ( -0.2 [-3.3, +2.7] vs natural) tokens    133 (natural 233), n=480
+   b5=149t    acc  73.1% ( -0.2 [-2.1, +1.9] vs natural) tokens    145 (natural 233), n=480
+   b6=171t    acc  72.9% ( -0.4 [-2.7, +1.7] vs natural) tokens    156 (natural 233), n=480
+   b7=205t    acc  72.7% ( -0.6 [-2.9, +1.2] vs natural) tokens    169 (natural 233), n=480
+   b8=264t    acc  72.5% ( -0.8 [-2.7, +0.8] vs natural) tokens    185 (natural 233), n=480
+   b9=360t    acc  72.9% ( -0.4 [-1.2, +0.6] vs natural) tokens    200 (natural 233), n=480
+   mt         acc  70.6% ( -2.7 [-6.7, +1.5] vs natural) tokens     92 (natural 233), n=480
+   mq         acc  69.2% ( -4.2 [-8.5, +0.2] vs natural) tokens     91 (natural 233), n=480
+== bfcl_irrelevance: natural 82.2% at 240 tokens (210 thinking); post-settlement share 91.6% of the thinking of 265 right answers
+   f00        acc  87.5% ( +4.7 [-0.6, +10.0] vs natural) tokens     12 (natural 236), n=320
+   f05        acc  85.9% ( +3.1 [-1.6, +8.4] vs natural) tokens     26 (natural 236), n=320
+   f10        acc  84.1% ( +1.2 [-3.4, +6.6] vs natural) tokens     33 (natural 236), n=320
+   f15        acc  82.8% ( +0.0 [-4.4, +4.4] vs natural) tokens     42 (natural 236), n=320
+   f20        acc  81.6% ( -1.2 [-5.6, +3.8] vs natural) tokens     51 (natural 236), n=320
+   f25        acc  80.6% ( -2.2 [-5.9, +1.9] vs natural) tokens     60 (natural 236), n=320
+   f30        acc  80.6% ( -2.2 [-6.9, +2.2] vs natural) tokens     67 (natural 236), n=320
+   f35        acc  80.9% ( -1.9 [-6.2, +2.2] vs natural) tokens     76 (natural 236), n=320
+   f40        acc  80.9% ( -1.9 [-5.9, +1.9] vs natural) tokens     85 (natural 236), n=320
+   f45        acc  79.7% ( -3.1 [-6.6, +0.3] vs natural) tokens     95 (natural 236), n=320
+   f50        acc  79.4% ( -3.4 [-7.2, +0.0] vs natural) tokens    106 (natural 236), n=320
+   f55        acc  81.2% ( -1.6 [-5.0, +1.6] vs natural) tokens    116 (natural 236), n=320
+   f60        acc  82.5% ( -0.3 [-3.4, +2.5] vs natural) tokens    125 (natural 236), n=320
+   f65        acc  82.2% ( -0.6 [-3.4, +2.2] vs natural) tokens    136 (natural 236), n=320
+   f70        acc  82.5% ( -0.3 [-2.5, +1.9] vs natural) tokens    146 (natural 236), n=320
+   f75        acc  82.8% ( +0.0 [-2.5, +2.2] vs natural) tokens    158 (natural 236), n=320
+   f80        acc  82.5% ( -0.3 [-2.2, +1.6] vs natural) tokens    168 (natural 236), n=320
+   f85        acc  81.6% ( -1.2 [-2.8, +0.0] vs natural) tokens    178 (natural 236), n=320
+   f90        acc  82.5% ( -0.3 [-1.2, +0.6] vs natural) tokens    191 (natural 236), n=320
+   f95        acc  82.5% ( -0.3 [-0.9, +0.0] vs natural) tokens    204 (natural 236), n=320
+   b0=0t      acc  87.5% ( +5.3 [+0.3, +10.5] vs natural) tokens     12 (natural 240), n=640
+   b1=99t     acc  78.3% ( -3.9 [-7.0, -0.3] vs natural) tokens    108 (natural 240), n=640
+   b2=107t    acc  78.6% ( -3.6 [-6.6, -0.6] vs natural) tokens    118 (natural 240), n=640
+   b3=121t    acc  78.4% ( -3.8 [-6.9, -0.5] vs natural) tokens    129 (natural 240), n=640
+   b4=135t    acc  79.5% ( -2.7 [-5.2, -0.2] vs natural) tokens    140 (natural 240), n=640
+   b5=155t    acc  79.5% ( -2.7 [-5.0, -0.2] vs natural) tokens    153 (natural 240), n=640
+   b6=178t    acc  81.2% ( -0.9 [-2.8, +0.9] vs natural) tokens    166 (natural 240), n=640
+   b7=206t    acc  81.6% ( -0.6 [-2.0, +0.9] vs natural) tokens    177 (natural 240), n=640
+   b8=247t    acc  81.9% ( -0.3 [-1.4, +0.9] vs natural) tokens    190 (natural 240), n=640
+   b9=307t    acc  82.7% ( +0.5 [-0.8, +1.7] vs natural) tokens    200 (natural 240), n=640
+   mt         acc  78.4% ( -3.8 [-7.7, -0.2] vs natural) tokens     86 (natural 240), n=640
+   mq         acc  78.6% ( -3.6 [-6.7, -0.3] vs natural) tokens     84 (natural 240), n=640
+
+forced early-stop curves of models/od5c-best on runs/eff/roll-od5c-best/rollouts.jsonl (samples 0,1)
+== svamp: natural 87.9% at 292 tokens (281 thinking); post-settlement share 24.4% of the thinking of 775 right answers
+   f00        acc   6.8% (-81.2 [-84.1, -77.6] vs natural) tokens     15 (natural 292), n=880
+   f05        acc   6.5% (-81.6 [-84.8, -78.3] vs natural) tokens     40 (natural 292), n=880
+   f10        acc   5.9% (-82.2 [-85.1, -79.1] vs natural) tokens     45 (natural 292), n=880
+   f15        acc   6.9% (-81.1 [-83.9, -78.0] vs natural) tokens     52 (natural 292), n=880
+   f20        acc   7.4% (-80.7 [-83.6, -77.7] vs natural) tokens     65 (natural 292), n=880
+   f25        acc   8.3% (-79.8 [-82.8, -76.9] vs natural) tokens     79 (natural 292), n=880
+   f30        acc   8.5% (-79.5 [-82.5, -76.5] vs natural) tokens     95 (natural 292), n=880
+   f35        acc   9.8% (-78.3 [-81.8, -75.3] vs natural) tokens    105 (natural 292), n=880
+   f40        acc  11.5% (-76.6 [-80.1, -73.2] vs natural) tokens    123 (natural 292), n=880
+   f45        acc  12.3% (-75.8 [-79.2, -72.5] vs natural) tokens    131 (natural 292), n=880
+   f50        acc  14.1% (-74.0 [-77.3, -70.3] vs natural) tokens    143 (natural 292), n=880
+   f55        acc  16.9% (-71.1 [-75.0, -67.8] vs natural) tokens    153 (natural 292), n=880
+   f60        acc  21.9% (-66.1 [-69.9, -62.5] vs natural) tokens    167 (natural 292), n=880
+   f65        acc  30.8% (-57.3 [-60.8, -53.6] vs natural) tokens    179 (natural 292), n=880
+   f70        acc  40.1% (-48.0 [-51.8, -43.8] vs natural) tokens    191 (natural 292), n=880
+   f75        acc  47.2% (-40.9 [-44.8, -37.0] vs natural) tokens    204 (natural 292), n=880
+   f80        acc  57.0% (-31.0 [-34.5, -27.4] vs natural) tokens    216 (natural 292), n=880
+   f85        acc  65.8% (-22.3 [-25.2, -19.0] vs natural) tokens    229 (natural 292), n=880
+   f90        acc  75.0% (-13.1 [-15.7, -10.7] vs natural) tokens    243 (natural 292), n=880
+   f95        acc  81.4% ( -6.7 [-8.5, -5.0] vs natural) tokens    255 (natural 292), n=880
+   b0=0t      acc   6.8% (-81.1 [-83.8, -78.2] vs natural) tokens     15 (natural 292), n=1760
+   b1=130t    acc  38.8% (-49.1 [-52.6, -45.3] vs natural) tokens    133 (natural 292), n=1760
+   b2=153t    acc  49.4% (-38.5 [-42.2, -34.5] vs natural) tokens    154 (natural 292), n=1760
+   b3=170t    acc  57.2% (-30.7 [-33.9, -27.4] vs natural) tokens    164 (natural 292), n=1760
+   b4=187t    acc  63.4% (-24.5 [-27.5, -21.2] vs natural) tokens    176 (natural 292), n=1760
+   b5=205t    acc  67.8% (-20.1 [-22.8, -16.9] vs natural) tokens    187 (natural 292), n=1760
+   b6=229t    acc  71.7% (-16.2 [-18.7, -13.2] vs natural) tokens    196 (natural 292), n=1760
+   b7=266t    acc  76.0% (-11.9 [-14.0, -9.5] vs natural) tokens    210 (natural 292), n=1760
+   b8=322t    acc  80.8% ( -7.1 [-8.7, -5.6] vs natural) tokens    226 (natural 292), n=1760
+   b9=466t    acc  85.2% ( -2.7 [-3.7, -1.6] vs natural) tokens    247 (natural 292), n=1760
+== mbpp: natural 53.8% at 866 tokens (810 thinking); post-settlement share 73.5% of the thinking of 306 right answers
+   f00        acc  50.5% ( -4.1 [-8.0, -0.4] vs natural) tokens     65 (natural 887), n=560
+   f05        acc  50.4% ( -4.3 [-8.2, -0.2] vs natural) tokens    103 (natural 887), n=560
+   f10        acc  50.4% ( -4.3 [-7.7, -0.4] vs natural) tokens    139 (natural 887), n=560
+   f15        acc  49.3% ( -5.4 [-8.8, -1.6] vs natural) tokens    176 (natural 887), n=560
+   f20        acc  50.2% ( -4.5 [-7.5, -1.2] vs natural) tokens    213 (natural 887), n=560
+   f25        acc  50.5% ( -4.1 [-7.5, -0.7] vs natural) tokens    259 (natural 887), n=560
+   f30        acc  49.5% ( -5.2 [-8.2, -2.3] vs natural) tokens    291 (natural 887), n=560
+   f35        acc  51.1% ( -3.6 [-6.8, -0.4] vs natural) tokens    329 (natural 887), n=560
+   f40        acc  51.2% ( -3.4 [-6.2, -0.7] vs natural) tokens    366 (natural 887), n=560
+   f45        acc  53.4% ( -1.2 [-3.9, +1.1] vs natural) tokens    404 (natural 887), n=560
+   f50        acc  50.9% ( -3.8 [-6.4, -1.1] vs natural) tokens    444 (natural 887), n=560
+   f55        acc  50.9% ( -3.8 [-6.4, -1.2] vs natural) tokens    482 (natural 887), n=560
+   f60        acc  52.3% ( -2.3 [-4.8, +0.0] vs natural) tokens    524 (natural 887), n=560
+   f65        acc  52.1% ( -2.5 [-4.8, -0.4] vs natural) tokens    560 (natural 887), n=560
+   f70        acc  52.7% ( -2.0 [-4.3, -0.2] vs natural) tokens    600 (natural 887), n=560
+   f75        acc  52.5% ( -2.1 [-4.3, -0.2] vs natural) tokens    638 (natural 887), n=560
+   f80        acc  53.9% ( -0.7 [-2.9, +1.6] vs natural) tokens    677 (natural 887), n=560
+   f85        acc  53.0% ( -1.6 [-3.4, +0.0] vs natural) tokens    714 (natural 887), n=560
+   f90        acc  53.4% ( -1.2 [-3.0, +0.5] vs natural) tokens    753 (natural 887), n=560
+   f95        acc  54.5% ( -0.2 [-1.4, +0.9] vs natural) tokens    792 (natural 887), n=560
+   b0=0t      acc  50.5% ( -3.2 [-6.9, +0.7] vs natural) tokens     66 (natural 866), n=1120
+   b1=183t    acc  50.9% ( -2.9 [-4.8, -0.9] vs natural) tokens    227 (natural 866), n=1120
+   b2=225t    acc  51.4% ( -2.3 [-4.3, -0.4] vs natural) tokens    262 (natural 866), n=1120
+   b3=260t    acc  52.3% ( -1.4 [-3.0, +0.1] vs natural) tokens    288 (natural 866), n=1120
+   b4=300t    acc  51.8% ( -2.0 [-3.2, -0.7] vs natural) tokens    314 (natural 866), n=1120
+   b5=362t    acc  52.1% ( -1.7 [-3.1, -0.3] vs natural) tokens    348 (natural 866), n=1120
+   b6=446t    acc  52.2% ( -1.5 [-2.9, -0.4] vs natural) tokens    386 (natural 866), n=1120
+   b7=553t    acc  53.0% ( -0.7 [-1.9, +0.4] vs natural) tokens    426 (natural 866), n=1120
+   b8=817t    acc  52.4% ( -1.3 [-2.1, -0.6] vs natural) tokens    488 (natural 866), n=1120
+   b9=1845t   acc  53.3% ( -0.4 [-1.1, +0.1] vs natural) tokens    629 (natural 866), n=1120
+== ifeval: natural 62.2% at 333 tokens (127 thinking); post-settlement share 68.9% of the thinking of 501 right answers
+   f00        acc  63.8% ( +1.1 [-2.4, +4.9] vs natural) tokens    155 (natural 340), n=800
+   f05        acc  61.2% ( -1.4 [-4.4, +2.0] vs natural) tokens    191 (natural 340), n=800
+   f10        acc  61.8% ( -0.9 [-4.2, +2.6] vs natural) tokens    196 (natural 340), n=800
+   f15        acc  62.9% ( +0.2 [-2.8, +3.2] vs natural) tokens    194 (natural 340), n=800
+   f20        acc  60.6% ( -2.0 [-5.0, +1.1] vs natural) tokens    218 (natural 340), n=800
+   f25        acc  61.4% ( -1.2 [-4.1, +2.5] vs natural) tokens    203 (natural 340), n=800
+   f30        acc  62.5% ( -0.1 [-3.2, +3.2] vs natural) tokens    209 (natural 340), n=800
+   f35        acc  61.6% ( -1.0 [-4.5, +2.2] vs natural) tokens    217 (natural 340), n=800
+   f40        acc  62.4% ( -0.2 [-3.9, +3.5] vs natural) tokens    209 (natural 340), n=800
+   f45        acc  61.2% ( -1.4 [-4.6, +1.8] vs natural) tokens    223 (natural 340), n=800
+   f50        acc  62.9% ( +0.2 [-2.6, +3.1] vs natural) tokens    232 (natural 340), n=800
+   f55        acc  62.9% ( +0.2 [-3.1, +3.4] vs natural) tokens    229 (natural 340), n=800
+   f60        acc  63.4% ( +0.8 [-2.2, +3.8] vs natural) tokens    240 (natural 340), n=800
+   f65        acc  61.6% ( -1.0 [-3.9, +2.1] vs natural) tokens    250 (natural 340), n=800
+   f70        acc  62.6% ( +0.0 [-2.9, +2.8] vs natural) tokens    247 (natural 340), n=800
+   f75        acc  62.6% ( +0.0 [-2.8, +2.6] vs natural) tokens    250 (natural 340), n=800
+   f80        acc  63.2% ( +0.6 [-2.0, +3.2] vs natural) tokens    261 (natural 340), n=800
+   f85        acc  63.8% ( +1.1 [-1.8, +3.6] vs natural) tokens    271 (natural 340), n=800
+   f90        acc  63.9% ( +1.2 [-1.2, +3.9] vs natural) tokens    289 (natural 340), n=800
+   f95        acc  61.8% ( -0.9 [-3.5, +1.5] vs natural) tokens    281 (natural 340), n=800
+   b0=0t      acc  64.8% ( +2.6 [-0.6, +5.8] vs natural) tokens    148 (natural 333), n=1600
+   b1=71t     acc  61.5% ( -0.8 [-2.6, +0.9] vs natural) tokens    241 (natural 333), n=1600
+   b2=82t     acc  62.3% ( +0.1 [-1.7, +1.7] vs natural) tokens    257 (natural 333), n=1600
+   b3=93t     acc  61.6% ( -0.7 [-2.5, +1.0] vs natural) tokens    264 (natural 333), n=1600
+   b4=101t    acc  61.7% ( -0.6 [-2.5, +1.2] vs natural) tokens    273 (natural 333), n=1600
+   b5=109t    acc  61.9% ( -0.4 [-1.9, +1.0] vs natural) tokens    287 (natural 333), n=1600
+   b6=119t    acc  62.0% ( -0.2 [-1.4, +0.8] vs natural) tokens    288 (natural 333), n=1600
+   b7=132t    acc  62.9% ( +0.6 [-0.5, +1.8] vs natural) tokens    305 (natural 333), n=1600
+   b8=148t    acc  61.9% ( -0.3 [-1.1, +0.5] vs natural) tokens    311 (natural 333), n=1600
+   b9=176t    acc  62.3% ( +0.1 [-0.5, +0.8] vs natural) tokens    314 (natural 333), n=1600
+== bfcl_simple_python: natural 85.2% at 89 tokens (66 thinking); post-settlement share 87.7% of the thinking of 273 right answers
+   f00        acc  81.2% ( -4.1 [-9.4, +1.9] vs natural) tokens     24 (natural 89), n=320
+   f05        acc  83.8% ( -1.6 [-5.9, +2.8] vs natural) tokens     27 (natural 89), n=320
+   f10        acc  85.6% ( +0.3 [-4.1, +5.0] vs natural) tokens     31 (natural 89), n=320
+   f15        acc  84.1% ( -1.2 [-5.9, +4.4] vs natural) tokens     33 (natural 89), n=320
+   f20        acc  81.2% ( -4.1 [-9.1, +1.2] vs natural) tokens     36 (natural 89), n=320
+   f25        acc  83.8% ( -1.6 [-5.9, +2.8] vs natural) tokens     39 (natural 89), n=320
+   f30        acc  83.4% ( -1.9 [-5.9, +2.2] vs natural) tokens     41 (natural 89), n=320
+   f35        acc  83.4% ( -1.9 [-5.3, +1.9] vs natural) tokens     44 (natural 89), n=320
+   f40        acc  82.5% ( -2.8 [-7.2, +1.9] vs natural) tokens     46 (natural 89), n=320
+   f45        acc  81.6% ( -3.8 [-7.5, +0.0] vs natural) tokens     48 (natural 89), n=320
+   f50        acc  81.2% ( -4.1 [-7.8, +0.0] vs natural) tokens     50 (natural 89), n=320
+   f55        acc  82.2% ( -3.1 [-6.9, +0.3] vs natural) tokens     53 (natural 89), n=320
+   f60        acc  81.6% ( -3.8 [-7.5, +0.0] vs natural) tokens     56 (natural 89), n=320
+   f65        acc  82.8% ( -2.5 [-5.9, +0.6] vs natural) tokens     58 (natural 89), n=320
+   f70        acc  82.5% ( -2.8 [-5.9, +0.3] vs natural) tokens     61 (natural 89), n=320
+   f75        acc  83.8% ( -1.6 [-4.4, +0.9] vs natural) tokens     63 (natural 89), n=320
+   f80        acc  83.8% ( -1.6 [-4.4, +0.9] vs natural) tokens     66 (natural 89), n=320
+   f85        acc  83.1% ( -2.2 [-5.0, +0.6] vs natural) tokens     71 (natural 89), n=320
+   f90        acc  83.1% ( -2.2 [-5.0, +0.6] vs natural) tokens     73 (natural 89), n=320
+   f95        acc  81.9% ( -3.4 [-6.2, -0.9] vs natural) tokens     75 (natural 89), n=320
+   b0=0t      acc  81.2% ( -3.9 [-9.2, +1.9] vs natural) tokens     23 (natural 89), n=640
+   b1=47t     acc  83.9% ( -1.2 [-4.2, +1.7] vs natural) tokens     63 (natural 89), n=640
+   b2=52t     acc  83.8% ( -1.4 [-4.1, +1.2] vs natural) tokens     67 (natural 89), n=640
+   b3=54t     acc  84.5% ( -0.6 [-3.1, +2.0] vs natural) tokens     69 (natural 89), n=640
+   b4=58t     acc  84.1% ( -1.1 [-3.4, +1.4] vs natural) tokens     73 (natural 89), n=640
+   b5=61t     acc  83.8% ( -1.4 [-3.6, +0.8] vs natural) tokens     75 (natural 89), n=640
+   b6=67t     acc  83.4% ( -1.7 [-4.1, +0.3] vs natural) tokens     78 (natural 89), n=640
+   b7=74t     acc  83.8% ( -1.4 [-3.3, +0.3] vs natural) tokens     81 (natural 89), n=640
+   b8=81t     acc  84.4% ( -0.8 [-2.0, +0.3] vs natural) tokens     84 (natural 89), n=640
+   b9=92t     acc  84.4% ( -0.8 [-1.7, +0.2] vs natural) tokens     87 (natural 89), n=640
+== bfcl_multiple: natural 81.0% at 102 tokens (76 thinking); post-settlement share 79.7% of the thinking of 197 right answers
+   f00        acc  61.7% (-20.4 [-28.8, -13.3] vs natural) tokens     26 (natural 102), n=240
+   f05        acc  63.3% (-18.8 [-27.5, -12.1] vs natural) tokens     29 (natural 102), n=240
+   f10        acc  67.9% (-14.2 [-21.7, -7.9] vs natural) tokens     33 (natural 102), n=240
+   f15        acc  67.9% (-14.2 [-21.2, -7.9] vs natural) tokens     37 (natural 102), n=240
+   f20        acc  67.9% (-14.2 [-20.8, -8.3] vs natural) tokens     40 (natural 102), n=240
+   f25        acc  70.4% (-11.7 [-18.3, -5.8] vs natural) tokens     43 (natural 102), n=240
+   f30        acc  70.4% (-11.7 [-17.9, -5.8] vs natural) tokens     47 (natural 102), n=240
+   f35        acc  72.5% ( -9.6 [-16.2, -4.2] vs natural) tokens     49 (natural 102), n=240
+   f40        acc  72.5% ( -9.6 [-15.8, -4.6] vs natural) tokens     51 (natural 102), n=240
+   f45        acc  72.5% ( -9.6 [-15.0, -4.2] vs natural) tokens     53 (natural 102), n=240
+   f50        acc  72.9% ( -9.2 [-15.0, -3.3] vs natural) tokens     56 (natural 102), n=240
+   f55        acc  76.7% ( -5.4 [-11.2, -0.4] vs natural) tokens     60 (natural 102), n=240
+   f60        acc  77.5% ( -4.6 [-9.6, -0.4] vs natural) tokens     63 (natural 102), n=240
+   f65        acc  76.7% ( -5.4 [-10.8, -0.8] vs natural) tokens     66 (natural 102), n=240
+   f70        acc  79.2% ( -2.9 [-7.1, +0.8] vs natural) tokens     70 (natural 102), n=240
+   f75        acc  78.8% ( -3.3 [-8.3, +0.8] vs natural) tokens     73 (natural 102), n=240
+   f80        acc  80.4% ( -1.7 [-5.8, +2.1] vs natural) tokens     77 (natural 102), n=240
+   f85        acc  80.8% ( -1.2 [-5.0, +1.7] vs natural) tokens     81 (natural 102), n=240
+   f90        acc  80.0% ( -2.1 [-5.0, +0.8] vs natural) tokens     85 (natural 102), n=240
+   f95        acc  80.0% ( -2.1 [-5.0, +0.4] vs natural) tokens     88 (natural 102), n=240
+   b0=0t      acc  61.7% (-19.4 [-27.1, -12.3] vs natural) tokens     25 (natural 102), n=480
+   b1=44t     acc  80.4% ( -0.6 [-3.8, +2.5] vs natural) tokens     62 (natural 102), n=480
+   b2=52t     acc  81.0% ( +0.0 [-3.1, +3.1] vs natural) tokens     69 (natural 102), n=480
+   b3=55t     acc  81.2% ( +0.2 [-2.5, +2.9] vs natural) tokens     72 (natural 102), n=480
+   b4=61t     acc  81.5% ( +0.4 [-2.1, +3.1] vs natural) tokens     77 (natural 102), n=480
+   b5=68t     acc  80.8% ( -0.2 [-2.5, +2.1] vs natural) tokens     82 (natural 102), n=480
+   b6=75t     acc  80.6% ( -0.4 [-2.3, +1.5] vs natural) tokens     85 (natural 102), n=480
+   b7=84t     acc  81.0% ( +0.0 [-1.7, +1.5] vs natural) tokens     89 (natural 102), n=480
+   b8=96t     acc  80.6% ( -0.4 [-1.0, +0.0] vs natural) tokens     93 (natural 102), n=480
+   b9=118t    acc  81.0% ( +0.0 [-0.8, +0.8] vs natural) tokens     97 (natural 102), n=480
+== bfcl_irrelevance: natural 88.4% at 102 tokens (80 thinking); post-settlement share 93.6% of the thinking of 285 right answers
+   f00        acc  92.5% ( +3.4 [-0.9, +7.5] vs natural) tokens     19 (natural 103), n=320
+   f05        acc  89.4% ( +0.3 [-4.4, +4.1] vs natural) tokens     24 (natural 103), n=320
+   f10        acc  90.3% ( +1.2 [-3.1, +5.6] vs natural) tokens     30 (natural 103), n=320
+   f15        acc  90.3% ( +1.2 [-3.4, +5.3] vs natural) tokens     30 (natural 103), n=320
+   f20        acc  90.9% ( +1.9 [-2.8, +6.2] vs natural) tokens     32 (natural 103), n=320
+   f25        acc  90.3% ( +1.2 [-2.8, +5.3] vs natural) tokens     36 (natural 103), n=320
+   f30        acc  90.3% ( +1.2 [-2.8, +5.3] vs natural) tokens     38 (natural 103), n=320
+   f35        acc  90.9% ( +1.9 [-1.9, +5.6] vs natural) tokens     41 (natural 103), n=320
+   f40        acc  90.6% ( +1.6 [-2.8, +5.6] vs natural) tokens     43 (natural 103), n=320
+   f45        acc  89.7% ( +0.6 [-3.4, +4.7] vs natural) tokens     47 (natural 103), n=320
+   f50        acc  89.1% ( +0.0 [-4.1, +3.8] vs natural) tokens     50 (natural 103), n=320
+   f55        acc  87.2% ( -1.9 [-5.6, +1.6] vs natural) tokens     52 (natural 103), n=320
+   f60        acc  87.2% ( -1.9 [-5.6, +1.2] vs natural) tokens     55 (natural 103), n=320
+   f65        acc  85.9% ( -3.1 [-6.9, +0.0] vs natural) tokens     59 (natural 103), n=320
+   f70        acc  86.6% ( -2.5 [-5.6, +0.3] vs natural) tokens     65 (natural 103), n=320
+   f75        acc  86.6% ( -2.5 [-5.0, -0.3] vs natural) tokens     70 (natural 103), n=320
+   f80        acc  86.2% ( -2.8 [-5.6, -0.3] vs natural) tokens     73 (natural 103), n=320
+   f85        acc  87.2% ( -1.9 [-4.7, +0.3] vs natural) tokens     77 (natural 103), n=320
+   f90        acc  87.8% ( -1.2 [-3.8, +0.9] vs natural) tokens     84 (natural 103), n=320
+   f95        acc  88.4% ( -0.6 [-2.8, +1.2] vs natural) tokens     88 (natural 103), n=320
+   b0=0t      acc  92.5% ( +4.1 [+0.3, +8.0] vs natural) tokens     19 (natural 102), n=640
+   b1=53t     acc  88.0% ( -0.5 [-3.6, +2.3] vs natural) tokens     64 (natural 102), n=640
+   b2=58t     acc  87.7% ( -0.8 [-3.6, +1.7] vs natural) tokens     70 (natural 102), n=640
+   b3=63t     acc  87.0% ( -1.4 [-4.1, +0.9] vs natural) tokens     75 (natural 102), n=640
+   b4=68t     acc  87.2% ( -1.2 [-3.8, +1.1] vs natural) tokens     79 (natural 102), n=640
+   b5=72t     acc  86.7% ( -1.7 [-4.2, +0.5] vs natural) tokens     82 (natural 102), n=640
+   b6=78t     acc  86.6% ( -1.9 [-4.2, +0.2] vs natural) tokens     86 (natural 102), n=640
+   b7=84t     acc  86.1% ( -2.3 [-4.7, -0.2] vs natural) tokens     89 (natural 102), n=640
+   b8=96t     acc  87.8% ( -0.6 [-2.3, +0.9] vs natural) tokens     93 (natural 102), n=640
+   b9=115t    acc  87.8% ( -0.6 [-1.9, +0.6] vs natural) tokens     97 (natural 102), n=640

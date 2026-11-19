@@ -1,0 +1,49 @@
+diff --git a/thinkingcap/repair_pairs.py b/thinkingcap/repair_pairs.py
+index f58a440..d3d236d 100644
+--- a/thinkingcap/repair_pairs.py
++++ b/thinkingcap/repair_pairs.py
+@@ -457,15 +457,19 @@ def main():
+                 best = None
+                 if args.od5_v2 and (args.od5_held or part not in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))):
+                     # (14 Nov, consult23) not held: a COMPACT be-right pair, the right answer no longer than the wrong one
++                    held_c = args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
++                    lo_c = 0.85 if held_c else 0.50  # (19 Nov) a held part: length-NEUTRAL hold (0.85-1.00x, at ~0.95), never the shortest right
+                     for r in clean:
+                         for w in wrongs:
+                             ratio = thinking_len(r) / max(1, thinking_len(w))
+-                            if 0.50 <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
++                            if lo_c <= ratio <= 1.00 and (base_part != "ifeval" or args.right_resp_cap <= 0
+                                                            or response_len(r) <= args.right_resp_cap * response_len(w) + 15):
+-                                key = (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75))
++                                key = ((0 if decode and REREAD.search(decode(r)) else 1, abs(ratio - 0.95)) if held_c else
++                                       (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75)))
+                                 if best is None or key < best[0]:
+                                     best = (key, r, w)
+-                for r in (clean if best is None else []):
++                held_now = args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
++                for r in (clean if best is None and not held_now else []):  # (19 Nov) a held part never takes a longer right
+                     for w in wrongs:
+                         ratio = thinking_len(r) / max(1, thinking_len(w))
+                         if 0.90 <= ratio <= 1.12:
+diff --git a/thinkingcap/track.py b/thinkingcap/track.py
+index f51d032..19ea25d 100644
+--- a/thinkingcap/track.py
++++ b/thinkingcap/track.py
+@@ -5468,7 +5468,7 @@ def odpo_fixed(args):
+             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
+             if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
+                 import statistics
+-                prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
++                prev_h = [h for h in history if 2 <= h["round"] and k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]  # round 1 = the original's own answers (0 / 0): never averaged in
+                 per_ = {p_: (statistics.fmean([v[0]] + [h["per_part"][p_][0] for h in prev_h if p_ in h.get("per_part", {})]),
+                              statistics.fmean([v[1]] + [h["per_part"][p_][1] for h in prev_h if p_ in h.get("per_part", {})]))
+                         for p_, v in per_.items()}
+@@ -8070,7 +8070,7 @@ def plan(args):
+               for m in re.findall(r"models/([\w.\-]+)", l)}
+     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
+     SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
+-    if stages and stages <= {"effsame", "effpara", "waitfor", "hold"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
++    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick", "odpo"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
+         print("drive: plan start restore skipped (stages restore their own inputs)", flush=True)
+     elif stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
+         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
