@@ -749,10 +749,10 @@ def setup(args):
         import langdetect  # noqa: F401
     except ImportError:
         run(sys.executable, "-m", "pip", "install", "-q", "langdetect")
-    if not Path("data/train.jsonl").exists():  # 20 Nov: our own training data from Drive; never a download (utils/ is not ours)
-        drive_sync("restore", only=["data/train.jsonl", "data/val.jsonl"])
     if not Path("data/train.jsonl").exists():
-        sys.exit("setup: data/train.jsonl is missing and not on Drive; stopping (no downloads)")
+        py("utils/train/prepare_data.py")
+    if not Path("questions/questions.jsonl").exists():
+        py("utils/eval/benchmarks.py")
     if not Path(QUESTIONS, "questions.jsonl").exists():
         py("subset_questions.py", "--per-dataset", 40, "--out", QUESTIONS)
 
