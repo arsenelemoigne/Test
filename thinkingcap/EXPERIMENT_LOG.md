@@ -7161,3 +7161,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov ~23:30: od5h round-7 check (od5h-r6): 55.6% / -1.15 (code 68/-1.6, math 58/-3.3, no-fit 49/+1.7, IFEval 48/-0.7). Still the old holds (GPU 2 not restarted yet).
 - 19 Nov ~23:35 (user): od5h continues on GPU 2 (22 rounds + Dev 15-22); od5i (length-neutral holds, fresh) on GPU 1 in parallel (22 rounds + Dev 15-22). Full tests of the best decided after.
 - 19 Nov ~23:40 (user: improve the 59.5/-0.80 run, not from scratch): od5i replaced by od5j on GPU 1 = od5f-r18 continued on od3g slices 19-22 (like od5g) with --od5-held (length-neutral holds) and --od-smooth 2; Dev 19-22. Argon consult33 changes to be added before start.
+- 19 Nov ~23:50 (user): GPU 1 back to od5i (Argon consult31 plan + held fix, from scratch); consult34 not launched; waiting for consult33's verdict.
