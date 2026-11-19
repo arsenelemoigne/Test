@@ -5468,7 +5468,7 @@ def odpo_fixed(args):
             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
             if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
                 import statistics
-                prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
+                prev_h = [h for h in history if 2 <= h["round"] and k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]  # round 1 = the original's own answers (0 / 0): never averaged in
                 per_ = {p_: (statistics.fmean([v[0]] + [h["per_part"][p_][0] for h in prev_h if p_ in h.get("per_part", {})]),
                              statistics.fmean([v[1]] + [h["per_part"][p_][1] for h in prev_h if p_ in h.get("per_part", {})]))
                         for p_, v in per_.items()}

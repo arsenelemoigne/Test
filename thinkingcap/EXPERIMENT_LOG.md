@@ -7150,3 +7150,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov ~17:45 (user): od5h extended to 22 rounds (od3g slices 21-22 exist), fullpick Dev rounds 15-22.
 - 19 Nov ~18:00 (user): od5h fullpick = Dev only (rounds 15-22), no full test (Colab 24 h limit on GPU 2 ~14:00 tomorrow); full tests decided after.
 - 19 Nov ~18:05 (user): od5h full tests queued on GPU 1 (waitfor GPU 2's Dev picks file -hdev, then fullpick gate 59.0/+1.0, 2 full tests). User reconnects GPU 1 tomorrow morning.
+- 19 Nov ~18:35: od5ht smoke test round 2 monitor (od5ht-r1 on od3g slice 2): 29.6% / -0.22 (od5f r2 34.2 / -1.66). Per type: no-fit 29/+0.5, code 33/-0.2, math 36/-2.2, IFEval 25/+0.6, several 21/+0.9, simple 24/+1.2. --od5-held works: simple 2 rec + 6 compact (of 20), several 2 + 7 (of 22), math damaged -> 17 rec + 25 compact; 216 pairs, 15 steps. Fix: --od-smooth no longer averages in round 1 (the original's answers, 0/0).
