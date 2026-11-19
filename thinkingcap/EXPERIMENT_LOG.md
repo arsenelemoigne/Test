@@ -7139,3 +7139,7 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
   Per type (saved / acc): math 67 / -1.5, code 54 / -0.4, IFEval 53 / +1.8, one function 49 / -2.2, several 50 / -0.7, no-fit 59 / +6.1.
   Dev 58.2 / +3.18 -> full 57.4 / +0.1 (Dev bias +0.8 saving, +3.1 accuracy). fullpick's corrected forecast was 57.9 / -1.07.
 - 19 Nov: effsame half 1 (od5c-best cut at the ORIGINAL's per-type caps b1-b9, slices 19-20, samples 0-1): math -8.2 at b1=304t (natural 87.9% at 292t), -1.1 at b8=707t; code within ~1 pt from b2=564t; IFEval flat (thinking off +2.7 [-0.5, +5.8]); tools within 1 pt. Trained model's long answers still need their tokens on math. Half 2 (original at od5c-best's caps) running.
+- 19 Nov ~13:40: **effsame half 2 (the ORIGINAL cut at od5c-best's per-type caps, same tokens; slices 19-20, samples 0-1)** vs od5c-best at its own caps (effprobe):
+  math at 130t 12.0% vs 38.8%, 205t 30.2 vs 67.8, 322t 59.5 vs 80.8, 466t 78.4 vs 85.2 -> at equal thinking the trained model is far more accurate on math (+20 to +38 pts in the middle).
+  code: equal (e.g. 362t 51.5 vs 52.1; original natural 52.3 at 1,865t vs trained 53.8 at 866t). IFEval: original 57-58% at every cap vs trained ~62 (natural 59.4 vs 62.2); thinking off original 61.2.
+  one function: same gap as natural (81 vs 84). no-fit: original BEST with no thinking (87.5 vs natural 82.2, +5.3 [0.3, 10.5]); cutting at trained caps costs 1-4 pts.
