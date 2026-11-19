@@ -5826,9 +5826,21 @@ def hold(args):
     minutes = float(getattr(args, "hold_minutes", 30) or 30)
     print(f"hold: idle {minutes:.0f} min ({getattr(args, 'hold_tag', '')})", flush=True)
     end = time.time() + 60 * minutes
+    tag = getattr(args, "hold_tag", "") or ""
+    wake = DRIVE / f"WAKE_{tag}" if tag else None  # (20 Nov) a file WAKE_<tag> on Drive ends the hold early
+    last_save = time.time()
     while time.time() < end:
-        time.sleep(min(300, max(1, end - time.time())))
-        drive_sync("save")
+        time.sleep(min(60, max(1, end - time.time())))
+        if wake is not None and wake.exists():
+            print(f"hold: woken early by {wake.name}", flush=True)
+            try:
+                wake.unlink()
+            except OSError:
+                pass
+            break
+        if time.time() - last_save >= 300:
+            drive_sync("save")
+            last_save = time.time()
 
 
 def transfer(args):
