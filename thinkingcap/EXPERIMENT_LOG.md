@@ -7126,3 +7126,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 19 Nov ~07:00: GPU 1 reached end at 0334ccf (before the fix); its od5g lines skipped (no candidates). od5g 19-22 + gated fullpick -y4 moved to GPU 2 after the od5f 19-23 fullpick, before effsame/effpara. GPU 1 idle (restart needs the user).
 - 19 Nov: od5f-r22 Dev-512: saved 51.7 [49.1, 54.3], acc +3.23 [1.53, 5.03] (below gate).
 - 19 Nov: od5f-r23 Dev-512: 45.8 [42.8, 48.6] / +3.25. fullpick od5f 19-23: no round passes the gate (best r20 57.6/+2.72) -> no full test. od5g started on GPU 2.
+- 19 Nov: od5g round-20 monitor (od5g-r19 on new slice od3g-r20): 52.1 / +2.85 (od5f round 20 on old slice: 47.8 / +2.90). Brake holds bfcl_simple_python.
