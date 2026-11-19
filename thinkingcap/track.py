@@ -500,6 +500,8 @@ def main():
     parser.add_argument("--ob-into", default="od3g", help="od3branch: the new slice set's name (data/<name>-rK-questions.jsonl)")
     parser.add_argument("--ob-from", type=int, default=20, help="od3branch: first new slice; slices 2..from-1 are od3's (copied)")
     parser.add_argument("--ob-more", type=int, default=5, help="od3branch: how many new slices")
+    parser.add_argument("--od-smooth", type=int, default=1, help="odpo (19 Nov, consult31): the per-type brake reads the mean "
+                        "saving / accuracy of the last N slices (this round's answers + N-1 earlier monitors); 1 = this slice only")
     parser.add_argument("--ob-trim", type=float, default=0.0, help="od3branch (19 Nov): when a type's draw is too long (or too short) "
                         "vs slices 2..19, drop this share of its longest (shortest) candidates and draw again, up to --ob-trim-max in all")
     parser.add_argument("--ob-trim-max", type=float, default=0.4, help="od3branch: most of a type's candidates that trimming may drop")
@@ -5464,6 +5466,14 @@ def odpo_fixed(args):
             ptrepair(a0)  # answers (x8) + a first pair file; the answers are reused below
             sv_, ac_, per_ = od3_monitor(BON / f"rp-{a.name}" / "rollouts.jsonl", stats)
             caps = {p_: float(v) for p_, v in (x.split("=") for x in args.od_caps.split(","))}
+            if getattr(args, "od_smooth", 1) > 1:  # (19 Nov, consult31) the brake reads the mean of the last N slices
+                import statistics
+                prev_h = [h for h in history if k + 1 - args.od_smooth < h["round"] <= k][-(args.od_smooth - 1):]
+                per_ = {p_: (statistics.fmean([v[0]] + [h["per_part"][p_][0] for h in prev_h if p_ in h.get("per_part", {})]),
+                             statistics.fmean([v[1]] + [h["per_part"][p_][1] for h in prev_h if p_ in h.get("per_part", {})]))
+                        for p_, v in per_.items()}
+                print(f"odpo {name}: round {k + 1} brake reads the mean of {1 + len(prev_h)} slices: "
+                      + ", ".join(f"{p_} {v[0]:.0f}/{v[1]:+.1f}" for p_, v in per_.items()), flush=True)
             held = sorted((set() if getattr(args, "od_unlatch", False) else latched)
                           | {p_ for p_, (sv, ac) in per_.items() if sv >= caps.get(p_, 1e9) or ac <= args.od_acc_hold})
             latched = set(held)
