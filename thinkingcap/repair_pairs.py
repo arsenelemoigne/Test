@@ -465,7 +465,8 @@ def main():
                                 key = (0 if decode and REREAD.search(decode(r)) else 1, thinking_len(r), abs(ratio - 0.75))
                                 if best is None or key < best[0]:
                                     best = (key, r, w)
-                for r in (clean if best is None else []):
+                held_now = args.od5_held and part in set(filter(None, re.split(r"[,+]", args.no_shorten_parts)))
+                for r in (clean if best is None and not held_now else []):  # (19 Nov) a held part never takes a longer right
                     for w in wrongs:
                         ratio = thinking_len(r) / max(1, thinking_len(w))
                         if 0.90 <= ratio <= 1.12:
