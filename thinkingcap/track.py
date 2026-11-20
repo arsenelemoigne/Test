@@ -4679,6 +4679,7 @@ def fullpick(args):
             known = [k for k in rounds if k in score]
             pick = sorted(sorted([k for k in known if score[k][0] >= args.fp_dev_top_save and score[k][1] >= args.fp_dev_top_acc],
                                  key=lambda k: -score[k][0])[:top])  # (20 Nov, user) only rounds that could be good; no fill-in
+            pick = sorted(set(pick) | {k for k in rounds if k not in score})  # (20 Nov) a round with no monitor yet (the last one) is always scored
             print(f"fullpick {run_name}: monitor gate saving >= {args.fp_dev_top_save} and accuracy >= {args.fp_dev_top_acc}, "
                   f"at most {top} of {rounds}: " + (", ".join(f"r{k} {score[k][0]:.1f}/{score[k][1]:+.2f}" for k in pick) or "none")
                   + (f" (no monitor for {[k for k in rounds if k not in score]})" if len(known) < len(rounds) else ""), flush=True)
