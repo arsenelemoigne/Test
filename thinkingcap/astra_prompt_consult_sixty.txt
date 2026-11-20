@@ -1,0 +1,28 @@
+TASK (consult36, budget $5, up to 120 turns; answer earlier if you are sure). Read {DATA}/README_PACK.md first (the consult36 additions at
+its end), then {DATA}/YOUR_CONSULT35_REPORT.md (your last plan), {DATA}/OD5J_LINES_AS_RUN.txt (that plan as it runs now on GPU 1),
+{DATA}/OD5J_ROUNDS.md, {DATA}/OD5H_FULLTESTS.md, {DATA}/FINAL_MODEL_od5g_r20.md, {DATA}/OD5F_ROUNDS_1_19_VS_AFTER.md, {DATA}/OD5F_BEST_LINE.txt,
+{DATA}/OD5H_LINE.txt, {DATA}/fulltests.json and {DATA}/EXPERIMENT_LOG.md (every number; search it).
+
+GOAL: more than 60% of tokens saved on the full test (2,759 questions x 8 answers, official score) at better than -1 point of accuracy.
+Where we are: od5f round 18 59.5 [58.5, 60.4] / -0.80 [-1.53, -0.02]; od5g round 20 (od5f-r18 + 2 rounds on matched od3g slices)
+57.4 / +0.14; od5h (looser, 2-round brake, od3g slices) full tests r19 61.7 / -1.68, r21 62.7 / -1.69, r22 69.6 / -3.64: past 60% but
+the extra saving was paid on tool calls (one function -7 to -11, several -5 to -9) and at r22 on math (-7.9). Dev-512 over-read od5h's
+accuracy by 3.8 to 5.8 points, so the Dev gate did not protect us. od5j (your consult35 plan) is at round 16 of 18: monitors in
+OD5J_ROUNDS.md (r16 51.9 / +2.25), then fullpick, then od5jx = od5j-r18 continued on od3g slices 19-22.
+
+WHAT WE NEED FROM YOU:
+1. Your forecast for od5j-r18 and od5jx (rounds 19-22) on the full test, from the monitors so far and the same-round comparisons with
+   od5f / od5c / od5h. Will either pass 60% at better than -1? Which rounds deserve a full test? Give numbers with intervals or ranges.
+2. The plan most likely to beat 60% at better than -1, written as exact flag lines (odpo + fullpick) we can paste into the runner, for
+   GPU 2 now and for GPU 1 after od5j/od5jx if needed. Our preference: stay close to od5f-r18 / od5g-r20 (the best clean models) and change
+   few things. For each change: old value -> new value, why, expected effect on saving and on accuracy per task, evidence (file + line).
+   Address directly how to keep tool calls (one function, several) and math inside their limits while saving past 60%.
+3. A better gate for full tests: Dev over-reads accuracy for looser runs. Propose a rule (e.g. per-task floors on Dev, a calibration per
+   variant, weighting tool calls) with the evidence, as flag values for fullpick if possible.
+4. The mistakes in your consult35 plan, if any, with the line and the number.
+5. Cite everything (file, line, round, number); quote the exact log line for each number you use; mark anything you cannot verify
+   UNVERIFIED. Several past reviews had wrong numbers: check each one against the pack.
+
+RULES WE KEEP: start from the original Qwen3-0.6B (or continue one of our own clean runs); the model's own answers only; test-matched
+training questions already built (od3 / od3g slices up to round 22; no new datasets); online DPO; LoRA r16; constant learning rate;
+no methods copied from other competitors of the challenge. Keep rules general (measured per question / per task).
