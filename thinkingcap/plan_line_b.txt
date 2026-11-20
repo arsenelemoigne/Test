@@ -866,3 +866,5 @@ fullpick --fp-run od5k --fp-kind arena --fp-dev-rounds 19 20 21 22 --fp-dev-top 
 fullmodel --nothink-models models/od5k-r19 --fm-no-screen
 hold --hold-minutes 90 --hold-tag gpu1-e
 # removed 20 Nov 19:00 (keep the worker polling for consult37): end
+# 20 Nov 19:10: wait (up to 6 h) for consult37; a pushed plan change wakes it
+hold --hold-minutes 360 --hold-tag gpu1-g

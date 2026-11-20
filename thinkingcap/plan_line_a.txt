@@ -810,3 +810,5 @@ odpo --name od5l --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-rounds 22 --od-st
 fullpick --fp-run od5l --fp-kind arena --fp-dev-rounds 21 22 --fp-dev-top 2 --fp-dev-top-save 55 --fp-dev-top-acc 0.0 --fp-save-bias 0.80 --fp-acc-bias 2.50 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 2 --fp-gate-save 60.8 --fp-gate-acc 1.70 --rp-dev-vs rpE80 --fp-skip-tested --fp-tag=-ldev
 hold --hold-minutes 90 --hold-tag gpu2-c
 # removed 20 Nov 19:00 (keep the worker polling for consult37): end
+# 20 Nov 19:10: wait (up to 6 h) for consult37; a pushed plan change wakes it
+hold --hold-minutes 360 --hold-tag gpu2-g

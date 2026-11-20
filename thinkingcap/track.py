@@ -5865,8 +5865,20 @@ def hold(args):
     tag = getattr(args, "hold_tag", "") or ""
     wake = DRIVE / f"WAKE_{tag}" if tag else None  # (20 Nov) a file WAKE_<tag> on Drive ends the hold early
     last_save = time.time()
+    import hashlib
+    plans = lambda: hashlib.md5(b"".join(Path(f).read_bytes() for f in ("plan_line_a.txt", "plan_line_b.txt") if Path(f).exists())).hexdigest()
+    plan0, last_pull = plans(), time.time()  # (20 Nov) a pushed change to the plans also ends the hold early
     while time.time() < end:
         time.sleep(min(60, max(1, end - time.time())))
+        if time.time() - last_pull >= 180:
+            last_pull = time.time()
+            try:
+                update_files()
+            except Exception as error:
+                print(f"hold: update failed ({error})", flush=True)
+            if plans() != plan0:
+                print("hold: woken early by a new plan", flush=True)
+                break
         if wake is not None and wake.exists():
             print(f"hold: woken early by {wake.name}", flush=True)
             try:
