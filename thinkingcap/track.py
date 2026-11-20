@@ -5966,7 +5966,9 @@ def hold(args):
     wake = DRIVE / f"WAKE_{tag}" if tag else None  # (20 Nov) a file WAKE_<tag> on Drive ends the hold early
     last_save = time.time()
     import hashlib
-    plans = lambda: hashlib.md5(b"".join(Path(f).read_bytes() for f in ("plan_line_a.txt", "plan_line_b.txt") if Path(f).exists())).hexdigest()
+    mine = getattr(args, "plan_file", None) or ("plan_line_b.txt" if "gpu1" in (getattr(args, "hold_tag", "") or "") else "plan_line_a.txt")
+    plans = lambda: sorted(l.split("#")[0].strip() for l in (Path(mine).read_text().splitlines() if Path(mine).exists() else [])
+                           if l.split("#")[0].strip() and not l.split("#")[0].strip().startswith(("hold", "end")))  # (20 Nov) only a NEW run line in THIS GPU's plan wakes it
     plan0, last_pull = plans(), time.time()  # (20 Nov) a pushed change to the plans also ends the hold early
     while time.time() < end:
         time.sleep(min(60, max(1, end - time.time())))

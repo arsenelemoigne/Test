@@ -814,3 +814,4 @@
 # 20 Nov 19:30 (user: "the more data the better"): pack all online DPO data from Drive for Argon consult37
 # done: c37pack
 hold --hold-minutes 360 --hold-tag gpu2-g
+hold --hold-minutes 600 --hold-tag gpu2-h

@@ -868,3 +868,4 @@
 # removed 20 Nov 19:00 (keep the worker polling for consult37): end
 # 20 Nov 19:10: wait (up to 6 h) for consult37; a pushed plan change wakes it
 hold --hold-minutes 360 --hold-tag gpu1-g
+hold --hold-minutes 600 --hold-tag gpu1-h
