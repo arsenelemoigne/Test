@@ -7236,3 +7236,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - od5n (GPU 2, variation B) r1: step 20/20 loss 0.3419, pairs ordered right 95%. Monitor r1 = raw Qwen vs itself (0/0, as expected).
 - Plan extended (user): both continue to round 22 (od3g slices), fullpick Dev on rounds 12-22 only after round 22.
 - od5n r2 (GPU 2): last step 15/15 loss 0.4316, pairs ordered right 75%. MONITOR r2 (model r1): saved 27.3 / acc -0.13 (od5f r2: 28.5 / +0.37). Per type: math 31/-0.6, code 32/0.0, IFEval 24/+0.3, one fn 22/+0.5, several 19/+0.5, no-fit 23/-2.4.
+- od5m r2 (GPU 1): last step 15/15 loss 0.4937, pairs ordered right 76%. MONITOR r2 (model r1): saved 26.6 / acc -0.13 (od5f r2: 28.5 / +0.37). Per type: math 32/-1.2, code 29/+0.2, IFEval 23/-0.2, one fn 23/+0.1, several 18/+1.3, no-fit 27/+1.2.
