@@ -5,6 +5,17 @@ with {DATA}/OD5F_BEST_LINE.txt, {DATA}/OD5F_ROUNDS_1_19_VS_AFTER.md, {DATA}/NEW_
 
 GOAL: more than 60% of tokens saved on the full test (2,759 questions x 8 answers, official score) at better than -1 point of accuracy.
 
+THREE LEVELS OF RESULTS: DO NOT MIX THEM UP.
+- MONITOR (lines "MONITOR round j answers (models/X-r(j-1))"): the model of round j-1 answering round j's FRESH training slice
+  (~780 test-matched questions x 8), scored against the original on the same questions. It is cheap and comes every round, but it
+  reads ~2.5-3 points too high on accuracy versus the full test, and its saving is only roughly comparable.
+- DEV (Dev-512 x8, "dev_score"): a fixed held-out set of 512 questions x 8, scored the official way with a 95% interval. It is the
+  gate for full tests. It over-reads accuracy too: about +2.3 to +2.8 points for od5f's rounds, +3 for od5g-r20, and 4-6 points for
+  the looser od5h (so it cannot be trusted alone for looser runs).
+- FULL TEST (2,759 x 8, official score, the ONLY number that counts for the goal): e.g. od5f-r18 59.5 / -0.80.
+Quote each number with its level; compare like with like; when you forecast a full test from a monitor or Dev number, show the
+offset you use and where it comes from.
+
 BUILD ON THE BEST RUN: od5f (OD5F_BEST_LINE.txt). Its round 18 scored 59.5% [58.5, 60.4] / -0.80 [-1.53, -0.02] on the full test:
 0.5 point of saving short. Improve it MARGINALLY to pass 60% at better than -1. Compare everything you propose with what was already
 tested (od5c, od5r, od5f, od5g, od5h, od5j, od5k, od5l: their lines, their monitors, Dev and full tests) and with the training data each
