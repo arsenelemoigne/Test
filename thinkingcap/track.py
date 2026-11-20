@@ -58,7 +58,7 @@ def claim_shared():
 def main():
     claim_shared()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("stage", choices=("setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
+    parser.add_argument("stage", choices=("c37pack", "setup", "base", "rollouts", "mvt", "report", "fade", "plan", "recheck", "mix", "full",
                                           "grid_data", "grid", "gridtable", "combine", "merge", "fullbest", "stats", "bon", "bon_dpo", "code_round", "chain", "repair", "rlcal", "calcheck", "caltable", "callot", "cutexamples", "probezoo", "targeted", "decide", "zooreport", "wronglen", "benchlot", "drpo", "teach", "nothink", "mathmatch", "balround", "stopgold", "mathfix", "budgetprompt", "promptsearch", "buildpool", "buildpool2", "poolfix", "poolmore", "lupinanswers", "lupin", "topiccheck", "refsets", "codecut", "crosscheck", "fullsoup", "fullmodel", "breakdown", "struggle", "copddemo", "ifevalrules", "copdanalysis", "screenset", "rescreen", "dial", "pertype", "tooltopup", "poolup", "newtop", "onpolicy", "typeonly", "polans", "ptrepair", "odpo", "ladder", "devset", "devscore", "devsvamp", "transfer", "p1src", "hold", "r2prep", "r2pick", "lossan", "od3prep", "oneprep", "wandaod", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "mixscreen", "thinkprune", "chirurgical", "astra", "astradata", "consultpack", "wanda", "wandaeval", "tokenskip", "dropmodels", "drivereport", "drivetidy", "drivefree", "drivecheck", "probeknow", "audit", "balanced", "full2", "clean", "confirm", "fresh", "peek", "s1log", "end", "diag", "steer_read", "steer", "dpo_round", "scores"))
     parser.add_argument("--travel", type=float, default=256)
     parser.add_argument("--bd-names", nargs="*", default=[], help="breakdown: full-test runs to break down (runs/mvtf/full-NAME)")
@@ -5855,6 +5855,102 @@ def waitfor(args):
     print(f"waitfor: GAVE UP after {args.wf_hours} h: {args.wf_path} never appeared", flush=True)
 
 
+
+def c37pack(args):
+    """(20 Nov, user: "the more data the better") Argon consult37's data pack, read straight from Drive (no restore): every
+    online DPO run's pairs per round (counts and lengths per task and kind), od5f's pairs in full (texts cut to 600 chars, no
+    token ids), every od5f round's training answers summarised per question, the question slices, monitors, latches, Dev and
+    full-test score files. Written to Drive as consult37_pack.tar.gz (the lab downloads it)."""
+    import json, tarfile, statistics as st
+    from collections import Counter, defaultdict
+    out = Path("/content/c37pack"); out.mkdir(parents=True, exist_ok=True)
+    D = DRIVE / "runs" / "bon"
+    tok = None
+    try:
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+    except Exception as e:
+        print("c37pack: no tokenizer", e, flush=True)
+    dec = lambda ids, n=600: (tok.decode(ids[:400]) if tok else "")[:n] if ids else ""
+    runs = ["od5c", "od5r", "od5f", "od5g", "od5h", "od5j", "od5k", "od5l"]
+    summary = []
+    for run in runs:
+        for k in range(1, 25):
+            f = D / f"pairs-{run}-r{k}" / "pairs.jsonl"
+            if not f.exists():
+                continue
+            cnt, ratio, ln = Counter(), defaultdict(list), defaultdict(list)
+            full = open(out / f"pairs_{run}_r{k}.jsonl", "w") if run == "od5f" else None
+            with open(f) as h:
+                for line in h:
+                    try:
+                        p = json.loads(line)
+                    except Exception:
+                        continue
+                    key = (p.get("part"), p.get("kind"))
+                    cnt[key] += 1
+                    c, r = p.get("chosen_tokens") or 0, p.get("rejected_tokens") or 0
+                    if r:
+                        ratio[key].append(c / r)
+                    ln[key].append(c)
+                    if full:
+                        full.write(json.dumps({"id": p.get("id"), "part": p.get("part"), "kind": p.get("kind"),
+                                               "chosen_tokens": c, "rejected_tokens": r,
+                                               "chosen_start": dec(p.get("chosen_ids") or []),
+                                               "rejected_start": dec(p.get("rejected_ids") or [])}) + "\n")
+            if full:
+                full.close()
+            for (part, kind), n in sorted(cnt.items(), key=lambda x: str(x[0])):
+                rr = ratio[(part, kind)]
+                summary.append({"run": run, "round": k, "part": part, "kind": kind, "pairs": n,
+                                "chosen_over_rejected_median": round(st.median(rr), 3) if rr else None,
+                                "chosen_tokens_median": int(st.median(ln[(part, kind)])) if ln[(part, kind)] else None})
+        for extra in (f"{run}-monitor.jsonl", f"{run}-latch.json"):
+            if (D / extra).exists():
+                (out / extra).write_bytes((D / extra).read_bytes())
+        print(f"c37pack: {run} pairs done", flush=True)
+    with open(out / "PAIRS_SUMMARY_all_runs.jsonl", "w") as h:
+        for r in summary:
+            h.write(json.dumps(r) + "\n")
+    for k in range(1, 25):  # od5f's own training answers per round: per question, how many right of 8 and lengths
+        f = D / f"rp-od5f-r{k}" / "rollouts.jsonl"
+        if not f.exists():
+            continue
+        rows, keys = [], None
+        with open(f) as h:
+            for line in h:
+                try:
+                    q = json.loads(line)
+                except Exception:
+                    continue
+                keys = keys or sorted(q.keys())
+                outs = q.get("samples") or q.get("outputs") or q.get("answers") or [q]
+                right = [bool(o.get("correct", o.get("right", o.get("score", 0)))) for o in outs if isinstance(o, dict)]
+                toks = [o.get("output_tokens") or len(o.get("output_ids") or []) for o in outs if isinstance(o, dict)]
+                rows.append({"id": q.get("id"), "source": q.get("source"), "n": len(toks), "right": sum(right),
+                             "tokens_median": int(st.median(toks)) if toks else None, "tokens_max": max(toks) if toks else None})
+        with open(out / f"answers_od5f_r{k}.jsonl", "w") as h:
+            h.write(json.dumps({"_record_keys_in_source": keys}) + "\n")
+            for r in rows:
+                h.write(json.dumps(r) + "\n")
+    print("c37pack: od5f answers done", flush=True)
+    for pat in ("od3-r*-questions.jsonl", "od3g-r*-questions.jsonl", "od3-base-stats.json"):
+        for f in (DRIVE / "data").glob(pat):
+            if f.stat().st_size < 40_000_000:
+                (out / f.name).write_bytes(f.read_bytes())
+    for pat in ("dev512-od5*/dev_score.json",):
+        for f in D.glob(pat):
+            (out / f"{f.parent.name}_dev_score.json").write_bytes(f.read_bytes())
+    for f in (DRIVE / "runs" / "mvtf").glob("full-od5*/*.json"):
+        if f.stat().st_size < 5_000_000:
+            (out / f"{f.parent.name}_{f.name}").write_bytes(f.read_bytes())
+    tgt = DRIVE / "consult37_pack.tar.gz"
+    with tarfile.open("/content/consult37_pack.tar.gz", "w:gz") as t:
+        t.add(out, arcname="consult37_data")
+    import shutil
+    shutil.copy("/content/consult37_pack.tar.gz", tgt)
+    print(f"c37pack: written {tgt} ({tgt.stat().st_size / 1e6:.1f} MB)", flush=True)
+
 def hold(args):
     """(12 Nov) Keep the runtime alive and idle for --hold-minutes (a plan whose next line is `end`, or an empty queue for
     12 minutes, stops the runtime). Used to wait for the user's go between steps. The function was missing (KeyError)."""
@@ -8130,7 +8226,7 @@ def plan(args):
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
     SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
-    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick", "odpo"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
+    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick", "odpo", "c37pack", "fullmodel"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
         print("drive: plan start restore skipped (stages restore their own inputs)", flush=True)
     elif stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
