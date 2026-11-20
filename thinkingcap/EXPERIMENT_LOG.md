@@ -7194,3 +7194,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 20 Nov ~06:50: od5h-r15 Dev-512: 62.3% [60.0, 64.5] / +1.16 [-0.78, +3.17] (projects ~62.0 / -1.6; just under the full-test gate's +1.25).
 - 20 Nov ~07:00: od5j round-5 monitor (model od5j-r4 on slice 5): 34.4% / +0.10 (r3 26.4 / +0.20; same round od5f-r4 39.4 / -0.26, od5c-r4 49.6 / -1.19). Per type: simple 29/+0.5, code 39/+1.5, math 39/-2.1, IFEval 28/+0.4, no-fit 38/-1.6, several 31/+3.3. Saving recovering, accuracy flat.
 - 20 Nov ~07:15: od5h-r16 Dev-512: 60.2% [57.8, 62.8] / +1.94 [+0.13, +3.77] (projects ~59.9 / -0.8, i.e. like od5f-r18's 59.5 / -0.80; passes the gate >= 58 / >= +1.25).
+- 20 Nov ~07:35: od5h-r17 Dev-512: 65.2% [63.1, 67.2] / +1.17 [-0.68, +3.16] (projects ~64.9 / -1.6; just under the +1.25 gate).
