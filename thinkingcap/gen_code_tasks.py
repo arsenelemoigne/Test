@@ -70,7 +70,29 @@ tricky edge case), the other half harder (two or three edge cases at once).
 COST = {"usd": 0.0}
 
 
+def argon_openrouter(content, max_tokens=20000):
+    """(20 Nov) The same Gemini 4 Argon through OpenRouter (key OPENROUTER_API_KEY from the environment, never written)."""
+    body = {"model": "google/gemini-4-argon", "max_tokens": max_tokens, "temperature": 1.0,
+            "reasoning": {"effort": "low"}, "messages": [{"role": "user", "content": content}]}
+    req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=json.dumps(body).encode(),
+                                 headers={"Authorization": "Bearer " + os.environ["OPENROUTER_API_KEY"],
+                                          "Content-Type": "application/json"})
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                d = json.loads(r.read())
+            u = d.get("usage", {})
+            COST["usd"] += float(u.get("cost") or (u.get("prompt_tokens", 0) * 2e-6 + u.get("completion_tokens", 0) * 10e-6))
+            return ((d.get("choices") or [{}])[0].get("message", {}).get("content") or "").strip()
+        except Exception:
+            if attempt == 3:
+                return ""
+            time.sleep(10 * (attempt + 1))
+
+
 def argon(content, max_tokens=20000):
+    if not os.environ.get("GOOGLE_API_KEY") and os.environ.get("OPENROUTER_API_KEY"):  # (20 Nov) Google key out of credit
+        return argon_openrouter(content, max_tokens)
     body = {"contents": [{"role": "user", "parts": [{"text": content}]}],
             "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 1.0, "thinkingConfig": {"thinkingLevel": "low"}}}
     req = urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models/gemini-4-argon:generateContent",
