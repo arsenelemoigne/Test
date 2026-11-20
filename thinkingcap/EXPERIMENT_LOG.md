@@ -7199,3 +7199,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - 20 Nov ~08:00: od5j round-6 monitor (model od5j-r5 on slice 6): 36.9% / +0.20 (r4 34.4 / +0.10; same round od5f-r5 41.9 / -0.65, od5c-r5 47.0 / +0.39). Per type: simple 31/+1.6, code 41/-0.4, math 34/-0.9, IFEval 37/+0.7, several 41/+3.5, no-fit 41/-0.8. od5j-r6 saved.
 - 20 Nov ~08:15: od5h-r19 Dev-512: 60.6% [58.4, 62.9] / +2.12 [+0.16, +4.03] (projects ~60.3 / -0.6; passes the gate).
 - 20 Nov ~08:30: od5j round-7 monitor (model od5j-r6 on slice 7): 49.7% / -1.02 (r5 36.9 / +0.20; same round od5f-r6 45.2 / -0.91, od5c-r6 46.9 / -0.33). Per type: no-fit 44/-0.3, code 58/-1.5, math 51/-2.6, IFEval 46/+0.1, several 48/-3.4, simple 42/+1.8. Caught up with od5f. od5j-r7 saved.
+- 20 Nov ~08:35: od5h-r20 Dev-512: 64.7% [62.6, 66.7] / +1.58 [-0.19, +3.48] (projects ~64.4 / -1.2; passes the gate).
