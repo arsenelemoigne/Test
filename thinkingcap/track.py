@@ -5469,6 +5469,8 @@ def odpo_fixed(args):
             drive_sync("save")
         print(f"odpo {name}: starts at round {s0} from {prev} (answers: {answerer}), slices data/{sl}-rK", flush=True)
     for k in range(s0 - 1, args.od_rounds):
+        if Path("/content").exists() and not (os.path.ismount("/content/drive/MyDrive") or os.path.ismount("/content/drive")):
+            raise SystemExit(f"odpo: Drive is NOT mounted before round {k + 1}: re-run the Drive cell, then the plan (finished rounds are on Drive)")  # (20 Nov) never train into a fake local Drive
         done_m = Path("models") / f"{name}-r{k + 1}"  # (13 Nov) a rerun with more rounds skips the finished ones
         if k + 1 < args.od_rounds and any(h["round"] == k + 1 for h in history):
             drive_sync("restore", only=[str(done_m), f"adapters/{name}-r{k + 1}-s0"])
