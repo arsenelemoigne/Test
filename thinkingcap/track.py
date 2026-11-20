@@ -642,10 +642,11 @@ def main():
         # lost at the next disconnect. Refuse at once, so the queue runs out fast; mount Drive (cell 1), then rerun the plan.
         print(f"{args.stage}: Drive is NOT mounted -> refused (run the Drive cell first, then the plan cell)", flush=True)
         sys.exit(3)
-    if args.stage != "plan":
+    quick = args.stage in ("plan", "setup")  # (20 Nov) setup saves nothing new: its full Drive sync took 30+ min and users stopped it (killing rclone)
+    if not quick:
         keep_saving(300)  # inside every stage too: a long stage is on Drive at most ~5 minutes behind
     globals()[args.stage](args)
-    if args.stage != "plan":  # every finished stage is on Drive at once, even under an older plan worker
+    if not quick:  # every finished stage is on Drive at once, even under an older plan worker
         drive_sync("save")
 
 
