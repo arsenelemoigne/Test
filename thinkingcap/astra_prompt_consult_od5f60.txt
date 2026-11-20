@@ -1,0 +1,29 @@
+TASK (consult37, budget ~7 EUR, up to 150 turns). Read {DATA}/README_PACK.md first (all sections), then every file it lists, starting
+with {DATA}/OD5F_BEST_LINE.txt, {DATA}/OD5F_ROUNDS_1_19_VS_AFTER.md, {DATA}/NEW_RESULTS_od5f.md, {DATA}/FINAL_MODEL_od5g_r20.md,
+{DATA}/CONSULT36_RESULTS.md, {DATA}/CONSULT36_RUNS_AS_RUN.txt, {DATA}/OD5J_ROUNDS.md, {DATA}/OD5H_FULLTESTS.md, {DATA}/fulltests.json,
+{DATA}/code/ and {DATA}/EXPERIMENT_LOG.md (every run, every number, every slice's statistics; search it).
+
+GOAL: more than 60% of tokens saved on the full test (2,759 questions x 8 answers, official score) at better than -1 point of accuracy.
+
+BUILD ON THE BEST RUN: od5f (OD5F_BEST_LINE.txt). Its round 18 scored 59.5% [58.5, 60.4] / -0.80 [-1.53, -0.02] on the full test:
+0.5 point of saving short. Improve it MARGINALLY to pass 60% at better than -1. Compare everything you propose with what was already
+tested (od5c, od5r, od5f, od5g, od5h, od5j, od5k, od5l: their lines, their monitors, Dev and full tests) and with the training data each
+used (od3 vs od3g slices, quotas, pairs per task and per round).
+
+THIS IS THE LAST TEST. Two GPUs start at the same time, so propose exactly TWO variations, both FROM SCRATCH from the raw
+Qwen/Qwen3-0.6B (no continuation of any trained model): variation A = od5f's recipe with the smallest change you are most confident
+in; variation B = a second, different marginal change (so the two runs together cover the two most likely ways past 60%). Each must
+reuse od5f's slices and round schedule unless the data says otherwise.
+
+DELIVER A CLEAR BATTLE PLAN:
+1. For A and B: the exact runner lines (odpo + fullpick, flags copied from od5f's line; nothing invented), from scratch, the number
+   of rounds, and the slices.
+2. For EVERY setting that differs from od5f's line: old value -> new value, the data that justifies it (file + line + quoted number),
+   the reasoning, and the expected effect per task (math, code, instructions, one function, several functions, no function fits).
+3. The expected full-test result with a range, and which rounds to full-test (the gate).
+4. What could go wrong and how the plan detects it early (which monitor or Dev number would stop it).
+Do not ask questions back. Mark anything you cannot verify from the pack as UNVERIFIED. Write the report without code blocks.
+
+RULES WE KEEP: online DPO; LoRA r16; constant learning rate; fixed reference = the original Qwen3-0.6B; the model's own answers only;
+test-matched training questions already built (od3 / od3g slices up to round 22); no new datasets; no methods copied from other
+competitors of the challenge; rules general (measured per question / per task).
