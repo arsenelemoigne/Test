@@ -701,6 +701,11 @@ def _drive_sync(direction, models=None, only=None):
     try:
         if not Path("/content/drive/MyDrive").exists():
             return
+        if not (os.path.ismount("/content/drive/MyDrive") or os.path.ismount("/content/drive")):  # (20 Nov) a dead rclone
+            # mount left a plain local folder here, and saves went to a fake "Drive" on the runtime disk: never again
+            print(f"drive: NOT mounted (/content/drive/MyDrive is a local folder); {direction} skipped: re-run the Drive cell",
+                  flush=True)
+            return
         DRIVE.mkdir(parents=True, exist_ok=True)
     except OSError as error:  # (9 Nov) a dropped Drive mount (Errno 107) crashed a whole queue: warn, keep working
         print(f"drive: NOT connected ({error}); {direction} skipped, results stay on this runtime until Drive is "
