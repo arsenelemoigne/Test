@@ -2,6 +2,9 @@ TASK (consult37, budget ~7 EUR, up to 150 turns). Read {DATA}/README_PACK.md fir
 with {DATA}/OD5F_BEST_LINE.txt, {DATA}/OD5F_ROUNDS_1_19_VS_AFTER.md, {DATA}/NEW_RESULTS_od5f.md, {DATA}/FINAL_MODEL_od5g_r20.md,
 {DATA}/CONSULT36_RESULTS.md, {DATA}/CONSULT36_RUNS_AS_RUN.txt, {DATA}/OD5J_ROUNDS.md, {DATA}/OD5H_FULLTESTS.md, {DATA}/fulltests.json,
 {DATA}/code/ and {DATA}/EXPERIMENT_LOG.md (every run, every number, every slice's statistics; search it).
+NEW: {DATA}/training_data/consult37_data/ holds the raw training data of every online DPO run (pairs per round and task,
+od5f's pairs and answers one by one, slices, monitors, brake states, Dev and full-test files): see README_PACK.md, last section.
+Aggregate it with your code runs; base your changes on it.
 
 GOAL: more than 60% of tokens saved on the full test (2,759 questions x 8 answers, official score) at better than -1 point of accuracy.
 
