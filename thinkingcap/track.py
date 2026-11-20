@@ -5863,6 +5863,8 @@ def c37pack(args):
     full-test score files. Written to Drive as consult37_pack.tar.gz (the lab downloads it)."""
     import json, tarfile, statistics as st
     from collections import Counter, defaultdict
+    if not (os.path.ismount("/content/drive/MyDrive") or os.path.ismount("/content/drive")) or not (DRIVE / "runs" / "bon").exists():
+        raise SystemExit("c37pack: Drive is NOT mounted (or runs/bon missing): re-run the Drive cell, then the plan")
     out = Path("/content/c37pack"); out.mkdir(parents=True, exist_ok=True)
     D = DRIVE / "runs" / "bon"
     tok = None
