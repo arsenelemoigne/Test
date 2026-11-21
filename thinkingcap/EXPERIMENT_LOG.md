@@ -7257,3 +7257,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - od5n r11 (GPU 2): loss 0.4428, pairs 78%. MONITOR r11 (model r10): saved 44.5 / acc +0.69 (od5f r11: 60.6 / -0.37). Per type: math 35/-0.6, code 50/+1.0, IFEval 45/0.0, one fn 46/+2.5, several 48/-0.2, no-fit 52/+4.5.
 - od5m r12 (GPU 1): loss 0.6876, pairs 66%. MONITOR r12 (model r11): saved 57.6 / acc +0.49 (od5f r12: 55.2 / -0.15). Per type: math 55/-1.1, code 67/-2.6, IFEval 57/+0.5, one fn 51/+4.3, several 53/+3.5, no-fit 54/+7.9.
 - od5n r12 (GPU 2): loss 0.5020, pairs 80%. MONITOR r12 (model r11): saved 49.5 / acc +1.51 (od5f r12: 55.2 / -0.15). Per type: math 36/-1.4, code 59/-1.6, IFEval 51/+2.6, one fn 51/+6.1, several 52/+3.0, no-fit 54/+9.8.
+- od5m r13 (GPU 1): loss 0.4422, pairs 79%. MONITOR r13 (model r12): saved 53.7 / acc +1.72 (od5f r13: 48.3 / +1.89). Per type: math 54/-0.2, code 53/+2.0, IFEval 55/+2.5, one fn 49/+3.7, several 56/-3.5, no-fit 56/+5.7.
