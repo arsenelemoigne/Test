@@ -821,4 +821,7 @@ odpo --name od5n --od-slices od3g --od-fixed-ref --rp-base Qwen/Qwen3-0.6B --od-
 fullpick --fp-run od5n --fp-kind arena --fp-dev-rounds 12 13 14 15 16 17 18 19 20 21 22 --fp-dev-top 6 --fp-dev-top-save 55 --fp-dev-top-acc 0.0 --fp-save-bias 0.80 --fp-acc-bias 2.50 --fp-acc-slope 0.25 --fp-acc-gate -0.85 --fp-n 2 --fp-gate-save 60.5 --fp-gate-acc 1.75 --rp-dev-vs rpE80 --fp-skip-tested --fp-tag=-ndev
 # 21 Nov ~13:30 (user): pack od5m/od5n data for Argon consult38 (od21a/od21b)
 c37pack --pk-full od5m od5n --pk-name consult38
+# 21 Nov ~13:30 (user: Drive full again, free ~150 GB, log everything): merged models of finished runs -> Drive trash (adapters kept, so every model can be rebuilt with merge.py); list in DRIVE/drivefree-*.txt
+drivefree --df-apply
+drivecheck
 hold --hold-minutes 600 --hold-tag gpu2-h

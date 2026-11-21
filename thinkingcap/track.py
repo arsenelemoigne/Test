@@ -2552,8 +2552,10 @@ def drivefree(args):
                      for l in Path(f).read_text().splitlines())
     keep = {"od5c-best", "od5c-ext-best", "od5r-best", "od5r-ext-best", "od5c-r15", "od5c-r16",
             *[f"od5c-r{k}" for k in range(19, 25)], *[f"od5r-r{k}" for k in range(15, 25)],
-            "rpE-80", "rpK-40", "rpL-80", "rpM-60", "r2s1b-s180", "r2s2-s80-on-r2s1b-s180"}
-    keep_re = re.compile(r"^(r2s3b-s(30|40)\b|r2s3b-s(30|40)-on-)")
+            "rpE-80", "rpK-40", "rpL-80", "rpM-60", "r2s1b-s180", "r2s2-s80-on-r2s1b-s180",
+            # (21 Nov) full-tested best models and the article model; od5m / od5n (Dev / full tests pending) kept whole
+            *[f"od5f-r{k}" for k in range(15, 20)], "od5f-best", "od5g-r20", "od5g-best", "od5k-r19", "od5k-best"}
+    keep_re = re.compile(r"^(r2s3b-s(30|40)\b|r2s3b-s(30|40)-on-|od5[mn]-)")
     root_mb = Path("/content/drive/MyDrive")
     tops = sorted(p for p in root_mb.iterdir() if p.is_dir() and p.name.startswith("thinkingcap")) if root_mb.exists() else []
     for t in tops:
@@ -2646,6 +2648,11 @@ def drivecheck(args):
     must += [f"runs/mvtf/full-{m}" for m in ("base", "od5c-best", "od5c-r15", "od5c-r19", "od5c-r10", "od5r-r15", "od5r-r16")]
     must += [f"data/od3-r{k}-questions.jsonl" for k in range(2, 24)] + ["data/od3-base-stats.json", "data/od3-base-resp.json",
              "data/od3-base-think.json", "runs/bon/od5c-monitor.jsonl", "runs/bon/od5r-monitor.jsonl", "runs/bon/transfer-base"]
+    # (21 Nov) the clean best models, the article model, and every adapter of the online runs that matter now
+    must += [f"models/{m}" for m in ("od5f-r18", "od5g-r20", "od5k-r19")]
+    must += [f"adapters/{r}-r{k}-s0" for r in ("od5f", "od5m", "od5n") for k in range(1, 23)] + [f"adapters/od5g-r{k}-s0" for k in range(1, 21)]
+    must += [f"runs/bon/{r}-monitor.jsonl" for r in ("od5f", "od5g", "od5k", "od5m", "od5n")]
+    must += [f"models/od5{r}-r{k}" for r in "mn" for k in range(12, 23)]
     missing = []
     for rel in must:
         p = DRIVE / rel
@@ -8236,7 +8243,7 @@ def plan(args):
               for m in re.findall(r"models/([\w.\-]+)", l)}
     stages = {l.split()[0] for l in plan_text.splitlines() if l.strip() and not l.startswith("#")} - {"end"}
     SELF_RESTORING = {"nothink", "odpo", "fullpick", "effprobe", "effsame", "od3branch", "waitfor", "effpara", "hold", "transfer", "drivefree", "drivecheck", "drivereport"}
-    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick", "odpo", "c37pack", "fullmodel"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
+    if stages and stages <= {"effsame", "effpara", "waitfor", "hold", "fullpick", "odpo", "c37pack", "fullmodel", "drivefree", "drivecheck"}:  # (19 Nov) fully self-contained: no plan-start restore (data/*.jsonl took 40+ min on a fresh runtime)
         print("drive: plan start restore skipped (stages restore their own inputs)", flush=True)
     elif stages and stages <= SELF_RESTORING:  # (17 Nov) these stages restore their own inputs: skip the old research folders
         drive_sync("restore", only=["data/*.jsonl", "questions_*", *[f"models/{m}" for m in wanted]])
