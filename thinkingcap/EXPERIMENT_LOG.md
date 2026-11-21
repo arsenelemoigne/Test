@@ -7282,3 +7282,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - od5n r22 (GPU 2): loss 0.4560, pairs 79%. MONITOR r22 (model r21): saved 51.9 / acc +3.45 (od5f r22: 42.1 / +4.38). Per type: math 53/-1.1, code 36/+2.1, IFEval 59/+9.6, one fn 55/+0.3, several 58/+1.7, no-fit 69/+9.5. All 22 od5n rounds done. Next on both: end-of-line Dev of <name>-best, then fullpick Dev r12-22.
 - **od5n-r22 Dev-512: saved 58.3 [55.8, 60.6] / acc +4.27 [+2.50, +6.05]** — highest Dev accuracy at >58% saved of any run (od5f r18 Dev 60.4 / +0.88 -> full 59.5 / -0.80). Gate 60.5 / +1.75: saving short by 2.2.
 - od5m-r22 Dev-512: saved 49.9 [47.2, 52.5] / acc +3.45 [+1.71, +5.04]. Below od5m-r18 on saving (55.6); od5m peaked earlier (monitor best r16).
+- od5n-r13 Dev-512: saved 56.0 [53.3, 58.6] / acc +1.19 [-0.65, +2.97].
