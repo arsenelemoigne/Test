@@ -7271,3 +7271,4 @@ Ops: restarts restore every finished odpo round's model from Drive just to skip 
 - od5n r18 (GPU 2): loss 0.4210, pairs 78%. MONITOR r18 (model r17): saved 53.2 / acc +2.62 (od5f r18: 54.6 / +1.91). Per type: math 49/-1.0, code 59/+4.6, IFEval 47/+4.4, one fn 53/+1.2, several 60/-0.3, no-fit 64/+7.0.
 - NOTE ~10:00: the first odpo line ends with a Dev-512 of <name>-best (= r18) before the r19-22 continuation starts (~40 min per GPU; I had not anticipated it). Rounds 19-22 now end ~13:30 (GPU 1) / ~14:00 (GPU 2).
 - **od5m-r18 Dev-512: saved 55.6 [53.1, 58.1] / acc +2.30 [+0.60, +4.08]** (od5f r18 Dev 60.4 / +0.88 -> full 59.5 / -0.80; od5f r16 Dev 55.3 / +1.72 -> full 55.4 / -0.57). Gate 60.5 / +1.75: not passed.
+- **od5n-r18 Dev-512: saved 57.5 [54.8, 59.9] / acc +2.83 [+0.92, +4.70]** (od5f r17 Dev 58.0 / +1.83; od5f r18 Dev 60.4 / +0.88 -> full 59.5 / -0.80). Gate 60.5 / +1.75: not passed (saving). Best accuracy at this saving level of any od5 Dev so far.
