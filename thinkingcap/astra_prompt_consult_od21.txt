@@ -1,0 +1,49 @@
+TASK (consult38, budget ~7 EUR, up to 150 turns). Read {DATA}/README_PACK.md first (all sections, especially "consult38
+additions"), then {DATA}/YOUR_CONSULT37_REPORT.md (your own last plan), {DATA}/OD5M_OD5N_LINES_AS_RUN.txt, {DATA}/OD5M_OD5N_RESULTS.md,
+{DATA}/DEV_FULLPICK_LATEST.md (if present), {DATA}/OD5F_BEST_LINE.txt, {DATA}/NEW_RESULTS_od5f.md, {DATA}/CONSULT36_RESULTS.md,
+{DATA}/FINAL_MODEL_od5g_r20.md, {DATA}/fulltests.json, {DATA}/code/ and {DATA}/EXPERIMENT_LOG.md (every run and number; search it).
+RAW DATA: {DATA}/training_data/consult38_data/ (if present: od5m and od5n pairs and training answers one by one, monitors, latches,
+Dev files, pairs summary of every run) and {DATA}/training_data/consult37_data/ (od5f in full). Aggregate them with your code
+runs; base every change on them.
+
+GOAL: more than 60% of tokens saved on the full test (2,759 questions x 8 answers, official score) at better than -1 point of accuracy.
+
+WHAT HAPPENED TO YOUR CONSULT37 PLAN. Your two variations ran from scratch as od5m (A) and od5n (B), 22 rounds each (rounds 1-18
+on od3 slices, 19-22 continued on od3g slices). Only your cap / floor / quota changes were applied; your extra flags (rp-beta,
+rp-epochs, LoRA settings, stop rules) were not in od5f's line and were dropped. Result so far: neither passed the Dev gate.
+od5m shortened fastest early (monitor 55.5 at round 7, best monitor 59.4 / +2.73 at round 16) then flattened at 52-54 and lost saving
+by round 22 (Dev r22 49.9 / +3.45). od5n held math back for many rounds (math saving 29-44% from round 8 to 17), then rose late
+(monitor 58.1 / +2.59 at round 19; Dev r22 58.3 [55.8, 60.6] / +4.27 [+2.50, +6.05], the best Dev accuracy we ever had at >58%
+saved). Compare: od5f-r18 Dev 60.4 / +0.88 -> full test 59.5 / -0.80; od5k-r19 full 60.6 / -1.00.
+Explain from the data WHY each run behaved as it did (per task: which caps, floors, brakes and pair kinds drove each turn), and what
+that says about where the remaining 1-2 points of saving can come from without losing a point of accuracy.
+
+THREE LEVELS OF RESULTS: DO NOT MIX THEM UP.
+- MONITOR ("MONITOR round j answers (models/X-r(j-1))"): the model of round j-1 on round j's FRESH training slice (~780 test-matched
+  questions x 8) vs the original. Cheap, every round; reads ~2.5-3 points too high on accuracy versus the full test.
+- DEV (Dev-512 x8): fixed held-out 512 questions x 8, official score with a 95% interval; the gate for full tests. Over-reads accuracy
+  by about +2.3 to +2.8 points for od5f-style runs, +3 for od5g-r20, 4-6 for the looser od5h.
+- FULL TEST (2,759 x 8, official): the ONLY number that counts.
+Quote each number with its level; compare like with like; when you forecast a full test, show the offset and where it comes from.
+
+DELIVER TWO NEW PLANS, named od21a and od21b, both online DPO, both FROM SCRATCH from the raw Qwen/Qwen3-0.6B (one clean policy:
+no continuation of a trained model, no merging or souping), one per GPU, run at the same time. They must cover two different,
+most likely ways past 60% at better than -1. You may build on od5f, od5m or od5n (say which and why).
+
+FOR EACH PLAN, A CLEAR BATTLE PLAN:
+1. The exact runner lines (odpo + fullpick), with flags that EXIST in code/track.py (copy the syntax from the lines as run; quote the
+   argparse line of any flag you use that is not in od5f's line). Number of rounds and slices (od3 rounds 1-19 = od3g 1-19; od3g has
+   20-22; nothing beyond 22 exists). If you think a code change is truly needed, state it as a minimal diff, mark it CODE CHANGE, and
+   give a fallback line that works without it.
+2. For EVERY setting that differs from the run you build on: old value -> new value, the data that justifies it (file + line or
+   computed number from your code run), the reasoning, and the expected effect per task (math, code, instructions, one function,
+   several functions, no function fits).
+3. The expected round-by-round path (monitor and Dev) and the expected full-test result with a range; which rounds to Dev and
+   full-test, and the fullpick gate values.
+4. What could go wrong, and which monitor or Dev number at which round shows it early.
+Do not ask questions back. Mark anything you cannot verify from the pack as UNVERIFIED. Write the report without code blocks.
+
+RULES WE KEEP: online DPO; LoRA r16; constant learning rate; fixed reference = the original Qwen3-0.6B; the model's own answers only;
+test-matched training questions already built (od3 / od3g slices up to round 22); no new datasets; no methods copied from other
+competitors of the challenge; rules general (measured per question / per task), not hand-tuned per task name beyond the per-task
+caps / floors / quotas the runner already has.
