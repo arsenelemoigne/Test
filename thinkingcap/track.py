@@ -286,6 +286,8 @@ def main():
                         "PART=PTS,... (default 3 pts for every type)")
     parser.add_argument("--od3-more", type=int, default=0, help="od3prep (13 Nov, user): add this many NEW round slices "
                         "after the existing data/od3-rK files (same test matching, never a question of an earlier slice)")
+    parser.add_argument("--pk-full", nargs="*", default=["od5f"], help="c37pack (21 Nov): runs whose pairs and training answers are packed in full")
+    parser.add_argument("--pk-name", default="consult37", help="c37pack (21 Nov): pack name -> DRIVE/<name>_pack.tar.gz")
     parser.add_argument("--od-unlatch", action="store_true", help="odpo (14 Nov, od5 / consult21): a type at its cap is held "
                         "for that round only (no permanent latch)")
     parser.add_argument("--od-best-name", default="", help="odpo (15 Nov): name of the result model (default <name>-best)")
@@ -5877,7 +5879,8 @@ def c37pack(args):
     except Exception as e:
         print("c37pack: no tokenizer", e, flush=True)
     dec = lambda ids, n=600: (tok.decode(ids[:400]) if tok else "")[:n] if ids else ""
-    runs = ["od5c", "od5r", "od5f", "od5g", "od5h", "od5j", "od5k", "od5l"]
+    runs = ["od5c", "od5r", "od5f", "od5g", "od5h", "od5j", "od5k", "od5l", "od5m", "od5n"]
+    fulls = list(getattr(args, "pk_full", None) or ["od5f"]); pname = getattr(args, "pk_name", "consult37") or "consult37"
     summary = []
     for run in runs:
         for k in range(1, 25):
@@ -5885,7 +5888,7 @@ def c37pack(args):
             if not f.exists():
                 continue
             cnt, ratio, ln = Counter(), defaultdict(list), defaultdict(list)
-            full = open(out / f"pairs_{run}_r{k}.jsonl", "w") if run == "od5f" else None
+            full = open(out / f"pairs_{run}_r{k}.jsonl", "w") if run in fulls else None
             with open(f) as h:
                 for line in h:
                     try:
@@ -5917,8 +5920,8 @@ def c37pack(args):
     with open(out / "PAIRS_SUMMARY_all_runs.jsonl", "w") as h:
         for r in summary:
             h.write(json.dumps(r) + "\n")
-    for k in range(1, 25):  # od5f's own training answers per round: per question, how many right of 8 and lengths
-        f = D / f"rp-od5f-r{k}" / "rollouts.jsonl"
+    for frun, k in [(r_, k_) for r_ in fulls for k_ in range(1, 25)]:  # each full run's training answers per round: per question, right of 8 and lengths
+        f = D / f"rp-{frun}-r{k}" / "rollouts.jsonl"
         if not f.exists():
             continue
         rows, keys = [], None
@@ -5934,11 +5937,11 @@ def c37pack(args):
                 toks = [o.get("output_tokens") or len(o.get("output_ids") or []) for o in outs if isinstance(o, dict)]
                 rows.append({"id": q.get("id"), "source": q.get("source"), "n": len(toks), "right": sum(right),
                              "tokens_median": int(st.median(toks)) if toks else None, "tokens_max": max(toks) if toks else None})
-        with open(out / f"answers_od5f_r{k}.jsonl", "w") as h:
+        with open(out / f"answers_{frun}_r{k}.jsonl", "w") as h:
             h.write(json.dumps({"_record_keys_in_source": keys}) + "\n")
             for r in rows:
                 h.write(json.dumps(r) + "\n")
-    print("c37pack: od5f answers done", flush=True)
+    print(f"c37pack: answers of {fulls} done", flush=True)
     for pat in ("od3-r*-questions.jsonl", "od3g-r*-questions.jsonl", "od3-base-stats.json"):
         for f in (DRIVE / "data").glob(pat):
             if f.stat().st_size < 40_000_000:
@@ -5949,11 +5952,11 @@ def c37pack(args):
     for f in (DRIVE / "runs" / "mvtf").glob("full-od5*/*.json"):
         if f.stat().st_size < 5_000_000:
             (out / f"{f.parent.name}_{f.name}").write_bytes(f.read_bytes())
-    tgt = DRIVE / "consult37_pack.tar.gz"
-    with tarfile.open("/content/consult37_pack.tar.gz", "w:gz") as t:
-        t.add(out, arcname="consult37_data")
+    tgt = DRIVE / f"{pname}_pack.tar.gz"
+    with tarfile.open(f"/content/{pname}_pack.tar.gz", "w:gz") as t:
+        t.add(out, arcname=f"{pname}_data")
     import shutil
-    shutil.copy("/content/consult37_pack.tar.gz", tgt)
+    shutil.copy(f"/content/{pname}_pack.tar.gz", tgt)
     print(f"c37pack: written {tgt} ({tgt.stat().st_size / 1e6:.1f} MB)", flush=True)
 
 def hold(args):
